@@ -8,57 +8,10 @@ import {
   Zap, Box, LayoutTemplate
 } from "lucide-react";
 
-interface ModHit {
-  projectId: string;
-  slug: string;
-  title: string;
-  description: string;
-  iconUrl: string | null;
-  author: string;
-  downloads: number;
-  follows: number;
-  latestVersion: string | null;
-  categories: string[];
-  dateCreated: string;
-  url: string;
-  _source?: "modrinth" | "curseforge"; // Flag interno para saber la fuente
-}
-
-interface CollectionEntry {
-  id: string;
-  name: string;
-  description: string;
-  projectCount: number;
-  iconUrl: string | null;
-}
-
-interface PresetEntry {
-  id: string;
-  name: string;
-  description: string;
-  projectCount: number;
-  iconUrl: string | null;
-  tags: string[];
-  recommendedLoader: string;
-  recommendedVersion: string;
-}
-
-interface VersionEntry {
-  id: string;
-  versionNumber: string;
-  name: string;
-  versionType: "release" | "beta" | "alpha";
-  gameVersions: string[];
-  loaders: string[];
-  datePublished: string;
-  downloads: number;
-  primaryFile: {
-    url: string;
-    filename: string;
-    primary: boolean;
-    size: number;
-  } | null;
-}
+import type { ModHit, CollectionEntry, PresetEntry, VersionEntry } from "./types";
+import { formatNumber, formatSize, openExternal } from "./utils";
+import { FomoCollections } from "./FomoCollections";
+import { FomoPresets } from "./FomoPresets";
 
 interface FomoSidebarProps {
   open: boolean;
@@ -81,28 +34,6 @@ const SORT_OPTIONS = [
   { value: "updated",   label: "🔄 Actualizados" },
 ];
 
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}
-
-function openExternal(url: string) {
-  try {
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) window.location.href = url;
-  } catch {
-    window.location.href = url;
-  }
-}
 
 export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1" }: FomoSidebarProps) {
   const [mode,        setMode]        = useState<"discover" | "collections" | "presets">("discover");
@@ -125,6 +56,10 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   const [collLoading,    setCollLoading]    = useState(false);
   const [collError,      setCollError]      = useState<string | null>(null);
   const [collDownloading, setCollDownloading] = useState<string | null>(null);
+  const [viewingCollection, setViewingCollection] = useState<CollectionEntry | null>(null);
+  const [collectionMods,    setCollectionMods]    = useState<ModHit[]>([]);
+  const [collModsLoading,   setCollModsLoading]   = useState(false);
+  const [collectionFilter,  setCollectionFilter]  = useState<string>("all");
   
   // Presets state
   const [presets,       setPresets]       = useState<PresetEntry[]>([]);
@@ -200,18 +135,65 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   const fetchCollections = useCallback(async () => {
     setCollLoading(true);
     setCollError(null);
+    setViewingCollection(null);
+    
+    let combined: CollectionEntry[] = [];
+    let errorMsg = null;
+
+    // 1. Cargar colecciones locales
     try {
-      const res = await fetch("/api/modrinth/collections");
-      const data = await res.json();
-      if (res.ok) {
-        setCollections(data.collections ?? []);
+      const resLocal = await fetch("/api/local-collections");
+      if (resLocal.ok) {
+        const data = await resLocal.json();
+        combined = [...(data.collections || [])];
+      }
+    } catch(e) {}
+
+    // 2. Cargar colecciones de Modrinth
+    try {
+      const resModrinth = await fetch("/api/modrinth/collections");
+      const data = await resModrinth.json();
+      if (resModrinth.ok) {
+        combined = [...combined, ...(data.collections || [])];
       } else {
-        setCollError(data.error || "Error al cargar colecciones");
+        errorMsg = data.error || "Error al cargar colecciones de Modrinth";
       }
     } catch (err) {
-      setCollError("Error de conexión");
+      errorMsg = "Error de conexión con Modrinth";
     }
+
+    setCollections(combined);
+    
+    // Solo bloqueamos la UI con un error si no tenemos NINGUNA colección (ni local ni remota)
+    if (combined.length === 0 && errorMsg) {
+      setCollError(errorMsg);
+    }
+    
     setCollLoading(false);
+  }, []);
+
+  const fetchCollectionProjects = useCallback(async (coll: CollectionEntry) => {
+    setViewingCollection(coll);
+    setCollModsLoading(true);
+    // Para colecciones locales, los proyectos ya vienen anidados:
+    if (coll.isLocal) {
+      setCollectionMods(coll.projects ?? []);
+      setCollModsLoading(false);
+      return;
+    }
+    // Para Modrinth, fetcheamos los detalles del proyecto:
+    try {
+      const res = await fetch(`/api/modrinth/collections?collectionId=${coll.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setCollectionMods(data.mods ?? []);
+      } else {
+        alert("Error al cargar proyectos de la colección");
+      }
+    } catch (err) {
+      console.error("[FOMO] Error fetching collection projects:", err);
+    }
+    setCollModsLoading(false);
   }, []);
 
   const fetchPresets = useCallback(async () => {
@@ -228,11 +210,24 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
     setPresetsLoading(false);
   }, []);
 
+  const prevOpenRef = useRef(open);
+
   useEffect(() => {
-    if (open) {
-      if (mode === "discover") fetchMods();
-      else if (mode === "collections") fetchCollections();
-      else if (mode === "presets") fetchPresets();
+    const justOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (!open) return;
+
+    if (mode === "discover") {
+      // Si acabamos de abrir y ya hay datos, usar caché (no refetch)
+      if (justOpened && mods.length > 0) return;
+      fetchMods();
+    } else if (mode === "collections") {
+      if (justOpened && collections.length > 0) return;
+      fetchCollections();
+    } else if (mode === "presets") {
+      if (justOpened && presets.length > 0) return;
+      fetchPresets();
     }
   }, [open, mode, fetchMods, fetchCollections, fetchPresets, source]);
 
@@ -346,6 +341,94 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
     setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
   };
 
+  const handleAddToCollection = async (mod: ModHit) => {
+    const customColls = collections.filter(c => c.id !== "followed-projects");
+    
+    if (customColls.length === 0) {
+      const create = window.confirm("No tienes colecciones propias. ¿Deseas crear una nueva colección llamada 'MIM' para guardar este mod?");
+      if (!create) return;
+
+      try {
+        const res = await fetch("/api/local-collections", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "create", name: "MIM", description: "Mi colección principal" }),
+        });
+        if (res.ok) {
+          const { collection } = await res.json();
+          // Add to the newly created collection immediately
+          await fetch("/api/local-collections", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "add_project", collectionId: collection.id, project: mod }),
+          });
+          alert(`Colección MIM creada y '${mod.title}' añadido con éxito.`);
+          fetchCollections();
+        } else {
+          alert("Error al crear la colección.");
+        }
+      } catch (err) {
+        alert("Error de red al crear colección.");
+      }
+      return;
+    }
+
+    const collName = prompt(
+      `A qué colección quieres añadir "${mod.title}"?\n` +
+      customColls.map((c, i) => `${i + 1}. ${c.name}`).join("\n")
+    );
+
+    if (!collName) return;
+    const index = parseInt(collName) - 1;
+    const targetColl = customColls[index];
+
+    if (!targetColl) {
+      alert("Selección inválida.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/local-collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_project",
+          collectionId: targetColl.id,
+          project: mod,
+        }),
+      });
+
+      if (res.ok) {
+        alert(`Añadido con éxito a ${targetColl.name}`);
+        fetchCollections(); 
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (err) {
+      alert("Error de conexión");
+    }
+  };
+
+  const handleCreateCollection = async () => {
+    const name = prompt("Nombre de la nueva colección:", "MIM");
+    if (!name) return;
+    try {
+      const res = await fetch("/api/local-collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", name, description: "Mi colección local" }),
+      });
+      if (res.ok) {
+        fetchCollections();
+      } else {
+        alert("Error al crear colección");
+      }
+    } catch (e) {
+      alert("Error de red");
+    }
+  };
+
   const handleDownloadCollection = async (coll: CollectionEntry) => {
     setCollDownloading(coll.id);
     try {
@@ -405,13 +488,14 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
     setPresetDownloading(null);
   };
 
-  // Responsive sidebar width: full on small screens, 480px on md+
-  const sidebarWidth = "min(100vw, 500px)";
+  // Responsive sidebar width: full on small screens, 650px on md+
+  const sidebarWidth = "min(100vw, 650px)";
 
   const getLoaderColor = (l: string) => {
-    if (l === "forge") return "#EF4444";
-    if (l === "neoforge") return "#FF783C";
-    if (l === "fabric") return "#66C8A0";
+    if (l === "forge") return "#3B82F6"; // Azul
+    if (l === "neoforge") return "#06B6D4"; // Cyan
+    if (l === "fabric") return "#8B5CF6"; // Violeta
+    if (l === "quilt") return "#EC4899"; // Rosa
     return "var(--color-primary)";
   };
 
@@ -434,28 +518,31 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{
           width: sidebarWidth,
-          background: "color-mix(in srgb, var(--color-card) 97%, transparent)",
-          borderRight: "1px solid var(--color-border-strong)",
-          backdropFilter: "blur(24px)",
+          background: "linear-gradient(145deg, color-mix(in srgb, var(--color-card) 95%, transparent) 0%, color-mix(in srgb, var(--color-background) 98%, transparent) 100%)",
+          borderRight: "1px solid var(--color-border)",
+          backdropFilter: "blur(32px)",
         }}
       >
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div
-          className="flex items-center justify-between px-5 py-5 border-b shrink-0"
+          className="flex items-center justify-between px-6 py-5 border-b shrink-0 relative overflow-hidden"
           style={{ borderColor: "var(--color-border)" }}
         >
-          <div className="flex items-center gap-3">
+          {/* Subtle glow effect behind header */}
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-primary/10 via-transparent to-transparent pointer-events-none" />
+          
+          <div className="flex items-center gap-4 relative z-10">
             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(255,100,60,0.14)", border: "1px solid rgba(255,100,60,0.3)" }}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+              style={{ background: "linear-gradient(135deg, rgba(255,108,62,0.2) 0%, rgba(255,108,62,0.05) 100%)", border: "1px solid rgba(255,108,62,0.4)" }}
             >
-              <Flame className="w-5 h-5" style={{ color: "#FF6C3E" }} />
+              <Flame className="w-6 h-6" style={{ color: "#FF6C3E", filter: "drop-shadow(0 2px 4px rgba(255,108,62,0.4))" }} />
             </div>
             <div>
-              <h2 className="font-headline text-lg leading-none" style={{ color: "var(--color-foreground)" }}>
+              <h2 className="font-headline text-xl leading-none tracking-tight" style={{ color: "var(--color-foreground)" }}>
                 FOMO
               </h2>
               <p className="font-caption mt-1" style={{ color: "var(--color-muted)" }}>
@@ -463,7 +550,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                   ? (source === "modrinth" ? "Novedades de Modrinth" : "Catálogo CurseForge")
                   : mode === "collections"
                   ? "Mis Colecciones de Modrinth"
-                  : "Plantillas Pre-armadas"}
+                  : "Modpacks Recomendados"}
               </p>
             </div>
           </div>
@@ -514,7 +601,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
             }}
           >
             <LayoutTemplate className="w-4 h-4" />
-            Plantillas
+            Modpacks
           </button>
         </div>
 
@@ -809,8 +896,17 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                               </button>
                               
                               <button
+                                onClick={() => handleAddToCollection(mod)}
+                                className="p-1 px-2 rounded-lg text-[0.6rem] font-bold opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center gap-1"
+                                style={{ background: "rgba(102,200,160,0.1)", color: "#66C8A0" }}
+                              >
+                                <Library className="w-3 h-3" />
+                                + Colección
+                              </button>
+
+                              <button
                                 onClick={() => handleOpenVersionSelector(mod)}
-                                className="p-1 px-2 rounded-lg text-[0.6rem] font-bold opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1 mx-auto"
+                                className="p-1 px-2 rounded-lg text-[0.6rem] font-bold opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center gap-1"
                                 style={{ background: "rgba(255,255,255,0.05)", color: "var(--color-muted)" }}
                               >
                                 <ChevronDown className="w-3 h-3" />
@@ -908,175 +1004,33 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
             </div>
           </>
         ) : mode === "collections" ? (
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-4">
-            {collLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 className="w-9 h-9 animate-spin" style={{ color: "#66C8A0", opacity: 0.5 }} />
-                <p className="font-subhead text-sm animate-pulse" style={{ color: "var(--color-muted)" }}>Sincronizando con Modrinth...</p>
-              </div>
-            ) : collError ? (
-              <div className="text-center py-20 px-6 rounded-3xl" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500 opacity-60" />
-                <p className="font-subhead text-red-400">Error de Autenticación</p>
-                <p className="font-caption mt-2 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-                  {collError.includes("TOKEN") 
-                    ? "Necesitás configurar MODRINTH_TOKEN en tu .env.local para acceder a tus colecciones privadas."
-                    : collError}
-                </p>
-                <button 
-                  onClick={fetchCollections}
-                  className="mt-6 px-6 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
-                  style={{ background: "rgba(255,255,255,0.1)", color: "var(--color-foreground)" }}
-                >
-                  Reintentar
-                </button>
-              </div>
-            ) : collections.length === 0 ? (
-              <div className="text-center py-20 opacity-40">
-                <Library className="w-12 h-12 mx-auto mb-3" />
-                <p className="font-subhead">No tienes colecciones</p>
-                <p className="font-caption mt-1">Sigue colecciones en Modrinth para verlas aquí</p>
-              </div>
-            ) : (
-              collections.map((coll) => (
-                <div
-                  key={coll.id}
-                  className="rounded-2xl p-4 transition-all duration-300 group"
-                  style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
-                      {coll.iconUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={coll.iconUrl} alt={coll.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center opacity-20">
-                          <Library className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-headline text-base truncate" style={{ color: "var(--color-foreground)" }}>{coll.name}</h3>
-                      <p className="font-caption text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>{coll.projectCount} proyectos</p>
-                    </div>
-                    <button
-                      onClick={() => handleDownloadCollection(coll)}
-                      disabled={!!collDownloading}
-                      className="flex flex-col items-center justify-center p-3 rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                      style={{ 
-                        background: collDownloading === coll.id ? "rgba(102,200,160,0.15)" : "rgba(255,255,255,0.05)",
-                        color: "#66C8A0",
-                        border: "1px solid rgba(102,200,160,0.3)"
-                      }}
-                      title="Descargar toda la colección"
-                    >
-                      {collDownloading === coll.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Download className="w-5 h-5" />
-                          <span className="text-[0.6rem] font-bold mt-1">Sync</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {coll.description && (
-                    <p className="font-caption text-xs mt-3 line-clamp-2 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-                      {coll.description}
-                    </p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          <FomoCollections
+            collections={collections}
+            collLoading={collLoading}
+            collError={collError}
+            collDownloading={collDownloading}
+            viewingCollection={viewingCollection}
+            collectionMods={collectionMods}
+            collModsLoading={collModsLoading}
+            collectionFilter={collectionFilter}
+            setCollectionFilter={setCollectionFilter}
+            setViewingCollection={setViewingCollection}
+            fetchCollections={fetchCollections}
+            fetchCollectionProjects={fetchCollectionProjects}
+            handleDownloadCollection={handleDownloadCollection}
+            handleDownload={handleDownload}
+            handleOpenVersionSelector={handleOpenVersionSelector}
+            downloading={downloading}
+            handleCreateCollection={handleCreateCollection}
+          />
         ) : (
           /* ── Presets Mode ─────────────────────────────────────────────── */
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-4">
-            {presetsLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 className="w-9 h-9 animate-spin" style={{ color: "#BB96E4", opacity: 0.5 }} />
-                <p className="font-subhead text-sm animate-pulse" style={{ color: "var(--color-muted)" }}>Cargando plantillas...</p>
-              </div>
-            ) : presets.length === 0 ? (
-              <div className="text-center py-20 opacity-40">
-                <LayoutTemplate className="w-12 h-12 mx-auto mb-3" />
-                <p className="font-subhead">No hay plantillas disponibles</p>
-                <p className="font-caption mt-1">Reintentá más tarde</p>
-              </div>
-            ) : (
-              presets.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="rounded-2xl p-4 transition-all duration-300 group"
-                  style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0 flex items-center justify-center">
-                      <LayoutTemplate className="w-8 h-8 opacity-40" style={{ color: "#BB96E4" }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-headline text-base truncate" style={{ color: "var(--color-foreground)" }}>{preset.name}</h3>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-caption text-xs" style={{ color: "var(--color-muted)" }}>
-                          {preset.projectCount} proyectos
-                        </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/10" style={{ color: "var(--color-muted)" }}>
-                          {preset.recommendedLoader}
-                        </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/10" style={{ color: "var(--color-muted)" }}>
-                          {preset.recommendedVersion}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleApplyPreset(preset)}
-                      disabled={!!presetDownloading}
-                      className="flex flex-col items-center justify-center p-3 rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                      style={{ 
-                        background: presetDownloading === preset.id ? "rgba(187,150,228,0.15)" : "rgba(255,255,255,0.05)",
-                        color: "#BB96E4",
-                        border: "1px solid rgba(187,150,228,0.3)"
-                      }}
-                      title="Aplicar plantilla (descarga todos los mods)"
-                    >
-                      {presetDownloading === preset.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Download className="w-5 h-5" />
-                          <span className="text-[0.6rem] font-bold mt-1">Aplicar</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {preset.description && (
-                    <p className="font-caption text-xs mt-3 line-clamp-2 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-                      {preset.description}
-                    </p>
-                  )}
-                  {preset.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {preset.tags.map(tag => (
-                        <span
-                          key={tag}
-                          className="font-label text-[0.58rem] px-2 py-0.5 rounded-full"
-                          style={{ background: "rgba(187,150,228,0.12)", color: "#BB96E4" }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          <FomoPresets
+            presets={presets}
+            presetsLoading={presetsLoading}
+            presetDownloading={presetDownloading}
+            handleApplyPreset={handleApplyPreset}
+          />
         )}
 
         {/* ── Version Selector Overlay ───────────────────────────────────── */}

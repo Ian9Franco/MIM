@@ -17,24 +17,6 @@ Este documento centraliza las ideas, integraciones pendientes y la visión a lar
 
 ---
 
-## 🚀 Próxima Sesión: Integraciones Críticas
-Estas son las tareas técnicas inmediatas para fortalecer el ecosistema de MIM.
-
-### 1. Integración con CurseForge
-- [ ] **API de Eternal:** Implementar búsqueda y descarga (o alternativa viable).
-- [ ] **FOMO Sidebar:** Permitir toggle entre Modrinth y CurseForge.
-- [ ] **Mapeo de IDs:** Manejo de IDs de proyecto y slugs compatibles entre plataformas.
-
-### 2. Integración con Collections (Modrinth)
-- [x] **Sync Personal:** Sincronización con [Following Collections](https://modrinth.com/collection/following).
-- [x] **Acción Directa:** Botón para "Descargar" directamente a un proyecto activo.
-- [ ] **Presets:** Visualización de colecciones como plantillas externas.
-
-### 3. UX de Versiones
-- [x] **Selector Manual:** Para Datapacks y assets ambiguos, permitir desplegar lista de versiones antes de descargar (ej: v44.44.44).
-
----
-
 ## 🗺️ Roadmap Estratégico
 > [!TIP]
 > El objetivo es pasar de "otro repo abandonado" a un proyecto que demuestre seniority y capacidad de producto.
@@ -42,7 +24,6 @@ Estas son las tareas técnicas inmediatas para fortalecer el ecosistema de MIM.
 ### Fase 1: Producto Base y Presencia
 *Que no parezca un proyecto de las 3 AM.*
 
-- **README Killer:** Hero potente, propuesta de valor clara, arquitectura y screenshots premium.
 - **Portfolio Integration:** Case study completo centrado en decisiones, problemas y soluciones.
 - **Demo Deployable:** Landing funcional o showcase visual que no requiera instalación inmediata.
 - **Video Demo:** 60-90 segundos de "Problema → Solución → Wow factor".

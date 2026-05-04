@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
+import fs from "fs";
+import { exec } from "child_process";
+import os from "os";
+
+export async function POST(req: NextRequest) {
+  try {
+    const { folderPath } = await req.json();
+
+    if (!folderPath) {
+      return NextResponse.json({ error: "Missing folderPath" }, { status: 400 });
+    }
+
+    let resolvedPath = path.resolve(folderPath);
+
+    if (folderPath === "downloads") {
+      resolvedPath = path.join(os.homedir(), "Downloads");
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      fs.mkdirSync(resolvedPath, { recursive: true });
+    }
+
+    // Open the folder in the native file explorer
+    let command = "";
+    if (os.platform() === "win32") {
+      // explorer.exe returns exit code 1 if it succeeds in opening an existing window, so we ignore errors
+      command = `explorer "${resolvedPath}"`;
+    } else if (os.platform() === "darwin") {
+      command = `open "${resolvedPath}"`;
+    } else {
+      command = `xdg-open "${resolvedPath}"`;
+    }
+
+    exec(command, (error) => {
+      // Ignore exit code 1 on Windows
+      if (error && !(os.platform() === "win32" && error.code === 1)) {
+        console.error("[/api/open-folder] Error opening folder:", error);
+      }
+    });
+
+    return NextResponse.json({ success: true, path: resolvedPath });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/open-folder] Unhandled error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

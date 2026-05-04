@@ -1,8 +1,8 @@
-import React from "react";
-import { Inbox } from "lucide-react";
-import { SectionHeading } from "./SectionHeading";
-import { SkeletonLoader } from "./SkeletonLoader";
-import { EmptyState } from "./EmptyState";
+import React, { useState } from "react";
+import { Inbox, FolderOpen, Loader2 } from "lucide-react";
+import { SectionHeading } from "../ui/SectionHeading";
+import { SkeletonLoader } from "../ui/SkeletonLoader";
+import { EmptyState } from "../ui/EmptyState";
 import { ModCard } from "./ModCard";
 import type { PendingFile, Project } from "@/lib/types";
 
@@ -21,15 +21,43 @@ export function PendingFilesSection({
   setSelectedFiles,
   activeProject
 }: PendingFilesSectionProps) {
+  const [openingFolder, setOpeningFolder] = useState(false);
+
+  const handleOpenDownloadsFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      await fetch("/api/open-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderPath: pendingFiles.length > 0 ? pendingFiles[0].path.substring(0, pendingFiles[0].path.lastIndexOf('\\')) : "downloads" }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setOpeningFolder(false);
+  };
+
   return (
     <section className="animate-fade-up stagger-2">
-      <SectionHeading
-        icon={<Inbox className="w-4 h-4" />}
-        title="Ingresos Pendientes"
-        sub="Archivos detectados en tu carpeta de Descargas"
-        badge={pendingFiles.length}
-        accentColor="var(--color-primary)"
-      />
+      <div className="flex items-start justify-between mb-2">
+        <SectionHeading
+          icon={<Inbox className="w-4 h-4" />}
+          title="Ingresos Pendientes"
+          sub="Archivos detectados en tu carpeta de Descargas"
+          badge={pendingFiles.length}
+          accentColor="var(--color-primary)"
+        />
+        <button
+          onClick={handleOpenDownloadsFolder}
+          disabled={openingFolder}
+          className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
+          title="Abrir carpeta de origen (Descargas)"
+        >
+          {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
+          Carpeta
+        </button>
+      </div>
       <div className="space-y-2">
         {loading ? (
           <SkeletonLoader />

@@ -13,40 +13,20 @@
 - **UI Adaptativa:** Indicador "CurseForge" en mods de CF. Botón de descarga cambia a "Abrir externo" ya que CF requiere descarga manual.
 - **Error Handling:** Banner informativo cuando `CURSEFORGE_API_KEY` no está configurada (HTTP 503).
 
-**Archivos creados/modificados:**
-- `app/api/curseforge/discover/route.ts` — Endpoint de búsqueda
-- `components/FomoSidebar.tsx` — Toggle entre fuentes, normalización de datos
-
 ---
 
-### 📦 Collections Presets (Plantillas)
+### 📦 Modrinth Collections & Presets
+- **Sincronización Completa:** Endpoint `/api/modrinth/collections` ahora integra tanto colecciones creadas por el usuario como colecciones seguidas (Following).
+- **Fix de Conexión:** Corregido error 404/502 cuando el usuario no tenía colecciones creadas; ahora el sistema maneja gracefully la ausencia de datos y busca en follows.
+- **Acción Directa:** Soporte para descarga masiva de colecciones directamente a la carpeta Downloads del sistema.
 - **Nuevo Tab "Plantillas":** Tercer tab en FOMO Sidebar junto a "Descubrir" y "Mis Colecciones".
-- **Colecciones Curadas:** 5 plantillas pre-armadas:
-  - ⚡ Starter Tech Pack (Create, Thermal, Mekanism)
-  - ➕ Vanilla Enhancements (Sodium, QoL mods)
-  - 🔮 Magic & Adventure (Botania, Ars Nouveau)
-  - 🚀 Performance Essentials (Sodium, Lithium, optimización)
-  - 🏗️ Builder's Dream (WorldEdit, decorativos)
-- **Auto-configuración:** Al aplicar una plantilla, el loader y versión se actualizan automáticamente a los recomendados.
-- **Tags Visuales:** Cada plantilla muestra tags (tech, magic, performance) para identificación rápida.
-
-**Archivos creados/modificados:**
-- `app/api/modrinth/presets/route.ts` — Endpoint de plantillas
-- `components/FomoSidebar.tsx` — Nuevo tab, UI de presets, handler de aplicación
+- **Colecciones Curadas:** 5 plantillas pre-armadas (Starter Tech, Vanilla+, etc.) con auto-configuración de loader y versión.
 
 ---
 
-### 📝 README Killer (Español)
-- **Hero Potente:** Nueva estructura con badges, value proposition clara y navegación visual.
-- **Problem/Solution Framework:** Explicación del problema (caos de mods) → solución (flujo 3-clics).
-- **Tabla de Features:** Feature × Qué resuelve × Tiempo ahorrado.
-- **Diagrama de Arquitectura:** ASCII art mostrando Frontend → API → Integraciones → Core Engine.
-- **Decisiones Técnicas:** Case study de SSE vs WebSockets y dual-source APIs.
-- **Screenshots ASCII:** Representaciones del dashboard y FOMO sidebar.
-- **Estructura Completa:** Roadmap, contributing guidelines, licencia.
-
-**Archivo modificado:**
-- `README.md` — Reescritura completa en español profesional
+### 🎨 UX & UI Improvements
+- **Selector Manual de Versiones:** Implementado selector para Datapacks y assets ambiguos, permitiendo elegir versiones específicas (ej: v44.44.44) antes de descargar.
+- **README Killer (Español):** Reescritura completa con Hero potente, diagramas de arquitectura y case study técnico.
 
 ---
 

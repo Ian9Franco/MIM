@@ -1,7 +1,7 @@
 import React from "react";
 import { Zap, ChevronRight, Package, Server } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
-import { HotkeyCard } from "./HotkeyCard";
+import { HotkeyCard } from "../ui/HotkeyCard";
 import type { PendingFile, LibraryFile, Project } from "@/lib/types";
 
 interface QuickCategorizeSectionProps {

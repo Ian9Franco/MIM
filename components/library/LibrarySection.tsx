@@ -1,8 +1,8 @@
-import React from "react";
-import { Layers, Loader2, BookOpen, RefreshCw, Bell } from "lucide-react";
-import { ModCard } from "./ModCard";
-import { SkeletonLoader } from "./SkeletonLoader";
-import { EmptyState } from "./EmptyState";
+import React, { useState } from "react";
+import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen } from "lucide-react";
+import { ModCard } from "@/components/library/ModCard";
+import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { LibraryFile, Project } from "@/lib/types";
 
 interface LibrarySectionProps {
@@ -60,6 +60,29 @@ export function LibrarySection({
     return { badgeText: "No encontrado", badgeColor: "bg-white/8 text-foreground/40" };
   }
 
+  const [openingFolder, setOpeningFolder] = useState(false);
+
+  const handleOpenLibraryFolder = async () => {
+    if (!activeProject) return;
+    setOpeningFolder(true);
+    try {
+      // Path based on constants logic (approximated here via API to be safe)
+      // Actually we need to send the path or let the API deduce it.
+      // But we can just send the path of the first mod in the library if exists,
+      // or the base library path. The backend doesn't know activeProject's SOURCE_BASE unless we tell it.
+      // Let's send a generic request to open the active project's mods folder.
+      await fetch("/api/open-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // If library has files, use the directory of the first file. Otherwise just open the downloads.
+        body: JSON.stringify({ folderPath: library.length > 0 ? library[0].path.substring(0, library[0].path.lastIndexOf('\\')) : "" }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setOpeningFolder(false);
+  };
+
   return (
     <section className="animate-fade-up" style={{ animationDelay: "0.18s" }}>
       {/* Library header */}
@@ -113,6 +136,18 @@ export function LibrarySection({
               Mover a Descargas
             </button>
           )}
+
+          <button
+            onClick={handleOpenLibraryFolder}
+            disabled={openingFolder || library.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
+            title="Abrir carpeta de mods"
+          >
+            {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
+            Carpeta
+          </button>
+
           <button
             onClick={handleCheckUpdates}
             disabled={checkingUpdates}

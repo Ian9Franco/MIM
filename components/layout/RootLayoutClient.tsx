@@ -3,11 +3,14 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Flame } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { FomoSidebar } from "@/components/FomoSidebar";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { FomoSidebar } from "@/components/fomo/FomoSidebar";
+import { SettingsModal } from "@/components/layout/SettingsModal";
+import { Settings } from "lucide-react";
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [fomoOpen, setFomoOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
@@ -76,7 +79,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                   </h1>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="font-label text-accent bg-accent/10 px-2.5 py-0.5 rounded-full">
-                      v1.0 Alpha
+                      v4.0 Alpha
                     </span>
                     <span className="font-label text-[#66C8A0] bg-[#66C8A0]/10 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#66C8A0] animate-pulse" />
@@ -89,6 +92,14 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
             {/* Right controls */}
             <div className="flex items-center gap-3 animate-fade-up stagger-2">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-white/5"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-muted)" }}
+                title="Ajustes de Ubicaciones"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               <ThemeToggle />
             </div>
           </div>
@@ -125,6 +136,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           </div>
         </footer>
       </div>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }

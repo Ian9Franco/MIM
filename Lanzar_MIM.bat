@@ -1,5 +1,5 @@
 @echo off
-set "PROJECT_DIR=D:\.mine\manager"
+set "PROJECT_DIR=%~dp0"
 cd /d "%PROJECT_DIR%"
 
 title Minecraft Intelligent Manager - Launcher

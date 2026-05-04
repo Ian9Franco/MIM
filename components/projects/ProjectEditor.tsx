@@ -11,7 +11,7 @@ export interface Project {
 }
 
 const LOADER_COLOR: Record<string, string> = {
-  forge: "#FF8C00", neoforge: "#FF783C", fabric: "#66C8A0",
+  forge: "#3B82F6", neoforge: "#06B6D4", fabric: "#8B5CF6", quilt: "#EC4899",
 };
 
 export function ProjectEditor({ initial, onSave, onCancel }: {

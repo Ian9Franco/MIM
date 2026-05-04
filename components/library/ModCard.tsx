@@ -21,9 +21,10 @@ interface ModCardProps {
 }
 
 const LOADER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  forge:    { bg: "rgba(239,68,68,0.12)",   color: "#EF4444", label: "Forge" },
-  neoforge: { bg: "rgba(255,120,60,0.12)",  color: "#FF783C", label: "NeoForge" },
-  fabric:   { bg: "rgba(102,200,160,0.12)", color: "#66C8A0", label: "Fabric" },
+  forge:    { bg: "rgba(59,130,246,0.15)",  color: "#3B82F6", label: "Forge" },
+  neoforge: { bg: "rgba(6,182,212,0.15)",   color: "#06B6D4", label: "NeoForge" },
+  fabric:   { bg: "rgba(139,92,246,0.15)",  color: "#8B5CF6", label: "Fabric" },
+  quilt:    { bg: "rgba(236,72,153,0.15)",  color: "#EC4899", label: "Quilt" },
   unknown:  { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", label: "Unknown" },
 };
 

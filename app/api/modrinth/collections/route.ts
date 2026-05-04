@@ -81,7 +81,6 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    // Primero obtener el perfil del usuario para saber su username
     const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
     if (!profileRes.ok) {
       return NextResponse.json(
@@ -90,30 +89,55 @@ export async function GET(_req: NextRequest) {
       );
     }
     const profile = await profileRes.json();
+    const userId: string = profile.id;
     const username: string = profile.username;
 
-    // Obtener las colecciones del usuario
-    const collectionsRes = await fetch(
-      `${MODRINTH_API}/user/${encodeURIComponent(username)}/collections`,
-      { headers }
-    );
+    // Si se pide los mods de 'followed-projects'
+    const { searchParams } = new URL(req.url);
+    const collectionId = searchParams.get("collectionId");
 
-    if (!collectionsRes.ok) {
-      return NextResponse.json(
-        { error: `Error al obtener colecciones: ${collectionsRes.status}` },
-        { status: 502 }
-      );
+    if (collectionId === "followed-projects") {
+      const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers });
+      if (!followsRes.ok) {
+        return NextResponse.json({ error: "Error al cargar proyectos seguidos" }, { status: 502 });
+      }
+      const follows = await followsRes.json();
+      
+      const mods = follows.map((m: any) => ({
+        projectId: m.id || m.project_id,
+        slug: m.slug,
+        title: m.title || m.name,
+        description: m.description,
+        iconUrl: m.icon_url || null,
+        author: "Modrinth", 
+        downloads: m.downloads || 0,
+        follows: m.followers || 0,
+        latestVersion: null,
+        categories: m.categories || [],
+        dateCreated: m.published || "",
+        url: `https://modrinth.com/project/${m.slug}`,
+        projectType: m.project_type || "mod",
+      }));
+      return NextResponse.json({ mods });
     }
 
-    const rawCollections = await collectionsRes.json();
+    // Por defecto, devolver la lista de colecciones (sólo la virtual de seguidos)
+    const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers });
+    let projectCount = 0;
+    if (followsRes.ok) {
+      const follows = await followsRes.json();
+      projectCount = follows.length || 0;
+    }
 
-    const collections: CollectionEntry[] = (rawCollections ?? []).map((c: any) => ({
-      id:           c.id,
-      name:         c.name,
-      description:  c.description ?? "",
-      projectCount: c.projects?.length ?? 0,
-      iconUrl:      c.icon_url ?? null,
-    }));
+    const collections = [
+      {
+        id: "followed-projects",
+        name: "Proyectos Seguidos",
+        description: "Todos los mods que sigues en Modrinth.",
+        projectCount,
+        iconUrl: null,
+      }
+    ];
 
     return NextResponse.json({ collections, username });
   } catch (e: unknown) {

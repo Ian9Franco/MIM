@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Package } from "lucide-react";
-import { BuildPanel }       from "@/components/BuildPanel";
-import { SectionHeading }   from "@/components/SectionHeading";
-import { ProjectsSection }      from "@/components/ProjectsSection";
-import { LibrarySection }       from "@/components/LibrarySection";
-import { PendingFilesSection }  from "@/components/PendingFilesSection";
-import { QuickCategorizeSection } from "@/components/QuickCategorizeSection";
-import { AlertSidebar }         from "@/components/AlertSidebar";
-import { DescriptionModal } from "@/components/DescriptionModal";
+import { BuildPanel }       from "@/components/projects/BuildPanel";
+import { SectionHeading }   from "@/components/ui/SectionHeading";
+import { ProjectsSection }      from "@/components/projects/ProjectsSection";
+import { LibrarySection }       from "@/components/library/LibrarySection";
+import { PendingFilesSection }  from "@/components/library/PendingFilesSection";
+import { QuickCategorizeSection } from "@/components/library/QuickCategorizeSection";
+import { AlertSidebar }         from "@/components/layout/AlertSidebar";
+import { DescriptionModal } from "@/components/ui/DescriptionModal";
 import { CATEGORIES } from "@/lib/constants";
 import type { Project, PendingFile, LibraryFile } from "@/lib/types";
 
@@ -25,7 +25,7 @@ function newId() { return Math.random().toString(36).slice(2, 9); }
 
 /* ── Shared style primitives ─────────────────────────────────────────────────── */
 const LOADER_COLOR: Record<string, string> = {
-  forge: "#EF4444", neoforge: "#FF783C", fabric: "#66C8A0",
+  forge: "#3B82F6", neoforge: "#06B6D4", fabric: "#8B5CF6", quilt: "#EC4899",
 };
 
 /* ── Divider ────────────────────────────────────────────────────────────────── */

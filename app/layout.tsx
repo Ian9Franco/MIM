@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { RootLayoutClient } from "@/components/RootLayoutClient";
+import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 
 export const metadata: Metadata = {
   title: "MIM — Minecraft Intelligent Manager",

@@ -2,7 +2,26 @@
 @import "tailwindcss";
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
+/* OFFICIAL (Default - Antracita & Terracota) */
 :root {
+  --color-background: #141416;
+  --color-surface:    #1c1c1f;
+  --color-card:       #222226;
+  --color-primary:    #D97757; /* Naranja arcilla / Terracota */
+  --color-accent:     #E28A6B;
+  --color-emerald:    #66C8A0;
+  --color-foreground: #F4F4F5; /* Blanco hueso */
+  --color-muted:      #A1A1AA; /* Gris medio */
+  --color-border:     rgba(255, 255, 255, 0.08); /* Gris ceniza sutil */
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Glow vars */
+  --glow-primary: rgba(217, 119, 87, 0.15);
+  --glow-accent:  rgba(226, 138, 107, 0.15);
+}
+
+/* VAMPIRE (Old Dark) */
+[data-theme="vampire"] {
   --color-background: #200D2D;
   --color-surface:    #1a0a24;
   --color-card:       #1e0d29;
@@ -14,12 +33,12 @@
   --color-border:     rgba(187, 150, 228, 0.16);
   --color-border-strong: rgba(187, 150, 228, 0.32);
 
-  /* Glow vars */
   --glow-primary: rgba(187, 150, 228, 0.18);
   --glow-accent:  rgba(255, 208, 102, 0.14);
 }
 
-[data-theme="light"] {
+/* MODERN (Old Light) */
+[data-theme="modern"] {
   --color-background: #F0EBF7;
   --color-surface:    #E8E0F2;
   --color-card:       #FDFAFF;

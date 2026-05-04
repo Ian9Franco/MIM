@@ -7,24 +7,26 @@
 ## 🔥 Novedades (2026-05-04)
 
 ### 🚀 FOMO Discovery Sidebar
-- **Integración completa con Modrinth:** nueva barra lateral desplegable para descubrir contenido sin salir de MIM.
-- **Búsqueda y Filtros:** soporte para búsqueda con debounce, filtros por tipo de proyecto (Mods, Resourcepacks, Datapacks, Shaders) y versión/loader.
-- **Sorting Inteligente:** modos "Recién Lanzados", "Actualizados" y "Relevancia" (activado automáticamente al buscar).
-- **Responsive:** diseño adaptativo que ocupa el 100% en móviles y ancho cómodo en desktop.
+- **Integración con Modrinth:** nueva barra lateral desplegable para descubrir contenido (Mods, Packs, Shaders, Datapacks).
+- **Dynamic Text & Filters:** el FOMO ahora adapta sus textos y oculta selectores innecesarios (ej: Loader en Shaders) según el tipo de asset.
+- **Sorting Inteligente:** soporte para Relevancia, Nuevos y Actualizados.
 
 ### 📦 Universal Asset Management
-- **Scanner Inteligente:** `lib/scanner.ts` ahora identifica Resourcepacks (vía `assets/`), Datapacks (vía `data/`) y Shaders (vía `shaders/`) inspeccionando el ZIP sin extraerlo.
-- **Soporte `pack.mcmeta`:** extracción de nombres reales para packs de recursos.
-- **Aislamiento por Proyecto:** los Packs y Configs ahora son específicos de cada proyecto (`source/[version]/_projects/[nombre]`) en lugar de globales, permitiendo total independencia entre modpacks.
-- **Acceso Directo:** botón en el panel de Build para abrir la carpeta del proyecto en el Explorador de Windows, creando la estructura necesaria al instante.
+- **Scanner Multi-Asset:** `lib/scanner.ts` ahora detecta automáticamente Resourcepacks, Datapacks y Shaders.
+- **Thumbnail Local Extraction:** extracción automática de iconos (`pack.png` o mod icons) en Base64 para visualización instantánea sin internet.
+- **Clasificación por Contexto:** los archivos no-mod se mueven automáticamente a las carpetas del proyecto activo (`_projects/.../resourcepacks`, etc.).
+- **Aislamiento Total:** packs y configs son 100% específicos de cada proyecto.
 
 ### 🎨 UI & UX Polish
-- **Grouping en Librería:** la Librería de Source ahora agrupa los mods por subcategoría (**FAUNA**, **QOL**, **TECNOLOGÍA**, etc.) facilitando la gestión de packs grandes.
-- **Legibilidad:** aumento general de contraste y tamaños de fuente para una lectura más cómoda en pantallas de alta resolución.
-- **Badges de Tipo:** visualización clara de si un archivo es Mod, Resourcepack o Shader en las tarjetas.
+- **Global Scaling:** interfaz un 15% más grande (base 17px) para mejor legibilidad.
+- **Pixel-Perfect Icons:** uso de `image-rendering: pixelated` para iconos de Minecraft ultra nítidos.
+- **Categorización Visual:** agrupación por subcategorías en la librería (Fauna, Tecnología, etc.).
 
-### 🔴 Critical Bug Fix
-- **Protección de Archivos (Data Loss):** corregido error fatal en `/api/classify` donde mover un archivo a su misma categoría resultaba en el truncado (0 bytes) y posterior eliminación del archivo original. Se agregó un chequeo de `path.resolve` para ignorar operaciones si el origen y destino son idénticos.
+### 🔴 Critical Bug Fixes
+- **Data Loss Guard:** bloqueo de operaciones de clasificación si el origen y destino son idénticos.
+- **Modrinth Discovery Fix:** eliminado filtro que ocultaba Datapacks erróneamente.
+- **Download Loader Filter:** corregido error que impedía bajar Packs/Shaders por filtros de loader incompatibles.
+- **Watcher Race Condition:** delay de 500ms para asegurar que archivos grandes terminen de escribirse antes del escaneo.
 
 ---
 

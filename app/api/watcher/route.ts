@@ -57,14 +57,15 @@ export async function GET(req: NextRequest) {
        * Never throws — a scan failure still produces an event with empty meta
        * so the frontend can display the file in the pending list.
        */
-      const processFile = (filePath: string) => {
+      const processFile = async (filePath: string) => {
         const fileName = path.basename(filePath);
         let meta: Partial<ModMeta> = {};
         try {
+          // Small delay to ensure the file has finished writing and is no longer locked
+          // (especially important for larger shaders/resourcepacks)
+          await new Promise(resolve => setTimeout(resolve, 500));
           meta = scanMod(filePath);
         } catch {
-          // File may still be locked by the downloader or isn't a valid ZIP.
-          // Send with empty meta — the UI will show it as "unknown".
           console.warn(`[/api/watcher] scanMod failed for: ${fileName}`);
         }
         send({ path: filePath, fileName, meta });

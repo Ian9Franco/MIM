@@ -25,7 +25,7 @@ function newId() { return Math.random().toString(36).slice(2, 9); }
 
 /* ── Shared style primitives ─────────────────────────────────────────────────── */
 const LOADER_COLOR: Record<string, string> = {
-  forge: "#FF8C00", neoforge: "#FF783C", fabric: "#66C8A0",
+  forge: "#EF4444", neoforge: "#FF783C", fabric: "#66C8A0",
 };
 
 /* ── Divider ────────────────────────────────────────────────────────────────── */
@@ -155,6 +155,7 @@ export default function Page() {
           targetCategory: `${category}\\${sub}`,
           modloader: activeProject.loader,
           version: activeProject.version,
+          projectName: activeProject.name,
         }),
       });
       if (!res.ok) return;

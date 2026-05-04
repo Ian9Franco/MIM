@@ -174,6 +174,7 @@ export function LibrarySection({
                             version={f.meta?.gameVersion ?? f.meta?.version ?? "unknown"}
                             modVersion={f.meta?.modVersion}
                             projectType={f.meta?.projectType}
+                            iconBase64={f.meta?.iconBase64}
                             loader={f.meta?.loader ?? "unknown"}
                             isSelected={isSelected}
                             onClick={() => setSelectedLibFiles((prev) =>

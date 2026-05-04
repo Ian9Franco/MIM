@@ -128,30 +128,73 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   const handleDownload = async (mod: ModHit) => {
     setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
     try {
-      const vRes = await fetch(
-        `https://api.modrinth.com/v2/project/${mod.slug}/version?loaders=["${loader}"]&game_versions=["${gameVersion}"]`,
-        { headers: { "User-Agent": "MIM-App/1.0" } }
-      );
-      if (vRes.ok) {
-        const versions = await vRes.json();
-        if (versions.length > 0) {
-          const downloadUrl = versions[0].files?.[0]?.url;
-          const filename    = versions[0].files?.[0]?.filename;
-          if (downloadUrl && filename) {
-            await fetch("/api/modrinth/download", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url: downloadUrl, filename }),
-            });
-          }
+      const fetchVersion = async (useFilters: boolean) => {
+        const vParams = new URLSearchParams();
+        if (useFilters) {
+          if (projectType === "mod") vParams.set("loaders", JSON.stringify([loader]));
+          if (projectType !== "datapack") vParams.set("game_versions", JSON.stringify([gameVersion]));
         }
+        
+        const vRes = await fetch(
+          `https://api.modrinth.com/v2/project/${mod.slug}/version?${vParams.toString()}`,
+          { headers: { "User-Agent": "MIM-App/1.0" } }
+        );
+        if (!vRes.ok) return [];
+        return await vRes.json();
+      };
+
+      // 1. Try with filters
+      let versions = await fetchVersion(true);
+      
+      // 2. Fallback to absolute latest if no filtered version found
+      if (versions.length === 0) {
+        console.log(`[FOMO] No version found with filters for ${mod.slug}, trying latest...`);
+        versions = await fetchVersion(false);
       }
-    } catch (_) {}
+
+      if (versions.length > 0) {
+        const downloadUrl = versions[0].files?.[0]?.url;
+        const filename    = versions[0].files?.[0]?.filename;
+        if (downloadUrl && filename) {
+          console.log(`[FOMO] Downloading: ${filename} from ${downloadUrl}`);
+          const dlRes = await fetch("/api/modrinth/download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: downloadUrl, filename }),
+          });
+          if (!dlRes.ok) {
+            const err = await dlRes.json();
+            alert(`Error al descargar: ${err.error}`);
+          }
+        } else {
+          alert("No se encontró un archivo de descarga válido para este proyecto.");
+        }
+      } else {
+        alert("No se encontraron versiones disponibles para este proyecto en Modrinth.");
+      }
+    } catch (err) {
+      console.error("[FOMO] Download error:", err);
+      alert("Error crítico durante la descarga. Revisá la consola.");
+    }
     setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
   };
 
   // Responsive sidebar width: full on small screens, 480px on md+
   const sidebarWidth = "min(100vw, 500px)";
+
+  const getLoaderColor = (l: string) => {
+    if (l === "forge") return "#EF4444";
+    if (l === "neoforge") return "#FF783C";
+    if (l === "fabric") return "#66C8A0";
+    return "var(--color-primary)";
+  };
+
+  const getProjectTypeName = (type: string) => {
+    if (type === "resourcepack") return "packs de recursos";
+    if (type === "datapack") return "datapacks";
+    if (type === "shader") return "shaders";
+    return "mods";
+  };
 
   return (
     <>
@@ -219,7 +262,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               type="text"
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
-              placeholder="Buscar mods..."
+              placeholder={`Buscar ${getProjectTypeName(projectType)}...`}
               className="flex-1 bg-transparent outline-none text-sm font-body-med"
               style={{ color: "var(--color-foreground)" }}
             />
@@ -259,39 +302,43 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               ))}
             </select>
 
-            <select
-              value={loader}
-              onChange={(e) => handleLoaderChange(e.target.value)}
-              className="flex-1 text-sm font-subhead rounded-lg px-2 py-2 outline-none transition-colors truncate"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--color-border-strong)",
-                color: "var(--color-foreground)",
-              }}
-            >
-              {LOADERS.map(l => (
-                <option key={l} value={l} style={{ background: "var(--color-card)" }}>
-                  {l.charAt(0).toUpperCase() + l.slice(1)}
-                </option>
-              ))}
-            </select>
+            {projectType === "mod" && (
+              <select
+                value={loader}
+                onChange={(e) => handleLoaderChange(e.target.value)}
+                className="flex-1 text-sm font-subhead rounded-lg px-2 py-2 outline-none transition-colors truncate"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--color-border-strong)",
+                  color: "var(--color-foreground)",
+                }}
+              >
+                {LOADERS.map(l => (
+                  <option key={l} value={l} style={{ background: "var(--color-card)" }}>
+                    {l.charAt(0).toUpperCase() + l.slice(1)}
+                  </option>
+                ))}
+              </select>
+            )}
 
-            <select
-              value={gameVersion}
-              onChange={(e) => handleVersionChange(e.target.value)}
-              className="flex-1 text-sm font-subhead rounded-lg px-2 py-2 outline-none transition-colors truncate"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--color-border-strong)",
-                color: "var(--color-foreground)",
-              }}
-            >
-              {VERSIONS.map(v => (
-                <option key={v} value={v} style={{ background: "var(--color-card)" }}>
-                  {v}
-                </option>
-              ))}
-            </select>
+            {projectType !== "datapack" && (
+              <select
+                value={gameVersion}
+                onChange={(e) => handleVersionChange(e.target.value)}
+                className="flex-1 text-sm font-subhead rounded-lg px-2 py-2 outline-none transition-colors truncate"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--color-border-strong)",
+                  color: "var(--color-foreground)",
+                }}
+              >
+                {VERSIONS.map(v => (
+                  <option key={v} value={v} style={{ background: "var(--color-card)" }}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <button
               onClick={() => fetchMods()}
@@ -330,7 +377,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               ? "Cargando..."
               : query
                 ? `${formatNumber(total)} resultados para "${query}"`
-                : `${formatNumber(total)} mods · Pág. ${page} de ${totalPages}`}
+                : `${formatNumber(total)} ${getProjectTypeName(projectType)} · Pág. ${page} de ${totalPages}`}
           </p>
         </div>
 
@@ -377,6 +424,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                         src={mod.iconUrl}
                         alt={mod.title}
                         className="w-full h-full object-cover"
+                        style={{ imageRendering: "pixelated" }}
                         loading="lazy"
                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                       />

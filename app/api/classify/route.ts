@@ -30,7 +30,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -82,25 +82,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Create target directory ────────────────────────────────────────────────
-    // path.join handles OS separators correctly; category already contains "."
-    const targetDir = path.join(SOURCE_BASE, version, modloader, category, sub);
-    fs.mkdirSync(targetDir, { recursive: true });
-
     const moved: string[] = [];
     const skipped: string[] = [];
 
+    // Import scanner for on-the-fly type detection
+    const { scanMod } = require("@/lib/scanner");
+
     for (const p of pathsToProcess) {
       if (!fs.existsSync(p)) {
-        // Accumulate missing files instead of silently continuing — client
-        // can show a warning for each skipped path.
         console.warn(`[/api/classify] Source not found, skipping: ${p}`);
         skipped.push(p);
         continue;
       }
 
+      // ── Determine Target Path ───────────────────────────────────────────────
+      let finalTargetDir = "";
+      
+      try {
+        const meta = scanMod(p);
+        if (meta.projectType === "resourcepack") {
+          if (!projectName) throw new Error("projectName required for resourcepack classification");
+          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "resourcepacks");
+        } else if (meta.projectType === "shader") {
+          if (!projectName) throw new Error("projectName required for shader classification");
+          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "shaderpacks");
+        } else if (meta.projectType === "datapack") {
+          if (!projectName) throw new Error("projectName required for datapack classification");
+          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "datapacks");
+        } else {
+          // It's a mod (or unknown) — use standard library path
+          finalTargetDir = path.join(SOURCE_BASE, version, modloader, category, sub);
+        }
+      } catch (e) {
+        console.warn(`[/api/classify] Scan failed, falling back to mod path: ${p}`, e);
+        finalTargetDir = path.join(SOURCE_BASE, version, modloader, category, sub);
+      }
+
+      fs.mkdirSync(finalTargetDir, { recursive: true });
       const fileName = path.basename(p);
-      const targetPath = path.join(targetDir, fileName);
+      const targetPath = path.join(finalTargetDir, fileName);
 
       // If the file is already exactly where it's supposed to be, skip to avoid truncation/deletion
       if (path.resolve(p) === path.resolve(targetPath)) {

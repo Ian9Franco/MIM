@@ -7,6 +7,7 @@ interface ModCardProps {
   version: string;
   modVersion?: string;
   projectType?: string;
+  iconBase64?: string;
   loader: string;
   isSelected: boolean;
   onClick: () => void;
@@ -20,7 +21,7 @@ interface ModCardProps {
 }
 
 const LOADER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  forge:    { bg: "rgba(255,140,0,0.12)",   color: "#ff3c00ff", label: "Forge" },
+  forge:    { bg: "rgba(239,68,68,0.12)",   color: "#EF4444", label: "Forge" },
   neoforge: { bg: "rgba(255,120,60,0.12)",  color: "#FF783C", label: "NeoForge" },
   fabric:   { bg: "rgba(102,200,160,0.12)", color: "#66C8A0", label: "Fabric" },
   unknown:  { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", label: "Unknown" },
@@ -41,6 +42,7 @@ export function ModCard({
   isDownloading,
   index = 0,
   projectType,
+  iconBase64,
 }: ModCardProps) {
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion;
   const isLoaderError  = loader  !== "unknown" && activeLoader  !== "" && loader  !== activeLoader;
@@ -103,7 +105,7 @@ export function ModCard({
 
         {/* Icon */}
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105"
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105 overflow-hidden"
           style={{
             background: isError
               ? "rgba(239,68,68,0.1)"
@@ -113,13 +115,16 @@ export function ModCard({
             border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "rgba(255,208,102,0.25)" : "rgba(187,150,228,0.18)"}`,
           }}
         >
-          {isError
-            ? <AlertTriangle className="w-4 h-4 text-red-400" />
-            : <Folder
-                className="w-4 h-4 transition-colors"
-                style={{ color: isSelected ? "var(--color-accent)" : "var(--color-primary)" }}
-              />
-          }
+          {isError ? (
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          ) : iconBase64 ? (
+            <img src={iconBase64} alt="icon" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+          ) : (
+            <Folder
+              className="w-5 h-5 transition-colors"
+              style={{ color: isSelected ? "var(--color-accent)" : "var(--color-primary)" }}
+            />
+          )}
         </div>
 
         {/* Info */}

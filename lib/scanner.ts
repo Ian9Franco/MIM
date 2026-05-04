@@ -31,6 +31,7 @@ export interface ModMeta {
   projectType: string;
   /** True when this is a Fabric mod that could be used via Sinytra Connector. */
   isCompatibleWithConnector: boolean;
+  iconBase64?: string;
 }
 
 // ── Internal Defaults ─────────────────────────────────────────────────────────
@@ -125,6 +126,13 @@ function parseForgeToml(content: string): Partial<ModMeta> {
     }
   }
 
+  // logoFile
+  const logoMatch = content.match(/logoFile\s*=\s*"([^"]+)"/);
+  if (logoMatch) {
+    // We attach it temporarily to result to pick it up later in scanMod
+    (result as any)._logoFile = logoMatch[1];
+  }
+
   return result;
 }
 
@@ -167,6 +175,15 @@ export function scanMod(filePath: string): ModMeta {
         : null;
       const gv = depStr ? extractMcVersionFromRange(depStr) : null;
 
+      let iconBase64: string | undefined;
+      const iconPath = typeof data.icon === "string" ? data.icon : Array.isArray(data.icon) ? data.icon[0] : null;
+      if (iconPath) {
+        const iconEntry = findEntry(iconPath.replace(/^\//, ""));
+        if (iconEntry) {
+          try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+        }
+      }
+
       return {
         ...DEFAULT_META,
         loader: "fabric",
@@ -177,6 +194,7 @@ export function scanMod(filePath: string): ModMeta {
         gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
         // Fabric mods are candidate for Sinytra Connector usage
         isCompatibleWithConnector: true,
+        ...(iconBase64 ? { iconBase64 } : {}),
       };
     } catch {
       // Malformed JSON — fall through with loader tag only
@@ -196,6 +214,15 @@ export function scanMod(filePath: string): ModMeta {
         ? extractMcVersionFromRange(String(mcDep.versions))
         : gameVersionFromFilename(filePath);
 
+      let iconBase64: string | undefined;
+      const iconPath = typeof ql.metadata?.icon === "string" ? ql.metadata.icon : null;
+      if (iconPath) {
+        const iconEntry = findEntry(iconPath.replace(/^\//, ""));
+        if (iconEntry) {
+          try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+        }
+      }
+
       return {
         ...DEFAULT_META,
         loader: "quilt",
@@ -204,6 +231,7 @@ export function scanMod(filePath: string): ModMeta {
         modName: ql.metadata?.name ?? UNKNOWN,
         modVersion: ql.version ?? UNKNOWN,
         gameVersion: gv ?? UNKNOWN,
+        ...(iconBase64 ? { iconBase64 } : {}),
       };
     } catch {
       return { ...DEFAULT_META, loader: "quilt", projectType: "mod" };
@@ -214,6 +242,15 @@ export function scanMod(filePath: string): ModMeta {
   const neoforgeEntry = findEntry("META-INF/neoforge.mods.toml");
   if (neoforgeEntry) {
     const parsed = parseForgeToml(neoforgeEntry.getData().toString("utf8"));
+    let iconBase64: string | undefined;
+    if ((parsed as any)._logoFile) {
+      const iconEntry = findEntry((parsed as any)._logoFile);
+      if (iconEntry) {
+        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+      }
+      delete (parsed as any)._logoFile;
+    }
+
     return {
       ...DEFAULT_META,
       ...parsed,
@@ -222,6 +259,7 @@ export function scanMod(filePath: string): ModMeta {
       // If TOML didn't give us a game version, try the filename
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
+      ...(iconBase64 ? { iconBase64 } : {}),
     };
   }
 
@@ -229,6 +267,15 @@ export function scanMod(filePath: string): ModMeta {
   const forgeEntry = findEntry("META-INF/mods.toml");
   if (forgeEntry) {
     const parsed = parseForgeToml(forgeEntry.getData().toString("utf8"));
+    let iconBase64: string | undefined;
+    if ((parsed as any)._logoFile) {
+      const iconEntry = findEntry((parsed as any)._logoFile);
+      if (iconEntry) {
+        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+      }
+      delete (parsed as any)._logoFile;
+    }
+
     return {
       ...DEFAULT_META,
       ...parsed,
@@ -236,6 +283,7 @@ export function scanMod(filePath: string): ModMeta {
       projectType: "mod",
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
+      ...(iconBase64 ? { iconBase64 } : {}),
     };
   }
 
@@ -269,12 +317,21 @@ export function scanMod(filePath: string): ModMeta {
     if (isResourcePack) type = "resourcepack";
     else if (isDataPack) type = "datapack";
 
+    let iconBase64: string | undefined;
+    const packPngEntry = findEntry("pack.png");
+    if (packPngEntry) {
+      try {
+        iconBase64 = `data:image/png;base64,${packPngEntry.getData().toString("base64")}`;
+      } catch {}
+    }
+
     return {
       ...DEFAULT_META,
       projectType: type,
       modId: path.basename(filePath, path.extname(filePath)),
       modName: description,
       gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+      ...(iconBase64 ? { iconBase64 } : {}),
     };
   }
 

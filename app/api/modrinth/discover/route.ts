@@ -28,11 +28,22 @@ export async function GET(req: NextRequest) {
   const q           = searchParams.get("q")?.trim() ?? "";
   const offset      = (page - 1) * pageSize;
 
-  const facets = JSON.stringify([
-    [`categories:${loader}`],
-    [`versions:${gameVersion}`],
+  const facetsArray: string[][] = [
     [`project_type:${projectType}`],
-  ]);
+  ];
+
+  // Datapacks don't use the versions facet usually.
+  if (projectType !== "datapack") {
+    facetsArray.push([`versions:${gameVersion}`]);
+  }
+
+  // Only filter by loader (forge/fabric) if we are searching for mods.
+  // Resourcepacks, datapacks and shaders are usually loader-independent.
+  if (projectType === "mod" && loader !== "unknown") {
+    facetsArray.push([`categories:${loader}`]);
+  }
+
+  const facets = JSON.stringify(facetsArray);
 
   const headers: Record<string, string> = {
     "User-Agent": "MIM-App/1.0 (contact@mim.local)",
@@ -59,20 +70,22 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
 
     // Map to a clean, minimal shape
-    const mods = (data.hits ?? []).map((h: any) => ({
-      projectId:   h.project_id,
-      slug:        h.slug,
-      title:       h.title,
-      description: h.description,
-      iconUrl:     h.icon_url ?? null,
-      author:      h.author,
-      downloads:   h.downloads,
-      follows:     h.follows,
-      latestVersion: h.latest_version ?? null,
-      categories:  h.categories ?? [],
-      dateCreated: h.date_created,
-      url:         `https://modrinth.com/mod/${h.slug}`,
-    }));
+    // Removed strict project_type filter because Modrinth may tag some projects as 'mod' even if we faceted by 'datapack', resulting in 0 hits returned after filter.
+    const mods = (data.hits ?? [])
+      .map((h: any) => ({
+        projectId:   h.project_id,
+        slug:        h.slug,
+        title:       h.title,
+        description: h.description,
+        iconUrl:     h.icon_url ?? null,
+        author:      h.author,
+        downloads:   h.downloads,
+        follows:     h.follows,
+        latestVersion: h.latest_version ?? null,
+        categories:  h.categories ?? [],
+        dateCreated: h.date_created,
+        url:         `https://modrinth.com/mod/${h.slug}`,
+      }));
 
     return NextResponse.json({
       mods,

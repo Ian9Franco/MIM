@@ -43,6 +43,7 @@ interface ModCheckInput {
     modName?: string;
     modId?: string;
     modVersion?: string;
+    projectType?: string;
   };
 }
 
@@ -57,6 +58,7 @@ interface ModCheckResult {
 interface ModrinthHit {
   title: string;
   project_id: string;
+  slug: string;
 }
 
 interface ModrinthVersionObj {
@@ -128,38 +130,51 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Step 2 — Fallback: name-based search filtered by loader + game version
+        // Step 2 — Fallback: name-based search filtered by game version and type
         if (!projectId) {
-          const facets = JSON.stringify([
-            [`categories:${loader}`],
+          const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" 
+            ? mod.meta.projectType 
+            : "mod";
+            
+          const facets: string[][] = [
             [`versions:${gameVersion}`],
-          ]);
+            [`project_type:${projectType}`]
+          ];
+          
+          // Only enforce the modloader if it's a mod. Resourcepacks/shaders often don't tag a loader.
+          if (projectType === "mod") {
+            facets.push([`categories:${loader}`]);
+          }
+
           const res = await fetch(
             `${MODRINTH_API}/search` +
               `?query=${encodeURIComponent(nameToSearch)}` +
-              `&facets=${encodeURIComponent(facets)}&limit=3`,
+              `&facets=${encodeURIComponent(JSON.stringify(facets))}&limit=3`,
             { headers }
           );
           if (res.ok) {
             const data = await res.json();
             if (data.hits?.length > 0) {
-              // Prefer an exact title match to avoid installing the wrong mod
-              const exactMatch = (data.hits as ModrinthHit[]).find(
-                (h) => h.title.toLowerCase() === nameToSearch.toLowerCase()
+              // Strictly look for exact title match OR slug match.
+              // This prevents "Primal" matching "Primal Winter" just because it's the first result.
+              const hit = (data.hits as ModrinthHit[]).find(
+                (h) => 
+                  h.title.toLowerCase() === nameToSearch.toLowerCase() ||
+                  h.slug.toLowerCase() === nameToSearch.toLowerCase()
               );
-              projectId = exactMatch
-                ? exactMatch.project_id
-                : (data.hits as ModrinthHit[])[0].project_id;
+              if (hit) projectId = hit.project_id;
             }
           }
         }
 
         if (!projectId) return { path: mod.path, status: "unknown" };
 
-        // Step 3 — Fetch version list filtered by loader + game version
+        // Step 3 — Fetch version list filtered by game version (and loader if it's a mod)
+        const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" ? mod.meta.projectType : "mod";
+        const loadersParam = projectType === "mod" ? `&loaders=["${loader}"]` : "";
         const versionsRes = await fetch(
           `${MODRINTH_API}/project/${projectId}/version` +
-            `?loaders=["${loader}"]&game_versions=["${gameVersion}"]`,
+            `?game_versions=["${gameVersion}"]${loadersParam}`,
           { headers }
         );
         if (!versionsRes.ok) return { path: mod.path, status: "error" };

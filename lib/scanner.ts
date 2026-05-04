@@ -28,6 +28,7 @@ export interface ModMeta {
   modVersion: string;
   gameVersion: string;
   loader: string;
+  projectType: string;
   /** True when this is a Fabric mod that could be used via Sinytra Connector. */
   isCompatibleWithConnector: boolean;
 }
@@ -42,6 +43,7 @@ const DEFAULT_META: ModMeta = {
   modVersion: UNKNOWN,
   gameVersion: UNKNOWN,
   loader: UNKNOWN,
+  projectType: UNKNOWN,
   isCompatibleWithConnector: false,
 };
 
@@ -168,6 +170,7 @@ export function scanMod(filePath: string): ModMeta {
       return {
         ...DEFAULT_META,
         loader: "fabric",
+        projectType: "mod",
         modId: data.id ?? UNKNOWN,
         modName: data.name ?? UNKNOWN,
         modVersion: data.version ?? UNKNOWN,
@@ -177,7 +180,7 @@ export function scanMod(filePath: string): ModMeta {
       };
     } catch {
       // Malformed JSON — fall through with loader tag only
-      return { ...DEFAULT_META, loader: "fabric", isCompatibleWithConnector: true };
+      return { ...DEFAULT_META, loader: "fabric", projectType: "mod", isCompatibleWithConnector: true };
     }
   }
 
@@ -196,13 +199,14 @@ export function scanMod(filePath: string): ModMeta {
       return {
         ...DEFAULT_META,
         loader: "quilt",
+        projectType: "mod",
         modId: ql.id ?? UNKNOWN,
         modName: ql.metadata?.name ?? UNKNOWN,
         modVersion: ql.version ?? UNKNOWN,
         gameVersion: gv ?? UNKNOWN,
       };
     } catch {
-      return { ...DEFAULT_META, loader: "quilt" };
+      return { ...DEFAULT_META, loader: "quilt", projectType: "mod" };
     }
   }
 
@@ -214,6 +218,7 @@ export function scanMod(filePath: string): ModMeta {
       ...DEFAULT_META,
       ...parsed,
       loader: "neoforge",
+      projectType: "mod",
       // If TOML didn't give us a game version, try the filename
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
@@ -228,14 +233,55 @@ export function scanMod(filePath: string): ModMeta {
       ...DEFAULT_META,
       ...parsed,
       loader: "forge",
+      projectType: "mod",
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
     };
   }
 
-  // ── 5. Unknown — filename heuristic only ─────────────────────────────────────
+  // ── 5. Resourcepack / Datapack / Shaderpack ──────────────────────────────────
+  const isShader = entries.some((e: AdmZip.IZipEntry) => e.entryName.startsWith("shaders/"));
+  if (isShader) {
+    return {
+      ...DEFAULT_META,
+      projectType: "shader",
+      modId: path.basename(filePath, path.extname(filePath)),
+      modName: path.basename(filePath, path.extname(filePath)),
+      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+    };
+  }
+
+  const packMcmetaEntry = findEntry("pack.mcmeta");
+  if (packMcmetaEntry) {
+    let description = path.basename(filePath, path.extname(filePath));
+    try {
+      const parsed = JSON.parse(packMcmetaEntry.getData().toString("utf8"));
+      if (parsed?.pack?.description) {
+        description = typeof parsed.pack.description === "object"
+          ? (parsed.pack.description.text || description)
+          : String(parsed.pack.description);
+      }
+    } catch {}
+
+    const isResourcePack = entries.some((e: AdmZip.IZipEntry) => e.entryName.startsWith("assets/"));
+    const isDataPack = entries.some((e: AdmZip.IZipEntry) => e.entryName.startsWith("data/"));
+    let type = UNKNOWN;
+    if (isResourcePack) type = "resourcepack";
+    else if (isDataPack) type = "datapack";
+
+    return {
+      ...DEFAULT_META,
+      projectType: type,
+      modId: path.basename(filePath, path.extname(filePath)),
+      modName: description,
+      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+    };
+  }
+
+  // ── 6. Unknown — filename heuristic only ─────────────────────────────────────
   return {
     ...DEFAULT_META,
+    projectType: UNKNOWN,
     gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
   };
 }

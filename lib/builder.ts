@@ -218,16 +218,18 @@ export function buildAllUser(
   }
   console.log(`[builder] Collected ${jars.size} mods.`);
 
+  const projectName = path.basename(buildPath);
+
   // ── 3. ResourcePacks ────────────────────────────────────────────────────────
-  const srcResources = path.join(sourceBase, version, "common", "resourcepacks");
+  const srcResources = path.join(sourceBase, version, "_projects", projectName, "resourcepacks");
   copyIfExists(srcResources, resourcesDir, "resourcepacks");
 
-  // ── 4. ShaderPacks (version-agnostic, lives in assets/) ────────────────────
-  const srcShaders = path.join(sourceBase, "..", "assets", "shaders");
+  // ── 4. ShaderPacks ──────────────────────────────────────────────────────────
+  const srcShaders = path.join(sourceBase, version, "_projects", projectName, "shaderpacks");
   copyIfExists(srcShaders, shadersDir, "shaderpacks");
 
   // ── 5. Config Presets ────────────────────────────────────────────────────────
-  const srcConfig = path.join(sourceBase, "..", "presets", version);
+  const srcConfig = path.join(sourceBase, version, "_projects", projectName, "config");
   copyIfExists(srcConfig, path.join(stagingDir, "config"), "config presets");
 
   // ── 6. Safety: verify no server-only mods leaked into the player build ───────
@@ -302,12 +304,14 @@ export function buildAllHost(
   }
   console.log(`[builder] Collected ${jars.size} mods.`);
 
+  const projectName = path.basename(buildPath);
+
   // ── 3. Datapacks ────────────────────────────────────────────────────────────
-  const srcDatapacks = path.join(sourceBase, version, "common", "datapacks");
+  const srcDatapacks = path.join(sourceBase, version, "_projects", projectName, "datapacks");
   copyIfExists(srcDatapacks, datapacksDir, "datapacks");
 
   // ── 4. Config Presets ────────────────────────────────────────────────────────
-  const srcConfig = path.join(sourceBase, "..", "presets", version);
+  const srcConfig = path.join(sourceBase, version, "_projects", projectName, "config");
   copyIfExists(srcConfig, path.join(outputDir, "config"), "config presets");
 
   const message =

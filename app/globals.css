@@ -10,9 +10,9 @@
   --color-accent:     #FFD066;
   --color-emerald:    #66C8A0;
   --color-foreground: #F2ECF9;
-  --color-muted:      rgba(242, 236, 249, 0.45);
-  --color-border:     rgba(187, 150, 228, 0.14);
-  --color-border-strong: rgba(187, 150, 228, 0.28);
+  --color-muted:      rgba(242, 236, 249, 0.60);
+  --color-border:     rgba(187, 150, 228, 0.16);
+  --color-border-strong: rgba(187, 150, 228, 0.32);
 
   /* Glow vars */
   --glow-primary: rgba(187, 150, 228, 0.18);
@@ -26,10 +26,10 @@
   --color-primary:    #7B52B8;
   --color-accent:     #C47B00;
   --color-emerald:    #1B8A64;
-  --color-foreground: #1C0A2E;
-  --color-muted:      rgba(28, 10, 46, 0.5);
-  --color-border:     rgba(123, 82, 184, 0.15);
-  --color-border-strong: rgba(123, 82, 184, 0.3);
+  --color-foreground: #160824;
+  --color-muted:      rgba(28, 10, 46, 0.62);
+  --color-border:     rgba(123, 82, 184, 0.18);
+  --color-border-strong: rgba(123, 82, 184, 0.35);
 
   --glow-primary: rgba(123, 82, 184, 0.12);
   --glow-accent:  rgba(196, 123, 0, 0.10);
@@ -57,6 +57,7 @@ html, body {
   color: var(--color-foreground);
   font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
@@ -85,7 +86,7 @@ html, body {
 .font-body-med { font-family: "Poppins", sans-serif; font-weight: 500; }
 
 /* Small labels, metadata */
-.font-caption  { font-family: "Poppins", sans-serif; font-weight: 300; font-size: 0.73rem; line-height: 1.4; }
+.font-caption  { font-family: "Poppins", sans-serif; font-weight: 300; font-size: 0.76rem; line-height: 1.45; }
 
 /* Badge labels, uppercase tags */
 .font-label    { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 0.65rem; letter-spacing: 0.09em; text-transform: uppercase; }

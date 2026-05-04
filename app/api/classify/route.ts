@@ -102,6 +102,12 @@ export async function POST(req: NextRequest) {
       const fileName = path.basename(p);
       const targetPath = path.join(targetDir, fileName);
 
+      // If the file is already exactly where it's supposed to be, skip to avoid truncation/deletion
+      if (path.resolve(p) === path.resolve(targetPath)) {
+        moved.push(targetPath);
+        continue;
+      }
+
       // Cross-drive move: copy first, then delete source.
       // fs.rename throws EXDEV when src and dest are on different drives (C: → D:).
       fs.copyFileSync(p, targetPath);

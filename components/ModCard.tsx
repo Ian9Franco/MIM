@@ -6,6 +6,7 @@ interface ModCardProps {
   name: string;
   version: string;
   modVersion?: string;
+  projectType?: string;
   loader: string;
   isSelected: boolean;
   onClick: () => void;
@@ -19,7 +20,7 @@ interface ModCardProps {
 }
 
 const LOADER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  forge:    { bg: "rgba(255,140,0,0.12)",   color: "#FF8C00", label: "Forge" },
+  forge:    { bg: "rgba(255,140,0,0.12)",   color: "#ff3c00ff", label: "Forge" },
   neoforge: { bg: "rgba(255,120,60,0.12)",  color: "#FF783C", label: "NeoForge" },
   fabric:   { bg: "rgba(102,200,160,0.12)", color: "#66C8A0", label: "Fabric" },
   unknown:  { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", label: "Unknown" },
@@ -39,6 +40,7 @@ export function ModCard({
   onDownload,
   isDownloading,
   index = 0,
+  projectType,
 }: ModCardProps) {
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion;
   const isLoaderError  = loader  !== "unknown" && activeLoader  !== "" && loader  !== activeLoader;
@@ -152,6 +154,17 @@ export function ModCard({
             >
               {ls.label}
             </span>
+
+            {/* Project Type Badge */}
+            {projectType && projectType !== "mod" && projectType !== "unknown" && (
+              <span className="font-label rounded-full px-2 py-0.5"
+                style={{ background: "rgba(228,150,184,0.1)", color: "#E496B8", fontSize: "0.6rem" }}
+              >
+                {projectType === "resourcepack" ? "🖼️ Resource" :
+                 projectType === "datapack" ? "📦 Datapack" :
+                 projectType === "shader" ? "✨ Shader" : projectType}
+              </span>
+            )}
 
             {/* Error flags */}
             {isVersionError && (

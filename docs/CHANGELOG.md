@@ -1,6 +1,30 @@
 # MIM — Backend Changelog
-> Auditoría y refactor completo del backend. Fecha: 2026-05-03  
-> Archivos modificados: **11** · Bugs corregidos: **10** · Mejoras: **25+**
+> Auditoría y refactor completo del backend. Fecha: 2026-05-04  
+> Archivos modificados: **15+** · Bugs corregidos: **2** · Mejoras: **10+**
+
+---
+
+## 🔥 Novedades (2026-05-04)
+
+### 🚀 FOMO Discovery Sidebar
+- **Integración completa con Modrinth:** nueva barra lateral desplegable para descubrir contenido sin salir de MIM.
+- **Búsqueda y Filtros:** soporte para búsqueda con debounce, filtros por tipo de proyecto (Mods, Resourcepacks, Datapacks, Shaders) y versión/loader.
+- **Sorting Inteligente:** modos "Recién Lanzados", "Actualizados" y "Relevancia" (activado automáticamente al buscar).
+- **Responsive:** diseño adaptativo que ocupa el 100% en móviles y ancho cómodo en desktop.
+
+### 📦 Universal Asset Management
+- **Scanner Inteligente:** `lib/scanner.ts` ahora identifica Resourcepacks (vía `assets/`), Datapacks (vía `data/`) y Shaders (vía `shaders/`) inspeccionando el ZIP sin extraerlo.
+- **Soporte `pack.mcmeta`:** extracción de nombres reales para packs de recursos.
+- **Aislamiento por Proyecto:** los Packs y Configs ahora son específicos de cada proyecto (`source/[version]/_projects/[nombre]`) en lugar de globales, permitiendo total independencia entre modpacks.
+- **Acceso Directo:** botón en el panel de Build para abrir la carpeta del proyecto en el Explorador de Windows, creando la estructura necesaria al instante.
+
+### 🎨 UI & UX Polish
+- **Grouping en Librería:** la Librería de Source ahora agrupa los mods por subcategoría (**FAUNA**, **QOL**, **TECNOLOGÍA**, etc.) facilitando la gestión de packs grandes.
+- **Legibilidad:** aumento general de contraste y tamaños de fuente para una lectura más cómoda en pantallas de alta resolución.
+- **Badges de Tipo:** visualización clara de si un archivo es Mod, Resourcepack o Shader en las tarjetas.
+
+### 🔴 Critical Bug Fix
+- **Protección de Archivos (Data Loss):** corregido error fatal en `/api/classify` donde mover un archivo a su misma categoría resultaba en el truncado (0 bytes) y posterior eliminación del archivo original. Se agregó un chequeo de `path.resolve` para ignorar operaciones si el origen y destino son idénticos.
 
 ---
 

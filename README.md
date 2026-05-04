@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Minecraft Intelligent Manager (MIM)
+
+Welcome to the **Minecraft Intelligent Manager (MIM)**.
+
+MIM is an advanced Next.js & Tauri native application tailored for streamlining the management, categorization, and building of Minecraft modpacks (Forge, NeoForge, Fabric, and Quilt).
+
+## Core Features
+
+1. **Intelligent Deep Scan**: Automatically parses `.jar` manifests internally to strictly detect modloader compatibility and target game versions, preventing crashes.
+2. **Modrinth Integration**: Features one-click update checking. MIM cross-references your entire library with Modrinth's API, notifying you of updates and downloading them automatically to your Pending queue, matching your specific loader and version.
+3. **Quick Categorization (La Aduana)**: Organize downloaded mods into your `source` directory with rapid hotkeys (1, 2, 3). Recategorize directly from your library or unclassify them back to the Downloads folder.
+4. **Real-time Monitoring**: Actively watches your `Downloads` folder for `.jar` files using Server-Sent Events, updating the interface seamlessly without reloading.
+5. **Modern Native UI**: Crafted with a premium Glassmorphism aesthetic, an intelligent 2-column layout for scaling to large modpacks, responsive dynamic badges, and full **Dark & Light Mode** support (with a semantic design system).
+6. **Automated Building**: Compiles your categorized mods into ready-to-play `.zip` files with injected configurations.
 
 ## Getting Started
 
-First, run the development server:
+Make sure you have your dependencies installed. We recommend Node.js 18+.
 
 ```bash
+# Start the Tauri development server (Native App)
+npx tauri dev
+
+# Or, start just the Next.js web interface
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
+For optimal performance with the update scanner, define your Modrinth API token in a `.env.local` file:
+```env
+MODRINTH_API_KEY=your_token_here
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the `docs/` folder for architectural and frontend details.

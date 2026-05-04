@@ -1,0 +1,239 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+@import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --color-background: #200D2D;
+  --color-surface:    #1a0a24;
+  --color-card:       #1e0d29;
+  --color-primary:    #BB96E4;
+  --color-accent:     #FFD066;
+  --color-emerald:    #66C8A0;
+  --color-foreground: #F2ECF9;
+  --color-muted:      rgba(242, 236, 249, 0.45);
+  --color-border:     rgba(187, 150, 228, 0.14);
+  --color-border-strong: rgba(187, 150, 228, 0.28);
+
+  /* Glow vars */
+  --glow-primary: rgba(187, 150, 228, 0.18);
+  --glow-accent:  rgba(255, 208, 102, 0.14);
+}
+
+[data-theme="light"] {
+  --color-background: #F0EBF7;
+  --color-surface:    #E8E0F2;
+  --color-card:       #FDFAFF;
+  --color-primary:    #7B52B8;
+  --color-accent:     #C47B00;
+  --color-emerald:    #1B8A64;
+  --color-foreground: #1C0A2E;
+  --color-muted:      rgba(28, 10, 46, 0.5);
+  --color-border:     rgba(123, 82, 184, 0.15);
+  --color-border-strong: rgba(123, 82, 184, 0.3);
+
+  --glow-primary: rgba(123, 82, 184, 0.12);
+  --glow-accent:  rgba(196, 123, 0, 0.10);
+}
+
+@theme {
+  --color-background: var(--color-background);
+  --color-card:       var(--color-card);
+  --color-primary:    var(--color-primary);
+  --color-accent:     var(--color-accent);
+  --color-foreground: var(--color-foreground);
+  --font-poppins:     "Poppins", sans-serif;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(ellipse 70% 55% at 5% -5%,  rgba(187, 150, 228, 0.13) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 95% 105%, rgba(255, 208, 102, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 60%,  rgba(187, 150, 228, 0.04) 0%, transparent 70%);
+  background-attachment: fixed;
+  color: var(--color-foreground);
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(187, 150, 228, 0.22); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(187, 150, 228, 0.40); }
+
+/* ── Selection ──────────────────────────────────────────────────────────────── */
+::selection { background: rgba(187, 150, 228, 0.28); color: var(--color-foreground); }
+
+/* ── Typography ─────────────────────────────────────────────────────────────── */
+/* Display: Hero text, massive titles */
+.font-display  { font-family: "Poppins", sans-serif; font-weight: 900; font-style: italic; letter-spacing: -0.04em; line-height: 0.92; }
+
+/* Headline: Section titles, card titles */
+.font-headline { font-family: "Poppins", sans-serif; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+
+/* Subheadline: card names, item labels */
+.font-subhead  { font-family: "Poppins", sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Body regular */
+.font-body     { font-family: "Poppins", sans-serif; font-weight: 400; }
+.font-body-med { font-family: "Poppins", sans-serif; font-weight: 500; }
+
+/* Small labels, metadata */
+.font-caption  { font-family: "Poppins", sans-serif; font-weight: 300; font-size: 0.73rem; line-height: 1.4; }
+
+/* Badge labels, uppercase tags */
+.font-label    { font-family: "Poppins", sans-serif; font-weight: 700; font-size: 0.65rem; letter-spacing: 0.09em; text-transform: uppercase; }
+
+/* Accent italic: decorative, hotkey numbers */
+.font-accent   { font-family: "Poppins", sans-serif; font-weight: 700; font-style: italic; }
+.font-black-it { font-family: "Poppins", sans-serif; font-weight: 900; font-style: italic; }
+.font-thin     { font-family: "Poppins", sans-serif; font-weight: 200; }
+
+/* ── Glassmorphism ──────────────────────────────────────────────────────────── */
+.glass {
+  background: color-mix(in srgb, var(--color-card) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+
+.glass-hover:hover {
+  background: color-mix(in srgb, var(--color-card) 96%, transparent);
+  border-color: var(--color-border-strong);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 8%, transparent),
+    0 8px 32px var(--glow-primary),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Surface: slightly lighter than glass, no blur needed */
+.surface {
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+
+/* ── Glow utilities ─────────────────────────────────────────────────────────── */
+.glow-primary { box-shadow: 0 0 24px var(--glow-primary); }
+.glow-accent  { box-shadow: 0 0 24px var(--glow-accent); }
+.text-glow-primary { text-shadow: 0 0 28px rgba(187, 150, 228, 0.55); }
+.text-glow-accent  { text-shadow: 0 0 24px rgba(255, 208, 102, 0.45); }
+
+/* ── Focus ring ─────────────────────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Input base ─────────────────────────────────────────────────────────────── */
+.input-base {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  color: var(--color-foreground);
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-base:focus {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 3px var(--glow-primary);
+}
+
+.input-base::placeholder { color: var(--color-muted); }
+
+[data-theme="light"] .input-base { background: rgba(255, 255, 255, 0.7); }
+
+/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes grow {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20%       { transform: translateX(-5px) rotate(-0.8deg); }
+  40%       { transform: translateX(5px)  rotate(0.8deg); }
+  60%       { transform: translateX(-3px) rotate(-0.4deg); }
+  80%       { transform: translateX(3px); }
+}
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(187, 150, 228, 0.4); }
+  70%  { box-shadow: 0 0 0 7px rgba(187, 150, 228, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(187, 150, 228, 0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dotBlink {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+  40%            { opacity: 1;   transform: scale(1); }
+}
+
+/* ── Animation classes ──────────────────────────────────────────────────────── */
+.animate-fade-up    { animation: fadeUp    0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in    { animation: fadeIn    0.28s ease forwards; }
+.animate-scale-in   { animation: scaleIn   0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-right{ animation: slideRight 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-down { animation: slideDown  0.3s  cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-float      { animation: float     3.2s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulseRing 1.6s ease infinite; }
+.animate-shake      { animation: shake     0.48s ease-in-out; }
+.animate-spin       { animation: spin      1s   linear infinite; }
+
+/* Stagger helpers */
+.stagger-1 { animation-delay: 0.06s; }
+.stagger-2 { animation-delay: 0.12s; }
+.stagger-3 { animation-delay: 0.18s; }
+.stagger-4 { animation-delay: 0.24s; }
+.stagger-5 { animation-delay: 0.30s; }

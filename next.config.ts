@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // No "output: export" — SSE and API routes require server mode.
+  // Tauri reads from the Next.js dev server (nextDevUrl in tauri.conf.json).
 };
 
 export default nextConfig;

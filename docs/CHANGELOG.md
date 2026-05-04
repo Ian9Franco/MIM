@@ -4,6 +4,52 @@
 
 ---
 
+## 🔥 Novedades (2026-05-04) — Integraciones Críticas
+
+### 🚀 CurseForge Integration
+- **API de Eternal Implementada:** Endpoint `/api/curseforge/discover` con soporte completo para búsqueda de mods, resourcepacks, shaders y datapacks.
+- **FOMO Sidebar Toggle:** Nuevos botones para alternar entre Modrinth y CurseForge con colores distintivos (verde Modrinth, naranja CurseForge).
+- **Mapeo de IDs:** Traducción automática de IDs de proyecto entre plataformas y mapeo de loaders (Forge→1, Fabric→4, NeoForge→6).
+- **UI Adaptativa:** Indicador "CurseForge" en mods de CF. Botón de descarga cambia a "Abrir externo" ya que CF requiere descarga manual.
+- **Error Handling:** Banner informativo cuando `CURSEFORGE_API_KEY` no está configurada (HTTP 503).
+
+**Archivos creados/modificados:**
+- `app/api/curseforge/discover/route.ts` — Endpoint de búsqueda
+- `components/FomoSidebar.tsx` — Toggle entre fuentes, normalización de datos
+
+---
+
+### 📦 Collections Presets (Plantillas)
+- **Nuevo Tab "Plantillas":** Tercer tab en FOMO Sidebar junto a "Descubrir" y "Mis Colecciones".
+- **Colecciones Curadas:** 5 plantillas pre-armadas:
+  - ⚡ Starter Tech Pack (Create, Thermal, Mekanism)
+  - ➕ Vanilla Enhancements (Sodium, QoL mods)
+  - 🔮 Magic & Adventure (Botania, Ars Nouveau)
+  - 🚀 Performance Essentials (Sodium, Lithium, optimización)
+  - 🏗️ Builder's Dream (WorldEdit, decorativos)
+- **Auto-configuración:** Al aplicar una plantilla, el loader y versión se actualizan automáticamente a los recomendados.
+- **Tags Visuales:** Cada plantilla muestra tags (tech, magic, performance) para identificación rápida.
+
+**Archivos creados/modificados:**
+- `app/api/modrinth/presets/route.ts` — Endpoint de plantillas
+- `components/FomoSidebar.tsx` — Nuevo tab, UI de presets, handler de aplicación
+
+---
+
+### 📝 README Killer (Español)
+- **Hero Potente:** Nueva estructura con badges, value proposition clara y navegación visual.
+- **Problem/Solution Framework:** Explicación del problema (caos de mods) → solución (flujo 3-clics).
+- **Tabla de Features:** Feature × Qué resuelve × Tiempo ahorrado.
+- **Diagrama de Arquitectura:** ASCII art mostrando Frontend → API → Integraciones → Core Engine.
+- **Decisiones Técnicas:** Case study de SSE vs WebSockets y dual-source APIs.
+- **Screenshots ASCII:** Representaciones del dashboard y FOMO sidebar.
+- **Estructura Completa:** Roadmap, contributing guidelines, licencia.
+
+**Archivo modificado:**
+- `README.md` — Reescritura completa en español profesional
+
+---
+
 ## 🔥 Novedades (2026-05-04)
 
 ### 🚀 FOMO Discovery Sidebar

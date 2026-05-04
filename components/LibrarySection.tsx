@@ -20,6 +20,8 @@ interface LibrarySectionProps {
   handleCheckUpdates: () => void;
   handleViewDescription: () => void;
   loadingDescription: boolean;
+  handleSyncAllDescriptions: () => void;
+  syncingDescriptions: boolean;
   handleUnclassify: () => void;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
 }
@@ -39,6 +41,8 @@ export function LibrarySection({
   handleCheckUpdates,
   handleViewDescription,
   loadingDescription,
+  handleSyncAllDescriptions,
+  syncingDescriptions,
   handleUnclassify,
   handleDownloadUpdate
 }: LibrarySectionProps) {
@@ -78,6 +82,17 @@ export function LibrarySection({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncAllDescriptions}
+            disabled={syncingDescriptions || library.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
+            style={{ background: "rgba(187,150,228,0.1)", border: "1px solid rgba(187,150,228,0.25)", color: "var(--color-primary)", fontSize: "0.65rem" }}
+            title="Sincronizar info de Modrinth para toda la librería"
+          >
+            {syncingDescriptions ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Sync Info
+          </button>
+
           {selectedLibFiles.length === 1 && (
             <button
               onClick={handleViewDescription}

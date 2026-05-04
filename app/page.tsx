@@ -354,6 +354,31 @@ export default function Page() {
   }, [library, pendingFiles, ignoredConflicts]);
 
   /* ── View Mod Description ────────────────────────────────────────────────── */
+  const [syncingDescriptions, setSyncingDescriptions] = useState(false);
+
+  const handleSyncAllDescriptions = async () => {
+    if (library.length === 0 || !activeProject) return;
+    setSyncingDescriptions(true);
+    try {
+      const res = await fetch("/api/modrinth/export-descriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          mods: library, 
+          loader: activeProject.loader, 
+          gameVersion: activeProject.version 
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Sincronización exitosa: ${data.count} descripciones procesadas.`);
+      }
+    } catch (e) {
+      console.error("Error al sincronizar descripciones", e);
+    }
+    setSyncingDescriptions(false);
+  };
+
   const handleViewDescription = async () => {
     if (selectedLibFiles.length !== 1 || !activeProject) return;
     setLoadingDescription(true);
@@ -466,6 +491,8 @@ export default function Page() {
           handleCheckUpdates={handleCheckUpdates}
           handleViewDescription={handleViewDescription}
           loadingDescription={loadingDescription}
+          handleSyncAllDescriptions={handleSyncAllDescriptions}
+          syncingDescriptions={syncingDescriptions}
           handleUnclassify={handleUnclassify}
           handleDownloadUpdate={handleDownloadUpdate}
         />

@@ -41,6 +41,7 @@ const UNKNOWN_META: ModMeta = {
   modVersion: "unknown",
   gameVersion: "unknown",
   loader: "unknown",
+  projectType: "unknown",
   isCompatibleWithConnector: false,
 };
 

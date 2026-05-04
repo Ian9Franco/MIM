@@ -9,7 +9,7 @@ Estas son las integraciones y mejoras pendientes para el Minecraft Intelligent M
 
 ## 2. Integración con Collections (Modrinth)
 - Sincronización con colecciones personales de Modrinth: [Following Collections](https://modrinth.com/collection/following).
-- Botón para "Descargar Colección Completa" directamente a un proyecto.
+- Botón para "Descargar" directamente a un proyecto.
 - Visualización de colecciones como "presets" externos.
 
 ## 3. Mejoras de UI de Versiones

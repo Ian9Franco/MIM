@@ -1,5 +1,5 @@
 
-const CURSEFORGE_API_KEY = '2534c484-3d6c-4310-ac05-4092025c6d11';
+const CURSEFORGE_API_KEY = process.env.CURSEFORGE_API_KEY;
 
 async function testConfig(name, url, headers) {
     console.log(`Testing [${name}]...`);

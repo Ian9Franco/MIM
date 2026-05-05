@@ -32,6 +32,7 @@ export interface ModMeta {
   projectType: string;
   /** True when this is a Fabric mod that could be used via Sinytra Connector. */
   isCompatibleWithConnector: boolean;
+  author?: string;
   iconBase64?: string;
   sha1?: string;
 }
@@ -114,6 +115,10 @@ function parseForgeToml(content: string): Partial<ModMeta> {
   const verMatch = content.match(/^version\s*=\s*"(?![^"]*\$\{)([^"]+)"/m);
   if (verMatch) result.modVersion = verMatch[1];
 
+  // authors fallback
+  const authorMatch = content.match(/authors?\s*=\s*"([^"]+)"/i);
+  if (authorMatch) (result as any).author = authorMatch[1];
+
   // minecraft dependency version range
   // Split on [[dependencies so each chunk is one dependency block
   const sections = content.split(/\[\[dependencies/i);
@@ -121,8 +126,9 @@ function parseForgeToml(content: string): Partial<ModMeta> {
     if (/modId\s*=\s*["']minecraft["']/i.test(section)) {
       const rangeMatch = section.match(/versionRange\s*=\s*"([^"]+)"/);
       if (rangeMatch) {
+        const isPlus = rangeMatch[1].includes(",)") || rangeMatch[1].includes(">=");
         const gv = extractMcVersionFromRange(rangeMatch[1]);
-        if (gv) result.gameVersion = gv;
+        if (gv) result.gameVersion = isPlus ? `${gv}+` : gv;
       }
       break; // Only one minecraft dep block expected
     }

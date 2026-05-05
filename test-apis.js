@@ -1,6 +1,6 @@
 
-const MODRINTH_TOKEN = 'mrp_zAl2Im5Wgnk26HUQh7D881dpTxbE9U9gu8ZtCF6CZzuNw7cOoUuuMG1Ede2x';
-const CURSEFORGE_API_KEY = '2534c484-3d6c-4310-ac05-4092025c6d11';
+const MODRINTH_TOKEN = process.env.MODRINTH_TOKEN; // Usar variable de entorno
+const CURSEFORGE_API_KEY = process.env.CURSEFORGE_API_KEY;
 
 async function testCurseForge() {
     console.log('--- Testing CurseForge API ---');

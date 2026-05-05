@@ -33,6 +33,7 @@ interface ModCardProps {
   modVersion?:   string;
   projectType?:  string;
   iconBase64?:   string;
+  author?:       string;
   loader:        string;
   isSelected:    boolean;
   onClick:       () => void;
@@ -63,9 +64,12 @@ export const ModCard = memo(function ModCard({
   name, version, modVersion, loader, isSelected, onClick,
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
-  isPending, onDelete, isDeleting, riskScore,
+  isPending, onDelete, isDeleting, riskScore, author,
 }: ModCardProps) {
-  const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion;
+  // Logic: if version is "1.20+", it matches "1.20.1"
+  const isCompatibleRange = version.endsWith("+") && activeVersion.startsWith(version.slice(0, -1));
+  
+  const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion && !isCompatibleRange;
   const isLoaderError  = loader  !== "unknown" && activeLoader  !== ""  && loader  !== activeLoader;
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader as LoaderKey] ?? LOADER_STYLES.unknown;
@@ -136,9 +140,16 @@ export const ModCard = memo(function ModCard({
 
         {/* Metadata */}
         <div className="flex-1 min-w-0">
-          <p className="font-subhead text-sm truncate leading-tight" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
-            {name}
-          </p>
+          <div className="flex items-baseline gap-2">
+            <p className="font-subhead text-sm truncate leading-tight" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
+              {name}
+            </p>
+            {author && author !== "unknown" && (
+              <span className="font-caption text-[10px] opacity-40 truncate">
+                by {author}
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5" role="list" aria-label="Etiquetas">
             <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.accent, fontSize: "0.6rem" }}>{version}</span>
             {modVersion && modVersion !== "unknown" && (

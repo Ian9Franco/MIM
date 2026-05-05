@@ -210,6 +210,7 @@ export function LibrarySection({
                             modVersion={f.meta?.modVersion}
                             projectType={f.meta?.projectType}
                             iconBase64={f.meta?.iconBase64}
+                            author={f.meta?.author}
                             loader={f.meta?.loader ?? "unknown"}
                             isSelected={isSelected}
                             onClick={() => setSelectedLibFiles((prev) =>

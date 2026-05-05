@@ -87,12 +87,43 @@ interface CurseForgeEntry {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const apiKey = process.env.CURSEFORGE_API_KEY;
+  let apiKey = process.env.CURSEFORGE_API_KEY;
 
-  // Debug: log si la key está presente (no logueamos el valor completo por seguridad)
+  // Debug: log detallado para diagnosticar problemas con la API key
+  console.log("[CurseForge API] ===== DIAGNÓSTICO =====");
   console.log("[CurseForge API] CURSEFORGE_API_KEY presente:", !!apiKey);
   console.log("[CurseForge API] CURSEFORGE_API_KEY length:", apiKey?.length || 0);
-  console.log("[CurseForge API] CURSEFORGE_API_KEY first 10 chars:", apiKey?.substring(0, 10) || "N/A");
+  console.log("[CurseForge API] CURSEFORGE_API_KEY starts with '$2a':", apiKey?.startsWith('$2a'));
+  console.log("[CurseForge API] CURSEFORGE_API_KEY first 20 chars:", JSON.stringify(apiKey?.substring(0, 20)));
+  
+  // Si la key no empieza con $2a (formato bcrypt de CurseForge), leer directamente del archivo
+  if (!apiKey || !apiKey.startsWith('$2a')) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const envPath = path.resolve(process.cwd(), '.env.local');
+      console.log("[CurseForge API] Intentando leer .env.local desde:", envPath);
+      
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        // Buscar la línea CURSEFORGE_API_KEY y capturar TODO hasta el final de línea
+        const match = envContent.match(/CURSEFORGE_API_KEY=(.+)$/m);
+        if (match) {
+          const realKey = match[1].trim();
+          console.log("[CurseForge API] Key desde archivo:", realKey.substring(0, 20) + "...");
+          console.log("[CurseForge API] Key desde archivo length:", realKey.length);
+          console.log("[CurseForge API] Usando key desde archivo en lugar de process.env");
+          apiKey = realKey;
+        } else {
+          console.error("[CurseForge API] No se encontró CURSEFORGE_API_KEY en el archivo");
+        }
+      } else {
+        console.error("[CurseForge API] Archivo .env.local no encontrado");
+      }
+    } catch (e) {
+      console.error("[CurseForge API] Error leyendo archivo:", e);
+    }
+  }
 
   if (!apiKey) {
     return NextResponse.json(
@@ -125,11 +156,13 @@ export async function GET(req: NextRequest) {
   const cfLoaderId = LOADER_TO_CF_ID[loader];
 
   const headers = {
-    "x-api-key":      apiKey.trim(),
+    "x-api-key":      apiKey,
     "Accept":         "application/json",
     "Content-Type":   "application/json",
     "User-Agent":     "MinecraftIntelligentManager/1.0",
   };
+  
+  console.log("[CurseForge API] Headers preparados, key length:", apiKey.length);
 
   try {
     const params = new URLSearchParams({

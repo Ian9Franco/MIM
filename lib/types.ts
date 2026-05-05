@@ -81,6 +81,7 @@ export interface ModMeta {
   version?:     string;
   loader?:      string;
   projectType?: string;
+  author?:      string;
   iconBase64?:  string;
   sha1?:        string;
 }

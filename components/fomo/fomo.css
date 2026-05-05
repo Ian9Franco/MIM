@@ -1,0 +1,261 @@
+/* components/fomo/fomo.css */
+
+.fomo-sidebar {
+  /* Default: Official Dark Theme */
+  --fomo-bg: rgba(20, 20, 22, 0.95);
+  --fomo-card-bg: #1c1c1f;
+  --fomo-card-border: rgba(255, 255, 255, 0.08);
+  --fomo-card-hover-border: rgba(255, 255, 255, 0.16);
+  --fomo-text-primary: #F4F4F5;
+  --fomo-text-muted: #A1A1AA;
+  --fomo-text-subtle: rgba(255, 255, 255, 0.5);
+  
+  --fomo-border: rgba(255, 255, 255, 0.08);
+  --fomo-secondary-bg: rgba(255, 255, 255, 0.04);
+  
+  --fomo-input-bg: rgba(255, 255, 255, 0.03);
+  --fomo-input-border: rgba(255, 255, 255, 0.08);
+  
+  --fomo-pill-inactive-bg: rgba(255, 255, 255, 0.04);
+  --fomo-pill-inactive-text: rgba(255, 255, 255, 0.6);
+  --fomo-pill-inactive-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Vampire Theme Overrides */
+[data-theme="vampire"] .fomo-sidebar {
+  --fomo-bg: rgba(32, 13, 45, 0.96);
+  --fomo-card-bg: #1e0d29;
+  --fomo-card-border: rgba(187, 150, 228, 0.16);
+  --fomo-card-hover-border: rgba(187, 150, 228, 0.32);
+  --fomo-text-primary: #F2ECF9;
+  --fomo-text-muted: rgba(242, 236, 249, 0.75);
+  --fomo-text-subtle: rgba(242, 236, 249, 0.5);
+  
+  --fomo-border: rgba(187, 150, 228, 0.16);
+  --fomo-secondary-bg: rgba(187, 150, 228, 0.06);
+  
+  --fomo-input-bg: rgba(187, 150, 228, 0.04);
+  --fomo-input-border: rgba(187, 150, 228, 0.16);
+  
+  --fomo-pill-inactive-bg: rgba(187, 150, 228, 0.06);
+  --fomo-pill-inactive-text: rgba(242, 236, 249, 0.6);
+  --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
+}
+
+/* Modern Theme Overrides (LIGHT THEME) */
+[data-theme="modern"] .fomo-sidebar {
+  --fomo-bg: rgba(243, 240, 254, 0.98);
+  --fomo-card-bg: #FFFFFF;
+  --fomo-card-border: rgba(124, 58, 237, 0.12);
+  --fomo-card-hover-border: rgba(124, 58, 237, 0.28);
+  --fomo-text-primary: #1E1B4B; /* High-contrast indigo dark text */
+  --fomo-text-muted: #4338CA; /* Dark blue/purple */
+  --fomo-text-subtle: #4B5563; /* Dark slate gray for descriptions */
+  
+  --fomo-border: rgba(124, 58, 237, 0.15);
+  --fomo-secondary-bg: rgba(124, 58, 237, 0.06);
+  
+  --fomo-input-bg: #FFFFFF;
+  --fomo-input-border: rgba(124, 58, 237, 0.2);
+  
+  --fomo-pill-inactive-bg: rgba(124, 58, 237, 0.06);
+  --fomo-pill-inactive-text: #4F46E5;
+  --fomo-pill-inactive-border: rgba(124, 58, 237, 0.15);
+}
+
+/* Structural Components */
+
+.fomo-sidebar-container {
+  background: var(--fomo-bg) !important;
+  border-color: var(--fomo-border) !important;
+  color: var(--fomo-text-primary) !important;
+}
+
+.fomo-header-border {
+  border-color: var(--fomo-border) !important;
+}
+
+.fomo-text-title {
+  color: var(--fomo-text-primary) !important;
+}
+
+.fomo-text-subtle {
+  color: var(--fomo-text-subtle) !important;
+}
+
+.fomo-section-header {
+  color: var(--fomo-text-muted) !important;
+  opacity: 0.95 !important;
+  font-weight: 800;
+}
+
+/* Inactive Pill Style */
+.fomo-pill-inactive {
+  background-color: var(--fomo-pill-inactive-bg) !important;
+  color: var(--fomo-pill-inactive-text) !important;
+  border-color: var(--fomo-pill-inactive-border) !important;
+}
+
+.fomo-pill-inactive:hover {
+  border-color: var(--fomo-text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* Cards */
+.fomo-card {
+  background-color: var(--fomo-card-bg) !important;
+  border-color: var(--fomo-card-border) !important;
+  color: var(--fomo-text-primary) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fomo-card:hover {
+  border-color: var(--fomo-card-hover-border) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+}
+
+.fomo-card-title {
+  color: var(--fomo-text-primary) !important;
+}
+
+.fomo-card-desc {
+  color: var(--fomo-text-subtle) !important;
+}
+
+/* Select inputs */
+.fomo-select-element {
+  background-color: var(--fomo-input-bg) !important;
+  border-color: var(--fomo-input-border) !important;
+  color: var(--fomo-text-primary) !important;
+}
+
+.fomo-select-element option {
+  background-color: var(--fomo-card-bg) !important;
+  color: var(--fomo-text-primary) !important;
+}
+
+/* Pagination container */
+.fomo-pagination-bar {
+  border-color: var(--fomo-border) !important;
+  background-color: var(--fomo-secondary-bg) !important;
+}
+
+.fomo-pagination-btn {
+  background-color: var(--fomo-pill-inactive-bg) !important;
+  border: 1px solid var(--fomo-pill-inactive-border) !important;
+  color: var(--fomo-text-primary) !important;
+  transition: all 0.2s ease;
+}
+
+.fomo-pagination-btn:hover:not(:disabled) {
+  background-color: var(--fomo-secondary-bg) !important;
+  border-color: var(--fomo-text-muted) !important;
+}
+
+.fomo-pagination-page-inactive {
+  background-color: var(--fomo-pill-inactive-bg) !important;
+  border-color: var(--fomo-pill-inactive-border) !important;
+  color: var(--fomo-text-muted) !important;
+}
+
+.fomo-pagination-page-inactive:hover {
+  background-color: var(--fomo-secondary-bg) !important;
+  border-color: var(--fomo-text-muted) !important;
+  color: var(--fomo-text-primary) !important;
+}
+
+.fomo-pagination-page-active {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
+}
+
+/* ==========================================
+   SOURCE STYLING RULES & GLOWS (Modrinth & CurseForge)
+   ========================================== */
+
+/* Animación de luz giratoria para los bordes */
+@keyframes rotating-glow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.fomo-card {
+  position: relative;
+  z-index: 1;
+  background: var(--fomo-card-bg);
+  border: 1px solid var(--fomo-card-border);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fomo-card::before {
+  content: "";
+  position: absolute;
+  inset: -150%;
+  z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 150deg,
+    var(--glow-color, #1ED760) 180deg,
+    transparent 210deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  animation: rotate-border 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate-border {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fomo-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: var(--brand-color) !important;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+}
+
+.fomo-card:hover::before {
+  opacity: 0.4;
+}
+
+/* Modrinth Specific Glow */
+.fomo-source-modrinth .fomo-card {
+  --glow-color: #1ED760;
+  --brand-color: #1ED760;
+}
+
+/* CurseForge Specific Glow */
+.fomo-source-curseforge .fomo-card {
+  --glow-color: #F16436;
+  --brand-color: #F16436;
+}
+
+/* Custom Dropdowns (Selects) */
+.fomo-select-element {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2em;
+  padding-right: 2.5rem !important;
+  transition: all 0.2s ease;
+}
+
+.fomo-select-element:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--brand-color) !important;
+}
+
+.fomo-select-element:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05), 0 0 15px var(--brand-color)22;
+}

@@ -12,6 +12,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Package } from "lucide-react";
 import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
@@ -53,6 +54,27 @@ export default function Page() {
   const [loading,          setLoading]          = useState(true);
   const [showSubcategories,setShowSubcategories]= useState<string | null>(null);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
+  const [fomoOpen,         setFomoOpen]         = useState(false);
+  const [detailsOpen,      setDetailsOpen]      = useState(false);
+  const [mounted,          setMounted]          = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const handleFomoToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setFomoOpen(customEvent.detail);
+    };
+    const handleDetailsToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open: boolean }>;
+      setDetailsOpen(customEvent.detail.open);
+    };
+    window.addEventListener("fomo-toggle", handleFomoToggle);
+    window.addEventListener("fomo-details-toggle", handleDetailsToggle);
+    return () => {
+      window.removeEventListener("fomo-toggle", handleFomoToggle);
+      window.removeEventListener("fomo-details-toggle", handleDetailsToggle);
+    };
+  }, []);
 
   const lib = useLibrary(
     projects.activeProject,
@@ -170,7 +192,7 @@ export default function Page() {
   }, []);
 
   return (
-    <div className={`transition-all duration-300 ease-in-out ${sidebarOpen ? "pr-[400px]" : "pr-0"}`}>
+    <div className={`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${sidebarOpen ? "pr-[400px]" : "pr-0"}`}>
       <div className="space-y-8 pb-16">
 
         {/* ── Row 1: Projects + Build ──────────────────────────────────── */}
@@ -207,18 +229,26 @@ export default function Page() {
 
         <Divider />
 
-        {/* ── Row 2: Pending + Categorize | Library ────────────────────── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        {/* ── Row 2: Dynamic Column Grid (Downloads | Categorization | Library) ── */}
+        <div className={`grid grid-cols-1 ${fomoOpen ? "lg:grid-cols-2" : "xl:grid-cols-3"} gap-6 items-start mt-6 animate-fade-up`}>
+          
+          {/* Column 1: Descargas Pendientes (Only when FOMO is closed) */}
+          {!fomoOpen && (
+            <div className="space-y-6">
+              <PendingFilesSection
+                pendingFiles={pendingFiles}
+                loading={loading}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                activeProject={projects.activeProject}
+                onDeleteFile={handleDeletePendingFile}
+                layout="main"
+              />
+            </div>
+          )}
 
+          {/* Column 2: Categorización Rápida */}
           <div className="space-y-6">
-            <PendingFilesSection
-              pendingFiles={pendingFiles}
-              loading={loading}
-              selectedFiles={selectedFiles}
-              setSelectedFiles={setSelectedFiles}
-              activeProject={projects.activeProject}
-              onDeleteFile={handleDeletePendingFile}
-            />
             <QuickCategorizeSection
               allSelected={allSelected}
               activeProject={projects.activeProject}
@@ -230,26 +260,29 @@ export default function Page() {
             />
           </div>
 
-          <LibrarySection
-            library={lib.library}
-            loadingLibrary={lib.loadingLibrary}
-            selectedLibFiles={selectedLibFiles}
-            setSelectedLibFiles={setSelectedLibFiles}
-            activeProject={projects.activeProject}
-            downloadingMods={lib.downloadingMods}
-            modrinthStatus={lib.modrinthStatus}
-            ignoredUpdates={lib.ignoredUpdates}
-            conflicts={lib.conflicts}
-            setSidebarOpen={setSidebarOpen}
-            checkingUpdates={lib.checkingUpdates}
-            handleCheckUpdates={lib.handleCheckUpdates}
-            handleViewDescription={lib.handleViewDescription}
-            loadingDescription={lib.loadingDescription}
-            handleSyncAllDescriptions={lib.handleSyncAllDescriptions}
-            syncingDescriptions={lib.syncingDescriptions}
-            handleUnclassify={lib.handleUnclassify}
-            handleDownloadUpdate={lib.handleDownloadUpdate}
-          />
+          {/* Column 3: Librería de Source */}
+          <div>
+            <LibrarySection
+              library={lib.library}
+              loadingLibrary={lib.loadingLibrary}
+              selectedLibFiles={selectedLibFiles}
+              setSelectedLibFiles={setSelectedLibFiles}
+              activeProject={projects.activeProject}
+              downloadingMods={lib.downloadingMods}
+              modrinthStatus={lib.modrinthStatus}
+              ignoredUpdates={lib.ignoredUpdates}
+              conflicts={lib.conflicts}
+              setSidebarOpen={setSidebarOpen}
+              checkingUpdates={lib.checkingUpdates}
+              handleCheckUpdates={lib.handleCheckUpdates}
+              handleViewDescription={lib.handleViewDescription}
+              loadingDescription={lib.loadingDescription}
+              handleSyncAllDescriptions={lib.handleSyncAllDescriptions}
+              syncingDescriptions={lib.syncingDescriptions}
+              handleUnclassify={lib.handleUnclassify}
+              handleDownloadUpdate={lib.handleDownloadUpdate}
+            />
+          </div>
         </div>
 
         {/* ── Modals + Sidebars ────────────────────────────────────────── */}
@@ -272,6 +305,38 @@ export default function Page() {
           handleDownloadUpdate={lib.handleDownloadUpdate}
           handleDismissUpdate={lib.handleDismissUpdate}
         />
+
+        {/* Right Floating Sidebar for Downloads or Project Details when FOMO is open */}
+        {mounted && typeof window !== "undefined" && createPortal(
+          <div
+            className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-l ${
+              detailsOpen ? "w-[600px] max-w-[90vw]" : "w-[380px]"
+            } ${
+              fomoOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
+            }`}
+            style={{
+              background: "color-mix(in srgb, var(--color-card) 94%, transparent)",
+              borderColor: "var(--color-border)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <div className={`flex-1 flex flex-col min-h-0 ${detailsOpen ? "" : "p-6 overflow-y-auto custom-scrollbar"}`}>
+              {detailsOpen ? (
+                <div id="fomo-details-sidebar-portal" className="flex-1 flex flex-col min-h-0" />
+              ) : (
+                <PendingFilesSection
+                  pendingFiles={pendingFiles}
+                  loading={loading}
+                  selectedFiles={selectedFiles}
+                  setSelectedFiles={setSelectedFiles}
+                  activeProject={projects.activeProject}
+                  onDeleteFile={handleDeletePendingFile}
+                />
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     </div>
   );

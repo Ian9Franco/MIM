@@ -14,6 +14,7 @@ interface PendingFilesSectionProps {
   setSelectedFiles: React.Dispatch<React.SetStateAction<PendingFile[]>>;
   activeProject: Project | null;
   onDeleteFile?: (file: PendingFile) => Promise<void>;
+  layout?: "sidebar" | "main";
 }
 
 export function PendingFilesSection({
@@ -22,11 +23,12 @@ export function PendingFilesSection({
   selectedFiles,
   setSelectedFiles,
   activeProject,
-  onDeleteFile
+  onDeleteFile,
+  layout = "sidebar"
 }: PendingFilesSectionProps) {
   const [openingFolder, setOpeningFolder] = useState(false);
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
-  const [fileToDelete, setFileToDelete] = useState<PendingFile | null>(null);
+  const [filesToDelete, setFilesToDelete] = useState<PendingFile[]>([]);
 
   const handleOpenDownloadsFolder = async () => {
     setOpeningFolder(true);
@@ -43,19 +45,37 @@ export function PendingFilesSection({
   };
 
   const handleDeleteRequest = (file: PendingFile) => {
-    setFileToDelete(file);
+    const isSelected = selectedFiles.some(s => s.path === file.path);
+    if (isSelected && selectedFiles.length > 1) {
+      setFilesToDelete(selectedFiles);
+    } else {
+      setFilesToDelete([file]);
+    }
   };
 
   const handleConfirmDelete = async () => {
-    if (!fileToDelete || !onDeleteFile) return;
-    setDeletingFiles(prev => ({ ...prev, [fileToDelete.path]: true }));
+    if (filesToDelete.length === 0 || !onDeleteFile) return;
+    const paths = filesToDelete.map(f => f.path);
+    setDeletingFiles(prev => {
+      const next = { ...prev };
+      paths.forEach(p => { next[p] = true; });
+      return next;
+    });
+
     try {
-      await onDeleteFile(fileToDelete);
+      for (const file of filesToDelete) {
+        await onDeleteFile(file);
+      }
+      setSelectedFiles(prev => prev.filter(s => !paths.includes(s.path)));
     } catch (e) {
-      console.error("Error deleting file:", e);
+      console.error("Error deleting files:", e);
     } finally {
-      setDeletingFiles(prev => ({ ...prev, [fileToDelete.path]: false }));
-      setFileToDelete(null);
+      setDeletingFiles(prev => {
+        const next = { ...prev };
+        paths.forEach(p => { next[p] = false; });
+        return next;
+      });
+      setFilesToDelete([]);
     }
   };
 
@@ -64,7 +84,7 @@ export function PendingFilesSection({
       <div className="flex items-start justify-between mb-2">
         <SectionHeading
           icon={<Inbox className="w-4 h-4" />}
-          title="Ingresos Pendientes"
+          title="Descargas pendientes"
           sub="Archivos detectados en tu carpeta de Descargas"
           badge={pendingFiles.length}
           accentColor="var(--color-primary)"
@@ -80,7 +100,7 @@ export function PendingFilesSection({
           Carpeta
         </button>
       </div>
-      <div className="space-y-2">
+      <div className={layout === "main" ? "space-y-2.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar p-1" : "space-y-2.5"}>
         {loading ? (
           <SkeletonLoader />
         ) : pendingFiles.length === 0 ? (
@@ -116,11 +136,17 @@ export function PendingFilesSection({
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal
-        isOpen={!!fileToDelete}
-        onClose={() => setFileToDelete(null)}
+        isOpen={filesToDelete.length > 0}
+        onClose={() => setFilesToDelete([])}
         onConfirm={handleConfirmDelete}
-        title="¿Eliminar archivo?"
-        message={fileToDelete ? `¿Estás seguro de que querés eliminar "${fileToDelete.fileName}"? Esta acción no se puede deshacer.` : ""}
+        title={filesToDelete.length > 1 ? "¿Eliminar archivos seleccionados?" : "¿Eliminar archivo?"}
+        message={
+          filesToDelete.length > 1
+            ? `¿Estás seguro de que querés eliminar los ${filesToDelete.length} archivos seleccionados? Esta acción no se puede deshacer.`
+            : filesToDelete.length === 1
+            ? `¿Estás seguro de que querés eliminar "${filesToDelete[0].fileName}"? Esta acción no se puede deshacer.`
+            : ""
+        }
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         type="danger"

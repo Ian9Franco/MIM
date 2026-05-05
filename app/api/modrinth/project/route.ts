@@ -23,7 +23,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
     const data = await res.json();
-    return NextResponse.json({ body: data.body });
+    return NextResponse.json({ 
+      body: data.body,
+      client_side: data.client_side,
+      server_side: data.server_side
+    });
   } catch (e) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

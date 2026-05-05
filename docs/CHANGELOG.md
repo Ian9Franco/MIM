@@ -1,11 +1,26 @@
 # MIM — Backend Changelog
 
-### 🌈 Multi-Theme & High Contrast (2026-05-05)
-- **Dynamic Token System:** Refactorización de `theme/tokens.ts` para usar variables CSS dinámicas.
-- **Modo Modern (Light) Fix:** Optimización de contraste en el modo claro. Textos legibles y colores de acento adaptativos (Deep Amber para botones dorados).
-- **Theme-Aware Components:** `FomoModCard` y `FomoVersionOverlay` ahora son 100% compatibles con cambios de tema en tiempo real.
-- **Glassmorphism Premium:** Upgrade de `.glass` a 24px de blur con sombras de alta fidelidad.
-- **Custom Scrollbar:** Implementación de barras de desplazamiento ultra-finas integradas en el diseño.
+### 🔮 FOMO 3.0 & Dynamic Floating Glass Layout (2026-05-05)
+- **Ancho Dinámico "Glass Gutter"**: Rediseño de la geometría de pantallas. Al abrirse los detalles de un mod, el panel de FOMO se contrae fluidamente de `75vw` a `calc(100vw - 600px - 40px)`, y la barra lateral derecha se ensancha de `380px` a `600px`. Esto crea una separación vertical ("gutter") de `40px` mostrando el fondo de la app principal con un desenfoque de fondo cinematográfico.
+- **Grilla Reactiva con Columnas Forzadas**: Unificación del feed a una grilla responsiva. El sistema fuerza dinámicamente un layout de exactamente **2 columnas** max tanto en el buscador de FOMO como en Colecciones en cuanto se abren los detalles del proyecto para evitar que las tarjetas colapsen por la reducción del espacio.
+- **Colecciones Enriquecidas con Selección**: Integrada la lógica de selección de mods y descarga en lote (Bulk Download) con su propia barra inferior de acciones masivas dentro del tab "Mis Colecciones" en una grilla premium idéntica a la sección de descubrimiento.
+- **Acción de Selección Libre de Tarjeta**: Selección inteligente al clickear cualquier espacio libre de la tarjeta contenedora del mod.
+- **Freno de Propagación en Clicks**: Implementado `e.stopPropagation()` en todos los botones interactivos internos (`Detalles`, `Descargar`, `Web`, `Colección`) para permitir acciones inmediatas directas sin disparar ni interferir con la selección del mod.
+- **Portal Polling Resolution**: Implementado sistema de sondeo recursivo cada `20ms` (hasta 10 reintentos) en `FomoVersionOverlay` para buscar el nodo portaleado `#fomo-details-sidebar-portal`, previniendo race conditions en la renderización asincrónica de componentes hermanos de React.
+- **Estética Unificada**: Cabecera reducida y limpia. Eliminación de filtros de ordenación redundantes del header superior, moviéndolos al panel de filtros flotantes para ganar altura vertical para el contenido.
+
+### 🚀 FOMO QoL & Advanced Filtering (2026-05-05)
+- **Multi-Filtro Inteligente:** Panel de filtros avanzados con soporte para multi-selección de versiones, categorías (tags) y entornos (Client/Server).
+- **Persistencia de Selección:** La selección de mods para descarga masiva ahora persiste entre páginas y cambios de fuente (Modrinth/CurseForge) usando `localStorage`.
+- **Bulk Download:** Implementada barra de acciones masivas para descargar todos los mods seleccionados con un solo clic.
+- **Aesthetic Dual-Source:**
+  - **CurseForge Style:** Nuevo estilo "Rústico y Cuadrado" para tarjetas de CurseForge, diferenciándolas visualmente de Modrinth.
+  - **Modrinth Style:** Mantiene el look "Glassmorphism" moderno y redondeado.
+- **Header Refactor:** Reubicación de los botones de distribuidor al header para maximizar el espacio vertical de la lista de resultados.
+- **Detalles Enriquecidos:**
+  - **Environment Badges:** Visualización clara de compatibilidad Client-side / Server-side (Requerido/Opcional).
+  - **Plataformas Expandidas:** Listado de todos los modloaders compatibles detectados para cada proyecto.
+  - **Main Versions Highlight:** Resaltado visual de las versiones "Main" (1.20.1 y 1.21.1) en todos los selectores.
 
 ### 🛡️ Security Layer (Threat Detection v1.0)
 - **Bytecode Scanner:** Implementado motor de detección de amenazas en `lib/security-scanner.ts`.

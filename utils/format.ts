@@ -14,7 +14,7 @@ export function formatSize(bytes: number): string {
 
 export function getProjectTypeLabel(type: string): string {
   if (type === "mod") return "Mods";
-  if (type === "resourcepack") return "Resource Packs";
+  if (type === "resourcepack") return "Texturas";
   if (type === "shader") return "Shaders";
   if (type === "datapack") return "Data Packs";
   return "Elementos";
@@ -22,9 +22,14 @@ export function getProjectTypeLabel(type: string): string {
 
 export function openExternal(url: string) {
   try {
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) window.location.href = url;
-  } catch {
-    window.location.href = url;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.error("No se pudo abrir la URL externa:", e);
   }
 }

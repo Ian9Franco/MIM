@@ -12,6 +12,13 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [fomoOpen, setFomoOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const handleToggleFomo = (isOpen: boolean) => {
+    setFomoOpen(isOpen);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: isOpen }));
+    }
+  };
+
   return (
     <>
       {/* ── Ambient overlay ──────────────────────────────────────────────────── */}
@@ -27,11 +34,11 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       />
 
       {/* ── FOMO Sidebar ─────────────────────────────────────────────────────── */}
-      <FomoSidebar open={fomoOpen} onClose={() => setFomoOpen(false)} />
+      <FomoSidebar open={fomoOpen} onClose={() => handleToggleFomo(false)} />
 
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
-        className="relative z-10 min-h-screen flex flex-col transition-all duration-300 ease-in-out"
+        className="relative z-10 min-h-screen flex flex-col transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{ paddingLeft: fomoOpen ? "min(100vw, 500px)" : "0px" }}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -42,7 +49,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4 animate-fade-up">
               {/* FOMO button */}
               <button
-                onClick={() => setFomoOpen(!fomoOpen)}
+                onClick={() => handleToggleFomo(!fomoOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200"
                 style={{
                   background: fomoOpen ? "rgba(255,108,62,0.15)" : "rgba(255,108,62,0.08)",
@@ -59,7 +66,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                     (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,108,62,0.2)";
                   }
                 }}
-                title="Novedades de Modrinth"
+                title="Find Out More, Obviously"
               >
                 <Flame className="w-4 h-4" />
                 <span className="font-headline text-xs tracking-wide hidden sm:inline">FOMO</span>

@@ -4,7 +4,8 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, AlertTriangle, CheckCircle, Info, Loader2 } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 
@@ -72,13 +73,19 @@ export function ConfirmModal({
   isLoading = false,
   children,
 }: ConfirmModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (!isOpen) return null;
 
   const config = typeConfig[type];
   const Icon = config.icon;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -168,4 +175,10 @@ export function ConfirmModal({
       </div>
     </div>
   );
+
+  if (mounted && typeof window !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return null;
 }

@@ -6,13 +6,14 @@ export const COLORS = {
   borderStrong: "var(--color-border-strong)",
   card: "var(--color-card)",
   fomoFlame: "#FF6C3E",
+  modrinthGreen: "#1ED760",
   wisteria: "#BB96E4",
   red: "var(--color-danger)",
   redBg: "var(--color-danger-bg)",
-  emerald: "var(--color-emerald)",
+  emerald: "#1ED760", // Unificado con Modrinth
   accent: "var(--color-accent)",
-  gold: "var(--color-accent)", // Use accent variable to ensure contrast
-  curseforgeOrange: "#EF6C00"
+  gold: "#FFB800",
+  curseforgeOrange: "#F16436"
 };
 
 export type LoaderKey = "forge" | "fabric" | "neoforge" | "quilt";

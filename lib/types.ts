@@ -15,6 +15,8 @@ export interface ModHit {
   url:           string;
   projectType?:  string;
   body?:         string;
+  client_side?:  string;
+  server_side?:  string;
   _source?:      "modrinth" | "curseforge";
 }
 

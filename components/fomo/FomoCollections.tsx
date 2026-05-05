@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, memo } from "react";
-import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
+import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, AlertTriangle, Download } from "lucide-react";
 import {
   fetchCollections,
   fetchCollectionMods,
@@ -31,11 +31,16 @@ interface FomoCollectionsProps {
   downloading:  Record<string, boolean>;
   onDownloadMod:(mod: ModHit) => void;
   onOpenVersions:(mod: ModHit) => void;
+  selectedMods?: ModHit[];
+  onToggleSelect?: (mod: ModHit) => void;
+  onClearSelection?: () => void;
+  isDetailsOpen?: boolean;
 }
 
 export const FomoCollections = memo(function FomoCollections({
   loader, gameVersion, onStatus, addingForMod, onClearAddingFor,
   downloading, onDownloadMod, onOpenVersions,
+  selectedMods = [], onToggleSelect, onClearSelection, isDetailsOpen = false,
 }: FomoCollectionsProps) {
   const [collections,    setCollections]    = useState<CollectionEntry[]>([]);
   const [loading,        setLoading]        = useState(false);
@@ -220,11 +225,61 @@ export const FomoCollections = memo(function FomoCollections({
             {collDl === viewing.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "↓ Descargar todos"}
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
-          {viewLoading ? <LoadingSpinner label="Cargando mods..." /> : viewMods.map((mod) => (
-            <FomoModCard key={mod.projectId} mod={mod} isDownloading={!!downloading[mod.projectId]} onDownload={onDownloadMod} onOpenVersions={onOpenVersions} onAddToCollection={() => {}} />
-          ))}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {viewLoading ? (
+            <div className="p-12"><LoadingSpinner label="Cargando mods..." /></div>
+          ) : (
+            <div className={`grid grid-cols-1 ${isDetailsOpen ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start p-6`}>
+              {viewMods.map((mod) => (
+                <FomoModCard 
+                  key={mod.projectId} 
+                  mod={mod} 
+                  isDownloading={!!downloading[mod.projectId]} 
+                  onDownload={onDownloadMod} 
+                  onOpenVersions={onOpenVersions} 
+                  onAddToCollection={() => {}} 
+                  isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
+                  onToggleSelect={onToggleSelect}
+                />
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Bulk Actions Bar for Collections */}
+        {selectedMods.length > 0 && (
+          <div className="mx-6 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up relative z-10" style={{ background: COLORS.card, border: `1px solid ${COLORS.primary}`, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
+            <div className="flex items-center gap-3 pl-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20 text-primary font-bold">
+                {selectedMods.length}
+              </div>
+              <span className="text-sm font-bold" style={{ color: COLORS.foreground }}>Seleccionados</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onClearSelection?.()}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/10"
+                style={{ color: COLORS.muted }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  onStatus(`Iniciando descarga de ${selectedMods.length} items...`, "info");
+                  for (const mod of selectedMods) {
+                    await onDownloadMod(mod);
+                    await new Promise(r => setTimeout(r, 500));
+                  }
+                  onClearSelection?.();
+                }}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Descargar Todo
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

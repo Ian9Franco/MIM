@@ -432,14 +432,23 @@ Sistema de análisis de seguridad para detectar comportamientos potencialmente m
 
 ---
 
-## 11. FOMO UI 2.0 & Descubrimiento
+## 11. FOMO UI 3.0 & Descubrimiento
 
-### Novedades de la Versión 2.0
-- **Grid de 2 Columnas:** Maximiza la visibilidad de contenido en el descubrimiento.
-- **FomoVersionOverlay:** Panel de inspección profunda con:
-  - **Changelogs:** Historial completo renderizado en Markdown.
-  - **Dependency Resolver:** Detección de dependencias requeridas vs opcionales.
-  - **SHA1 Matching:** Verificación de integridad contra la API de Modrinth.
+### Novedades de la Versión 3.0 (Dynamic Glass Layout)
+- **Alineación Tridimensional Floating Glass Gutter**:
+  - Al abrirse la vista de detalles, la barra lateral derecha se ensancha de `380px` a **`600px`** (`max-w-[90vw]`).
+  - El sidebar de FOMO se contrae dinámicamente de `75vw` a **`calc(100vw - 600px - 40px)`**, dejando una franja vertical libre de **`40px`** que deja ver el fondo con blur de la app principal.
+  - Se mantiene el radio de esquinas derechas de FOMO (`borderRadius: "0 2rem 2rem 0"`), haciendo que ambos paneles parezcan hojas de vidrio flotante.
+- **Grilla Reactiva Forzada**:
+  - **Detalles Cerrados**: Grilla responsiva de hasta **3 columnas** (`grid-cols-1 lg:grid-cols-2 xl:grid-cols-3`).
+  - **Detalles Abiertos**: La grilla se fuerza automáticamente a exactamente **2 columnas** tanto en la pestaña de Descubrir como en Colecciones para prevenir el colapso visual de las tarjetas.
+- **Fricción Cero en Selección de Tarjetas**:
+  - El usuario puede conmutar el estado de selección de un mod haciendo click en **cualquier parte vacía de la tarjeta**.
+  - Todos los botones internos de acción (`Detalles`, `Descargar`, `Web`, `Colección`) utilizan `e.stopPropagation()` para ejecutar sus directivas sin gatillar selectores accidentales.
+- **FomoVersionOverlay Portaleado**:
+  - El panel de inspección se renderiza dinámicamente usando un **React Portal** apuntando a `#fomo-details-sidebar-portal`.
+  - Incorpora un **DOM Polling Finder** que reintenta buscar el contenedor de portal cada `20ms` hasta 10 veces en caso de race conditions durante el renderizado asincrónico.
+  - Ofrece pestañas enriquecidas para **Changelogs** (en Markdown completo), **Dependency Resolver** (con colores según severidad) y verificación de integridad **SHA1**.
 
 ---
 

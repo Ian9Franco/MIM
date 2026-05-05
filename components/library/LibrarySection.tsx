@@ -172,7 +172,7 @@ export function LibrarySection({
       ) : library.length === 0 ? (
         <EmptyState message="No hay mods instalados en este proyecto aún" />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2" style={{ scrollbarWidth: "thin" }}>
           {Object.entries(
             library.reduce((acc, mod) => {
               const cat = mod.category || "Otros";

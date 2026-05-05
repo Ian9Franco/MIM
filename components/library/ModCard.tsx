@@ -53,7 +53,7 @@ interface ModCardProps {
 /** Maps projectType slugs to human-readable emoji labels */
 function getProjectTypeLabel(type: string): string {
   const map: Record<string, string> = {
-    resourcepack: "🖼️ Resource",
+    resourcepack: "🖼️ Textura",
     datapack:     "📦 Datapack",
     shader:       "✨ Shader",
   };
@@ -72,7 +72,7 @@ export const ModCard = memo(function ModCard({
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion && !isCompatibleRange;
   const isLoaderError  = loader  !== "unknown" && activeLoader  !== ""  && loader  !== activeLoader;
   const isError        = isVersionError || isLoaderError;
-  const ls             = LOADER_STYLES[loader as LoaderKey] ?? LOADER_STYLES.unknown;
+  const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
   const cardBorder = isSelected && !isError ? "rgba(255,208,102,0.55)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")

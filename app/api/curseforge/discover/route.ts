@@ -82,6 +82,7 @@ interface CurseForgeEntry {
   url:         string;
   categories:  string[];
   latestVersion: string | null;
+  projectType: string;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -150,10 +151,31 @@ export async function GET(req: NextRequest) {
   const sortParam   = searchParams.get("sort")        ?? "featured";
   const projectType = searchParams.get("projectType") ?? "mod";
   const q           = searchParams.get("q")?.trim()   ?? "";
+  const categories = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
 
   const classId    = PROJECT_TYPE_TO_CLASS_ID[projectType] ?? PROJECT_TYPE_TO_CLASS_ID.mod;
   const sortField  = SORT_TO_CF_FIELD[sortParam] ?? SORT_TO_CF_FIELD.featured;
   const cfLoaderId = LOADER_TO_CF_ID[loader];
+
+  // Mapping simple categories to CurseForge IDs
+  const CF_CATEGORY_MAP: Record<string, number> = {
+    'adventure': 423,
+    'magic': 412,
+    'technology': 410,
+    'decoration': 4448,
+    'storage': 416,
+    'food': 421,
+    'library': 408,
+    'mobs': 425,
+    'optimization': 444,
+    'utility': 406,
+    'world_generation': 407,
+    'economy': 4441,
+    'management': 4443,
+    'equipment': 4445,
+    'game_mechanics': 436,
+    'transportation': 414,
+  };
 
   const headers = {
     "x-api-key":      apiKey,
@@ -178,6 +200,14 @@ export async function GET(req: NextRequest) {
     // El filtro de modLoader solo aplica para mods (no para shaders/resourcepacks/datapacks)
     if (projectType === "mod" && cfLoaderId !== undefined) {
       params.set("modLoaderType", String(cfLoaderId));
+    }
+
+    if (categories.length > 0) {
+      const cat = categories[0];
+      const cfId = CF_CATEGORY_MAP[cat];
+      if (cfId) {
+        params.set("categoryId", String(cfId));
+      }
     }
 
     if (q) {
@@ -224,6 +254,7 @@ export async function GET(req: NextRequest) {
       url:           m.links?.websiteUrl ?? `https://www.curseforge.com/minecraft/${projectType === "mod" ? "mc-mods" : projectType}/${m.slug}`,
       categories:    (m.categories ?? []).map((c: any) => c.name),
       latestVersion: m.latestFilesIndexes?.[0]?.gameVersion ?? null,
+      projectType,
     }));
 
     const total = data.pagination?.totalCount ?? 0;

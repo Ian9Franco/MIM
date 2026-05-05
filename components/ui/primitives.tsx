@@ -185,26 +185,22 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
   options, value, onChange, className = "", ariaLabel,
 }: PillToggleGroupProps) {
   return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      className={`flex gap-2 ${className}`}
-    >
+    <div className={`flex p-1 rounded-2xl bg-white/5 border border-white/10 ${className}`} role="radiogroup" aria-label={ariaLabel}>
       {options.map((opt) => {
-        const active = opt.value === value;
+        const isActive = value === opt.value;
         return (
           <button
             key={opt.value}
-            role="tab"
-            aria-selected={active}
+            role="radio"
+            aria-checked={isActive}
             onClick={() => onChange(opt.value)}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-subhead transition-all"
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold transition-all rounded-xl ${
+              isActive ? "shadow-lg scale-[1.02]" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+            }`}
             style={{
-              background: active ? (opt.activeBg   ?? "rgba(255,108,62,0.15)") : "transparent",
-              color:      active ? (opt.activeColor ?? "#FF6C3E")               : COLORS.muted,
-              border: active
-                ? `1px solid ${opt.activeBorder ?? "rgba(255,108,62,0.3)"}`
-                : "1px solid transparent",
+              background: isActive ? (opt.activeBg || "var(--color-primary-bg)") : "transparent",
+              color:      isActive ? (opt.activeColor || "var(--color-primary)") : undefined,
+              border:     isActive ? `1px solid ${opt.activeBorder || "var(--color-primary-border)"}` : "1px solid transparent",
             }}
           >
             {opt.icon}

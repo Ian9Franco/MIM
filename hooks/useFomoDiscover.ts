@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/types";
+import { SORT_OPTIONS } from "../constants/app";
 import type { SortOrder } from "../constants/app";
 
 export interface PendingDependency {
@@ -24,15 +25,26 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [source, setSource] = useState<"modrinth" | "curseforge">("modrinth");
   const [sourceError, setSourceError] = useState("");
   const [loader, setLoader] = useState(defaultLoader);
-  const [gameVersion, setGameVersion] = useState(defaultGameVersion);
+  const [gameVersions, setGameVersions] = useState<string[]>([defaultGameVersion]);
   const [projectType, setProjectType] = useState("mod");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [environments, setEnvironments] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("relevance");
   const [query, setQuery] = useState("");
+
+  // Limpiar filtros al cambiar de projectType
+  useEffect(() => {
+    setCategories([]);
+    setEnvironments([]);
+    setPage(1);
+  }, [projectType]);
+
   const [loading, setLoading] = useState(false);
   const [mods, setMods] = useState<ModHit[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedMods, setSelectedMods] = useState<ModHit[]>([]);
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const [selectingVersionFor, setSelectingVersionFor] = useState<ModHit | null>(null);
   const [projectVersions, setProjectVersions] = useState<VersionEntry[]>([]);
@@ -40,9 +52,36 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   
   // Estado para el modal de dependencias
   const [dependencyPrompt, setDependencyPrompt] = useState<DependencyPrompt | null>(null);
-  
-  // Estado para el modal de confirmación de eliminación
-  const [deleteConfirm, setDeleteConfirm] = useState<{ file: any; onConfirm: () => void } | null>(null);
+
+  // Persistence for selection
+  useEffect(() => {
+    const saved = localStorage.getItem("fomo_selected_mods");
+    if (saved) {
+      try {
+        setSelectedMods(JSON.parse(saved));
+      } catch (e) {
+        console.error("Error loading selected mods from localStorage", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("fomo_selected_mods", JSON.stringify(selectedMods));
+  }, [selectedMods]);
+
+  const toggleModSelection = useCallback((mod: ModHit) => {
+    setSelectedMods(prev => {
+      const exists = prev.some(m => m.projectId === mod.projectId);
+      if (exists) {
+        return prev.filter(m => m.projectId !== mod.projectId);
+      }
+      return [...prev, mod];
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedMods([]);
+  }, []);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,7 +92,9 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     try {
       const params = new URLSearchParams({
         loader,
-        gameVersion,
+        gameVersions: JSON.stringify(gameVersions),
+        categories: JSON.stringify(categories),
+        environments: JSON.stringify(environments),
         projectType,
         page: String(page),
         pageSize: "20",
@@ -63,14 +104,14 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       
       const endpoint = source === "modrinth" 
         ? `/api/modrinth/discover?${params}`
-        : `/api/curseforge/discover?${params}`;
+        : `/api/curseforge/discover?${params}&gameVersion=${gameVersions[0] || "1.20.1"}`; // CF only supports one version easily
         
       const res = await fetch(endpoint);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        if (res.status === 503 && errorData.error?.includes("CURSEFORGE_API_KEY")) {
+        if (res.status === 503 && (errorData.error?.includes("CURSEFORGE_API_KEY") || errorData.error?.includes("configurada"))) {
           setSourceError("Error en la API (falta CURSEFORGE_API_KEY)");
-        } else if (res.status === 401) {
+        } else if (res.status === 401 || res.status === 403) {
           setSourceError(`Error de autenticación: ${errorData.error || "API key inválida"}`);
         } else if (res.status === 429) {
           setSourceError("Rate limit excedido - intentá más tarde");
@@ -80,14 +121,22 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         throw new Error("Search failed");
       }
       const data = await res.json();
-      setMods(data.mods ?? []);
+      
+      // Asegurar que los mods tengan el campo _source correcto
+      const mappedMods = (data.mods ?? []).map((m: ModHit) => ({
+        ...m,
+        _source: m._source || source
+      }));
+      
+      setMods(mappedMods);
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 0);
     } catch (err) {
       console.error("[useFomoDiscover] Error fetching mods:", err);
+      setMods([]);
     }
     setLoading(false);
-  }, [source, loader, gameVersion, projectType, sortOrder, query, page]);
+  }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -95,6 +144,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, [refetch]);
 
   const handleDownload = useCallback(async (mod: ModHit, version?: VersionEntry) => {
+    const modSource = mod._source || source;
     // Check if mod already exists in library or is already being downloaded
     if (downloading[mod.projectId]) return;
 
@@ -108,8 +158,14 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
 
       if (!downloadUrl) {
         // Fetch latest version if not provided
-        const vParams = new URLSearchParams({ projectId: mod.projectId, loader, gameVersion, projectType });
-        const vRes = await fetch(`/api/modrinth/versions?${vParams}`);
+        const vParams = new URLSearchParams({ 
+          projectId: mod.projectId, 
+          loader, 
+          gameVersion: gameVersions[0] || "1.20.1", 
+          projectType 
+        });
+        const endpoint = modSource === "modrinth" ? "/api/modrinth/versions" : "/api/curseforge/versions";
+        const vRes = await fetch(`${endpoint}?${vParams}`);
         if (vRes.ok) {
           const vData = await vRes.json();
           if (vData.versions?.length > 0) {
@@ -155,7 +211,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       showStatus(`Error crítico al descargar ${mod.title}`, "error");
       setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
     }
-  }, [loader, gameVersion, projectType, showStatus]);
+  }, [loader, gameVersions, projectType, showStatus, source, downloading]);
 
   // Función auxiliar para ejecutar la descarga
   const executeDownload = useCallback(async (
@@ -165,11 +221,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     hashes?: Record<string, string>,
     depsToDownload?: PendingDependency[]
   ) => {
+    const modSource = mod._source || source;
     setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
     showStatus(`Descargando ${mod.title}...`, "info");
     
     try {
-      const dlRes = await fetch("/api/modrinth/download", {
+      const endpoint = modSource === "modrinth" ? "/api/modrinth/download" : "/api/curseforge/download";
+      const dlRes = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: downloadUrl, filename, hashes }),
@@ -194,15 +252,17 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
               title: dep.title || dep.projectId,
               description: "",
               iconUrl: dep.iconUrl || null,
-              author: "Modrinth",
+              author: modSource === "modrinth" ? "Modrinth" : "CurseForge",
               downloads: 0,
               follows: 0,
               latestVersion: null,
               categories: [],
               dateCreated: "",
-              url: dep.url || `https://modrinth.com/project/${dep.slug || dep.projectId}`,
+              url: dep.url || (modSource === "modrinth" 
+                ? `https://modrinth.com/project/${dep.slug || dep.projectId}`
+                : `https://www.curseforge.com/minecraft/mc-mods/${dep.slug || dep.projectId}`),
               projectType: dep.projectType || "mod",
-              _source: "modrinth",
+              _source: modSource,
             };
 
             await new Promise((resolve) => setTimeout(resolve, 250));
@@ -217,7 +277,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     } finally {
       setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
     }
-  }, [loader, gameVersion, projectType, showStatus, downloading, handleDownload]);
+  }, [loader, gameVersions, projectType, showStatus, source, handleDownload]);
 
   const handleDownloadDependency = useCallback(async (dependency: NonNullable<VersionEntry["dependencies"]>[number]) => {
     if (!dependency.projectId) {
@@ -244,16 +304,25 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, [handleDownload, showStatus]);
 
   const handleOpenVersionSelector = useCallback(async (mod: ModHit) => {
+    const modSource = mod._source || source;
     setSelectingVersionFor(mod);
     setVersLoading(true);
     setProjectVersions([]);
     try {
-      const params = new URLSearchParams({ projectId: mod.projectId, gameVersion, loader, projectType });
+      const params = new URLSearchParams({ 
+        projectId: mod.projectId, 
+        gameVersion: gameVersions[0] || "1.20.1", 
+        loader, 
+        projectType 
+      });
       
       // Fetch versions and project details in parallel
+      const vEndpoint = modSource === "modrinth" ? "/api/modrinth/versions" : "/api/curseforge/versions";
+      const pEndpoint = modSource === "modrinth" ? "/api/modrinth/project" : "/api/curseforge/project";
+
       const [vRes, pRes] = await Promise.all([
-        fetch(`/api/modrinth/versions?${params}`),
-        fetch(`/api/modrinth/project?projectId=${mod.projectId}`)
+        fetch(`${vEndpoint}?${params}`),
+        fetch(`${pEndpoint}?projectId=${mod.projectId}`)
       ]);
 
       if (vRes.ok) {
@@ -262,32 +331,39 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       }
       if (pRes.ok) {
         const pData = await pRes.json();
-        setSelectingVersionFor(prev => prev ? { ...prev, body: pData.body } : null);
+        setSelectingVersionFor(prev => prev ? { 
+          ...prev, 
+          body: pData.body,
+          client_side: pData.client_side,
+          server_side: pData.server_side
+        } : null);
       }
     } catch (err) {
       console.error("[useFomoDiscover] Error fetching details:", err);
     }
     setVersLoading(false);
-  }, [gameVersion, loader, projectType]);
+  }, [gameVersions, loader, projectType, source]);
 
   // Función para confirmar descarga con dependencias
-  const confirmDownloadWithDeps = useCallback((includeDeps: boolean) => {
+  const confirmDownloadWithDeps = useCallback(async (includeDeps: boolean) => {
     if (!dependencyPrompt) return;
     
     const { mod, dependencies, downloadUrl, filename, hashes } = dependencyPrompt;
     setDependencyPrompt(null);
     
     if (includeDeps && dependencies.length > 0) {
-      executeDownload(mod, downloadUrl, filename, hashes, dependencies);
+      await executeDownload(mod, downloadUrl, filename, hashes, dependencies);
     } else {
-      executeDownload(mod, downloadUrl, filename, hashes);
+      await executeDownload(mod, downloadUrl, filename, hashes);
     }
   }, [dependencyPrompt, executeDownload]);
 
   return {
     source, setSource, sourceError,
     loader, setLoader,
-    gameVersion, setGameVersion,
+    gameVersions, setGameVersions,
+    categories, setCategories,
+    environments, setEnvironments,
     projectType, setProjectType,
     sortOrder, setSortOrder,
     query, setQuery,
@@ -300,5 +376,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     handleOpenVersionSelector,
     dependencyPrompt, setDependencyPrompt,
     confirmDownloadWithDeps,
+    selectedMods, toggleModSelection, clearSelection,
+    sortOptions: SORT_OPTIONS
   };
 }

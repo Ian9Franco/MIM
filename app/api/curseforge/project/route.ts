@@ -1,0 +1,48 @@
+/**
+ * /api/curseforge/project — GET
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Obtiene los detalles de un proyecto en CurseForge, incluyendo su descripción.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+
+const CURSEFORGE_API = "https://api.curseforge.com/v1";
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("projectId");
+  const apiKey = process.env.CURSEFORGE_API_KEY;
+
+  if (!projectId) {
+    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+  }
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "CURSEFORGE_API_KEY not set" }, { status: 503 });
+  }
+
+  const headers = {
+    "x-api-key": apiKey,
+    "Accept": "application/json",
+  };
+
+  try {
+    // 1. Obtener detalles del mod
+    const modRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}`, { headers });
+    if (!modRes.ok) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    const modData = await modRes.json();
+
+    // 2. Obtener descripción
+    const descRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}/description`, { headers });
+    const descData = await descRes.json().catch(() => ({ data: "" }));
+
+    return NextResponse.json({
+      ...modData.data,
+      body: descData.data || "", // CurseForge usa HTML en la descripción
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}

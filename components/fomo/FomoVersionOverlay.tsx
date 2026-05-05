@@ -1,5 +1,6 @@
-import React, { memo, useState, useCallback } from "react";
-import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package } from "lucide-react";
+import React, { memo, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Globe, Laptop, Server, Calendar, HardDrive, Box } from "lucide-react";
 import { formatSize, openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml } from "@/utils/markdown";
@@ -11,7 +12,7 @@ interface FomoVersionOverlayProps {
   loading:     boolean;
   downloading: boolean;
   loader:      string;
-  gameVersion: string;
+  gameVersions: string[];
   projectType: string;
   onClose:     () => void;
   onDownload:  (mod: ModHit, version: VersionEntry) => void;
@@ -19,11 +20,35 @@ interface FomoVersionOverlayProps {
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersion, projectType, onClose, onDownload, onDownloadDependency,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onDownloadDependency,
 }: FomoVersionOverlayProps) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">("versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const findTarget = () => {
+      const el = document.getElementById("fomo-details-sidebar-portal");
+      if (el) {
+        setPortalTarget(el);
+        return true;
+      }
+      return false;
+    };
+
+    if (findTarget()) return;
+
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      if (findTarget() || count >= 10) {
+        clearInterval(interval);
+      }
+    }, 20);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDownloadDependency = useCallback(async (depId: string, depTitle: string) => {
     setDepDownloading(depId);
@@ -53,7 +78,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       // 2. Fetch compatible versions
       const loadersParam = depMod.projectType === "mod" ? `&loaders=["${loader}"]` : "";
       const versionsRes = await fetch(
-        `https://api.modrinth.com/v2/project/${depId}/version?game_versions=["${gameVersion}"]${loadersParam}`
+        `https://api.modrinth.com/v2/project/${depId}/version?game_versions=["${gameVersions[0] || "1.20.1"}"]${loadersParam}`
       );
       if (!versionsRes.ok) throw new Error("No se encontraron versiones compatibles");
       
@@ -88,7 +113,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     } finally {
       setDepDownloading(null);
     }
-  }, [loader, gameVersion, onDownload]);
+  }, [loader, gameVersions, onDownload]);
 
   // Extract all unique dependencies from all versions to show in the Dependencies tab
   const allDependencies = Array.from(new Set(versions.flatMap(v => v.dependencies || []).map(d => d.projectId)))
@@ -113,13 +138,12 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     openExternal(anchor.href);
   }, []);
 
-  return (
+  const content = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`Detalles de ${mod.title}`}
-      className="absolute inset-0 z-[60] flex flex-col backdrop-blur-xl animate-fade-in"
-      style={{ background: "color-mix(in srgb, var(--color-background) 80%, transparent)" }}
+      className="flex-1 flex flex-col min-h-0 animate-fade-in text-foreground"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b shrink-0" style={{ borderColor: COLORS.border }}>
@@ -135,28 +159,68 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       </div>
 
       {/* Mod summary */}
-      <div className="px-5 py-4 flex items-center gap-4 border-b" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
-        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border" style={{ background: "var(--color-hover)", borderColor: COLORS.borderStrong }}>
-          {mod.iconUrl && <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />}
+      <div className="px-5 py-5 flex flex-col gap-5 border-b" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border shadow-sm" style={{ background: "var(--color-hover)", borderColor: COLORS.borderStrong }}>
+            {mod.iconUrl && <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-headline text-lg truncate" style={{ color: COLORS.foreground }}>{mod.title}</p>
+            <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>
+              por <span className="text-primary/80 font-bold">{mod.author}</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openExternal(mod.url)}
+            className="p-3 rounded-xl border transition-all hover:bg-white/10 hover:scale-105 active:scale-95"
+            style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border, color: COLORS.foreground }}
+          >
+            <ExternalLink className="w-5 h-5 opacity-60" />
+          </button>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-headline text-base truncate" style={{ color: COLORS.foreground }}>{mod.title}</p>
-          <p className="font-caption text-xs" style={{ color: COLORS.muted }}>
-            por {mod.author} • {loader} • {gameVersion}
-          </p>
+
+        {/* New: Quick Metadata Grid */}
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[140px] p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Entorno</p>
+            <div className="flex flex-wrap gap-1.5">
+              <EnvironmentBadge type={mod.client_side || "unknown"} label="Cliente" icon={<Laptop className="w-3 h-3" />} />
+              <EnvironmentBadge type={mod.server_side || "unknown"} label="Servidor" icon={<Server className="w-3 h-3" />} />
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-[110px] p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Plataformas</p>
+            <div className="flex flex-wrap gap-1">
+              {Array.from(new Set(versions.flatMap(v => v.loaders))).map(l => (
+                <span key={l} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[0.65rem] font-bold border border-primary/20 uppercase">{l}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Versiones Disponibles</p>
+            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pr-1">
+              {Array.from(new Set(versions.flatMap(v => v.gameVersions)))
+                .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+                .slice(0, 16)
+                .map(gv => (
+                  <span key={gv} className={`px-1.5 py-0.5 rounded text-[0.6rem] font-medium border ${
+                    gv === "1.20.1" || gv === "1.21.1" 
+                      ? "bg-primary/20 text-primary border-primary/30 font-bold" 
+                      : "bg-white/5 text-white/40 border-white/5"
+                  }`}>{gv}</span>
+                ))
+              }
+              {new Set(versions.flatMap(v => v.gameVersions)).size > 16 && <span className="text-[0.6rem] text-white/20 self-center">...</span>}
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => openExternal(mod.url)}
-          className="p-2.5 rounded-xl border transition-colors hover:bg-white/10"
-          style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border, color: COLORS.foreground }}
-        >
-          <ExternalLink className="w-4.5 h-4.5 opacity-60" />
-        </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex px-3 pt-2 gap-1 border-b shrink-0" style={{ borderColor: COLORS.border }}>
+      <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto custom-scrollbar" style={{ borderColor: COLORS.border }}>
         <TabButton 
           active={activeTab === "versions"} 
           onClick={() => setActiveTab("versions")} 
@@ -264,15 +328,16 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
               </div>
             ) : (
               versions.map((v) => {
-                const isCompatible = v.gameVersions.includes(gameVersion) && (v.loaders.includes(loader) || projectType !== "mod");
+                const isCompatible = v.gameVersions.some(gv => gameVersions.includes(gv)) && (v.loaders.includes(loader) || projectType !== "mod");
+                const isMainVersion = v.gameVersions.some(gv => gv === "1.20.1" || gv === "1.21.1");
                 
                 return (
                   <div 
                     key={v.id}
-                    className={`rounded-2xl border transition-all ${!isCompatible ? "opacity-60" : ""}`}
+                    className={`rounded-2xl border transition-all ${!isCompatible ? "opacity-60" : ""} ${isMainVersion ? "ring-1 ring-primary/30" : ""}`}
                     style={{ 
-                      background: expandedVersion === v.id ? "var(--color-hover)" : "var(--color-secondary-bg)",
-                      borderColor: expandedVersion === v.id ? COLORS.borderStrong : COLORS.border
+                      background: isMainVersion ? "rgba(187,150,228,0.05)" : (expandedVersion === v.id ? "var(--color-hover)" : "var(--color-secondary-bg)"),
+                      borderColor: isMainVersion ? COLORS.primary : (expandedVersion === v.id ? COLORS.borderStrong : COLORS.border)
                     }}
                   >
                     <div 
@@ -282,6 +347,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-headline text-sm truncate" style={{ color: COLORS.foreground }}>{v.name || v.versionNumber}</p>
+                          {isMainVersion && (
+                            <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-bold uppercase bg-primary text-white">Main</span>
+                          )}
                           {v.versionType === "release" ? (
                             <CheckCircle2 className="w-3 h-3 text-green-400" />
                           ) : (
@@ -294,6 +362,20 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         <p className="text-[0.65rem] mt-1" style={{ color: COLORS.muted }}>
                           {new Date(v.datePublished).toLocaleDateString()} • {formatSize(v.primaryFile?.size ?? 0)}
                         </p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {v.gameVersions.slice(0, 6).map(gv => (
+                            <span key={gv} 
+                              className={`text-[0.55rem] px-1.5 py-0.5 rounded border ${
+                                gv === "1.20.1" || gv === "1.21.1" 
+                                  ? "bg-primary/20 text-primary border-primary/30 font-bold" 
+                                  : (gameVersions.includes(gv) ? "bg-white/10 text-white/90 border-white/20" : "bg-black/10 text-white/40 border-white/5")
+                              }`}
+                            >
+                              {gv}
+                            </span>
+                          ))}
+                          {v.gameVersions.length > 6 && <span className="text-[0.55rem] text-white/30">+{v.gameVersions.length - 6}</span>}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -354,13 +436,20 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                           <div>
                             <p className="text-[0.6rem] font-bold uppercase" style={{ color: COLORS.muted }}>Versiones de Juego</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {v.gameVersions.map(gv => (
-                                <span key={gv} className={`text-[0.6rem] px-1.5 py-0.5 rounded border ${gv === gameVersion ? "opacity-100" : "opacity-40"}`}
-                                  style={{ background: gv === gameVersion ? "var(--color-accent-bg)" : "var(--color-secondary-bg)", borderColor: gv === gameVersion ? "var(--color-accent-border)" : COLORS.border, color: gv === gameVersion ? COLORS.gold : COLORS.muted }}
-                                >
-                                  {gv}
-                                </span>
-                              ))}
+                              {v.gameVersions.map(gv => {
+                                const isActive = gameVersions.includes(gv);
+                                return (
+                                  <span key={gv} className={`text-[0.6rem] px-1.5 py-0.5 rounded border ${isActive ? "opacity-100 font-bold" : "opacity-40"}`}
+                                    style={{ 
+                                      background: isActive ? "var(--color-accent-bg)" : "var(--color-secondary-bg)", 
+                                      borderColor: isActive ? "var(--color-accent-border)" : COLORS.border, 
+                                      color: isActive ? COLORS.gold : COLORS.muted 
+                                    }}
+                                  >
+                                    {gv}
+                                  </span>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
@@ -375,13 +464,29 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       </div>
     </div>
   );
+
+  if (portalTarget) {
+    return createPortal(content, portalTarget);
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Detalles de ${mod.title}`}
+      className="absolute inset-0 z-[60] flex flex-col backdrop-blur-xl animate-fade-in"
+      style={{ background: "color-mix(in srgb, var(--color-background) 80%, transparent)" }}
+    >
+      {content}
+    </div>
+  );
 });
 
 function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-xs font-bold rounded-t-lg transition-all flex items-center gap-2 ${active ? "border-b-2" : "opacity-40 hover:opacity-100"}`}
+      className={`px-2.5 py-2 text-xs font-bold rounded-t-lg transition-all flex items-center gap-1.5 shrink-0 ${active ? "border-b-2" : "opacity-40 hover:opacity-100"}`}
       style={{ 
         background: active ? "var(--color-secondary-bg)" : "transparent",
         borderColor: COLORS.primary,
@@ -391,5 +496,32 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
       {icon}
       {label}
     </button>
+  );
+}
+
+function EnvironmentBadge({ type, label, icon }: { type: string, label: string, icon: React.ReactNode }) {
+  const colorMap: Record<string, string> = {
+    required: COLORS.emerald,
+    optional: COLORS.gold,
+    unsupported: COLORS.red,
+    unknown: COLORS.muted
+  };
+  
+  const bgMap: Record<string, string> = {
+    required: "rgba(102,200,160,0.15)",
+    optional: "rgba(255,184,0,0.1)",
+    unsupported: "rgba(239,68,68,0.1)",
+    unknown: "rgba(255,255,255,0.05)"
+  };
+
+  return (
+    <div 
+      className="flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[0.6rem] font-bold"
+      style={{ background: bgMap[type] || bgMap.unknown, borderColor: (colorMap[type] || colorMap.unknown) + "33", color: colorMap[type] || colorMap.unknown }}
+      title={`${label}: ${type}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </div>
   );
 }

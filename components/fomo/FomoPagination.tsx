@@ -34,24 +34,17 @@ export const FomoPagination = memo(function FomoPagination({
   const nextPage = useCallback(() => onPage(Math.min(totalPages, page + 1)),       [onPage, page, totalPages]);
   const pages    = getPageWindow(page, totalPages);
 
-  const btnBase: React.CSSProperties = {
-    background: "rgba(255,255,255,0.05)",
-    border:     `1px solid ${COLORS.border}`,
-    color:       COLORS.foreground,
-  };
-
   return (
     <nav
       aria-label="Paginación de mods"
-      className="flex items-center justify-between px-4 py-3.5 border-t shrink-0 gap-2"
-      style={{ borderColor: COLORS.border }}
+      className="flex items-center justify-between px-4 py-3.5 border-t shrink-0 gap-2 fomo-pagination-bar"
+      style={{ borderColor: "var(--color-border)" }}
     >
       <button
         onClick={prevPage}
         disabled={page <= 1 || loading}
         aria-label="Página anterior"
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-subhead transition-all disabled:opacity-30"
-        style={btnBase}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-subhead transition-all disabled:opacity-30 fomo-pagination-btn"
       >
         <ChevronLeft className="w-4 h-4" aria-hidden="true" />
         Anterior
@@ -65,11 +58,9 @@ export const FomoPagination = memo(function FomoPagination({
             onClick={() => onPage(p)}
             aria-label={`Página ${p}`}
             aria-current={p === page ? "page" : undefined}
-            className="w-9 h-9 rounded-xl text-sm font-subhead transition-all"
-            style={{
-              background: p === page ? COLORS.primary : "rgba(255,255,255,0.05)",
-              color:      p === page ? "#fff"          : COLORS.muted,
-            }}
+            className={`w-9 h-9 rounded-xl text-sm font-subhead transition-all border ${
+              p === page ? "fomo-pagination-page-active" : "fomo-pagination-page-inactive"
+            }`}
           >
             {p}
           </button>
@@ -80,8 +71,7 @@ export const FomoPagination = memo(function FomoPagination({
         onClick={nextPage}
         disabled={page >= totalPages || loading}
         aria-label="Página siguiente"
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-subhead transition-all disabled:opacity-30"
-        style={btnBase}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-subhead transition-all disabled:opacity-30 fomo-pagination-btn"
       >
         Siguiente
         <ChevronRight className="w-4 h-4" aria-hidden="true" />

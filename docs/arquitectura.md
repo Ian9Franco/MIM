@@ -41,6 +41,23 @@ D:\.mine\
         └── fabric\         # Misma estructura interna
 ```
 
+## Descubrimiento Inteligente (FOMO 3.0)
+El panel FOMO centraliza el descubrimiento de contenido mediante una arquitectura de filtros avanzados, un diseño de columnas reactivas inteligentes y una navegación multi-capa tridimensional sin solapamientos:
+
+*   **Multi-Faceted Search:** Soporte para filtros combinados (AND/OR) en Modrinth para versiones de juego, modloaders, entornos y categorías.
+*   **Aislamiento Estético:** 
+    *   **Modrinth:** Estilo moderno, redondeado y con efectos de cristal (Glassmorphism).
+    *   **CurseForge:** Estilo "Rústico y Cuadrado" (Retro Minecraft vibe) para diferenciar visualmente el origen de los datos.
+*   **Persistencia de Estado:** Las selecciones de usuario se almacenan en `localStorage`, permitiendo que la lista de descarga sobreviva a cambios de vista o recargas.
+*   **Environment Awareness:** Los metadatos de proyecto incluyen ahora `client_side` y `server_side`, optimizando la clasificación automática en las carpetas `.local` y `.server`.
+*   **Multitarea Coherente y "Glass Gutter":**
+    *   **Contracción de Ancho**: Cuando los detalles de un mod se abren en la barra lateral derecha (la cual se expande a `600px`), FOMO se contrae fluidamente a `calc(100vw - 600px - 40px)`.
+    *   **Canal Flotante de 40px**: Esta diferencia expone una franja vertical del fondo desenfocado de la aplicación. Al mantener sus esquinas redondeadas (`borderRadius: "0 2rem 2rem 0"`), se crea la ilusión tridimensional de dos paneles flotantes de cristal.
+    *   **Restricción Dinámica de Grilla**: Para evitar que las tarjetas colapsen al reducirse el ancho, el sistema fuerza dinámicamente la grilla a exactamente **2 columnas** (en vez de 3) tanto en la vista de Descubrir como en Colecciones.
+*   **Gestión de Clicks Mejorada (Fricción Cero):**
+    *   **Selección por Tarjeta**: Permite seleccionar mods clickeando en cualquier zona vacía de la tarjeta del mod.
+    *   **Detención de Burbujeo**: Los botones de acción (`Detalles`, `Descargar`, `Web`, `Colección`) emplean `e.stopPropagation()` para ejecutar sus operaciones individuales sin disparar ni alterar accidentalmente el estado de selección del mod.
+
 ## Motor de Escaneo e Integridad
 El `lib/scanner.ts` no solo extrae metadatos JSON; ahora genera un **hash SHA1** único para cada archivo. Esto permite:
 - Vincular archivos locales con proyectos de Modrinth/CurseForge con precisión del 100%.

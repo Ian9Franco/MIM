@@ -35,13 +35,13 @@ Crear modpacks de Minecraft es **frustrante**:
 
 **MIM** transforma el caos en un flujo de trabajo de **3 clics**:
 
-- **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas y filtros inteligentes.
+- **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas, multi-filtro avanzado (categorías, versiones, entornos) y descarga masiva.
 - **🛡️ Security Scanner:** Análisis heurístico de bytecode para detectar malware y patrones sospechosos.
-- **🌈 Multi-Theme Support:** Soporte perfecto para modos Claro (Modern) y Oscuro (Vampire) con contraste optimizado.
+- **🌈 Multi-Aesthetic UI:** Soporte para modos Claro/Oscuro y estilos visuales específicos por fuente (CurseForge Rústico vs Modrinth Moderno).
 - **🔍 Escaneo Profundo:** Identificación de JARs por metadatos internos y **hashes SHA1**.
 - **📦 Integridad Total:** Sincronización exacta con Modrinth/CurseForge verificando integridad de archivos.
-- **⚡ Dependency Resolver:** Un solo clic para descargar un mod y todas sus dependencias requeridas.
-- **📜 Changelogs en Vivo:** Historial completo de cambios y versiones directamente en la app.
+- **⚡ Bulk Actions:** Selecciona múltiples mods y descárgalos todos con un solo clic.
+- **📜 Detalles Enriquecidos:** Environment badges (Client/Server), plataformas expandidas y resaltado de versiones Main.
 
 ```
 1. Descarga mods → MIM detecta automáticamente en Downloads

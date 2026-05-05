@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Moon, Sun, Monitor, Paintbrush } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Monitor, Ghost, Sparkles } from "lucide-react";
 
 type Theme = "official" | "vampire" | "modern";
 
@@ -27,8 +27,8 @@ export function ThemeToggle() {
 
   const options: { id: Theme; icon: React.ReactNode; label: string }[] = [
     { id: "official", icon: <Monitor className="w-3.5 h-3.5" />, label: "Oficial" },
-    { id: "vampire", icon: <Moon className="w-3.5 h-3.5" />, label: "Vampire" },
-    { id: "modern", icon: <Sun className="w-3.5 h-3.5" />, label: "Modern" },
+    { id: "vampire", icon: <Ghost className="w-3.5 h-3.5" />, label: "Vampire" },
+    { id: "modern", icon: <Sparkles className="w-3.5 h-3.5" />, label: "Modern" },
   ];
 
   return (

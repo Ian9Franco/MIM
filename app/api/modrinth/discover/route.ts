@@ -18,30 +18,53 @@ const DEFAULT_PAGE_SIZE = 20;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const loader      = searchParams.get("loader") ?? "forge";
-  const gameVersion = searchParams.get("gameVersion") ?? "1.20.1";
-  const page        = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize    = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
-  const sortParam   = searchParams.get("sort") ?? "relevance";
-  const sort        = ["updated", "relevance", "downloads", "newest"].includes(sortParam) ? sortParam : "relevance";
-  const projectType = searchParams.get("projectType") ?? "mod";
-  const q           = searchParams.get("q")?.trim() ?? "";
-  const offset      = (page - 1) * pageSize;
+  const loader       = searchParams.get("loader") ?? "forge";
+  const gameVersions = searchParams.get("gameVersions") ? JSON.parse(searchParams.get("gameVersions")!) : ["1.20.1"];
+  const categories   = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
+  const environments = searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : [];
+  const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const pageSize     = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
+  const sortParam    = searchParams.get("sort") ?? "relevance";
+  const sort         = ["updated", "relevance", "downloads", "newest"].includes(sortParam) ? sortParam : "relevance";
+  const projectType  = searchParams.get("projectType") ?? "mod";
+  const q            = searchParams.get("q")?.trim() ?? "";
+  const offset       = (page - 1) * pageSize;
 
   const facetsArray: string[][] = [
     [`project_type:${projectType}`],
   ];
 
-  // Datapacks don't use the versions facet usually.
-  if (projectType !== "datapack") {
-    facetsArray.push([`versions:${gameVersion}`]);
+  // Game Versions (OR)
+  if (projectType !== "datapack" && gameVersions.length > 0) {
+    facetsArray.push(gameVersions.map((v: string) => `versions:${v}`));
   }
 
-  // Only filter by loader (forge/fabric) if we are searching for mods.
-  // Resourcepacks, datapacks and shaders are usually loader-independent.
+  // Loader (AND with the rest)
   if (projectType === "mod" && loader !== "unknown") {
     facetsArray.push([`categories:${loader}`]);
   }
+
+  // Categories (OR within categories group)
+  if (categories.length > 0) {
+    facetsArray.push(categories.map((cat: string) => `categories:${cat}`));
+  }
+
+  // Environments (OR within environments group)
+  if (environments.length > 0) {
+    environments.forEach((env: string) => {
+      if (env === "client") {
+        facetsArray.push(["client_side:required", "client_side:optional"]);
+      } else if (env === "server") {
+        facetsArray.push(["server_side:required", "server_side:optional"]);
+      } else if (env === "both") {
+        facetsArray.push(["client_side:required", "client_side:optional"]);
+        facetsArray.push(["server_side:required", "server_side:optional"]);
+      }
+    });
+  }
+
+  // Debug log to see the final facets
+  console.log("[Modrinth Discover] Final Facets:", JSON.stringify(facetsArray));
 
   const facets = JSON.stringify(facetsArray);
 
@@ -84,7 +107,8 @@ export async function GET(req: NextRequest) {
         latestVersion: h.latest_version ?? null,
         categories:  h.categories ?? [],
         dateCreated: h.date_created,
-        url:         `https://modrinth.com/mod/${h.slug}`,
+        url:         `https://modrinth.com/${h.project_type ?? "mod"}/${h.slug}`,
+        projectType: h.project_type ?? "mod",
       }));
 
     return NextResponse.json({

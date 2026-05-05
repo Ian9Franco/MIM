@@ -35,6 +35,14 @@ Crear modpacks de Minecraft es **frustrante**:
 
 **MIM** transforma el caos en un flujo de trabajo de **3 clics**:
 
+- **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas y filtros inteligentes.
+- **🛡️ Security Scanner:** Análisis heurístico de bytecode para detectar malware y patrones sospechosos.
+- **🌈 Multi-Theme Support:** Soporte perfecto para modos Claro (Modern) y Oscuro (Vampire) con contraste optimizado.
+- **🔍 Escaneo Profundo:** Identificación de JARs por metadatos internos y **hashes SHA1**.
+- **📦 Integridad Total:** Sincronización exacta con Modrinth/CurseForge verificando integridad de archivos.
+- **⚡ Dependency Resolver:** Un solo clic para descargar un mod y todas sus dependencias requeridas.
+- **📜 Changelogs en Vivo:** Historial completo de cambios y versiones directamente en la app.
+
 ```
 1. Descarga mods → MIM detecta automáticamente en Downloads
 2. Categoriza con hotkeys (1,2,3) → Organizado en segundos  
@@ -43,8 +51,7 @@ Crear modpacks de Minecraft es **frustrante**:
 
 **Lo que MIM hace por ti:**
 
-| Feature | Qué resuelve | Tiempo ahorrado |
-|---------|--------------|-----------------|
+| **🛡️ Security Engine** | Análisis preventivo de malware y código sospechoso | 100% seguridad |
 | **🔍 Deep JAR Scan** | Detecta loader, versión y metadata SIN abrir el juego | 30 min/pack |
 | **📦 Dual Source** | Modrinth + CurseForge en una sola interfaz | Navegación 50% más rápida |
 | **⬇️ Auto-Download** | Descarga directa a tu carpeta activa | 0 clicks extra |
@@ -76,22 +83,30 @@ Crear modpacks de Minecraft es **frustrante**:
                      │
          ┌───────────┴───────────┐
          ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│   Modrinth API  │     │  CurseForge API │
-│  (Descarga      │     │  (Discovery     │
-│   directa)      │     │   + Metadata)   │
-└─────────────────┘     └─────────────────┘
-         │                       │
-         └───────────┬───────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      CORE ENGINE                                │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐ │
-│  │   JAR Scanner    │  │  File Watcher    │  │   Builder    │ │
-│  │  (manifest.toml, │  │  (chokidar + SSE)│  │  (Zip + FS)  │ │
-│  │   fabric.mod.json│  │                  │  │              │ │
-│  └──────────────────┘  └──────────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+ ┌─────────────────┐     ┌─────────────────┐
+ │   Modrinth API  │     │  CurseForge API │
+ │  (Descarga      │     │  (Discovery     │
+ │   directa)      │     │   + Metadata)   │
+ └─────────────────┘     └─────────────────┘
+          │                       │
+          └───────────┬───────────┘
+                      ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                      CORE ENGINE                                │
+ │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐ │
+ │  │   JAR Scanner    │  │  File Watcher    │  │   Builder    │ │
+ │  │  (manifest.toml, │  │  (chokidar + SSE)│  │  (Zip + FS)  │ │
+ │  │   fabric.mod.json│  │                  │  │              │ │
+ │  └──────────────────┘  └──────────────────┘  └──────────────┘ │
+ │           ▲                     ▲                     ▲       │
+ │           │                     │                     │       │
+ │           └───────────┬─────────┴───────────┬─────────┘       │
+ │                       │                     │                 │
+ │             ┌─────────────────────┐ ┌─────────────────────┐   │
+ │             │   Security Engine   │ │  Integrity Handler  │   │
+ │             │  (Bytecode Scan)    │ │  (SHA1 Sync)        │   │
+ │             └─────────────────────┘ └─────────────────────┘   │
+ └─────────────────────────────────────────────────────────────────┘
 ```
 
 **Tecnologías Clave:**
@@ -304,58 +319,110 @@ export async function GET(req: NextRequest) {
 mim/
 ├── app/                      # Next.js App Router
 │   ├── api/                  # API Routes
-│   │   ├── modrinth/         # Integración Modrinth
+│   │   ├── modrinth/         # Integración Modrinth completa
 │   │   │   ├── discover/     # Búsqueda de proyectos
 │   │   │   ├── download/     # Descarga directa
-│   │   │   ├── collections/  # Colecciones del usuario
-│   │   │   └── check-updates/
+│   │   │   ├── collections/  # Colecciones del usuario + follows
+│   │   │   ├── check-updates/# Verificar actualizaciones batch
+│   │   │   ├── presets/      # Colecciones curadas (Starter Tech, etc.)
+│   │   │   ├── versions/     # Listar versiones de proyecto
+│   │   │   ├── project/      # Detalles de proyecto
+│   │   │   └── export-descriptions/ # Exportar metadata
 │   │   ├── curseforge/       # Integración CurseForge
 │   │   │   └── discover/     # Búsqueda (discovery only)
 │   │   ├── classify/         # Mover mods a categorías
 │   │   ├── unclassify/       # Mover a Downloads
+│   │   ├── delete/           # Eliminar archivos
 │   │   ├── build/            # Compilar modpack
 │   │   ├── library/          # Listar mods clasificados
-│   │   └── watcher/          # SSE para file watching
+│   │   ├── watcher/          # SSE para file watching
+│   │   ├── project/          # Gestión de proyectos
+│   │   ├── settings/         # Configuración persistente
+│   │   └── open-folder/      # Abrir carpetas en explorer
 │   ├── layout.tsx            # Root layout + providers
-│   └── page.tsx              # Dashboard principal
-├── components/               # React components
-│   ├── FomoSidebar.tsx       # Panel de descubrimiento
-│   ├── LibrarySection.tsx    # Grid de mods clasificados
-│   ├── QuickCategorizeSection.tsx
-│   └── BuildPanel.tsx        # Panel de construcción
+│   ├── page.tsx              # Dashboard principal
+│   └── globals.css           # Variables CSS, glassmorphism
+├── components/               # React components organizados
+│   ├── fomo/                 # FOMO Sidebar - Descubrimiento
+│   │   ├── FomoSidebar.tsx   # Panel lateral con 3 tabs
+│   │   ├── FomoCollections.tsx # Colecciones del usuario
+│   │   ├── FomoDiscoverFilters.tsx # Filtros dinámicos
+│   │   ├── FomoModCard.tsx   # Tarjeta de mod con metadata
+│   │   ├── FomoPagination.tsx # Paginación
+│   │   ├── FomoPresets.tsx   # Plantillas curadas
+│   │   └── FomoVersionOverlay.tsx # Selector de versión
+│   ├── library/              # Librería de mods clasificados
+│   │   ├── LibrarySection.tsx # Grid de mods
+│   │   ├── ModCard.tsx       # Tarjeta con icono Base64
+│   │   ├── PendingFilesSection.tsx # Archivos pendientes
+│   │   ├── QuickCategorizeSection.tsx # Hotkeys 1,2,3
+│   │   └── SubcategoryPanel.tsx # Panel de sub-categorías
+│   ├── projects/             # Gestión de proyectos
+│   │   ├── ProjectsSection.tsx # Lista de proyectos
+│   │   ├── ProjectEditor.tsx # Editor
+│   │   └── BuildPanel.tsx    # Panel de construcción
+│   ├── layout/               # Layout components
+│   │   ├── AlertSidebar.tsx  # Panel de alertas
+│   │   ├── SettingsModal.tsx # Modal de configuración
+│   │   ├── ThemeToggle.tsx   # Dark/Light mode
+│   │   └── RootLayoutClient.tsx # Client wrapper
+│   └── ui/                   # Primitivas UI
+│       ├── primitives.tsx    # Botones, inputs base
+│       ├── HotkeyCard.tsx    # Tarjetas de atajos
+│       ├── SkeletonLoader.tsx # Shimmer loading
+│       ├── DescriptionModal.tsx # Modal de descripción
+│       └── SectionHeading.tsx # Encabezados
 ├── lib/                      # Core logic
 │   ├── scanner.ts            # Parser de JARs (Fabric/Forge/Neo)
 │   ├── builder.ts            # Compresión y estructura de builds
-│   ├── watcher.ts            # chokidar file watcher
+│   ├── watcher.ts            # chokidar file watcher + SSE
+│   ├── settings.ts           # Persistencia de config
+│   ├── types.ts              # Tipos TypeScript globales
 │   └── constants.ts          # Configuración y validaciones
 ├── docs/                     # Documentación técnica
 │   ├── CHANGELOG.md          # Auditoría de cambios
-│   └── recuerda.md           # Roadmap estratégico
-├── src-tauri/                # Rust backend (Tauri)
-└── public/                   # Assets estáticos
+│   ├── recuerda.md           # Roadmap estratégico
+│   ├── mim_documentation.md  # Documentación consolidada
+│   ├── arquitectura.md       # Diagramas de arquitectura
+│   ├── frontend.md           # Guía de estética
+│   └── modrinth_api_*.md     # Guías de integración
+├── public/                   # Assets estáticos (icon.png)
+└── mim-settings.json         # Configuración persistente
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Completado
-- [x] JAR Scanner profundo (Fabric, Forge, NeoForge, Quilt)
-- [x] Integración Modrinth (búsqueda, descarga, colecciones)
-- [x] CurseForge discovery
-- [x] File watcher en tiempo real (SSE)
-- [x] Build system con aislamiento de proyectos
-- [x] UI Glassmorphism + Dark/Light mode
+### ✅ Completado (2026-05-05)
+- [x] JAR Scanner profundo con **hashes SHA1** (Fabric, Forge, NeoForge)
+- [x] UI FOMO 2.0 (Rejilla de 2 columnas + Detailed Overlay)
+- [x] Dependency Resolver (Bulk download)
+- [x] Integración Modrinth completa (búsqueda, descarga, colecciones, check-updates)
+- [x] Integración CurseForge (discovery, toggle UI entre fuentes)
+- [x] Colecciones curadas (Starter Tech, Vanilla+, etc.) con auto-configuración
+- [x] File watcher en tiempo real (SSE + chokidar)
+- [x] Build system `alluser` con aislamiento de proyectos
+- [x] UI Glassmorphism + Dark/Light mode + escalado global 17px
+- [x] Sistema de proyectos persistentes (JSON storage)
+- [x] Thumbnail extraction local (Base64) sin depender de internet
+- [x] 17+ bug fixes críticos (path traversal, race conditions, rate limiting)
+- [x] **Threat Detection Engine v1.0** - Análisis de seguridad con scoring 0-100
 
 ### 🚧 En Progreso
-- [ ] **JAR Scanner Avanzado** - Detección de dependencias rotas
-- [ ] **Conflict Engine** - Incompatibilidades de loaders
-- [ ] **Crash Interpreter** - Traducción de logs a acciones
+- [ ] **JAR Scanner Avanzado** - Detección de dependencias rotas e incompatibilidades
+- [ ] **Conflict Engine** - Detección de conflictos entre mods
+- [ ] **Crash Interpreter** - Traducción de logs a acciones accionables
+- [ ] **Memory de Clasificación** - Pre-seleccionar categoría basada en historial
+- [ ] **Sinytra Connector Flag** - Vista combinada Fabric+Forge
+- [ ] **Security UI** - Badge de risk score en ModCard, auto-scan
 
-### 📋 Próximos
-- [ ] **Security Layer** - Behavioral risk scanning
-- [ ] **AI Recommendations** - "Si usas esto, quizás quieras esto"
-- [ ] **Portfolio Case Study** - Documentación técnica completa
+### 📋 Próximos (Fases 1-5)
+- [ ] **Portfolio Case Study** - Documentación técnica con decisiones y trade-offs
+- [ ] **Demo Deployable** - Landing funcional sin instalación
+- [ ] **Security Layer v1.1** - DB de hashes actualizable, whitelist, auto-scan UI
+- [ ] **AI Recommendations** - "Si usas esto, probablemente quieras esto"
+- [ ] **Natural Language Search** - "mods medievales oscuros con magia"
 
 ---
 
@@ -386,11 +453,3 @@ mim/
 MIT License - ver [LICENSE](LICENSE) para detalles.
 
 ---
-
-<div align="center">
-
-**[⬆ Volver arriba](#minecraft-intelligent-manager)**
-
-*Hecho con ⚡ por un desarrollador cansado de perder mods en Downloads*
-
-</div>

@@ -1,0 +1,903 @@
+{
+  "project_title": "Ad Astra",
+  "description": "Live long and prosper, Ad Astra!",
+  "body_preview": "<center>\n\n## Ad Astra\n\n[![Requires Resourceful Config](https://images.teamresourceful.com/u/jUWHY2.svg)](http://modrinth.com/mod/resourceful-lib)\n[![R...",
+  "total_compatible_versions_found": 20,
+  "versions": [
+    {
+      "id": "Qf7QFXk2",
+      "versionNumber": "1.15.20",
+      "name": "[Forge] Ad Astra 1.15.20",
+      "datePublished": "2025-03-04T01:59:42.652052Z",
+      "changelog_preview": "Updated to support Create 0.6.x...",
+      "dependencies": [
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.20.jar",
+        "hashes": {
+          "sha512": "c7337add217258cea0cb7d9f9136b5a7c8a17600bc2cc9c722321af838690b6c285628dcaebfccedb3e1274683591ef7a45a3514094e5a3bcd8fe1c1f25626bf",
+          "sha1": "537ac3e358a97efd7b03648a9bfd7b11f1ae7ff7"
+        }
+      }
+    },
+    {
+      "id": "ZXcgZ31q",
+      "versionNumber": "1.15.19",
+      "name": "[Forge] Ad Astra 1.15.19",
+      "datePublished": "2024-11-17T19:31:24.882251Z",
+      "changelog_preview": "- Made etrionic blast furnace use alloying mode by default.\n- Added client config translations.\n- Fixed crash with PipeZ (#508).\n- Fixed REI crash.\n- ...",
+      "dependencies": [
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.19.jar",
+        "hashes": {
+          "sha1": "ff0103224186be21463a784767459554debc1f33",
+          "sha512": "81e9aabe3e736d1ac1b5a6876ce7d561e04dcffa22c07284f1bcba51f76b184bb0c9d319855c70a69283de9f454997d5420aa92533adf7af85fc513abe837299"
+        }
+      }
+    },
+    {
+      "id": "WUGYX9Me",
+      "versionNumber": "1.15.18",
+      "name": "[Forge] Ad Astra 1.15.18",
+      "datePublished": "2024-02-18T08:24:12.732214Z",
+      "changelog_preview": "## WARNING\n\nThis is a beta release. If you're updating from 1.15.5 or below, please back up your world and expect the following\nbreaking changes:\n\n- S...",
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.18.jar",
+        "hashes": {
+          "sha512": "be63d1e11b76edee3bdedcece4f09f11ab57c7c9705f0e079b46a972f30ffc0c883b791d284b07f17ea07ae82cde1dea305327fb51c18fd0892677fa405558b6",
+          "sha1": "4bcd0ac9aa80107b6b7f02deef4cdc727becd099"
+        }
+      }
+    },
+    {
+      "id": "kdVcIAfI",
+      "versionNumber": "1.15.17",
+      "name": "[Forge] Ad Astra 1.15.17",
+      "datePublished": "2024-02-10T23:13:29.378938Z",
+      "changelog_preview": "## WARNING\n\nThis is a beta release. If you're updating from 1.15.5 or below, please back up your world and expect the following\nbreaking changes:\n\n- S...",
+      "dependencies": [
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.17.jar",
+        "hashes": {
+          "sha1": "9fdd3d7022051dc2d4d9822c2edd29478fecb567",
+          "sha512": "b0f13c103b5ed82f73d91af099aec957f6d00b147fb7bafaae7870e4763e346926c94f5b9589cff12fa2ec0d5db3722b684c4576e2006890075fa3b44ac33611"
+        }
+      }
+    },
+    {
+      "id": "8gUJ1Pbs",
+      "versionNumber": "1.15.16",
+      "name": "[Forge] Ad Astra 1.15.16",
+      "datePublished": "2024-02-01T22:29:25.206404Z",
+      "changelog_preview": "## WARNING\n\nThis is a beta release. If you're updating from 1.15.5 or below, please back up your world and expect the following\nbreaking changes:\n\n- S...",
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.16.jar",
+        "hashes": {
+          "sha1": "bda43d30b02016325d573cd3c5a779bccd4eeabf",
+          "sha512": "fc655e0f905c9fb884c61340a5bcf7b21da207692aa50e504d9037c87ed5291017058c44614972cecd350c5d1e3de38128362a24a96257edf3b9076b65f14dbc"
+        }
+      }
+    },
+    {
+      "id": "rkI8N0Wy",
+      "versionNumber": "1.15.15",
+      "name": "[Forge] Ad Astra 1.15.15",
+      "datePublished": "2024-02-01T08:52:24.282166Z",
+      "changelog_preview": "## WARNING\n\nThis is an beta release. If you're updating from 1.15.5 or below, please back up your world and expect the following\nbreaking changes:\n\n- ...",
+      "dependencies": [
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.15.jar",
+        "hashes": {
+          "sha1": "b3814f15246c110d36ae1a79c6dca7defcbcae28",
+          "sha512": "7e6306f76f3417eba84d40e6e6e11124be76ff28ba8385508cfceb4d812de5cf5301386f4ada1c369ad6cc0220f903b43487d091253e2ea460114d6a47a1d2db"
+        }
+      }
+    },
+    {
+      "id": "sy9B3fUN",
+      "versionNumber": "1.15.14",
+      "name": "[Forge] Ad Astra 1.15.14",
+      "datePublished": "2024-01-31T03:38:10.188546Z",
+      "changelog_preview": "## WARNING\n\nThis is an alpha release. Expect bugs and frequent updates until we reach a stable version.\nIf you're updating from 1.15.5 or below, pleas...",
+      "dependencies": [
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.14.jar",
+        "hashes": {
+          "sha512": "cd113cabbb68be8822f23c8cb23fef170c024b75ab3efd8c1336e14ced32863b376cf0cacb771c2c36ba3e37ee64e26ed96abc5c4e64f3a98a012008c2bb5059",
+          "sha1": "ba8b5f9b9a56e26eb1b4e44549c1765f497b362b"
+        }
+      }
+    },
+    {
+      "id": "Cy91L9m1",
+      "versionNumber": "1.15.13",
+      "name": "[Forge] Ad Astra 1.15.13",
+      "datePublished": "2024-01-30T04:05:45.897772Z",
+      "changelog_preview": "## WARNING\n\nThis is an alpha release. Expect bugs and frequent updates until we reach a stable version.\nIf you're updating from 1.15.5 or below, pleas...",
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.13.jar",
+        "hashes": {
+          "sha512": "d051a09e7b9838054148647527b978b64700a0cf21a6fc34af7a6e188d3c34b0a177f4ab9c26d4fd3cc118c06321ac915bd2d9fca6d796c6e93a470b66aa72ff",
+          "sha1": "6d8bcdf7cb74babd74a37628cb911145bfb9dfd1"
+        }
+      }
+    },
+    {
+      "id": "q6x9oTEW",
+      "versionNumber": "1.15.12",
+      "name": "[Forge] Ad Astra 1.15.12",
+      "datePublished": "2024-01-29T17:22:03.272267Z",
+      "changelog_preview": "## WARNING\nThis is an alpha release. Expect bugs and frequent updates until we reach a stable version.\nIf you're updating from 1.15.5 or below, please...",
+      "dependencies": [
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "bb2EpKpx",
+          "title": "Odyssey Allies",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "fEWKxVzh",
+          "title": "Odyssey Claims",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.12.jar",
+        "hashes": {
+          "sha1": "1cd39d182b07242b4db2f474ffa19e4ba4d6b93a",
+          "sha512": "9d242510db8f5c4b9f3c2a09b032515b9b62e22bcfe5360274652906356b6527e2ef385e7d3072c6f4062fb386aefa7a4c4b2a46ebe07e604d61362ce79bcc58"
+        }
+      }
+    },
+    {
+      "id": "tJqXeG13",
+      "versionNumber": "1.15.11",
+      "name": "[Forge] Ad Astra 1.15.11",
+      "datePublished": "2024-01-29T03:31:28.399839Z",
+      "changelog_preview": "## WARNING\nThis is an alpha release. Expect bugs and frequent updates until we reach a stable version.\nIf you're updating from 1.15.5 or below, please...",
+      "dependencies": [
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "loOLVxG0",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.11.jar",
+        "hashes": {
+          "sha1": "5387690eee4cb997d006b9d6ac3d43eccd441c16",
+          "sha512": "069dc714f8b34b9405c975819a925d0332c12c58dcdddb484f92499fc43e12fd99f83724af87012bdf89a2a9a5eea80af619dc9b0fd269acf579be6f18508d24"
+        }
+      }
+    },
+    {
+      "id": "ZUVEpame",
+      "versionNumber": "1.15.10",
+      "name": "[Forge] Ad Astra 1.15.10",
+      "datePublished": "2024-01-18T03:18:26.048143Z",
+      "changelog_preview": "- Add Oxygen and Gravity events (#430)\n- Fixed Oxygen Distributor and Gravity Normalizer sending significantly \nmore data than they should (#434)\n- Fi...",
+      "dependencies": [
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "uBKACKpl",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.10.jar",
+        "hashes": {
+          "sha512": "d4e4d007dfba595b2b32d0f5aa0bc5a87b0e2d0121f061abb71ec6dd304605397f5e7c399c002792fc9efc8910483f837c8af9405a7aad51ccb9717a9757cef6",
+          "sha1": "db0bce4c4eb65857e844ef484c729b585459da97"
+        }
+      }
+    },
+    {
+      "id": "H0mSLwF9",
+      "versionNumber": "1.15.9",
+      "name": "[Forge] Ad Astra 1.15.9",
+      "datePublished": "2024-01-16T06:40:43.646785Z",
+      "changelog_preview": "- Fixed etrionic capacitor crashing in round-robin mode with when it's not charging anything.\n- Fixed REI fluid bars displaying incorrectly.\n- Updated...",
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "b1ZV3DIJ",
+          "title": "Athena",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "loOLVxG0",
+          "title": "Shimmer",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.9.jar",
+        "hashes": {
+          "sha1": "b3a81e984168feba96357e946bd1d92e0ab0cb57",
+          "sha512": "526630d402f0759907f0f065676a85f63adfec48992d0139763b63567c231446b1733ea944707e8c0ff33cdd1b3b4997ca2f02621482981610e26c878bd2978b"
+        }
+      }
+    },
+    {
+      "id": "wYb71wQE",
+      "versionNumber": "1.15.8",
+      "name": "[Forge] Ad Astra 1.15.8",
+      "datePublished": "2024-01-12T21:59:04.734448Z",
+      "changelog_preview": "- Fix sodium/embeddium crash...",
+      "dependencies": [
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.8.jar",
+        "hashes": {
+          "sha512": "d50b534ed4afc7f4a2681be5fe334e7930b073b360c826d8bebf65bb5f8cf16f00f1c2829c860e302a5e9b3770d9890770d4e0abec3e75471a768656cf76ff52",
+          "sha1": "86d9be42dacc39e9c0c40b5f0163b78afbdcbf77"
+        }
+      }
+    },
+    {
+      "id": "VTfNmX00",
+      "versionNumber": "1.15.7",
+      "name": "[Forge] Ad Astra 1.15.7",
+      "datePublished": "2024-01-12T19:16:52.138305Z",
+      "changelog_preview": "This update brings a lot of internal changes from the rework into the release version of Ad Astra.\nIt is initially marked as a alpha as there are a lo...",
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.7.jar",
+        "hashes": {
+          "sha1": "bce7e5f45b69bcefef4c87dbc9d2fa6192ec4b9a",
+          "sha512": "a9bc83f21209d65deabaf12f59d3b5e4b62b602a692755418f545d25193c3862f95cad6f2392914c53235ac42e892ffe8b4db76ec18c7278828e79dd717887a5"
+        }
+      }
+    },
+    {
+      "id": "6oFkQIqc",
+      "versionNumber": "1.15.5",
+      "name": "[Forge] Ad Astra 1.15.5",
+      "datePublished": "2023-11-23T20:38:04.090656Z",
+      "changelog_preview": "- Update a few textures (JerryLu086, #400)\n- Fix redstone torches extinguishing in space\n- Prevent mobs that are not in the oxygen tag from spawning\n-...",
+      "dependencies": [
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.5.jar",
+        "hashes": {
+          "sha1": "4f1e5a074f39c3dcf2ef38a44415f9611cade6cf",
+          "sha512": "99747d4f27e449fdf1c932299293a9155a51a8e78aa4bb34d7ae502e051ae88199f68cdd8910557159c7c030aa2ce4272381362d3f35a8c0863a9d91ee0fa1ee"
+        }
+      }
+    },
+    {
+      "id": "AUgYW5MG",
+      "versionNumber": "1.15.4",
+      "name": "1.15.4",
+      "datePublished": "2023-09-29T17:01:18.479416Z",
+      "changelog_preview": null,
+      "dependencies": [
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "nU0bVIaL",
+          "title": "Patchouli",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "nfn13YXA",
+          "title": "Roughly Enough Items (REI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "u6dRKJwZ",
+          "title": "Just Enough Items (JEI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.4.jar",
+        "hashes": {
+          "sha1": "3730a4fafb3f2432226ee195f133ac39949519f6",
+          "sha512": "4eaea6d6e4699fb9c7a84a9c6207693780fa032a308e4fafd6d60b81e1e4f5782f35e2a2ae1bb4c924bd931a3c942126b94011ef09cc9c7a19cc63f69fa56d7f"
+        }
+      }
+    },
+    {
+      "id": "9rCTue8e",
+      "versionNumber": "1.15.3",
+      "name": "1.15.3",
+      "datePublished": "2023-07-29T21:11:04.074420Z",
+      "changelog_preview": null,
+      "dependencies": [
+        {
+          "projectId": "u6dRKJwZ",
+          "title": "Just Enough Items (JEI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "nfn13YXA",
+          "title": "Roughly Enough Items (REI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "nU0bVIaL",
+          "title": "Patchouli",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.3.jar",
+        "hashes": {
+          "sha1": "6a0a99f549dfc3146a2bfffb941ebb3fe640339c",
+          "sha512": "9bd4f337af927332ee85e3efaf1722547377565c6dcb973f0f38b7fbcacce0ebf1307dab3e766621dd85d9ccef1149a8e18ff7d4dbb57e979abd25966f01b77b"
+        }
+      }
+    },
+    {
+      "id": "TA1s5rP6",
+      "versionNumber": "1.15.2",
+      "name": "1.15.2",
+      "datePublished": "2023-07-14T13:27:36.266262Z",
+      "changelog_preview": null,
+      "dependencies": [
+        {
+          "projectId": "nU0bVIaL",
+          "title": "Patchouli",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "u6dRKJwZ",
+          "title": "Just Enough Items (JEI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "nfn13YXA",
+          "title": "Roughly Enough Items (REI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.2.jar",
+        "hashes": {
+          "sha1": "48546a9a47a93d6903cd7f32cea057d05b45647d",
+          "sha512": "fe26fcda6301ad260ba0f8b4bfe2584ccb5b5460c0c9709126edac35a169e89f413beba4b89eba7073720685c44d721cc9459993c3a6b36a42e5d636f479f64a"
+        }
+      }
+    },
+    {
+      "id": "RohrE1G4",
+      "versionNumber": "1.15.1",
+      "name": "1.15.1",
+      "datePublished": "2023-06-23T21:54:02.258169Z",
+      "changelog_preview": null,
+      "dependencies": [
+        {
+          "projectId": "nU0bVIaL",
+          "title": "Patchouli",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "u6dRKJwZ",
+          "title": "Just Enough Items (JEI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "nfn13YXA",
+          "title": "Roughly Enough Items (REI)",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20.1-1.15.1.jar",
+        "hashes": {
+          "sha512": "6f81d9e5f6f6b9b193bd6ccf7712e9b935a3223ab3fc35870de41f1d42fc6ac776111f9838778326a5248100625439de33fcc1530c26e207eb1226e4d47d405e",
+          "sha1": "d036f639edeba8945a797bbf64e06415445e4273"
+        }
+      }
+    },
+    {
+      "id": "JM91Sn4b",
+      "versionNumber": "1.15",
+      "name": "1.15",
+      "datePublished": "2023-06-18T02:47:56.263278Z",
+      "changelog_preview": "1.20.x...",
+      "dependencies": [
+        {
+          "projectId": "G1hIVOrD",
+          "title": "Resourceful Lib",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "M1953qlQ",
+          "title": "Resourceful Config",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "nfn13YXA",
+          "title": "Roughly Enough Items (REI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "2u6LRnMa",
+          "title": "Botarium",
+          "dependencyType": "required"
+        },
+        {
+          "projectId": "u6dRKJwZ",
+          "title": "Just Enough Items (JEI)",
+          "dependencyType": "optional"
+        },
+        {
+          "projectId": "nU0bVIaL",
+          "title": "Patchouli",
+          "dependencyType": "optional"
+        }
+      ],
+      "primaryFile": {
+        "filename": "ad_astra-forge-1.20-1.15.jar",
+        "hashes": {
+          "sha1": "870e71c1302c6a73e62bdee93fac808611b86b59",
+          "sha512": "819d2cc436a115b4ee8f0de1d174fd9b2411246d144294c59381da95b0d0a70d97def162fb39e3dfa00d110b99131024dbee384f645e54805cc1fb293fc23ff0"
+        }
+      }
+    }
+  ]
+}

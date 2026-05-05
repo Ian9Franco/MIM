@@ -89,14 +89,26 @@ interface CurseForgeEntry {
 export async function GET(req: NextRequest) {
   const apiKey = process.env.CURSEFORGE_API_KEY;
 
+  // Debug: log si la key está presente (no logueamos el valor completo por seguridad)
+  console.log("[CurseForge API] CURSEFORGE_API_KEY presente:", !!apiKey);
+  console.log("[CurseForge API] CURSEFORGE_API_KEY length:", apiKey?.length || 0);
+  console.log("[CurseForge API] CURSEFORGE_API_KEY first 10 chars:", apiKey?.substring(0, 10) || "N/A");
+
   if (!apiKey) {
     return NextResponse.json(
       {
         error:         "CURSEFORGE_API_KEY no configurada",
         instrucciones: "Obtené una API key gratuita en https://console.curseforge.com/ y agregala en .env.local como CURSEFORGE_API_KEY=tu_key",
+        envCheck:      `CURSEFORGE_API_KEY presente: ${!!process.env.CURSEFORGE_API_KEY}`,
       },
       { status: 503 }
     );
+  }
+  
+  // Verificar que la key no tenga espacios en blanco
+  const trimmedKey = apiKey.trim();
+  if (trimmedKey !== apiKey) {
+    console.warn("[CurseForge API] API key tiene espacios en blanco al inicio/final");
   }
 
   const { searchParams } = new URL(req.url);
@@ -113,9 +125,10 @@ export async function GET(req: NextRequest) {
   const cfLoaderId = LOADER_TO_CF_ID[loader];
 
   const headers = {
-    "x-api-key":   apiKey,
-    "Content-Type": "application/json",
-    "User-Agent":  "MIM-App/1.0 (contact@mim.local)",
+    "x-api-key":      apiKey.trim(),
+    "Accept":         "application/json",
+    "Content-Type":   "application/json",
+    "User-Agent":     "MinecraftIntelligentManager/1.0",
   };
 
   try {
@@ -143,6 +156,19 @@ export async function GET(req: NextRequest) {
     if (!res.ok) {
       const errorText = await res.text().catch(() => res.statusText);
       console.error(`[/api/curseforge/discover] Error de CurseForge API (${res.status}):`, errorText);
+      
+      // 403 = API key inválida o bloqueada
+      if (res.status === 403) {
+        return NextResponse.json(
+          { 
+            error: "API key de CurseForge rechazada (403 Forbidden)",
+            details: "Tu API key puede estar inválida, expirada, o tener espacios en blanco. Verificá tu key en https://console.curseforge.com/",
+            status: 403,
+          },
+          { status: 403 }
+        );
+      }
+      
       return NextResponse.json(
         { error: `Error de CurseForge API: ${res.status}` },
         { status: 502 }

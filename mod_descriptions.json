@@ -18,5 +18,25 @@
     "description": "Enhances on the wilderness aspect of the game",
     "body": "* * *\n\n# Introduction\n\nPrimal is a Forge/NeoForge mod that enhances Minecraft wilderness, making survival more immersive and exciting!\n\n    For a full breakdown of the mod's content, please check out our \n\n      official wiki\n    .\n\n      (Currently some contents may be missing)\n\n## UPDATES\n**1.0 - Hunters**\n\n**1.1 - Hunt & Gather**",
     "url": "https://modrinth.com/mod/mod-primal"
+  },
+  {
+    "fileName": "ad_astra-forge-1.20.1-1.15.20.jar",
+    "modName": "Ad Astra",
+    "status": "success",
+    "projectId": "Duramjh8",
+    "title": "Ad Astra [16x]",
+    "description": "A blue space themed 1.8.9 pvp resource pack",
+    "body": "Ad astra is a blue space themed texture pack made for 1.8.9 pvp.\n\nIt is based arround a mashup i've made between the Bonzai (purple) by HoodiePacks and the Devilled by WolfAva.\n\nIt is mainly themed arround the black items & colored border on ressources, witch makes it mainly a dark themed pack.\n\nHere are some ingame screenshots to showcase the pack :)\n\nSidenote : Feel free to join the discord if there is any issues with the Texture pack (Rendering Issues, Crashes, Textures not working properly, Sky glitches and/or not rendering...) It helps us greatly improve the work we do and provide the best for you all !",
+    "url": "https://modrinth.com/mod/ad_astra"
+  },
+  {
+    "fileName": "L_Enders_Cataclysm-3.27.jar",
+    "modName": "cataclysm",
+    "status": "success",
+    "projectId": "46KJle7n",
+    "title": "L_Ender's Cataclysm",
+    "description": "Cataclysm is a mod that adds difficult dungeons, challenging boss-fights and powerful items.",
+    "body": "Cataclysm is a mod that adds difficult dungeons, challenging boss-fights and powerful items.\n\nDefeat them in battle to prove yourself and earn powerful gear!\n\n[](http://discord.gg/honeyfrost)\n\nCataclysm is finally coming to the Minecraft Bedrock on all Platforms as an Add-On in 2026!\n\nWatch it’s Announcement Trailer Here: https://www.youtube.com/watch?v=oSmwvFQNG0M\n\nFor more information about Cataclysm Bedrock Edition,\n\njoin Honeyfrost’s Discord at: http://discord.gg/honeyfrost\n\nNo Fabric\n\nTutorial(German):https://youtu.be/21k2s9t81us",
+    "url": "https://modrinth.com/mod/l_enders-cataclysm"
   }
 ]

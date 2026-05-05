@@ -1,14 +1,25 @@
 # MIM – Guía de Estética Frontend
+> **Versión actualizada:** 2026-05-05 — Glassmorphism, FOMO UI 2.0 (High Density), Security Badges
 
 ## Paleta de Colores
 
-| Token       | Hex       | Tailwind custom token |
-|-------------|-----------|-----------------------|
-| Dark Purple | `#200D2D` | `bg-dark-purple`      |
-| Wisteria    | `#BB96E4` | `text-wisteria`       |
-| Sun Glow    | `#FFD066` | `text-sun-glow`       |
+| Token       | Hex       | Tailwind custom token | Uso |
+|-------------|-----------|-----------------------|-----|
+| Dark Purple | `#200D2D` | `bg-dark-purple`      | Fondo base, sidebar |
+| Wisteria    | `#BB96E4` | `text-wisteria`       | Acentos primarios, bordes |
+| Sun Glow    | `#FFD066` | `text-sun-glow`       | Highlights, badges, hotkeys |
+| Forge Orange| `#E6A15C` | N/A (inline)          | Indicador Forge (FOMO toggle) |
+| CF Orange   | `#F16436` | N/A (inline)          | Indicador CurseForge |
+| Risk Red    | `#EF4444` | N/A (inline)          | Alerta crítica (Security/Version error) |
+| Safety Green| `#22C55E` | N/A (inline)          | Estado seguro (Clean) |
 
 Definidas como variables CSS en `globals.css` y mapeadas en `tailwind.config.ts`.
+
+## Escalado Global
+
+- **Base font size:** 17px (15% más grande que default 16px) para mejor legibilidad.
+- **Pixel-perfect icons:** `image-rendering: pixelated` para iconos de Minecraft.
+- **Implementación:** `globals.css` → `html { font-size: 17px; }`
 
 ---
 
@@ -63,14 +74,62 @@ Patrón adaptado del componente `SkeletonCopy` de referencia (Scrap.io style):
 
 ## Componentes y su Estética
 
-### `ModCard`
+### Componentes FOMO (`components/fomo/`)
+
+#### `FomoSidebar`
+- Ancho: `w-[750px]` (Expandido para 2 columnas)
+- Background: `bg-[#200D2D]/95 backdrop-blur-xl`
+- **Layout:** Rejilla de 2 columnas para resultados de búsqueda.
+- 3 Tabs con indicadores de estado activo.
+- Toggle Modrinth/CF con colores distintivos (verde/naranja).
+
+#### `FomoModCard`
+- Layout horizontal con thumbnail izquierda.
+- Thumbnail: `w-16 h-16 object-contain` con `image-rendering: pixelated`.
+- Badge de fuente: "Modrinth" (verde) / "CurseForge" (naranja).
+- **Security Badge:** Indicador de riesgo (Clean/Caution/Suspicious/Critical).
+- Hover: glow sutil + elevación.
+
+#### `FomoVersionOverlay`
+- Full overlay con backdrop blur.
+- **Tabs:** Historial, Dependencias, Descripción.
+- Lista de versiones scrollable con changelogs renderizados.
+- Destaca versión compatible con proyecto activo.
+- **Dependency Resolver:** Colores por estado (Requerido: Rojo, Opcional: Violeta).
+- Botón "Descargar" primario amarillo.
+
+### Componentes de Layout (`components/layout/`)
+
+#### `AlertSidebar`
+- Slide-in desde derecha
+- Background: `bg-[#1a0a24]/95`
+- Alertas categorizadas por severidad
+
+#### `SettingsModal`
+- Centered modal con backdrop oscuro
+- Formularios con inputs glassmorphism
+- Persistencia a `mim-settings.json`
+
+#### `ThemeToggle`
+- Switch animado sol/luna
+- Iconos pixelados
+
+### Componentes de Library (`components/library/`)
+
+#### `ModCard` (Pendiente/Clasificado)
 - Fondo: `bg-[#1a0a24]`
 - Borde normal: `border-[#BB96E4]/20`
 - Borde seleccionado: `border-[#FFD066]` + glow amarillo
 - Borde error (versión incorrecta): `border-red-500/50` → rojo
 - Animación de error: `animate-[shake_0.5s_ease-in-out]`
+- Icono extraído localmente (Base64) o placeholder
 
-### `HotkeyCard`
+#### `QuickCategorizeSection`
+- Grid de `HotkeyCard`
+- Atajos: 1 (Essential), 2 (Local), 3 (Server)
+- Muestra panel de subcategorías on-select
+
+### `HotkeyCard` (`components/ui/`)
 - Hover: `hover:-translate-y-2` + `hover:shadow-[0_10px_30px_rgba(255,208,102,0.15)]`
 - Número: `text-white/30` → `text-[#FFD066]` on hover
 - Ícono: `group-hover:scale-110 group-hover:rotate-3`

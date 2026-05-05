@@ -1,5 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
+import { markdownToHtml } from "@/utils/markdown";
+import { openExternal } from "@/utils/format";
 
 interface DescriptionModalProps {
   modDescription: {
@@ -13,6 +15,18 @@ interface DescriptionModalProps {
 }
 
 export function DescriptionModal({ modDescription, onClose }: DescriptionModalProps) {
+  const descriptionHtml = modDescription.body
+    ? markdownToHtml(modDescription.body)
+    : '<span class="opacity-70">No hay documentación detallada (body) disponible para este mod en Modrinth.</span>';
+
+  const handleBodyClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    const anchor = target?.closest("a[data-external-link='true']") as HTMLAnchorElement | null;
+    if (!anchor?.href) return;
+    event.preventDefault();
+    openExternal(anchor.href);
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" 
@@ -30,9 +44,14 @@ export function DescriptionModal({ modDescription, onClose }: DescriptionModalPr
               {modDescription.title || modDescription.modName || "Descripción del Mod"}
             </h2>
             {modDescription.url && (
-              <a href={modDescription.url} target="_blank" rel="noreferrer" className="text-sm hover:underline mt-1 block" style={{ color: "var(--color-accent)" }}>
+              <button
+                type="button"
+                onClick={() => openExternal(modDescription.url!)}
+                className="text-sm hover:underline mt-1 block"
+                style={{ color: "var(--color-accent)" }}
+              >
                 Ver en Modrinth ↗
-              </a>
+              </button>
             )}
           </div>
           <button 
@@ -51,13 +70,12 @@ export function DescriptionModal({ modDescription, onClose }: DescriptionModalPr
               "{modDescription.description}"
             </p>
           )}
-          <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "var(--color-muted)" }}>
-            {modDescription.body ? (
-              modDescription.body
-            ) : (
-              <span className="opacity-70">No hay documentación detallada (body) disponible para este mod en Modrinth.</span>
-            )}
-          </div>
+          <div
+            className="text-sm leading-relaxed break-words"
+            style={{ color: "var(--color-muted)", lineHeight: "1.7" }}
+            onClick={handleBodyClick}
+            dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+          />
         </div>
       </div>
     </div>

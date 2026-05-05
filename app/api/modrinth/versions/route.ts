@@ -24,6 +24,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -33,6 +36,7 @@ interface VersionFile {
   filename: string;
   primary: boolean;
   size: number;
+  hashes: Record<string, string>;
 }
 
 interface VersionEntry {
@@ -57,66 +61,58 @@ export async function GET(req: NextRequest) {
   const projectType = searchParams.get("projectType") ?? "mod";
 
   if (!projectId) {
-    return NextResponse.json(
-      { error: "Falta parámetro requerido: projectId" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
-  const headers: Record<string, string> = {
-    "User-Agent": "MIM-App/1.0 (contact@mim.local)",
-  };
-  if (process.env.MODRINTH_API_KEY) {
-    headers["Authorization"] = process.env.MODRINTH_API_KEY;
-  }
+  const headers: Record<string, string> = { "User-Agent": "MIM-App/1.0 (contact@mim.local)" };
+  if (process.env.MODRINTH_API_KEY) headers["Authorization"] = process.env.MODRINTH_API_KEY;
 
   try {
-    // Construir parámetros de filtro opcionales
-    // Los shaders, resourcepacks y datapacks no tienen loader en Modrinth,
-    // por eso solo se aplica el filtro de loader si el tipo es "mod".
+    // 1. Fetch versions with filters
     const params = new URLSearchParams();
-    if (gameVersion) {
-      params.set("game_versions", JSON.stringify([gameVersion]));
-    }
-    if (loader && projectType === "mod") {
-      params.set("loaders", JSON.stringify([loader]));
-    }
+    if (gameVersion) params.set("game_versions", JSON.stringify([gameVersion]));
+    if (loader && projectType === "mod") params.set("loaders", JSON.stringify([loader]));
 
-    const queryString = params.toString() ? `?${params.toString()}` : "";
-    const url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version${queryString}`;
+    let url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params.toString()}`;
+    let res = await fetch(url, { headers, cache: "no-store" });
+    let rawVersions = await res.json();
 
-    const res = await fetch(url, { headers });
-
-    if (res.status === 404) {
-      return NextResponse.json(
-        { error: `Proyecto no encontrado: "${projectId}"` },
-        { status: 404 }
-      );
+    // 2. If no versions found with strict filters, fetch ALL versions to show them as "other"
+    if (Array.isArray(rawVersions) && rawVersions.length === 0 && (gameVersion || loader)) {
+      url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version`;
+      res = await fetch(url, { headers, cache: "no-store" });
+      rawVersions = await res.json();
     }
 
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: `Error de Modrinth API: ${res.status} ${res.statusText}` },
-        { status: 502 }
-      );
+    if (!Array.isArray(rawVersions)) return NextResponse.json({ versions: [] });
+
+    // 3. Collect all dependency IDs to resolve them in one batch
+    const depIds = new Set<string>();
+    rawVersions.forEach((v: any) => {
+      v.dependencies?.forEach((d: any) => { if (d.project_id) depIds.add(d.project_id); });
+    });
+
+    const projectMeta: Record<string, { title: string; slug: string; iconUrl: string | null; projectType: string }> = {};
+    if (depIds.size > 0) {
+      try {
+        const pRes = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(Array.from(depIds))}`, { headers, cache: "no-store" });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          pData.forEach((p: any) => {
+            projectMeta[p.id] = {
+              title: p.title ?? p.id,
+              slug: p.slug ?? p.id,
+              iconUrl: p.icon_url ?? null,
+              projectType: p.project_type ?? "mod",
+            };
+          });
+        }
+      } catch (e) { console.error("Error resolving dependencies:", e); }
     }
 
-    const rawVersions = await res.json();
-
-    if (!Array.isArray(rawVersions)) {
-      return NextResponse.json(
-        { error: "Respuesta inesperada de Modrinth: no es un array" },
-        { status: 502 }
-      );
-    }
-
-    // Mapear al shape limpio que necesita el cliente
-    const versions: VersionEntry[] = rawVersions.map((v: any) => {
-      // El archivo primario es el que tiene primary=true; si no hay uno marcado,
-      // tomamos el primero de la lista (Modrinth garantiza al menos uno).
-      const primaryFile: VersionFile | null =
-        v.files?.find((f: any) => f.primary) ?? v.files?.[0] ?? null;
-
+    // 4. Map versions
+    const versions = rawVersions.map((v: any) => {
+      const primaryFile = v.files?.find((f: any) => f.primary) ?? v.files?.[0] ?? null;
       return {
         id:            v.id,
         versionNumber: v.version_number,
@@ -126,21 +122,31 @@ export async function GET(req: NextRequest) {
         loaders:       v.loaders ?? [],
         datePublished: v.date_published,
         downloads:     v.downloads ?? 0,
-        primaryFile: primaryFile
-          ? {
-              url:      primaryFile.url,
-              filename: primaryFile.filename,
-              primary:  primaryFile.primary ?? false,
-              size:     primaryFile.size ?? 0,
-            }
-          : null,
+        changelog:     v.changelog ?? "",
+        dependencies:  (v.dependencies ?? []).map((d: any) => ({
+          projectId: d.project_id,
+          dependencyType: d.dependency_type,
+          title: projectMeta[d.project_id]?.title || d.project_id || d.file_name || "Dependencia externa",
+          slug: projectMeta[d.project_id]?.slug,
+          iconUrl: projectMeta[d.project_id]?.iconUrl ?? null,
+          projectType: projectMeta[d.project_id]?.projectType ?? "mod",
+          url: projectMeta[d.project_id]?.slug ? `https://modrinth.com/project/${projectMeta[d.project_id].slug}` : undefined,
+          versionId: d.version_id,
+          fileName: d.file_name ?? null,
+          externalUrl: d.external_secure_url ?? null,
+        })),
+        primaryFile: primaryFile ? {
+          url:      primaryFile.url,
+          filename: primaryFile.filename,
+          primary:  primaryFile.primary ?? false,
+          size:     primaryFile.size ?? 0,
+          hashes:   primaryFile.hashes ?? {},
+        } : null,
       };
     });
 
     return NextResponse.json({ versions });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Error desconocido";
-    console.error("[/api/modrinth/versions] Error no manejado:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

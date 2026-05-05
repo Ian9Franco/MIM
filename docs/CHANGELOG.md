@@ -1,4 +1,34 @@
 # MIM — Backend Changelog
+
+### 🌈 Multi-Theme & High Contrast (2026-05-05)
+- **Dynamic Token System:** Refactorización de `theme/tokens.ts` para usar variables CSS dinámicas.
+- **Modo Modern (Light) Fix:** Optimización de contraste en el modo claro. Textos legibles y colores de acento adaptativos (Deep Amber para botones dorados).
+- **Theme-Aware Components:** `FomoModCard` y `FomoVersionOverlay` ahora son 100% compatibles con cambios de tema en tiempo real.
+- **Glassmorphism Premium:** Upgrade de `.glass` a 24px de blur con sombras de alta fidelidad.
+- **Custom Scrollbar:** Implementación de barras de desplazamiento ultra-finas integradas en el diseño.
+
+### 🛡️ Security Layer (Threat Detection v1.0)
+- **Bytecode Scanner:** Implementado motor de detección de amenazas en `lib/security-scanner.ts`.
+- **Heuristic Engine:** Detección de llamadas de red, ejecución de procesos, abuso de reflexión y código nativo.
+- **Risk Scoring:** Implementado sistema de puntuación 0-100 con niveles de riesgo visuales.
+- **SHA1 Blacklist:** Soporte para bloqueo de hashes de malware conocidos.
+- **API Security:** Nuevo endpoint `/api/security/scan` para auditoría bajo demanda.
+
+### 🎨 FOMO UI 2.0 (High Density)
+- **Grid de 2 Columnas:** El panel de descubrimiento ahora utiliza una rejilla de dos columnas, duplicando la visibilidad de mods por scroll.
+- **Sidebar Widened:** Ancho del sidebar aumentado a `750px` para acomodar el nuevo layout.
+- **Detailed Version Overlay:** Panel de detalles premium con:
+  - **Tabs:** Historial de Versiones, Dependencias y Descripción (Markdown).
+  - **Dependency Resolver:** Visualización de dependencias requeridas (Rojo) y opcionales (Violeta) con botón de descarga directa.
+  - **Full Changelogs:** Renderizado completo del historial de cambios en un contenedor scrolleable.
+
+### 🔧 Fixes & Estabilidad
+- **TypeScript Strictness:** Corregidos errores de tipos en el mapeo de `VersionEntry` y props de componentes.
+- **Limpieza de UI:** Eliminados los `alert()` intrusivos para una experiencia silenciosa.
+- **SHA1 Matching:** El matching de Modrinth ahora es 100% preciso basado en hashes.
+
+---
+
 > Auditoría y refactor completo del backend. Fecha: 2026-05-04  
 > Archivos modificados: **15+** · Bugs corregidos: **2** · Mejoras: **10+**
 

@@ -25,6 +25,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, isValidCategory } from "@/lib/constants";
+import { getProjectSubcategories } from "@/lib/projectSubcategories";
 import path from "path";
 import fs from "fs";
 
@@ -70,10 +71,17 @@ export async function POST(req: NextRequest) {
     const category = (targetCategory as string).slice(0, sepIdx);
     const sub = (targetCategory as string).slice(sepIdx + 1);
 
-    // ── Validate category+sub against the manifest ────────────────────────────
-    // isValidCategory() is the shared SSOT from constants — prevents path traversal
-    // by rejecting any combination not explicitly listed in SUBCATEGORIES.
-    if (!isValidCategory(category, sub)) {
+    // ── Validate category+sub ──────────────────────────────────────────────────
+    // Primero verificar contra las subcategorías por defecto
+    let isValid = isValidCategory(category, sub);
+    
+    // Si no es válida por defecto, verificar contra las subcategorías del proyecto
+    if (!isValid && projectName) {
+      const projectSubs = getProjectSubcategories(projectName);
+      isValid = projectSubs[category]?.includes(sub) ?? false;
+    }
+    
+    if (!isValid) {
       return NextResponse.json(
         {
           error: `Invalid category/sub combination: "${category}" / "${sub}"`,

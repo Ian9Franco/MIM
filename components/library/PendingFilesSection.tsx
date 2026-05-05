@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Inbox, FolderOpen, Loader2 } from "lucide-react";
+import { Inbox, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
 import { EmptyState } from "../ui/EmptyState";
+import { ConfirmModal } from "../ui/ConfirmModal";
 import { ModCard } from "./ModCard";
 import type { PendingFile, Project } from "@/lib/types";
 
@@ -12,6 +13,7 @@ interface PendingFilesSectionProps {
   selectedFiles: PendingFile[];
   setSelectedFiles: React.Dispatch<React.SetStateAction<PendingFile[]>>;
   activeProject: Project | null;
+  onDeleteFile?: (file: PendingFile) => Promise<void>;
 }
 
 export function PendingFilesSection({
@@ -19,9 +21,12 @@ export function PendingFilesSection({
   loading,
   selectedFiles,
   setSelectedFiles,
-  activeProject
+  activeProject,
+  onDeleteFile
 }: PendingFilesSectionProps) {
   const [openingFolder, setOpeningFolder] = useState(false);
+  const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
+  const [fileToDelete, setFileToDelete] = useState<PendingFile | null>(null);
 
   const handleOpenDownloadsFolder = async () => {
     setOpeningFolder(true);
@@ -35,6 +40,23 @@ export function PendingFilesSection({
       console.error(e);
     }
     setOpeningFolder(false);
+  };
+
+  const handleDeleteRequest = (file: PendingFile) => {
+    setFileToDelete(file);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!fileToDelete || !onDeleteFile) return;
+    setDeletingFiles(prev => ({ ...prev, [fileToDelete.path]: true }));
+    try {
+      await onDeleteFile(fileToDelete);
+    } catch (e) {
+      console.error("Error deleting file:", e);
+    } finally {
+      setDeletingFiles(prev => ({ ...prev, [fileToDelete.path]: false }));
+      setFileToDelete(null);
+    }
   };
 
   return (
@@ -83,11 +105,26 @@ export function PendingFilesSection({
                 )}
                 activeVersion={activeProject?.version ?? ""}
                 activeLoader={activeProject?.loader ?? ""}
+                isPending={true}
+                onDelete={onDeleteFile ? () => handleDeleteRequest(f) : undefined}
+                isDeleting={deletingFiles[f.path]}
               />
             );
           })
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!fileToDelete}
+        onClose={() => setFileToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="¿Eliminar archivo?"
+        message={fileToDelete ? `¿Estás seguro de que querés eliminar "${fileToDelete.fileName}"? Esta acción no se puede deshacer.` : ""}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        type="danger"
+      />
     </section>
   );
 }

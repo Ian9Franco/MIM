@@ -1,331 +1,295 @@
-import React from "react";
-import { Loader2, AlertCircle, Library, Download, ChevronLeft, Box, Flame, ExternalLink, ChevronDown } from "lucide-react";
-import type { CollectionEntry, ModHit } from "./types";
-import { formatNumber, openExternal } from "./utils";
+/**
+ * @fileoverview FomoCollections – displays local and Modrinth mod collections,
+ * with collection detail view, mod download, and collection creation.
+ *
+ * Props are leaner than the original; all API calls delegated to services/.
+ */
+
+"use client";
+
+import React, { useState, useEffect, useCallback, memo } from "react";
+import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, AlertTriangle } from "lucide-react";
+import {
+  fetchCollections,
+  fetchCollectionMods,
+  createCollection,
+  addModToCollection,
+  downloadCollection,
+} from "@/services/api";
+import { COLORS } from "@/theme/tokens";
+import { LoadingSpinner, EmptyState } from "../ui/primitives";
+import { FomoModCard }               from "./FomoModCard";
+import type { CollectionEntry, ModHit } from "@/lib/types";
+import type { StatusType } from "@/hooks/useStatusBanner";
 
 interface FomoCollectionsProps {
-  collections: CollectionEntry[];
-  collLoading: boolean;
-  collError: string | null;
-  collDownloading: string | null;
-  viewingCollection: CollectionEntry | null;
-  collectionMods: ModHit[];
-  collModsLoading: boolean;
-  collectionFilter: string;
-  setCollectionFilter: (f: string) => void;
-  setViewingCollection: (c: CollectionEntry | null) => void;
-  fetchCollections: () => void;
-  fetchCollectionProjects: (c: CollectionEntry) => void;
-  handleDownloadCollection: (c: CollectionEntry) => void;
-  handleDownload: (m: ModHit) => void;
-  handleOpenVersionSelector: (m: ModHit) => void;
-  downloading: Record<string, boolean>;
-  handleCreateCollection?: () => void;
+  loader:       string;
+  gameVersion:  string;
+  onStatus:     (text: string, type?: StatusType) => void;
+  addingForMod: ModHit | null;
+  onClearAddingFor: () => void;
+  downloading:  Record<string, boolean>;
+  onDownloadMod:(mod: ModHit) => void;
+  onOpenVersions:(mod: ModHit) => void;
 }
 
-export function FomoCollections({
-  collections,
-  collLoading,
-  collError,
-  collDownloading,
-  viewingCollection,
-  collectionMods,
-  collModsLoading,
-  collectionFilter,
-  setCollectionFilter,
-  setViewingCollection,
-  fetchCollections,
-  fetchCollectionProjects,
-  handleDownloadCollection,
-  handleDownload,
-  handleOpenVersionSelector,
-  downloading,
-  handleCreateCollection,
+export const FomoCollections = memo(function FomoCollections({
+  loader, gameVersion, onStatus, addingForMod, onClearAddingFor,
+  downloading, onDownloadMod, onOpenVersions,
 }: FomoCollectionsProps) {
-  if (viewingCollection) {
+  const [collections,    setCollections]    = useState<CollectionEntry[]>([]);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
+  const [viewing,        setViewing]        = useState<CollectionEntry | null>(null);
+  const [viewMods,       setViewMods]       = useState<ModHit[]>([]);
+  const [viewLoading,    setViewLoading]    = useState(false);
+  const [collDl,         setCollDl]         = useState<string | null>(null);
+  const [creating,       setCreating]       = useState(false);
+  const [targetType,     setTargetType]     = useState<"local" | "modrinth">("modrinth");
+  const [newName,        setNewName]        = useState("MIM");
+  const [deletingColl,   setDeletingColl]   = useState<string | null>(null);
+  const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { collections: colls, error: err } = await fetchCollections();
+    setCollections(colls);
+    setError(err);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openCollection = useCallback(async (coll: CollectionEntry) => {
+    setViewing(coll);
+    setViewLoading(true);
+    if (coll.isLocal) {
+      setViewMods(coll.projects ?? []);
+    } else {
+      const { mods } = await fetchCollectionMods(coll.id);
+      setViewMods(mods);
+    }
+    setViewLoading(false);
+  }, []);
+
+  const handleCreate = useCallback(async (name: string) => {
+    const { collection, error } = await createCollection(name, addingForMod, targetType);
+    if (error) { onStatus(error, "error"); return; }
+    onStatus(addingForMod ? `"${addingForMod.title}" añadido a ${name}` : `Colección "${name}" creada en ${targetType}`, "success");
+    setCreating(false);
+    onClearAddingFor();
+    load();
+  }, [addingForMod, targetType, onClearAddingFor, onStatus, load]);
+
+  const handleAddTo = useCallback(async (coll: CollectionEntry) => {
+    if (!addingForMod) return;
+    const target: "local" | "modrinth" = coll.isLocal ? "local" : "modrinth";
+    const { error } = await addModToCollection(coll.id, addingForMod, target);
+    if (error) { onStatus(error, "error"); return; }
+    onStatus(`"${addingForMod.title}" añadido a ${coll.name}`, "success");
+    onClearAddingFor();
+    load();
+  }, [addingForMod, onClearAddingFor, onStatus, load]);
+
+  const handleDownloadCollection = useCallback(async (coll: CollectionEntry) => {
+    setCollDl(coll.id);
+    const { count, error } = await downloadCollection(coll.id, loader, gameVersion);
+    if (error) onStatus(error, "error");
+    else       onStatus(`${count} mods descargados de "${coll.name}"`, "success");
+    setCollDl(null);
+  }, [loader, gameVersion, onStatus]);
+
+  const handleDeleteCollection = useCallback(async (coll: CollectionEntry) => {
+    if (coll.id === "followed-projects") {
+      onStatus("No se puede eliminar la colección de proyectos seguidos", "error");
+      return;
+    }
+
+    setDeletingColl(coll.id);
+    try {
+      const endpoint = coll.isLocal ? "/api/local-collections" : "/api/modrinth/collections";
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionId: coll.id }),
+      });
+
+      if (res.ok) {
+        onStatus(`Colección "${coll.name}" eliminada`, "success");
+        load();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        onStatus(data.error || "Error al eliminar colección", "error");
+      }
+    } catch (err) {
+      onStatus("Error de red al eliminar colección", "error");
+    } finally {
+      setDeletingColl(null);
+      setConfirmDelete(null);
+    }
+  }, [onStatus, load]);
+
+  // Collection-selector overlay (when adding a mod to a collection)
+  if (addingForMod || creating) {
     return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* View Header */}
-        <div className="px-4 py-3 border-b flex items-center justify-between shrink-0" style={{ borderColor: "var(--color-border)" }}>
-          <button 
-            onClick={() => setViewingCollection(null)}
-            className="flex items-center gap-2 text-xs font-bold hover:opacity-70 transition-opacity"
-            style={{ color: "var(--color-primary)" }}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Volver a colecciones
-          </button>
-          <button
-            onClick={() => handleDownloadCollection(viewingCollection)}
-            disabled={!!collDownloading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95"
-            style={{ 
-              background: "rgba(102,200,160,0.15)",
-              color: "#66C8A0",
-              border: "1px solid rgba(102,200,160,0.3)"
-            }}
-          >
-            {collDownloading === viewingCollection.id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5" />
-                Bajar Todo
-              </>
-            )}
+      <div className="flex-1 flex flex-col p-4 space-y-3 overflow-y-auto custom-scrollbar">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-headline text-lg">{creating ? "Nueva Colección" : "Añadir a Colección"}</h3>
+            <p className="font-caption text-xs mt-1 truncate max-w-[340px]" style={{ color: COLORS.muted }}>
+              {addingForMod ? `Para: "${addingForMod.title}"` : "Crea una nueva colección"}
+            </p>
+          </div>
+          <button onClick={() => { onClearAddingFor(); setCreating(false); }} aria-label="Cancelar" className="p-2 rounded-xl hover:bg-white/10">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Collection Meta & Filters */}
-        <div className="px-5 py-4 bg-white/[0.02] border-b space-y-3" style={{ borderColor: "var(--color-border)" }}>
-          <div>
-            <h3 className="font-headline text-lg" style={{ color: "var(--color-foreground)" }}>{viewingCollection.name}</h3>
-            <p className="font-caption text-xs mt-1" style={{ color: "var(--color-muted)" }}>{viewingCollection.projectCount} proyectos en esta colección</p>
-          </div>
-          
-          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {["all", "mod", "resourcepack"].map((type) => (
+        {creating ? (
+          <div className="p-5 rounded-2xl bg-white/5 border border-primary/20 space-y-4">
+            <div className="flex p-1 bg-black/40 rounded-xl gap-1">
               <button
-                key={type}
-                onClick={() => setCollectionFilter(type)}
-                className="px-3 py-1.5 rounded-lg text-[0.65rem] font-bold transition-all shrink-0"
-                style={{
-                  background: collectionFilter === type ? "rgba(102,200,160,0.15)" : "rgba(255,255,255,0.05)",
-                  color: collectionFilter === type ? "#66C8A0" : "var(--color-muted)",
-                  border: collectionFilter === type ? "1px solid rgba(102,200,160,0.3)" : "1px solid transparent"
-                }}
+                onClick={() => setTargetType("modrinth")}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${targetType === "modrinth" ? "bg-primary text-white" : "opacity-40 hover:opacity-100"}`}
               >
-                {type === "all" ? "Todo" : type === "mod" ? "Mods" : "Packs"}
+                Modrinth
+              </button>
+              <button
+                onClick={() => setTargetType("local")}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${targetType === "local" ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
+              >
+                Local
+              </button>
+            </div>
+
+            <input
+              autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate(newName)}
+              placeholder={targetType === "modrinth" ? "Nombre en Modrinth" : "Nombre local"}
+              aria-label="Nombre de la nueva colección"
+              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-primary/50"
+              style={{ color: COLORS.foreground }}
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setCreating(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5" style={{ color: COLORS.muted }}>Cancelar</button>
+              <button onClick={() => handleCreate(newName)} className="flex-[2] py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20" style={{ background: COLORS.primary, color: "white" }}>
+                {targetType === "modrinth" ? "Crear en Modrinth" : "Crear Local"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3">
+              <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
+              <span className="font-bold text-sm">Nueva Colección</span>
+            </button>
+            {collections.filter((c) => c.id !== "followed-projects").map((coll) => (
+              <button key={coll.id} onClick={() => handleAddTo(coll)} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-transparent hover:border-primary/30 hover:bg-white/10 transition-all text-left group">
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                  {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-5 h-5 opacity-40" style={{ color: COLORS.primary }} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm truncate">{coll.name}</p>
+                  <p className="font-caption text-[0.7rem]" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                </div>
+                <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             ))}
-          </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Collection detail view
+  if (viewing) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center gap-2 p-4 border-b shrink-0" style={{ borderColor: COLORS.border }}>
+          <button onClick={() => setViewing(null)} aria-label="Volver a colecciones" className="p-1.5 rounded-lg hover:bg-white/10">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h3 className="font-headline text-sm truncate flex-1">{viewing.name}</h3>
+          <button
+            onClick={() => handleDownloadCollection(viewing)}
+            disabled={!!collDl}
+            aria-label="Descargar todos los mods"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+            style={{ background: "rgba(102,200,160,0.15)", color: COLORS.emerald, border: "1px solid rgba(102,200,160,0.3)" }}
+          >
+            {collDl === viewing.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "↓ Descargar todos"}
+          </button>
         </div>
-
-        {/* Projects List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-3">
-          {collModsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin opacity-40" style={{ color: "var(--color-primary)" }} />
-              <p className="font-caption text-xs" style={{ color: "var(--color-muted)" }}>Cargando proyectos...</p>
-            </div>
-          ) : collectionMods.length === 0 ? (
-            <div className="text-center py-20 opacity-40">
-              <Box className="w-12 h-12 mx-auto mb-3" />
-              <p className="font-subhead">No hay proyectos compatibles</p>
-            </div>
-          ) : (
-            collectionMods
-              .filter(m => {
-                if (collectionFilter === "all") return true;
-                return m.projectType === collectionFilter;
-              })
-              .map((mod) => (
-              <div
-                key={mod.projectId}
-                className="rounded-2xl p-4 transition-all duration-200"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <div className="flex items-start gap-3.5">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-white/5 border border-white/10 flex items-center justify-center">
-                    {mod.iconUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={mod.iconUrl} alt={mod.title} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <Flame className="w-5 h-5 opacity-25" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-subhead text-base leading-snug" style={{ color: "var(--color-foreground)" }}>
-                          {mod.title}
-                        </p>
-                        <p className="font-caption text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>
-                          by {mod.author}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="font-label text-[0.6rem]" style={{ color: "var(--color-muted)" }}>
-                            ↓ {formatNumber(mod.downloads)}
-                          </span>
-                          {mod.latestVersion && (
-                            <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(102,200,160,0.12)", color: "#66C8A0" }}>
-                              v{mod.latestVersion}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-1.5 shrink-0">
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => handleDownload(mod)}
-                            disabled={downloading[mod.projectId]}
-                            className="p-2 rounded-xl transition-all hover:bg-white/10 disabled:opacity-40"
-                            style={{ color: "#66C8A0", border: "1px solid var(--color-border)" }}
-                            title="Descargar versión por defecto"
-                          >
-                            {downloading[mod.projectId] ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleOpenVersionSelector(mod)}
-                            className="px-2 py-2 rounded-xl text-[0.65rem] font-bold transition-all hover:bg-white/10 flex items-center justify-center gap-1"
-                            style={{ color: "var(--color-foreground)", border: "1px solid var(--color-border)" }}
-                            title="Ver versiones"
-                          >
-                            Versiones
-                            <ChevronDown className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => openExternal(mod.url)}
-                            className="p-2 rounded-xl hover:bg-white/10 transition-colors"
-                            style={{ color: "var(--color-muted)", border: "1px solid transparent" }}
-                            title="Abrir en navegador"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Full Description */}
-                    {mod.description && (
-                      <p className="font-caption text-sm mt-3 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-                        {mod.description}
-                      </p>
-                    )}
-
-                    {/* Categories */}
-                    {mod.categories && mod.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {mod.categories.map(cat => (
-                          <span
-                            key={cat}
-                            className="font-label text-[0.58rem] px-2 py-0.5 rounded-full"
-                            style={{ background: "rgba(187,150,228,0.12)", color: "var(--color-primary)" }}
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+          {viewLoading ? <LoadingSpinner label="Cargando mods..." /> : viewMods.map((mod) => (
+            <FomoModCard key={mod.projectId} mod={mod} isDownloading={!!downloading[mod.projectId]} onDownload={onDownloadMod} onOpenVersions={onOpenVersions} onAddToCollection={() => {}} />
+          ))}
         </div>
       </div>
     );
   }
 
+  // Collection list view
+  if (loading) return <LoadingSpinner label="Cargando colecciones..." />;
+  if (error && collections.length === 0) return <EmptyState icon={<Library className="w-12 h-12" />} title="Error al cargar" subtitle={error} />;
+
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-4">
-      {collLoading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="w-9 h-9 animate-spin" style={{ color: "#66C8A0", opacity: 0.5 }} />
-          <p className="font-subhead text-sm animate-pulse" style={{ color: "var(--color-muted)" }}>Sincronizando con Modrinth...</p>
-        </div>
-      ) : collError ? (
-        <div className="text-center py-20 px-6 rounded-3xl" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)" }}>
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500 opacity-60" />
-          <p className="font-subhead text-red-400">Error de Autenticación</p>
-          <p className="font-caption mt-2 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-            {collError.includes("TOKEN") 
-              ? "Necesitás configurar MODRINTH_TOKEN en tu .env.local para acceder a tus colecciones privadas."
-              : collError}
-          </p>
-          <button 
-            onClick={fetchCollections}
-            className="mt-6 px-6 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
-            style={{ background: "rgba(255,255,255,0.1)", color: "var(--color-foreground)" }}
-          >
-            Reintentar
-          </button>
-        </div>
-      ) : collections.length === 0 ? (
-        <div className="text-center py-20 opacity-40">
-          <Library className="w-12 h-12 mx-auto mb-3" />
-          <p className="font-subhead">No tienes colecciones</p>
-          <p className="font-caption mt-1 mb-6">Crea una colección local o sincroniza con Modrinth</p>
-          {handleCreateCollection && (
-            <button 
-              onClick={handleCreateCollection}
-              className="px-6 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
-              style={{ background: "rgba(102,200,160,0.15)", color: "#66C8A0", border: "1px solid rgba(102,200,160,0.3)" }}
-            >
-              + Crear Colección
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Botón flotante o superior para crear más colecciones */}
-          {handleCreateCollection && (
-            <div className="flex justify-end mb-2">
-              <button 
-                onClick={handleCreateCollection}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95"
-                style={{ background: "rgba(102,200,160,0.1)", color: "#66C8A0", border: "1px solid rgba(102,200,160,0.2)" }}
-              >
-                + Nueva Colección
-              </button>
-            </div>
-          )}
-          {collections.map((coll) => (
-          <div
-            key={coll.id}
-            onClick={() => fetchCollectionProjects(coll)}
-            className="rounded-2xl p-4 transition-all duration-300 group cursor-pointer hover:translate-x-1"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
-                {coll.iconUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={coll.iconUrl} alt={coll.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center opacity-20">
-                    <Library className="w-8 h-8" />
-                  </div>
-                )}
+    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-3" role="list" aria-label="Tus colecciones">
+      <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 mb-2">
+        <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
+        <span className="font-bold text-sm">Nueva Colección</span>
+      </button>
+      {collections.length === 0
+        ? <EmptyState icon={<Library className="w-12 h-12" />} title="Sin colecciones" subtitle="Crea una para empezar" />
+        : collections.map((coll) => (
+          <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
+            <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
+                {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-6 h-6 opacity-30" style={{ color: COLORS.primary }} />}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-headline text-base truncate" style={{ color: "var(--color-foreground)" }}>{coll.name}</h3>
-                <p className="font-caption text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>{coll.projectCount} proyectos</p>
+                <p className="font-headline text-sm truncate" style={{ color: COLORS.foreground }}>{coll.name}</p>
+                <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
+                  {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
+                </div>
               </div>
+            </button>
+
+            {/* Delete Button / Confirmation */}
+            {confirmDelete === coll.id ? (
+              <div className="flex items-center gap-1.5 animate-fade-in">
+                <button
+                  onClick={() => handleDeleteCollection(coll)}
+                  disabled={deletingColl === coll.id}
+                  className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
+                  title="Confirmar eliminación"
+                >
+                  {deletingColl === coll.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deletingColl === coll.id}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 transition-all"
+                  title="Cancelar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={(e) => { e.stopPropagation(); handleDownloadCollection(coll); }}
-                disabled={!!collDownloading}
-                className="flex flex-col items-center justify-center p-3 rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                style={{ 
-                  background: collDownloading === coll.id ? "rgba(102,200,160,0.15)" : "rgba(255,255,255,0.05)",
-                  color: "#66C8A0",
-                  border: "1px solid rgba(102,200,160,0.3)"
-                }}
-                title="Sincronizar todo"
+                onClick={() => setConfirmDelete(coll.id)}
+                className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${coll.id === "followed-projects" ? "pointer-events-none invisible" : "hover:bg-red-500/20 text-white/40 hover:text-red-400"}`}
+                title={coll.id === "followed-projects" ? "No se puede eliminar" : "Eliminar colección"}
+                disabled={coll.id === "followed-projects"}
               >
-                {collDownloading === coll.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Download className="w-5 h-5" />
-                )}
+                <Trash2 className="w-4 h-4" />
               </button>
-            </div>
+            )}
           </div>
-        ))}
-        </>
-      )}
+        ))
+      }
     </div>
   );
-}
+});

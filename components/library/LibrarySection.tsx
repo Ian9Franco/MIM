@@ -104,71 +104,56 @@ export function LibrarySection({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSyncAllDescriptions}
-            disabled={syncingDescriptions || library.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
-            style={{ background: "rgba(187,150,228,0.1)", border: "1px solid rgba(187,150,228,0.25)", color: "var(--color-primary)", fontSize: "0.65rem" }}
-            title="Sincronizar info de Modrinth para toda la librería"
-          >
-            {syncingDescriptions ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            Sync Info
-          </button>
-
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Description - Solo cuando hay 1 seleccionado */}
           {selectedLibFiles.length === 1 && (
-            <button
+            <ActionButton
               onClick={handleViewDescription}
               disabled={loadingDescription}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
-              style={{ background: "rgba(102,200,160,0.1)", border: "1px solid rgba(102,200,160,0.25)", color: "#66C8A0", fontSize: "0.65rem" }}
-            >
-              {loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
-              Ver Descripción
-            </button>
-          )}
-          {selectedLibFiles.length > 0 && (
-            <button
-              onClick={handleUnclassify}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", fontSize: "0.65rem" }}
-            >
-              Mover a Descargas
-            </button>
+              icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
+              label={loadingDescription ? "Cargando..." : "Ver Info"}
+              color="success"
+            />
           )}
 
-          <button
+          {/* Unclassify - Cuando hay seleccionados */}
+          {selectedLibFiles.length > 0 && (
+            <ActionButton
+              onClick={handleUnclassify}
+              icon={<FolderOpen className="w-3.5 h-3.5" />}
+              label="Mover a Descargas"
+              color="danger"
+              title="Mover mods seleccionados de vuelta a la carpeta de Descargas"
+            />
+          )}
+
+          {/* Open Folder */}
+          <ActionButton
             onClick={handleOpenLibraryFolder}
             disabled={openingFolder || library.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
-            title="Abrir carpeta de mods"
-          >
-            {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
-            Carpeta
-          </button>
+            icon={openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
+            label="Abrir Carpeta"
+            color="neutral"
+            title="Abrir la carpeta de mods en el explorador de archivos"
+          />
 
-          <button
+          {/* Check Updates - Destacado */}
+          <ActionButton
             onClick={handleCheckUpdates}
             disabled={checkingUpdates}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: "rgba(187,150,228,0.08)",
-              border: "1px solid var(--color-border-strong)",
-              color: "var(--color-primary)",
-              fontSize: "0.62rem",
-            }}
-            onMouseEnter={(e) => { if (!checkingUpdates) (e.currentTarget as HTMLElement).style.background = "rgba(187,150,228,0.14)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(187,150,228,0.08)"; }}
-          >
-            <RefreshCw className={`w-3 h-3 ${checkingUpdates ? "animate-spin" : ""}`} />
-            {checkingUpdates ? "Buscando..." : "Buscar Updates"}
-          </button>
+            icon={<RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} />}
+            label={checkingUpdates ? "Buscando..." : "Buscar Updates"}
+            color="accent"
+            title="Verificar si hay actualizaciones disponibles en Modrinth"
+            highlighted
+          />
           
+          {/* Alert Center Button */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="relative flex items-center justify-center w-8 h-8 rounded-xl transition-all"
-            style={{ background: "rgba(255,208,102,0.1)", border: "1px solid rgba(255,208,102,0.25)", color: "var(--color-accent)" }}
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-105"
+            style={{ background: "rgba(255,208,102,0.15)", border: "1px solid rgba(255,208,102,0.35)", color: "var(--color-accent)" }}
+            title="Abrir Centro de Alertas"
           >
             <Bell className="w-4 h-4" />
             {(conflicts.length > 0 || Object.entries(modrinthStatus).some(([p, s]) => s.status === "update_available" && !ignoredUpdates.has(p))) && (
@@ -248,5 +233,46 @@ export function LibrarySection({
         </div>
       )}
     </section>
+  );
+}
+
+// ── Helper Component ─────────────────────────────────────────────────────────────
+
+interface ActionButtonProps {
+  onClick?: () => void;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  label: string;
+  color: "primary" | "success" | "danger" | "neutral" | "accent";
+  title?: string;
+  highlighted?: boolean;
+}
+
+function ActionButton({ onClick, disabled, icon, label, color, title, highlighted }: ActionButtonProps) {
+  const colorStyles = {
+    primary: { bg: "rgba(187,150,228,0.12)", border: "rgba(187,150,228,0.3)", color: "#BB96E4" },
+    success: { bg: "rgba(102,200,160,0.12)", border: "rgba(102,200,160,0.3)", color: "#66C8A0" },
+    danger:  { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.3)", color: "#f87171" },
+    neutral: { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.15)", color: "var(--color-foreground)" },
+    accent:  { bg: "rgba(255,208,102,0.15)", border: "rgba(255,208,102,0.35)", color: "#FFD066" },
+  };
+  const style = colorStyles[color];
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-xs transition-all disabled:opacity-50 ${highlighted ? "shadow-lg" : ""}`}
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}`,
+        color: style.color,
+        boxShadow: highlighted ? `0 0 12px ${style.bg}` : undefined,
+      }}
+    >
+      {icon}
+      <span className="whitespace-nowrap">{label}</span>
+    </button>
   );
 }

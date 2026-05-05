@@ -44,6 +44,7 @@ interface ModCheckInput {
     modId?: string;
     modVersion?: string;
     projectType?: string;
+    sha1?: string;
   };
 }
 
@@ -63,7 +64,7 @@ interface ModrinthHit {
 
 interface ModrinthVersionObj {
   version_number: string;
-  files?: { url: string }[];
+  files?: { url: string, primary?: boolean }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -105,6 +106,31 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = process.env.MODRINTH_API_KEY;
     }
 
+    // ── Bulk Hash Resolution ───────────────────────────────────────────────────
+    // If the backend provided SHA1 hashes, we resolve them all in a single request.
+    const hashToProject: Record<string, string> = {};
+    const validHashes = mods.map(m => m.meta?.sha1).filter(Boolean) as string[];
+    
+    if (validHashes.length > 0) {
+      try {
+        const hashRes = await fetch(`${MODRINTH_API}/version_files`, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ hashes: validHashes, algorithm: "sha1" })
+        });
+        if (hashRes.ok) {
+          const hashData = await hashRes.json();
+          for (const [hash, versionObj] of Object.entries(hashData)) {
+            if ((versionObj as any).project_id) {
+              hashToProject[hash] = (versionObj as any).project_id;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[/api/modrinth/check-updates] Bulk hash resolution failed:", err);
+      }
+    }
+
     // ── Per-mod check ──────────────────────────────────────────────────────────
     const checkMod = async (mod: ModCheckInput): Promise<ModCheckResult> => {
       // Prefer modName from metadata; fall back to stripping ".jar" from filename
@@ -118,8 +144,13 @@ export async function POST(req: NextRequest) {
       try {
         let projectId: string | null = null;
 
-        // Step 1 — Direct lookup by modId (fastest path, no search ambiguity)
-        if (mod.meta?.modId && mod.meta.modId !== "unknown") {
+        // Step 1 — Direct lookup by SHA1 hash (Absolute precision)
+        if (mod.meta?.sha1 && hashToProject[mod.meta.sha1]) {
+          projectId = hashToProject[mod.meta.sha1];
+        }
+
+        // Step 2 — Direct lookup by modId (Fast, no search ambiguity)
+        if (!projectId && mod.meta?.modId && mod.meta.modId !== "unknown") {
           const res = await fetch(
             `${MODRINTH_API}/project/${encodeURIComponent(mod.meta.modId)}`,
             { headers }
@@ -130,7 +161,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Step 2 — Fallback: name-based search filtered by game version and type
+        // Step 3 — Fallback: name-based search filtered by game version and type
         if (!projectId) {
           const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" 
             ? mod.meta.projectType 
@@ -171,10 +202,10 @@ export async function POST(req: NextRequest) {
 
         // Step 3 — Fetch version list filtered by game version (and loader if it's a mod)
         const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" ? mod.meta.projectType : "mod";
-        const loadersParam = projectType === "mod" ? `&loaders=["${loader}"]` : "";
+        const loadersParam = projectType === "mod" ? `&loaders=${encodeURIComponent(JSON.stringify([loader]))}` : "";
         const versionsRes = await fetch(
           `${MODRINTH_API}/project/${projectId}/version` +
-            `?game_versions=["${gameVersion}"]${loadersParam}`,
+            `?game_versions=${encodeURIComponent(JSON.stringify([gameVersion]))}${loadersParam}`,
           { headers }
         );
         if (!versionsRes.ok) return { path: mod.path, status: "error" };
@@ -195,11 +226,12 @@ export async function POST(req: NextRequest) {
           !currentVersion.includes(latestVersion);
 
         if (hasUpdate) {
+          const primaryFile = latest.files?.find(f => f.primary) || latest.files?.[0];
           return {
             path: mod.path,
             status: "update_available",
             latestVersion,
-            downloadUrl: latest.files?.[0]?.url,
+            downloadUrl: primaryFile?.url,
             projectId,
           };
         }

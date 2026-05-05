@@ -30,6 +30,7 @@ import fs from "fs";
 import os from "os";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
+const MODRINTH_API_V3 = "https://api.modrinth.com/v3";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,10 @@ interface CollectionEntry {
   description: string;
   projectCount: number;
   iconUrl: string | null;
+  isLocal?: boolean;
+  source?: "modrinth";
+  webUrl?: string | null;
+  visibility?: "private" | "unlisted" | "public" | "unknown";
 }
 
 interface QueuedFile {
@@ -55,13 +60,115 @@ interface FailedFile {
 
 // ── Helper: construir headers con token de usuario ────────────────────────────
 
+/**
+ * Construye headers con autenticación válida para Modrinth.
+ *
+ * Modrinth requiere el formato: `Authorization: mrp_<token>` para Personal Access Tokens.
+ * Si el usuario proporciona solo el token sin prefijo, lo agregamos automáticamente.
+ */
 function buildHeaders(): Record<string, string> | null {
-  const token = process.env.MODRINTH_TOKEN || process.env.MODRINTH_API_KEY;
+  let token = process.env.MODRINTH_TOKEN || process.env.MODRINTH_API_KEY;
   if (!token) return null;
+
+  // Asegurar formato correcto del token
+  // Modrinth PATs deben tener prefijo 'mrp_'
+  // OAuth tokens típicamente empiezan con algo diferente o son más largos
+  if (!token.startsWith("mrp_") && !token.startsWith("Bearer ") && token.length < 100) {
+    // Probablemente es un PAT sin prefijo
+    token = `mrp_${token}`;
+  }
 
   return {
     "User-Agent":    "MIM-App/1.0 (contact@mim.local)",
     "Authorization": token,
+  };
+}
+
+async function tryFetchUserCollections(userId: string, headers: Record<string, string>) {
+  const collections: any[] = [];
+  const seenIds = new Set<string>();
+  
+  // 1. Fetch ALL user collections using v3 API (includes owned and followed)
+  try {
+    const res = await fetch(`${MODRINTH_API_V3}/collections`, { headers, cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        for (const coll of data) {
+          if (!seenIds.has(coll.id)) {
+            collections.push(coll);
+            seenIds.add(coll.id);
+          }
+        }
+      }
+    } else {
+      console.error("[Modrinth API] Error fetching collections from v3:", res.status, await res.text().catch(() => ""));
+    }
+  } catch (err) {
+    console.error("[Modrinth API] Error fetching user collections from v3:", err);
+  }
+
+  // 2. Fallback: Fetch user's OWN collections from v2 API (for backwards compatibility)
+  if (collections.length === 0) {
+    try {
+      const res = await fetch(`${MODRINTH_API}/user/${userId}/collections`, { headers, cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          for (const coll of data) {
+            if (!seenIds.has(coll.id)) {
+              collections.push(coll);
+              seenIds.add(coll.id);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Modrinth API] Error fetching user collections from v2:", err);
+    }
+  }
+
+  // 3. Fetch FOLLOWED collections (as backup, in case v3 doesn't include them)
+  try {
+    const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers, cache: "no-store" });
+    if (followsRes.ok) {
+      const follows = await followsRes.json();
+      const followedCollections = follows.filter((f: any) => f.object_type === "collection");
+      
+      for (const fc of followedCollections) {
+        if (seenIds.has(fc.id)) continue; // Skip if already have it
+        try {
+          const cRes = await fetch(`${MODRINTH_API}/collection/${fc.id}`, { headers, cache: "no-store" });
+          if (cRes.ok) {
+            const fullColl = await cRes.json();
+            collections.push(fullColl);
+            seenIds.add(fullColl.id);
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.error("[Modrinth API] Error fetching followed collections:", err);
+  }
+
+  return collections;
+}
+
+function mapCollection(coll: any): CollectionEntry {
+  return {
+    id: coll.id,
+    name: coll.name ?? coll.title ?? "Colección sin nombre",
+    description: coll.description ?? "",
+    projectCount: Array.isArray(coll.projects) ? coll.projects.length : (coll.project_count ?? 0),
+    iconUrl: coll.icon_url ?? null,
+    isLocal: false,
+    source: "modrinth",
+    webUrl: coll.slug
+      ? `https://modrinth.com/collection/${coll.slug}`
+      : coll.id
+      ? `https://modrinth.com/collection/${coll.id}`
+      : null,
+    visibility: coll.status ?? "unknown",
   };
 }
 
@@ -74,7 +181,8 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json(
       {
         error:       "MODRINTH_TOKEN no configurado",
-        instrucciones: "Agregá MODRINTH_TOKEN=tu_token_aqui en .env.local para habilitar sincronización de colecciones.",
+        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Agregalo en .env.local como MODRINTH_TOKEN=mrp_tu_token_aqui (con o sin el prefijo mrp_).",
+        url: "https://modrinth.com/settings/pats",
       },
       { status: 401 }
     );
@@ -83,6 +191,17 @@ export async function GET(_req: NextRequest) {
   try {
     const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
     if (!profileRes.ok) {
+      // Si es 401, el token es inválido o expiró
+      if (profileRes.status === 401) {
+        return NextResponse.json(
+          {
+            error: "Token de Modrinth inválido o expirado",
+            instrucciones: "1. Verificá que tu Personal Access Token sea válido en https://modrinth.com/settings/pats. 2. Si expiró, creá uno nuevo. 3. Actualizá .env.local y reiniciá el servidor.",
+            url: "https://modrinth.com/settings/pats",
+          },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
         { error: `No se pudo obtener perfil de Modrinth: ${profileRes.status}` },
         { status: 502 }
@@ -93,7 +212,7 @@ export async function GET(_req: NextRequest) {
     const username: string = profile.username;
 
     // Si se pide los mods de 'followed-projects'
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(_req.url);
     const collectionId = searchParams.get("collectionId");
 
     if (collectionId === "followed-projects") {
@@ -121,7 +240,44 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ mods });
     }
 
-    // Por defecto, devolver la lista de colecciones (sólo la virtual de seguidos)
+    if (collectionId) {
+      const collectionRes = await fetch(`${MODRINTH_API}/collection/${encodeURIComponent(collectionId)}`, { headers, cache: "no-store" });
+      if (!collectionRes.ok) {
+        return NextResponse.json({ error: "No se pudo cargar la colección" }, { status: 502 });
+      }
+
+      const collection = await collectionRes.json();
+      const projectIds: string[] = Array.isArray(collection.projects) ? collection.projects : [];
+      if (projectIds.length === 0) {
+        return NextResponse.json({ mods: [] });
+      }
+
+      const projectsRes = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(projectIds)}`, { headers, cache: "no-store" });
+      if (!projectsRes.ok) {
+        return NextResponse.json({ error: "No se pudieron cargar los proyectos de la colección" }, { status: 502 });
+      }
+
+      const projects = await projectsRes.json();
+      const mods = projects.map((m: any) => ({
+        projectId: m.id,
+        slug: m.slug,
+        title: m.title,
+        description: m.description,
+        iconUrl: m.icon_url ?? null,
+        author: username,
+        downloads: m.downloads || 0,
+        follows: m.followers || 0,
+        latestVersion: null,
+        categories: m.categories || [],
+        dateCreated: m.published || "",
+        url: `https://modrinth.com/project/${m.slug}`,
+        projectType: m.project_type || "mod",
+      }));
+
+      return NextResponse.json({ mods });
+    }
+
+    // Por defecto, devolver la lista de colecciones remotas + la virtual de seguidos.
     const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers });
     let projectCount = 0;
     if (followsRes.ok) {
@@ -129,13 +285,19 @@ export async function GET(_req: NextRequest) {
       projectCount = follows.length || 0;
     }
 
+    const remoteCollections = await tryFetchUserCollections(userId, headers);
     const collections = [
+      ...remoteCollections.map(mapCollection),
       {
         id: "followed-projects",
         name: "Proyectos Seguidos",
         description: "Todos los mods que sigues en Modrinth.",
         projectCount,
         iconUrl: null,
+        isLocal: false,
+        source: "modrinth" as const,
+        webUrl: "https://modrinth.com/dashboard/collections",
+        visibility: "private" as const,
       }
     ];
 
@@ -156,14 +318,78 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:         "MODRINTH_TOKEN no configurado",
-        instrucciones: "Agregá MODRINTH_TOKEN=tu_token_aqui en .env.local.",
+        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Agregalo en .env.local como MODRINTH_TOKEN=mrp_tu_token_aqui.",
+        url: "https://modrinth.com/settings/pats",
       },
       { status: 401 }
     );
   }
 
   try {
-    const { collectionId, gameVersion, loader } = await req.json();
+    const body = await req.json();
+    const { action, collectionId, gameVersion, loader, name, description } = body;
+
+    if (action === "create") {
+      const createRes = await fetch(`${MODRINTH_API_V3}/collection`, {
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          description: description ?? "Creada desde MIM",
+          status: "private",
+        }),
+      });
+
+      if (!createRes.ok) {
+        const errorData = await createRes.json().catch(() => ({}));
+        return NextResponse.json(
+          { error: errorData.description || errorData.error || `Modrinth rechazó la creación (${createRes.status})` },
+          { status: createRes.status }
+        );
+      }
+
+      const collection = await createRes.json();
+      return NextResponse.json({ collection: mapCollection(collection) });
+    }
+
+    if (action === "add_project") {
+      const { projectId } = body;
+      if (!collectionId || !projectId) {
+        return NextResponse.json({ error: "Faltan collectionId o projectId" }, { status: 400 });
+      }
+
+      // 1. Get current projects
+      const getRes = await fetch(`${MODRINTH_API}/collection/${collectionId}`, { headers });
+      if (!getRes.ok) return NextResponse.json({ error: "No se pudo obtener la colección" }, { status: 502 });
+      const current = await getRes.json();
+      const projects = Array.isArray(current.projects) ? current.projects : [];
+
+      if (projects.includes(projectId)) {
+        return NextResponse.json({ message: "El proyecto ya está en la colección" });
+      }
+
+      // 2. Update with new project
+      const patchRes = await fetch(`${MODRINTH_API}/collection/${collectionId}`, {
+        method: "PATCH",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projects: [...projects, projectId],
+        }),
+      });
+
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({}));
+        return NextResponse.json({ error: err.description || "Error al actualizar colección" }, { status: 502 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     if (!collectionId || !gameVersion || !loader) {
       return NextResponse.json(
@@ -286,6 +512,55 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Error desconocido";
     console.error("[/api/modrinth/collections] POST — Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ── DELETE — Eliminar una colección de Modrinth ─────────────────────────────────────
+
+export async function DELETE(req: NextRequest) {
+  const headers = buildHeaders();
+
+  if (!headers) {
+    return NextResponse.json(
+      {
+        error:         "MODRINTH_TOKEN no configurado",
+        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Agregalo en .env.local como MODRINTH_TOKEN=mrp_tu_token_aqui.",
+        url: "https://modrinth.com/settings/pats",
+      },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { collectionId } = body;
+
+    if (!collectionId) {
+      return NextResponse.json({ error: "Falta collectionId" }, { status: 400 });
+    }
+
+    // Llamar a la API de Modrinth v3 para eliminar la colección
+    const deleteRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
+      method: "DELETE",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!deleteRes.ok) {
+      const errorData = await deleteRes.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errorData.description || errorData.error || `Error ${deleteRes.status}` },
+        { status: deleteRes.status }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Colección eliminada" });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Error desconocido";
+    console.error("[/api/modrinth/collections] DELETE — Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

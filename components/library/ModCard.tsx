@@ -1,234 +1,218 @@
+/**
+ * @fileoverview ModCard – displays a single installed mod with its metadata,
+ * status badges, and optional inline update download button.
+ *
+ * @param name          Display name of the mod
+ * @param version       Minecraft game version the mod targets
+ * @param modVersion    Mod's own version string
+ * @param loader        Mod loader ("forge", "fabric", etc.)
+ * @param isSelected    Whether this card is currently selected
+ * @param onClick       Click handler (toggles selection)
+ * @param activeVersion Project's active game version (for compatibility check)
+ * @param activeLoader  Project's active loader (for compatibility check)
+ * @param badgeText     Optional status badge text (e.g. "↑ 1.2.3")
+ * @param badgeColor    Tailwind classes for badge styling
+ * @param onDownload    If provided, shows an inline download button
+ * @param isDownloading Whether the download is in progress
+ * @param index         List position, used for staggered animation delay
+ * @param projectType   Type of project (mod, resourcepack, etc.)
+ * @param iconBase64    Base64-encoded mod icon
+ */
+
 "use client";
 
-import { Folder, AlertTriangle, Download, Loader2 } from "lucide-react";
+import React, { memo, useCallback } from "react";
+import { Folder, AlertTriangle, Download, Loader2, Trash2, ArrowUp, X, Shield } from "lucide-react";
+import { LOADER_STYLES } from "@/theme/tokens";
+import { COLORS } from "@/theme/tokens";
+import type { LoaderKey } from "@/theme/tokens";
 
 interface ModCardProps {
-  name: string;
-  version: string;
-  modVersion?: string;
-  projectType?: string;
-  iconBase64?: string;
-  loader: string;
-  isSelected: boolean;
-  onClick: () => void;
+  name:          string;
+  version:       string;
+  modVersion?:   string;
+  projectType?:  string;
+  iconBase64?:   string;
+  loader:        string;
+  isSelected:    boolean;
+  onClick:       () => void;
   activeVersion: string;
-  activeLoader: string;
-  badgeText?: string;
-  badgeColor?: string;
-  onDownload?: () => void;
-  isDownloading?: boolean;
-  index?: number;
+  activeLoader:  string;
+  badgeText?:    string;
+  badgeColor?:   string;
+  onDownload?:   () => void;
+  isDownloading?:boolean;
+  index?:        number;
+  isPending?:    boolean;
+  onDelete?:     () => void;
+  isDeleting?:   boolean;
+  riskScore?:    number;
 }
 
-const LOADER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  forge:    { bg: "rgba(59,130,246,0.15)",  color: "#3B82F6", label: "Forge" },
-  neoforge: { bg: "rgba(6,182,212,0.15)",   color: "#06B6D4", label: "NeoForge" },
-  fabric:   { bg: "rgba(139,92,246,0.15)",  color: "#8B5CF6", label: "Fabric" },
-  quilt:    { bg: "rgba(236,72,153,0.15)",  color: "#EC4899", label: "Quilt" },
-  unknown:  { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", label: "Unknown" },
-};
+/** Maps projectType slugs to human-readable emoji labels */
+function getProjectTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    resourcepack: "🖼️ Resource",
+    datapack:     "📦 Datapack",
+    shader:       "✨ Shader",
+  };
+  return map[type] ?? type;
+}
 
-export function ModCard({
-  name,
-  version,
-  modVersion,
-  loader,
-  isSelected,
-  onClick,
-  activeVersion,
-  activeLoader,
-  badgeText,
-  badgeColor,
-  onDownload,
-  isDownloading,
-  index = 0,
-  projectType,
-  iconBase64,
+export const ModCard = memo(function ModCard({
+  name, version, modVersion, loader, isSelected, onClick,
+  activeVersion, activeLoader, badgeText, badgeColor,
+  onDownload, isDownloading, index = 0, projectType, iconBase64,
+  isPending, onDelete, isDeleting, riskScore,
 }: ModCardProps) {
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion;
-  const isLoaderError  = loader  !== "unknown" && activeLoader  !== "" && loader  !== activeLoader;
+  const isLoaderError  = loader  !== "unknown" && activeLoader  !== ""  && loader  !== activeLoader;
   const isError        = isVersionError || isLoaderError;
+  const ls             = LOADER_STYLES[loader as LoaderKey] ?? LOADER_STYLES.unknown;
 
-  const ls = LOADER_STYLE[loader] ?? LOADER_STYLE.unknown;
+  const cardBorder = isSelected && !isError ? "rgba(255,208,102,0.55)"
+    : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
+    : COLORS.border;
+  const cardBg = isSelected && !isError ? "rgba(255,208,102,0.05)"
+    : isError   ? "rgba(127,29,29,0.12)"
+    : "color-mix(in srgb, var(--color-card) 82%, transparent)";
+  const cardShadow = isSelected && !isError
+    ? "0 0 28px rgba(255,208,102,0.12), 0 4px 16px rgba(0,0,0,0.2)"
+    : "none";
 
-  /* ── Border / background based on state ────── */
-  let cardBorder = "var(--color-border)";
-  let cardBg     = "color-mix(in srgb, var(--color-card) 82%, transparent)";
-  let cardShadow = "none";
+  const stopPropDownload = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); onDownload?.();
+  }, [onDownload]);
 
-  if (isSelected && !isError) {
-    cardBorder = "rgba(255,208,102,0.55)";
-    cardBg     = "rgba(255,208,102,0.05)";
-    cardShadow = "0 0 28px rgba(255,208,102,0.12), 0 4px 16px rgba(0,0,0,0.2)";
-  } else if (isError) {
-    cardBorder = isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)";
-    cardBg     = "rgba(127,29,29,0.12)";
-  }
+  const stopPropDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); onDelete?.();
+  }, [onDelete]);
+
+  // Security score indicator
+  const getSecurityColor = (score?: number) => {
+    if (score === undefined) return null;
+    if (score <= 30) return { color: "#22c55e", bg: "rgba(34,197,94,0.12)", label: "✓ Seguro" };
+    if (score <= 60) return { color: "#eab308", bg: "rgba(234,179,8,0.12)", label: "⚠ Precaución" };
+    if (score <= 85) return { color: "#f97316", bg: "rgba(249,115,22,0.12)", label: "⚠ Sospechoso" };
+    return { color: "#ef4444", bg: "rgba(239,68,68,0.12)", label: "✕ Crítico" };
+  };
+  const securityInfo = getSecurityColor(riskScore);
 
   return (
-    <div
+    <article
       onClick={onClick}
       className={`animate-fade-up ${isError && isSelected ? "animate-shake" : ""}`}
       style={{ animationDelay: `${index * 0.035}s`, opacity: 0 }}
+      aria-selected={isSelected}
+      aria-label={`${name} – ${version}`}
     >
       <div
         className="group relative flex items-center gap-3.5 px-4 py-3.5 rounded-2xl cursor-pointer overflow-hidden transition-all duration-250"
-        style={{
-          border: `1px solid ${cardBorder}`,
-          background: cardBg,
-          boxShadow: cardShadow,
-        }}
-        onMouseEnter={(e) => {
-          if (!isSelected && !isError) {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border-strong)";
-            (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.18)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSelected && !isError) {
-            (e.currentTarget as HTMLElement).style.borderColor = cardBorder;
-            (e.currentTarget as HTMLElement).style.boxShadow = cardShadow;
-          }
-        }}
+        style={{ border: `1px solid ${cardBorder}`, background: cardBg, boxShadow: cardShadow }}
       >
         {/* Left accent bar */}
         <div
+          aria-hidden="true"
           className="absolute left-0 top-0 w-[3px] h-full rounded-l-[1px] transition-all duration-300"
           style={{
-            background: isSelected
-              ? "var(--color-accent)"
-              : isError
-              ? "#ef4444"
-              : "var(--color-primary)",
-            opacity: isSelected ? 1 : isError ? 0.7 : 0.3,
+            background: isSelected ? COLORS.accent : isError ? "#ef4444" : COLORS.primary,
+            opacity:    isSelected ? 1 : isError ? 0.7 : 0.3,
           }}
         />
 
         {/* Icon */}
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105 overflow-hidden"
+          aria-hidden="true"
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
           style={{
-            background: isError
-              ? "rgba(239,68,68,0.1)"
-              : isSelected
-              ? "rgba(255,208,102,0.12)"
-              : "rgba(187,150,228,0.1)",
+            background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "rgba(255,208,102,0.12)" : "rgba(187,150,228,0.1)",
             border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "rgba(255,208,102,0.25)" : "rgba(187,150,228,0.18)"}`,
           }}
         >
-          {isError ? (
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-          ) : iconBase64 ? (
-            <img src={iconBase64} alt="icon" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
-          ) : (
-            <Folder
-              className="w-5 h-5 transition-colors"
-              style={{ color: isSelected ? "var(--color-accent)" : "var(--color-primary)" }}
-            />
-          )}
+          {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
+          : iconBase64 ? <img src={iconBase64} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+          : <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />}
         </div>
 
-        {/* Info */}
+        {/* Metadata */}
         <div className="flex-1 min-w-0">
-          <p
-            className="font-subhead text-sm truncate leading-tight"
-            style={{ color: isError ? "#fca5a5" : "var(--color-foreground)" }}
-          >
+          <p className="font-subhead text-sm truncate leading-tight" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
             {name}
           </p>
-
-          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-            {/* Game version */}
-            <span className="font-label rounded-full px-2 py-0.5"
-              style={{ background: "rgba(255,208,102,0.1)", color: "var(--color-accent)", fontSize: "0.6rem" }}
-            >
-              {version}
-            </span>
-
-            {/* Mod version */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5" role="list" aria-label="Etiquetas">
+            <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.accent, fontSize: "0.6rem" }}>{version}</span>
             {modVersion && modVersion !== "unknown" && (
-              <span className="font-caption rounded-full px-2 py-0.5"
-                style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: "var(--color-primary)" }}
-              >
-                v{modVersion}
-              </span>
+              <span role="listitem" className="font-caption rounded-full px-2 py-0.5" style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: COLORS.primary }}>v{modVersion}</span>
             )}
-
-            {/* Loader */}
-            <span className="font-label rounded-full px-2 py-0.5"
-              style={{ background: ls.bg, color: ls.color, fontSize: "0.6rem" }}
-            >
-              {ls.label}
-            </span>
-
-            {/* Project Type Badge */}
+            <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: ls.bg, color: ls.color, fontSize: "0.6rem" }}>{ls.label}</span>
             {projectType && projectType !== "mod" && projectType !== "unknown" && (
-              <span className="font-label rounded-full px-2 py-0.5"
-                style={{ background: "rgba(228,150,184,0.1)", color: "#E496B8", fontSize: "0.6rem" }}
+              <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(228,150,184,0.1)", color: "#E496B8", fontSize: "0.6rem" }}>{getProjectTypeLabel(projectType)}</span>
+            )}
+            {isVersionError && <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.6rem" }}>⚠ versión</span>}
+            {isLoaderError  && <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.6rem" }}>⚠ loader</span>}
+            {/* Security Score Badge */}
+            {securityInfo && (
+              <span
+                role="listitem"
+                className="font-label rounded-full px-2 py-0.5 flex items-center gap-1"
+                style={{ background: securityInfo.bg, color: securityInfo.color, fontSize: "0.6rem" }}
+                title={`Risk Score: ${riskScore}/100`}
               >
-                {projectType === "resourcepack" ? "🖼️ Resource" :
-                 projectType === "datapack" ? "📦 Datapack" :
-                 projectType === "shader" ? "✨ Shader" : projectType}
+                <Shield className="w-3 h-3" />
+                {securityInfo.label}
               </span>
             )}
 
-            {/* Error flags */}
-            {isVersionError && (
-              <span className="font-label rounded-full px-2 py-0.5"
-                style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", fontSize: "0.6rem" }}
-              >
-                ⚠ versión
-              </span>
-            )}
-            {isLoaderError && (
-              <span className="font-label rounded-full px-2 py-0.5"
-                style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", fontSize: "0.6rem" }}
-              >
-                ⚠ loader
-              </span>
-            )}
-
-            {/* Update badge + download btn */}
+            {/* Update Available Badge with Action */}
             {badgeText && (
-              <div className="flex items-center gap-1.5 animate-fade-in">
+              <div className="flex items-center gap-1.5 animate-fade-in" role="listitem">
                 <span
                   className={`font-label rounded-md px-2 py-0.5 max-w-[130px] truncate ${badgeColor ?? "bg-white/8 text-foreground/60"}`}
-                  title={badgeText}
                   style={{ fontSize: "0.6rem" }}
+                  title={badgeText}
                 >
+                  <ArrowUp className="w-3 h-3 inline mr-0.5" />
                   {badgeText}
                 </span>
                 {onDownload && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDownload(); }}
+                    onClick={stopPropDownload}
                     disabled={isDownloading}
-                    className="flex items-center justify-center w-6 h-6 rounded-lg transition-all"
-                    style={{
-                      background: isDownloading ? "rgba(255,255,255,0.04)" : "rgba(255,208,102,0.1)",
-                      border: `1px solid ${isDownloading ? "rgba(255,255,255,0.08)" : "rgba(255,208,102,0.25)"}`,
-                      color: isDownloading ? "rgba(255,255,255,0.25)" : "var(--color-accent)",
-                    }}
+                    aria-label="Descargar actualización"
                     title="Descargar actualización"
+                    className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-105"
+                    style={{ background: isDownloading ? "rgba(255,255,255,0.04)" : "rgba(255,208,102,0.15)", border: `1px solid ${isDownloading ? "rgba(255,255,255,0.08)" : "rgba(255,208,102,0.35)"}`, color: isDownloading ? "rgba(255,255,255,0.25)" : COLORS.accent }}
                   >
-                    {isDownloading
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Download className="w-3 h-3" />
-                    }
+                    {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
                   </button>
                 )}
               </div>
+            )}
+
+            {/* Delete Button for Pending Files */}
+            {isPending && onDelete && (
+              <button
+                onClick={stopPropDelete}
+                disabled={isDeleting}
+                aria-label="Eliminar archivo"
+                title="Eliminar archivo permanentemente"
+                className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-105 ml-auto"
+                style={{ background: isDeleting ? "rgba(255,255,255,0.04)" : "rgba(239,68,68,0.15)", border: `1px solid ${isDeleting ? "rgba(255,255,255,0.08)" : "rgba(239,68,68,0.35)"}`, color: isDeleting ? "rgba(255,255,255,0.25)" : "#ef4444" }}
+              >
+                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              </button>
             )}
           </div>
         </div>
 
         {/* Selected indicator */}
         {isSelected && !isError && (
-          <div className="shrink-0 flex items-center gap-1.5 animate-fade-in">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--color-accent)" }} />
-            <span className="font-label" style={{ color: "var(--color-accent)", fontSize: "0.6rem" }}>sel.</span>
+          <div aria-hidden="true" className="shrink-0 flex items-center gap-1.5 animate-fade-in">
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: COLORS.accent }} />
+            <span className="font-label" style={{ color: COLORS.accent, fontSize: "0.6rem" }}>sel.</span>
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
-}
+});

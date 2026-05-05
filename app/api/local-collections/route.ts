@@ -18,7 +18,11 @@ function saveLocalCollections(data: any) {
 }
 
 export async function GET() {
-  const collections = getLocalCollections();
+  const collections = getLocalCollections().map((coll: any) => ({
+    ...coll,
+    projectCount: Array.isArray(coll.projects) ? coll.projects.length : (coll.projectCount ?? 0),
+    source: "local",
+  }));
   return NextResponse.json({ collections });
 }
 
@@ -32,9 +36,11 @@ export async function POST(req: Request) {
         id: "local_" + Date.now(),
         name: body.name || "Nueva Colección",
         description: body.description || "",
+        projectCount: 0,
         projects: [],
         iconUrl: null,
         isLocal: true,
+        source: "local",
       };
       collections.push(newColl);
       saveLocalCollections(collections);
@@ -44,6 +50,9 @@ export async function POST(req: Request) {
     if (body.action === "add_project") {
       const coll = collections.find((c: any) => c.id === body.collectionId);
       if (!coll) return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+      if (!body.project?.projectId) {
+        return NextResponse.json({ error: "Falta el proyecto a agregar" }, { status: 400 });
+      }
       
       if (!coll.projects.find((p: any) => p.projectId === body.project.projectId)) {
         coll.projects.push(body.project);
@@ -64,6 +73,31 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json();
+    const { collectionId } = body;
+
+    if (!collectionId) {
+      return NextResponse.json({ error: "Falta collectionId" }, { status: 400 });
+    }
+
+    const collections = getLocalCollections();
+    const idx = collections.findIndex((c: any) => c.id === collectionId);
+
+    if (idx === -1) {
+      return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+    }
+
+    const deleted = collections.splice(idx, 1)[0];
+    saveLocalCollections(collections);
+
+    return NextResponse.json({ success: true, deleted: deleted.name });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

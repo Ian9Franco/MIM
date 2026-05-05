@@ -19,6 +19,7 @@
 import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ export interface ModMeta {
   /** True when this is a Fabric mod that could be used via Sinytra Connector. */
   isCompatibleWithConnector: boolean;
   iconBase64?: string;
+  sha1?: string;
 }
 
 // ── Internal Defaults ─────────────────────────────────────────────────────────
@@ -153,7 +155,10 @@ export function scanMod(filePath: string): ModMeta {
     throw new Error(`[scanner] File not found: ${filePath}`);
   }
 
-  const zip = new AdmZip(filePath);
+  const fileBuffer = fs.readFileSync(filePath);
+  const sha1 = crypto.createHash("sha1").update(fileBuffer).digest("hex");
+
+  const zip = new AdmZip(fileBuffer);
   const entries = zip.getEntries();
 
   // Helper: find a ZIP entry by exact name (case-sensitive, as JAR requires)
@@ -195,10 +200,11 @@ export function scanMod(filePath: string): ModMeta {
         // Fabric mods are candidate for Sinytra Connector usage
         isCompatibleWithConnector: true,
         ...(iconBase64 ? { iconBase64 } : {}),
+        sha1,
       };
     } catch {
       // Malformed JSON — fall through with loader tag only
-      return { ...DEFAULT_META, loader: "fabric", projectType: "mod", isCompatibleWithConnector: true };
+      return { ...DEFAULT_META, loader: "fabric", projectType: "mod", isCompatibleWithConnector: true, sha1 };
     }
   }
 
@@ -232,9 +238,10 @@ export function scanMod(filePath: string): ModMeta {
         modVersion: ql.version ?? UNKNOWN,
         gameVersion: gv ?? UNKNOWN,
         ...(iconBase64 ? { iconBase64 } : {}),
+        sha1,
       };
     } catch {
-      return { ...DEFAULT_META, loader: "quilt", projectType: "mod" };
+      return { ...DEFAULT_META, loader: "quilt", projectType: "mod", sha1 };
     }
   }
 
@@ -260,6 +267,7 @@ export function scanMod(filePath: string): ModMeta {
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
       ...(iconBase64 ? { iconBase64 } : {}),
+      sha1,
     };
   }
 
@@ -284,6 +292,7 @@ export function scanMod(filePath: string): ModMeta {
       gameVersion:
         parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
       ...(iconBase64 ? { iconBase64 } : {}),
+      sha1,
     };
   }
 
@@ -296,6 +305,7 @@ export function scanMod(filePath: string): ModMeta {
       modId: path.basename(filePath, path.extname(filePath)),
       modName: path.basename(filePath, path.extname(filePath)),
       gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+      sha1,
     };
   }
 
@@ -332,6 +342,7 @@ export function scanMod(filePath: string): ModMeta {
       modName: description,
       gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
       ...(iconBase64 ? { iconBase64 } : {}),
+      sha1,
     };
   }
 
@@ -340,5 +351,6 @@ export function scanMod(filePath: string): ModMeta {
     ...DEFAULT_META,
     projectType: UNKNOWN,
     gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+    sha1,
   };
 }

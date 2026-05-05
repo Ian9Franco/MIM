@@ -79,6 +79,7 @@ export function QuickCategorizeSection({
         <SubcategoryPanel
           activeCategory={showSubcategories}
           fileName={allSelected.length === 1 ? allSelected[0].fileName : `${allSelected.length} archivos seleccionados`}
+          projectName={activeProject?.name || null}
           onSelect={handleClassify}
           onBack={() => setShowSubcategories(null)}
         />

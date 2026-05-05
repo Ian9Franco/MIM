@@ -165,27 +165,81 @@ alluser/
 ```
 D:\.mine\manager\
 ├── app/
-│   ├── api/
-│   │   ├── watcher/route.ts    # SSE: stream de descargas detectadas
-│   │   ├── classify/route.ts   # POST: mover mod a categoría destino
-│   │   └── build/route.ts      # POST: disparar build alluser
-│   ├── layout.tsx              # Shell global (header, fuentes, CSS vars)
+│   ├── api/                    # API Routes
+│   │   ├── build/              # POST: disparar build alluser
+│   │   ├── classify/           # POST: mover mod a categoría destino
+│   │   ├── unclassify/         # POST: mover a Downloads
+│   │   ├── library/            # GET: listar mods clasificados
+│   │   ├── watcher/            # SSE: stream de descargas detectadas
+│   │   ├── delete/             # POST: eliminar archivos
+│   │   ├── open-folder/        # POST: abrir carpetas en explorer
+│   │   ├── project/            # GET/POST: gestión de proyectos
+│   │   ├── settings/           # GET/POST: configuración persistente
+│   │   ├── curseforge/
+│   │   │   └── discover/       # GET: búsqueda CurseForge
+│   │   └── modrinth/
+│   │       ├── discover/       # GET: búsqueda Modrinth
+│   │       ├── download/       # POST: descarga directa
+│   │       ├── collections/    # GET: colecciones del usuario
+│   │       ├── check-updates/  # POST: verificar actualizaciones
+│   │       ├── presets/        # GET: colecciones curadas (Starter Tech, etc.)
+│   │       ├── versions/       # GET: versiones de un proyecto
+│   │       ├── project/        # GET: detalles de proyecto
+│   │       └── export-descriptions/ # POST: exportar descripciones
+│   ├── layout.tsx              # Shell global (Server Component)
 │   ├── page.tsx                # Dashboard principal (La Aduana)
-│   └── globals.css             # Variables CSS, tokens de diseño
-├── components/                 # UI Components desacoplados
-│   ├── ModCard.tsx             # Tarjeta de mod pendiente
-│   ├── HotkeyCard.tsx          # Card de categoría rápida (1/2/3)
-│   ├── SkeletonLoader.tsx      # Estado de carga con shimmer
-│   └── SubcategoryPanel.tsx    # Panel de sub-categorías expandido
+│   ├── globals.css             # Variables CSS, tokens de diseño
+│   └── favicon.ico
+├── components/                 # UI Components organizados por dominio
+│   ├── fomo/                   # FOMO Sidebar - Descubrimiento
+│   │   ├── FomoSidebar.tsx     # Panel lateral principal
+│   │   ├── FomoCollections.tsx # Colecciones del usuario
+│   │   ├── FomoDiscoverFilters.tsx # Filtros de búsqueda
+│   │   ├── FomoModCard.tsx     # Tarjeta de mod en búsqueda
+│   │   ├── FomoPagination.tsx  # Paginación de resultados
+│   │   ├── FomoPresets.tsx     # Plantillas curadas
+│   │   ├── FomoVersionOverlay.tsx # Selector de versión
+│   │   ├── types.ts            # Tipos específicos de FOMO
+│   │   └── utils.ts            # Helpers de FOMO
+│   ├── library/                # Librería de mods clasificados
+│   │   ├── LibrarySection.tsx  # Grid de mods clasificados
+│   │   ├── ModCard.tsx         # Tarjeta de mod con metadata
+│   │   ├── PendingFilesSection.tsx # Archivos pendientes de clasificar
+│   │   ├── QuickCategorizeSection.tsx # Hotkeys de categorización
+│   │   └── SubcategoryPanel.tsx # Panel de sub-categorías
+│   ├── projects/               # Gestión de proyectos
+│   │   ├── BuildPanel.tsx      # Panel de construcción con progreso
+│   │   ├── ProjectEditor.tsx   # Editor de proyectos
+│   │   └── ProjectsSection.tsx # Lista de proyectos
+│   ├── layout/                 # Componentes de layout
+│   │   ├── AlertSidebar.tsx    # Panel de alertas y notificaciones
+│   │   ├── RootLayoutClient.tsx # Client wrapper con providers
+│   │   ├── SettingsModal.tsx   # Modal de configuración
+│   │   └── ThemeToggle.tsx     # Toggle dark/light mode
+│   └── ui/                     # Primitivas UI reutilizables
+│       ├── primitives.tsx      # Botones, inputs, badges base
+│       ├── HotkeyCard.tsx      # Tarjetas de atajos de teclado
+│       ├── SkeletonLoader.tsx  # Estado de carga con shimmer
+│       ├── DescriptionModal.tsx # Modal de descripción de mod
+│       ├── SectionHeading.tsx  # Encabezados de sección
+│       └── EmptyState.tsx      # Estado vacío ilustrado
 ├── lib/                        # Lógica backend (Node.js, solo server)
 │   ├── constants.ts            # SUBCATEGORIES, rutas base, loaders — SSOT
 │   ├── scanner.ts              # Inspección de JARs (adm-zip)
 │   ├── watcher.ts              # Observador de descargas (chokidar)
-│   └── builder.ts              # Lógica de aplanamiento y exportación
+│   ├── builder.ts              # Lógica de aplanamiento y exportación
+│   ├── settings.ts             # Persistencia de configuración (mim-settings.json)
+│   └── types.ts                # Tipos TypeScript globales (ModHit, Project, etc.)
 ├── docs/
 │   ├── mim_documentation.md    # Este archivo
-│   └── frontend.md             # Guía de estética frontend
+│   ├── frontend.md             # Guía de estética frontend
+│   ├── CHANGELOG.md            # Auditoría de cambios
+│   ├── recuerda.md             # Roadmap estratégico
+│   ├── arquitectura.md         # Diagramas de arquitectura
+│   └── modrinth_api_*.md       # Guías de integración
+├── public/                     # Assets estáticos
 ├── tailwind.config.ts
+├── next.config.js
 └── package.json
 ```
 
@@ -248,7 +302,8 @@ Utiliza `adm-zip` para leer el JAR en memoria sin extraerlo.
 
 ## 9. Endpoints Clave (API Routes)
 
-### `GET /api/watcher`
+### File Watcher
+#### `GET /api/watcher`
 Abre un canal SSE. Devuelve eventos `data: JSON\n\n` cada vez que cae un `.jar`/`.zip` en Downloads.
 
 **Evento emitido:**
@@ -256,7 +311,13 @@ Abre un canal SSE. Devuelve eventos `data: JSON\n\n` cada vez que cae un `.jar`/
 { "path": "/home/user/Downloads/alexscaves-1.0.jar", "fileName": "alexscaves-1.0.jar", "meta": { "version": "1.0.0", "loader": "forge" } }
 ```
 
-### `POST /api/classify`
+**Features:**
+- Keepalive cada 30s para mantener conexión viva
+- Auto-reconnect del browser
+- 500ms delay para archivos grandes (race condition fix)
+
+### Gestión de Mods
+#### `POST /api/classify`
 Mueve físicamente un mod a su categoría de destino en `source/`.
 
 **Body:**
@@ -265,25 +326,124 @@ Mueve físicamente un mod a su categoría de destino en `source/`.
 ```
 
 **Validaciones:**
-- Campos requeridos presentes.
-- `targetCategory` válido según `SUBCATEGORIES` (evita path traversal accidental).
-- Archivo fuente existente.
+- SSOT de categorías via `isValidCategory()`
+- Guard de colisión (origen !== destino)
+- Lista de `skipped[]` en respuesta
 
-### `POST /api/build`
-Dispara el build `alluser`.
+#### `POST /api/unclassify`
+Mueve mods clasificados de vuelta a Downloads.
+
+**Features:**
+- Collision guard con timestamp (no sobrescribe)
+- Lista de `skipped[]` en respuesta
+
+#### `POST /api/delete`
+Elimina archivos físicamente.
+
+#### `GET /api/library`
+Lista mods clasificados por versión + loader.
+
+**Query params:** `?version=1.20.1&loader=forge`
+
+### Build System
+#### `POST /api/build`
+Dispara el build `alluser` o `allhost`.
 
 **Body:**
 ```json
-{ "version": "1.20.1", "loader": "forge", "projectName": "Netherious Server" }
+{ "version": "1.20.1", "loader": "forge", "projectName": "Netherious Server", "type": "alluser" }
 ```
 
-**Validaciones:**
-- `loader` debe ser uno de `["forge", "neoforge", "fabric"]`.
-- Campos requeridos presentes.
+**Types:** `alluser` (cliente), `allhost` (servidor)
+
+### Modrinth Integration
+#### `GET /api/modrinth/discover`
+Búsqueda de proyectos en Modrinth.
+
+**Query params:** `?query=sodium&loader=fabric&version=1.20.1&project_type=mod`
+
+#### `POST /api/modrinth/download`
+Descarga directa a carpeta Downloads del sistema.
+
+**Body:** `{ "url": "https://...", "filename": "mod.jar" }`
+
+**Security:**
+- `path.basename()` sanitization (anti path traversal)
+- Solo HTTPS permitido
+- Collision guard con timestamp
+
+#### `GET /api/modrinth/collections`
+Obtiene colecciones del usuario (creadas + followed).
+
+**Headers:** Requiere `Authorization: mrp_...`
+
+#### `GET /api/modrinth/presets`
+Colecciones curadas built-in (Starter Tech, Vanilla+, etc.)
+
+#### `GET /api/modrinth/versions`
+Lista versiones disponibles de un proyecto.
+
+#### `POST /api/modrinth/check-updates`
+Verifica actualizaciones batch para lista de mods.
+
+**Optimización:** Batching con límite de concurrencia (5 requests paralelas)
+
+### CurseForge Integration
+#### `GET /api/curseforge/discover`
+Búsqueda en CurseForge via API de Eternal.
+
+**Query params:** similares a Modrinth
+
+**Nota:** Descarga manual (abrir externo) ya que CF requiere API key adicional.
+
+### Sistema de Proyectos
+#### `GET|POST /api/project`
+CRUD de proyectos. Persistencia en `mim-settings.json`.
+
+### Configuración
+#### `GET|POST /api/settings`
+Gestión de settings (sourceBase, buildsBase, downloadsPath).
+
+#### `POST /api/open-folder`
+Abre carpetas en explorer del sistema operativo.
 
 ---
 
-## 10. Estética y Diseño Frontend
+## 10. Security Layer (Threat Detection Engine)
+
+### Overview
+Sistema de análisis de seguridad para detectar comportamientos potencialmente maliciosos en mods de Minecraft antes de su instalación.
+
+### Arquitectura del Scanner
+- **Archivo:** `lib/security-scanner.ts`
+- **Endpoint:** `POST /api/security/scan`
+- **Scoring:** 0-100 (Clean | Caution | Suspicious | Critical)
+
+### Categorías de Amenazas
+| Categoría | Peso | Descripción |
+|-----------|------|-------------|
+| Process Execution | 25 | `Runtime.exec()`, `ProcessBuilder` |
+| Native Code | 20 | `System.loadLibrary()`, JNI |
+| Reflection Abuse | 15 | `setAccessible(true)`, `defineClass()` |
+| Network Calls | 15 | Sockets, HTTP connections |
+| Obfuscation | 10 | Nombres ofuscados, string encryption |
+| File System | 10 | Borrado masivo, escritura fuera de .minecraft |
+| Known Malware | 100 | SHA-1 hash en blacklist |
+
+---
+
+## 11. FOMO UI 2.0 & Descubrimiento
+
+### Novedades de la Versión 2.0
+- **Grid de 2 Columnas:** Maximiza la visibilidad de contenido en el descubrimiento.
+- **FomoVersionOverlay:** Panel de inspección profunda con:
+  - **Changelogs:** Historial completo renderizado en Markdown.
+  - **Dependency Resolver:** Detección de dependencias requeridas vs opcionales.
+  - **SHA1 Matching:** Verificación de integridad contra la API de Modrinth.
+
+---
+
+## 12. Estética y Diseño Frontend
 
 ### Paleta de Colores
 | Token       | Hex       | Uso                            |
@@ -300,14 +460,10 @@ Dispara el build `alluser`.
 - Todos los elementos tienen `border-radius` redondeado (`rounded-[1rem]` o `rounded-full`).
 - Transiciones `transition-all duration-300` en hover states.
 
-### Skeleton Loader
-Replica el patrón de Scrap.io: shimmer sweep + pulse lines + indicador flotante con spinner.
-
 ---
 
-## 11. Razonamiento de UX
+## 13. Razonamiento de UX
 
 - **Fricción Cero:** Si MIM detecta que el mod es de una versión diferente al proyecto activo, la tarjeta se pone en rojo y vibra antes de guardarlo.
-- **Memoria de Clasificación:** *(Pendiente)* Si clasificás `AlexsCaves.jar` como `bosses`, la próxima versión del mismo mod pre-seleccionará `bosses` automáticamente.
-- **Symlinks (Futuro):** Para ahorrar espacio, el perfil activo podría usar symlinks a `source/` en vez de copias físicas. Las copias físicas reales solo ocurren al generar el `.zip` de distribución.
-- **Sinytra Connector Flag:** *(Pendiente)* Habilitaría una vista combinada Fabric+Forge para builds híbridos.
+- **Seguridad Preventiva:** El risk score se muestra visualmente antes de la clasificación para evitar riesgos accidentales.
+- **Aislamiento Total:** Cada proyecto es una burbuja hermética; lo que instalas en uno no afecta a los demás.

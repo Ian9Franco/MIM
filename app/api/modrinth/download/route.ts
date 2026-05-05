@@ -20,13 +20,55 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { SOURCE_BASE } from "@/lib/constants";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import crypto from "crypto";
+
+function collectJarFiles(dir: string, bucket: string[]) {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      collectJarFiles(fullPath, bucket);
+      continue;
+    }
+    if (/\.(jar|zip)$/i.test(entry.name)) {
+      bucket.push(fullPath);
+    }
+  }
+}
+
+function findExistingByHash(downloadsDir: string, hashes?: Record<string, string>) {
+  if (!hashes?.sha1 && !hashes?.sha512) return null;
+
+  const candidates: string[] = [];
+  collectJarFiles(downloadsDir, candidates);
+  collectJarFiles(SOURCE_BASE, candidates);
+
+  for (const filePath of candidates) {
+    try {
+      const buffer = fs.readFileSync(filePath);
+      if (hashes.sha512) {
+        const sha512 = crypto.createHash("sha512").update(buffer).digest("hex");
+        if (sha512 === hashes.sha512) return filePath;
+      }
+      if (hashes.sha1) {
+        const sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
+        if (sha1 === hashes.sha1) return filePath;
+      }
+    } catch {
+      // Ignore unreadable files while scanning for duplicates.
+    }
+  }
+
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename } = await req.json();
+    const { url, filename, hashes } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json(
@@ -67,6 +109,16 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }
 
+    const existingPath = findExistingByHash(downloadsDir, hashes);
+    if (existingPath) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        existingPath,
+        reason: "already_exists",
+      });
+    }
+
     // ── Collision guard ────────────────────────────────────────────────────────
     // Append a timestamp suffix if the file already exists in Downloads to
     // avoid silently overwriting a mod the user may have intentionally kept.
@@ -86,10 +138,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Convert the response body to a Buffer and write synchronously.
-    // This runs in Node.js runtime (not Edge), so Buffer is available.
     const buffer = await res.arrayBuffer();
-    fs.writeFileSync(targetPath, Buffer.from(buffer));
+    const nodeBuffer = Buffer.from(buffer);
+
+    // ── Integrity check ────────────────────────────────────────────────────────
+    if (hashes) {
+      if (hashes.sha512) {
+        const hash = crypto.createHash("sha512").update(nodeBuffer).digest("hex");
+        if (hash !== hashes.sha512) throw new Error("SHA512 integrity check failed");
+      } else if (hashes.sha1) {
+        const hash = crypto.createHash("sha1").update(nodeBuffer).digest("hex");
+        if (hash !== hashes.sha1) throw new Error("SHA1 integrity check failed");
+      }
+    }
+
+    fs.writeFileSync(targetPath, nodeBuffer);
 
     console.log(`[/api/modrinth/download] Saved: ${path.basename(targetPath)}`);
     return NextResponse.json({ success: true, targetPath });

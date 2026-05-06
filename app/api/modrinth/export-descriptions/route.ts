@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-import { SOURCE_BASE } from "@/lib/constants";
+import { mimDB, type ModDescription } from "@/lib/indexeddb";
+import { storageMigration } from "@/lib/storage-migration";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const CONCURRENCY_LIMIT = 5;
@@ -56,49 +55,34 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = process.env.MODRINTH_API_KEY;
     }
 
-    const oldRootOutputPath = path.join(process.cwd(), "mod_descriptions.json");
-    const oldIndexOutputPath = path.join(process.cwd(), "mim-index", "mod-descriptions.json");
-    const outputPath = path.join(SOURCE_BASE, ".mim-index", "mod-descriptions.json");
-
-    // Migrate old mod_descriptions.json if it exists
-    try {
-      const oldRootExists = await fs.stat(oldRootOutputPath).then(() => true).catch(() => false);
-      const oldIndexExists = await fs.stat(oldIndexOutputPath).then(() => true).catch(() => false);
-      const newExists = await fs.stat(outputPath).then(() => true).catch(() => false);
-
-      if (!newExists) {
-        await fs.mkdir(path.dirname(outputPath), { recursive: true });
-        if (oldIndexExists) {
-          await fs.rename(oldIndexOutputPath, outputPath);
-          console.log("[export-descriptions] Legacy descriptions successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
-        } else if (oldRootExists) {
-          await fs.rename(oldRootOutputPath, outputPath);
-          console.log("[export-descriptions] Legacy descriptions successfully migrated from root to SOURCE_BASE/.mim-index/");
-        }
+    
+    // Initialize IndexedDB and migrate if needed
+    await mimDB.init();
+    
+    // Check if migration is needed and perform it
+    const migrationStatus = await storageMigration.getMigrationStatus();
+    if (migrationStatus.needsMigration) {
+      console.log('[export-descriptions] Performing migration to IndexedDB...');
+      const migrationResult = await storageMigration.migrateAll();
+      if (migrationResult.errors.length > 0) {
+        console.warn('[export-descriptions] Migration completed with errors:', migrationResult.errors);
       }
-    } catch (e) {
-      console.error("[export-descriptions] Migration failed:", e);
-    }
-
-    // Ensure parent directory exists before reading/writing
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-
-    let existingData: ModDescriptionResult[] = [];
-    try {
-      const fileContent = await fs.readFile(outputPath, "utf8");
-      existingData = JSON.parse(fileContent);
-    } catch (e) {
-      // File doesn't exist or is invalid
-    }
-
-    const existingMap = new Map<string, ModDescriptionResult>();
-    for (const item of existingData) {
-      existingMap.set(item.fileName, item);
     }
 
     const fetchDescription = async (mod: ModCheckInput): Promise<ModDescriptionResult> => {
-      if (existingMap.has(mod.fileName)) {
-        return existingMap.get(mod.fileName)!;
+      // Try to get from IndexedDB first
+      const cached = await mimDB.getDescription(mod.fileName);
+      if (cached) {
+        return {
+          fileName: cached.fileName,
+          modName: cached.modName,
+          projectId: cached.projectId,
+          title: cached.title,
+          description: cached.description,
+          body: cached.body,
+          url: cached.url,
+          status: cached.status,
+        };
       }
 
       const nameToSearch =
@@ -174,11 +158,35 @@ export async function POST(req: NextRequest) {
           
           result.url = `https://modrinth.com/mod/${projectData.slug}`;
           result.status = "success";
+
+          // Save to IndexedDB for future use
+          const description: ModDescription = {
+            fileName: result.fileName,
+            modName: result.modName,
+            projectId: result.projectId,
+            title: result.title,
+            description: result.description,
+            body: result.body,
+            url: result.url,
+            status: result.status,
+            lastUpdated: Date.now()
+          };
+          await mimDB.setDescription(description);
         }
 
         return result;
       } catch (e) {
         result.status = "error";
+        
+        // Save error status to cache to avoid repeated failed requests
+        const errorDescription: ModDescription = {
+          fileName: result.fileName,
+          modName: result.modName,
+          status: "error",
+          lastUpdated: Date.now()
+        };
+        await mimDB.setDescription(errorDescription);
+        
         return result;
       }
     };
@@ -189,24 +197,46 @@ export async function POST(req: NextRequest) {
       allResults.push(...batchResults);
     }
 
-    // Merge into existing data map to avoid duplicates
-    for (const res of allResults) {
-      existingMap.set(res.fileName, res);
+    // Clean up expired cache entries periodically
+    if (Math.random() < 0.1) { // 10% chance to clean up
+      try {
+        const cleaned = await mimDB.clearExpiredCache();
+        if (cleaned > 0) {
+          console.log(`[export-descriptions] Cleaned ${cleaned} expired cache entries`);
+        }
+      } catch (e) {
+        console.warn('[export-descriptions] Failed to clean expired cache:', e);
+      }
     }
-    const updatedData = Array.from(existingMap.values());
-
-    // Save the combined list to the JSON file
-    await fs.writeFile(outputPath, JSON.stringify(updatedData, null, 2));
 
     return NextResponse.json({ 
-      message: "Descriptions exported successfully",
-      savedPath: outputPath,
+      message: "Descriptions processed successfully",
       count: allResults.length,
       data: allResults 
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/modrinth/export-descriptions] Unhandled error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// GET endpoint for migration status and stats
+export async function GET() {
+  try {
+    await mimDB.init();
+    
+    const migrationStatus = await storageMigration.getMigrationStatus();
+    const storageStats = await mimDB.getStorageStats();
+
+    return NextResponse.json({
+      migration: migrationStatus,
+      storage: storageStats,
+      indexedDBAvailable: true
+    });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/modrinth/export-descriptions] GET error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

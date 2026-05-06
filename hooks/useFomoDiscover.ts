@@ -141,39 +141,62 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 0);
 
-      // --- Background Exclusivity Check ---
-      // Realizamos el check de disponibilidad en la otra plataforma de forma silenciosa
-      mappedMods.forEach(async (mod: ModHit) => {
-        // Inicializar estado de chequeo
-        setMods(prev => prev.map(m => 
-          m.projectId === mod.projectId 
-            ? { ...m, availability: { modrinth: mod._source === "modrinth", curseforge: mod._source === "curseforge", checking: true } } 
+      // --- Background Exclusivity Check (Optimizado Batch) ---
+      // Realizamos el check de disponibilidad en la otra plataforma en batch
+      // para reducir de N solicitudes a 1 sola solicitud por búsqueda
+      if (mappedMods.length > 0) {
+        // Inicializar estado de chequeo para todos los mods
+        setMods(prev => prev.map((m: any) => 
+          mappedMods.some((mapped: any) => mapped.projectId === m.projectId)
+            ? { ...m, availability: { modrinth: m._source === "modrinth", curseforge: m._source === "curseforge", checking: true } }
             : m
         ));
 
         try {
-           const checkRes = await fetch(`/api/crosscheck?title=${encodeURIComponent(mod.title)}&slug=${encodeURIComponent(mod.slug || "")}&source=${mod._source}`);
-           if (checkRes.ok) {
-            const { exists } = await checkRes.json();
-            setMods(prev => prev.map(m => 
-              m.projectId === mod.projectId 
-                ? { 
-                    ...m, 
-                    availability: { 
-                      modrinth: mod._source === "modrinth" ? true : exists, 
-                      curseforge: mod._source === "curseforge" ? true : exists,
-                      checking: false 
-                    } 
-                  } 
-                : m
-            ));
+          // Preparar batch request
+          const batchData = mappedMods.map((mod: any) => ({
+            title: mod.title,
+            slug: mod.slug || undefined,
+            source: mod._source
+          }));
+
+          const batchRes = await fetch('/api/crosscheck/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mods: batchData })
+          });
+
+          if (batchRes.ok) {
+            const { results } = await batchRes.json();
+            
+            // Actualizar resultados para todos los mods
+            setMods(prev => prev.map((m: any) => {
+              const mappedMod = mappedMods.find((mapped: any) => mapped.projectId === m.projectId);
+              if (!mappedMod) return m;
+              
+              const key = mappedMod.title + (mappedMod.slug || "");
+              const exists = results[key]?.exists || false;
+              
+              return {
+                ...m,
+                availability: {
+                  modrinth: m._source === "modrinth" ? true : exists,
+                  curseforge: m._source === "curseforge" ? true : exists,
+                  checking: false
+                }
+              };
+            }));
           }
         } catch (err) {
-          console.error(`Error cross-checking mod ${mod.title}:`, err);
-          // En caso de error, quitamos el estado de checking pero mantenemos el origen actual
-          setMods(prev => prev.map(m => m.projectId === mod.projectId ? { ...m, availability: { ...m.availability!, checking: false } } : m));
+          console.error("[useFomoDiscover] Error en batch cross-check:", err);
+          // En caso de error, quitar el estado de checking para todos
+          setMods(prev => prev.map((m: any) => 
+            mappedMods.some((mapped: any) => mapped.projectId === m.projectId)
+              ? { ...m, availability: { ...m.availability!, checking: false } }
+              : m
+          ));
         }
-      });
+      }
     } catch (err) {
       console.error("[useFomoDiscover] Error fetching mods:", err);
       setMods([]);

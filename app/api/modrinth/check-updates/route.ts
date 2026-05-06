@@ -10,9 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
+import { promises as fs } from "fs";
+import * as fsSync from "fs";
 import path from "path";
 import { SOURCE_BASE } from "@/lib/constants";
+import { smartCache } from "@/lib/smart-cache";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
@@ -66,14 +68,14 @@ const OLD_INDEX_REMOTE_CACHE_FILE = path.join(process.cwd(), "mim-index", "remot
 const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
 
 // Migrate legacy file if it exists
-if (!fs.existsSync(REMOTE_CACHE_FILE)) {
+if (!fsSync.existsSync(REMOTE_CACHE_FILE)) {
   try {
-    fs.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
-    if (fs.existsSync(OLD_INDEX_REMOTE_CACHE_FILE)) {
-      fs.renameSync(OLD_INDEX_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
+    fsSync.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
+    if (fsSync.existsSync(OLD_INDEX_REMOTE_CACHE_FILE)) {
+      fsSync.renameSync(OLD_INDEX_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
       console.log("[updates-cache] Legacy remote cache successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
-    } else if (fs.existsSync(OLD_ROOT_REMOTE_CACHE_FILE)) {
-      fs.renameSync(OLD_ROOT_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
+    } else if (fsSync.existsSync(OLD_ROOT_REMOTE_CACHE_FILE)) {
+      fsSync.renameSync(OLD_ROOT_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
       console.log("[updates-cache] Legacy remote cache successfully migrated from root to SOURCE_BASE/.mim-index/");
     }
   } catch (e) {
@@ -86,9 +88,9 @@ let saveRemoteTimeout: NodeJS.Timeout | null = null;
 
 function loadRemoteCache() {
   if (remoteCache) return remoteCache;
-  if (fs.existsSync(REMOTE_CACHE_FILE)) {
+  if (fsSync.existsSync(REMOTE_CACHE_FILE)) {
     try {
-      remoteCache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+      remoteCache = JSON.parse(fsSync.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
     } catch (e) {
       console.error("[updates-cache] Error loading remote cache file, resetting cache", e);
     }
@@ -105,8 +107,8 @@ function queueSaveRemoteCache() {
     saveRemoteTimeout = null;
     if (remoteCache) {
       try {
-        fs.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
-        fs.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(remoteCache, null, 2), "utf-8");
+        fsSync.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
+        fsSync.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(remoteCache, null, 2), "utf-8");
       } catch (e) {
         console.error("[updates-cache] Error writing remote cache to disk", e);
       }

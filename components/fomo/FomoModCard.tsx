@@ -58,7 +58,7 @@ export const FomoModCard = memo(function FomoModCard({
   return (
     <article
       onClick={() => onToggleSelect?.(mod)}
-      className={`transition-all duration-200 shadow-md relative group cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''} ${
+      className={`flex flex-col transition-all duration-200 shadow-md relative group cursor-pointer h-full ${isSelected ? 'ring-2 ring-primary' : ''} ${
         isCurseForge 
           ? 'rounded-none border-2 border-orange-900/30' 
           : 'rounded-[1.35rem] border glass-hover backdrop-blur-[14px]'
@@ -90,7 +90,7 @@ export const FomoModCard = memo(function FomoModCard({
         </button>
       )}
 
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-1">
         <div className="flex items-start gap-4">
           <div
             aria-hidden="true"
@@ -206,11 +206,11 @@ export const FomoModCard = memo(function FomoModCard({
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2 mt-5">
+        <div className="grid grid-cols-3 gap-2 mt-auto pt-5">
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }}
             aria-label={`Seleccionar ${mod.title} para colección`}
-            className={`flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A]' : ''}`}
+            className={`flex items-center justify-center gap-1.5 h-9 px-2 rounded-xl text-[0.65rem] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A]' : ''}`}
             style={{ 
               background: isSelected ? COLORS.primary : (isCurseForge ? "rgba(239, 108, 0, 0.12)" : "rgba(187,150,228,0.12)"), 
               color: isSelected ? "#FFF" : (isCurseForge ? COLORS.curseforgeOrange : COLORS.primary), 
@@ -225,7 +225,7 @@ export const FomoModCard = memo(function FomoModCard({
             onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
             disabled={isDownloading}
             aria-label={isDownloading ? "Descargando…" : (isCurseForge && mod.allowModDistribution === false ? "Abrir página de descarga manual" : `Descargar ${mod.title}`)}
-            className="flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:grayscale disabled:scale-100 shadow-sm"
+            className="flex items-center justify-center gap-1.5 h-9 px-2 rounded-xl text-[0.65rem] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:grayscale disabled:scale-100 shadow-sm"
             style={{ 
               background: isCurseForge && mod.allowModDistribution === false ? "rgba(239, 108, 0, 0.12)" : "rgba(102,200,160,0.12)", 
               color: isCurseForge && mod.allowModDistribution === false ? COLORS.curseforgeOrange : COLORS.emerald, 
@@ -242,7 +242,7 @@ export const FomoModCard = memo(function FomoModCard({
           <button
             onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }}
             aria-label={`Ver detalles de ${mod.title}`}
-            className={`flex items-center justify-center gap-1.5 h-9.5 px-2.5 text-xs font-semibold transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 h-9 px-2 text-[0.65rem] font-bold transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] shadow-sm ${
               isCurseForge ? 'rounded-none border border-orange-500/30' : 'rounded-xl border border-white/10'
             }`}
             style={{ color: isCurseForge ? COLORS.curseforgeOrange : COLORS.foreground, background: "var(--color-secondary-bg)" }}

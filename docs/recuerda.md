@@ -18,6 +18,11 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 - **⚡ Bulk Actions (Bandeja de Clasificación):** Eliminación por lote y retorno masivo a descargas (Unclassify) integrados en la bandeja de trabajo.
 - **🛡️ Compatibilidad 1.20.1:** Excepción lógica para unificar Forge/NeoForge en la versión 1.20.1.
 - **Fixes de Estabilidad:** Resolución de errores de `ConfirmModal` y `useRef` en la página principal.
+- **✨ Enhanced Layout & Scanner (Beta 5.1):**
+  - Layout de `ModCard` estandarizado con alturas fijas y gaps consistentes.
+  - Fixes de TypeScript en `enhanced-mod-scanner`.
+  - Mejoras en la detección de versiones desde nombres de archivos y paths.
+  - Creación de la [Guía de Implementación](file:///D:/.mine/manager/docs/enhanced-components-guide.md).
 
 ### 👁️ FOMO 3.0 (Discovery & Cloud)
 - **Discovery Sidebar:** Integración total con Modrinth y CurseForge.

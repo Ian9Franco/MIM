@@ -1,22 +1,6 @@
 /**
  * @fileoverview ModCard – displays a single installed mod with its metadata,
  * status badges, and optional inline update download button.
- *
- * @param name          Display name of the mod
- * @param version       Minecraft game version the mod targets
- * @param modVersion    Mod's own version string
- * @param loader        Mod loader ("forge", "fabric", etc.)
- * @param isSelected    Whether this card is currently selected
- * @param onClick       Click handler (toggles selection)
- * @param activeVersion Project's active game version (for compatibility check)
- * @param activeLoader  Project's active loader (for compatibility check)
- * @param badgeText     Optional status badge text (e.g. "↑ 1.2.3")
- * @param badgeColor    Tailwind classes for badge styling
- * @param onDownload    If provided, shows an inline download button
- * @param isDownloading Whether the download is in progress
- * @param index         List position, used for staggered animation delay
- * @param projectType   Type of project (mod, resourcepack, etc.)
- * @param iconBase64    Base64-encoded mod icon
  */
 
 "use client";
@@ -52,7 +36,6 @@ interface ModCardProps {
   categories?:   string[];
 }
 
-/** Maps projectType slugs to human-readable emoji labels */
 function getProjectTypeLabel(type: string): string {
   const map: Record<string, string> = {
     resourcepack: "🖼️ Textura",
@@ -68,28 +51,17 @@ export const ModCard = memo(function ModCard({
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, author, categories,
 }: ModCardProps) {
-  // Logic: if version is "1.20+", it matches "1.20.1"
-  // Also support prefix matching: if mod is "1.21", it matches "1.21.1"
-  // And handle ranges like "1.21 - 1.21.1"
+  const useStaggeredAnimation = index < 50;
+  
   const isCompatibleRange = useMemo(() => {
     if (!version || version === "unknown") return true;
     if (version === activeVersion) return true;
-    
-    // Check 1.21+
-    if (version.endsWith("+")) {
-      return activeVersion.startsWith(version.slice(0, -1));
-    }
-    
-    // Check prefix: 1.21 matches 1.21.1
+    if (version.endsWith("+")) return activeVersion.startsWith(version.slice(0, -1));
     if (activeVersion.startsWith(version + ".")) return true;
-    
-    // Check range: 1.21 - 1.21.1
     if (version.includes(" - ")) {
       const [start, end] = version.split(" - ");
-      // Simple check: matches start or matches end or is between (starts with start prefix)
       return activeVersion.startsWith(start) || activeVersion.startsWith(end);
     }
-    
     return false;
   }, [version, activeVersion]);
   
@@ -97,16 +69,11 @@ export const ModCard = memo(function ModCard({
   
   const isLoaderError = useMemo(() => {
     if (loader === "unknown" || activeLoader === "" || loader === activeLoader) return false;
-    
-    // Exception for 1.20.1: Forge and NeoForge are compatible
     if (activeVersion === "1.20.1") {
       const l = loader.toLowerCase();
       const al = activeLoader.toLowerCase();
-      if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) {
-        return false;
-      }
+      if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) return false;
     }
-    
     return true;
   }, [loader, activeLoader, activeVersion]);
 
@@ -131,7 +98,6 @@ export const ModCard = memo(function ModCard({
     e.stopPropagation(); onDelete?.();
   }, [onDelete]);
 
-  // Security score indicator
   const getSecurityColor = (score?: number) => {
     if (score === undefined) return null;
     if (score <= 30) return { color: "#22c55e", bg: "rgba(34,197,94,0.12)", label: "✓ Seguro" };
@@ -144,35 +110,34 @@ export const ModCard = memo(function ModCard({
   return (
     <article
       onClick={onClick}
-      className={`animate-fade-up snap-start snap-always scroll-mt-2.5 ${isError && isSelected ? "animate-shake" : ""}`}
-      style={{ animationDelay: `${index * 0.035}s` }}
+      className={`${useStaggeredAnimation ? "animate-fade-up" : ""} snap-start snap-always scroll-mt-2.5 ${isError && isSelected ? "animate-shake" : ""}`}
+      style={{ animationDelay: useStaggeredAnimation ? `${index * 0.035}s` : undefined }}
       aria-selected={isSelected}
       aria-label={`${name} – ${version}`}
     >
       <div
-        className="group relative flex flex-col rounded-[1.5rem] cursor-pointer overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-[500px] px-4 py-3 min-h-[88px]"
+        className="group relative flex flex-col rounded-[1.5rem] cursor-pointer overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-[500px] px-4 py-3"
         style={{ 
+          height: "140px", 
           border: `1px solid ${cardBorder}`, 
           background: cardBg, 
           boxShadow: cardShadow,
-          gap: "0.875rem"
         }}
       >
-        <div className="flex items-center w-full gap-3.5">
-          {/* Left accent bar */}
-          <div
-            aria-hidden="true"
-            className="absolute left-0 top-0 w-[3px] h-full rounded-l-[1px] transition-all duration-300"
-            style={{
-              background: isSelected ? COLORS.accent : isError ? "#ef4444" : COLORS.primary,
-              opacity:    isSelected ? 1 : isError ? 0.7 : 0.3,
-            }}
-          />
+        <div
+          aria-hidden="true"
+          className="absolute left-0 top-0 w-[3px] h-full rounded-l-[1px] transition-all duration-300"
+          style={{
+            background: isSelected ? COLORS.accent : isError ? "#ef4444" : COLORS.primary,
+            opacity:    isSelected ? 1 : isError ? 0.7 : 0.3,
+          }}
+        />
 
-          {/* Icon */}
+        {/* Top Content: Icon + Metadata */}
+        <div className="flex items-start gap-3.5 flex-1 min-h-0">
           <div
             aria-hidden="true"
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden transition-transform duration-500"
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden mt-1"
             style={{
               background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "var(--color-accent-bg)" : "var(--color-secondary-bg)",
               border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "var(--color-accent-border)" : "var(--color-border)"}`,
@@ -183,146 +148,99 @@ export const ModCard = memo(function ModCard({
             : <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />}
           </div>
 
-          {/* Metadata */}
-          <div className="flex-1 min-w-0 transition-all duration-500 opacity-100 visible w-auto">
-            <div className="flex items-baseline gap-2">
-              <p className="font-subhead text-sm truncate leading-tight" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
                 {name}
               </p>
-              {author && author !== "unknown" && (
-                <span className="font-caption text-[10px] opacity-40 truncate">
-                  by {author}
-                </span>
-              )}
               
-              {/* Delete Button for Pending Files */}
               {isPending && onDelete && (
                 <button
                   onClick={stopPropDelete}
                   disabled={isDeleting}
                   aria-label="Eliminar archivo"
-                  title="Eliminar archivo permanentemente"
-                  className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 ml-auto group/del active:scale-95"
+                  className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-110 shrink-0"
                   style={{ 
-                    background: isDeleting ? "rgba(255,255,255,0.04)" : "rgba(239,68,68,0.12)", 
-                    border: `1px solid ${isDeleting ? "rgba(255,255,255,0.08)" : "rgba(239,68,68,0.25)"}`, 
-                    color: isDeleting ? "rgba(255,255,255,0.25)" : "#ef4444" 
+                    background: "rgba(239,68,68,0.12)", 
+                    border: "1px solid rgba(239,68,68,0.25)", 
+                    color: "#ef4444" 
                   }}
                 >
-                  {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-1.5 mt-2 overflow-hidden" role="list" aria-label="Etiquetas">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <span role="listitem" className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)", fontSize: "0.6rem" }}>{version}</span>
-                {modVersion && modVersion !== "unknown" && (
-                  <span role="listitem" className="font-label rounded-full px-2 py-0.5 truncate max-w-[100px]" style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: COLORS.primary, fontSize: "0.6rem" }}>v{modVersion}</span>
-                )}
-                <span role="listitem" className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.6rem" }}>{ls.label}</span>
-                {projectType && projectType !== "mod" && projectType !== "unknown" && (
-                  <span role="listitem" className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "rgba(228,150,184,0.1)", color: "#E496B8", fontSize: "0.6rem" }}>{getProjectTypeLabel(projectType)}</span>
-                )}
-              </div>
 
+            {author && author !== "unknown" && (
+              <span className="font-caption text-[10px] opacity-40 truncate -mt-1.5">
+                by {author}
+              </span>
+            )}
+
+            <div className="flex flex-wrap items-center gap-1.5 overflow-hidden max-h-[44px]" role="list">
+              <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)", fontSize: "0.55rem" }}>{version}</span>
+              {modVersion && modVersion !== "unknown" && (
+                <span className="font-label rounded-full px-2 py-0.5 truncate max-w-[80px]" style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: COLORS.primary, fontSize: "0.55rem" }}>v{modVersion}</span>
+              )}
+              <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.55rem" }}>{ls.label}</span>
+              
               {(isVersionError || isLoaderError) && (
-                <div className="flex items-center gap-1 ml-auto shrink-0 animate-fade-in">
-                  {isVersionError && <span className="font-label rounded-full px-2 py-0.5 flex items-center gap-1" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.6rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ver</span>}
-                  {isLoaderError  && <span className="font-label rounded-full px-2 py-0.5 flex items-center gap-1" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.6rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ldr</span>}
+                <div className="flex items-center gap-1 shrink-0">
+                  {isVersionError && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ver</span>}
+                  {isLoaderError  && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ldr</span>}
                 </div>
               )}
               
-              {/* Security Score Badge */}
               {securityInfo && (
-                <span
-                  role="listitem"
-                  className="font-label rounded-full px-2 py-0.5 flex items-center gap-1 ml-1 shrink-0"
-                  style={{ background: securityInfo.bg, color: securityInfo.color, fontSize: "0.55rem" }}
-                  title={`Risk Score: ${riskScore}/100`}
-                >
+                <span className="font-label rounded-full px-2 py-0.5 flex items-center gap-1 shrink-0" style={{ background: securityInfo.bg, color: securityInfo.color, fontSize: "0.55rem" }}>
                   <Shield className="w-2.5 h-2.5" />
                   {securityInfo.label}
                 </span>
               )}
             </div>
           </div>
-
-          {/* Selected indicator (moved inside row) */}
-          {isSelected && !isError && (
-            <div aria-hidden="true" className="shrink-0 flex items-center gap-1.5 animate-fade-in transition-all duration-500 opacity-100 w-auto ml-auto">
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: COLORS.accent }} />
-              <span className="font-label" style={{ color: COLORS.accent, fontSize: "0.6rem" }}>sel.</span>
-            </div>
-          )}
         </div>
 
-        {/* Tags Row (Library version) */}
-        {categories && categories.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1 pl-[3.125rem] w-full">
-            {categories
-              .filter(cat => !["forge", "fabric", "neoforge", "quilt", "iris", "optifine"].includes(cat.toLowerCase()))
-              .slice(0, 3)
-              .map((cat) => {
-                const label = CATEGORY_TRANSLATIONS[cat] || cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                return (
-                  <span 
-                    key={cat}
-                    className="px-2 py-0.5 rounded-full text-[0.55rem] font-bold border transition-all"
-                    style={{ 
-                      background: "rgba(255,255,255,0.03)", 
-                      borderColor: "rgba(255,255,255,0.06)",
-                      color: "rgba(255,255,255,0.4)"
-                    }}
-                  >
-                    {label}
-                  </span>
-                );
-              })}
-            {categories.filter(cat => !["forge", "fabric", "neoforge", "quilt", "iris", "optifine"].includes(cat.toLowerCase())).length > 3 && (
-              <span className="text-[0.5rem] font-bold self-center opacity-20 ml-0.5">
-                +{categories.filter(cat => !["forge", "fabric", "neoforge", "quilt", "iris", "optifine"].includes(cat.toLowerCase())).length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Update Available Badge with Action (Absolute positioned or below) */}
-        {badgeText && (
-          <div className="flex items-center gap-1.5 animate-fade-in pl-[3.125rem] mt-1" role="listitem">
-            <span
-              className={`font-label rounded-md px-2 py-0.5 max-w-[130px] truncate ${badgeColor ?? "bg-white/8 text-foreground/60"}`}
-              style={{ fontSize: "0.6rem" }}
-              title={badgeText}
-            >
-              <ArrowUp className="w-3 h-3 inline mr-0.5" />
-              {badgeText}
-            </span>
-            {onDownload && (
-              <button
-                onClick={stopPropDownload}
-                disabled={isDownloading}
-                aria-label="Descargar actualización"
-                title="Descargar actualización"
-                className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-105"
+        {/* Footer: Categories + Update */}
+        <div className="flex items-center justify-between w-full mt-auto pt-2 border-t border-white/5" style={{ height: "32px" }}>
+          <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
+            {categories && categories.slice(0, 2).map((cat) => (
+              <span 
+                key={cat}
+                className="px-2 py-0.5 rounded-full text-[0.55rem] font-bold border shrink-0"
                 style={{ 
-                  background: isDownloading ? "var(--color-secondary-bg)" : "var(--color-accent-bg)", 
-                  border: `1px solid ${isDownloading ? "var(--color-border)" : "var(--color-accent-border)"}`, 
-                  color: isDownloading ? "var(--color-muted)" : "var(--color-accent)" 
+                  background: "rgba(255,255,255,0.03)", 
+                  borderColor: "rgba(255,255,255,0.06)",
+                  color: "rgba(255,255,255,0.4)",
                 }}
               >
-                {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-              </button>
+                {CATEGORY_TRANSLATIONS[cat] || cat}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {badgeText && (
+              <div className="flex items-center gap-1.5">
+                <span className={`font-label rounded-md px-2 py-0.5 max-w-[100px] truncate ${badgeColor ?? "bg-white/8 text-foreground/60"}`} style={{ fontSize: "0.55rem" }}>
+                  <ArrowUp className="w-2.5 h-2.5 inline mr-0.5" />
+                  {badgeText}
+                </span>
+                {onDownload && (
+                  <button onClick={stopPropDownload} disabled={isDownloading} className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-105" style={{ background: "var(--color-accent-bg)", border: "1px solid var(--color-accent-border)", color: "var(--color-accent)" }}>
+                    {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                  </button>
+                )}
+              </div>
+            )}
+            {isSelected && !isError && (
+              <div aria-hidden="true" className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: COLORS.accent }} />
+                <span className="font-label" style={{ color: COLORS.accent, fontSize: "0.6rem" }}>sel.</span>
+              </div>
             )}
           </div>
-        )}
-
-        {/* Selected indicator */}
-        {isSelected && !isError && (
-          <div aria-hidden="true" className="shrink-0 flex items-center gap-1.5 animate-fade-in transition-all duration-500 opacity-100 w-auto">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: COLORS.accent }} />
-            <span className="font-label" style={{ color: COLORS.accent, fontSize: "0.6rem" }}>sel.</span>
-          </div>
-        )}
+        </div>
       </div>
     </article>
   );

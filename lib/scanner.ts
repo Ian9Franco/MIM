@@ -85,20 +85,66 @@ function extractMcVersionFromRange(range: string): string | null {
 }
 
 /**
- * Last-resort fallback: scrape the game version from the filename itself.
+ * Enhanced fallback: scrape the game version from the filename itself.
  *
  * Examples:
  *   "sodium-fabric-mc1.20.1-0.5.3.jar"  →  "1.20.1"
  *   "primal-1.1.6+1.20.1.jar"           →  "1.20.1"
+ *   "mod-1.20.1.jar"                    →  "1.20.1"
+ *   "mod_1.20.1.jar"                    →  "1.20.1"
+ *   "mod-for-mc1.20.1.jar"              →  "1.20.1"
+ *   "mod-1.20.jar"                      →  "1.20"
  *
  * When multiple MC-like strings appear (e.g. "1.20-1.20.1"), we pick the
  * last one because filenames typically end with the MC version.
  */
 function gameVersionFromFilename(filePath: string): string | null {
   const base = path.basename(filePath, ".jar");
-  const matches = [...base.matchAll(/1\.(1[6-9]|2\d)(?:\.\d+)?/g)];
-  if (matches.length === 0) return null;
-  return matches[matches.length - 1][0];
+  
+  // Patrones mejorados para detectar versiones
+  const patterns = [
+    /mc?1\.(1[6-9]|2\d)(?:\.\d+)?/g,           // mc1.20.1, 1.20.1
+    /[_\-\+](1\.(1[6-9]|2\d)(?:\.\d+)?)[_\-\+\.]/g, // _1.20.1_, -1.20.1-, +1.20.1+
+    /(?:^|[_\-\+])(1\.(1[6-9]|2\d)(?:\.\d+)?)(?:[_\-\+]|$)/g, // inicio/final con separadores
+    /1\.(1[6-9]|2\d)(?:\.\d+)?/g,              // fallback original
+  ];
+
+  for (const pattern of patterns) {
+    const matches = [...base.matchAll(pattern)];
+    if (matches.length > 0) {
+      // Limpiar el match de prefijos/sufijos
+      let version = matches[matches.length - 1][0];
+      version = version.replace(/^mc?/, '').replace(/[_\-\+]/g, '');
+      return version;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Normalize and clean mod version strings
+ */
+function normalizeModVersion(version: string): string {
+  if (!version || version === "unknown") return version;
+  
+  // Limpiar caracteres problemáticos
+  let clean = version.trim()
+    .replace(/^v/i, "") // Quitar 'v' inicial
+    .replace(/[-+]?(fabric|forge|neoforge|quilt|snapshot|alpha|beta|dev|local|all|release|final|pre|build)/gi, "") // Quitar sufijos comunes
+    .replace(/[-+]?(mc)?1\.(1[6-9]|2\d)(\.\d+)?/gi, "") // Quitar versiones de Minecraft
+    .replace(/[_-]/g, ".") // Estandarizar separadores
+    .replace(/[^0-9.]/g, "") // Solo números y puntos
+    .replace(/^\.+|\.+$/g, "") // Quitar puntos extremos
+    .replace(/\.{2,}/g, "."); // Reducir puntos múltiples
+
+  // Validar que la versión tenga sentido
+  const parts = clean.split(".");
+  if (parts.length > 4) {
+    clean = parts.slice(0, 4).join(".");
+  }
+
+  return clean || version; // Return original si no se puede limpiar
 }
 
 /**
@@ -137,7 +183,24 @@ function parseForgeToml(content: string): Partial<ModMeta> {
   // version — explicitly skip Gradle placeholder strings like "${file.jarVersion}"
   // The negative lookahead `(?![^"]*\$\{)` rejects any value containing "${"
   const verMatch = content.match(/^version\s*=\s*"(?![^"]*\$\{)([^"]+)"/m);
-  if (verMatch) result.modVersion = verMatch[1];
+  if (verMatch) {
+    result.modVersion = normalizeModVersion(verMatch[1]);
+  } else {
+    // Intentar extraer versión de otras propiedades comunes
+    const altPatterns = [
+      /modVersion\s*=\s*"([^"]+)"/,
+      /implementation-version\s*:\s*([^,\s]+)/,
+      /Specification-Version\s*:\s*([^,\s]+)/
+    ];
+    
+    for (const pattern of altPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        result.modVersion = normalizeModVersion(match[1]);
+        break;
+      }
+    }
+  }
 
   // authors fallback
   const authorMatch = content.match(/authors?\s*=\s*"([^"]+)"/i);
@@ -401,7 +464,7 @@ function scanModRaw(filePath: string): ModMeta {
         projectType: "mod",
         modId: data.id ?? UNKNOWN,
         modName: data.name ?? UNKNOWN,
-        modVersion: data.version ?? UNKNOWN,
+        modVersion: data.version ? normalizeModVersion(data.version) : UNKNOWN,
         gameVersion: gv ?? gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
         // Fabric mods are candidate for Sinytra Connector usage
         isCompatibleWithConnector: true,

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Project, LibraryFile, PendingFile } from "@/lib/types";
 
 export function useLibrary(
@@ -26,6 +26,27 @@ export function useLibrary(
   const [ignoredUpdates, setIgnoredUpdates] = useState<Set<string>>(new Set());
   const autoCheckedProjects = useRef<Set<string>>(new Set());
 
+  // Memoización agresiva para optimizar rendimiento con grandes librerías
+  const libraryHash = useMemo(() => 
+    library.map(m => `${m.path}:${m.fileName}`).join('|'), 
+    [library.length, library.map(m => m.path).join(',')]
+  );
+
+  const selectedHash = useMemo(() => 
+    selectedLibFiles.map(f => f.path).join('|'),
+    [selectedLibFiles.length, selectedLibFiles.map(f => f.path).join(',')]
+  );
+
+  const statusHash = useMemo(() => 
+    Object.keys(modrinthStatus).sort().join('|'),
+    [Object.keys(modrinthStatus).length]
+  );
+
+  const projectHash = useMemo(() => 
+    activeProject ? `${activeProject.version}:${activeProject.loader}:${activeProject.name}` : '',
+    [activeProject?.version, activeProject?.loader, activeProject?.name]
+  );
+
   useEffect(() => {
     if (!activeProject) { setLibrary([]); return; }
     setLoadingLibrary(true);
@@ -33,7 +54,7 @@ export function useLibrary(
       .then((r) => r.json())
       .then((d) => { setLibrary(d.library || []); setLoadingLibrary(false); })
       .catch(() => setLoadingLibrary(false));
-  }, [activeProject?.version, activeProject?.loader, activeProject?.name]);
+  }, [projectHash]);
 
   const checkUpdates = useCallback(async (force = false) => {
     if (!activeProject || (library.length === 0 && pendingFiles.length === 0)) return;
@@ -55,7 +76,7 @@ export function useLibrary(
       }
     } catch (_) {}
     setCheckingUpdates(false);
-  }, [activeProject, library, pendingFiles]);
+  }, [activeProject, libraryHash, pendingFiles.length]);
 
   const handleCheckUpdates = useCallback(() => {
     checkUpdates(true);
@@ -66,13 +87,13 @@ export function useLibrary(
     setLoadingLibrary(true);
     try {
       const res = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`);
-      const data = await res.json();
-      setLibrary(data.library || []);
-      // Comprobar actualizaciones desde la caché local rápida
-      checkUpdates(false);
+      if (res.ok) {
+        const data = await res.json();
+        setLibrary(data.library || []);
+      }
     } catch (_) {}
     setLoadingLibrary(false);
-  }, [activeProject, checkUpdates]);
+  }, [projectHash]);
 
   useEffect(() => {
     if (activeProject && library.length > 0 && !autoCheckedProjects.current.has(activeProject.id)) {

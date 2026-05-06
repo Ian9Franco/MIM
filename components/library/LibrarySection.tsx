@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight } from "lucide-react";
 import { ModCard } from "@/components/library/ModCard";
+import { VirtualizedLibrary } from "@/components/library/VirtualizedLibrary";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TransferModal } from "./TransferModal";
@@ -253,67 +254,16 @@ export function LibrarySection({
           )}
         </div>
       ) : (
-        <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
-          {Object.entries(
-            library.reduce((acc, mod) => {
-              const cat = mod.category || "Otros";
-              if (!acc[cat]) acc[cat] = {};
-              const sub = mod.sub || "general";
-              if (!acc[cat][sub]) acc[cat][sub] = [];
-              acc[cat][sub].push(mod);
-              return acc;
-            }, {} as Record<string, Record<string, LibraryFile[]>>)
-          ).map(([category, subGroups]) => (
-            <div key={category} className="animate-fade-up mb-8">
-              <div className="flex items-center gap-2 mb-4 px-1 border-b border-white/5 pb-2">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: category === ".essential" ? "var(--color-primary)" : category === ".local" ? "var(--color-accent)" : "#66C8A0" }} />
-                <h3 className="font-headline text-sm uppercase tracking-wider opacity-80">
-                  {category}
-                </h3>
-              </div>
-              <div className="space-y-6 pl-2">
-                {Object.entries(subGroups).map(([sub, mods]) => (
-                  <div key={sub}>
-                    <h4 className="font-subhead text-xs tracking-widest opacity-40 mb-2.5 uppercase flex items-center gap-2">
-                      {sub} <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[9px]">{mods.length}</span>
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {mods.map((f, i) => {
-                        const displayName = (f.meta?.modName && f.meta.modName !== "unknown") ? f.meta.modName : f.fileName;
-                        const isSelected  = selectedLibFiles.some((s) => s.path === f.path);
-                        const badge       = getBadge(f);
-                        return (
-                          <ModCard
-                            key={f.path}
-                            index={i}
-                            name={displayName}
-                            version={f.meta?.gameVersion ?? f.meta?.version ?? "unknown"}
-                            modVersion={f.meta?.modVersion}
-                            projectType={f.meta?.projectType}
-                            iconBase64={f.meta?.iconBase64}
-                            author={f.meta?.author}
-                            loader={f.meta?.loader ?? "unknown"}
-                            isSelected={isSelected}
-                            onClick={() => setSelectedLibFiles((prev) =>
-                              isSelected ? prev.filter((s) => s.path !== f.path) : [...prev, f]
-                            )}
-                            activeVersion={activeProject?.version ?? ""}
-                            activeLoader={activeProject?.loader ?? ""}
-                            badgeText={badge.badgeText}
-                            badgeColor={badge.badgeColor}
-                            onDownload={badge.onDownload}
-                            isDownloading={downloadingMods[f.path]}
-                            categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <VirtualizedLibrary
+          library={library}
+          selectedLibFiles={selectedLibFiles}
+          setSelectedLibFiles={setSelectedLibFiles}
+          activeProject={activeProject}
+          downloadingMods={downloadingMods}
+          modrinthStatus={modrinthStatus}
+          ignoredUpdates={ignoredUpdates}
+          handleDownloadUpdate={handleDownloadUpdate}
+        />
       )}
 
       {activeProject && transferOpen && (

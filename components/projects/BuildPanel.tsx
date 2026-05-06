@@ -88,7 +88,7 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
       {/* ── Result ──────────────────────────────────────────────────── */}
       {result && (
         <div
-          className="flex items-start gap-3 p-4 rounded-2xl border animate-scale-in"
+          className="flex items-start gap-3 p-4 rounded-[1.5rem] border animate-scale-in"
           style={{
             background: result.data.success ? "rgba(16,92,64,0.25)"  : "rgba(92,16,16,0.25)",
             borderColor: result.data.success ? "rgba(102,200,160,0.25)" : "rgba(239,68,68,0.25)",
@@ -132,7 +132,7 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
             console.error(e);
           }
         }}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl transition-all group"
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-[1.5rem] transition-all group"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px dashed var(--color-border-strong)",
@@ -179,7 +179,7 @@ function BuildButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="group relative text-left rounded-2xl overflow-hidden transition-all duration-250 disabled:opacity-40 disabled:cursor-not-allowed"
+      className="group relative text-left rounded-[1.5rem] overflow-hidden transition-all duration-250 disabled:opacity-40 disabled:cursor-not-allowed"
       style={{
         background: accentBg,
         border: `1px solid ${accentBorder}`,
@@ -205,7 +205,7 @@ function BuildButton({
     >
       <div className="flex items-start gap-3.5">
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
+          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
           style={{ background: `color-mix(in srgb, ${accentColor} 12%, transparent)`, border: `1px solid ${accentBorder}`, color: accentColor }}
         >
           {isBuilding

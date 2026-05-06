@@ -43,7 +43,7 @@ export function ProjectsSection({
       />
 
       <div
-        className="rounded-2xl p-4 space-y-3"
+        className="rounded-[1.5rem] p-4 space-y-3"
         style={{
           background: "color-mix(in srgb, var(--color-card) 82%, transparent)",
           border: "1px solid var(--color-border)",
@@ -56,7 +56,7 @@ export function ProjectsSection({
             <button
               key={p.id}
               onClick={() => setActiveProjectId(p.id)}
-              className="group relative flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-200"
+              className="group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all duration-200"
               style={{
                 background: activeProjectId === p.id ? "rgba(187,150,228,0.12)" : "rgba(255,255,255,0.03)",
                 border: `1px solid ${activeProjectId === p.id ? "rgba(187,150,228,0.4)" : "var(--color-border)"}`,
@@ -102,7 +102,7 @@ export function ProjectsSection({
 
           <button
             onClick={() => { setCreatingNew(true); setEditingId(null); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-body-med text-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-body-med text-sm transition-all"
             style={{
               border: "1px dashed var(--color-border-strong)",
               color: "var(--color-muted)",

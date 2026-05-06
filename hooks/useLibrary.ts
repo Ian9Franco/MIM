@@ -29,20 +29,25 @@ export function useLibrary(
   useEffect(() => {
     if (!activeProject) { setLibrary([]); return; }
     setLoadingLibrary(true);
-    fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}`)
+    fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
       .then((r) => r.json())
       .then((d) => { setLibrary(d.library || []); setLoadingLibrary(false); })
       .catch(() => setLoadingLibrary(false));
-  }, [activeProject?.version, activeProject?.loader]);
+  }, [activeProject?.version, activeProject?.loader, activeProject?.name]);
 
-  const handleCheckUpdates = useCallback(async () => {
+  const checkUpdates = useCallback(async (force = false) => {
     if (!activeProject || library.length === 0) return;
     setCheckingUpdates(true);
     try {
       const res = await fetch("/api/modrinth/check-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mods: library, loader: activeProject.loader, gameVersion: activeProject.version }),
+        body: JSON.stringify({ 
+          mods: library, 
+          loader: activeProject.loader, 
+          gameVersion: activeProject.version,
+          forceRefresh: force
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -52,25 +57,29 @@ export function useLibrary(
     setCheckingUpdates(false);
   }, [activeProject, library]);
 
+  const handleCheckUpdates = useCallback(() => {
+    checkUpdates(true);
+  }, [checkUpdates]);
+
   const refreshLibrary = useCallback(async () => {
     if (!activeProject) return;
     setLoadingLibrary(true);
     try {
-      const res = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}`);
+      const res = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`);
       const data = await res.json();
       setLibrary(data.library || []);
-      // También refrescar actualizaciones
-      handleCheckUpdates();
+      // Comprobar actualizaciones desde la caché local rápida
+      checkUpdates(false);
     } catch (_) {}
     setLoadingLibrary(false);
-  }, [activeProject, handleCheckUpdates]);
+  }, [activeProject, checkUpdates]);
 
   useEffect(() => {
     if (activeProject && library.length > 0 && !autoCheckedProjects.current.has(activeProject.id)) {
       autoCheckedProjects.current.add(activeProject.id);
-      handleCheckUpdates();
+      checkUpdates(false);
     }
-  }, [activeProject, library, handleCheckUpdates]);
+  }, [activeProject, library, checkUpdates]);
 
   const handleClassify = useCallback(async (
     category: string, sub: string, allSelected: (PendingFile | LibraryFile)[],
@@ -93,7 +102,7 @@ export function useLibrary(
       const moved = new Set(allSelected.map((f) => f.path));
       setPendingFilesLocal((prev: any) => prev.filter((f: any) => !moved.has(f.path)));
       clearSelected();
-      fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}`)
+      fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
         .then((r) => r.json())
         .then((d) => setLibrary(d.library || []));
     } catch (_) {}
@@ -108,7 +117,7 @@ export function useLibrary(
     });
     if (res.ok) {
       setSelectedLibFiles([]);
-      const r = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}`);
+      const r = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`);
       const d = await r.json();
       setLibrary(d.library || []);
     }

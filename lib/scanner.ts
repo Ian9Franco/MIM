@@ -20,6 +20,7 @@ import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { SOURCE_BASE } from "./constants";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 
@@ -64,9 +65,23 @@ const DEFAULT_META: ModMeta = {
  * We use a greedy regex that picks the first MC-like version it finds.
  */
 function extractMcVersionFromRange(range: string): string | null {
-  // Match patterns like 1.16, 1.20, 1.20.1, 1.21.4
-  const match = range.match(/1\.(1[6-9]|2\d)(?:\.\d+)?/);
-  return match ? match[0] : null;
+  // Find all MC-like versions in the range string
+  const matches = [...range.matchAll(/1\.(1[6-9]|2\d)(?:\.\d+)?/g)].map(m => m[0]);
+  if (matches.length === 0) return null;
+
+  // Case: Single version with a range indicator (e.g., ">=1.21" or "[1.21, )")
+  if (matches.length === 1) {
+    return (range.includes(",") || range.includes(">") || range.includes(".x")) 
+      ? `${matches[0]}+` 
+      : matches[0];
+  }
+
+  // Case: Explicit range (e.g., "[1.21, 1.21.1]")
+  if (matches[0] === matches[1]) return matches[0];
+  
+  // If it's a typical Forge range like [1.21, 1.22), showing 1.21 - 1.22 can be confusing.
+  // We'll show it as a range if it's small, or 1.21+ if it's a major jump.
+  return `${matches[0]} - ${matches[1]}`;
 }
 
 /**
@@ -84,6 +99,15 @@ function gameVersionFromFilename(filePath: string): string | null {
   const matches = [...base.matchAll(/1\.(1[6-9]|2\d)(?:\.\d+)?/g)];
   if (matches.length === 0) return null;
   return matches[matches.length - 1][0];
+}
+
+/**
+ * Super fallback: if the version isn't in the metadata or filename,
+ * look at the directory structure (e.g., .../1.21.1/neoforge/...).
+ */
+function gameVersionFromPath(filePath: string): string | null {
+  const match = filePath.match(/[\\/](1\.(?:1[6-9]|2\d)(?:\.\d+)?)[\\/]/);
+  return match ? match[1] : null;
 }
 
 // ── Forge / NeoForge TOML Parser ──────────────────────────────────────────────
@@ -122,17 +146,21 @@ function parseForgeToml(content: string): Partial<ModMeta> {
   // minecraft dependency version range
   // Split on [[dependencies so each chunk is one dependency block
   const sections = content.split(/\[\[dependencies/i);
+  let foundGv = null;
+
   for (const section of sections) {
-    if (/modId\s*=\s*["']minecraft["']/i.test(section)) {
-      const rangeMatch = section.match(/versionRange\s*=\s*"([^"]+)"/);
-      if (rangeMatch) {
-        const isPlus = rangeMatch[1].includes(",)") || rangeMatch[1].includes(">=");
-        const gv = extractMcVersionFromRange(rangeMatch[1]);
-        if (gv) result.gameVersion = isPlus ? `${gv}+` : gv;
+    const isMc = /modId\s*=\s*["']minecraft["']/i.test(section);
+    const rangeMatch = section.match(/versionRange\s*=\s*"([^"]+)"/);
+    if (rangeMatch) {
+      const gv = extractMcVersionFromRange(rangeMatch[1]);
+      if (gv) {
+        foundGv = gv;
+        if (isMc) break; // Minecraft block is high priority
       }
-      break; // Only one minecraft dep block expected
     }
   }
+  
+  if (foundGv) result.gameVersion = foundGv;
 
   // logoFile
   const logoMatch = content.match(/logoFile\s*=\s*"([^"]+)"/);
@@ -144,19 +172,140 @@ function parseForgeToml(content: string): Partial<ModMeta> {
   return result;
 }
 
-// ── Main Export ───────────────────────────────────────────────────────────────
+// ── Cache Layer ───────────────────────────────────────────────────────────────
+
+const OLD_ROOT_CACHE_FILE = path.join(process.cwd(), "mim-mod-cache.json");
+const OLD_INDEX_CACHE_FILE = path.join(process.cwd(), "mim-index", "mod-cache.json");
+const CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "mod-cache.json");
+
+// Migrate legacy file if it exists
+if (!fs.existsSync(CACHE_FILE)) {
+  try {
+    fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
+    if (fs.existsSync(OLD_INDEX_CACHE_FILE)) {
+      fs.renameSync(OLD_INDEX_CACHE_FILE, CACHE_FILE);
+      console.log("[scanner] Legacy mod cache successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
+    } else if (fs.existsSync(OLD_ROOT_CACHE_FILE)) {
+      fs.renameSync(OLD_ROOT_CACHE_FILE, CACHE_FILE);
+      console.log("[scanner] Legacy mod cache successfully migrated from root to SOURCE_BASE/.mim-index/");
+    }
+  } catch (e) {
+    console.error("[scanner] Failed to migrate legacy mod cache:", e);
+  }
+}
+
+const CURRENT_CACHE_VERSION = 2;
+
+let modCache: { version: number; entries: Record<string, { mtimeMs: number; size: number; meta: ModMeta }> } | null = null;
+let saveTimeout: NodeJS.Timeout | null = null;
+
+function loadCache() {
+  if (modCache) return modCache;
+  if (fs.existsSync(CACHE_FILE)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+      if (parsed && parsed.version === CURRENT_CACHE_VERSION) {
+        modCache = parsed;
+      } else {
+        console.log(`[scanner] Cache version changed (got ${parsed?.version}, expected ${CURRENT_CACHE_VERSION}), resetting cache.`);
+      }
+    } catch (e) {
+      console.error("[scanner] Error loading cache file, resetting cache", e);
+    }
+  }
+  if (!modCache || !modCache.entries) {
+    modCache = { version: CURRENT_CACHE_VERSION, entries: {} };
+  }
+  
+  // Janitor task: asynchronously clean up deleted files from cache 5s after first load
+  setTimeout(() => {
+    try {
+      if (modCache) {
+        let changed = false;
+        const paths = Object.keys(modCache.entries);
+        for (const p of paths) {
+          if (!fs.existsSync(p)) {
+            delete modCache.entries[p];
+            changed = true;
+          }
+        }
+        if (changed) {
+          fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
+          fs.writeFileSync(CACHE_FILE, JSON.stringify(modCache, null, 2), "utf-8");
+          console.log("[scanner] Mod cache cleaned up from dead file paths.");
+        }
+      }
+    } catch (e) {
+      console.error("[scanner] Error running cache janitor:", e);
+    }
+  }, 5000);
+
+  return modCache;
+}
+
+function queueSaveCache() {
+  if (saveTimeout) return;
+  saveTimeout = setTimeout(() => {
+    saveTimeout = null;
+    if (modCache) {
+      try {
+        fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
+        fs.writeFileSync(CACHE_FILE, JSON.stringify(modCache, null, 2), "utf-8");
+      } catch (e) {
+        console.error("[scanner] Error writing cache file to disk", e);
+      }
+    }
+  }, 1000);
+}
 
 /**
- * Reads a .jar file and extracts its mod metadata without extracting to disk.
+ * Reads a .jar file and extracts its mod metadata with local persistent caching.
  *
- * Throws if the file does not exist or cannot be opened as a ZIP archive.
- * Individual field parsing errors are silently swallowed — the field falls
- * back to "unknown" so the rest of the metadata is still usable.
+ * If the file's stats (mtimeMs and size) match the cache, returns the cached metadata
+ * instantly, completely avoiding slow disk I/O, zip parsing, and SHA-1 hashing.
  *
  * @param filePath  Absolute path to the .jar file.
- * @returns         Populated ModMeta (partial fields may be "unknown").
+ * @returns         Populated ModMeta.
  */
 export function scanMod(filePath: string): ModMeta {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`[scanner] File not found: ${filePath}`);
+  }
+
+  try {
+    const stat = fs.statSync(filePath);
+    const mtimeMs = stat.mtimeMs;
+    const size = stat.size;
+
+    const cache = loadCache();
+    const cachedEntry = cache.entries[filePath];
+
+    if (cachedEntry && cachedEntry.mtimeMs === mtimeMs && cachedEntry.size === size) {
+      return cachedEntry.meta;
+    }
+
+    // Cache miss or modified file: run actual raw scan
+    const meta = scanModRaw(filePath);
+
+    // Save to cache
+    cache.entries[filePath] = {
+      mtimeMs,
+      size,
+      meta,
+    };
+    queueSaveCache();
+
+    return meta;
+  } catch (e) {
+    // If stats / cache reading fails, fallback to raw scanner directly to be safe
+    return scanModRaw(filePath);
+  }
+}
+
+/**
+ * Raw non-cached mod metadata extraction.
+ */
+function scanModRaw(filePath: string): ModMeta {
   if (!fs.existsSync(filePath)) {
     throw new Error(`[scanner] File not found: ${filePath}`);
   }
@@ -171,7 +320,58 @@ export function scanMod(filePath: string): ModMeta {
   const findEntry = (name: string) =>
     entries.find((e: AdmZip.IZipEntry) => e.entryName === name);
 
-  // ── 1. Fabric ───────────────────────────────────────────────────────────────
+  // ── 1. NeoForge ─────────────────────────────────────────────────────────────
+  const neoforgeEntry = findEntry("META-INF/neoforge.mods.toml");
+  if (neoforgeEntry) {
+    const parsed = parseForgeToml(neoforgeEntry.getData().toString("utf8"));
+    let iconBase64: string | undefined;
+    if ((parsed as any)._logoFile) {
+      const iconEntry = findEntry((parsed as any)._logoFile);
+      if (iconEntry) {
+        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+      }
+      delete (parsed as any)._logoFile;
+    }
+
+    return {
+      ...DEFAULT_META,
+      ...parsed,
+      loader: "neoforge",
+      projectType: "mod",
+      // If TOML didn't give us a game version, try the filename
+      gameVersion:
+        parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
+      ...(iconBase64 ? { iconBase64 } : {}),
+      sha1,
+    };
+  }
+
+  // ── 2. Forge ────────────────────────────────────────────────────────────────
+  const forgeEntry = findEntry("META-INF/mods.toml");
+  if (forgeEntry) {
+    const parsed = parseForgeToml(forgeEntry.getData().toString("utf8"));
+    let iconBase64: string | undefined;
+    if ((parsed as any)._logoFile) {
+      const iconEntry = findEntry((parsed as any)._logoFile);
+      if (iconEntry) {
+        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
+      }
+      delete (parsed as any)._logoFile;
+    }
+
+    return {
+      ...DEFAULT_META,
+      ...parsed,
+      loader: "forge",
+      projectType: "mod",
+      gameVersion:
+        parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
+      ...(iconBase64 ? { iconBase64 } : {}),
+      sha1,
+    };
+  }
+
+  // ── 3. Fabric ───────────────────────────────────────────────────────────────
   const fabricEntry = findEntry("fabric.mod.json");
   if (fabricEntry) {
     try {
@@ -202,7 +402,7 @@ export function scanMod(filePath: string): ModMeta {
         modId: data.id ?? UNKNOWN,
         modName: data.name ?? UNKNOWN,
         modVersion: data.version ?? UNKNOWN,
-        gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
+        gameVersion: gv ?? gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
         // Fabric mods are candidate for Sinytra Connector usage
         isCompatibleWithConnector: true,
         ...(iconBase64 ? { iconBase64 } : {}),
@@ -214,7 +414,7 @@ export function scanMod(filePath: string): ModMeta {
     }
   }
 
-  // ── 2. Quilt ────────────────────────────────────────────────────────────────
+  // ── 4. Quilt ────────────────────────────────────────────────────────────────
   const quiltEntry = findEntry("quilt.mod.json");
   if (quiltEntry) {
     try {
@@ -251,57 +451,6 @@ export function scanMod(filePath: string): ModMeta {
     }
   }
 
-  // ── 3. NeoForge ─────────────────────────────────────────────────────────────
-  const neoforgeEntry = findEntry("META-INF/neoforge.mods.toml");
-  if (neoforgeEntry) {
-    const parsed = parseForgeToml(neoforgeEntry.getData().toString("utf8"));
-    let iconBase64: string | undefined;
-    if ((parsed as any)._logoFile) {
-      const iconEntry = findEntry((parsed as any)._logoFile);
-      if (iconEntry) {
-        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
-      }
-      delete (parsed as any)._logoFile;
-    }
-
-    return {
-      ...DEFAULT_META,
-      ...parsed,
-      loader: "neoforge",
-      projectType: "mod",
-      // If TOML didn't give us a game version, try the filename
-      gameVersion:
-        parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
-      ...(iconBase64 ? { iconBase64 } : {}),
-      sha1,
-    };
-  }
-
-  // ── 4. Forge ────────────────────────────────────────────────────────────────
-  const forgeEntry = findEntry("META-INF/mods.toml");
-  if (forgeEntry) {
-    const parsed = parseForgeToml(forgeEntry.getData().toString("utf8"));
-    let iconBase64: string | undefined;
-    if ((parsed as any)._logoFile) {
-      const iconEntry = findEntry((parsed as any)._logoFile);
-      if (iconEntry) {
-        try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
-      }
-      delete (parsed as any)._logoFile;
-    }
-
-    return {
-      ...DEFAULT_META,
-      ...parsed,
-      loader: "forge",
-      projectType: "mod",
-      gameVersion:
-        parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN,
-      ...(iconBase64 ? { iconBase64 } : {}),
-      sha1,
-    };
-  }
-
   // ── 5. Resourcepack / Datapack / Shaderpack ──────────────────────────────────
   const isShader = entries.some((e: AdmZip.IZipEntry) => e.entryName.startsWith("shaders/"));
   if (isShader) {
@@ -310,7 +459,7 @@ export function scanMod(filePath: string): ModMeta {
       projectType: "shader",
       modId: path.basename(filePath, path.extname(filePath)),
       modName: path.basename(filePath, path.extname(filePath)),
-      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+      gameVersion: gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
       sha1,
     };
   }
@@ -346,7 +495,7 @@ export function scanMod(filePath: string): ModMeta {
       projectType: type,
       modId: path.basename(filePath, path.extname(filePath)),
       modName: description,
-      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN,
+      gameVersion: gameVersionFromFilename(filePath) ?? gameVersionFromPath(filePath) ?? UNKNOWN,
       ...(iconBase64 ? { iconBase64 } : {}),
       sha1,
     };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { SOURCE_BASE } from "@/lib/constants";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const CONCURRENCY_LIMIT = 5;
@@ -55,7 +56,33 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = process.env.MODRINTH_API_KEY;
     }
 
-    const outputPath = path.join(process.cwd(), "mod_descriptions.json");
+    const oldRootOutputPath = path.join(process.cwd(), "mod_descriptions.json");
+    const oldIndexOutputPath = path.join(process.cwd(), "mim-index", "mod-descriptions.json");
+    const outputPath = path.join(SOURCE_BASE, ".mim-index", "mod-descriptions.json");
+
+    // Migrate old mod_descriptions.json if it exists
+    try {
+      const oldRootExists = await fs.stat(oldRootOutputPath).then(() => true).catch(() => false);
+      const oldIndexExists = await fs.stat(oldIndexOutputPath).then(() => true).catch(() => false);
+      const newExists = await fs.stat(outputPath).then(() => true).catch(() => false);
+
+      if (!newExists) {
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        if (oldIndexExists) {
+          await fs.rename(oldIndexOutputPath, outputPath);
+          console.log("[export-descriptions] Legacy descriptions successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
+        } else if (oldRootExists) {
+          await fs.rename(oldRootOutputPath, outputPath);
+          console.log("[export-descriptions] Legacy descriptions successfully migrated from root to SOURCE_BASE/.mim-index/");
+        }
+      }
+    } catch (e) {
+      console.error("[export-descriptions] Migration failed:", e);
+    }
+
+    // Ensure parent directory exists before reading/writing
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
     let existingData: ModDescriptionResult[] = [];
     try {
       const fileContent = await fs.readFile(outputPath, "utf8");

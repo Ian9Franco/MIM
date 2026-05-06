@@ -21,7 +21,7 @@
 
 "use client";
 
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Folder, AlertTriangle, Download, Loader2, Trash2, ArrowUp, X, Shield } from "lucide-react";
 import { LOADER_STYLES } from "@/theme/tokens";
 import { COLORS } from "@/theme/tokens";
@@ -67,7 +67,29 @@ export const ModCard = memo(function ModCard({
   isPending, onDelete, isDeleting, riskScore, author,
 }: ModCardProps) {
   // Logic: if version is "1.20+", it matches "1.20.1"
-  const isCompatibleRange = version.endsWith("+") && activeVersion.startsWith(version.slice(0, -1));
+  // Also support prefix matching: if mod is "1.21", it matches "1.21.1"
+  // And handle ranges like "1.21 - 1.21.1"
+  const isCompatibleRange = useMemo(() => {
+    if (!version || version === "unknown") return true;
+    if (version === activeVersion) return true;
+    
+    // Check 1.21+
+    if (version.endsWith("+")) {
+      return activeVersion.startsWith(version.slice(0, -1));
+    }
+    
+    // Check prefix: 1.21 matches 1.21.1
+    if (activeVersion.startsWith(version + ".")) return true;
+    
+    // Check range: 1.21 - 1.21.1
+    if (version.includes(" - ")) {
+      const [start, end] = version.split(" - ");
+      // Simple check: matches start or matches end or is between (starts with start prefix)
+      return activeVersion.startsWith(start) || activeVersion.startsWith(end);
+    }
+    
+    return false;
+  }, [version, activeVersion]);
   
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion && !isCompatibleRange;
   const isLoaderError  = loader  !== "unknown" && activeLoader  !== ""  && loader  !== activeLoader;
@@ -111,7 +133,7 @@ export const ModCard = memo(function ModCard({
       aria-label={`${name} – ${version}`}
     >
       <div
-        className="group relative flex items-center gap-3.5 px-4 py-3.5 rounded-2xl cursor-pointer overflow-hidden transition-all duration-250"
+        className="group relative flex items-center gap-3.5 px-4 py-3.5 rounded-[1.5rem] cursor-pointer overflow-hidden transition-all duration-250"
         style={{ border: `1px solid ${cardBorder}`, background: cardBg, boxShadow: cardShadow }}
       >
         {/* Left accent bar */}
@@ -127,7 +149,7 @@ export const ModCard = memo(function ModCard({
         {/* Icon */}
         <div
           aria-hidden="true"
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
+          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
           style={{
             background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "var(--color-accent-bg)" : "var(--color-secondary-bg)",
             border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "var(--color-accent-border)" : "var(--color-border)"}`,

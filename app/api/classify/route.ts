@@ -113,12 +113,16 @@ export async function POST(req: NextRequest) {
           if (!projectName) throw new Error("projectName required for datapack classification");
           finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "datapacks");
         } else {
-          // It's a mod (or unknown) — use standard library path
-          finalTargetDir = path.join(SOURCE_BASE, version, modloader, category, sub);
+          // It's a mod (or unknown) — use isolated or standard library path
+          finalTargetDir = projectName
+            ? path.join(SOURCE_BASE, version, "_projects", projectName, "mods", category, sub)
+            : path.join(SOURCE_BASE, version, modloader, category, sub);
         }
       } catch (e) {
         console.warn(`[/api/classify] Scan failed, falling back to mod path: ${p}`, e);
-        finalTargetDir = path.join(SOURCE_BASE, version, modloader, category, sub);
+        finalTargetDir = projectName
+          ? path.join(SOURCE_BASE, version, "_projects", projectName, "mods", category, sub)
+          : path.join(SOURCE_BASE, version, modloader, category, sub);
       }
 
       fs.mkdirSync(finalTargetDir, { recursive: true });

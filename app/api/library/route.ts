@@ -47,25 +47,32 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const version = searchParams.get("version");
   const loader = searchParams.get("loader");
+  const project = searchParams.get("project");
 
-  // ── Validate params ──────────────────────────────────────────────────────────
-  if (!version || !loader) {
+  if (!version) {
     return NextResponse.json(
-      { error: "Missing required query params: version, loader" },
+      { error: "Missing required query param: version" },
       { status: 400 }
     );
   }
 
-  // Validate loader before touching disk — avoids returning empty library
-  // for a typo'd loader with no indication of what went wrong.
-  if (!isValidLoader(loader)) {
+  if (!project && !loader) {
+    return NextResponse.json(
+      { error: "Missing required query param: loader (when project is not specified)" },
+      { status: 400 }
+    );
+  }
+
+  if (loader && !isValidLoader(loader)) {
     return NextResponse.json(
       { error: `Invalid loader "${loader}". Must be one of: forge, neoforge, fabric` },
       { status: 400 }
     );
   }
 
-  const loaderPath = path.join(SOURCE_BASE, version, loader);
+  const loaderPath = project
+    ? path.join(SOURCE_BASE, version, "_projects", project, "mods")
+    : path.join(SOURCE_BASE, version, loader);
 
   // Version+loader combination doesn't exist yet — not an error, just empty
   if (!fs.existsSync(loaderPath)) {

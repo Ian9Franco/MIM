@@ -208,17 +208,21 @@ export function buildAllUser(
   fs.mkdirSync(resourcesDir, { recursive: true });
   fs.mkdirSync(shadersDir,   { recursive: true });
 
+  const projectName = path.basename(buildPath);
+
   // ── 2. Collect and copy mods ────────────────────────────────────────────────
   // .essential is listed first → it wins on duplicate filenames
-  const loaderPath = path.join(sourceBase, version, loader);
+  const projectModsPath = path.join(sourceBase, version, "_projects", projectName, "mods");
+  const loaderPath = fs.existsSync(projectModsPath)
+    ? projectModsPath
+    : path.join(sourceBase, version, loader);
+
   const jars = collectJars(loaderPath, [".essential", ".local"]);
 
   for (const [file, src] of jars) {
     fs.copyFileSync(src, path.join(modsDir, file));
   }
   console.log(`[builder] Collected ${jars.size} mods.`);
-
-  const projectName = path.basename(buildPath);
 
   // ── 3. ResourcePacks ────────────────────────────────────────────────────────
   const srcResources = path.join(sourceBase, version, "_projects", projectName, "resourcepacks");
@@ -294,17 +298,21 @@ export function buildAllHost(
   fs.mkdirSync(modsDir,      { recursive: true });
   fs.mkdirSync(datapacksDir, { recursive: true });
 
+  const projectName = path.basename(buildPath);
+
   // ── 2. Collect and copy mods ────────────────────────────────────────────────
   // .essential is listed first → wins on duplicate filenames
-  const loaderPath = path.join(sourceBase, version, loader);
+  const projectModsPath = path.join(sourceBase, version, "_projects", projectName, "mods");
+  const loaderPath = fs.existsSync(projectModsPath)
+    ? projectModsPath
+    : path.join(sourceBase, version, loader);
+
   const jars = collectJars(loaderPath, [".essential", ".server"]);
 
   for (const [file, src] of jars) {
     fs.copyFileSync(src, path.join(modsDir, file));
   }
   console.log(`[builder] Collected ${jars.size} mods.`);
-
-  const projectName = path.basename(buildPath);
 
   // ── 3. Datapacks ────────────────────────────────────────────────────────────
   const srcDatapacks = path.join(sourceBase, version, "_projects", projectName, "datapacks");

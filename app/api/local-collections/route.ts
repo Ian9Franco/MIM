@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { SOURCE_BASE } from "@/lib/constants";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,25 @@ interface LocalCollection {
 
 // ── Persistencia ──────────────────────────────────────────────────────────────
 
-const COLLECTIONS_FILE = path.join(process.cwd(), "mim-collections.json");
+const OLD_ROOT_COLLECTIONS_FILE = path.join(process.cwd(), "mim-collections.json");
+const OLD_INDEX_COLLECTIONS_FILE = path.join(process.cwd(), "mim-index", "collections.json");
+const COLLECTIONS_FILE = path.join(SOURCE_BASE, ".mim-index", "collections.json");
+
+// Migrate legacy file if it exists
+if (!fs.existsSync(COLLECTIONS_FILE)) {
+  try {
+    fs.mkdirSync(path.dirname(COLLECTIONS_FILE), { recursive: true });
+    if (fs.existsSync(OLD_INDEX_COLLECTIONS_FILE)) {
+      fs.renameSync(OLD_INDEX_COLLECTIONS_FILE, COLLECTIONS_FILE);
+      console.log("[collections] Legacy collections file successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
+    } else if (fs.existsSync(OLD_ROOT_COLLECTIONS_FILE)) {
+      fs.renameSync(OLD_ROOT_COLLECTIONS_FILE, COLLECTIONS_FILE);
+      console.log("[collections] Legacy collections file successfully migrated from root to SOURCE_BASE/.mim-index/");
+    }
+  } catch (e) {
+    console.error("[collections] Failed to migrate legacy collections file:", e);
+  }
+}
 
 /** Lee las colecciones desde el archivo JSON local. Devuelve [] si no existe o está corrupto. */
 function getLocalCollections(): LocalCollection[] {
@@ -50,6 +69,7 @@ function getLocalCollections(): LocalCollection[] {
 
 /** Persiste el array de colecciones en el archivo JSON local. */
 function saveLocalCollections(data: LocalCollection[]): void {
+  fs.mkdirSync(path.dirname(COLLECTIONS_FILE), { recursive: true });
   fs.writeFileSync(COLLECTIONS_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 

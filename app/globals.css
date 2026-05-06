@@ -293,6 +293,19 @@ html, body {
 
 [data-theme="light"] .input-base { background: rgba(255, 255, 255, 0.7); }
 
+/* ── Select & Option theme standardization ──────────────────────────────────── */
+select, option {
+  background-color: var(--color-card) !important;
+  color: var(--color-foreground) !important;
+}
+select option {
+  background-color: var(--color-card) !important;
+  color: var(--color-foreground) !important;
+}
+select:focus {
+  border-color: var(--color-primary) !important;
+}
+
 /* ── Keyframes ──────────────────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { transform: translateX(-100%); }

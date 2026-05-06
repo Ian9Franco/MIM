@@ -27,6 +27,17 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
+  // Extract all unique game versions from the mod versions list
+  const allGameVersions = React.useMemo(() => {
+    return Array.from(new Set(versions.flatMap(v => v.gameVersions || [])))
+      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  }, [versions]);
+
+  // Try to find if active project version is compatible, and set as default filter. Otherwise, default to showing all (null)
+  const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(() => {
+    return gameVersions.find(gv => allGameVersions.includes(gv)) || null;
+  });
+
   useEffect(() => {
     const findTarget = () => {
       const el = document.getElementById("fomo-details-sidebar-portal");
@@ -200,20 +211,44 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           </div>
 
           <div className="w-full p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
-            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Versiones Disponibles</p>
-            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pr-1">
-              {Array.from(new Set(versions.flatMap(v => v.gameVersions)))
-                .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
-                .slice(0, 16)
-                .map(gv => (
-                  <span key={gv} className={`px-1.5 py-0.5 rounded text-[0.6rem] font-medium border ${
-                    gv === "1.20.1" || gv === "1.21.1" 
-                      ? "bg-primary/20 text-primary border-primary/30 font-bold" 
-                      : "bg-white/5 text-white/40 border-white/5"
-                  }`}>{gv}</span>
-                ))
-              }
-              {new Set(versions.flatMap(v => v.gameVersions)).size > 16 && <span className="text-[0.6rem] text-white/20 self-center">...</span>}
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Versiones Disponibles (Filtrar abajo)</p>
+            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1" role="group" aria-label="Filtro de versiones de Minecraft">
+              {/* "Todas" Reset Button */}
+              <button
+                type="button"
+                onClick={() => setSelectedVersionFilter(null)}
+                className={`px-2 py-0.5 rounded text-[0.6rem] font-bold border transition-all hover:scale-105 active:scale-95 ${
+                  selectedVersionFilter === null
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10"
+                }`}
+              >
+                Todas
+              </button>
+
+              {allGameVersions.slice(0, 24).map(gv => {
+                const isSelected = selectedVersionFilter === gv;
+                const isProjectVersion = gameVersions.includes(gv);
+                
+                return (
+                  <button
+                    key={gv}
+                    type="button"
+                    onClick={() => setSelectedVersionFilter(isSelected ? null : gv)}
+                    className={`px-1.5 py-0.5 rounded text-[0.6rem] font-semibold border transition-all hover:scale-105 active:scale-95 ${
+                      isSelected
+                        ? "bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-sm shadow-orange-500/10 font-bold"
+                        : isProjectVersion
+                        ? "bg-primary/20 text-primary border-primary/30 font-medium hover:bg-primary/30"
+                        : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10"
+                    }`}
+                    title={isSelected ? `Filtrando por ${gv} (haz clic para limpiar)` : `Filtrar versiones por ${gv}`}
+                  >
+                    {gv}
+                  </button>
+                );
+              })}
+              {allGameVersions.length > 24 && <span className="text-[0.6rem] text-white/20 self-center px-1">...</span>}
             </div>
           </div>
         </div>
@@ -321,13 +356,28 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 <Loader2 className="w-8 h-8 animate-spin opacity-30" />
                 <p className="text-xs font-medium text-white/40">Buscando versiones...</p>
               </div>
-            ) : versions.length === 0 ? (
-              <div className="text-center py-20">
-                <Info className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <p className="font-subhead text-sm text-white/60">No hay versiones compatibles</p>
-              </div>
-            ) : (
-              versions.map((v) => {
+            ) : (() => {
+              const filteredVersions = selectedVersionFilter
+                ? versions.filter(v => v.gameVersions.includes(selectedVersionFilter))
+                : versions;
+
+              if (filteredVersions.length === 0) {
+                return (
+                  <div className="text-center py-20">
+                    <Info className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <p className="font-subhead text-sm text-white/60">No hay archivos compatibles con la versión {selectedVersionFilter}</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVersionFilter(null)}
+                      className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-primary/20 text-primary border border-primary/30 transition-all hover:bg-primary/30"
+                    >
+                      Mostrar todas las versiones
+                    </button>
+                  </div>
+                );
+              }
+
+              return filteredVersions.map((v) => {
                 const isCompatible = v.gameVersions.some(gv => gameVersions.includes(gv)) && (v.loaders.includes(loader) || projectType !== "mod");
                 const isMainVersion = v.gameVersions.some(gv => gv === "1.20.1" || gv === "1.21.1");
                 
@@ -457,8 +507,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     )}
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
         )}
       </div>

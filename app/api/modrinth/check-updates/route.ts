@@ -2,30 +2,25 @@
  * /api/modrinth/check-updates — POST
  * ─────────────────────────────────────────────────────────────────────────────
  * Compara una lista de mods instalados contra Modrinth para detectar actualizaciones.
+ * Utiliza una caché local persistente con TTL de 12 horas para evitar spam a la API.
  *
- * Body: { mods: ModCheckInput[], loader: string, gameVersion: string }
+ * Body: { mods: ModCheckInput[], loader: string, gameVersion: string, forceRefresh?: boolean }
  * Respuesta: { updates: Record<filePath, ModCheckResult> }
- *
- * Estrategia de resolución por mod (en orden de precisión):
- *   1. Lookup por SHA1 hash (batch request único, máxima precisión).
- *   2. Lookup directo por modId (rápido, sin ambigüedad de búsqueda).
- *   3. Búsqueda por nombre con filtros de loader+versión (fallback).
- *
- * Para evitar rate limiting (Modrinth: 300 req/min), los mods se procesan
- * en batches de CONCURRENCY_LIMIT en lugar de todos en paralelo.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import { SOURCE_BASE } from "@/lib/constants";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
-/**
- * Maximum number of mods to check in parallel per batch.
- * Modrinth's documented rate limit is 300 req/min (~5 req/s).
- * Keeping batches small ensures we stay well within that budget.
- */
+/** Maximum number of mods to check in parallel per batch. */
 const CONCURRENCY_LIMIT = 5;
+
+/** Cache TTL: 12 Hours (in milliseconds) */
+const TTL_MS = 12 * 60 * 60 * 1000;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,7 +38,7 @@ interface ModCheckInput {
 
 interface ModCheckResult {
   path: string;
-  status: "updated" | "update_available" | "unknown" | "error";
+  status: "updated" | "update_available" | "unknown" | "error" | "updated_downloaded";
   latestVersion?: string;
   downloadUrl?: string;
   projectId?: string;
@@ -63,20 +58,122 @@ interface ModrinthVersionObj {
   files?: { url: string, primary?: boolean }[];
 }
 
+// ── Persistent Remote Cache ───────────────────────────────────────────────────
+
+const OLD_ROOT_REMOTE_CACHE_FILE = path.join(process.cwd(), "mim-remote-cache.json");
+const OLD_INDEX_REMOTE_CACHE_FILE = path.join(process.cwd(), "mim-index", "remote-cache.json");
+const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+
+// Migrate legacy file if it exists
+if (!fs.existsSync(REMOTE_CACHE_FILE)) {
+  try {
+    fs.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
+    if (fs.existsSync(OLD_INDEX_REMOTE_CACHE_FILE)) {
+      fs.renameSync(OLD_INDEX_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
+      console.log("[updates-cache] Legacy remote cache successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
+    } else if (fs.existsSync(OLD_ROOT_REMOTE_CACHE_FILE)) {
+      fs.renameSync(OLD_ROOT_REMOTE_CACHE_FILE, REMOTE_CACHE_FILE);
+      console.log("[updates-cache] Legacy remote cache successfully migrated from root to SOURCE_BASE/.mim-index/");
+    }
+  } catch (e) {
+    console.error("[updates-cache] Failed to migrate legacy remote cache:", e);
+  }
+}
+
+let remoteCache: { version: number; entries: Record<string, { cachedAt: number; result: ModCheckResult }> } | null = null;
+let saveRemoteTimeout: NodeJS.Timeout | null = null;
+
+function loadRemoteCache() {
+  if (remoteCache) return remoteCache;
+  if (fs.existsSync(REMOTE_CACHE_FILE)) {
+    try {
+      remoteCache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+    } catch (e) {
+      console.error("[updates-cache] Error loading remote cache file, resetting cache", e);
+    }
+  }
+  if (!remoteCache || !remoteCache.entries) {
+    remoteCache = { version: 1, entries: {} };
+  }
+  return remoteCache;
+}
+
+function queueSaveRemoteCache() {
+  if (saveRemoteTimeout) return;
+  saveRemoteTimeout = setTimeout(() => {
+    saveRemoteTimeout = null;
+    if (remoteCache) {
+      try {
+        fs.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
+        fs.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(remoteCache, null, 2), "utf-8");
+      } catch (e) {
+        console.error("[updates-cache] Error writing remote cache to disk", e);
+      }
+    }
+  }, 1000);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Splits an array into sequential chunks of size n. */
 function chunkArray<T>(arr: T[], n: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < arr.length; i += n) chunks.push(arr.slice(i, i + n));
   return chunks;
 }
 
+/**
+ * Normaliza un string de versión para comparar solo los números significativos.
+ * Elimina v, mcX.Y.Z, -fabric, -forge, etc.
+ */
+function normalizeVersion(v: string): string {
+  if (!v) return "";
+  // 1. Minúsculas y quitar prefijo 'v'
+  let clean = v.toLowerCase().replace(/^v/, "");
+
+  // 2. Quitar metadatos de loader y estados (fabric, forge, snapshot, etc.)
+  clean = clean.replace(/[-+](fabric|forge|neoforge|quilt|snapshot|alpha|beta|dev|local|all)/gi, "");
+  
+  // 3. Quitar versiones de Minecraft incrustadas (mc1.21.1, 1.21, etc.)
+  clean = clean.replace(/[-+](mc)?1\.(1[6-9]|2\d)(\.\d+)?/gi, "");
+  
+  // 4. Estandarizar separadores a puntos y quitar todo lo que no sea número o punto
+  clean = clean.replace(/[_-]/g, ".").replace(/[^0-9.]/g, "");
+  
+  // 5. Limpiar puntos extra
+  clean = clean.replace(/^\.+|\.+$/g, "").replace(/\.{2,}/g, ".");
+  
+  return clean;
+}
+
+/**
+ * Compara si la versión 'latest' es realmente superior a 'current'.
+ */
+function hasRealUpdate(latest: string, current: string): boolean {
+  const nL = normalizeVersion(latest);
+  const nC = normalizeVersion(current);
+
+  if (!nL || !nC) return latest !== current;
+  if (nL === nC) return false;
+
+  // Comparación numérica por componentes
+  const pL = nL.split(".").map(Number);
+  const pC = nC.split(".").map(Number);
+
+  for (let i = 0; i < Math.max(pL.length, pC.length); i++) {
+    const vL = pL[i] || 0;
+    const vC = pC[i] || 0;
+    if (vL > vC) return true;
+    if (vL < vC) return false;
+  }
+
+  return false;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
-    const { mods, loader, gameVersion } = await req.json();
+    const { mods, loader, gameVersion, forceRefresh = false } = await req.json();
 
     // ── Validate ───────────────────────────────────────────────────────────────
     if (!mods || !Array.isArray(mods) || mods.length === 0) {
@@ -92,20 +189,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ── Load Cache and Filter Mods ─────────────────────────────────────────────
+    const cache = loadRemoteCache();
+    const now = Date.now();
+
+    const cachedResults: ModCheckResult[] = [];
+    const modsToCheck: ModCheckInput[] = [];
+
+    for (const mod of mods) {
+      const cacheKey = `${mod.meta?.sha1 || mod.path}-${loader}-${gameVersion}`;
+      const cached = cache.entries[cacheKey];
+
+      if (!forceRefresh && cached && (now - cached.cachedAt < TTL_MS)) {
+        // Cache hit! Use cached results (update the file path to match current value)
+        cachedResults.push({ ...cached.result, path: mod.path });
+      } else {
+        // Cache miss or force refreshed: check remote
+        modsToCheck.push(mod);
+      }
+    }
+
+    // If everything is cached, return immediately! Saves bandwidth, time, and CPU.
+    if (modsToCheck.length === 0) {
+      const updatesByPath: Record<string, ModCheckResult> = {};
+      for (const result of cachedResults) {
+        updatesByPath[result.path] = result;
+      }
+      return NextResponse.json({ updates: updatesByPath, cachedCount: cachedResults.length });
+    }
+
     // ── Build request headers ──────────────────────────────────────────────────
     const headers: Record<string, string> = {
-      // Modrinth requires a descriptive User-Agent; anonymous requests are lower priority
       "User-Agent": "MIM-App/1.0 (contact@mim.local)",
     };
     if (process.env.MODRINTH_API_KEY) {
-      // API key grants higher rate limits — set MODRINTH_API_KEY in .env.local
       headers["Authorization"] = process.env.MODRINTH_API_KEY;
     }
 
-    // ── Bulk Hash Resolution ───────────────────────────────────────────────────
-    // If the backend provided SHA1 hashes, we resolve them all in a single request.
+    // ── Bulk Hash Resolution for Uncached Mods ─────────────────────────────────
     const hashToProject: Record<string, string> = {};
-    const validHashes = mods.map(m => m.meta?.sha1).filter(Boolean) as string[];
+    const validHashes = modsToCheck.map(m => m.meta?.sha1).filter(Boolean) as string[];
     
     if (validHashes.length > 0) {
       try {
@@ -127,9 +250,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Per-mod check ──────────────────────────────────────────────────────────
+    // ── Per-mod check for Uncached Mods ────────────────────────────────────────
     const checkMod = async (mod: ModCheckInput): Promise<ModCheckResult> => {
-      // Prefer modName from metadata; fall back to stripping ".jar" from filename
       const nameToSearch =
         mod.meta?.modName && mod.meta.modName !== "unknown"
           ? mod.meta.modName
@@ -140,14 +262,14 @@ export async function POST(req: NextRequest) {
       try {
         let projectId: string | null = null;
 
-        // Step 1 — Direct lookup by SHA1 hash (Absolute precision)
+        // Step 1 — Direct lookup by SHA1 hash
         if (mod.meta?.sha1 && hashToProject[mod.meta.sha1]) {
           projectId = hashToProject[mod.meta.sha1];
         }
 
         let slug: string | null = null;
 
-        // Step 2 — Direct lookup by modId (Fast, no search ambiguity)
+        // Step 2 — Direct lookup by modId
         if (!projectId && mod.meta?.modId && mod.meta.modId !== "unknown") {
           const res = await fetch(
             `${MODRINTH_API}/project/${encodeURIComponent(mod.meta.modId)}`,
@@ -160,7 +282,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Step 3 — Fallback: name-based search filtered by game version and type
+        // Step 3 — Fallback: name-based search
         if (!projectId) {
           const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" 
             ? mod.meta.projectType 
@@ -171,7 +293,6 @@ export async function POST(req: NextRequest) {
             [`project_type:${projectType}`]
           ];
           
-          // Only enforce the modloader if it's a mod. Resourcepacks/shaders often don't tag a loader.
           if (projectType === "mod") {
             facets.push([`categories:${loader}`]);
           }
@@ -185,8 +306,6 @@ export async function POST(req: NextRequest) {
           if (res.ok) {
             const data = await res.json();
             if (data.hits?.length > 0) {
-              // Strictly look for exact title match OR slug match.
-              // This prevents "Primal" matching "Primal Winter" just because it's the first result.
               const hit = (data.hits as ModrinthHit[]).find(
                 (h) => 
                   h.title.toLowerCase() === nameToSearch.toLowerCase() ||
@@ -200,9 +319,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        if (!projectId) return { path: mod.path, status: "unknown" };
+        if (!projectId) {
+          const result: ModCheckResult = { path: mod.path, status: "unknown" };
+          const cacheKey = `${mod.meta?.sha1 || mod.path}-${loader}-${gameVersion}`;
+          cache.entries[cacheKey] = { cachedAt: now, result };
+          queueSaveRemoteCache();
+          return result;
+        }
 
-        // Step 3 — Fetch version list filtered by game version (and loader if it's a mod)
+        // Step 4 — Fetch version list
         const projectType = mod.meta?.projectType && mod.meta.projectType !== "unknown" ? mod.meta.projectType : "mod";
         const loadersParam = projectType === "mod" ? `&loaders=${encodeURIComponent(JSON.stringify([loader]))}` : "";
         const versionsRes = await fetch(
@@ -214,54 +339,64 @@ export async function POST(req: NextRequest) {
 
         const versions = (await versionsRes.json()) as ModrinthVersionObj[];
         if (!Array.isArray(versions) || versions.length === 0) {
-          return { path: mod.path, status: "unknown" };
+          const result: ModCheckResult = { path: mod.path, status: "unknown" };
+          const cacheKey = `${mod.meta?.sha1 || mod.path}-${loader}-${gameVersion}`;
+          cache.entries[cacheKey] = { cachedAt: now, result };
+          queueSaveRemoteCache();
+          return result;
         }
 
-        // Modrinth returns versions newest-first — index 0 is the latest release
         const latest = versions[0];
         const latestVersion = latest.version_number;
 
-        // Update is available when the strings differ AND the current version
-        // doesn't already contain the latest string (handles suffixes like "+build.1")
-        const hasUpdate =
-          latestVersion !== currentVersion &&
-          !currentVersion.includes(latestVersion);
+        // Use the new robust comparison logic
+        const hasUpdate = hasRealUpdate(latestVersion, currentVersion);
 
-        if (hasUpdate) {
-          const primaryFile = latest.files?.find(f => f.primary) || latest.files?.[0];
-          return {
-            path: mod.path,
-            status: "update_available",
-            latestVersion,
-            downloadUrl: primaryFile?.url,
-            projectId,
-            slug: slug || projectId, // Fallback al ID si no hay slug
-            changelog: latest.changelog || "No hay información de cambios disponible.",
-          };
-        }
+        const primaryFile = latest.files?.find(f => f.primary) || latest.files?.[0];
+        const status = hasUpdate ? "update_available" : "updated";
 
-        return { path: mod.path, status: "updated" };
+        const result: ModCheckResult = {
+          path: mod.path,
+          status,
+          latestVersion,
+          downloadUrl: primaryFile?.url,
+          projectId,
+          slug: slug || projectId,
+          changelog: latest.changelog || "No hay información de cambios disponible.",
+        };
+
+        // Cache the parsed result
+        const cacheKey = `${mod.meta?.sha1 || mod.path}-${loader}-${gameVersion}`;
+        cache.entries[cacheKey] = { cachedAt: now, result };
+        queueSaveRemoteCache();
+
+        return result;
       } catch {
         return { path: mod.path, status: "error" };
       }
     };
 
-    // ── Throttled execution — process in batches of CONCURRENCY_LIMIT ──────────
-    // Running all mods in parallel (Promise.all) would flood Modrinth with 50+
-    // simultaneous requests and trigger rate limiting. Batching keeps us safe.
-    const allResults: ModCheckResult[] = [];
-    for (const batch of chunkArray(mods as ModCheckInput[], CONCURRENCY_LIMIT)) {
+    // ── Throttled Execution for Uncached Mods ──────────────────────────────────
+    const freshResults: ModCheckResult[] = [];
+    for (const batch of chunkArray(modsToCheck, CONCURRENCY_LIMIT)) {
       const batchResults = await Promise.all(batch.map(checkMod));
-      allResults.push(...batchResults);
+      freshResults.push(...batchResults);
     }
 
-    // Convert to a map keyed by file path for O(1) frontend lookups
+    // Combine cached and fresh results
+    const allResults = [...cachedResults, ...freshResults];
+
+    // Convert to map
     const updatesByPath: Record<string, ModCheckResult> = {};
     for (const result of allResults) {
       updatesByPath[result.path] = result;
     }
 
-    return NextResponse.json({ updates: updatesByPath });
+    return NextResponse.json({ 
+      updates: updatesByPath, 
+      cachedCount: cachedResults.length, 
+      freshCount: freshResults.length 
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/modrinth/check-updates] Unhandled error:", message);

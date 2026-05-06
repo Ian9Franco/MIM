@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen } from "lucide-react";
+import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight } from "lucide-react";
 import { ModCard } from "@/components/library/ModCard";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { TransferModal } from "./TransferModal";
 import type { LibraryFile, Project } from "@/lib/types";
 
 interface LibrarySectionProps {
@@ -11,6 +12,7 @@ interface LibrarySectionProps {
   selectedLibFiles: LibraryFile[];
   setSelectedLibFiles: React.Dispatch<React.SetStateAction<LibraryFile[]>>;
   activeProject: Project | null;
+  projects?: Project[];
   downloadingMods: Record<string, boolean>;
   modrinthStatus: Record<string, any>;
   ignoredUpdates: Set<string>;
@@ -32,6 +34,7 @@ export function LibrarySection({
   selectedLibFiles,
   setSelectedLibFiles,
   activeProject,
+  projects = [],
   downloadingMods,
   modrinthStatus,
   ignoredUpdates,
@@ -46,6 +49,14 @@ export function LibrarySection({
   handleUnclassify,
   handleDownloadUpdate
 }: LibrarySectionProps) {
+  const [transferOpen, setTransferOpen] = useState(false);
+
+  const transferCandidates = activeProject
+    ? projects.filter((p) => p.id !== activeProject.id && p.version === activeProject.version)
+    : [];
+
+  // We now always have at least the "__global__" source available
+  const hasCandidates = true;
 
   function getBadge(f: LibraryFile) {
     const s = modrinthStatus[f.path];
@@ -84,15 +95,15 @@ export function LibrarySection({
   };
 
   return (
-    <section className="animate-fade-up" style={{ animationDelay: "0.18s" }}>
+    <section className="animate-fade-up relative" style={{ animationDelay: "0.18s" }}>
       {/* Library header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
             style={{ background: "rgba(102,200,160,0.1)", border: "1px solid rgba(102,200,160,0.2)", color: "#66C8A0" }}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-5 h-5" />
           </div>
           <div>
             <h2 className="font-headline text-base leading-none" style={{ color: "var(--color-foreground)" }}>
@@ -124,6 +135,17 @@ export function LibrarySection({
               label="Mover a Descargas"
               color="danger"
               title="Mover mods seleccionados de vuelta a la carpeta de Descargas"
+            />
+          )}
+
+          {/* Transfer Mods */}
+          {activeProject && (
+            <ActionButton
+              onClick={() => setTransferOpen(true)}
+              icon={<ArrowLeftRight className="w-3.5 h-3.5" />}
+              label="Transferir Local"
+              color="primary"
+              title="Copiar mods desde la librería global o desde otro proyecto"
             />
           )}
 
@@ -170,7 +192,27 @@ export function LibrarySection({
       {loadingLibrary ? (
         <SkeletonLoader />
       ) : library.length === 0 ? (
-        <EmptyState message="No hay mods instalados en este proyecto aún" />
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed transition-all shadow-inner" style={{ background: "var(--color-secondary-bg)", borderColor: "var(--color-border)" }}>
+          <Layers className="w-12 h-12 mb-4 opacity-20" style={{ color: "var(--color-accent)" }} />
+          <p className="font-subhead text-sm text-white/70 mb-2">No hay mods instalados en este proyecto aún</p>
+          <p className="text-xs text-white/40 max-w-sm mb-5">
+            Puedes buscar y descargar mods desde el menú FOMO, o importar de forma instantánea tu colección desde la librería global o desde otro proyecto compatible.
+          </p>
+          {activeProject && (
+            <button
+              onClick={() => setTransferOpen(true)}
+              type="button"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all text-white hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "var(--color-accent)",
+                boxShadow: "0 8px 24px var(--color-accent-bg)",
+              }}
+            >
+              <ArrowLeftRight className="w-5 h-5" />
+              <span>Importar desde Librería Global / Proyecto ({activeProject.version})</span>
+            </button>
+          )}
+        </div>
       ) : (
         <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
           {Object.entries(
@@ -232,6 +274,14 @@ export function LibrarySection({
             </div>
           ))}
         </div>
+      )}
+
+      {activeProject && transferOpen && (
+        <TransferModal
+          activeProject={activeProject}
+          projects={projects}
+          onClose={() => setTransferOpen(false)}
+        />
       )}
     </section>
   );

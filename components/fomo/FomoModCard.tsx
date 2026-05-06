@@ -8,7 +8,7 @@
 
 import React, { memo } from "react";
 import {
-  Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle, Check
+  Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle, Check, Info
 } from "lucide-react";
 import { formatNumber } from "@/utils/format";
 import { openExternal } from "@/utils/format";
@@ -110,7 +110,17 @@ export const FomoModCard = memo(function FomoModCard({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 pr-6"> {/* Espacio para el botón de selección */}
                 <p className={`font-headline text-base leading-tight truncate ${isCurseForge ? 'uppercase tracking-tight font-black' : ''}`} style={{ color: COLORS.foreground }}>{mod.title}</p>
-                <p className="font-caption mt-1" style={{ color: COLORS.muted }}>por {mod.author || "Autor desconocido"}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <p className="font-caption truncate" style={{ color: COLORS.muted }}>por {mod.author || "Autor desconocido"}</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openExternal(mod.url); }}
+                    className="p-1 rounded-md text-white/40 hover:text-white/80 hover:bg-white/5 transition-all"
+                    title="Ver en web"
+                    aria-label="Ver en web"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -198,15 +208,15 @@ export const FomoModCard = memo(function FomoModCard({
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); openExternal(mod.url); }}
-            aria-label={`Ver ${mod.title} en ${isCurseForge ? "CurseForge" : "Modrinth"}`}
+            onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }}
+            aria-label={`Ver detalles de ${mod.title}`}
             className={`flex items-center justify-center gap-1.5 h-9.5 px-2.5 text-xs font-semibold transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] shadow-sm ${
               isCurseForge ? 'rounded-none border border-orange-500/30' : 'rounded-xl border border-white/10'
             }`}
             style={{ color: isCurseForge ? COLORS.curseforgeOrange : COLORS.foreground, background: "var(--color-secondary-bg)" }}
           >
-            <ExternalLink className="w-4 h-4 shrink-0" />
-            <span className="truncate">Web</span>
+            <Info className="w-4 h-4 shrink-0" />
+            <span className="truncate">Detalles</span>
           </button>
         </div>
       </div>

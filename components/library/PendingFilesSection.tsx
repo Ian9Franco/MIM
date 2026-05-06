@@ -81,18 +81,20 @@ export function PendingFilesSection({
 
   return (
     <section className="animate-fade-up stagger-2">
-      <div className="flex items-start justify-between mb-2">
-        <SectionHeading
-          icon={<Inbox className="w-4 h-4" />}
-          title="Descargas pendientes"
-          sub="Archivos detectados en tu carpeta de Descargas"
-          badge={pendingFiles.length}
-          accentColor="var(--color-primary)"
-        />
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div className="flex-1 min-w-0">
+          <SectionHeading
+            icon={<Inbox className="w-4 h-4" />}
+            title="Descargas pendientes"
+            sub="Archivos detectados en tu carpeta de Descargas"
+            badge={pendingFiles.length}
+            accentColor="var(--color-primary)"
+          />
+        </div>
         <button
           onClick={handleOpenDownloadsFolder}
           disabled={openingFolder}
-          className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50 shrink-0"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
           title="Abrir carpeta de origen (Descargas)"
         >

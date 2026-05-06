@@ -265,6 +265,7 @@ export default function Page() {
               selectedLibFiles={selectedLibFiles}
               setSelectedLibFiles={setSelectedLibFiles}
               activeProject={projects.activeProject}
+              projects={projects.projects}
               downloadingMods={lib.downloadingMods}
               modrinthStatus={lib.modrinthStatus}
               ignoredUpdates={lib.ignoredUpdates}

@@ -44,6 +44,7 @@ interface ModCheckResult {
   projectId?: string;
   slug?: string;
   changelog?: string;
+  categories?: string[];
 }
 
 interface ModrinthHit {
@@ -386,9 +387,30 @@ export async function POST(req: NextRequest) {
     // Combine cached and fresh results
     const allResults = [...cachedResults, ...freshResults];
 
-    // Convert to map
+    // ── Bulk Project Enrichment (Categories) ───────────────────────────────────
+    const projectIdsToEnrich = [...new Set(allResults.map(r => r.projectId).filter(Boolean))] as string[];
+    const categoryMap: Record<string, string[]> = {};
+
+    if (projectIdsToEnrich.length > 0) {
+      try {
+        const projectsRes = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(projectIdsToEnrich)}`, { headers });
+        if (projectsRes.ok) {
+          const projectsData = await projectsRes.json();
+          for (const p of projectsData) {
+            categoryMap[p.id] = p.categories || [];
+          }
+        }
+      } catch (err) {
+        console.error("[/api/modrinth/check-updates] Bulk project lookup failed:", err);
+      }
+    }
+
+    // Convert to map and attach categories
     const updatesByPath: Record<string, ModCheckResult> = {};
     for (const result of allResults) {
+      if (result.projectId && categoryMap[result.projectId]) {
+        result.categories = categoryMap[result.projectId];
+      }
       updatesByPath[result.path] = result;
     }
 

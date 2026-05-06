@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight } from "lucide-react";
 import { ModCard } from "@/components/library/ModCard";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
@@ -17,6 +17,7 @@ interface LibrarySectionProps {
   modrinthStatus: Record<string, any>;
   ignoredUpdates: Set<string>;
   conflicts: any[];
+  sidebarOpen: boolean;
   setSidebarOpen: (b: boolean) => void;
   checkingUpdates: boolean;
   handleCheckUpdates: () => void;
@@ -26,6 +27,8 @@ interface LibrarySectionProps {
   syncingDescriptions: boolean;
   handleUnclassify: () => void;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
+  autoClassify: boolean;
+  setAutoClassify: (b: boolean) => void;
 }
 
 export function LibrarySection({
@@ -39,6 +42,7 @@ export function LibrarySection({
   modrinthStatus,
   ignoredUpdates,
   conflicts,
+  sidebarOpen,
   setSidebarOpen,
   checkingUpdates,
   handleCheckUpdates,
@@ -47,9 +51,26 @@ export function LibrarySection({
   handleSyncAllDescriptions,
   syncingDescriptions,
   handleUnclassify,
-  handleDownloadUpdate
+  handleDownloadUpdate,
+  autoClassify,
+  setAutoClassify
 }: LibrarySectionProps) {
   const [transferOpen, setTransferOpen] = useState(false);
+  const [shouldShake, setShouldShake] = useState(false);
+  const prevAlertCount = useRef(0);
+
+  // Detectar nuevas alertas para sacudir la campana
+  useEffect(() => {
+    const updateCount = Object.values(modrinthStatus).filter(s => s.status === "update_available" && !ignoredUpdates.has(s.path)).length;
+    const currentCount = conflicts.length + updateCount;
+    
+    if (currentCount > prevAlertCount.current) {
+      setShouldShake(true);
+      const timer = setTimeout(() => setShouldShake(false), 600);
+      return () => clearTimeout(timer);
+    }
+    prevAlertCount.current = currentCount;
+  }, [conflicts.length, modrinthStatus, ignoredUpdates]);
 
   const transferCandidates = activeProject
     ? projects.filter((p) => p.id !== activeProject.id && p.version === activeProject.version)
@@ -140,13 +161,23 @@ export function LibrarySection({
 
           {/* Transfer Mods */}
           {activeProject && (
-            <ActionButton
-              onClick={() => setTransferOpen(true)}
-              icon={<ArrowLeftRight className="w-3.5 h-3.5" />}
-              label="Transferir Local"
-              color="primary"
-              title="Copiar mods desde la librería global o desde otro proyecto"
-            />
+            <div className="flex items-center gap-2">
+              <ActionButton
+                onClick={() => setAutoClassify(!autoClassify)}
+                icon={<RefreshCw className={`w-3.5 h-3.5 ${autoClassify ? "animate-spin-slow" : ""}`} />}
+                label="Auto"
+                color={autoClassify ? "success" : "neutral"}
+                title={autoClassify ? "Clasificación automática activa" : "Activar clasificación automática"}
+                highlighted={autoClassify}
+              />
+              <ActionButton
+                onClick={() => setTransferOpen(true)}
+                icon={<ArrowLeftRight className="w-3.5 h-3.5" />}
+                label="Transferir Local"
+                color="primary"
+                title="Copiar mods desde la librería global o desde otro proyecto"
+              />
+            </div>
           )}
 
           {/* Open Folder */}
@@ -159,25 +190,33 @@ export function LibrarySection({
             title="Abrir la carpeta de mods en el explorador de archivos"
           />
 
-          {/* Check Updates - Destacado */}
-          <ActionButton
-            onClick={handleCheckUpdates}
-            disabled={checkingUpdates}
-            icon={<RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} />}
-            label={checkingUpdates ? "Buscando..." : "Buscar Updates"}
-            color="accent"
-            title="Verificar si hay actualizaciones disponibles en Modrinth"
-            highlighted
-          />
-          
           {/* Alert Center Button */}
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-105"
-            style={{ background: "var(--color-accent-bg)", border: "1px solid var(--color-accent-border)", color: "var(--color-accent)" }}
-            title="Abrir Centro de Alertas"
+            data-sidebar-toggle="true"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-110 active:scale-90 group"
+            style={{ 
+              background: "rgba(255,255,255,0.03)", 
+              border: "1px solid var(--color-border)", 
+              color: "var(--color-muted)" 
+            }}
+            title={sidebarOpen ? "Cerrar Centro de Alertas" : "Abrir Centro de Alertas"}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = "var(--color-accent-bg)";
+              el.style.borderColor = "var(--color-accent-border)";
+              el.style.color = "var(--color-accent)";
+              el.style.boxShadow = "0 0 15px var(--color-accent-bg)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = "rgba(255,255,255,0.03)";
+              el.style.borderColor = "var(--color-border)";
+              el.style.color = "var(--color-muted)";
+              el.style.boxShadow = "none";
+            }}
           >
-            <Bell className="w-4 h-4" />
+            <Bell className={`w-4 h-4 transition-transform ${sidebarOpen ? "scale-110" : ""} ${shouldShake ? "animate-bell-ring" : "group-hover:animate-bell-ring"}`} />
             {(conflicts.length > 0 || Object.entries(modrinthStatus).some(([p, s]) => s.status === "update_available" && !ignoredUpdates.has(p))) && (
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f87171] opacity-75"></span>
@@ -264,6 +303,7 @@ export function LibrarySection({
                             badgeColor={badge.badgeColor}
                             onDownload={badge.onDownload}
                             isDownloading={downloadingMods[f.path]}
+                            categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
                           />
                         );
                       })}

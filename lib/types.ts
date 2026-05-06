@@ -92,6 +92,7 @@ export interface ModMeta {
   author?:      string;
   iconBase64?:  string;
   sha1?:        string;
+  categories?:  string[];
 }
 
 export interface PendingFile {

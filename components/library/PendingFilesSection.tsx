@@ -15,6 +15,7 @@ interface PendingFilesSectionProps {
   activeProject: Project | null;
   onDeleteFile?: (file: PendingFile) => Promise<void>;
   layout?: "sidebar" | "main";
+  modrinthStatus?: Record<string, any>;
 }
 
 export function PendingFilesSection({
@@ -24,7 +25,8 @@ export function PendingFilesSection({
   setSelectedFiles,
   activeProject,
   onDeleteFile,
-  layout = "sidebar"
+  layout = "sidebar",
+  modrinthStatus = {}
 }: PendingFilesSectionProps) {
   const [openingFolder, setOpeningFolder] = useState(false);
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
@@ -102,37 +104,43 @@ export function PendingFilesSection({
           Carpeta
         </button>
       </div>
-      <div className={layout === "main" ? "space-y-2.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar p-1" : "space-y-2.5"}>
+      <div 
+        className={layout === "main" ? "space-y-2.5 max-h-[590px] overflow-y-auto pr-2 custom-scrollbar p-1 snap-y snap-mandatory scroll-pt-1 scroll-pb-1" : "space-y-2.5"}
+        style={layout === "main" ? {
+          WebkitMaskImage: "linear-gradient(to bottom, transparent, black 3px, black calc(100% - 3px), transparent)",
+          maskImage: "linear-gradient(to bottom, transparent, black 3px, black calc(100% - 3px), transparent)",
+        } : {}}
+      >
         {loading ? (
           <SkeletonLoader />
         ) : pendingFiles.length === 0 ? (
           <EmptyState message="Monitoreando Descargas... Descargá un .jar para verlo aquí" />
         ) : (
-          pendingFiles.map((f, i) => {
-            const isSelected = selectedFiles.some((s) => s.path === f.path);
-            const displayName = (f.meta?.modName && f.meta.modName !== "unknown") ? f.meta.modName : f.fileName;
-            return (
-              <ModCard
-                key={f.path}
-                index={i}
-                name={displayName}
-                version={f.meta?.gameVersion ?? "unknown"}
-                modVersion={f.meta?.modVersion}
-                projectType={f.meta?.projectType}
-                iconBase64={f.meta?.iconBase64}
-                loader={f.meta?.loader ?? "unknown"}
-                isSelected={isSelected}
-                onClick={() => setSelectedFiles((prev) =>
-                  isSelected ? prev.filter((s) => s.path !== f.path) : [...prev, f]
-                )}
-                activeVersion={activeProject?.version ?? ""}
-                activeLoader={activeProject?.loader ?? ""}
-                isPending={true}
-                onDelete={onDeleteFile ? () => handleDeleteRequest(f) : undefined}
-                isDeleting={deletingFiles[f.path]}
-              />
-            );
-          })
+          pendingFiles
+            .filter(f => !selectedFiles.some(s => s.path === f.path))
+            .map((f, i) => {
+              const displayName = (f.meta?.modName && f.meta.modName !== "unknown") ? f.meta.modName : f.fileName;
+              return (
+                <ModCard
+                  key={f.path}
+                  index={i}
+                  name={displayName}
+                  version={f.meta?.gameVersion ?? "unknown"}
+                  modVersion={f.meta?.modVersion}
+                  projectType={f.meta?.projectType}
+                  iconBase64={f.meta?.iconBase64}
+                  loader={f.meta?.loader ?? "unknown"}
+                  isSelected={false}
+                  onClick={() => setSelectedFiles((prev) => [...prev, f])}
+                  activeVersion={activeProject?.version ?? ""}
+                  activeLoader={activeProject?.loader ?? ""}
+                  isPending={true}
+                  onDelete={onDeleteFile ? () => handleDeleteRequest(f) : undefined}
+                  isDeleting={deletingFiles[f.path]}
+                  categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
+                />
+              );
+            })
         )}
       </div>
 

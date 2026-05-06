@@ -33,3 +33,31 @@ export function openExternal(url: string) {
     console.error("No se pudo abrir la URL externa:", e);
   }
 }
+
+export const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  adventure: "Aventura",
+  cursed: "Maldito",
+  decoration: "Decoración",
+  economy: "Economía",
+  equipment: "Equipamiento",
+  food: "Comida",
+  game_mechanics: "Mecánicas",
+  library: "Librería",
+  magic: "Magia",
+  management: "Gestión",
+  minigame: "Minijuego",
+  mobs: "Mobs",
+  optimization: "Optimización",
+  social: "Social",
+  storage: "Almacenamiento",
+  technology: "Tecnología",
+  transportation: "Transporte",
+  utility: "Utilidad",
+  world_generation: "Generación",
+  "utility-qol": "Calidad de Vida",
+  "performance": "Rendimiento",
+  "adventure-rpg": "Rol/Aventura",
+  "api-and-library": "API/Librería",
+  "world-gen": "Mundo",
+  "map-and-information": "Mapas/Info",
+};

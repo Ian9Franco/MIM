@@ -11,9 +11,9 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Package } from "lucide-react";
+import { Package, FolderOpen } from "lucide-react";
 import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
 import { CATEGORY_HOTKEYS }   from "../constants/app";
@@ -24,6 +24,7 @@ import { PendingFilesSection } from "@/components/library/PendingFilesSection";
 import { QuickCategorizeSection } from "@/components/library/QuickCategorizeSection";
 import { AlertSidebar }       from "@/components/layout/AlertSidebar";
 import { DescriptionModal }   from "@/components/ui/DescriptionModal";
+import { ConfirmModal }       from "@/components/ui/ConfirmModal";
 import { BuildPanel }         from "@/components/projects/BuildPanel";
 import type { PendingFile, LibraryFile } from "@/lib/types";
 import { LOADER_COLORS } from "../constants/app";
@@ -62,6 +63,9 @@ export default function Page() {
   const [fomoOpen,         setFomoOpen]         = useState(false);
   const [detailsOpen,      setDetailsOpen]      = useState(false);
   const [mounted,          setMounted]          = useState(false);
+  const [autoClassify,     setAutoClassify]     = useState(false);
+  const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
+  const autoProcessing = useRef<Set<string>>(new Set());
 
 
 
@@ -101,6 +105,21 @@ export default function Page() {
       window.removeEventListener("refresh-system", handleRefreshRequest);
     };
   }, [lib]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: sidebarOpen }));
+    }
+  }, [sidebarOpen]);
+
+  // Bloquear scroll de fondo cuando hay sidebars abiertas
+  useEffect(() => {
+    if (sidebarOpen || fomoOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [sidebarOpen, fomoOpen]);
 
   const allSelected = [...selectedFiles, ...selectedLibFiles];
 
@@ -166,6 +185,59 @@ export default function Page() {
     setShowSubcategories(null);
   }, []);
 
+  /* ── Auto-Classification Logic ───────────────────────────────────────── */
+  useEffect(() => {
+    if (!autoClassify || !projects.activeProject) return;
+
+    pendingFiles.forEach(f => {
+      if (autoProcessing.current.has(f.path)) return;
+
+      const status = lib.modrinthStatus[f.path];
+      if (!status || !status.categories) return;
+
+      const tags = status.categories.map((c: string) => c.toLowerCase());
+      
+      let target: { cat: string, sub: string } | null = null;
+
+      if (tags.includes("library") || tags.includes("api-and-library")) {
+        target = { cat: ".essential", sub: "librerias" };
+      } else if (tags.includes("technology")) {
+        target = { cat: ".essential", sub: "tecnologia" };
+      } else if (tags.includes("audio") || tags.includes("sound")) {
+        target = { cat: ".local", sub: "sonidos" };
+      }
+
+      if (target) {
+        const activeVer = projects.activeProject?.version || "";
+        const activeLdr = projects.activeProject?.loader || "";
+        const modVer = f.meta?.gameVersion || "unknown";
+        const modLdr = f.meta?.loader || "unknown";
+
+        const isCompatibleRange = (() => {
+          if (modVer === "unknown" || modVer === activeVer) return true;
+          if (modVer.endsWith("+")) return activeVer.startsWith(modVer.slice(0, -1));
+          if (activeVer.startsWith(modVer + ".")) return true;
+          return false;
+        })();
+
+        const isCompatibleLoader = (() => {
+          if (modLdr === "unknown" || activeLdr === "" || modLdr === activeLdr) return true;
+          if (activeVer === "1.20.1") {
+            const l = modLdr.toLowerCase();
+            const al = activeLdr.toLowerCase();
+            if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) return true;
+          }
+          return false;
+        })();
+
+        if (isCompatibleRange && isCompatibleLoader) {
+          autoProcessing.current.add(f.path);
+          lib.handleClassify(target.cat, target.sub, [f], setPendingFiles, clearSelected);
+        }
+      }
+    });
+  }, [autoClassify, pendingFiles, lib.modrinthStatus, projects.activeProject, lib, setPendingFiles, clearSelected]);
+
   const handleClassify = useCallback((cat: string, sub: string) => {
     lib.handleClassify(cat, sub, allSelected, setPendingFiles, clearSelected);
   }, [lib, allSelected, clearSelected]);
@@ -188,8 +260,28 @@ export default function Page() {
     }
   }, []);
 
+  const handleBulkDelete = useCallback(() => {
+    if (selectedFiles.length === 0) return;
+    setFilesToDelete(selectedFiles);
+  }, [selectedFiles]);
+
+  const handleConfirmBulkDelete = useCallback(async () => {
+    if (filesToDelete.length === 0) return;
+    for (const f of filesToDelete) {
+      await handleDeletePendingFile(f);
+    }
+    setFilesToDelete([]);
+    setSelectedFiles([]);
+  }, [filesToDelete, handleDeletePendingFile]);
+
+  const handleBulkUnclassify = useCallback(async () => {
+    if (selectedLibFiles.length === 0) return;
+    await lib.handleUnclassify();
+    setSelectedLibFiles([]);
+  }, [selectedLibFiles, lib]);
+
   return (
-    <div className={`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${sidebarOpen ? "pr-[400px]" : "pr-0"}`}>
+    <div className="transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <div className="space-y-8 pb-16">
 
         {/* ── Row 1: Projects + Build ──────────────────────────────────── */}
@@ -214,6 +306,45 @@ export default function Page() {
                 title="Build"
                 sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`}
                 accentColor="var(--color-accent)"
+                className="mb-4"
+                actions={
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetch("/api/project/open", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                            projectName: projects.activeProject?.name, 
+                            version: projects.activeProject?.version 
+                          }),
+                        });
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }}
+                    className="flex items-center gap-3 px-12 py-3.5 rounded-2xl transition-all group active:scale-95"
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px dashed var(--color-border-strong)",
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.background = "rgba(255,255,255,0.06)";
+                      el.style.borderColor = "var(--color-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.background = "rgba(255,255,255,0.03)";
+                      el.style.borderColor = "var(--color-border-strong)";
+                    }}
+                  >
+                    <FolderOpen className="w-4.5 h-4.5 transition-colors group-hover:text-primary" style={{ color: "var(--color-muted)" }} />
+                    <span className="text-xs font-bold transition-colors group-hover:text-primary" style={{ color: "var(--color-muted)" }}>
+                      Abrir carpeta del proyecto (Packs / Config)
+                    </span>
+                  </button>
+                }
               />
               <BuildPanel
                 projectName={projects.activeProject.name}
@@ -226,26 +357,27 @@ export default function Page() {
 
         <Divider />
 
-        {/* ── Row 2: Dynamic Column Grid (Downloads | Categorization | Library) ── */}
-        <div className={`grid grid-cols-1 ${fomoOpen ? "lg:grid-cols-[260px_1fr]" : "xl:grid-cols-[1.2fr_320px_2fr]"} gap-6 items-start mt-6 animate-fade-up`}>
+        {/* ── Row 2: Stable Column Grid (Downloads | Categorization | Library) ── */}
+        <div 
+          className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up"
+        >
           
-          {/* Column 1: Descargas Pendientes (Only when FOMO is closed) */}
-          {!fomoOpen && (
-            <div className="space-y-6">
-              <PendingFilesSection
-                pendingFiles={pendingFiles}
-                loading={loading}
-                selectedFiles={selectedFiles}
-                setSelectedFiles={setSelectedFiles}
-                activeProject={projects.activeProject}
-                onDeleteFile={handleDeletePendingFile}
-                layout="main"
-              />
-            </div>
-          )}
+          {/* Column 1: Descargas Pendientes (Hidden but preserving space when FOMO is open) */}
+          <div className={`space-y-6 transition-opacity duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+            <PendingFilesSection
+              pendingFiles={pendingFiles}
+              loading={loading}
+              selectedFiles={selectedFiles}
+              setSelectedFiles={setSelectedFiles}
+              activeProject={projects.activeProject}
+              onDeleteFile={handleDeletePendingFile}
+              layout="main"
+              modrinthStatus={lib.modrinthStatus}
+            />
+          </div>
 
           {/* Column 2: Categorización Rápida */}
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             <QuickCategorizeSection
               allSelected={allSelected}
               activeProject={projects.activeProject}
@@ -254,11 +386,13 @@ export default function Page() {
               handleClassify={handleClassify}
               setSelectedFiles={setSelectedFiles}
               setSelectedLibFiles={setSelectedLibFiles}
+              onDeleteSelected={handleBulkDelete}
+              onUnclassifySelected={handleBulkUnclassify}
             />
           </div>
 
           {/* Column 3: Librería de Source */}
-          <div>
+          <div className="min-w-0">
             <LibrarySection
               library={lib.library}
               loadingLibrary={lib.loadingLibrary}
@@ -270,6 +404,7 @@ export default function Page() {
               modrinthStatus={lib.modrinthStatus}
               ignoredUpdates={lib.ignoredUpdates}
               conflicts={lib.conflicts}
+              sidebarOpen={sidebarOpen}
               setSidebarOpen={setSidebarOpen}
               checkingUpdates={lib.checkingUpdates}
               handleCheckUpdates={lib.handleCheckUpdates}
@@ -279,6 +414,8 @@ export default function Page() {
               syncingDescriptions={lib.syncingDescriptions}
               handleUnclassify={lib.handleUnclassify}
               handleDownloadUpdate={lib.handleDownloadUpdate}
+              autoClassify={autoClassify}
+              setAutoClassify={setAutoClassify}
             />
           </div>
         </div>
@@ -302,12 +439,14 @@ export default function Page() {
           handleResolveConflict={lib.handleResolveConflict}
           handleDownloadUpdate={lib.handleDownloadUpdate}
           handleDismissUpdate={lib.handleDismissUpdate}
+          checkingUpdates={lib.checkingUpdates}
+          handleCheckUpdates={lib.handleCheckUpdates}
         />
 
         {/* Right Floating Sidebar for Downloads or Project Details when FOMO is open */}
         {mounted && typeof window !== "undefined" && createPortal(
           <div
-            className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-l ${
+            className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
               detailsOpen ? "w-[600px] max-w-[90vw]" : "w-[380px]"
             } ${
               fomoOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
@@ -329,6 +468,7 @@ export default function Page() {
                   setSelectedFiles={setSelectedFiles}
                   activeProject={projects.activeProject}
                   onDeleteFile={handleDeletePendingFile}
+                  modrinthStatus={lib.modrinthStatus}
                 />
               )}
             </div>
@@ -336,6 +476,23 @@ export default function Page() {
           document.body
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={filesToDelete.length > 0}
+        onClose={() => setFilesToDelete([])}
+        onConfirm={handleConfirmBulkDelete}
+        title={filesToDelete.length > 1 ? "¿Eliminar archivos seleccionados?" : "¿Eliminar archivo?"}
+        message={
+          filesToDelete.length > 1
+            ? `¿Estás seguro de que querés eliminar los ${filesToDelete.length} archivos seleccionados? Esta acción no se puede deshacer.`
+            : filesToDelete.length === 1
+            ? `¿Estás seguro de que querés eliminar "${filesToDelete[0].fileName}"? Esta acción no se puede deshacer.`
+            : ""
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        type="danger"
+      />
     </div>
   );
 }

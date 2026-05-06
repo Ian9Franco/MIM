@@ -1,7 +1,7 @@
 <div align="center">
 
-<!-- Logo placeholder - usar icono de MIM o crear uno -->
-<img src="public/icon.png" width="120" height="120" alt="MIM Logo" style="border-radius: 24px;">
+<!-- Logo principal de MIM -->
+<img src="public/MIMico.png" width="120" height="120" alt="MIM Logo" style="border-radius: 24px;">
 
 # 🎮 Minecraft Intelligent Manager
 
@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO v3.0**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.0**
 
 [📸 Ver Screenshots](#-screenshots) • [🚀 Demo en Vivo](#-demo) • [📖 Documentación](./docs/) • [🐛 Reportar Bug](../../issues)
 
@@ -38,13 +38,15 @@ Crear modpacks de Minecraft es **frustrante**:
 - **Detección en Tiempo Real**: Watcher mejorado que detecta archivos nuevos y eliminados instantáneamente.
 
 
-- **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas, multi-filtro avanzado (categorías, versiones, entornos) y descarga masiva.
+- **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas, multi-filtro avanzado (tags, versiones, entornos) y descarga masiva.
+- **🤖 Intelligent Automation (Auto):** Clasificación automática basada en tags temáticos. Mueve librerías, mods técnicos y sonidos a sus carpetas correctas respetando la compatibilidad.
+- **⚡ Bulk Actions:** Selecciona múltiples archivos y realiza acciones en lote: Clasificación, Eliminación física o Retorno a descargas (Unclassify).
+- **🏷️ Universal Tagging:** Integración de tags de Modrinth en toda la app para identificar la temática del mod instantáneamente.
 - **🛡️ Security Scanner:** Análisis heurístico de bytecode para detectar malware y patrones sospechosos.
 - **🌈 Multi-Aesthetic UI:** Soporte para modos Claro/Oscuro y estilos visuales específicos por fuente (CurseForge Rústico vs Modrinth Moderno).
 - **🔍 Escaneo Profundo:** Identificación de JARs por metadatos internos y **hashes SHA1**.
 - **📦 Integridad Total:** Sincronización exacta con Modrinth/CurseForge verificando integridad de archivos.
-- **⚡ Bulk Actions:** Selecciona múltiples mods y descárgalos todos con un solo clic.
-- **📜 Detalles Enriquecidos:** Environment badges (Client/Server), plataformas expandidas y resaltado de versiones Main.
+- **📜 Detalles Enriquecidos:** Environment badges (Client/Server), plataformas expandidas y resaltado de versiones Main (1.20.1/1.21.1).
 
 ```
 1. Descarga mods → MIM detecta automáticamente en Downloads

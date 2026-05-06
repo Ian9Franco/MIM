@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { Flame, X, Search, Library, Download, Layers, Plus } from "lucide-react";
+import { Flame, X, Search, Library, Download, Layers, Plus, ChevronLeft } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -118,7 +118,7 @@ export function FomoSidebar({
       {/* Backdrop */}
       <div
         aria-hidden="true"
-        className={`fixed inset-0 z-30 bg-black/45 backdrop-blur-md transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`fixed inset-0 z-30 bg-black/45 backdrop-blur-md transition-opacity duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -129,7 +129,7 @@ export function FomoSidebar({
         role="dialog"
         aria-modal="true"
         aria-label="Panel FOMO"
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
           discover.source === "curseforge" ? "fomo-source-curseforge" : "fomo-source-modrinth"
         } ${
           open ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-full opacity-0 pointer-events-none"
@@ -167,7 +167,7 @@ export function FomoSidebar({
               options={TAB_OPTIONS} 
               value={mode} 
               onChange={(v) => setMode(v as Mode)} 
-              className="scale-90 origin-left p-1" 
+              className="p-1 min-w-[280px]" 
               style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
               ariaLabel="Secciones de FOMO" 
             />
@@ -181,7 +181,7 @@ export function FomoSidebar({
                 options={SOURCE_OPTIONS} 
                 value={discover.source} 
                 onChange={(v) => discover.setSource(v as any)} 
-                className="scale-90 origin-right p-1 shadow-inner" 
+                className="p-1 shadow-inner min-w-[240px]" 
                 style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
                 ariaLabel="Fuente de mods" 
               />
@@ -193,10 +193,11 @@ export function FomoSidebar({
             <button 
               onClick={onClose} 
               aria-label="Cerrar panel" 
-              className="p-2 rounded-xl hover:bg-red-500/10 active:scale-95 transition-all border border-transparent hover:border-red-500/20 group" 
+              className="relative w-10 h-10 rounded-xl hover:bg-red-500/10 active:scale-95 transition-all border border-transparent hover:border-red-500/20 group flex items-center justify-center overflow-hidden" 
               style={{ color: COLORS.muted }}
             >
-              <X className="w-5 h-5 group-hover:text-red-400 transition-colors" />
+              <X className="w-5 h-5 absolute transition-all duration-300 group-hover:opacity-0 group-hover:scale-50 group-hover:rotate-90" />
+              <ChevronLeft className="w-5 h-5 absolute transition-all duration-300 opacity-0 scale-50 -rotate-90 group-hover:opacity-100 group-hover:scale-100 group-hover:rotate-0 text-red-400" />
             </button>
           </div>
           {status && <StatusBanner text={status.text} type={status.type} onClose={clearStatus} />}

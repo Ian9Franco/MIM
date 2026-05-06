@@ -1,17 +1,22 @@
 # MIM — Backend Changelog
 
+### 🚀 MIM Beta 5.0 — Thematic Tags & Intelligent Automation (2026-05-06)
+- **Sistema de Tags Unificado**: Integración de tags temáticos (Aventura, Optimización, Tecnología, etc.) en toda la app. Sustitución del término genérico "Categorías" por "Tags" para mayor precisión.
+- **Enriquecimiento Automático**: Los archivos en la carpeta de descargas ahora obtienen sus tags automáticamente mediante búsqueda por hash en Modrinth, permitiendo ver de qué trata un mod antes de clasificarlo.
+- **Modo "Auto" (Categorización Inteligente)**:
+    - Nuevo toggle **"Auto"** con animación de rotación suave que vigila tus descargas.
+    - **Reglas de Clasificación**: Mueve automáticamente mods a `.essential\librerias`, `.essential\tecnologia` o `.local\sonidos` basándose en sus tags.
+    - **Seguridad**: Validación automática de compatibilidad (Loader y Versión) antes de mover cualquier archivo.
+- **Excepción de Compatibilidad 1.20.1**: Implementada regla lógica para tratar Forge y NeoForge como compatibles en la versión 1.20.1, eliminando advertencias erróneas.
+- **Acciones Masivas (Bulk Actions)**:
+    - **Eliminación por Lote**: Botón para borrar permanentemente múltiples mods seleccionados en la bandeja de clasificación con modal de confirmación unificado.
+    - **Retorno Masivo (Unclassify)**: Botón para devolver múltiples mods de la librería a la carpeta de descargas en un solo clic.
+- **UX & Micro-animaciones**:
+    - **Bell Shaking v2**: Animación de campana más agresiva ("shaking") que se activa automáticamente al recibir nuevas notificaciones o alertas de conflicto.
+    - **Fix de Referencias**: Corregidos errores de `useRef` y `ConfirmModal` no definidos que afectaban la estabilidad de la página principal.
+
 ### 🔄 Sync Mastery & Premium UX (2026-05-06)
 - **Botón de Refresco Maestro**: Implementado sistema de sincronización forzada con el disco. El nuevo botón "Sincronizar con Disco" en la cabecera dispara un re-escaneo profundo de la librería, actualizaciones y descargas pendientes.
-- **Sincronización de Borrados (Unlink)**: El observador de archivos (Watcher) ahora detecta eliminaciones físicas en la carpeta de descargas, eliminando automáticamente los elementos de la UI en tiempo real.
-- **Centro de Alertas v2**:
-    - **Botones de Acción Enriquecidos**: Añadidos accesos directos a "Web" (Modrinth) e "Info" (Changelog) para cada notificación de actualización.
-    - **Visualizador de Changelog Integrado**: Desplegable nativo dentro de la alerta para leer los cambios de la versión sin salir de la app.
-    - **Fix de Notificaciones Fantasma**: Refactorizado el filtrado de conteo para excluir mods eliminados o ignorados de los badges de notificación.
-- **Refinamiento Modern Theme (Cyan Edition)**:
-    - **Acentos Cyan**: Transición de acentos amarillos a Cyan vibrante para máxima legibilidad y contraste en fondos claros.
-    - **Grid de Subcategorías Premium**: Rediseño del panel de subcategorías con grid de 2 columnas estandarizadas, glassmorphism avanzado y letras de fondo dinámicas para profundidad visual.
-    - **Lógica de Fusión Inteligente**: Las subcategorías ahora se fusionan inteligentemente entre los defaults del sistema ("Rendimiento" añadido como esencial) y las personalizaciones del usuario.
-- **Fixes de Estabilidad**: Corregidos errores de "Used before declaration" en hooks de React y APIs de servidor.
 
 ### 🔮 FOMO 3.0 & Dynamic Floating Glass Layout (2026-05-05)
 - **Ancho Dinámico "Glass Gutter"**: Rediseño de la geometría de pantallas. Al abrirse los detalles de un mod, el panel de FOMO se contrae fluidamente de `75vw` a `calc(100vw - 600px - 40px)`, y la barra lateral derecha se ensancha de `380px` a `600px`. Esto crea una separación vertical ("gutter") de `40px` mostrando el fondo de la app principal con un desenfoque de fondo cinematográfico.

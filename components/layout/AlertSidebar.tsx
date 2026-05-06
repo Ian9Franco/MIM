@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { X, Bell, CheckCircle, AlertTriangle, ArrowUpCircle, Shield, Package, RefreshCw, FileWarning, Info, Loader2, Globe, ChevronDown, ChevronUp } from "lucide-react";
 
 interface AlertSidebarProps {
@@ -12,6 +12,8 @@ interface AlertSidebarProps {
   handleResolveConflict: (c: any, replace: boolean) => void;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
   handleDismissUpdate: (path: string) => void;
+  checkingUpdates?: boolean;
+  handleCheckUpdates?: () => void;
   securityAlerts?: Array<{
     filePath: string;
     fileName: string;
@@ -32,19 +34,39 @@ export function AlertSidebar({
   handleResolveConflict,
   handleDownloadUpdate,
   handleDismissUpdate,
+  checkingUpdates,
+  handleCheckUpdates,
   securityAlerts = [],
 }: AlertSidebarProps) {
   const [activeTab, setActiveTab] = useState<"all" | "updates" | "conflicts" | "security">("all");
   const [expandedChangelog, setExpandedChangelog] = useState<string | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
   const updates = Object.entries(modrinthStatus).filter(([path, s]) => {
     const mod = library.find(l => l.path === path);
     return s.status === "update_available" && mod && !ignoredUpdates.has(path);
   });
   const criticalAlerts = securityAlerts.filter(a => a.riskLevel === "critical" || a.riskLevel === "suspicious");
   
+  // Click outside to close
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        // Don't close if we clicked the toggle button itself
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-sidebar-toggle="true"]')) return;
+        
+        setSidebarOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [sidebarOpen, setSidebarOpen]);
+
   return (
     <div 
-      className={`fixed inset-y-0 right-0 w-[400px] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      ref={sidebarRef}
+      className={`fixed inset-y-0 right-0 w-[400px] z-50 flex flex-col shadow-2xl transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
       style={{ 
         background: "var(--color-card)", 
         borderLeft: "1px solid var(--color-border)",
@@ -60,15 +82,28 @@ export function AlertSidebar({
             </span>
           )}
         </h2>
-        <button 
-          onClick={() => setSidebarOpen(false)} 
-          className="p-2 rounded-xl transition-colors" 
-          style={{ color: "var(--color-muted)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-hover)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {handleCheckUpdates && (
+            <button
+              onClick={handleCheckUpdates}
+              disabled={checkingUpdates}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50"
+              style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} />
+              <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span>
+            </button>
+          )}
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="p-2 rounded-xl transition-colors" 
+            style={{ color: "var(--color-muted)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Alert Category Tabs */}
@@ -309,7 +344,7 @@ function TabButton({ active, onClick, icon, label, count, alert }: TabButtonProp
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium transition-all ${alert ? "relative" : ""}`}
+      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium transition-all min-w-0 ${alert ? "relative" : ""}`}
       style={{
         background: active ? "var(--color-hover)" : "transparent",
         color: active ? "var(--color-foreground)" : "var(--color-muted)",
@@ -327,11 +362,11 @@ function TabButton({ active, onClick, icon, label, count, alert }: TabButtonProp
         }
       }}
     >
-      <span style={{ color: active ? "var(--color-primary)" : "inherit" }}>{icon}</span>
-      <span className="text-[0.65rem] leading-tight">{label}</span>
+      <span className="shrink-0" style={{ color: active ? "var(--color-primary)" : "inherit" }}>{icon}</span>
+      <span className="text-[0.65rem] leading-tight truncate w-full px-1">{label}</span>
       {count > 0 && (
         <span 
-          className="text-[0.55rem] px-1.5 py-0 rounded-full"
+          className="text-[0.55rem] px-1.5 py-0 rounded-full shrink-0"
           style={{ 
             background: alert ? "var(--color-danger-bg)" : "var(--color-secondary-bg)",
             color: alert ? "var(--color-danger)" : "var(--color-muted)",

@@ -9,13 +9,17 @@ Este documento centraliza los comportamientos inesperados o fallos en la lógica
 - **Solución Implementada**: Se añadió el sistema de **Transferencia Local / Importación**, permitiendo al usuario clonar mods desde la "Librería Global" hacia el proyecto de forma instantánea.
 
 ## 2. Falsos Positivos de Incompatibilidad (Versión/Loader)
-- **Estado**: En Investigación
-- **Descripción**: Algunos mods para **1.21.1 NeoForge** aparecen marcados como incompatibles (en rojo) a pesar de ser la versión correcta.
-- **Observaciones**:
-    - Ya ocurrió anteriormente con Forge y versiones como "1.20+" que no se reconocían para "1.20.1".
-    - El escáner de metadatos (`mods.toml` / `neoforge.mods.toml`) podría estar leyendo mal los rangos de versión (ej: `[1.21, 1.22)`) o los IDs del loader.
-    - Se necesita una lógica de comparación de versiones más robusta que soporte rangos de SemVer y no solo comparaciones exactas de strings.
+- **Estado**: Parcialmente Resuelto (vía Excepción Lógica)
+- **Descripción**: Algunos mods para **1.20.1 Forge/NeoForge** aparecían marcados como incompatibles entre sí.
+- **Solución Implementada**: Se añadió una excepción específica para la versión **1.20.1** que trata Forge y NeoForge como compatibles en la lógica de validación de `ModCard` y `QuickCategorize`.
+- **Pendiente**: Implementar un sistema de comparación SemVer para rangos (ej: `[1.21, 1.22)`) para evitar otros falsos positivos.
 
 ## 3. Persistencia de Caché de Metadatos
 - **Estado**: Estable
 - **Descripción**: Verificar si los cambios manuales en los archivos JAR se reflejan inmediatamente o si el `mod-cache.json` ignora actualizaciones de archivos con el mismo nombre pero distinto contenido (aunque se usa `mtimeMs` para mitigar esto).
+
+## 4. Errores de Referencia y Declaración (Fixes Rápidos)
+- **Estado**: Resuelto
+- **Descripción**: Errores de `ConfirmModal is not defined` y `Cannot find name 'useRef'` en `app/page.tsx`.
+- **Causa**: Falta de imports tras refactorizaciones de componentes y lógica de auto-clasificación.
+- **Solución**: Se añadieron los imports correspondientes de React y de la carpeta de componentes UI.

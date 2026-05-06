@@ -16,6 +16,23 @@ import { Settings, RefreshCw, ChevronRight } from "lucide-react";
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [fomoOpen, setFomoOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertSidebarOpen, setAlertSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handleAlertToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setAlertSidebarOpen(customEvent.detail);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
+      }
+    };
+  }, []);
 
   const handleToggleFomo = (isOpen: boolean) => {
     setFomoOpen(isOpen);
@@ -58,8 +75,12 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
-        className="relative z-10 min-h-screen flex flex-col transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        style={{ paddingLeft: fomoOpen ? "min(100vw, 500px)" : "0px" }}
+        className="relative z-10 min-h-screen flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] overflow-x-hidden"
+        style={{ 
+          transform: `translateX(${fomoOpen ? 500 : 0}px)`,
+          paddingRight: alertSidebarOpen ? "400px" : "0px",
+          width: "100%",
+        }}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <header className="sticky top-0 z-40 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
@@ -67,48 +88,52 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
             {/* Left side: FOMO toggle + App Title */}
             <div className="flex items-center gap-6 animate-fade-up">
-              {/* FOMO button (Drawer Handle style) */}
+              {/* FOMO button (Premium Minimalist style) */}
               <button
                 onClick={() => handleToggleFomo(!fomoOpen)}
-                className="flex items-center gap-3 pl-3 pr-4 py-2.5 rounded-xl transition-all duration-500 group/fomo relative overflow-hidden"
+                className="flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass"
                 style={{
-                  background: fomoOpen ? "rgba(255,108,62,0.2)" : "rgba(255,108,62,0.08)",
-                  border: `1px solid ${fomoOpen ? "rgba(255,108,62,0.6)" : "rgba(255,108,62,0.2)"}`,
-                  color: "#FF6C3E",
-                  boxShadow: fomoOpen ? "0 0 30px rgba(255,108,62,0.25)" : "none",
-                  transform: fomoOpen ? "translateX(4px)" : "none"
-                }}
-                onMouseEnter={(e) => {
-                  if (!fomoOpen) {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(255,108,62,0.18)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,108,62,0.4)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!fomoOpen) {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(255,108,62,0.08)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,108,62,0.2)";
-                  }
+                  background: fomoOpen ? "rgba(187,150,228,0.15)" : "rgba(255,255,255,0.03)",
+                  borderColor: fomoOpen ? "rgba(187,150,228,0.4)" : "rgba(255,255,255,0.08)",
+                  color: fomoOpen ? "var(--color-primary)" : "var(--color-muted)",
+                  boxShadow: fomoOpen ? "0 8px 32px rgba(187,150,228,0.15)" : "none",
                 }}
                 title={fomoOpen ? "Cerrar Panel" : "Explorar Mods (FOMO)"}
               >
-                {/* Decorative sliding indicator */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 bg-primary/40 transition-transform duration-500 ${fomoOpen ? 'translate-x-0' : '-translate-x-full'}`} />
+                <div className="relative flex items-center justify-center">
+                  {/* Particles (Ender Eye theme) */}
+                  {!fomoOpen && (
+                    <>
+                      <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-15px", "--tw-translate-y": "-15px", animationDelay: "0s" } as any} />
+                      <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
+                      <div className="absolute w-1 h-1 bg-primary/30 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "5px", "--tw-translate-y": "18px", animationDelay: "1s" } as any} />
+                      <div className="absolute w-1 h-1 bg-accent/30 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-12px", "--tw-translate-y": "12px", animationDelay: "1.5s" } as any} />
+                    </>
+                  )}
+                  
+                  <Image 
+                    src="/fomoico.png" 
+                    alt="" 
+                    width={28} 
+                    height={28} 
+                    className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-ender-eye'}`} 
+                  />
+                  {/* Subtle aura behind eye when fomo is open */}
+                  <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
+                </div>
                 
-                <Image 
-                  src="/fomoico.png" 
-                  alt="" 
-                  width={24} 
-                  height={24} 
-                  className={`w-6 h-6 object-contain transition-all duration-500 ${fomoOpen ? 'rotate-0' : 'animate-pulse'}`} 
-                />
-                
-                <div className="flex flex-col items-start leading-none gap-1">
-                  <span className="font-headline text-xs tracking-wider">FOMO</span>
-                  <span className="text-[8px] opacity-40 font-medium tracking-widest hidden sm:inline">DISCOVER</span>
+                <div className="flex flex-col items-start leading-tight">
+                  <span className={`font-headline text-[11px] tracking-[0.15em] transition-colors duration-300 ${fomoOpen ? 'text-primary' : 'text-foreground/80'}`}>FOMO</span>
+                  <span className="text-[8px] opacity-30 font-bold tracking-[0.2em] uppercase">Descubrir</span>
                 </div>
 
-                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${fomoOpen ? 'rotate-180' : 'group-hover/fomo:translate-x-1'}`} />
+                <div className={`flex items-center justify-center w-5 h-5 rounded-full bg-white/5 border border-white/10 transition-all duration-500 ${
+                  fomoOpen 
+                    ? 'rotate-180 bg-primary/10 border-primary/20' 
+                    : 'rotate-180 group-hover/fomo:rotate-0 bg-white/5 border-white/10 group-hover/fomo:bg-primary/10 group-hover/fomo:border-primary/20'
+                }`}>
+                  <ChevronRight className={`w-3 h-3 transition-colors ${fomoOpen ? 'text-primary' : 'text-foreground/40 group-hover/fomo:text-primary'}`} />
+                </div>
               </button>
 
               {/* App Title Wrapper with Premium Styling */}
@@ -117,7 +142,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 <div className="absolute -inset-x-4 -inset-y-2 bg-gradient-to-r from-primary/5 via-transparent to-transparent rounded-2xl opacity-0 group-hover/title:opacity-100 transition-opacity duration-500" />
                 
                 <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
-                  <span className="bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                  <span className="bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-3">
+                    <Image src="/MIMico.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
                     MIM
                   </span>
                   
@@ -134,7 +160,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
                 <div className="flex items-center gap-2 mt-2.5 relative z-10">
                   <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10 shadow-inner">
-                    v4.0 Alpha
+                    Beta
                   </span>
                   <span className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
                     <span className="w-1 h-1 rounded-full bg-[#66C8A0] shadow-[0_0_8px_#66C8A0]" />
@@ -148,7 +174,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3 animate-fade-up stagger-2">
               <button
                 onClick={handleRefresh}
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/5 ${isRefreshing ? 'rotate-180 text-primary' : ''}`}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 hover:bg-white/5 ${isRefreshing ? 'rotate-180 text-primary' : ''}`}
                 style={{ border: "1px solid var(--color-border)", color: "var(--color-muted)" }}
                 title="Sincronizar con Disco"
               >
@@ -157,7 +183,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
               <button
                 onClick={() => setSettingsOpen(true)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-white/5"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-white/5"
                 style={{ border: "1px solid var(--color-border)", color: "var(--color-muted)" }}
                 title="Ajustes de Ubicaciones"
               >
@@ -174,28 +200,48 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ── Sticky Footer ───────────────────────────────────────────────────── */}
-        <footer className="px-6 py-6 border-t border-primary/20 text-center backdrop-blur-sm">
-          <div className="space-y-2.5">
-            <p className="text-xs text-foreground/40 font-thin tracking-wide">
-              MIM —{" "}
-              <span className="font-caption text-primary/60">
-                Minecraft Intelligent Manager
-              </span>
-            </p>
-            <p className="text-[11px] text-foreground/30 font-light tracking-wide">
-              Hecho con café, malas decisiones y demasiadas noches sin dormir por{" "}
+        <footer className="px-6 py-10 border-t border-primary/10 bg-background/40 backdrop-blur-md">
+          <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60 hover:opacity-100 transition-opacity duration-700">
+            
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <div className="flex items-center gap-2">
+                <Image src="/MIMico.png" alt="" width={20} height={20} className="w-5 h-5 grayscale opacity-50" />
+                <span className="font-headline text-[10px] tracking-[0.3em] uppercase text-foreground/50">Minecraft Intelligent Manager</span>
+              </div>
+              <p className="text-[10px] font-light tracking-wide text-foreground/30">
+                &copy; {new Date().getFullYear()} MIM Project. Porque organizar mods manualmente debería ser ilegal.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-8">
               <a
-                href="https://ian-pontorno-portfolio.vercel.app/"
+                href="https://github.com/Ian9Franco/MIM"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary/70 font-medium hover:text-primary transition-colors duration-300"
+                className="group flex flex-col items-center gap-1 transition-all duration-300"
               >
-                Ian
+                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/20 group-hover:text-primary/60 transition-colors">Repository</span>
+                <span className="text-[11px] font-medium text-foreground/40 group-hover:text-foreground/80 transition-colors">github.com/Ian9Franco/MIM</span>
               </a>
-            </p>
-            <p className="text-[10px] text-foreground/20 italic">
-              Porque organizar mods manualmente debería ser ilegal.
-            </p>
+
+              <div className="w-px h-6 bg-white/5" />
+
+              <a
+                href="https://github.com/Ian9Franco"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col items-center gap-1 transition-all duration-300"
+              >
+                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/20 group-hover:text-primary/60 transition-colors">Developer</span>
+                <span className="text-[11px] font-medium text-foreground/40 group-hover:text-foreground/80 transition-colors">@Ian9Franco</span>
+              </a>
+            </div>
+
+            <div className="hidden lg:block">
+              <p className="text-[10px] text-foreground/20 font-thin italic max-w-[200px] text-right leading-relaxed">
+                Hecho con mucho cold brew y demasiadas <br /> noches sin dormir por Ian.
+              </p>
+            </div>
           </div>
         </footer>
       </div>

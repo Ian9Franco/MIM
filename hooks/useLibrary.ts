@@ -36,14 +36,14 @@ export function useLibrary(
   }, [activeProject?.version, activeProject?.loader, activeProject?.name]);
 
   const checkUpdates = useCallback(async (force = false) => {
-    if (!activeProject || library.length === 0) return;
+    if (!activeProject || (library.length === 0 && pendingFiles.length === 0)) return;
     setCheckingUpdates(true);
     try {
       const res = await fetch("/api/modrinth/check-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          mods: library, 
+          mods: [...library, ...pendingFiles], 
           loader: activeProject.loader, 
           gameVersion: activeProject.version,
           forceRefresh: force
@@ -55,7 +55,7 @@ export function useLibrary(
       }
     } catch (_) {}
     setCheckingUpdates(false);
-  }, [activeProject, library]);
+  }, [activeProject, library, pendingFiles]);
 
   const handleCheckUpdates = useCallback(() => {
     checkUpdates(true);
@@ -80,6 +80,12 @@ export function useLibrary(
       checkUpdates(false);
     }
   }, [activeProject, library, checkUpdates]);
+
+  useEffect(() => {
+    if (activeProject && pendingFiles.length > 0) {
+      checkUpdates(false);
+    }
+  }, [activeProject, pendingFiles.length, checkUpdates]);
 
   const handleClassify = useCallback(async (
     category: string, sub: string, allSelected: (PendingFile | LibraryFile)[],

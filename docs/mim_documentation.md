@@ -2,7 +2,7 @@
 
 > **Minecraft Intelligent Manager** — Gestor inteligente de mods, builds y assets para packs de Minecraft.  
 > Workspace root: `D:\.mine\`
-> Versión Documentación: 2026-05-06
+> Versión Documentación: 2026-05-06 (Beta 5.0)
 
 ---
 
@@ -177,6 +177,27 @@ Analiza archivos `.class` para detectar patrones de malware:
 2. **Aislamiento:** Proyectos estancos para evitar conflictos entre versiones de Minecraft.
 3. **Visibilidad de Datos:** Changelogs integrados en notificaciones para actualizaciones informadas.
 4. **Herramientas Concretas:** Priorizamos la utilidad técnica (Diagnosis Engine) sobre asistentes genéricos.
+
+---
+
+## 12. Automatización e Inteligencia de Datos
+
+### Universal Tagging (Modrinth Enrichment)
+MIM no solo lee los archivos locales, sino que enriquece la información mediante la API de Modrinth:
+- **Hashing SHA1:** Se genera el hash del archivo local para buscar el proyecto exacto.
+- **Thematic Tags:** Se recuperan categorías como "Optimization", "Adventure", "Library", etc.
+- **UI Integration:** Los tags aparecen como "pills" visuales en las tarjetas de mods (Discovery, Pendientes y Librería).
+
+### Modo "Auto" (Categorización Inteligente)
+Sistema de reglas basado en tags temáticos para mover archivos automáticamente:
+- **Regla Library:** Tags `library` o `api-and-library` → `.essential\librerias`.
+- **Regla Tech:** Tag `technology` → `.essential\tecnologia`.
+- **Regla Audio:** Tags `audio` o `sound` → `.local\sonidos`.
+
+### Motor de Compatibilidad Avanzado
+Lógica de validación contextual para evitar crasheos:
+- **Excepción 1.20.1:** Reconocimiento de interoperabilidad entre Forge y NeoForge exclusivamente para esta versión de Minecraft.
+- **Rango de Versiones:** Detección de compatibilidad para versiones terminadas en `+` (ej: `1.20+` es compatible con `1.20.1`).
 
 ---
 *MIM — Minecraft Intelligent Manager Master Documentation*

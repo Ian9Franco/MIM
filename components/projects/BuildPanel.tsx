@@ -119,40 +119,6 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
         </div>
       )}
 
-      {/* ── Open Project Folder Button ──────────────────────────────────────────────────── */}
-      <button
-        onClick={async () => {
-          try {
-            await fetch("/api/project/open", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ projectName, version }),
-            });
-          } catch (e) {
-            console.error(e);
-          }
-        }}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-[1.5rem] transition-all group"
-        style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px dashed var(--color-border-strong)",
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.background = "rgba(255,255,255,0.06)";
-          el.style.borderColor = "var(--color-primary)";
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.background = "rgba(255,255,255,0.03)";
-          el.style.borderColor = "var(--color-border-strong)";
-        }}
-      >
-        <FolderOpen className="w-4 h-4" style={{ color: "var(--color-muted)" }} />
-        <span className="font-subhead text-sm transition-colors group-hover:text-primary" style={{ color: "var(--color-muted)" }}>
-          Abrir carpeta del proyecto (Packs / Config)
-        </span>
-      </button>
     </div>
   );
 }

@@ -285,7 +285,13 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
       </div>
 
       {/* Dynamic Filters Section */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
+      <div 
+        className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1 pb-10"
+        style={{
+          WebkitMaskImage: "linear-gradient(to bottom, black 92%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, black 92%, transparent 100%)",
+        }}
+      >
         {/* Game Versions */}
         <div className="flex flex-col gap-3">
           <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">

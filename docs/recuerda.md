@@ -2,7 +2,7 @@
 
 Este documento centraliza el estado actual del proyecto, separando los hitos alcanzados de la visión a futuro.
 
-**Última actualización:** 06-05-2026 — Sync Mastery, Modern Theme Refinement y FOMO 3.0 Finalized
+**Última actualización:** 06-05-2026 — Beta 5.0 (Automation & Tags)
 
 ---
 
@@ -13,7 +13,11 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 - **Watcher de Borrado Inteligente:** Detección de `unlink` (archivos borrados a mano en Windows) con actualización instantánea de la UI.
 - **Alert Center v2:** Changelogs integrados y botones de acceso web directo en las notificaciones. Corregido el bug de notificaciones "fantasma".
 - **Modern Theme v2 (Cyan Edition):** Reemplazo de amarillos por Cyan vibrante. Grid premium de 2 columnas para subcategorías con profundidad visual.
-- **Fixes de Hooks:** Resolución de race conditions y errores de declaración en `useLibrary` y `Page`.
+- **🏷️ Thematic Tags & Auto-Enrichment:** Los archivos en descargas ahora obtienen sus tags (Aventura, Optimización, etc.) automáticamente vía Modrinth para identificación instantánea.
+- **🤖 Intelligent Automation (Modo Auto):** Sistema de categorización automática que mueve librerías, tecnología y sonidos a sus carpetas correctas respetando versiones.
+- **⚡ Bulk Actions (Bandeja de Clasificación):** Eliminación por lote y retorno masivo a descargas (Unclassify) integrados en la bandeja de trabajo.
+- **🛡️ Compatibilidad 1.20.1:** Excepción lógica para unificar Forge/NeoForge en la versión 1.20.1.
+- **Fixes de Estabilidad:** Resolución de errores de `ConfirmModal` y `useRef` en la página principal.
 
 ### 👁️ FOMO 3.0 (Discovery & Cloud)
 - **Discovery Sidebar:** Integración total con Modrinth y CurseForge.
@@ -46,8 +50,9 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 ### 🗺️ Roadmap Estratégico
 
 #### Fase 1: Inteligencia de Clasificación
-- [ ] **Memory de Clasificación:** Pre-seleccionar categorías basadas en el historial de uso.
-- [ ] **Smart Categories:** Clasificación automática de mods comunes.
+- [x] **Smart Categories (Modo Auto):** Clasificación automática de mods comunes (Librerías, Tech, Sonidos).
+- [x] **Universal Tagging:** Integración de tags temáticos de Modrinth en toda la app.
+- [ ] **Memory de Clasificación:** Pre-seleccionar categorías basadas en el historial de uso manual.
 - [ ] **Cross-Platform Exclusivity Check:** Identificar visualmente si un mod es exclusivo de una plataforma o está en ambas.
 
 #### Fase 2: Compatibilidad y Optimización

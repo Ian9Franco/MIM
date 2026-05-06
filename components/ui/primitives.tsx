@@ -185,8 +185,30 @@ interface PillToggleGroupProps {
 export const PillToggleGroup = React.memo(function PillToggleGroup({
   options, value, onChange, className = "", style = {}, ariaLabel,
 }: PillToggleGroupProps) {
+  const activeIndex = options.findIndex(o => o.value === value);
+  const activeOpt   = options[activeIndex];
+
   return (
-    <div className={`flex p-1 rounded-2xl ${className}`} style={{ background: "var(--fomo-secondary-bg)", border: "1px solid var(--fomo-border)", ...style }} role="radiogroup" aria-label={ariaLabel}>
+    <div 
+      className={`relative flex p-1 rounded-2xl ${className}`} 
+      style={{ background: "var(--fomo-secondary-bg)", border: "1px solid var(--fomo-border)", ...style }} 
+      role="radiogroup" 
+      aria-label={ariaLabel}
+    >
+      {/* Liquid Sliding Background */}
+      {activeIndex !== -1 && (
+        <div 
+          className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none inset-y-1"
+          style={{
+            width: `calc(100% / ${options.length} - 12px)`,
+            left: `calc((${activeIndex} * 100% / ${options.length}) + 6px)`,
+            background: activeOpt?.activeBg || "var(--color-primary-bg)",
+            border: `1px solid ${activeOpt?.activeBorder || "var(--color-primary-border)"}`,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          }}
+        />
+      )}
+
       {options.map((opt) => {
         const isActive = value === opt.value;
         return (
@@ -195,17 +217,15 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
             role="radio"
             aria-checked={isActive}
             onClick={() => onChange(opt.value)}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold transition-all rounded-xl ${
-              isActive ? "shadow-lg scale-[1.02]" : "hover:bg-black/5 dark:hover:bg-white/5"
+            className={`relative z-10 flex-1 h-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold transition-all rounded-xl whitespace-nowrap overflow-hidden ${
+              isActive ? "" : "opacity-50 hover:opacity-100 hover:bg-white/5"
             }`}
             style={{
-              background: isActive ? (opt.activeBg || "var(--color-primary-bg)") : "transparent",
-              color:      isActive ? (opt.activeColor || "var(--color-primary)") : "var(--fomo-text-muted)",
-              border:     isActive ? `1px solid ${opt.activeBorder || "var(--color-primary-border)"}` : "1px solid transparent",
+              color: isActive ? (opt.activeColor || "var(--color-primary)") : "var(--fomo-text-muted)",
             }}
           >
-            {opt.icon}
-            {opt.label}
+            <span className="shrink-0">{opt.icon}</span>
+            <span>{opt.label}</span>
           </button>
         );
       })}
@@ -222,6 +242,7 @@ interface SectionHeadingProps {
   badge?:      number;
   accentColor?:string;
   actions?:    React.ReactNode;
+  className?:  string;
 }
 
 /**
@@ -229,11 +250,11 @@ interface SectionHeadingProps {
  * and optional right-aligned action buttons.
  */
 export const SectionHeading = React.memo(function SectionHeading({
-  icon, title, sub, badge, accentColor, actions,
+  icon, title, sub, badge, accentColor, actions, className = "mb-5",
 }: SectionHeadingProps) {
   const color = accentColor ?? COLORS.primary;
   return (
-    <div className="flex items-center gap-3 mb-5">
+    <div className={`flex items-center gap-3 ${className}`}>
       <div
         aria-hidden="true"
         className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"

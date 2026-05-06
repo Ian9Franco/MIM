@@ -370,6 +370,39 @@ select:focus {
   40%            { opacity: 1;   transform: scale(1); }
 }
 
+@keyframes slime-squish {
+  0%, 100% { transform: scale(1, 1) translateY(0); }
+  15% { transform: scale(1.2, 0.8) translateY(2px); }
+  35% { transform: scale(0.9, 1.15) translateY(-8px); }
+  55% { transform: scale(1.1, 0.9) translateY(0); }
+  75% { transform: scale(1, 1.05) translateY(-2px); }
+}
+
+@keyframes ender-eye-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 5px rgba(187, 150, 228, 0.5)); }
+  50% { transform: scale(1.1); filter: brightness(1.3) drop-shadow(0 0 15px rgba(187, 150, 228, 0.8)); }
+}
+
+@keyframes bell-ring {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  15% { transform: translateX(-4px) rotate(-8deg); }
+  30% { transform: translateX(4px) rotate(8deg); }
+  45% { transform: translateX(-4px) rotate(-5deg); }
+  60% { transform: translateX(4px) rotate(5deg); }
+  75% { transform: translateX(-2px) rotate(-2deg); }
+  90% { transform: translateX(2px) rotate(2deg); }
+}
+
+@keyframes ender-particle {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1); opacity: 0; }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Animation classes ──────────────────────────────────────────────────────── */
 .animate-fade-up    { animation: fadeUp    0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-fade-in    { animation: fadeIn    0.28s ease forwards; }
@@ -379,7 +412,12 @@ select:focus {
 .animate-float      { animation: float     3.2s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulseRing 1.6s ease infinite; }
 .animate-shake      { animation: shake     0.48s ease-in-out; }
+.animate-bell-ring  { animation: bell-ring  0.6s ease-in-out; }
 .animate-spin       { animation: spin      1s   linear infinite; }
+.animate-spin-slow  { animation: spin-slow 4s   linear infinite; }
+.animate-slime      { animation: slime-squish 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; transform-origin: bottom; }
+.animate-ender-eye  { animation: ender-eye-pulse 3s ease-in-out infinite; }
+.animate-ender-particle { animation: ender-particle 2s ease-out infinite; }
 
 /* Stagger helpers */
 .stagger-1 { animation-delay: 0.06s; }

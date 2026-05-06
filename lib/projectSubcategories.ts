@@ -31,6 +31,7 @@ export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
     "librerias",
     "tecnologia",
     "combate avanzado",
+    "rendimiento",
   ],
   ".local": [
     "animaciones",
@@ -73,13 +74,20 @@ export function readProjectConfig(projectName: string): ProjectConfig {
   if (fs.existsSync(configPath)) {
     try {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      // Merge con defaults si faltan categorías
+      // Fusión inteligente: asegura que los nuevos defaults aparezcan sin borrar los del usuario
+      const mergedSubs = { ...DEFAULT_SUBCATEGORIES };
+      if (config.subcategories) {
+        Object.keys(config.subcategories).forEach(cat => {
+          const userSubs = config.subcategories[cat] || [];
+          const defaultSubs = DEFAULT_SUBCATEGORIES[cat] || [];
+          // Unir y eliminar duplicados
+          mergedSubs[cat] = Array.from(new Set([...defaultSubs, ...userSubs]));
+        });
+      }
+
       return {
         ...config,
-        subcategories: {
-          ...DEFAULT_SUBCATEGORIES,
-          ...(config.subcategories || {}),
-        },
+        subcategories: mergedSubs,
       };
     } catch (e) {
       console.error("[ProjectConfig] Error reading config:", e);

@@ -19,7 +19,8 @@ const DEFAULT_PAGE_SIZE = 20;
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const loader       = searchParams.get("loader") ?? "forge";
-  const gameVersions = searchParams.get("gameVersions") ? JSON.parse(searchParams.get("gameVersions")!) : ["1.20.1"];
+  const gameVersionsJson = searchParams.get("gameVersions");
+  const gameVersions = gameVersionsJson ? JSON.parse(gameVersionsJson) : [];
   const categories   = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
   const environments = searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : [];
   const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -62,9 +63,6 @@ export async function GET(req: NextRequest) {
       }
     });
   }
-
-  // Debug log to see the final facets
-  console.log("[Modrinth Discover] Final Facets:", JSON.stringify(facetsArray));
 
   const facets = JSON.stringify(facetsArray);
 

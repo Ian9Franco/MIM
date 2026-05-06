@@ -29,7 +29,7 @@ Consolidado de forma inteligente en la barra de filtros del panel lateral para l
 
 ---
 
-## ⚡ La Experiencia "Floating Glass Gutter" (Multitarea Tridimensional v3.0)
+## ⚡ La Experiencia "Floating Glass Gutter" (Multitarea Tridimensional v3.0 - COMPLETADO)
 
 FOMO introduce un diseño de interfaz de usuario multi-capa tridimensional, asincrónico y fluido:
 
@@ -62,6 +62,14 @@ El sistema de selección de mods ha sido perfeccionado para ofrecer fricción ce
 2.  **Protección de Botones de Acción (e.stopPropagation)**: Si haces click en los botones de acción específica de una tarjeta (*Detalles*, *Descargar*, *Web* o *Colección*), el evento no se propaga a la tarjeta. Esto permite realizar la acción de inmediato sin conmutar accidentalmente el estado de selección del mod.
 3.  **Selección Unificada en Colecciones**: Esta lógica de selección ultra-precisa y visualización en grilla se encuentra integrada tanto en la pestaña de **Descubrir** como en la vista interna de **Mis Colecciones**.
 4.  **Barra de Acciones Masivas (Bulk Download Bar)**: Al seleccionar uno o más mods en cualquiera de las pestañas, se eleva suavemente una barra inferior con el recuento de elementos que permite descargar todo el lote en bloque con un solo click.
+
+---
+
+## 📦 Sincronización de Colecciones y Selector de Versiones
+
+FOMO 3.0 cierra el ciclo de gestión con dos herramientas críticas:
+*   **Sincronización de Colecciones**: Integración total con Modrinth para importar tus colecciones personales y las que sigues, permitiendo bajarlas al instante.
+*   **Selector Manual**: Control total para elegir versiones específicas de Datapacks, Shaders y Resourcepacks antes de la descarga.
 
 ---
 

@@ -309,7 +309,7 @@ export async function GET(_req: NextRequest) {
   }
 }
 
-// ── POST — Descargar proyectos de una colección a Downloads -- aca necesito que la app lea mi .env donde tengo mi key───────────────────
+// ── POST — Descargar proyectos de una colección a Downloads ─────────────────
 
 export async function POST(req: NextRequest) {
   const headers = buildHeaders();
@@ -436,17 +436,17 @@ export async function POST(req: NextRequest) {
     // Procesar cada proyecto de forma secuencial para no exceder rate limits
     for (const projectId of projectIds) {
       try {
-        // Obtener título del proyecto para el log
+        // Obtener metadatos del proyecto (título + tipo) en un solo request
         let projectTitle = projectId;
+        let projectType  = "mod";
         const projRes = await fetch(`${MODRINTH_API}/project/${projectId}`, { headers });
         if (projRes.ok) {
           const proj = await projRes.json();
           projectTitle = proj.title ?? projectId;
+          projectType  = proj.project_type ?? "mod";
         }
 
-        // Buscar versión más reciente compatible con gameVersion + loader
         // Para no-mods (resourcepacks, shaders) omitimos el filtro de loader.
-        const projectType = projRes.ok ? (await (await fetch(`${MODRINTH_API}/project/${projectId}`, { headers })).json()).project_type : "mod";
         const loadersParam = projectType === "mod" ? `&loaders=["${loader}"]` : "";
 
         const versionsRes = await fetch(

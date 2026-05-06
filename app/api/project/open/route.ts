@@ -1,3 +1,14 @@
+/**
+ * /api/project/open — POST
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Crea la estructura de carpetas de un proyecto (resourcepacks, shaderpacks,
+ * datapacks, config) y la abre en el explorador de archivos del SO.
+ *
+ * Body: { version: string, projectName: string }
+ * Respuesta: { success: true, path: string }
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE } from "@/lib/constants";
 import path from "path";

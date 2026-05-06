@@ -1,3 +1,14 @@
+/**
+ * /api/settings — GET / POST
+ * ─────────────────────────────────────────────────────────────────────────────
+ * GET  — Devuelve la configuración actual de la app (sourceBase, buildsBase, etc.)
+ * POST — Guarda y devuelve la nueva configuración.
+ *
+ * Body POST: Objeto parcial con los campos a actualizar.
+ * Respuesta: Settings completo persistido en disco.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextResponse } from "next/server";
 import { getSettings, saveSettings } from "@/lib/settings";
 

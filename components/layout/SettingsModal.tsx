@@ -79,10 +79,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className="fixed inset-x-0 top-0 z-50 flex justify-center pointer-events-none">
         <div 
-          className="w-full max-w-2xl rounded-2xl pointer-events-auto p-6 animate-scale-in"
-          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "0 10px 40px rgba(0,0,0,0.4)" }}
+          className="w-full max-w-3xl rounded-b-3xl pointer-events-auto p-6 animate-slide-down"
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderTop: "none", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-headline text-lg flex items-center gap-2">

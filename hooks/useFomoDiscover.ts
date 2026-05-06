@@ -32,11 +32,15 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [sortOrder, setSortOrder] = useState<SortOrder>("relevance");
   const [query, setQuery] = useState("");
 
-  // Limpiar filtros al cambiar de projectType
+  // Resetear a página 1 al cambiar cualquier filtro o búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [loader, gameVersions, projectType, categories, environments, sortOrder, query, source]);
+
+  // Limpiar categorías y entornos al cambiar de projectType (el reset de página ya lo hace el efecto de arriba)
   useEffect(() => {
     setCategories([]);
     setEnvironments([]);
-    setPage(1);
   }, [projectType]);
 
   const [loading, setLoading] = useState(false);
@@ -90,6 +94,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     setSourceError("");
     const q = typeof overrideQuery === "string" ? overrideQuery : query;
     try {
+      // Modrinth y CurseForge ahora usan 'gameVersions' (array JSON).
       const params = new URLSearchParams({
         loader,
         gameVersions: JSON.stringify(gameVersions),
@@ -104,7 +109,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       
       const endpoint = source === "modrinth" 
         ? `/api/modrinth/discover?${params}`
-        : `/api/curseforge/discover?${params}&gameVersion=${gameVersions[0] || "1.20.1"}`; // CF only supports one version easily
+        : `/api/curseforge/discover?${params}`;
         
       const res = await fetch(endpoint);
       if (!res.ok) {
@@ -116,9 +121,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         } else if (res.status === 429) {
           setSourceError("Rate limit excedido - intentá más tarde");
         } else {
-          setSourceError(`Error: ${errorData.error || errorData.message || res.statusText}`);
+          setSourceError(`Error: ${errorData.error || errorData.message || res.statusText || "Unknown error"}`);
         }
-        throw new Error("Search failed");
+        
+        console.error(`[useFomoDiscover] Search failed (${res.status}):`, errorData.error || res.statusText);
+        setMods([]);
+        setLoading(false);
+        return;
       }
       const data = await res.json();
       
@@ -131,6 +140,40 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       setMods(mappedMods);
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 0);
+
+      // --- Background Exclusivity Check ---
+      // Realizamos el check de disponibilidad en la otra plataforma de forma silenciosa
+      mappedMods.forEach(async (mod: ModHit) => {
+        // Inicializar estado de chequeo
+        setMods(prev => prev.map(m => 
+          m.projectId === mod.projectId 
+            ? { ...m, availability: { modrinth: mod._source === "modrinth", curseforge: mod._source === "curseforge", checking: true } } 
+            : m
+        ));
+
+        try {
+           const checkRes = await fetch(`/api/crosscheck?title=${encodeURIComponent(mod.title)}&slug=${encodeURIComponent(mod.slug || "")}&source=${mod._source}`);
+           if (checkRes.ok) {
+            const { exists } = await checkRes.json();
+            setMods(prev => prev.map(m => 
+              m.projectId === mod.projectId 
+                ? { 
+                    ...m, 
+                    availability: { 
+                      modrinth: mod._source === "modrinth" ? true : exists, 
+                      curseforge: mod._source === "curseforge" ? true : exists,
+                      checking: false 
+                    } 
+                  } 
+                : m
+            ));
+          }
+        } catch (err) {
+          console.error(`Error cross-checking mod ${mod.title}:`, err);
+          // En caso de error, quitamos el estado de checking pero mantenemos el origen actual
+          setMods(prev => prev.map(m => m.projectId === mod.projectId ? { ...m, availability: { ...m.availability!, checking: false } } : m));
+        }
+      });
     } catch (err) {
       console.error("[useFomoDiscover] Error fetching mods:", err);
       setMods([]);
@@ -149,6 +192,18 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     if (downloading[mod.projectId]) return;
 
     setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
+    
+    // CASO ESPECIAL: Descarga bloqueada por el autor (CurseForge)
+    if (mod.allowModDistribution === false) {
+      showStatus(`Descarga manual requerida para ${mod.title}`, "info");
+      window.open(mod.url, "_blank");
+      // Dar un pequeño tiempo para que el usuario vea el mensaje antes de quitar el estado de carga
+      setTimeout(() => {
+        setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
+      }, 1000);
+      return;
+    }
+
     showStatus(`Descargando ${mod.title}...`, "info");
     try {
       let activeVersion = version;

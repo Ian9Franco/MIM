@@ -1,3 +1,15 @@
+/**
+ * /api/open-folder — POST
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Abre una carpeta en el explorador de archivos nativo del sistema operativo.
+ * Crea la carpeta si no existe. Soporta Windows, macOS y Linux.
+ *
+ * Body: { folderPath: string }
+ *   Valor especial: "downloads" → abre ~/Downloads del usuario.
+ * Respuesta: { success: true, path: string }
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";

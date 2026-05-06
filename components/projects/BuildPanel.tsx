@@ -18,6 +18,11 @@ interface BuildPanelProps {
   loader: string;
 }
 
+/**
+ * Panel de construcción (Build). Permite generar las versiones "alluser" 
+ * (para el cliente) o "allhost" (para el servidor) enviando una petición
+ * al endpoint de la API.
+ */
 export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
   const [building, setBuilding] = useState<BuildType | null>(null);
   const [result, setResult]     = useState<{ type: BuildType; data: BuildResult } | null>(null);

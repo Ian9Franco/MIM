@@ -5,13 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getRawEnv } from "@/lib/env";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
-  const apiKey = process.env.CURSEFORGE_API_KEY;
+  // Carga Manual (Bypass Next.js)
+  const apiKey = getRawEnv("CURSEFORGE_API_KEY") || "";
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -42,7 +44,9 @@ export async function GET(req: NextRequest) {
       ...modData.data,
       body: descData.data || "", // CurseForge usa HTML en la descripción
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/curseforge/project] Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

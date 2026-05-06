@@ -8,7 +8,7 @@
 
 import React, { memo } from "react";
 import {
-  Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle
+  Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle, Check
 } from "lucide-react";
 import { formatNumber } from "@/utils/format";
 import { openExternal } from "@/utils/format";
@@ -32,6 +32,19 @@ export const FomoModCard = memo(function FomoModCard({
 }: FomoModCardProps) {
   const isCurseForge = mod._source === "curseforge";
   
+  // Iconos de plataforma para exclusividad
+  const ModrinthIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+      <path d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM15.63 15.63L14.22 17.04L12 14.82L9.78 17.04L8.37 15.63L10.59 13.41L8.37 11.19L9.78 9.78L12 12L14.22 9.78L15.63 11.19L13.41 13.41L15.63 15.63Z" fill="currentColor"/>
+    </svg>
+  );
+
+  const CurseForgeIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+      <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" fill="currentColor"/>
+    </svg>
+  );
+
   // Mejorar la detección del tipo basándose en los metadatos de Modrinth si están disponibles
   const rawType = mod.projectType || (mod.url?.includes('/resourcepack/') ? 'resourcepack' : mod.url?.includes('/shader/') ? 'shader' : mod.url?.includes('/datapack/') ? 'datapack' : 'mod');
   
@@ -53,10 +66,10 @@ export const FomoModCard = memo(function FomoModCard({
       }`}
       style={{ 
         background: isCurseForge 
-          ? "rgba(30, 20, 10, 0.85)" 
+          ? "var(--color-cf-bg)" 
           : (isSelected ? "rgba(187,150,228,0.1)" : COLORS.card), 
         borderColor: isCurseForge 
-          ? (isSelected ? COLORS.curseforgeOrange : "rgba(239, 108, 0, 0.2)")
+          ? (isSelected ? COLORS.curseforgeOrange : "var(--color-cf-border)")
           : (isSelected ? COLORS.primary : COLORS.border),
       }}
       aria-label={mod.title}
@@ -64,7 +77,7 @@ export const FomoModCard = memo(function FomoModCard({
       {/* Selection Toggle - Reubicado para no tapar el chip de tipo */}
       {onToggleSelect && (
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(mod); }}
+          onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }}
           className={`absolute top-4 right-4 p-1.5 transition-all z-20 ${
             isCurseForge ? 'rounded-none' : 'rounded-full'
           } ${
@@ -107,6 +120,42 @@ export const FomoModCard = memo(function FomoModCard({
               </Chip>
               <Chip bg="rgba(255,255,255,0.06)" className={isCurseForge ? 'rounded-none' : ''}>↓ {formatNumber(mod.downloads)}</Chip>
               {mod.latestVersion && <Chip color={COLORS.emerald} bg="rgba(102,200,160,0.14)" className={isCurseForge ? 'rounded-none' : ''}>v{mod.latestVersion}</Chip>}
+              
+              {/* Badge de Plataforma y Exclusividad Real */}
+              <div className="flex items-center gap-1 ml-auto">
+                {mod.availability?.checking ? (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40 animate-pulse">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="text-[0.6rem] font-bold uppercase tracking-tighter">Check...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Caso 1: Está en AMBAS plataformas */}
+                    {mod.availability?.curseforge && mod.availability?.modrinth ? (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary/80" title="Disponible en CurseForge y Modrinth">
+                        <div className="flex -space-x-1">
+                          <CurseForgeIcon />
+                          <ModrinthIcon />
+                        </div>
+                        <span className="text-[0.6rem] font-bold uppercase tracking-tighter">Cross-Platform</span>
+                      </div>
+                    ) : (
+                      /* Caso 2: EXCLUSIVO de una plataforma */
+                      isCurseForge ? (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-orange-500/80" title="Exclusivo de CurseForge">
+                          <CurseForgeIcon />
+                          <span className="text-[0.6rem] font-bold uppercase tracking-tighter">Only CF</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1bd672]/10 border border-[#1bd672]/20 text-[#1bd672]/80" title="Exclusivo de Modrinth">
+                          <ModrinthIcon />
+                          <span className="text-[0.6rem] font-bold uppercase tracking-tighter">Only MR</span>
+                        </div>
+                      )
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -115,31 +164,38 @@ export const FomoModCard = memo(function FomoModCard({
           {mod.description}
         </p>
 
-        <div className="grid grid-cols-2 gap-2 mt-5">
-          {!isCurseForge && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }}
-              aria-label={`Ver detalles de ${mod.title}`}
-              className="flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-              style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary, border: "1px solid rgba(187,150,228,0.2)" }}
-            >
-              <ListTree className="w-4 h-4 shrink-0" />
-              <span className="truncate">Detalles</span>
-            </button>
-          )}
+        <div className="grid grid-cols-3 gap-2 mt-5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }}
+            aria-label={`Seleccionar ${mod.title} para colección`}
+            className={`flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A]' : ''}`}
+            style={{ 
+              background: isSelected ? COLORS.primary : (isCurseForge ? "rgba(239, 108, 0, 0.12)" : "rgba(187,150,228,0.12)"), 
+              color: isSelected ? "#FFF" : (isCurseForge ? COLORS.curseforgeOrange : COLORS.primary), 
+              border: isSelected ? "none" : `1px solid ${isCurseForge ? "rgba(239, 108, 0, 0.2)" : "rgba(187,150,228,0.2)"}` 
+            }}
+          >
+            {isSelected ? <Check className="w-4 h-4 shrink-0" /> : <ListTree className="w-4 h-4 shrink-0" />}
+            <span className="truncate">{isSelected ? "Seleccionado" : "Añadir"}</span>
+          </button>
 
-          {!isCurseForge && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
-              disabled={isDownloading}
-              aria-label={isDownloading ? "Descargando…" : `Descargar ${mod.title}`}
-              className="flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 shadow-sm"
-              style={{ background: "rgba(102,200,160,0.12)", color: COLORS.emerald, border: "1px solid rgba(102,200,160,0.22)" }}
-            >
-              {isDownloading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Download className="w-4 h-4 shrink-0" />}
-              <span className="truncate">Descargar</span>
-            </button>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
+            disabled={isDownloading}
+            aria-label={isDownloading ? "Descargando…" : (isCurseForge && mod.allowModDistribution === false ? "Abrir página de descarga manual" : `Descargar ${mod.title}`)}
+            className="flex items-center justify-center gap-1.5 h-9.5 px-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:grayscale disabled:scale-100 shadow-sm"
+            style={{ 
+              background: isCurseForge && mod.allowModDistribution === false ? "rgba(239, 108, 0, 0.12)" : "rgba(102,200,160,0.12)", 
+              color: isCurseForge && mod.allowModDistribution === false ? COLORS.curseforgeOrange : COLORS.emerald, 
+              border: `1px solid ${isCurseForge && mod.allowModDistribution === false ? "rgba(239, 108, 0, 0.22)" : "rgba(102,200,160,0.22)"}` 
+            }}
+            title={isCurseForge && mod.allowModDistribution === false ? "El autor ha desactivado la descarga automática. Al hacer clic se abrirá la web para descarga manual." : ""}
+          >
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : (isCurseForge && mod.allowModDistribution === false ? <ExternalLink className="w-4 h-4 shrink-0" /> : <Download className="w-4 h-4 shrink-0" />)}
+            <span className="truncate">
+              {isCurseForge && mod.allowModDistribution === false ? "Manual" : "Descargar"}
+            </span>
+          </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); openExternal(mod.url); }}
@@ -151,23 +207,6 @@ export const FomoModCard = memo(function FomoModCard({
           >
             <ExternalLink className="w-4 h-4 shrink-0" />
             <span className="truncate">Web</span>
-          </button>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onAddToCollection(mod); }}
-            aria-label={`Añadir ${mod.title} a colección`}
-            className={`flex items-center justify-center gap-1.5 h-9.5 px-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${
-              isCurseForge ? 'rounded-none border border-orange-500/30' : 'rounded-xl'
-            }`}
-            style={{ 
-              background: isCurseForge ? "rgba(239, 108, 0, 0.08)" : "var(--color-accent-bg)", 
-              color: COLORS.gold,
-              borderColor: isCurseForge ? "rgba(239, 108, 0, 0.2)" : "var(--color-accent-border)",
-              borderWidth: isCurseForge ? "1px" : "1px"
-            }}
-          >
-            <Library className="w-4 h-4 shrink-0" />
-            <span className="truncate">Colección</span>
           </button>
         </div>
       </div>

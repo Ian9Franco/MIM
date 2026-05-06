@@ -1,21 +1,20 @@
 /**
  * /api/watcher — GET (Server-Sent Events)
  * ─────────────────────────────────────────────────────────────────────────────
- * Opens a persistent SSE stream.  On connection:
- *   1. Flushes all existing .jar/.zip files in Downloads immediately.
- *   2. Keeps the stream open and pushes new files as chokidar detects them.
+ * Abre un stream SSE persistente para notificar archivos nuevos en Downloads.
  *
- * The client can disconnect at any time — the abort signal removes the listener
- * from the shared watcherEmitter to prevent memory leaks.
+ * Al conectarse:
+ *   1. Envía inmediatamente todos los archivos .jar/.zip existentes en Downloads.
+ *   2. Mantiene el stream abierto y envía nuevos archivos conforme chokidar los detecta.
  *
- * Changes from original:
- *   - SSE keepalive: sends a comment ping (":\n\n") every 30 s to prevent
- *     proxies and browsers from closing idle connections.
- *   - Keepalive interval is cleared on client disconnect (no leak).
- *   - processFile errors are caught individually; a malformed JAR no longer
- *     silently drops the event — the client still receives the filename with
- *     empty meta so it can show the file in the pending list.
- *   - controller.close() called on abort so the ReadableStream is formally closed.
+ * Cada evento SSE tiene el shape: { path, fileName, meta }
+ *   - meta: resultado de scanMod() — puede estar vacío si el JAR está corrupto.
+ *
+ * El cliente puede desconectarse en cualquier momento — la señal de abort elimina
+ * el listener del watcherEmitter para prevenir memory leaks.
+ *
+ * Keepalive: envía un ping SSE (":") cada 30s para prevenir que proxies y browsers
+ * cierren conexiones SSE inactivas.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -76,9 +75,14 @@ export async function GET(req: NextRequest) {
         processFile(filePath);
       }
 
-      // ── 2. Subscribe to new files ─────────────────────────────────────────────
+      // ── 2. Subscribe to events ────────────────────────────────────────────────
       const listener = (filePath: string) => processFile(filePath);
+      const deleteListener = (filePath: string) => {
+        send({ type: "deleted", path: filePath });
+      };
+
       watcherEmitter.on("new_file", listener);
+      watcherEmitter.on("deleted_file", deleteListener);
 
       // ── 3. Keepalive ping ─────────────────────────────────────────────────────
       // Browsers and reverse proxies close idle SSE connections after ~60 s.
@@ -88,6 +92,7 @@ export async function GET(req: NextRequest) {
       // ── 4. Cleanup on client disconnect ───────────────────────────────────────
       req.signal.addEventListener("abort", () => {
         watcherEmitter.off("new_file", listener);
+        watcherEmitter.off("deleted_file", deleteListener);
         clearInterval(keepalive);
         // Formally close the stream so Node releases the underlying resources.
         try {

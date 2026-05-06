@@ -1,32 +1,47 @@
+/**
+ * /api/settings/move-files — POST
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Mueve recursivamente todos los archivos de una ruta a otra.
+ * Usado cuando el usuario cambia la carpeta raíz del source/builds en Settings.
+ *
+ * Body: { sourcePath: string, targetPath: string }
+ * Respuesta: { success: true, message: string }
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-// Función recursiva para mover directorios
-function moveDirectorySync(src: string, dest: string) {
+/**
+ * Mueve recursivamente el contenido de `src` a `dest`.
+ * Usa copy+delete porque fs.rename falla en movimientos cross-drive (C: → D:).
+ * Elimina el directorio fuente una vez vaciado.
+ */
+function moveDirectorySync(src: string, dest: string): void {
   if (!fs.existsSync(src)) return;
+
   if (!fs.existsSync(dest)) {
     fs.mkdirSync(dest, { recursive: true });
   }
 
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath  = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
       moveDirectorySync(srcPath, destPath);
     } else {
-      // Mover el archivo (sobreescribe si existe)
       fs.copyFileSync(srcPath, destPath);
       fs.unlinkSync(srcPath);
     }
   }
-  // Eliminar el directorio original vacío
+
+  // Eliminar el directorio fuente ya vacío
   try {
     fs.rmdirSync(src);
   } catch (e) {
-    console.warn(`No se pudo eliminar el directorio fuente: ${src}`, e);
+    console.warn(`[/api/settings/move-files] No se pudo eliminar directorio fuente: ${src}`, e);
   }
 }
 
@@ -42,17 +57,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: "Misma ruta, no se hizo nada" });
     }
 
-    // Validar que existan
     if (!fs.existsSync(sourcePath)) {
       return NextResponse.json({ error: "La ruta de origen no existe" }, { status: 404 });
     }
 
-    // Mover recursivamente
     moveDirectorySync(sourcePath, targetPath);
 
     return NextResponse.json({ success: true, message: "Archivos movidos correctamente" });
-  } catch (error: any) {
-    console.error("Error moviendo archivos:", error);
-    return NextResponse.json({ error: error.message || "Error al mover archivos" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/settings/move-files] Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

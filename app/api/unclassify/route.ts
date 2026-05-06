@@ -1,19 +1,15 @@
 /**
  * /api/unclassify — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Moves classified mods back to the user's Downloads folder.
- * Used when the user wants to re-classify or discard a mod.
+ * Mueve mods clasificados de vuelta a la carpeta Downloads del usuario.
+ * Usado cuando el usuario quiere re-clasificar o descartar un mod.
  *
  * Body: { sourcePaths: string[] }
+ * Respuesta: { success: true, targetPaths: string[], skipped?: string[] }
  *
- * Uses copy+delete for the same cross-drive reason as /api/classify.
- *
- * Changes from original:
- *   - Filename collision guard: if a file with the same name already exists in
- *     Downloads, the incoming file is renamed with a timestamp suffix instead of
- *     silently overwriting the existing one.
- *   - Missing source files accumulate in skipped[] and are returned in the body.
- *   - Structured console.warn/error with route prefix.
+ * Usa copy+delete por la misma razón cross-drive que /api/classify.
+ * Guard de colisión: si ya existe un archivo con el mismo nombre en Downloads,
+ * lo renombra con sufijo timestamp en lugar de sobreescribirlo silenciosamente.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

@@ -18,7 +18,8 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Flame, X, Zap, Box, Search, Library, Download, Layers, ArrowUpDown } from "lucide-react";
+import Image from "next/image";
+import { Flame, X, Search, Library, Download, Layers, Plus } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -128,7 +129,7 @@ export function FomoSidebar({
         role="dialog"
         aria-modal="true"
         aria-label="Panel FOMO"
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r fomo-sidebar fomo-sidebar-container ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
           discover.source === "curseforge" ? "fomo-source-curseforge" : "fomo-source-modrinth"
         } ${
           open ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-full opacity-0 pointer-events-none"
@@ -136,20 +137,20 @@ export function FomoSidebar({
         style={{ 
           width: sidebarWidth, 
           maxWidth: isDetailsOpen ? "none" : "1400px",
-          background: "rgba(10,10,12,0.98)", 
-          borderColor: COLORS.border,
+          background: "var(--fomo-bg)", 
+          borderColor: "var(--fomo-border)",
           backdropFilter: "blur(30px)",
-          borderRadius: "0 2rem 2rem 0" 
+          borderRadius: "0 2rem 2.5rem 2rem" 
         }}
       >
         {/* Unified Premium Header */}
-        <div className="relative flex items-center justify-between px-6 py-3.5 border-b shrink-0 bg-black/20" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="relative flex items-center justify-between px-6 py-3.5 border-b shrink-0" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
           <div className="flex items-center gap-4">
             {/* Title & Icon */}
             <div className="flex items-center gap-3">
-              <div aria-hidden="true" className="w-8.5 h-8.5 rounded-lg flex items-center justify-center shadow-lg relative group" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div aria-hidden="true" className="w-8.5 h-8.5 rounded-lg flex items-center justify-center shadow-lg relative group" style={{ background: "var(--fomo-secondary-bg)", border: "1px solid var(--fomo-border)" }}>
                 <div className="absolute inset-0 rounded-lg bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <Flame className="w-4.5 h-4.5 relative z-10 animate-pulse" style={{ color: COLORS.fomoFlame }} />
+                <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7 relative z-10 animate-pulse object-contain" />
               </div>
               <div>
                 <h2 className="font-headline text-base leading-none" style={{ color: COLORS.foreground }}>FOMO</h2>
@@ -166,7 +167,8 @@ export function FomoSidebar({
               options={TAB_OPTIONS} 
               value={mode} 
               onChange={(v) => setMode(v as Mode)} 
-              className="scale-90 origin-left bg-black/20 border-white/5 p-1" 
+              className="scale-90 origin-left p-1" 
+              style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
               ariaLabel="Secciones de FOMO" 
             />
           </div>
@@ -179,7 +181,8 @@ export function FomoSidebar({
                 options={SOURCE_OPTIONS} 
                 value={discover.source} 
                 onChange={(v) => discover.setSource(v as any)} 
-                className="scale-90 origin-right bg-black/60 border-white/5 p-1 shadow-inner" 
+                className="scale-90 origin-right p-1 shadow-inner" 
+                style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
                 ariaLabel="Fuente de mods" 
               />
             )}
@@ -244,7 +247,8 @@ export function FomoSidebar({
                     value={discover.query}
                     onChange={(e) => discover.setQuery(e.target.value)}
                     placeholder={`Buscar en ${discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
-                    className="flex-1 bg-transparent outline-none text-sm font-medium text-[var(--fomo-text-primary)] placeholder:text-[var(--fomo-text-muted)]/50"
+                    className="flex-1 bg-transparent border-none !outline-none focus:!outline-none focus-visible:!outline-none !ring-0 text-sm font-medium text-[var(--fomo-text-primary)] placeholder:text-[var(--fomo-text-muted)]/50"
+                    style={{ outline: "none", boxShadow: "none" }}
                   />
                   {discover.query && (
                     <button onClick={() => discover.setQuery("")} className="p-1 hover:bg-[var(--fomo-secondary-bg)] rounded-full">
@@ -254,22 +258,21 @@ export function FomoSidebar({
                 </div>
               </div>
 
-              {/* Counter */}
               <div className="px-6 py-3 shrink-0 flex items-center justify-between">
-                <p className="font-caption text-xs uppercase tracking-widest text-[var(--fomo-text-muted)]">
+                <p className="font-caption text-xs uppercase tracking-widest" style={{ color: "var(--fomo-text-muted)" }}>
                   {discover.loading ? "Cargando..." : (
                     <>
-                      <span className="text-[var(--fomo-text-primary)] font-bold">{formatNumber(discover.total)}</span> {getProjectTypeLabel(discover.projectType)} encontrados
+                      <span className="font-bold" style={{ color: "var(--fomo-text-primary)" }}>{formatNumber(discover.total)}</span> {getProjectTypeLabel(discover.projectType)} encontrados
                     </>
                   )}
                 </p>
-                <p className="font-caption text-xs uppercase tracking-widest text-[var(--fomo-text-muted)]">
-                  Página <span className="text-[var(--fomo-text-primary)] font-bold">{discover.page}</span> de {discover.totalPages}
+                <p className="font-caption text-xs uppercase tracking-widest" style={{ color: "var(--fomo-text-muted)" }}>
+                  Página <span className="font-bold" style={{ color: "var(--fomo-text-primary)" }}>{discover.page}</span> de {discover.totalPages}
                 </p>
               </div>
 
               {/* Mod list */}
-              <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 grid grid-cols-1 ${!!discover.selectingVersionFor ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start`} role="feed" aria-label="Lista de mods" aria-busy={discover.loading}>
+              <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${!!discover.selectingVersionFor ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start`} role="feed" aria-label="Lista de mods" aria-busy={discover.loading}>
                 {discover.mods.map((mod) => (
                   <FomoModCard
                     key={mod.projectId}
@@ -300,6 +303,14 @@ export function FomoSidebar({
                       style={{ color: COLORS.muted }}
                     >
                       Cancelar
+                    </button>
+                    <button
+                      onClick={() => setMode("collections")}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all border border-white/10 hover:bg-white/5 active:scale-95"
+                      style={{ color: COLORS.foreground }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Añadir a...
                     </button>
                     <button
                       onClick={async () => {

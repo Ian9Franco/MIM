@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Bell, CheckCircle, AlertTriangle, ArrowUpCircle, Shield, Package, RefreshCw, FileWarning, Info, Loader2 } from "lucide-react";
+import { X, Bell, CheckCircle, AlertTriangle, ArrowUpCircle, Shield, Package, RefreshCw, FileWarning, Info, Loader2, Globe, ChevronDown, ChevronUp } from "lucide-react";
 
 interface AlertSidebarProps {
   sidebarOpen: boolean;
@@ -35,7 +35,11 @@ export function AlertSidebar({
   securityAlerts = [],
 }: AlertSidebarProps) {
   const [activeTab, setActiveTab] = useState<"all" | "updates" | "conflicts" | "security">("all");
-  const updates = Object.entries(modrinthStatus).filter(([_, s]) => s.status === "update_available");
+  const [expandedChangelog, setExpandedChangelog] = useState<string | null>(null);
+  const updates = Object.entries(modrinthStatus).filter(([path, s]) => {
+    const mod = library.find(l => l.path === path);
+    return s.status === "update_available" && mod && !ignoredUpdates.has(path);
+  });
   const criticalAlerts = securityAlerts.filter(a => a.riskLevel === "critical" || a.riskLevel === "suspicious");
   
   return (
@@ -190,7 +194,7 @@ export function AlertSidebar({
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       <ActionButton
                         primary
                         onClick={() => handleDownloadUpdate(path, s.downloadUrl!, mod.fileName.replace(mod.meta?.modVersion ?? "", s.latestVersion!))}
@@ -202,7 +206,33 @@ export function AlertSidebar({
                         onClick={() => handleDismissUpdate(path)}
                         label="Ignorar"
                       />
+                      
+                      {/* New Buttons: Web & Info */}
+                      <div className="w-full flex gap-2 mt-1">
+                        <ActionButton
+                          onClick={() => window.open(`https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
+                          icon={<Globe className="w-3.5 h-3.5" />}
+                          label="Web"
+                          small
+                        />
+                        <ActionButton
+                          onClick={() => setExpandedChangelog(expandedChangelog === path ? null : path)}
+                          icon={expandedChangelog === path ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          label="Más Info"
+                          small
+                        />
+                      </div>
                     </div>
+
+                    {/* Changelog Dropdown */}
+                    {expandedChangelog === path && (
+                      <div className="mt-3 p-3 rounded-lg bg-black/20 border border-white/5 animate-fade-in">
+                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mb-2">Registro de cambios:</p>
+                        <div className="text-xs max-h-40 overflow-y-auto custom-scrollbar font-sans leading-relaxed whitespace-pre-wrap pr-2" style={{ color: "var(--color-muted)" }}>
+                          {s.changelog || "Sin detalles disponibles."}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -352,9 +382,10 @@ interface ActionButtonProps {
   disabled?: boolean;
   icon?: React.ReactNode;
   label: string;
+  small?: boolean;
 }
 
-function ActionButton({ primary, danger, onClick, disabled, icon, label }: ActionButtonProps) {
+function ActionButton({ primary, danger, onClick, disabled, icon, label, small }: ActionButtonProps) {
   const getButtonStyle = () => {
     if (primary && danger) {
       return {
@@ -383,7 +414,7 @@ function ActionButton({ primary, danger, onClick, disabled, icon, label }: Actio
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+      className={`${small ? 'py-1 px-2 text-[10px]' : 'py-2 px-3 text-xs'} flex-1 rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5`}
       style={{
         background: style.background,
         color: style.color,

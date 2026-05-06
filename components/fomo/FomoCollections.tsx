@@ -78,23 +78,68 @@ export const FomoCollections = memo(function FomoCollections({
   }, []);
 
   const handleCreate = useCallback(async (name: string) => {
-    const { collection, error } = await createCollection(name, addingForMod, targetType);
+    const modsToAdd = addingForMod ? [addingForMod] : selectedMods;
+    if (modsToAdd.length === 0) return;
+
+    let successCount = 0;
+    let lastError = null;
+
+    // Crear la colección primero con el primer mod (o ninguno)
+    const { collection, error } = await createCollection(name, modsToAdd[0], targetType);
+    
     if (error) { onStatus(error, "error"); return; }
-    onStatus(addingForMod ? `"${addingForMod.title}" añadido a ${name}` : `Colección "${name}" creada en ${targetType}`, "success");
+    
+    successCount++;
+
+    // Añadir el resto de los mods
+    if (modsToAdd.length > 1) {
+      for (let i = 1; i < modsToAdd.length; i++) {
+        const { error: addErr } = await addModToCollection(collection!.id, modsToAdd[i], targetType);
+        if (!addErr) successCount++;
+        else lastError = addErr;
+      }
+    }
+
+    if (lastError && successCount < modsToAdd.length) {
+      onStatus(`Colección creada, pero solo se añadieron ${successCount}/${modsToAdd.length} items.`, "info");
+    } else {
+      onStatus(modsToAdd.length > 1 
+        ? `${modsToAdd.length} items añadidos a la nueva colección "${name}"` 
+        : `"${modsToAdd[0].title}" añadido a ${name}`, "success");
+    }
+
     setCreating(false);
     onClearAddingFor();
+    onClearSelection?.();
     load();
-  }, [addingForMod, targetType, onClearAddingFor, onStatus, load]);
+  }, [addingForMod, selectedMods, targetType, onClearAddingFor, onClearSelection, onStatus, load]);
 
   const handleAddTo = useCallback(async (coll: CollectionEntry) => {
-    if (!addingForMod) return;
+    const modsToAdd = addingForMod ? [addingForMod] : selectedMods;
+    if (modsToAdd.length === 0) return;
+
     const target: "local" | "modrinth" = coll.isLocal ? "local" : "modrinth";
-    const { error } = await addModToCollection(coll.id, addingForMod, target);
-    if (error) { onStatus(error, "error"); return; }
-    onStatus(`"${addingForMod.title}" añadido a ${coll.name}`, "success");
+    let successCount = 0;
+    let lastError = null;
+
+    for (const mod of modsToAdd) {
+      const { error } = await addModToCollection(coll.id, mod, target);
+      if (!error) successCount++;
+      else lastError = error;
+    }
+
+    if (lastError && successCount < modsToAdd.length) {
+      onStatus(`Se añadieron ${successCount}/${modsToAdd.length} items a ${coll.name}. Algunos fallaron.`, "info");
+    } else {
+      onStatus(modsToAdd.length > 1 
+        ? `${modsToAdd.length} items añadidos a "${coll.name}"` 
+        : `"${modsToAdd[0].title}" añadido a ${coll.name}`, "success");
+    }
+
     onClearAddingFor();
+    onClearSelection?.();
     load();
-  }, [addingForMod, onClearAddingFor, onStatus, load]);
+  }, [addingForMod, selectedMods, onClearAddingFor, onClearSelection, onStatus, load]);
 
   const handleDownloadCollection = useCallback(async (coll: CollectionEntry) => {
     setCollDl(coll.id);
@@ -135,17 +180,20 @@ export const FomoCollections = memo(function FomoCollections({
   }, [onStatus, load]);
 
   // Collection-selector overlay (when adding a mod to a collection)
-  if (addingForMod || creating) {
+  if (addingForMod || creating || (selectedMods.length > 0 && !viewing)) {
+    const isBulk = selectedMods.length > 1 && !addingForMod;
     return (
       <div className="flex-1 flex flex-col p-4 space-y-3 overflow-y-auto custom-scrollbar">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-headline text-lg">{creating ? "Nueva Colección" : "Añadir a Colección"}</h3>
             <p className="font-caption text-xs mt-1 truncate max-w-[340px]" style={{ color: COLORS.muted }}>
-              {addingForMod ? `Para: "${addingForMod.title}"` : "Crea una nueva colección"}
+              {creating 
+                ? "Crea una nueva colección" 
+                : (addingForMod ? `Para: "${addingForMod.title}"` : `Para: ${selectedMods.length} items seleccionados`)}
             </p>
           </div>
-          <button onClick={() => { onClearAddingFor(); setCreating(false); }} aria-label="Cancelar" className="p-2 rounded-xl hover:bg-white/10">
+          <button onClick={() => { onClearAddingFor(); setCreating(false); onClearSelection?.(); }} aria-label="Cancelar" className="p-2 rounded-xl hover:bg-white/10">
             <X className="w-5 h-5" />
           </button>
         </div>

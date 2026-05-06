@@ -175,6 +175,7 @@ interface PillToggleGroupProps {
   value:    string;
   onChange: (v: string) => void;
   className?:string;
+  style?:    React.CSSProperties;
   ariaLabel: string;
 }
 
@@ -182,10 +183,10 @@ interface PillToggleGroupProps {
  * A group of pill-style toggle buttons with accessible keyboard navigation.
  */
 export const PillToggleGroup = React.memo(function PillToggleGroup({
-  options, value, onChange, className = "", ariaLabel,
+  options, value, onChange, className = "", style = {}, ariaLabel,
 }: PillToggleGroupProps) {
   return (
-    <div className={`flex p-1 rounded-2xl bg-white/5 border border-white/10 ${className}`} role="radiogroup" aria-label={ariaLabel}>
+    <div className={`flex p-1 rounded-2xl ${className}`} style={{ background: "var(--fomo-secondary-bg)", border: "1px solid var(--fomo-border)", ...style }} role="radiogroup" aria-label={ariaLabel}>
       {options.map((opt) => {
         const isActive = value === opt.value;
         return (
@@ -195,11 +196,11 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
             aria-checked={isActive}
             onClick={() => onChange(opt.value)}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold transition-all rounded-xl ${
-              isActive ? "shadow-lg scale-[1.02]" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+              isActive ? "shadow-lg scale-[1.02]" : "hover:bg-black/5 dark:hover:bg-white/5"
             }`}
             style={{
               background: isActive ? (opt.activeBg || "var(--color-primary-bg)") : "transparent",
-              color:      isActive ? (opt.activeColor || "var(--color-primary)") : undefined,
+              color:      isActive ? (opt.activeColor || "var(--color-primary)") : "var(--fomo-text-muted)",
               border:     isActive ? `1px solid ${opt.activeBorder || "var(--color-primary-border)"}` : "1px solid transparent",
             }}
           >

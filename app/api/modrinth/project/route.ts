@@ -1,3 +1,15 @@
+/**
+ * /api/modrinth/project — GET
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Obtiene los metadatos de un proyecto de Modrinth por su ID o slug.
+ * Usado por el panel de detalles de la FOMO Sidebar para mostrar la
+ * descripción completa, compatibilidad cliente/servidor y cuerpo del proyecto.
+ *
+ * Query params: ?projectId=<id_o_slug>
+ * Respuesta: { body: string, client_side: string, server_side: string }
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";

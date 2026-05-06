@@ -8,11 +8,11 @@
 ### **El único gestor de modpacks que no pierde mods, no rompe mundos y te ahorra horas de debugging.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-1.0-FFC131?logo=tauri)](https://tauri.app/)
+[![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente de mods | 🔍 Escaneo profundo de JARs | 🚀 Construcción automatizada de modpacks**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO v3.0**
 
 [📸 Ver Screenshots](#-screenshots) • [🚀 Demo en Vivo](#-demo) • [📖 Documentación](./docs/) • [🐛 Reportar Bug](../../issues)
 
@@ -34,6 +34,9 @@ Crear modpacks de Minecraft es **frustrante**:
 ## ✅ La Solución
 
 **MIM** transforma el caos en un flujo de trabajo de **3 clics**:
+- **Sincronización Maestra**: Botón de refresco para asegurar que la app refleje cualquier cambio manual en tus carpetas.
+- **Detección en Tiempo Real**: Watcher mejorado que detecta archivos nuevos y eliminados instantáneamente.
+
 
 - **🚀 FOMO 2.0:** Descubrimiento ultra-denso con rejilla de 2 columnas, multi-filtro avanzado (categorías, versiones, entornos) y descarga masiva.
 - **🛡️ Security Scanner:** Análisis heurístico de bytecode para detectar malware y patrones sospechosos.

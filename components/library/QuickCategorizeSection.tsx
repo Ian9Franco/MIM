@@ -29,7 +29,7 @@ export function QuickCategorizeSection({
       <div className="flex items-center gap-3 mb-5">
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "rgba(255,208,102,0.1)", border: "1px solid rgba(255,208,102,0.2)", color: "var(--color-accent)" }}
+          style={{ background: "var(--color-accent-bg)", border: "1px solid var(--color-accent-border)", color: "var(--color-accent)" }}
         >
           <Zap className="w-4 h-4" />
         </div>
@@ -66,16 +66,16 @@ export function QuickCategorizeSection({
       {!activeProject && (
         <div
           className="mb-4 px-4 py-2.5 rounded-xl flex items-center gap-2 animate-fade-in"
-          style={{ border: "1px solid rgba(255,208,102,0.2)", background: "rgba(255,208,102,0.05)" }}
+          style={{ border: "1px solid var(--color-accent-border)", background: "var(--color-accent-bg)" }}
         >
-          <span className="font-caption" style={{ color: "rgba(255,208,102,0.7)" }}>
+          <span className="font-caption" style={{ color: "var(--color-accent)" }}>
             Creá o seleccioná un proyecto antes de clasificar.
           </span>
         </div>
       )}
 
       {/* Subcategories or hotkey cards */}
-      {showSubcategories && allSelected.length > 0 ? (
+      {showSubcategories && allSelected.length > 0 && activeProject ? (
         <SubcategoryPanel
           activeCategory={showSubcategories}
           fileName={allSelected.length === 1 ? allSelected[0].fileName : `${allSelected.length} archivos seleccionados`}
@@ -85,7 +85,7 @@ export function QuickCategorizeSection({
         />
       ) : (
         <div
-          className={`grid grid-cols-3 gap-3 transition-all duration-300 ${
+          className={`flex flex-col gap-3 transition-all duration-300 ${
             (allSelected.length === 0 || !activeProject) ? "opacity-35 pointer-events-none" : ""
           }`}
         >

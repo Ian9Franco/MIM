@@ -1,21 +1,19 @@
 /**
  * /api/modrinth/download — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Downloads a file from a remote URL and saves it to the user's Downloads
- * folder so the watcher picks it up and the classify flow begins.
+ * Descarga un archivo desde una URL remota y lo guarda en la carpeta Downloads
+ * del usuario para que el watcher lo detecte e inicie el flujo de clasificación.
  *
- * Body: { url: string, filename: string }
+ * Body: { url: string, filename: string, hashes?: { sha1?: string, sha512?: string } }
+ * Respuesta: { success: true, targetPath: string }
+ *           | { success: true, skipped: true, existingPath: string, reason: "already_exists" }
  *
- * Changes from original:
- *   - filename sanitization: strips path traversal characters before joining
- *     with the Downloads directory (original used filename directly, which
- *     allowed a crafted filename like "../../evil.jar" to escape Downloads).
- *   - Validates that the URL is HTTPS — blocks accidental plain-HTTP downloads
- *     of mod files that could be intercepted.
- *   - Collision guard: if filename already exists in Downloads, appends a
- *     timestamp suffix instead of overwriting silently.
- *   - Response status forwarded in the error message when the remote fetch fails.
- *   - Structured console.error with route prefix on catch.
+ * Seguridad:
+ *   - Solo permite URLs HTTPS (Modrinth siempre usa HTTPS).
+ *   - filename sanitizado con path.basename para prevenir path traversal.
+ *   - Guard de colisión: si el archivo ya existe, agrega sufijo timestamp.
+ *   - Verificación de integridad SHA512/SHA1 tras la descarga.
+ *   - Deduplicación por hash: si el archivo ya existe en Downloads o SOURCE_BASE, no descarga de nuevo.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

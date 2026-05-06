@@ -1,25 +1,18 @@
 /**
  * /api/modrinth/check-updates — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Checks a list of installed mods against Modrinth for available updates.
+ * Compara una lista de mods instalados contra Modrinth para detectar actualizaciones.
  *
  * Body: { mods: ModCheckInput[], loader: string, gameVersion: string }
+ * Respuesta: { updates: Record<filePath, ModCheckResult> }
  *
- * Strategy per mod:
- *   1. Direct project lookup by modId (fast, most accurate).
- *   2. Name-based search with loader+version facets as fallback.
- *   3. Version list fetch → compare installed vs latest.
+ * Estrategia de resolución por mod (en orden de precisión):
+ *   1. Lookup por SHA1 hash (batch request único, máxima precisión).
+ *   2. Lookup directo por modId (rápido, sin ambigüedad de búsqueda).
+ *   3. Búsqueda por nombre con filtros de loader+versión (fallback).
  *
- * Changes from original:
- *   - CRITICAL BUG FIX: Promise.all(mods.map(...)) executed all requests in
- *     parallel with no limit. With 50+ mods this produces 50+ simultaneous
- *     requests, triggering Modrinth rate limiting (HTTP 429).
- *     Fixed with chunkArray() + sequential batch processing (CONCURRENCY_LIMIT = 5).
- *   - loader and gameVersion validated before processing mods.
- *   - `any` replaced with explicit ModCheckInput / ModCheckResult interfaces.
- *   - searchData.hits.find() type-annotated correctly.
- *   - latestVersionObj.files guarded with optional chaining.
- *   - Structured console.error with route prefix on catch.
+ * Para evitar rate limiting (Modrinth: 300 req/min), los mods se procesan
+ * en batches de CONCURRENCY_LIMIT en lugar de todos en paralelo.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -54,6 +47,8 @@ interface ModCheckResult {
   latestVersion?: string;
   downloadUrl?: string;
   projectId?: string;
+  slug?: string;
+  changelog?: string;
 }
 
 interface ModrinthHit {
@@ -64,6 +59,7 @@ interface ModrinthHit {
 
 interface ModrinthVersionObj {
   version_number: string;
+  changelog?: string;
   files?: { url: string, primary?: boolean }[];
 }
 
@@ -149,6 +145,8 @@ export async function POST(req: NextRequest) {
           projectId = hashToProject[mod.meta.sha1];
         }
 
+        let slug: string | null = null;
+
         // Step 2 — Direct lookup by modId (Fast, no search ambiguity)
         if (!projectId && mod.meta?.modId && mod.meta.modId !== "unknown") {
           const res = await fetch(
@@ -158,6 +156,7 @@ export async function POST(req: NextRequest) {
           if (res.ok) {
             const data = await res.json();
             projectId = data.id;
+            slug = data.slug;
           }
         }
 
@@ -193,7 +192,10 @@ export async function POST(req: NextRequest) {
                   h.title.toLowerCase() === nameToSearch.toLowerCase() ||
                   h.slug.toLowerCase() === nameToSearch.toLowerCase()
               );
-              if (hit) projectId = hit.project_id;
+              if (hit) {
+                projectId = hit.project_id;
+                slug = hit.slug;
+              }
             }
           }
         }
@@ -233,6 +235,8 @@ export async function POST(req: NextRequest) {
             latestVersion,
             downloadUrl: primaryFile?.url,
             projectId,
+            slug: slug || projectId, // Fallback al ID si no hay slug
+            changelog: latest.changelog || "No hay información de cambios disponible.",
           };
         }
 

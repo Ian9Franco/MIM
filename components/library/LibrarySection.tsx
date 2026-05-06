@@ -52,7 +52,7 @@ export function LibrarySection({
     if (!s) return {};
     if (s.status === "update_available" && !ignoredUpdates.has(f.path)) return {
       badgeText: "↑ " + s.latestVersion,
-      badgeColor: "bg-[rgba(255,208,102,0.15)] text-[#FFD066] border border-[rgba(255,208,102,0.3)]",
+      badgeColor: "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]",
       onDownload: () => handleDownloadUpdate(f.path, s.downloadUrl, f.fileName.replace(f.meta?.modVersion ?? "", s.latestVersion)),
     };
     if (s.status === "updated")           return { badgeText: "Al día",             badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
@@ -152,7 +152,7 @@ export function LibrarySection({
           <button
             onClick={() => setSidebarOpen(true)}
             className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-105"
-            style={{ background: "rgba(255,208,102,0.15)", border: "1px solid rgba(255,208,102,0.35)", color: "var(--color-accent)" }}
+            style={{ background: "var(--color-accent-bg)", border: "1px solid var(--color-accent-border)", color: "var(--color-accent)" }}
             title="Abrir Centro de Alertas"
           >
             <Bell className="w-4 h-4" />
@@ -172,7 +172,7 @@ export function LibrarySection({
       ) : library.length === 0 ? (
         <EmptyState message="No hay mods instalados en este proyecto aún" />
       ) : (
-        <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2" style={{ scrollbarWidth: "thin" }}>
+        <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
           {Object.entries(
             library.reduce((acc, mod) => {
               const cat = mod.category || "Otros";
@@ -254,8 +254,8 @@ function ActionButton({ onClick, disabled, icon, label, color, title, highlighte
     primary: { bg: "rgba(187,150,228,0.12)", border: "rgba(187,150,228,0.3)", color: "#BB96E4" },
     success: { bg: "rgba(102,200,160,0.12)", border: "rgba(102,200,160,0.3)", color: "#66C8A0" },
     danger:  { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.3)", color: "#f87171" },
-    neutral: { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.15)", color: "var(--color-foreground)" },
-    accent:  { bg: "rgba(255,208,102,0.15)", border: "rgba(255,208,102,0.35)", color: "#FFD066" },
+    neutral: { bg: "var(--color-secondary-bg)", border: "var(--color-border)", color: "var(--color-foreground)" },
+    accent:  { bg: "var(--color-accent-bg)", border: "var(--color-accent-border)", color: "var(--color-accent)" },
   };
   const style = colorStyles[color];
 

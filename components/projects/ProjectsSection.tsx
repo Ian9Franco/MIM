@@ -17,6 +17,10 @@ interface ProjectsSectionProps {
   loaderColors: Record<string, string>;
 }
 
+/**
+ * Sección principal que muestra la lista de proyectos (instancias) del usuario.
+ * Permite seleccionar, editar y crear nuevos proyectos.
+ */
 export function ProjectsSection({
   projects,
   activeProjectId,

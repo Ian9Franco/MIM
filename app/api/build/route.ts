@@ -1,15 +1,14 @@
 /**
  * /api/build — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Triggers an alluser or allhost build via the builder module.
+ * Dispara una build de tipo "alluser" o "allhost" usando el módulo builder.
+ * Copia los mods del source tree a la carpeta de builds del proyecto.
  *
  * Body: { version: string, loader: string, projectName: string, buildType: "alluser" | "allhost" }
+ * Respuesta: resultado del builder (lista de archivos copiados, errores, etc.)
  *
- * Changes from original:
- *   - isValidLoader() helper from constants replaces the inline LOADERS.includes() cast
- *   - Post-sanitization guard: empty safeName after stripping illegal chars → 400
- *   - BUILD_TYPES as const tuple for type-safe buildType check
- *   - Structured console.error with route prefix on catch
+ * - alluser: solo mods marcados como "user" (cliente)
+ * - allhost: todos los mods (cliente + servidor)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

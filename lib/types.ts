@@ -17,7 +17,13 @@ export interface ModHit {
   body?:         string;
   client_side?:  string;
   server_side?:  string;
+  allowModDistribution?: boolean;
   _source?:      "modrinth" | "curseforge";
+  availability?: {
+    modrinth: boolean;
+    curseforge: boolean;
+    checking?: boolean;
+  };
 }
 
 export interface CollectionEntry {

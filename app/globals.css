@@ -33,6 +33,10 @@
 
   --color-secondary-bg: rgba(255, 255, 255, 0.04);
   --color-hover:      rgba(255, 255, 255, 0.06);
+
+  /* CurseForge Specific Tokens */
+  --color-cf-bg:      rgba(30, 20, 10, 0.85);
+  --color-cf-border:  rgba(241, 100, 54, 0.2);
 }
 
 /* VAMPIRE (Old Dark) */
@@ -69,23 +73,27 @@
 
   --color-secondary-bg: rgba(187, 150, 228, 0.06);
   --color-hover:      rgba(187, 150, 228, 0.1);
+
+  /* CurseForge Specific Tokens */
+  --color-cf-bg:      rgba(30, 20, 10, 0.85);
+  --color-cf-border:  rgba(241, 100, 54, 0.3);
 }
 
 /* MODERN (Old Light) */
 [data-theme="modern"] {
-  --color-background: #F5F3FF;
-  --color-surface:    #EDE9FE;
+  --color-background: #F0F2F9; /* Un tono ligeramente más azulado y profundo */
+  --color-surface:    #E5E7EB;
   --color-card:       #FFFFFF;
   --color-primary:    #7C3AED;
-  --color-accent:     #B45309; /* Deep Amber for contrast */
-  --color-emerald:    #059669; /* Deep Emerald */
+  --color-accent:     #0891B2; /* Cyan vibrante para mejor contraste y frescura */
+  --color-emerald:    #059669; 
   --color-foreground: #1E1B4B;
-  --color-muted:      #6B7280; /* Gray-500 */
+  --color-muted:      #4B5563; /* Gris más oscuro para legibilidad */
   --color-border:     rgba(124, 58, 237, 0.15);
   --color-border-strong: rgba(124, 58, 237, 0.3);
 
   --glow-primary: rgba(124, 58, 237, 0.1);
-  --glow-accent:  rgba(180, 83, 9, 0.08);
+  --glow-accent:  rgba(8, 145, 178, 0.08);
 
   /* Semantic States */
   --color-danger:     #DC2626;
@@ -96,15 +104,47 @@
   --color-success:    #059669;
   --color-success-bg: #D1FAE5;
 
-  --color-warning:    #D97706;
-  --color-warning-bg: #FEF3C7;
+  --color-warning:    #0891B2;
+  --color-warning-bg: #ECFEFF;
 
-  --color-accent-bg:  #FEF3C7; /* Amber-100 for yellow buttons */
-  --color-accent-hover: #FDE68A;
-  --color-accent-border: #FCD34D;
+  --color-accent-bg:  #ECFEFF; 
+  --color-accent-hover: #CFFAFE;
+  --color-accent-border: #A5F3FC;
 
   --color-secondary-bg: rgba(124, 58, 237, 0.08);
   --color-hover:      rgba(124, 58, 237, 0.12);
+
+  /* CurseForge Specific Tokens (Modern Light) */
+  --color-cf-bg:      rgba(8, 145, 178, 0.06);
+  --color-cf-border:  rgba(8, 145, 178, 0.2);
+
+  /* Global Contrast Adjustments for Modern (Light) */
+  --opacity-muted: 0.7; /* Mayor opacidad para textos secundarios */
+}
+
+[data-theme="modern"] input,
+[data-theme="modern"] textarea {
+  color: var(--color-foreground) !important;
+}
+
+[data-theme="modern"] input::placeholder,
+[data-theme="modern"] textarea::placeholder {
+  color: var(--color-muted) !important;
+  opacity: 0.6;
+}
+
+[data-theme="modern"] .opacity-40 { opacity: 0.7 !important; }
+[data-theme="modern"] .opacity-35 { opacity: 0.65 !important; }
+[data-theme="modern"] .text-white\/40 { color: var(--color-muted) !important; }
+[data-theme="modern"] .text-white\/60 { color: var(--color-foreground) !important; opacity: 0.8; }
+
+
+/* Background refinement for Modern */
+[data-theme="modern"] body {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(8, 145, 178, 0.04) 0px, transparent 50%);
+  background-attachment: fixed;
 }
 
 @theme {
@@ -135,10 +175,10 @@ html, body {
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar       { width: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(187, 150, 228, 0.22); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(187, 150, 228, 0.40); }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-primary) 40%, transparent); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 
 /* ── Selection ──────────────────────────────────────────────────────────────── */
 ::selection { background: rgba(187, 150, 228, 0.28); color: var(--color-foreground); }
@@ -198,17 +238,20 @@ html, body {
 }
 
 /* ── Custom Scrollbar ───────────────────────────────────────────────────────── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 40%, transparent) transparent;
+}
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: 10px;
-  transition: background 0.3s ease;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--color-primary);

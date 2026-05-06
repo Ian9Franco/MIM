@@ -40,3 +40,6 @@ secret.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch y tests locales
+/scratch/

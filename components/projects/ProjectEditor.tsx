@@ -1,18 +1,16 @@
 import React, { useState } from "react";
 import { Check, X } from "lucide-react";
 import { LOADERS } from "@/lib/constants";
+import { LOADER_COLORS } from "@/constants/app";
 import type { Loader } from "@/lib/constants";
+import type { Project } from "@/lib/types";
 
-export interface Project {
-  id: string;
-  name: string;
-  version: string;
-  loader: Loader;
-}
-
-const LOADER_COLOR: Record<string, string> = {
-  forge: "#3B82F6", neoforge: "#06B6D4", fabric: "#8B5CF6", quilt: "#EC4899",
-};
+/**
+ * Componente para crear o editar un proyecto.
+ * @param initial - Proyecto inicial a editar (si es undefined, se crea uno nuevo).
+ * @param onSave - Callback que se ejecuta al presionar Guardar.
+ * @param onCancel - Callback que se ejecuta al presionar la X.
+ */
 
 export function ProjectEditor({ initial, onSave, onCancel }: {
   initial?: Project; onSave: (p: Project) => void; onCancel: () => void;
@@ -51,10 +49,10 @@ export function ProjectEditor({ initial, onSave, onCancel }: {
           value={loader}
           onChange={(e) => setLoader(e.target.value as Loader)}
           className="input-base"
-          style={{ cursor: "pointer", color: LOADER_COLOR[loader] ?? "var(--color-foreground)" }}
+          style={{ cursor: "pointer", color: LOADER_COLORS[loader] ?? "var(--color-foreground)" }}
         >
           {LOADERS.map((l) => (
-            <option key={l} value={l} style={{ background: "var(--color-background)", color: LOADER_COLOR[l] ?? "inherit" }}>
+            <option key={l} value={l} style={{ background: "var(--color-background)", color: LOADER_COLORS[l] ?? "inherit" }}>
               {l}
             </option>
           ))}

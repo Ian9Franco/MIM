@@ -106,6 +106,13 @@ export function startWatcher(downloadsPath: string): void {
     }
   });
 
+  watcher.on("unlink", (filePath: string) => {
+    if (isRelevantFile(filePath)) {
+      console.log(`[watcher] File removed: ${path.basename(filePath)}`);
+      watcherEmitter.emit("deleted_file", filePath);
+    }
+  });
+
   watcher.on("error", (err: unknown) => {
     console.error("[watcher] chokidar error:", err);
   });

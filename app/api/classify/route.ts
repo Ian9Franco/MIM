@@ -1,31 +1,29 @@
 /**
  * /api/classify — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Moves one or more mod files from Downloads into the categorized source tree.
+ * Mueve uno o más archivos de mod desde Downloads al árbol de source categorizado.
  *
  * Body:
- *   sourcePaths: string[]      — array of absolute paths (preferred)
- *   sourcePath?: string        — single path (legacy, still supported)
- *   targetCategory: string     — format: ".essential\fauna" (backslash delimiter)
- *   version: string            — e.g. "1.20.1"
- *   modloader: string          — e.g. "forge"
+ *   sourcePaths: string[]  — array de rutas absolutas (preferido)
+ *   sourcePath?: string    — ruta única (legado, sigue siendo soportado)
+ *   targetCategory: string — formato: "category\sub" (delimitador backslash)
+ *   version: string        — ej: "1.20.1"
+ *   modloader: string      — ej: "forge"
+ *   projectName?: string   — nombre del proyecto para resourcepacks/shaders/datapacks
  *
- * Uses copy+delete instead of fs.rename because rename fails cross-drive
- * on Windows (C: → D:).
+ * Usa copy+delete en lugar de fs.rename porque rename falla en movimientos
+ * cross-drive en Windows (C: → D:).
  *
- * Changes from original:
- *   - targetCategory parsing replaced: split("\\") → indexOf + slice with
- *     explicit guard when the separator is absent (avoids silent empty-string split)
- *   - isValidCategory() from constants used instead of manual double-check
- *   - Missing source files accumulate in skipped[] instead of silently continuing;
- *     skipped paths are returned in the response body for client awareness
- *   - Structured console.warn/error with route prefix
+ * El tipo del archivo se detecta automáticamente con scanMod():
+ *   - resourcepack / shader / datapack → carpeta del proyecto (_projects/{name})
+ *   - mod / desconocido               → árbol estándar ({version}/{loader}/{category}/{sub})
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, isValidCategory } from "@/lib/constants";
 import { getProjectSubcategories } from "@/lib/projectSubcategories";
+import { scanMod } from "@/lib/scanner";
 import path from "path";
 import fs from "fs";
 
@@ -92,9 +90,6 @@ export async function POST(req: NextRequest) {
 
     const moved: string[] = [];
     const skipped: string[] = [];
-
-    // Import scanner for on-the-fly type detection
-    const { scanMod } = require("@/lib/scanner");
 
     for (const p of pathsToProcess) {
       if (!fs.existsSync(p)) {

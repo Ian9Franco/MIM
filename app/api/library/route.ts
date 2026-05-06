@@ -1,19 +1,15 @@
 /**
  * /api/library — GET
  * ─────────────────────────────────────────────────────────────────────────────
- * Returns every classified mod for a given version+loader combination.
+ * Devuelve todos los mods clasificados para una combinación de versión+loader.
+ * Recorre el árbol de categorías en el SOURCE_BASE y escanea cada JAR.
  *
  * Query params: ?version=1.20.1&loader=forge
+ * Respuesta: { library: LibraryEntry[] }
  *
- * Response:
- *   { library: LibraryEntry[] }
- *
- * Changes from original:
- *   - isValidLoader() validation added — rejects unknown loaders before hitting disk
- *   - `any[]` replaced with explicit LibraryEntry interface
- *   - scanMod error catch now logs fileName so failures are traceable
- *   - Early return on missing loaderPath wrapped in isValidLoader guard to avoid
- *     returning empty library for a typo'd loader silently
+ * Si la combinación version+loader no existe aún, devuelve library vacío (no error).
+ * Si scanMod falla en un archivo (JAR corrupto o bloqueado), incluye la entrada
+ * con meta de fallback para que el archivo siga apareciendo en la librería.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

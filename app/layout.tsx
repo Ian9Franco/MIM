@@ -5,9 +5,14 @@ import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 export const metadata: Metadata = {
   title: "MIM — Minecraft Intelligent Manager",
   description: "Gestor inteligente de mods, builds y assets para packs de Minecraft.",
-  icons: { icon: "/icono.jpg", apple: "/icono.jpg" },
+  icons: { icon: "/MIMico.png", apple: "/MIMico.png" },
 };
 
+/**
+ * Layout principal del servidor (Server Component) para la aplicación.
+ * Define los metadatos globales e inicializa el documento HTML con
+ * el cliente RootLayoutClient para manejar el estado global.
+ */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">

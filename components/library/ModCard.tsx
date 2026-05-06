@@ -74,14 +74,14 @@ export const ModCard = memo(function ModCard({
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
-  const cardBorder = isSelected && !isError ? "rgba(255,208,102,0.55)"
+  const cardBorder = isSelected && !isError ? "var(--color-accent-border)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
-    : COLORS.border;
-  const cardBg = isSelected && !isError ? "rgba(255,208,102,0.05)"
+    : "var(--color-border)";
+  const cardBg = isSelected && !isError ? "var(--color-accent-bg)"
     : isError   ? "rgba(127,29,29,0.12)"
     : "color-mix(in srgb, var(--color-card) 82%, transparent)";
   const cardShadow = isSelected && !isError
-    ? "0 0 28px rgba(255,208,102,0.12), 0 4px 16px rgba(0,0,0,0.2)"
+    ? "0 0 28px var(--glow-accent), 0 4px 16px rgba(0,0,0,0.1)"
     : "none";
 
   const stopPropDownload = useCallback((e: React.MouseEvent) => {
@@ -129,8 +129,8 @@ export const ModCard = memo(function ModCard({
           aria-hidden="true"
           className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
           style={{
-            background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "rgba(255,208,102,0.12)" : "rgba(187,150,228,0.1)",
-            border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "rgba(255,208,102,0.25)" : "rgba(187,150,228,0.18)"}`,
+            background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "var(--color-accent-bg)" : "var(--color-secondary-bg)",
+            border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "var(--color-accent-border)" : "var(--color-border)"}`,
           }}
         >
           {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -151,7 +151,7 @@ export const ModCard = memo(function ModCard({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5" role="list" aria-label="Etiquetas">
-            <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.accent, fontSize: "0.6rem" }}>{version}</span>
+            <span role="listitem" className="font-label rounded-full px-2 py-0.5" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)", fontSize: "0.6rem" }}>{version}</span>
             {modVersion && modVersion !== "unknown" && (
               <span role="listitem" className="font-caption rounded-full px-2 py-0.5" style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: COLORS.primary }}>v{modVersion}</span>
             )}
@@ -192,7 +192,11 @@ export const ModCard = memo(function ModCard({
                     aria-label="Descargar actualización"
                     title="Descargar actualización"
                     className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-105"
-                    style={{ background: isDownloading ? "rgba(255,255,255,0.04)" : "rgba(255,208,102,0.15)", border: `1px solid ${isDownloading ? "rgba(255,255,255,0.08)" : "rgba(255,208,102,0.35)"}`, color: isDownloading ? "rgba(255,255,255,0.25)" : COLORS.accent }}
+                    style={{ 
+                      background: isDownloading ? "var(--color-secondary-bg)" : "var(--color-accent-bg)", 
+                      border: `1px solid ${isDownloading ? "var(--color-border)" : "var(--color-accent-border)"}`, 
+                      color: isDownloading ? "var(--color-muted)" : "var(--color-accent)" 
+                    }}
                   >
                     {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
                   </button>

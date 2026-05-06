@@ -32,6 +32,11 @@ function Divider() {
   return <div className="h-px w-full" style={{ background: "var(--color-border)" }} aria-hidden="true" />;
 }
 
+/**
+ * Genera un "fingerprint" o huella única para un archivo pendiente
+ * basado en sus metadatos. Se utiliza para detectar archivos duplicados
+ * en la carpeta de descargas y eliminarlos automáticamente.
+ */
 function getPendingFingerprint(file: PendingFile): string {
   const meta = file.meta;
   return [
@@ -58,6 +63,16 @@ export default function Page() {
   const [detailsOpen,      setDetailsOpen]      = useState(false);
   const [mounted,          setMounted]          = useState(false);
 
+
+
+  const lib = useLibrary(
+    projects.activeProject,
+    pendingFiles,
+    setPendingFiles,
+    selectedLibFiles,
+    setSelectedLibFiles,
+  );
+
   useEffect(() => {
     setMounted(true);
     const handleFomoToggle = (e: Event) => {
@@ -68,21 +83,24 @@ export default function Page() {
       const customEvent = e as CustomEvent<{ open: boolean }>;
       setDetailsOpen(customEvent.detail.open);
     };
+    const handleRefreshRequest = async () => {
+      lib.refreshLibrary();
+      // También re-escanear descargas pendientes
+      try {
+        const res = await fetch("/api/watcher/rescan");
+        const data = await res.json();
+        if (data.pending) setPendingFiles(data.pending);
+      } catch (_) {}
+    };
     window.addEventListener("fomo-toggle", handleFomoToggle);
     window.addEventListener("fomo-details-toggle", handleDetailsToggle);
+    window.addEventListener("refresh-system", handleRefreshRequest);
     return () => {
       window.removeEventListener("fomo-toggle", handleFomoToggle);
       window.removeEventListener("fomo-details-toggle", handleDetailsToggle);
+      window.removeEventListener("refresh-system", handleRefreshRequest);
     };
-  }, []);
-
-  const lib = useLibrary(
-    projects.activeProject,
-    pendingFiles,
-    setPendingFiles,
-    selectedLibFiles,
-    setSelectedLibFiles,
-  );
+  }, [lib]);
 
   const allSelected = [...selectedFiles, ...selectedLibFiles];
 
@@ -94,22 +112,30 @@ export default function Page() {
     es.onerror   = () => setLoading(false);
     es.onmessage = (e) => {
       try {
-        const data: PendingFile = JSON.parse(e.data);
-        if (data?.fileName) {
-          setPendingFiles((prev) => {
-            if (prev.find((f) => f.path === data.path)) return prev;
+        const data = JSON.parse(e.data);
+        
+        // Manejar borrado físico
+        if (data.type === "deleted") {
+          setPendingFiles((prev) => prev.filter((f) => f.path !== data.path));
+          return;
+        }
 
-            const duplicate = prev.find((f) => getPendingFingerprint(f) === getPendingFingerprint(data));
+        const pending: PendingFile = data;
+        if (pending?.fileName) {
+          setPendingFiles((prev) => {
+            if (prev.find((f) => f.path === pending.path)) return prev;
+
+            const duplicate = prev.find((f) => getPendingFingerprint(f) === getPendingFingerprint(pending));
             if (duplicate) {
               void fetch("/api/delete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ path: data.path }),
+                body: JSON.stringify({ path: pending.path }),
               });
               return prev;
             }
 
-            return [...prev, data];
+            return [...prev, pending];
           });
           setLoading(false);
         }
@@ -117,35 +143,6 @@ export default function Page() {
     };
     return () => es.close();
   }, []);
-
-  useEffect(() => {
-    const seen = new Map<string, PendingFile>();
-    const duplicates: PendingFile[] = [];
-
-    for (const pending of pendingFiles) {
-      const key = getPendingFingerprint(pending);
-      if (seen.has(key)) {
-        duplicates.push(pending);
-      } else {
-        seen.set(key, pending);
-      }
-    }
-
-    if (duplicates.length === 0) return;
-
-    setPendingFiles((prev) => {
-      const duplicatePaths = new Set(duplicates.map((file) => file.path));
-      return prev.filter((file) => !duplicatePaths.has(file.path));
-    });
-
-    for (const duplicate of duplicates) {
-      void fetch("/api/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: duplicate.path }),
-      });
-    }
-  }, [pendingFiles]);
 
   /* ── Keyboard hotkeys ────────────────────────────────────────────────── */
   useEffect(() => {
@@ -230,7 +227,7 @@ export default function Page() {
         <Divider />
 
         {/* ── Row 2: Dynamic Column Grid (Downloads | Categorization | Library) ── */}
-        <div className={`grid grid-cols-1 ${fomoOpen ? "lg:grid-cols-2" : "xl:grid-cols-3"} gap-6 items-start mt-6 animate-fade-up`}>
+        <div className={`grid grid-cols-1 ${fomoOpen ? "lg:grid-cols-[260px_1fr]" : "xl:grid-cols-[1.2fr_320px_2fr]"} gap-6 items-start mt-6 animate-fade-up`}>
           
           {/* Column 1: Descargas Pendientes (Only when FOMO is closed) */}
           {!fomoOpen && (

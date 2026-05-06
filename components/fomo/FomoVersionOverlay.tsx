@@ -1,6 +1,6 @@
 import React, { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Globe, Laptop, Server, Calendar, HardDrive, Box } from "lucide-react";
+import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Laptop, Server } from "lucide-react";
 import { formatSize, openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml } from "@/utils/markdown";

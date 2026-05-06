@@ -1,60 +1,105 @@
+/**
+ * /api/local-collections — GET / POST / DELETE
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Gestiona colecciones locales de mods almacenadas en mim-collections.json.
+ * Las colecciones locales son independientes de Modrinth y se guardan en disco.
+ *
+ * GET  — Lista todas las colecciones locales.
+ * POST — Crea una colección, agrega o elimina un proyecto de una colección.
+ *   actions: "create" | "add_project" | "remove_project"
+ * DELETE — Elimina una colección local completa.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const COLLECTIONS_FILE = path.join(process.cwd(), "mim-collections.json");
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 
-function getLocalCollections() {
-  if (fs.existsSync(COLLECTIONS_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(COLLECTIONS_FILE, "utf-8"));
-    } catch (e) {}
-  }
-  return [];
+interface LocalProject {
+  projectId: string;
+  [key: string]: unknown;
 }
 
-function saveLocalCollections(data: any) {
+interface LocalCollection {
+  id:           string;
+  name:         string;
+  description:  string;
+  projectCount: number;
+  projects:     LocalProject[];
+  iconUrl:      string | null;
+  isLocal:      boolean;
+  source:       "local";
+}
+
+// ── Persistencia ──────────────────────────────────────────────────────────────
+
+const COLLECTIONS_FILE = path.join(process.cwd(), "mim-collections.json");
+
+/** Lee las colecciones desde el archivo JSON local. Devuelve [] si no existe o está corrupto. */
+function getLocalCollections(): LocalCollection[] {
+  if (!fs.existsSync(COLLECTIONS_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(COLLECTIONS_FILE, "utf-8"));
+  } catch {
+    // Archivo corrupto o inválido — devolvemos vacío para no bloquear la app
+    return [];
+  }
+}
+
+/** Persiste el array de colecciones en el archivo JSON local. */
+function saveLocalCollections(data: LocalCollection[]): void {
   fs.writeFileSync(COLLECTIONS_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
+// ── GET — Listar colecciones ───────────────────────────────────────────────────
+
 export async function GET() {
-  const collections = getLocalCollections().map((coll: any) => ({
+  const collections = getLocalCollections().map((coll) => ({
     ...coll,
+    // Recalcular projectCount a partir del array real por si se desincronizó
     projectCount: Array.isArray(coll.projects) ? coll.projects.length : (coll.projectCount ?? 0),
-    source: "local",
+    source: "local" as const,
   }));
   return NextResponse.json({ collections });
 }
+
+// ── POST — Acciones sobre colecciones ─────────────────────────────────────────
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const collections = getLocalCollections();
 
+    // ── Crear nueva colección ────────────────────────────────────────────────
     if (body.action === "create") {
-      const newColl = {
-        id: "local_" + Date.now(),
-        name: body.name || "Nueva Colección",
-        description: body.description || "",
+      const newColl: LocalCollection = {
+        id:           "local_" + Date.now(),
+        name:         body.name || "Nueva Colección",
+        description:  body.description || "",
         projectCount: 0,
-        projects: [],
-        iconUrl: null,
-        isLocal: true,
-        source: "local",
+        projects:     [],
+        iconUrl:      null,
+        isLocal:      true,
+        source:       "local",
       };
       collections.push(newColl);
       saveLocalCollections(collections);
       return NextResponse.json({ success: true, collection: newColl });
     }
 
+    // ── Agregar proyecto a una colección ─────────────────────────────────────
     if (body.action === "add_project") {
-      const coll = collections.find((c: any) => c.id === body.collectionId);
-      if (!coll) return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+      const coll = collections.find((c) => c.id === body.collectionId);
+      if (!coll) {
+        return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+      }
       if (!body.project?.projectId) {
         return NextResponse.json({ error: "Falta el proyecto a agregar" }, { status: 400 });
       }
-      
-      if (!coll.projects.find((p: any) => p.projectId === body.project.projectId)) {
+      // Evitar duplicados
+      if (!coll.projects.find((p) => p.projectId === body.project.projectId)) {
         coll.projects.push(body.project);
         coll.projectCount = coll.projects.length;
         saveLocalCollections(collections);
@@ -62,43 +107,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // ── Eliminar proyecto de una colección ───────────────────────────────────
     if (body.action === "remove_project") {
-      const coll = collections.find((c: any) => c.id === body.collectionId);
-      if (!coll) return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
-      
-      coll.projects = coll.projects.filter((p: any) => p.projectId !== body.projectId);
+      const coll = collections.find((c) => c.id === body.collectionId);
+      if (!coll) {
+        return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+      }
+      coll.projects     = coll.projects.filter((p) => p.projectId !== body.projectId);
       coll.projectCount = coll.projects.length;
       saveLocalCollections(collections);
       return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/local-collections] POST error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
+// ── DELETE — Eliminar colección completa ──────────────────────────────────────
+
 export async function DELETE(req: Request) {
   try {
-    const body = await req.json();
-    const { collectionId } = body;
+    const { collectionId } = await req.json();
 
     if (!collectionId) {
       return NextResponse.json({ error: "Falta collectionId" }, { status: 400 });
     }
 
     const collections = getLocalCollections();
-    const idx = collections.findIndex((c: any) => c.id === collectionId);
+    const idx = collections.findIndex((c) => c.id === collectionId);
 
     if (idx === -1) {
       return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
     }
 
-    const deleted = collections.splice(idx, 1)[0];
+    const [deleted] = collections.splice(idx, 1);
     saveLocalCollections(collections);
 
     return NextResponse.json({ success: true, deleted: deleted.name });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/local-collections] DELETE error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

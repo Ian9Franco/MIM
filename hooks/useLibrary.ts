@@ -52,6 +52,19 @@ export function useLibrary(
     setCheckingUpdates(false);
   }, [activeProject, library]);
 
+  const refreshLibrary = useCallback(async () => {
+    if (!activeProject) return;
+    setLoadingLibrary(true);
+    try {
+      const res = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}`);
+      const data = await res.json();
+      setLibrary(data.library || []);
+      // También refrescar actualizaciones
+      handleCheckUpdates();
+    } catch (_) {}
+    setLoadingLibrary(false);
+  }, [activeProject, handleCheckUpdates]);
+
   useEffect(() => {
     if (activeProject && library.length > 0 && !autoCheckedProjects.current.has(activeProject.id)) {
       autoCheckedProjects.current.add(activeProject.id);
@@ -272,6 +285,7 @@ export function useLibrary(
     handleDownloadUpdate,
     handleResolveConflict,
     handleDismissUpdate,
-    handleClassify
+    handleClassify,
+    refreshLibrary
   };
 }

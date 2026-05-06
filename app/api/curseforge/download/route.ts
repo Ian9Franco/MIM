@@ -1,12 +1,18 @@
 /**
  * /api/curseforge/download — POST
  * ─────────────────────────────────────────────────────────────────────────────
- * Proxy para descargar archivos de CurseForge y guardarlos en Downloads.
- * Reutiliza la lógica de Modrinth para consistencia.
+ * Descarga un archivo de CurseForge a la carpeta Downloads del usuario para
+ * que el watcher lo detecte e inicie el flujo de clasificación.
+ *
+ * Body: { url: string, filename: string }
+ * Respuesta: { success: true, path: string }
+ *
+ * Nota: CurseForge no requiere API key para la descarga directa de archivos
+ * (a diferencia del discovery). La URL viene del endpoint /api/curseforge/versions.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/constants";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -19,28 +25,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing url or filename" }, { status: 400 });
     }
 
-    const safeFilename = path.basename(filename);
+    // path.basename previene path traversal ("../../evil.jar" → "evil.jar")
+    const safeFilename = path.basename(filename as string);
     const downloadsDir = path.join(os.homedir(), "Downloads");
     let destPath = path.join(downloadsDir, safeFilename);
 
-    // Evitar sobreescritura si ya existe en Downloads
+    // Guard de colisión: renombrar con timestamp si el archivo ya existe
     if (fs.existsSync(destPath)) {
-      const ext = path.extname(safeFilename);
+      const ext  = path.extname(safeFilename);
       const name = path.basename(safeFilename, ext);
-      destPath = path.join(downloadsDir, `${name}_${Date.now()}${ext}`);
+      destPath   = path.join(downloadsDir, `${name}_${Date.now()}${ext}`);
     }
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch from CurseForge: ${res.statusText}`);
-    
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
+    const res = await fetch(url as string);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch from CurseForge: ${res.statusText}`);
+    }
+
+    const buffer = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(destPath, buffer);
 
+    console.log(`[/api/curseforge/download] Saved: ${path.basename(destPath)}`);
     return NextResponse.json({ success: true, path: destPath });
-  } catch (e: any) {
-    console.error("[CurseForge Download Error]", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("[/api/curseforge/download] Unhandled error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

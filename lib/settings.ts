@@ -10,28 +10,40 @@ export interface MimSettings {
 
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
 
+/**
+ * Returns the absolute path of the portable directory where settings,
+ * whitelists, and other user data files are stored.
+ * Priority:
+ *  1. D:\.mine\source\.mim-index (for the main developer environment)
+ *  2. %USERPROFILE%\.mim-index (universal portable fallback for executable/dist/host runs)
+ */
+export function getPortableDir(): string {
+  const dMineSource = path.join("D:", ".mine", "source");
+  if (fs.existsSync(dMineSource)) {
+    return path.join(dMineSource, ".mim-index");
+  }
+  return path.join(os.homedir(), ".mim-index");
+}
+
 function getSettingsPath(): string {
   try {
-    const baseDir = path.join("D:", ".mine", "source");
-    if (fs.existsSync(baseDir)) {
-      const portableDir = path.join(baseDir, ".mim-index");
-      if (!fs.existsSync(portableDir)) {
-        fs.mkdirSync(portableDir, { recursive: true });
-      }
-      const portableFile = path.join(portableDir, "mim-settings.json");
-      
-      // Migrate local settings if portable doesn't exist yet but local does
-      if (!fs.existsSync(portableFile) && fs.existsSync(LOCAL_SETTINGS_FILE)) {
-        try {
-          fs.copyFileSync(LOCAL_SETTINGS_FILE, portableFile);
-          fs.unlinkSync(LOCAL_SETTINGS_FILE);
-          console.log(`[Settings] Migrated local settings to portable location: ${portableFile}`);
-        } catch (err) {
-          console.error("[Settings] Migration failed:", err);
-        }
-      }
-      return portableFile;
+    const portableDir = getPortableDir();
+    if (!fs.existsSync(portableDir)) {
+      fs.mkdirSync(portableDir, { recursive: true });
     }
+    const portableFile = path.join(portableDir, "mim-settings.json");
+    
+    // Migrate local settings if portable doesn't exist yet but local does
+    if (!fs.existsSync(portableFile) && fs.existsSync(LOCAL_SETTINGS_FILE)) {
+      try {
+        fs.copyFileSync(LOCAL_SETTINGS_FILE, portableFile);
+        fs.unlinkSync(LOCAL_SETTINGS_FILE);
+        console.log(`[Settings] Migrated local settings to portable location: ${portableFile}`);
+      } catch (err) {
+        console.error("[Settings] Migration failed:", err);
+      }
+    }
+    return portableFile;
   } catch (e) {
     console.warn("[Settings] Could not access or create portable settings path:", e);
   }

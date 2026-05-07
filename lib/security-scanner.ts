@@ -154,9 +154,10 @@ function getWhitelistedMods(): Set<string> {
   const modsSet = new Set<string>(localWhitelist.map(m => m.toLowerCase().trim()));
 
   try {
-    const baseDir = path.join("D:", ".mine", "source");
-    if (fs.existsSync(baseDir)) {
-      const portableDir = path.join(baseDir, ".mim-index");
+    const { getPortableDir } = require("./settings");
+    const portableDir = getPortableDir();
+    
+    if (portableDir) {
       if (!fs.existsSync(portableDir)) {
         fs.mkdirSync(portableDir, { recursive: true });
       }

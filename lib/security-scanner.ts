@@ -22,6 +22,7 @@
 import AdmZip from "adm-zip";
 import fs from "fs";
 import crypto from "crypto";
+import path from "path";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 
@@ -32,6 +33,14 @@ export interface SecurityScanResult {
   riskLevel: "clean" | "caution" | "suspicious" | "critical";
   /** SHA-1 hash of the file */
   sha1: string;
+  /** SHA-256 hash of the file */
+  sha256?: string;
+  /** VirusTotal analysis stats if available */
+  virusTotal?: {
+    maliciousCount: number;
+    totalEngineCount: number;
+    detailsUrl?: string;
+  } | null;
   /** List of detected threats with explanations */
   findings: SecurityFinding[];
   /** Summary for UI display */
@@ -138,6 +147,111 @@ const KNOWN_MALWARE_HASHES: Set<string> = new Set([
   // "a1b2c3d4e5f6...", // Example malware hash
 ]);
 
+// ── Whitelist & Cloud Verification Helpers ─────────────────────────────────────
+
+const WHITELISTED_MODS = new Set([
+  "fabric-api",
+  "fabric",
+  "forge",
+  "minecraft",
+  "architectury",
+  "cloth-config",
+  "sodium",
+  "iris",
+  "indium",
+  "lithium",
+  "phosphor",
+  "ferritecore",
+  "modernfix",
+  "krypton",
+  "canary",
+  "plushie",
+  "jei",
+  "rei",
+  "emi",
+  "citresewn",
+  "entitytexturefeatures",
+  "animatica",
+  "continuity",
+  "rubidium",
+  "oculus",
+  "embeddium",
+  "kotlin-for-forge",
+  "cloth-config-lite",
+  "cloth-config2",
+  "curios",
+  "patchouli",
+  "geckolib",
+  "citadel",
+  "creativecore",
+  "cupboard",
+  "searchables",
+  "architectury-api",
+  "pehkui",
+  "clumps",
+  "fastsuite",
+  "placebo",
+  "controlling",
+  "appleskin",
+  "bookshelf",
+  "balm",
+  "waystones",
+  "journeymap",
+  "xaerominimap",
+  "xaeroworldmap",
+]);
+
+function calculateSha256(filePath: string): string {
+  const hash = crypto.createHash("sha256");
+  const data = fs.readFileSync(filePath);
+  hash.update(data);
+  return hash.digest("hex");
+}
+
+async function checkVirusTotalHash(sha256: string): Promise<{ maliciousCount: number; totalEngineCount: number; detailsUrl?: string } | null> {
+  const apiKey = process.env.VIRUSTOTAL_API_KEY;
+  if (!apiKey || apiKey.startsWith("d7bb8b") || apiKey.includes("...")) {
+    return null;
+  }
+
+  try {
+    const res = await fetch(`https://www.virustotal.com/api/v3/files/${sha256}`, {
+      headers: {
+        "x-apikey": apiKey,
+      },
+    });
+
+    if (res.status === 404) {
+      // Not found on VirusTotal is clean/undetected
+      return { maliciousCount: 0, totalEngineCount: 0 };
+    }
+
+    if (!res.ok) {
+      console.warn(`[VirusTotal API] Error ${res.status}: ${res.statusText}`);
+      return null;
+    }
+
+    const json = await res.json();
+    const stats = json?.data?.attributes?.last_analysis_stats;
+    if (stats) {
+      const malicious = stats.malicious || 0;
+      const suspicious = stats.suspicious || 0;
+      const total = (stats.harmless || 0) + (stats.type_unsupported || 0) + (stats.suspicious || 0) + (stats.confirmed_timeout || 0) + (stats.timeout || 0) + (stats.failure || 0) + (stats.malicious || 0) + (stats.undetected || 0);
+      const permalink = json?.data?.links?.self ? `https://www.virustotal.com/gui/file/${sha256}` : undefined;
+      return {
+        maliciousCount: malicious + suspicious,
+        totalEngineCount: total,
+        detailsUrl: permalink,
+      };
+    }
+  } catch (err) {
+    console.error("[VirusTotal API] Unhandled error querying hash:", err);
+  }
+
+  return null;
+}
+
+
 // ── Main Scanner Function ───────────────────────────────────────────────────────
 
 /**
@@ -150,10 +264,11 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   const findings: SecurityFinding[] = [];
   const scannedAt = new Date().toISOString();
 
-  // Calculate file hash first
+  // Calculate file hashes first
   const sha1 = calculateSha1(filePath);
+  const sha256 = calculateSha256(filePath);
 
-  // Check against known malware database
+  // Check against known malware database (Local Blacklist)
   if (KNOWN_MALWARE_HASHES.has(sha1)) {
     findings.push({
       category: "known_malware",
@@ -163,7 +278,70 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
       scoreImpact: 100,
     });
 
-    return buildResult(100, findings, sha1, scannedAt);
+    return buildResult(100, findings, sha1, scannedAt, sha256, null);
+  }
+
+  // ── Whitelist & Verification Check (Local Whitelist System) ──────────────────
+  let isWhitelisted = false;
+  let modId = "";
+  try {
+    const { scanMod } = require("./scanner"); // Dynamic require to avoid circular imports
+    const meta = scanMod(filePath);
+    modId = meta.modId;
+    if (WHITELISTED_MODS.has(meta.modId.toLowerCase())) {
+      isWhitelisted = true;
+    }
+  } catch {
+    // If scanning metadata fails, fall back to filename checking
+  }
+
+  // Fallback to filename-based whitelist checking
+  if (!isWhitelisted) {
+    const filenameLower = path.basename(filePath).toLowerCase();
+    for (const item of WHITELISTED_MODS) {
+      if (filenameLower.includes(item)) {
+        isWhitelisted = true;
+        modId = item;
+        break;
+      }
+    }
+  }
+
+  if (isWhitelisted) {
+    findings.push({
+      category: "manifest_anomaly",
+      severity: "info",
+      description: `🛡️ Mod verificado oficialmente (${modId || "Comunidad"})`,
+      details: ["Este mod es popular y confiable. Las advertencias de bytecode se marcan como seguras para evitar falsos positivos."],
+      scoreImpact: 0,
+    });
+  }
+
+  // ── VirusTotal Reputation Check (Cloud Threat DB) ───────────────────────────
+  let vtResult = null;
+  try {
+    vtResult = await checkVirusTotalHash(sha256);
+    if (vtResult) {
+      if (vtResult.maliciousCount > 0) {
+        findings.push({
+          category: "known_malware",
+          severity: "critical",
+          description: `🚨 VirusTotal: ${vtResult.maliciousCount} motor(es) detectaron malware en este archivo`,
+          details: vtResult.detailsUrl ? [`Ver reporte completo: ${vtResult.detailsUrl}`] : [],
+          scoreImpact: vtResult.maliciousCount >= 3 ? 100 : vtResult.maliciousCount * 30, // 1 detección = +30, 2 = +60, 3+ = +100 (Critical)
+        });
+      } else if (vtResult.totalEngineCount > 0) {
+        findings.push({
+          category: "manifest_anomaly",
+          severity: "info",
+          description: `✅ Verificado por VirusTotal (0/${vtResult.totalEngineCount} motores maliciosos)`,
+          details: vtResult.detailsUrl ? [`Ver análisis: ${vtResult.detailsUrl}`] : [],
+          scoreImpact: 0,
+        });
+      }
+    }
+  } catch (vtErr) {
+    console.error("[Security Scanner] Failed VirusTotal query:", vtErr);
   }
 
   try {
@@ -248,9 +426,17 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   }
 
   // Calculate total risk score
-  const totalScore = Math.min(100, findings.reduce((sum, f) => sum + f.scoreImpact, 0));
+  let totalScore = findings.reduce((sum, f) => sum + f.scoreImpact, 0);
+  const hasCriticalMalware = findings.some(f => f.category === "known_malware" && f.severity === "critical");
 
-  return buildResult(totalScore, findings, sha1, scannedAt);
+  if (isWhitelisted && !hasCriticalMalware) {
+    // Whitelisted mods are capped at a very safe score of 15 (Clean) to ignore bytecode false positives
+    totalScore = Math.min(15, Math.max(0, totalScore));
+  } else {
+    totalScore = Math.min(100, Math.max(0, totalScore));
+  }
+
+  return buildResult(totalScore, findings, sha1, scannedAt, sha256, vtResult);
 }
 
 // ── Analysis Helpers ─────────────────────────────────────────────────────────────
@@ -375,7 +561,9 @@ function buildResult(
   score: number,
   findings: SecurityFinding[],
   sha1: string,
-  scannedAt: string
+  scannedAt: string,
+  sha256?: string,
+  virusTotal?: SecurityScanResult["virusTotal"]
 ): SecurityScanResult {
   // Determine risk level
   let riskLevel: SecurityScanResult["riskLevel"];
@@ -397,6 +585,8 @@ function buildResult(
     riskScore: score,
     riskLevel,
     sha1,
+    sha256,
+    virusTotal,
     findings: sortedFindings,
     summary,
     scannedAt,

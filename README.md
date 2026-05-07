@@ -400,6 +400,7 @@ mim/
 ## 🗺️ Roadmap
 
 ### ✅ Completado (2026-05-07)
+- [x] **🛡️ Security Layer v1.1 (Cloud & Whitelisting):** Integración con VirusTotal v3 (consulta de reputación en la nube mediante hashes SHA-256) y un sistema local de Whitelisting de mods oficiales para prevenir falsos positivos heurísticos.
 - [x] **SAGE Hybrid Diagnostics & Crash Interpreter v1.0** — Traducción en vivo de logs con causas exactas y medidor de inestabilidad Sinytra (0-100%).
 - [x] **Connector Compatibility Estimate (FOMO)** — Estimación contextualizada de riesgo e inestabilidad híbrida por tarjeta en tiempo real.
 - [x] **Memory de Clasificación (Fase 1)** — Pre-selección inteligente de categorías según el historial del usuario.
@@ -421,12 +422,11 @@ mim/
 ### 🚧 En Progreso
 - [ ] **JAR Scanner Avanzado** - Detección de dependencias rotas e incompatibilidades
 - [ ] **Conflict Engine** - Detección de conflictos lógicos complejos de bytecode (Mixins colisionando)
-- [ ] **Security UI** - Badge de risk score en ModCard, auto-scan
+- [ ] **Security UI** - Badge de risk score en ModCard con visualización de VirusTotal y estado verificado
 
 ### 📋 Próximos (Fases 1-5)
 - [ ] **Portfolio Case Study** - Documentación técnica con decisiones y trade-offs
 - [ ] **Demo Deployable** - Landing funcional sin instalación
-- [ ] **Security Layer v1.1** - DB de hashes actualizable, whitelist, auto-scan UI
 - [ ] **AI Recommendations** - "Si usas esto, probablemente quieras esto"
 - [ ] **Natural Language Search** - "mods medievales oscuros con magia"
 

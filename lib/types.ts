@@ -140,6 +140,12 @@ export interface SecurityScanResult {
   riskScore: number;
   riskLevel: RiskLevel;
   sha1: string;
+  sha256?: string;
+  virusTotal?: {
+    maliciousCount: number;
+    totalEngineCount: number;
+    detailsUrl?: string;
+  } | null;
   findings: SecurityFinding[];
   summary: string;
   scannedAt: string;

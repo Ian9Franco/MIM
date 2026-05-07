@@ -50,10 +50,12 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 - **Connector Compatibility Estimate en FOMO (S+):** Estimaciones dinámicas en tarjetas de mods de Fabric exclusivas para proyectos híbridos, calculando el nivel de inestabilidad según tags y dependencias de renderizado/optimización.
 - **Deduplicación de Descargas Local Directa:** Detección de colisiones de descarga entre múltiples proyectos mediante hashes locales, copiando instantáneamente de forma local entre proyectos en vez de forzar re-descargas lentas de internet.
 
-### 🛡️ Security Layer v1.0
+### 🛡️ Security Layer v1.1 (Cloud & Whitelisting)
 - **Threat Detection Engine:** Análisis de bytecode para detectar malware y llamadas de red sospechosas.
 - **Risk Scoring System:** Clasificación de riesgo 0-100 con insignias visuales.
 - **Security UI:** Integración de badges de seguridad en ModCards y Centro de Alertas.
+- **Known Threat DB (VirusTotal):** Integración de hashes SHA-256 con la API pública de VirusTotal v3 para corroborar reputación de archivos y detectar virus/malware reales en tiempo de ejecución.
+- **Whitelist System Local:** Lista blanca de mods ultra populares de la comunidad (Sodium, Iris, Curios, Curios API, etc.) que previene falsos positivos capeando y ajustando los scores heurísticos a un estado limpio de forma automática.
 
 ### 📦 Core Management
 - **Universal Scanner:** Detección de Mods, Resourcepacks, Shaders y Datapacks.
@@ -82,8 +84,8 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 - [ ] **Auto-Optimization:** Ajuste automático de Java Args y Shaders según hardware.
 
 #### Fase 3: Seguridad Avanzada
-- [ ] **Known Threat DB:** Integración con APIs externas de reputación (VirusTotal, etc.).
-- [ ] **Whitelist System:** Mods verificados oficialmente.
+- [x] **Known Threat DB:** Integración con APIs externas de reputación (VirusTotal, etc.).
+- [x] **Whitelist System:** Mods verificados oficialmente.
 
 #### Fase 4: Posicionamiento Profesional
 - [ ] **Demo Deployable:** Showcase visual o landing funcional.

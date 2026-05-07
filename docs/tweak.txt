@@ -1,0 +1,347 @@
+nueva feaure TWEAK
+Tuning Workspace for Engine Adjustment & Keybinds
+
+Entonces TWEAK podría hacer cosas MUY copadas:
+⚡ Quick Tweaks
+[ Reduce Stuttering ]
+[ Increase FPS ]
+[ Optimize for Shaders ]
+[ Lower VRAM Usage ]
+[ Competitive Settings ]
+🧠 Smart Recommendations
+
+Ejemplo:
+
+Detected:
+- 8GB RAM allocated
+- Integrated GPU
+- 230 mods
+
+Recommended:
+→ lower simulation distance
+→ disable entity shadows
+→ reduce particles
+🔥 Cross-mod optimization
+
+TWEAK detecta:
+
+Sodium
+Embeddium
+Distant Horizons
+Iris
+FerriteCore
+ModernFix
+
+y ajusta configs compatibles automáticamente.
+
+⚔️ “Apply preset”
+[ Vanilla+ Smooth ]
+[ Shader Beast ]
+[ Potato Survival ]
+[ Streamer Mode ]
+🧬 Auto tuning
+
+Ejemplo:
+
+benchmark corto,
+analiza FPS,
+cambia configs automáticamente.
+
+Como GeForce Experience pero sin ser un bloated spyware poseído por demonios corporativos.
+
+
+Sí. Y acabás de encontrar una de las features MÁS valiosas de todo MIM sin darte cuenta.
+
+Porque el `options.txt` NO es solamente “configuración”.
+
+Es:
+
+# la memoria muscular del jugador.
+
+Ahí vive:
+
+* sensibilidad,
+* keybinds,
+* packs,
+* accesibilidad,
+* HUD,
+* FOV,
+* audio,
+* controls rarísimos,
+* años de costumbre.
+
+Y cuando se rompe:
+
+> el jugador siente que perdió parte del alma.
+
+No exagero.
+Los modpacks destruyen `options.txt` TODO el tiempo.
+
+---
+
+# 🧠 Entonces la feature NO debería ser:
+
+## “editor de options.txt”
+
+Sino:
+
+# “Profile Persistence System”
+
+---
+
+# Porque sí:
+
+## `options.txt` CRECE con mods.
+
+Cada mod puede agregar:
+
+* keybinds,
+* toggles,
+* categorías,
+* render settings,
+* HUD configs,
+* integrations.
+
+Ejemplo:
+
+```txt id="4lnw0m"
+key_create.rotate_menu:key.keyboard.left.alt
+```
+
+o:
+
+```txt id="j44hmf"
+key_iris.shaderPackSelection:key.keyboard.k
+```
+
+Y mientras más mods:
+→ más gigantesco y caótico se vuelve.
+
+---
+
+# 🔥 La oportunidad GIGANTE acá
+
+## Smart Keybind Manager
+
+Porque Minecraft vanilla tiene un manejo de keybinds HORRIBLE.
+
+---
+
+# MIM podría:
+
+## 🧠 Detectar conflictos
+
+```txt id="syjlwm"
+⚠ Conflict Detected
+
+R:
+- Replay Mod
+- Sodium Extras
+- Create
+```
+
+---
+
+# 🔥 Buscar por tecla
+
+```txt id="l2a3hz"
+Press a key to see all bindings
+```
+
+y muestra:
+
+* quién usa la tecla,
+* categoría,
+* mod,
+* prioridad.
+
+---
+
+# 🔥 Presets de keybinds
+
+```txt id="0qqt5z"
+[ Builder Layout ]
+[ PvP Layout ]
+[ Create Mod Layout ]
+[ Accessibility Layout ]
+```
+
+---
+
+# 🔥 Import/export de layouts
+
+Esto SOLO ya sería increíble.
+
+```txt id="3e0nzb"
+Export Controls Profile
+Import Controls Profile
+```
+
+---
+
+# Y acá está EL FEATURE GOD TIER:
+
+# 🔥 Automatic Keybind Recovery
+
+Porque vos describiste EXACTAMENTE un problema REAL.
+
+Minecraft:
+
+* resetea controls,
+* cambia IDs,
+* rompe packs,
+* mods desaparecen,
+* actualizaciones destruyen binds.
+
+Entonces:
+
+## MIM guarda snapshots automáticos.
+
+---
+
+# 🧠 Ejemplo:
+
+```txt id="7n4lrh"
+Detected keybind structure change.
+Would you like to restore your previous layout?
+```
+
+BOOM.
+
+---
+
+# Y para resource packs:
+
+## esto es ENORME.
+
+Porque el orden:
+
+# IMPORTA MUCHÍSIMO.
+
+---
+
+# Entonces MIM debería:
+
+## 📦 Resource Pack Stack Manager
+
+Visual:
+
+```txt id="nlkcyo"
+Higher Priority
+↑
+Faithful
+Fresh Animations
+Complementary Extras
+Better Leaves
+↓
+Lower Priority
+```
+
+DRAG & DROP.
+
+---
+
+# 🔥 Y snapshots
+
+```txt id="f3xfxd"
+[ Save Pack Stack ]
+[ Restore Pack Stack ]
+```
+
+---
+
+# Porque TODOS pasamos por esto:
+
+```txt id="tzcw5m"
+"incompatibleResourcePacks"
+```
+
+Minecraft:
+
+> “ahora te desactivo todo, rata”
+
+Y después:
+
+* reordenar,
+* activar,
+* probar,
+* cerrar,
+* abrir.
+
+Infierno absoluto.
+
+---
+
+# 🧠 Entonces MIM podría tener:
+
+# “State Recovery”
+
+Guardando:
+
+* keybinds,
+* packs,
+* graphics,
+* accessibility,
+* shader selection,
+* audio,
+* mod configs.
+
+---
+
+# Y todavía MÁS loco:
+
+## Per-profile configs
+
+Ejemplo:
+
+```txt id="6imv94"
+Survival Profile
+PvP Profile
+Create Modpack
+Vanilla+
+```
+
+Cada uno con:
+
+* controls,
+* packs,
+* shaders,
+* graphics,
+* UI.
+
+---
+
+# Esto ya se transforma en:
+
+# “Configuration Identity System”
+
+Porque el jugador NO configura Minecraft una vez.
+
+Construye:
+
+# un ecosistema personal.
+
+Y perderlo se siente como:
+
+> reinstalar Windows y perder todo el setup.
+
+Trauma gamer legítimo.
+
+---
+
+# Honestamente:
+
+esto tiene potencial ENORME.
+
+Porque:
+
+* launchers actuales no hacen esto bien,
+* CurseForge no resuelve nada,
+* Prism apenas toca configs,
+* Minecraft vanilla es prehistórico acá.
+
+Y vos ya detectaste:
+
+# el dolor real del usuario.
+
+Eso es exactamente lo que diferencia una feature copada de una feature indispensable.

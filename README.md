@@ -399,7 +399,11 @@ mim/
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (2026-05-05)
+### ✅ Completado (2026-05-07)
+- [x] **SAGE Hybrid Diagnostics & Crash Interpreter v1.0** — Traducción en vivo de logs con causas exactas y medidor de inestabilidad Sinytra (0-100%).
+- [x] **Connector Compatibility Estimate (FOMO)** — Estimación contextualizada de riesgo e inestabilidad híbrida por tarjeta en tiempo real.
+- [x] **Memory de Clasificación (Fase 1)** — Pre-selección inteligente de categorías según el historial del usuario.
+- [x] **Aislamiento de Proyectos con Deduplicación Local** — Clonación local automática mediante hashes para compartir archivos entre proyectos al instante y sin re-descargar de internet.
 - [x] JAR Scanner profundo con **hashes SHA1** (Fabric, Forge, NeoForge)
 - [x] UI FOMO 2.0 (Rejilla de 2 columnas + Detailed Overlay)
 - [x] Dependency Resolver (Bulk download)
@@ -416,10 +420,7 @@ mim/
 
 ### 🚧 En Progreso
 - [ ] **JAR Scanner Avanzado** - Detección de dependencias rotas e incompatibilidades
-- [ ] **Conflict Engine** - Detección de conflictos entre mods
-- [ ] **Crash Interpreter** - Traducción de logs a acciones accionables
-- [ ] **Memory de Clasificación** - Pre-seleccionar categoría basada en historial
-- [ ] **Sinytra Connector Flag** - Vista combinada Fabric+Forge
+- [ ] **Conflict Engine** - Detección de conflictos lógicos complejos de bytecode (Mixins colisionando)
 - [ ] **Security UI** - Badge de risk score en ModCard, auto-scan
 
 ### 📋 Próximos (Fases 1-5)

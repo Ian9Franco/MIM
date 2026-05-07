@@ -46,6 +46,9 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 - **Identificación Visual Premium:** Insignia 🔌 Sinytra Bridge con efectos holográficos y micro-animaciones en los mods de Fabric que el puente es capaz de ejecutar.
 - **Resolución Inteligente de Descargas:** Descarga y extrae dinámicamente versiones nativas de Fabric para mods exclusivos de Fabric cuando se instalan dentro de un perfil de Forge.
 - **Heurísticas SAGE para Modos Híbridos:** Diagnóstico inteligente capaz de detectar fallos de traducción de bytecode de clases de Fabric en tiempo de ejecución (fase de transformación/classloader de Sinytra) y reportarlos de forma simplificada en español con planes de acción adaptados.
+- **SAGE Connector Compatibility Engine (S+):** Analizador de compatibilidad híbrida con un sistema de pesos/puntuación (0-100%) y visualización de un medidor glassmórfico de riesgo en la UI, detectando bloqueos complejos de recursos (deadlocks por idiomas), falta de módulos de Fabric API y fallos de Access Widener o métodos (NoSuchMethod/Field).
+- **Connector Compatibility Estimate en FOMO (S+):** Estimaciones dinámicas en tarjetas de mods de Fabric exclusivas para proyectos híbridos, calculando el nivel de inestabilidad según tags y dependencias de renderizado/optimización.
+- **Deduplicación de Descargas Local Directa:** Detección de colisiones de descarga entre múltiples proyectos mediante hashes locales, copiando instantáneamente de forma local entre proyectos en vez de forzar re-descargas lentas de internet.
 
 ### 🛡️ Security Layer v1.0
 - **Threat Detection Engine:** Análisis de bytecode para detectar malware y llamadas de red sospechosas.
@@ -64,7 +67,7 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 
 ### 🎯 Prioridades Inmediatas (S+)
 1. **Conflict Detection Engine (Avanzado):** Extender SAGE para detectar colisiones lógicas complejas de bytecode (Mixins del mismo método) previas al lanzamiento físico del juego.
-2. **Memory de Clasificación (Fase 1):** Pre-seleccionar categorías basadas en el historial de uso manual del usuario.
+2. **Auto-Optimization (Fase 2):** Ajuste automático de Java Args y Shaders según hardware.
 
 ### 🗺️ Roadmap Estratégico
 

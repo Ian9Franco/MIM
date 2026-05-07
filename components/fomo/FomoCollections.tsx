@@ -58,6 +58,8 @@ export const FomoCollections = memo(function FomoCollections({
   const [deletingColl,   setDeletingColl]   = useState<string | null>(null);
   const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null);
 
+  const [libraryUpdates, setLibraryUpdates] = useState<Record<string, any>>({});
+
   const load = useCallback(async () => {
     setLoading(true);
     const { collections: colls, error: err } = await fetchCollections();
@@ -67,6 +69,23 @@ export const FomoCollections = memo(function FomoCollections({
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const handleUpdates = (e: Event) => {
+      const customEvent = e as CustomEvent<Record<string, any>>;
+      if (customEvent.detail) {
+        setLibraryUpdates(customEvent.detail);
+      }
+    };
+    window.addEventListener("library-updates-changed", handleUpdates);
+    
+    // Solicitar actualizaciones al montar
+    window.dispatchEvent(new CustomEvent("request-library-updates"));
+
+    return () => {
+      window.removeEventListener("library-updates-changed", handleUpdates);
+    };
+  }, []);
 
   const openCollection = useCallback(async (coll: CollectionEntry) => {
     setViewing(coll);
@@ -292,6 +311,9 @@ export const FomoCollections = memo(function FomoCollections({
                   isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
                   onToggleSelect={onToggleSelect}
                   sinytraActive={sinytraActive}
+                  hasUpdateAvailable={Object.values(libraryUpdates).some(
+                    (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                  )}
                 />
               ))}
             </div>

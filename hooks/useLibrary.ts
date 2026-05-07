@@ -158,6 +158,7 @@ export function useLibrary(
           modloader: activeProject.loader,
           version: activeProject.version,
           projectName: activeProject.name,
+          projectType: allSelected[0]?.meta?.projectType, // Hint for specific routing (shader, etc.)
         }),
       });
       if (!res.ok) return;

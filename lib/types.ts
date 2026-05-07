@@ -185,6 +185,7 @@ export interface TweakData {
     active: string[];
     available: string[];
   };
+  shadersInGame: { name: string; size: number }[];
   recommendations: TweakRecommendation[];
   snapshots: TweakSnapshot[];
   modCount: number;

@@ -1,5 +1,22 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Bell, CheckCircle, AlertTriangle, ArrowUpCircle, Shield, Package, RefreshCw, FileWarning, Info, Loader2, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  X, 
+  Bell, 
+  CheckCircle, 
+  AlertTriangle, 
+  ArrowUpCircle, 
+  Shield, 
+  Package, 
+  RefreshCw, 
+  FileWarning, 
+  Info, 
+  Loader2, 
+  Globe, 
+  ChevronDown, 
+  ChevronUp,
+  Activity,
+  Settings
+} from "lucide-react";
 
 interface AlertSidebarProps {
   sidebarOpen: boolean;
@@ -38,9 +55,24 @@ export function AlertSidebar({
   handleCheckUpdates,
   securityAlerts = [],
 }: AlertSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"all" | "updates" | "conflicts" | "security">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config">("all");
   const [expandedChangelog, setExpandedChangelog] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Unified notifications states
+  const [activeProject, setActiveProject] = useState<any>(null);
+  const [configAlerts, setConfigAlerts] = useState<Array<{
+    id: string;
+    title: string;
+    detail: string;
+    type: "danger" | "warning";
+  }>>([]);
+  const [sageAlerts, setSageAlerts] = useState<Array<{
+    id: string;
+    title: string;
+    detail: string;
+    type: "danger" | "warning";
+  }>>([]);
 
   const [seenVersions, setSeenVersions] = useState<Record<string, string>>(() => {
     if (typeof window !== "undefined") {
@@ -88,22 +120,154 @@ export function AlertSidebar({
     if (path.startsWith("collection:")) {
       const projectId = path.replace("collection:", "");
       const lastSeen = seenVersions[projectId];
-      // Only show if we have seen it before and the latest version is different than what we last saw
       return s.status === "update_available" && s.latestVersion && lastSeen && lastSeen !== s.latestVersion;
     }
     const mod = library.find(l => l.path === path);
     return s.status === "update_available" && mod && !ignoredUpdates.has(path);
   });
-  const criticalAlerts = securityAlerts.filter(a => a.riskLevel === "critical" || a.riskLevel === "suspicious");
-  
+
+  // Unified real-time fetch of configuration errors and SAGE crash logs/security warnings
+  const fetchConfigAndSageAlerts = async (proj = activeProject) => {
+    try {
+      // 1. Fetch settings validation
+      const settingsRes = await fetch("/api/settings");
+      const alerts: any[] = [];
+      
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        
+        // Check for empty API keys
+        if (!settingsData.virusTotalApiKey) {
+          alerts.push({
+            id: "cfg-virustotal",
+            title: "VirusTotal: sin API key configurada",
+            detail: "No se ha configurado la API Key de VirusTotal. SAGE no podrá consultar la reputación de firmas en la nube.",
+            type: "warning"
+          });
+        }
+        if (!settingsData.modrinthApiKey) {
+          alerts.push({
+            id: "cfg-modrinth",
+            title: "Modrinth: sin API key configurada",
+            detail: "Falta tu API Key de Modrinth. El re-escaneo de actualizaciones y tags automáticos puede verse limitado.",
+            type: "warning"
+          });
+        }
+
+        // Validate paths exist
+        const pathRes = await fetch("/api/settings/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paths: [
+              settingsData.sourceBase,
+              settingsData.buildsBase,
+              settingsData.minecraftPath,
+              settingsData.downloadsPath,
+              settingsData.stagingPath
+            ]
+          })
+        });
+        
+        if (pathRes.ok) {
+          const pathData = await pathRes.json();
+          const results = pathData.results || {};
+          
+          if (settingsData.sourceBase && !results[settingsData.sourceBase]) {
+            alerts.push({
+              id: "cfg-source",
+              title: "Carpeta de código fuente (Source) inválida",
+              detail: `La ruta de origen "${settingsData.sourceBase}" no existe en el disco. MIM no podrá gestionar tus proyectos locales.`,
+              type: "danger"
+            });
+          }
+          if (settingsData.buildsBase && !results[settingsData.buildsBase]) {
+            alerts.push({
+              id: "cfg-builds",
+              title: "Carpeta de compilaciones (Builds) inválida",
+              detail: `La ruta "${settingsData.buildsBase}" no existe en el disco. No podrás exportar tus compilaciones.`,
+              type: "danger"
+            });
+          }
+          if (settingsData.minecraftPath && !results[settingsData.minecraftPath]) {
+            alerts.push({
+              id: "cfg-minecraft",
+              title: "Instalación de Minecraft (.minecraft) no detectada",
+              detail: `No se encontró la carpeta en "${settingsData.minecraftPath}". El juego no está instalado en este equipo, por lo que el análisis de logs locales estará inactivo.`,
+              type: "warning"
+            });
+          }
+        }
+      }
+      setConfigAlerts(alerts);
+
+      // 2. Fetch SAGE analysis warnings
+      const sage: any[] = [];
+      if (proj) {
+        // Crash analysis check
+        const logsRes = await fetch(`/api/project/logs?project=${proj.name}&version=${proj.version}`);
+        if (logsRes.ok) {
+          const logFilesData = await logsRes.json();
+          const logFilesList = logFilesData?.files || [];
+          const crashFiles = logFilesList.filter((f: any) => f.type === "crash");
+          if (crashFiles.length > 0) {
+            sage.push({
+              id: "sage-crashes",
+              title: `¡Se detectaron caídas de juego! (${crashFiles.length})`,
+              detail: `Se encontraron ${crashFiles.length} reportes en la carpeta crash-reports de este proyecto. Revisa SAGE para analizarlos.`,
+              type: "danger"
+            });
+          }
+        }
+
+        // Security scanner check (retrieve list of scannable files, trigger rapid scan)
+        const secRes = await fetch(`/api/security/scan?project=${proj.name}&version=${proj.version}&loader=${proj.loader}`);
+        if (secRes.ok) {
+          const secData = await secRes.json();
+          if (secData.success && secData.scannable && secData.scannable.length > 0) {
+            const scanRes = await fetch("/api/security/scan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filePaths: secData.scannable.map((s: any) => s.filePath) })
+            });
+            if (scanRes.ok) {
+              const scanData = await scanRes.json();
+              if (scanData.success && scanData.results) {
+                const criticalCount = scanData.results.filter((r: any) => r.riskLevel === "critical").length;
+                const suspiciousCount = scanData.results.filter((r: any) => r.riskLevel === "suspicious").length;
+                
+                if (criticalCount > 0) {
+                  sage.push({
+                    id: "sage-malware",
+                    title: `¡SAGE detectó riesgo crítico! (${criticalCount})`,
+                    detail: `Se encontraron ${criticalCount} archivos que contienen malware o firmas potencialmente peligrosas. ¡No inicies el juego!`,
+                    type: "danger"
+                  });
+                } else if (suspiciousCount > 0) {
+                  sage.push({
+                    id: "sage-suspicious",
+                    title: `Riesgos moderados detectados (${suspiciousCount})`,
+                    detail: `Se identificaron ${suspiciousCount} archivos sospechosos en tus mods. Te sugerimos escanearlos detalladamente en SAGE.`,
+                    type: "warning"
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+      setSageAlerts(sage);
+    } catch (e) {
+      console.error("Error al actualizar alertas unificadas:", e);
+    }
+  };
+
   // Click outside to close
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
-        // Don't close if we clicked the toggle button itself
         const target = event.target as HTMLElement;
         if (target.closest('[data-sidebar-toggle="true"]') || target.closest('[data-header-toggle="true"]')) return;
-        
         setSidebarOpen(false);
       }
     }
@@ -111,10 +275,52 @@ export function AlertSidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [sidebarOpen, setSidebarOpen]);
 
+  // Subscribe to central MIM custom events
+  useEffect(() => {
+    const handleActiveProject = (e: Event) => {
+      const customEvent = e as CustomEvent<any>;
+      setActiveProject(customEvent.detail);
+      fetchConfigAndSageAlerts(customEvent.detail);
+    };
+
+    const handleRefresh = () => {
+      fetchConfigAndSageAlerts(activeProject);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("active-project-changed", handleActiveProject);
+      window.addEventListener("refresh-system", handleRefresh);
+    }
+
+    fetchConfigAndSageAlerts(activeProject);
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("active-project-changed", handleActiveProject);
+        window.removeEventListener("refresh-system", handleRefresh);
+      }
+    };
+  }, [activeProject]);
+
+  // Reload when the sidebar is opened
+  useEffect(() => {
+    if (sidebarOpen) {
+      fetchConfigAndSageAlerts(activeProject);
+    }
+  }, [sidebarOpen, activeProject]);
+
+  // Update global alert status dot (unifies everything!)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const total = conflicts.length + updates.length + configAlerts.length + sageAlerts.length;
+      window.dispatchEvent(new CustomEvent("alert-status-changed", { detail: total > 0 }));
+    }
+  }, [conflicts.length, updates.length, configAlerts.length, sageAlerts.length]);
+
   return (
     <div 
       ref={sidebarRef}
-      className={`fixed inset-y-0 right-0 w-[400px] z-50 flex flex-col shadow-2xl transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
       style={{ 
         background: "var(--color-card)", 
         borderLeft: "1px solid var(--color-border)",
@@ -124,9 +330,9 @@ export function AlertSidebar({
         <h2 className="text-lg font-headline flex items-center gap-2" style={{ color: "var(--color-foreground)" }}>
           <Bell className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
           Centro de Alertas
-          {(conflicts.length + updates.length + criticalAlerts.length) > 0 && (
+          {(conflicts.length + updates.length + configAlerts.length + sageAlerts.length) > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--color-danger-bg)", color: "var(--color-danger)" }}>
-              {conflicts.length + updates.length + criticalAlerts.length}
+              {conflicts.length + updates.length + configAlerts.length + sageAlerts.length}
             </span>
           )}
         </h2>
@@ -144,10 +350,8 @@ export function AlertSidebar({
           )}
           <button 
             onClick={() => setSidebarOpen(false)} 
-            className="p-2 rounded-xl transition-colors" 
+            className="p-2 rounded-xl transition-colors hover:bg-white/5" 
             style={{ color: "var(--color-muted)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -161,21 +365,21 @@ export function AlertSidebar({
           onClick={() => setActiveTab("all")}
           icon={<Info className="w-3.5 h-3.5" />}
           label="Todas"
-          count={conflicts.length + updates.length + criticalAlerts.length}
+          count={conflicts.length + updates.length + sageAlerts.length + configAlerts.length}
         />
         <TabButton
-          active={activeTab === "security"}
-          onClick={() => setActiveTab("security")}
-          icon={<Shield className="w-3.5 h-3.5" />}
-          label="Seguridad"
-          count={criticalAlerts.length}
-          alert={criticalAlerts.length > 0}
+          active={activeTab === "sage"}
+          onClick={() => setActiveTab("sage")}
+          icon={<Activity className="w-3.5 h-3.5" />}
+          label="SAGE"
+          count={sageAlerts.length}
+          alert={sageAlerts.some(a => a.type === "danger")}
         />
         <TabButton
           active={activeTab === "updates"}
           onClick={() => setActiveTab("updates")}
           icon={<RefreshCw className="w-3.5 h-3.5" />}
-          label="Actualizaciones"
+          label="Updates"
           count={updates.length}
         />
         <TabButton
@@ -185,11 +389,19 @@ export function AlertSidebar({
           label="Conflictos"
           count={conflicts.length}
         />
+        <TabButton
+          active={activeTab === "config"}
+          onClick={() => setActiveTab("config")}
+          icon={<Settings className="w-3.5 h-3.5" />}
+          label="Ajustes"
+          count={configAlerts.length}
+          alert={configAlerts.some(a => a.type === "danger")}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {/* Empty State - Global */}
-        {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && criticalAlerts.length === 0 && (
+        {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && sageAlerts.length === 0 && configAlerts.length === 0 && (
           <div className="text-center py-12">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-bounce"
@@ -198,21 +410,35 @@ export function AlertSidebar({
               <CheckCircle className="w-8 h-8" style={{ color: "var(--color-success)" }} />
             </div>
             <p className="font-subhead text-base" style={{ color: "var(--color-foreground)" }}>Todo al día</p>
-            <p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>No hay alertas pendientes en tu biblioteca</p>
+            <p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>No hay alertas de ningún tipo en tu sistema</p>
           </div>
         )}
 
-        {/* Empty State - Security */}
-        {activeTab === "security" && criticalAlerts.length === 0 && (
+        {/* Empty State - SAGE */}
+        {activeTab === "sage" && sageAlerts.length === 0 && (
           <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
               style={{ background: "rgba(102,200,160,0.12)", border: "1px solid rgba(102,200,160,0.2)" }}
             >
-              <Shield className="w-8 h-8 text-[#66C8A0]" />
+              <Activity className="w-8 h-8 text-[#66C8A0]" />
             </div>
-            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Biblioteca Protegida</p>
-            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>No se han detectado amenazas, malware ni vulnerabilidades de seguridad en tus archivos JAR.</p>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>SAGE: Todo en Orden</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>No se han detectado malware, amenazas críticas ni caídas del juego en el proyecto actual.</p>
+          </div>
+        )}
+
+        {/* Empty State - Ajustes */}
+        {activeTab === "config" && configAlerts.length === 0 && (
+          <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
+              style={{ background: "rgba(187,150,228,0.12)", border: "1px solid rgba(187,150,228,0.2)" }}
+            >
+              <Settings className="w-8 h-8 text-[#BB96E4]" />
+            </div>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Ajustes Correctos</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todas las rutas en disco son funcionales y las credenciales están debidamente cargadas.</p>
           </div>
         )}
 
@@ -221,12 +447,12 @@ export function AlertSidebar({
           <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
-              style={{ background: "rgba(187,150,228,0.12)", border: "1px solid rgba(187,150,228,0.2)" }}
+              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}
             >
-              <CheckCircle className="w-8 h-8 text-[#BB96E4]" />
+              <CheckCircle className="w-8 h-8 text-rose-400" />
             </div>
             <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Sin Conflictos</p>
-            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todos los mods instalados son perfectamente compatibles entre sí y sin duplicados detectados.</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todos los mods instalados son compatibles entre sí sin duplicados.</p>
           </div>
         )}
 
@@ -235,61 +461,61 @@ export function AlertSidebar({
           <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
-              style={{ background: "rgba(255,108,62,0.12)", border: "1px solid rgba(255,108,62,0.2)" }}
+              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.2)" }}
             >
-              <RefreshCw className="w-8 h-8 text-[#FF6C3E]" />
+              <RefreshCw className="w-8 h-8 text-amber-400" />
             </div>
-            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Mods al Día</p>
-            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todos tus mods instalados o seguidos están actualizados a su última versión disponible.</p>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Mods Actualizados</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>No se encontraron nuevas actualizaciones disponibles en Modrinth para tus mods.</p>
           </div>
         )}
 
-        {/* Security Alerts */}
-        {(activeTab === "all" || activeTab === "security") && criticalAlerts.length > 0 && (
+        {/* ──────── SAGE ALERTS SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "sage") && sageAlerts.length > 0 && (
           <AlertSection
-            icon={<Shield className="w-4 h-4" />}
-            title="Alertas de Seguridad"
-            count={criticalAlerts.length}
-            color="var(--color-danger)"
+            icon={<Activity className="w-4 h-4 text-indigo-400 animate-pulse" />}
+            title="Diagnósticos de SAGE"
+            count={sageAlerts.length}
+            color="#818cf8"
           >
             <div className="flex flex-col gap-2">
-              {criticalAlerts.map((alert) => (
-                <div 
-                  key={alert.filePath} 
-                  className="p-3 rounded-xl border"
-                  style={{ borderColor: "var(--color-danger-border)", background: "var(--color-danger-bg)" }}
-                >
-                  <div className="flex items-start gap-2">
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: "var(--color-danger-hover)" }}
-                    >
-                      <AlertTriangle className="w-4 h-4" style={{ color: "var(--color-danger)" }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-subhead text-sm truncate" style={{ color: "var(--color-danger)" }}>{alert.fileName}</p>
-                      <p className="text-xs mt-1" style={{ color: "var(--color-muted)" }}>{alert.summary}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span 
-                          className="px-2 py-0.5 rounded-full text-xs font-bold"
-                          style={{ background: "var(--color-danger-hover)", color: "var(--color-danger)" }}
-                        >
-                          Risk: {alert.riskScore}/100
-                        </span>
+              {sageAlerts.map((alert) => {
+                const isDanger = alert.type === "danger";
+                return (
+                  <div 
+                    key={alert.id} 
+                    className="p-3 rounded-xl border animate-fade-in transition-all duration-300"
+                    style={{ 
+                      borderColor: isDanger ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)", 
+                      background: isDanger ? "rgba(239, 68, 68, 0.04)" : "rgba(245, 158, 11, 0.04)" 
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: isDanger ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)" }}
+                      >
+                        <AlertTriangle className={`w-4 h-4 ${isDanger ? 'text-red-400' : 'text-amber-400'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-headline text-xs font-bold ${isDanger ? 'text-red-300' : 'text-amber-300'}`}>
+                          {alert.title}
+                        </p>
+                        <p className="text-[10px] mt-1 leading-relaxed text-foreground/70">{alert.detail}</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </AlertSection>
         )}
 
-        {/* Updates */}
+        {/* ──────── UPDATES SECTION ──────── */}
         {(activeTab === "all" || activeTab === "updates") && updates.length > 0 && (
           <AlertSection
             icon={<RefreshCw className="w-4 h-4" />}
-            title="Actualizaciones Disponibles"
+            title="Actualizaciones de Mods"
             count={updates.length}
             color="var(--color-accent)"
           >
@@ -301,7 +527,7 @@ export function AlertSidebar({
                 return (
                   <div 
                     key={path} 
-                    className="p-3 rounded-xl border"
+                    className="p-3 rounded-xl border animate-fade-in"
                     style={{ borderColor: "var(--color-accent-border)", background: "var(--color-accent-bg)" }}
                   >
                     <div className="flex items-start gap-2">
@@ -367,7 +593,6 @@ export function AlertSidebar({
                         </>
                       )}
                       
-                      {/* New Buttons: Web & Info */}
                       <div className="w-full flex gap-2 mt-1">
                         <ActionButton
                           onClick={() => window.open(`https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
@@ -384,7 +609,6 @@ export function AlertSidebar({
                       </div>
                     </div>
 
-                    {/* Changelog Dropdown */}
                     {expandedChangelog === path && (
                       <div className="mt-3 p-3 rounded-lg bg-black/20 border border-white/5 animate-fade-in">
                         <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mb-2">Registro de cambios:</p>
@@ -400,7 +624,7 @@ export function AlertSidebar({
           </AlertSection>
         )}
 
-        {/* Conflicts */}
+        {/* ──────── CONFLICTS SECTION ──────── */}
         {(activeTab === "all" || activeTab === "conflicts") && conflicts.length > 0 && (
           <AlertSection
             icon={<FileWarning className="w-4 h-4" />}
@@ -412,7 +636,7 @@ export function AlertSidebar({
               {conflicts.map((c, idx) => (
                 <div 
                   key={idx} 
-                  className="p-3 rounded-xl border"
+                  className="p-3 rounded-xl border animate-fade-in"
                   style={{ borderColor: "var(--color-danger-border)", background: "var(--color-danger-bg)" }}
                 >
                   <div className="flex items-start gap-2">
@@ -446,6 +670,47 @@ export function AlertSidebar({
                   </div>
                 </div>
               ))}
+            </div>
+          </AlertSection>
+        )}
+
+        {/* ──────── CONFIG / SETTINGS SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "config") && configAlerts.length > 0 && (
+          <AlertSection
+            icon={<Settings className="w-4 h-4 text-purple-400" />}
+            title="Alertas de Configuración"
+            count={configAlerts.length}
+            color="#a78bfa"
+          >
+            <div className="flex flex-col gap-2">
+              {configAlerts.map((alert) => {
+                const isDanger = alert.type === "danger";
+                return (
+                  <div 
+                    key={alert.id} 
+                    className="p-3 rounded-xl border animate-fade-in transition-all duration-300"
+                    style={{ 
+                      borderColor: isDanger ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)", 
+                      background: isDanger ? "rgba(239, 68, 68, 0.04)" : "rgba(245, 158, 11, 0.04)" 
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: isDanger ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)" }}
+                      >
+                        <FileWarning className={`w-4 h-4 ${isDanger ? 'text-red-400' : 'text-amber-400'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-headline text-xs font-bold ${isDanger ? 'text-red-300' : 'text-purple-300'}`}>
+                          {alert.title}
+                        </p>
+                        <p className="text-[10px] mt-1 leading-relaxed text-foreground/70">{alert.detail}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </AlertSection>
         )}
@@ -501,7 +766,7 @@ function TabButton({ active, onClick, icon, label, count, alert }: TabButtonProp
         </span>
       )}
       {alert && (
-        <span className="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--color-danger)" }} />
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-400 animate-pulse" />
       )}
     </button>
   );

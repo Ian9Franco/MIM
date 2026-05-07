@@ -11,22 +11,25 @@ interface StagingModalProps {
 export function StagingModal({ onClose }: StagingModalProps) {
   const { files, isLoading, resolve, clear, hasFiles } = useStaging();
   const [processing, setProcessing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleResolveAll = async () => {
+    setError(null);
     setProcessing("all");
     const result = await resolve();
     setProcessing(null);
     if (!result.success && result.error) {
-      alert(result.error);
+      setError(result.error);
     }
   };
 
   const handleResolveSingle = async (f: StagingFile) => {
+    setError(null);
     setProcessing(f.path);
     const result = await resolve(f.path);
     setProcessing(null);
     if (!result.success && result.error) {
-      alert(result.error);
+      setError(result.error);
     }
   };
 
@@ -77,6 +80,15 @@ export function StagingModal({ onClose }: StagingModalProps) {
                   Una vez configurada la ruta en ajustes, puedes moverlos a su ubicación definitiva.
                 </div>
               </div>
+
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 flex items-start gap-4 animate-in slide-in-from-top-2 duration-300">
+                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-200/80 leading-relaxed">
+                    {error}
+                  </div>
+                </div>
+              )}
 
               {files.map((f) => (
                 <div key={f.path} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 group hover:bg-white/8 transition-all">

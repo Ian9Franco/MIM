@@ -15,15 +15,21 @@ import util from "util";
 
 const execPromise = util.promisify(exec);
 
-export async function GET() {
-  // Script de PowerShell que abre el FolderBrowserDialog nativo de Windows
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const initialPath = searchParams.get("initialPath");
+
+  // Script de PowerShell que abre el OpenFileDialog nativo de Windows configurado para carpetas
   const psScript = `
-    Add-Type -AssemblyName System.windows.forms;
-    $f = New-Object System.Windows.Forms.FolderBrowserDialog;
-    $f.ShowNewFolderButton = $true;
-    $f.RootFolder = 'MyComputer';
+    Add-Type -AssemblyName System.Windows.Forms;
+    $f = New-Object System.Windows.Forms.OpenFileDialog;
+    $f.ValidateNames = $false;
+    $f.CheckFileExists = $false;
+    $f.CheckPathExists = $true;
+    ${initialPath ? `$f.InitialDirectory = '${initialPath.replace(/'/g, "''")}';` : ""}
+    $f.FileName = 'Seleccione esta carpeta';
     if ($f.ShowDialog() -eq 'OK') {
-      Write-Output $f.SelectedPath;
+      Write-Output (Split-Path -Parent $f.FileName);
     }
   `;
 

@@ -45,14 +45,15 @@ Crear modpacks de Minecraft es **frustrante**:
 
 | Feature | Descripción | Impacto |
 |---------|-------------|---------|
-| **🚀 FOMO 2.0** | Descubrimiento ultra-denso con Modrinth + CurseForge | Navegación 50% más rápida |
+| **🚀 FOMO 3.0** | Descubrimiento ultra-denso con Modrinth + CurseForge | Navegación 50% más rápida |
 | **🤖 Modo Auto** | Clasificación automática basada en tags temáticos | 90% menos clicks |
-| **🛡️ Security Scanner** | Análisis de bytecode + VirusTotal | 100% protección |
-| **🧠 SAGE Engine** | Diagnóstico de crashes y compatibilidad | Solución instantánea |
+| **🛡️ Security Scanner** | Análisis de bytecode + VirusTotal + Alertas unificadas | 100% protección |
+| **🧠 SAGE Engine** | Diagnóstico de crashes, soporte de `.mcmeta` y rescate de jugadores (`UUID.dat` editor) | Corrección instantánea de fallos |
+| **🔔 ALRT Center** | Centro unificado de alertas en tiempo real (seguridad, crashes y configuración) | Campaneo rítmico inteligente (`seen/unseen`) |
 | **⚡ Bulk Actions** | Selección y acciones en lote | 10x más rápido |
 | **🔌 Sinytra Support** | Mods Fabric en proyectos Forge | Expande tu biblioteca |
-| **🎹 Keybind Editor** | Edita controles de mods (Iris, Sodium) | Control total |
-| **🧩 Priority Stack** | Gestión visual de resource packs | Evita bugs visuales |
+| **🎹 Keybind Editor** | Edita controles de mods (Iris, Sodium y Key binds dinámicos) | Control total sin entrar al juego |
+| **🧩 Priority Stack** | Ordenación y control visual de resource packs (Reglas de Fresh Animations) | Evita bugs visuales al instante |
 
 ---
 
@@ -183,24 +184,27 @@ MIM implementa **3 capas de seguridad**:
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Beta 5.2)
-- Security Layer con VirusTotal
-- SAGE Crash Diagnostics
-- Sinytra Connector Support
-- Auto-clasificación por tags
-- Bulk actions
-- FOMO 3.0 con CurseForge
-- Virtual scrolling (700+ mods)
+### ✅ Completado (Beta 5.3)
+- **ALRT Unified Center**: Centro unificado de alertas con campaneo continuo e indicador inteligente (`seen/unseen`).
+- **SAGE Player Rescue**: Edición local de archivos `.dat` (inventario, spawn, posición) para rescatar jugadores con crashes.
+- **SAGE .mcmeta Reader**: Soporte nativo para escaneo y lectura de metadatos de resource packs.
+- **Tweak Keybind Editor**: Lector dinámico de controles de mods directamente desde `options.txt`.
+- **Tweak Resource Pack Priority Stack**: Ordenamiento invertido visual y regla automática de validación para **Fresh Animations**.
+- Security Layer con VirusTotal.
+- SAGE Crash Diagnostics.
+- Sinytra Connector Support.
+- Auto-clasificación por tags y Bulk Actions.
+- FOMO 3.0 con CurseForge y alineación pixel-perfect.
+- Virtual scrolling (700+ mods).
 
 ### 🚧 En Progreso
-- Security UI badges
-- Conflict Detection Engine
-- Auto-Optimization de Java Args
+- Conflict Detection Engine.
+- Auto-Optimization de Java Args.
 
 ### 📋 Próximo
-- AI Recommendations
-- Natural Language Search
-- Demo Deployable
+- AI Recommendations con análisis semántico.
+- Natural Language Search.
+- Demo Deployable.
 
 ---
 

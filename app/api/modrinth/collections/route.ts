@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { getApiKey } from "@/lib/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const MODRINTH_API_V3 = "https://api.modrinth.com/v3";
@@ -67,7 +68,7 @@ interface FailedFile {
  * Si el usuario proporciona solo el token sin prefijo, lo agregamos automáticamente.
  */
 function buildHeaders(): Record<string, string> | null {
-  let token = process.env.MODRINTH_TOKEN || process.env.MODRINTH_API_KEY;
+  let token = getApiKey("modrinth");
   if (!token) return null;
 
   // Asegurar formato correcto del token
@@ -160,8 +161,8 @@ export async function GET(_req: NextRequest) {
   if (!headers) {
     return NextResponse.json(
       {
-        error:       "MODRINTH_TOKEN no configurado",
-        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Agregalo en .env.local como MODRINTH_TOKEN=mrp_tu_token_aqui (con o sin el prefijo mrp_).",
+        error:       "Token de Modrinth no configurado",
+        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Copialo y agregalo en los Ajustes del Sistema (Configuración) dentro de la sección Conectividad.",
         url: "https://modrinth.com/settings/pats",
       },
       { status: 401 }
@@ -176,7 +177,7 @@ export async function GET(_req: NextRequest) {
         return NextResponse.json(
           {
             error: "Token de Modrinth inválido o expirado",
-            instrucciones: "1. Verificá que tu Personal Access Token sea válido en https://modrinth.com/settings/pats. 2. Si expiró, creá uno nuevo. 3. Actualizá .env.local y reiniciá el servidor.",
+            instrucciones: "1. Verificá que tu Personal Access Token sea válido en https://modrinth.com/settings/pats. 2. Si expiró, creá uno nuevo. 3. Actualizalo en los Ajustes de la aplicación (Configuración) dentro de Conectividad.",
             url: "https://modrinth.com/settings/pats",
           },
           { status: 401 }

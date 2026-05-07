@@ -8,6 +8,10 @@ export interface MimSettings {
   downloadsPath: string;
   minecraftPath: string;
   stagingPath: string;
+  validated?: boolean;
+  modrinthApiKey?: string;
+  curseforgeApiKey?: string;
+  virusTotalApiKey?: string;
 }
 
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
@@ -57,6 +61,12 @@ export function getSettings(): MimSettings {
   const defaultMinecraft = path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
   const defaultStaging = path.join(getPortableDir(), "staging");
 
+  if (!fs.existsSync(defaultStaging)) {
+    try {
+      fs.mkdirSync(defaultStaging, { recursive: true });
+    } catch (e) {}
+  }
+
   if (fs.existsSync(settingsFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
@@ -65,7 +75,11 @@ export function getSettings(): MimSettings {
         buildsBase: data.buildsBase || path.join("D:", ".mine", "builds"),
         downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads"),
         minecraftPath: data.minecraftPath || defaultMinecraft,
-        stagingPath: data.stagingPath || defaultStaging
+        stagingPath: data.stagingPath || defaultStaging,
+        validated: !!data.validated,
+        modrinthApiKey: data.modrinthApiKey || "",
+        curseforgeApiKey: data.curseforgeApiKey || "",
+        virusTotalApiKey: data.virusTotalApiKey || ""
       };
     } catch (e) {}
   }
@@ -74,7 +88,11 @@ export function getSettings(): MimSettings {
     buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".mine", "builds"),
     downloadsPath: path.join(os.homedir(), "Downloads"),
     minecraftPath: defaultMinecraft,
-    stagingPath: defaultStaging
+    stagingPath: defaultStaging,
+    validated: false,
+    modrinthApiKey: "",
+    curseforgeApiKey: "",
+    virusTotalApiKey: ""
   };
 }
 
@@ -84,4 +102,28 @@ export function saveSettings(settings: Partial<MimSettings>) {
   const next = { ...current, ...settings };
   fs.writeFileSync(settingsFile, JSON.stringify(next, null, 2), "utf-8");
   return next;
+}
+
+export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal"): string {
+  const settings = getSettings();
+  if (keyName === "modrinth") {
+    return settings.modrinthApiKey || process.env.MODRINTH_API_KEY || process.env.MODRINTH_TOKEN || "";
+  }
+  if (keyName === "curseforge") {
+    return settings.curseforgeApiKey || process.env.CURSEFORGE_API_KEY || "";
+  }
+  if (keyName === "virustotal") {
+    return settings.virusTotalApiKey || process.env.VIRUSTOTAL_API_KEY || "";
+  }
+  return "";
+}
+
+export function isSettingsValid(settings: MimSettings): boolean {
+  return (
+    fs.existsSync(settings.sourceBase) &&
+    fs.existsSync(settings.buildsBase) &&
+    fs.existsSync(settings.downloadsPath) &&
+    fs.existsSync(settings.minecraftPath) &&
+    fs.existsSync(settings.stagingPath)
+  );
 }

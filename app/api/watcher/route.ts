@@ -25,12 +25,13 @@ import { watcherEmitter, startWatcher, scanExistingFiles } from "@/lib/watcher";
 import { scanMod, ModMeta } from "@/lib/scanner";
 import path from "path";
 import os from "os";
+import { getSettings } from "@/lib/settings";
 
 /** Interval between SSE keepalive pings (ms). */
 const KEEPALIVE_INTERVAL_MS = 30_000;
 
 export async function GET(req: NextRequest) {
-  const downloadsPath = path.join(os.homedir(), "Downloads");
+  const { downloadsPath } = getSettings();
   startWatcher(downloadsPath);
 
   // Snapshot existing files before the stream opens to avoid a race where

@@ -30,7 +30,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -105,24 +105,23 @@ export async function POST(req: NextRequest) {
       
       try {
         const meta = scanMod(p);
-        if (meta.projectType === "resourcepack") {
+        const effectiveProjectType = projectType || meta.projectType;
+
+        if (effectiveProjectType === "resourcepack") {
+          // Resource packs always go to the project folder in SOURCE.
+          // They are pushed to the game on demand via "Sync with Game" in Tweak.
           if (!projectName) throw new Error("projectName required for resourcepack classification");
-          // Check if we should move to game folder or project folder
-          // Based on user request, tweaks uses the game's resourcepacks folder
-          const gameRpDir = path.join(settings.minecraftPath, "resourcepacks");
-          if (fs.existsSync(settings.minecraftPath)) {
-            finalTargetDir = gameRpDir;
-          } else {
-            finalTargetDir = path.join(settings.stagingPath, "resourcepacks");
-          }
-        } else if (meta.projectType === "shader") {
+          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+        } else if (effectiveProjectType === "shader") {
+          // Shaders go directly to .minecraft/shaderpacks (or staging as fallback).
           const shaderpacksDir = path.join(settings.minecraftPath, "shaderpacks");
-          if (fs.existsSync(settings.minecraftPath)) {
+          if (settings.minecraftPath && fs.existsSync(settings.minecraftPath)) {
             finalTargetDir = shaderpacksDir;
           } else {
+            console.log(`[/api/classify] Minecraft path not found, routing shader to staging: ${settings.stagingPath}`);
             finalTargetDir = path.join(settings.stagingPath, "shaderpacks");
           }
-        } else if (meta.projectType === "datapack") {
+        } else if (effectiveProjectType === "datapack") {
           if (!projectName) throw new Error("projectName required for datapack classification");
           finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
         } else {
@@ -152,10 +151,14 @@ export async function POST(req: NextRequest) {
 
       // Cross-drive move: copy first, then delete source.
       // fs.rename throws EXDEV when src and dest are on different drives (C: → D:).
-      fs.copyFileSync(p, targetPath);
-      fs.unlinkSync(p);
-
-      moved.push(targetPath);
+      try {
+        fs.copyFileSync(p, targetPath);
+        fs.unlinkSync(p);
+        moved.push(targetPath);
+      } catch (err: any) {
+        console.error(`[/api/classify] Failed to move file: ${fileName}. Error: ${err.message}`);
+        skipped.push(p);
+      }
     }
 
     return NextResponse.json({

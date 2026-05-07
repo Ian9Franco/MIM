@@ -26,8 +26,18 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertSidebarOpen, setAlertSidebarOpen] = useState(false);
   const [hasAlerts, setHasAlerts] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
+  const [alertsSeen, setAlertsSeen] = useState(false);
   const [stagingOpen, setStagingOpen] = useState(false);
+  const [hasStagingFiles, setHasStagingFiles] = useState(false);
   const staging = useStaging();
+
+  // Marcar alertas como vistas si se abre el panel lateral de alertas
+  React.useEffect(() => {
+    if (alertSidebarOpen) {
+      setAlertsSeen(true);
+    }
+  }, [alertSidebarOpen]);
 
   React.useEffect(() => {
     const handleAlertToggle = (e: Event) => {
@@ -56,28 +66,75 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     };
 
     const handleAlertStatus = (e: Event) => {
+      const customEvent = e as CustomEvent<any>;
+      const detail = customEvent.detail;
+      
+      if (typeof detail === "number") {
+        setAlertCount(prev => {
+          // Si el total de alertas sube, rehabilitamos el campaneo y punto rojo
+          if (detail > prev) {
+            setAlertsSeen(false);
+          }
+          return detail;
+        });
+        setHasAlerts(detail > 0);
+      } else {
+        // Fallback para booleanos
+        setHasAlerts(!!detail);
+        if (detail) {
+          setAlertCount(prev => {
+            if (prev === 0) setAlertsSeen(false);
+            return prev || 1;
+          });
+        } else {
+          setAlertCount(0);
+          setAlertsSeen(true);
+        }
+      }
+    };
+    
+    const handleStagingStatus = (e: Event) => {
       const customEvent = e as CustomEvent<boolean>;
-      setHasAlerts(customEvent.detail);
+      setHasStagingFiles(customEvent.detail);
     };
 
     if (typeof window !== "undefined") {
       window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
       window.addEventListener("alert-status-changed", handleAlertStatus);
+      window.addEventListener("staging-status-changed", handleStagingStatus);
       window.addEventListener("fomo-toggle", handleFomoToggleEvent);
       window.addEventListener("sage-toggle", handleSageToggleEvent);
       window.addEventListener("tweak-toggle", handleTweakToggleEvent);
       window.addEventListener("active-project-changed", handleProjectChange);
     }
+    if (staging.hasFiles) setHasStagingFiles(true);
+    
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
         window.removeEventListener("alert-status-changed", handleAlertStatus);
+        window.removeEventListener("staging-status-changed", handleStagingStatus);
         window.removeEventListener("fomo-toggle", handleFomoToggleEvent);
         window.removeEventListener("sage-toggle", handleSageToggleEvent);
         window.removeEventListener("tweak-toggle", handleTweakToggleEvent);
         window.removeEventListener("active-project-changed", handleProjectChange);
       }
     };
+  }, []);
+
+  React.useEffect(() => {
+    fetch("/api/settings")
+      .then(r => {
+        if (!r.ok) throw new Error("Settings fetch failed");
+        return r.json();
+      })
+      .then(d => {
+        // Abrir si es la primera vez (no validado) o si alguna ruta es actualmente inválida
+        if (!d.validated || !d.isValid) {
+          setSettingsOpen(true);
+        }
+      })
+      .catch(err => console.error("Error al comprobar rutas iniciales:", err));
   }, []);
 
   const handleToggleFomo = (isOpen: boolean) => {
@@ -262,7 +319,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 <div className="absolute -inset-x-4 -inset-y-2 bg-gradient-to-r from-primary/5 via-transparent to-transparent rounded-2xl opacity-0 group-hover/title:opacity-100 transition-opacity duration-500" />
                 
                 <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
-                  <span className="bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-3">
+                  <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent flex items-center gap-3">
                     <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
                     MIM
                   </span>
@@ -312,12 +369,12 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
               <button
                 onClick={() => setStagingOpen(true)}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 relative ${staging.hasFiles ? 'text-amber-400 border-amber-500/30 bg-amber-500/5' : 'hover:bg-white/5 text-muted-foreground'}`}
-                style={{ border: staging.hasFiles ? "1px solid rgba(251,191,36,0.3)" : "1px solid var(--color-border)" }}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 relative ${hasStagingFiles ? 'text-amber-400 border-amber-500/30 bg-amber-500/5' : 'hover:bg-white/5 text-muted-foreground'}`}
+                style={{ border: hasStagingFiles ? "1px solid rgba(251,191,36,0.3)" : "1px solid var(--color-border)" }}
                 title="Archivos en Staging (Pendientes)"
               >
-                <Package className={`w-4 h-4 ${staging.hasFiles ? 'animate-bounce-subtle' : ''}`} />
-                {staging.hasFiles && (
+                <Package className={`w-4 h-4 ${hasStagingFiles ? 'animate-bounce-subtle' : ''}`} />
+                {hasStagingFiles && (
                   <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
@@ -329,23 +386,27 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
               <button
                 data-header-toggle="true"
                 onClick={() => handleToggleAlerts(!alertSidebarOpen)}
-                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 hover:bg-red-500/10 ${alertSidebarOpen ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]' : 'hover:bg-white/5'}`}
+                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 hover:bg-red-500/10 relative ${alertSidebarOpen ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]' : 'hover:bg-white/5'}`}
                 style={{ 
                   border: alertSidebarOpen ? "1px solid rgba(239,68,68,0.4)" : "1px solid var(--color-border)", 
                   color: alertSidebarOpen ? "#f87171" : "var(--color-muted)" 
                 }}
                 title={alertSidebarOpen ? "Cerrar Alertas" : "Centro de Alertas e Incompatibilidades (ALRT)"}
               >
-                <div className="relative">
-                  <Bell className={`w-3.5 h-3.5 transition-all ${alertSidebarOpen ? 'animate-bell-ring text-red-400 scale-110' : 'group-hover:animate-bell-ring'}`} />
-                  {hasAlerts && (
-                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-400"></span>
-                    </span>
-                  )}
-                </div>
+                <Bell className={`w-3.5 h-3.5 transition-all ${
+                  alertSidebarOpen 
+                    ? 'animate-bell-ring text-red-400 scale-110' 
+                    : (hasAlerts && !alertsSeen)
+                      ? 'animate-bell-ring-loop text-red-400 scale-110'
+                      : 'group-hover:animate-bell-ring'
+                }`} />
                 <span className="text-[10px] font-headline tracking-widest font-bold">ALRT</span>
+                {hasAlerts && !alertsSeen && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-400"></span>
+                  </span>
+                )}
               </button>
 
               {/* SGE Button */}

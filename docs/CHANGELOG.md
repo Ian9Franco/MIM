@@ -1,8 +1,35 @@
 # MIM — Changelog de Cambios
 
 > Auditoría completa de cambios, features y mejoras del proyecto.  
-> **Versión Actual:** Beta 5.2 (Tweak & Controls)  
+> **Versión Actual:** Beta 5.3 (SAGE Security & Player Rescue)  
 > **Última actualización:** 2026-05-07
+
+---
+
+## 🛡️ Beta 5.3 — SAGE Security & Player Rescue (2026-05-07)
+
+### SAGE Regex & mcmeta Scan Refinement
+- **Falsos Positivos Corregidos**: Se corrigió el patrón de detección de encriptación en el escáner de seguridad (`lib/security-scanner.ts`) añadiendo límites de palabra exactos `\b(AES|DES|RSA)\b` para evitar marcar erróneamente palabras cotidianas de Minecraft como "desert" (en biome/structure JSONs). Esto redujo la puntuación de riesgo del datapack **Dungeons and Taverns** de 100/100 (CRÍTICO) a 0/100 (Limpio), coincidiendo con VirusTotal.
+- **Soporte de Escaneo para .mcmeta**: SAGE ahora escanea y valida sintácticamente archivos `.mcmeta` (usados para metadata de packs de texturas y datapacks) en busca de strings maliciosas o enlaces fraudulentos.
+
+### Rescate de Emergencia de Jugadores (.dat Player Editor)
+- **Editor NBT Nativo**: Implementación de un cargador y serializador NBT binario (`lib/nbt.ts`) en TypeScript puro, libre de dependencias, con soporte de descompresión y compresión Gzip nativa.
+- **Carpeta de Rescate Portátil Integrada**: El endpoint `/api/sage/player-rescue` se desacopla del juego para operar de forma portátil. Crea de forma automática y lee la carpeta `.mine/source/.mim-index/player-rescue/`. Cualquier archivo de jugador `UUID.dat` o de mundo `level.dat` pegado allí es detectado, analizado y modificado al instante sin requerir instalaciones activas del juego en la máquina local.
+- **Herramientas de Rescate Directas**:
+  - **Teletransportar al Spawn**: Permite reubicar a un jugador en coordenadas seguras (ej. `0, 80, 0` o un Y=120 de aire seguro) para librarlo de un loop de crash por chunks corruptos.
+  - **Vaciar Inventario / Cofre de Ender**: Permite eliminar todos los ítems para librar al jugador de caídas de juego causadas por ítems con NBT dañado o ilegítimo.
+  - **Cambiar Dimensión**: Permite cambiar la dimensión del jugador al overworld en caso de que esté atrapado en dimensiones que se caen de forma consecutiva.
+- **UX en Sidebar**: Se integró una sofisticada pestaña **"Rescate"** en el panel lateral de SAGE para interactuar en tiempo real con los jugadores detectados, incluyendo logs de auditoría de modificaciones y respaldos automáticos `.mim_bak` para seguridad total contra corrupción de datos.
+
+### Centro de Alertas Unificado (ALRT Unification)
+- **Unificación Centralizada**: Se rediseñó el panel **Centro de Alertas (ALRT)** para consolidar todos los avisos del sistema en un único punto de control interactivo.
+- **Pestaña SAGE (Seguridad + Crashes)**: Agrupa alertas críticas de malware del escáner de archivos, riesgos de seguridad moderados y la detección de archivos de crash (`crash-reports`) activos en el proyecto seleccionado.
+- **Pestaña Ajustes (Configuración)**: Escanea en tiempo real la validez física de tus rutas de juego, carpetas MIM indispensables y la ausencia de API keys (como la clave de VirusTotal o Modrinth) para guiarte en la puesta a punto óptima de tu entorno.
+- **Sincronización Global**: El indicador numérico de alertas (Bell badge en la cabecera) reacciona dinámicamente agregando los reportes de SAGE y configuración para una visualización premium y centralizada de "un solo vistazo".
+- **Campaneo Rítmico y Gestión de Vistas**:
+  - **Campaneo Continuo**: Si existen alertas pendientes de lectura, el botón ALRT de la cabecera realiza un movimiento de campana rítmico infinito (`.animate-bell-ring-loop`) y muestra un punto de notificación rojo palpitante para llamar tu atención de manera premium.
+  - **Cierre Inteligente por Apertura**: En cuanto haces clic y abres el Centro de Alertas, la animación infinita y el punto rojo se detienen por completo. Esto indica que el usuario ya ha tomado conocimiento de las alertas de la sesión (aunque no las haya solucionado), evitando molestias visuales persistentes.
+  - **Detección de Nuevas Alertas**: Si se detecta una alerta adicional o nueva en tiempo real, el campaneo infinito y el punto rojo se reactivan de manera inteligente.
 
 ---
 

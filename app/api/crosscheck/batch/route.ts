@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/env";
+import { getApiKey } from "@/lib/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
     // Procesar mods de Modrinth buscando en CurseForge
     const modrinthMods = mods.filter(m => m.source === "modrinth");
     if (modrinthMods.length > 0) {
-      const apiKey = getRawEnv("CURSEFORGE_API_KEY") || "";
+      const apiKey = getApiKey("curseforge");
       if (!apiKey) {
         // Sin API key, marcar todos como no encontrados
         modrinthMods.forEach(mod => {

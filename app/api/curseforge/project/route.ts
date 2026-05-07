@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/env";
+import { getApiKey } from "@/lib/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
   // Carga Manual (Bypass Next.js)
-  const apiKey = getRawEnv("CURSEFORGE_API_KEY") || "";
+  const apiKey = getApiKey("curseforge");
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });

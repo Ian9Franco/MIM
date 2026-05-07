@@ -133,10 +133,110 @@
   opacity: 0.6;
 }
 
-[data-theme="modern"] .opacity-40 { opacity: 0.7 !important; }
-[data-theme="modern"] .opacity-35 { opacity: 0.65 !important; }
+/* Contrast improvements for Modern (Light Theme) */
+[data-theme="modern"] .opacity-30 { opacity: 0.65 !important; }
+[data-theme="modern"] .opacity-40 { opacity: 0.75 !important; }
+[data-theme="modern"] .opacity-35 { opacity: 0.70 !important; }
 [data-theme="modern"] .text-white\/40 { color: var(--color-muted) !important; }
 [data-theme="modern"] .text-white\/60 { color: var(--color-foreground) !important; opacity: 0.8; }
+
+/* Map white transparent styles to dark transparent in Modern Theme for visibility */
+[data-theme="modern"] .bg-white\/1 { background-color: rgba(0, 0, 0, 0.01) !important; }
+[data-theme="modern"] .bg-white\/2 { background-color: rgba(0, 0, 0, 0.02) !important; }
+[data-theme="modern"] .bg-white\/5 { background-color: rgba(0, 0, 0, 0.035) !important; }
+[data-theme="modern"] .bg-white\/10 { background-color: rgba(0, 0, 0, 0.06) !important; }
+
+[data-theme="modern"] .border-white\/5 { border-color: rgba(0, 0, 0, 0.08) !important; }
+[data-theme="modern"] .border-white\/10 { border-color: rgba(0, 0, 0, 0.12) !important; }
+[data-theme="modern"] .border-white\/20 { border-color: rgba(0, 0, 0, 0.18) !important; }
+
+/* Improve text contrast of opacity colors */
+[data-theme="modern"] .text-foreground\/20 { color: var(--color-muted) !important; opacity: 0.7; }
+[data-theme="modern"] .text-foreground\/30 { color: var(--color-muted) !important; opacity: 0.8; }
+[data-theme="modern"] .text-foreground\/40 { color: var(--color-muted) !important; opacity: 0.9; }
+[data-theme="modern"] .text-foreground\/50 { color: var(--color-foreground) !important; opacity: 0.7; }
+[data-theme="modern"] .text-foreground\/60 { color: var(--color-foreground) !important; opacity: 0.85; }
+[data-theme="modern"] .text-foreground\/70 { color: var(--color-foreground) !important; opacity: 0.95; }
+
+/* Header and global containers responsiveness to modern theme */
+[data-theme="modern"] header .glass,
+[data-theme="modern"] header button.glass {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+[data-theme="modern"] header button:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* SAGE & TWEAK Sidebars Adaptation for Modern (Light) Theme */
+[data-theme="modern"] aside {
+  background: color-mix(in srgb, var(--color-card) 95%, transparent) !important;
+  color: var(--color-foreground) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="modern"] aside h2,
+[data-theme="modern"] aside h3,
+[data-theme="modern"] aside h4,
+[data-theme="modern"] aside h5,
+[data-theme="modern"] aside .text-white {
+  color: var(--color-foreground) !important;
+}
+
+/* SAGE Header Title Gradient */
+[data-theme="modern"] aside h2.bg-gradient-to-r,
+[data-theme="modern"] aside h2 .bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--color-foreground), var(--color-primary)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* Override hover states that would turn text white on a white backdrop */
+[data-theme="modern"] aside .hover\:text-white:hover,
+[data-theme="modern"] aside button:hover,
+[data-theme="modern"] aside a:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Allow text inside standard solid primary/success/danger buttons to remain white/readable */
+[data-theme="modern"] aside button.bg-primary,
+[data-theme="modern"] aside button.bg-primary *,
+[data-theme="modern"] aside button.bg-rose-500,
+[data-theme="modern"] aside button.bg-rose-500 *,
+[data-theme="modern"] aside button.bg-emerald-500,
+[data-theme="modern"] aside button.bg-emerald-500 *,
+[data-theme="modern"] aside button.bg-amber-500,
+[data-theme="modern"] aside button.bg-amber-500 * {
+  color: #FFFFFF !important;
+}
+[data-theme="modern"] aside button.bg-primary:hover,
+[data-theme="modern"] aside button.bg-rose-500:hover,
+[data-theme="modern"] aside button.bg-emerald-500:hover,
+[data-theme="modern"] aside button.bg-amber-500:hover {
+  opacity: 0.9 !important;
+  color: #FFFFFF !important;
+}
+
+/* Color adjustments for semantic colors inside Modern Theme (Light) */
+[data-theme="modern"] .text-rose-300,
+[data-theme="modern"] .text-rose-400 {
+  color: #DC2626 !important; /* red-600 */
+}
+[data-theme="modern"] .text-amber-300,
+[data-theme="modern"] .text-amber-400 {
+  color: #D97706 !important; /* amber-600 */
+}
+[data-theme="modern"] .text-emerald-300,
+[data-theme="modern"] .text-emerald-400 {
+  color: #059669 !important; /* emerald-600 */
+}
+[data-theme="modern"] .text-indigo-200,
+[data-theme="modern"] .text-indigo-300,
+[data-theme="modern"] .text-indigo-400 {
+  color: var(--color-primary) !important;
+}
 
 
 /* Background refinement for Modern */
@@ -424,6 +524,7 @@ select:focus {
 .animate-pulse-ring { animation: pulseRing 1.6s ease infinite; }
 .animate-shake      { animation: shake     0.48s ease-in-out; }
 .animate-bell-ring  { animation: bell-ring  0.6s ease-in-out; }
+.animate-bell-ring-loop { animation: bell-ring 1.2s ease-in-out infinite; }
 .animate-bounce-subtle { animation: bounce-subtle 2s ease-in-out infinite; }
 .animate-spin       { animation: spin      1s   linear infinite; }
 .animate-spin-slow  { animation: spin-slow 4s   linear infinite; }

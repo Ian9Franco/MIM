@@ -68,7 +68,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       try {
         setSelectedMods(JSON.parse(saved));
       } catch (e) {
-        console.error("Error loading selected mods from localStorage", e);
+        console.warn("Error loading selected mods from localStorage", e);
       }
     }
   }, []);
@@ -132,7 +132,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           setSourceError(`Error: ${errorData.error || errorData.message || res.statusText || "Unknown error"}`);
         }
         
-        console.error(`[useFomoDiscover] Search failed (${res.status}):`, errorData.error || res.statusText);
+        console.warn(`[useFomoDiscover] Search failed (${res.status}):`, errorData.error || res.statusText);
         setMods([]);
         setLoading(false);
         return;
@@ -196,7 +196,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
             }));
           }
         } catch (err) {
-          console.error("[useFomoDiscover] Error en batch cross-check:", err);
+          console.warn("[useFomoDiscover] Error en batch cross-check:", err);
           // En caso de error, quitar el estado de checking para todos
           setMods(prev => prev.map((m: any) => 
             mappedMods.some((mapped: any) => mapped.projectId === m.projectId)
@@ -206,7 +206,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         }
       }
     } catch (err) {
-      console.error("[useFomoDiscover] Error fetching mods:", err);
+      console.warn("[useFomoDiscover] Error fetching mods:", err);
       setMods([]);
     }
     setLoading(false);
@@ -430,7 +430,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         } : null);
       }
     } catch (err) {
-      console.error("[useFomoDiscover] Error fetching details:", err);
+      console.warn("[useFomoDiscover] Error fetching details:", err);
     }
     setVersLoading(false);
   }, [gameVersions, loader, projectType, source, sinytraActive]);

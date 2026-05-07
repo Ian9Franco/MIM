@@ -231,7 +231,7 @@ export function FomoSidebar({
               options={TAB_OPTIONS} 
               value={mode} 
               onChange={(v) => setMode(v as Mode)} 
-              className="p-1 min-w-[280px]" 
+              className="p-1.5 min-w-[280px]" 
               style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
               ariaLabel="Secciones de FOMO" 
             />
@@ -245,7 +245,7 @@ export function FomoSidebar({
                 options={SOURCE_OPTIONS} 
                 value={discover.source} 
                 onChange={(v) => discover.setSource(v as any)} 
-                className="p-1 shadow-inner min-w-[240px]" 
+                className="p-1.5 shadow-inner min-w-[240px]" 
                 style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
                 ariaLabel="Fuente de mods" 
               />
@@ -271,7 +271,7 @@ export function FomoSidebar({
         {discover.sourceError && (
           <div className="mx-4 mb-2 p-3 rounded-xl text-xs" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
             <p className="font-subhead text-red-400">⚠️ {discover.sourceError}</p>
-            <p className="font-caption mt-1" style={{ color: COLORS.muted }}>Agregá CURSEFORGE_API_KEY en tu .env.local</p>
+            <p className="font-caption mt-1" style={{ color: COLORS.muted }}>Configurá la API key en los Ajustes del Sistema (Configuración).</p>
           </div>
         )}
 

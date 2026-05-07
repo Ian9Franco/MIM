@@ -64,11 +64,6 @@ export function LibrarySection({
   useEffect(() => {
     const updateCount = Object.values(modrinthStatus).filter(s => s.status === "update_available" && !ignoredUpdates.has(s.path)).length;
     const currentCount = conflicts.length + updateCount;
-    const hasAlerts = currentCount > 0;
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("alert-status-changed", { detail: hasAlerts }));
-    }
 
     if (currentCount > prevAlertCount.current) {
       setShouldShake(true);

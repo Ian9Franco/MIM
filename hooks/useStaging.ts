@@ -16,7 +16,11 @@ export function useStaging() {
     try {
       const res = await fetch("/api/staging");
       const data = await res.json();
-      setFiles(data.files || []);
+      const files = data.files || [];
+      setFiles(files);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("staging-status-changed", { detail: files.length > 0 }));
+      }
     } catch (e) {
       console.error("Failed to fetch staging files:", e);
     } finally {

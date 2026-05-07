@@ -32,6 +32,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/env";
+import { getApiKey } from "@/lib/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MINECRAFT_GAME_ID = 432;
@@ -198,7 +199,7 @@ export async function GET(req: NextRequest) {
   // 1. Carga Manual (Bypass Next.js): 
   // Leemos directamente el archivo .env.local para evitar que Next.js trunque la key
   // o intente interpolar los símbolos "$" (bug conocido de Next.js/Turbopack).
-  const apiKey = getRawEnv("CURSEFORGE_API_KEY") || "";
+  const apiKey = getApiKey("curseforge");
 
   // Log de diagnóstico en el servidor (no visible para el cliente)
   console.log(`[/api/curseforge/discover] Diagnóstico API Key (Raw):`, {
@@ -211,8 +212,8 @@ export async function GET(req: NextRequest) {
   if (!apiKey) {
     return NextResponse.json(
       {
-        error:         "CURSEFORGE_API_KEY no configurada",
-        instrucciones: "Obtené una API key gratuita en https://console.curseforge.com/ y agregala en .env.local como CURSEFORGE_API_KEY=tu_key",
+        error:         "API key de CurseForge no configurada",
+        instrucciones: "Andá a los Ajustes de la aplicación (Configuración) y agregá tu API key de CurseForge para habilitar la búsqueda.",
       },
       { status: 503 }
     );
@@ -291,13 +292,10 @@ export async function GET(req: NextRequest) {
       console.error(`[/api/curseforge/discover] CurseForge API error (${res.status}):`, errorText);
 
       if (res.status === 403) {
-        const isLikelyTruncated = (apiKey || "").length < 50;
         return NextResponse.json(
           {
             error:   "API key de CurseForge rechazada (403 Forbidden)",
-            details: isLikelyTruncated 
-              ? "Tu API key parece estar truncada o mal interpretada por Next.js (posiblemente por contener caracteres como $). Asegurate de envolverla en comillas DOBLES en tu .env.local: CURSEFORGE_API_KEY=\"tu_key\""
-              : "Tu API key puede estar inválida o expirada. Verificá en https://console.curseforge.com/",
+            details: "Tu API key de CurseForge es inválida o expiró. Por favor, andá a los Ajustes de la aplicación (Configuración) y verificá la key ingresada.",
           },
           { status: 403 }
         );

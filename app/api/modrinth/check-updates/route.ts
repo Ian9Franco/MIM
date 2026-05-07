@@ -15,6 +15,7 @@ import * as fsSync from "fs";
 import path from "path";
 import { SOURCE_BASE } from "@/lib/constants";
 import { smartCache } from "@/lib/smart-cache";
+import { getApiKey } from "@/lib/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
@@ -225,8 +226,9 @@ export async function POST(req: NextRequest) {
     const headers: Record<string, string> = {
       "User-Agent": "MIM-App/1.0 (contact@mim.local)",
     };
-    if (process.env.MODRINTH_API_KEY) {
-      headers["Authorization"] = process.env.MODRINTH_API_KEY;
+    const apiKey = getApiKey("modrinth");
+    if (apiKey) {
+      headers["Authorization"] = apiKey;
     }
 
     // ── Bulk Hash Resolution for Uncached Mods ─────────────────────────────────

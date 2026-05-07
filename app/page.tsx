@@ -154,6 +154,25 @@ export default function Page() {
     }
   }, [sidebarOpen]);
 
+  // Sincronizar actualizaciones de biblioteca con componentes secundarios globales (como Fomo)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("library-updates-changed", { detail: lib.modrinthStatus }));
+    }
+  }, [lib.modrinthStatus]);
+
+  useEffect(() => {
+    const handleRequest = () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("library-updates-changed", { detail: lib.modrinthStatus }));
+      }
+    };
+    window.addEventListener("request-library-updates", handleRequest);
+    return () => {
+      window.removeEventListener("request-library-updates", handleRequest);
+    };
+  }, [lib.modrinthStatus]);
+
   // Bloquear scroll de fondo cuando hay sidebars abiertas
   useEffect(() => {
     if (sidebarOpen || fomoOpen || sageOpen) {

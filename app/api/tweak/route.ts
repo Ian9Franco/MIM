@@ -477,7 +477,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing projectName or version" }, { status: 400 });
     }
 
-    const { sourceBase } = getSettings();
+    const globalSettings = getSettings();
+    const { sourceBase } = globalSettings;
     const projectDir = path.join(sourceBase, "_projects", projectName);
     const optionsPath = path.join(projectDir, "options.txt");
 
@@ -599,14 +600,31 @@ export async function GET(req: NextRequest) {
       responseData.resourcePacks.autoFixable = packAnalysis.autoFixable;
     }
 
-    // 2. Fetch available resourcepacks in project
+    // 2. Fetch available resourcepacks in project (stored in _projects/<name>/resourcepacks)
     const rpDir = path.join(projectDir, "resourcepacks");
     if (fs.existsSync(rpDir)) {
       try {
         const files = fs.readdirSync(rpDir);
-        responseData.resourcePacks.available = files.filter(f => f.endsWith(".zip") || fs.statSync(path.join(rpDir, f)).isDirectory());
+        responseData.resourcePacks.available = files.filter(
+          f => f.endsWith(".zip") || fs.statSync(path.join(rpDir, f)).isDirectory()
+        );
       } catch (e) {}
     }
+
+    // 3b. Fetch shaders in game .minecraft/shaderpacks (read-only listing)
+    const shaderDir = path.join(globalSettings.minecraftPath, "shaderpacks");
+    const shadersInGame: { name: string; size: number }[] = [];
+    if (fs.existsSync(shaderDir)) {
+      try {
+        for (const f of fs.readdirSync(shaderDir)) {
+          const fp = path.join(shaderDir, f);
+          if (fs.statSync(fp).isFile() && (f.endsWith(".zip") || f.endsWith(".jar"))) {
+            shadersInGame.push({ name: f, size: fs.statSync(fp).size });
+          }
+        }
+      } catch (e) {}
+    }
+    responseData.shadersInGame = shadersInGame;
 
     // 3. Scan for smart snapshot profiles (JSON metadata + options data)
     if (fs.existsSync(projectDir)) {
@@ -744,7 +762,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
     }
 
-    const { sourceBase } = getSettings();
+    const globalSettings = getSettings();
+    const { sourceBase } = globalSettings;
     const projectDir = path.join(sourceBase, "_projects", projectName);
     const optionsPath = path.join(projectDir, "options.txt");
 
@@ -789,14 +808,12 @@ export async function POST(req: Request) {
           const systemBackupPath = path.join(settings.minecraftPath, "options.txt.mim-backup-original");
           if (!fs.existsSync(systemBackupPath)) {
             fs.copyFileSync(systemMcPath, systemBackupPath);
-            console.log(`[Tweak] Backed up original Minecraft options.txt to ${systemBackupPath}`);
           }
           
           fs.copyFileSync(systemMcPath, optionsPath);
           imported = true;
-          console.log(`[Tweak] Successfully imported options.txt from user system Minecraft folder`);
         } catch (e) {
-          console.error("[Tweak] Failed to copy system options.txt:", e);
+          // Fallback handled by return below
         }
       }
 
@@ -1233,89 +1250,132 @@ key_key.togglePerspective:key.keyboard.f5
       });
     }
 
-    // ──── Action: SYNC RESOURCEPACKS (Project <-> Game) ────
-    if (action === "sync-resourcepacks") {
+    // ──── Action: SYNC-RESOURCEPACKS (bidirectional project ↔ game) ────
+    // Pushes project's resourcepacks to .minecraft/resourcepacks, and pulls
+    // any packs in the game that don't belong to the project back into the project.
+    if (action === "sync-textures" || action === "sync-resourcepacks") {
       const settings = getSettings();
+      if (!fs.existsSync(settings.minecraftPath)) {
+        return NextResponse.json(
+          { error: "La carpeta de Minecraft no existe. Revisá los Ajustes de Sistema." },
+          { status: 400 }
+        );
+      }
       const projectRpDir = path.join(projectDir, "resourcepacks");
-      const gameRpDir = path.join(settings.minecraftPath, "resourcepacks");
+      const gameRpDir    = path.join(settings.minecraftPath, "resourcepacks");
 
       if (!fs.existsSync(projectRpDir)) fs.mkdirSync(projectRpDir, { recursive: true });
-      if (!fs.existsSync(gameRpDir)) fs.mkdirSync(gameRpDir, { recursive: true });
+      if (!fs.existsSync(gameRpDir))    fs.mkdirSync(gameRpDir,    { recursive: true });
 
-      const projectPacks = fs.readdirSync(projectRpDir);
-      const gamePacks = fs.readdirSync(gameRpDir);
-
-      const movedToGame: string[] = [];
+      const movedToGame:    string[] = [];
       const movedToProject: string[] = [];
+      const skipped:        string[] = [];
 
-      // 1. Move everything from game to project first (Pull)
-      for (const pack of gamePacks) {
-        const src = path.join(gameRpDir, pack);
+      // Step 1: Pull — move packs that are in the game but NOT in the project → into the project
+      for (const pack of fs.readdirSync(gameRpDir)) {
+        const src  = path.join(gameRpDir,    pack);
         const dest = path.join(projectRpDir, pack);
-        
+        if (!fs.statSync(src).isFile()) continue;  // skip directories
         if (!fs.existsSync(dest)) {
           try {
             fs.copyFileSync(src, dest);
             fs.unlinkSync(src);
             movedToProject.push(pack);
           } catch (e) {
-            console.error(`[Tweak] Failed to move pack ${pack}:`, e);
+            skipped.push(pack);
           }
         }
       }
 
-      // 2. Move project packs to game (Push)
-      const updatedProjectPacks = fs.readdirSync(projectRpDir);
-      for (const pack of updatedProjectPacks) {
-        const src = path.join(projectRpDir, pack);
-        const dest = path.join(gameRpDir, pack);
+      // Step 2: Push — copy all project packs to the game (without deleting them from project)
+      for (const pack of fs.readdirSync(projectRpDir)) {
+        const src  = path.join(projectRpDir, pack);
+        const dest = path.join(gameRpDir,    pack);
+        if (!fs.statSync(src).isFile()) continue;
         if (!fs.existsSync(dest)) {
-          fs.copyFileSync(src, dest);
-          movedToGame.push(pack);
+          try {
+            fs.copyFileSync(src, dest);
+            movedToGame.push(pack);
+          } catch (e) {
+            skipped.push(pack);
+          }
         }
       }
 
-      return NextResponse.json({ 
-        success: true, 
-        message: `Sincronización completada. ${movedToGame.length} enviadas al juego, ${movedToProject.length} recuperadas al proyecto.` 
+      return NextResponse.json({
+        success: true,
+        message: [
+          movedToGame.length    > 0 ? `${movedToGame.length} enviadas al juego`         : null,
+          movedToProject.length > 0 ? `${movedToProject.length} recuperadas al proyecto` : null,
+          skipped.length        > 0 ? `${skipped.length} omitidas (error de copia)`      : null,
+          (movedToGame.length + movedToProject.length) === 0 ? "Todo ya está sincronizado" : null,
+        ].filter(Boolean).join(" · "),
+        movedToGame,
+        movedToProject,
+        skipped,
       });
     }
 
-    // ──── Action: PUSH TO MINECRAFT ────
+    // ──── Action: PUSH-TO-MINECRAFT (options.txt only) ────
+    // Copies the project's options.txt to .minecraft/options.txt so the game
+    // picks up all keybinds, graphics settings, and resource pack list on next launch.
     if (action === "push-to-minecraft") {
-      const settings = getSettings();
-      const systemMcPath = path.join(settings.minecraftPath, "options.txt");
-      const systemBackupPath = path.join(settings.minecraftPath, "options.txt.mim-backup");
-      
-      if (!fs.existsSync(optionsPath)) {
-        return NextResponse.json({ error: "No hay options.txt en el proyecto" }, { status: 404 });
+      if (!fs.existsSync(globalSettings.minecraftPath)) {
+        return NextResponse.json(
+          { error: "La carpeta de Minecraft no existe o no fue configurada. Revisá los Ajustes de Sistema." },
+          { status: 400 }
+        );
       }
-      
+
+      const systemMcPath   = path.join(globalSettings.minecraftPath, "options.txt");
+      const systemBackupPath = path.join(globalSettings.minecraftPath, "options.txt.mim-backup");
+
+      if (!fs.existsSync(optionsPath)) {
+        return NextResponse.json({ error: "No hay options.txt en el proyecto. Inicializá Tweak primero." }, { status: 404 });
+      }
+
       try {
-        // Backup current system options.txt before overwriting (if it exists and we haven't backed up recently)
+        // Keep a rolling backup of the game's current options.txt before overwriting
         if (fs.existsSync(systemMcPath)) {
-          // Always keep one backup, but rotate if we push multiple times
-          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-          const timestampedBackup = path.join(settings.minecraftPath, `options.txt.mim-backup-${timestamp}`);
-          
-          // Keep latest backup as simple .mim-backup
           fs.copyFileSync(systemMcPath, systemBackupPath);
-          console.log(`[Tweak] Backed up current Minecraft options.txt to ${systemBackupPath}`);
         }
-        
         fs.copyFileSync(optionsPath, systemMcPath);
-        return NextResponse.json({ 
-          success: true, 
-          message: "Configuración aplicada al juego de Minecraft. Backup creado." 
+        return NextResponse.json({
+          success: true,
+          message: "options.txt aplicado al juego. Los cambios estarán activos en el próximo inicio de Minecraft.",
         });
       } catch (e: any) {
         return NextResponse.json({ error: `Error al copiar: ${e.message}` }, { status: 500 });
       }
     }
 
-    // ──── Action: RESTORE ORIGINAL BACKUP ────
+    // ──── Action: LIST-SHADERS ────
+    // Lists all shader packs currently in .minecraft/shaderpacks without launching the game.
+    if (action === "list-shaders") {
+      const settings = getSettings();
+      const shaderDir = path.join(settings.minecraftPath, "shaderpacks");
+
+      if (!fs.existsSync(shaderDir)) {
+        return NextResponse.json({ success: true, shaders: [], message: "No se encontró la carpeta shaderpacks en .minecraft" });
+      }
+
+      const shaders: { name: string; size: number; sizeMb: string }[] = [];
+      for (const file of fs.readdirSync(shaderDir)) {
+        const fp = path.join(shaderDir, file);
+        if (!fs.statSync(fp).isFile()) continue;
+        if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
+        const size = fs.statSync(fp).size;
+        shaders.push({ name: file, size, sizeMb: (size / 1024 / 1024).toFixed(1) });
+      }
+
+      return NextResponse.json({ success: true, shaders, total: shaders.length });
+    }
+
     if (action === "restore-original-backup") {
-      const originalBackupPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt.mim-backup-original");
+      if (!fs.existsSync(globalSettings.minecraftPath)) {
+        return NextResponse.json({ error: "No se encuentra la carpeta de Minecraft para restaurar el backup." }, { status: 400 });
+      }
+      const originalBackupPath = path.join(globalSettings.minecraftPath, "options.txt.mim-backup-original");
       
       if (!fs.existsSync(originalBackupPath)) {
         return NextResponse.json({ error: "No hay backup original. Primero inicializá TWEAK." }, { status: 404 });
@@ -1366,8 +1426,9 @@ key_key.togglePerspective:key.keyboard.f5
       
       const safeSnapName = snapshotName.replace(/[<>:"\\|?*]/g, "_").trim();
       const dataPath = path.join(projectDir, `mim_snapshot_${safeSnapName}.dat`);
-      const systemMcPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt");
-      const systemBackupPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt.mim-backup");
+      const settings = getSettings();
+      const systemMcPath = path.join(settings.minecraftPath, "options.txt");
+      const systemBackupPath = path.join(settings.minecraftPath, "options.txt.mim-backup");
       
       if (!fs.existsSync(dataPath)) {
         return NextResponse.json({ error: `Snapshot '${safeSnapName}' no encontrado` }, { status: 404 });

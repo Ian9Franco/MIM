@@ -23,6 +23,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getApiKey } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -65,7 +66,8 @@ export async function GET(req: NextRequest) {
   }
 
   const headers: Record<string, string> = { "User-Agent": "MIM-App/1.0 (contact@mim.local)" };
-  if (process.env.MODRINTH_API_KEY) headers["Authorization"] = process.env.MODRINTH_API_KEY;
+  const apiKey = getApiKey("modrinth");
+  if (apiKey) headers["Authorization"] = apiKey;
 
   try {
     // 1. Fetch de versiones con filtros opcionales

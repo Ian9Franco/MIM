@@ -23,6 +23,7 @@ import AdmZip from "adm-zip";
 import fs from "fs";
 import crypto from "crypto";
 import path from "path";
+import { getApiKey } from "./settings";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ const SUSPICIOUS_PATTERNS: Array<{
   { pattern: /powershell|cmd\.exe|bash -c/, category: "suspicious_string", severity: "critical", description: "Shell command invocations", score: 20 },
   { pattern: /wget|curl.*-O|invoke-webrequest/i, category: "suspicious_string", severity: "high", description: "Download commands", score: 15 },
   { pattern: /base64_decode|Base64\.getDecoder/, category: "suspicious_string", severity: "medium", description: "Base64 decoding (often obfuscation)", score: 5 },
-  { pattern: /AES|DES|RSA.*encrypt|cipher\.getInstance/i, category: "suspicious_string", severity: "low", description: "Encryption usage", score: 3 },
+  { pattern: /\b(AES|DES|RSA)\b|cipher\.getInstance/i, category: "suspicious_string", severity: "low", description: "Encryption usage", score: 3 },
   { pattern: /keylogger|screenshot|clipboard/i, category: "suspicious_string", severity: "high", description: "Potential surveillance behavior", score: 15 },
 ];
 
@@ -202,8 +203,8 @@ function calculateSha256(filePath: string): string {
 }
 
 async function checkVirusTotalHash(sha256: string): Promise<{ maliciousCount: number; totalEngineCount: number; detailsUrl?: string } | null> {
-  const apiKey = process.env.VIRUSTOTAL_API_KEY;
-  if (!apiKey || apiKey.startsWith("d7bb8b") || apiKey.includes("...")) {
+  const apiKey = getApiKey("virustotal");
+  if (!apiKey || apiKey.includes("...") || apiKey.trim().length < 16) {
     return null;
   }
 
@@ -367,11 +368,12 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
         findings.push(...bytecodeFindings);
       }
 
-      // Analyze manifest and config files for suspicious strings
+      // Analyze manifest, metadata and config files for suspicious strings
       if (
         entryName.endsWith(".json") ||
         entryName.endsWith(".toml") ||
         entryName.endsWith(".properties") ||
+        entryName.endsWith(".mcmeta") ||
         entryName === "META-INF/MANIFEST.MF"
       ) {
         try {
@@ -613,21 +615,24 @@ function generateSummary(
 
 /**
  * Scans multiple files and returns aggregated results.
+ * Each result includes the source `filePath` so the UI can correlate
+ * results with their original scannable entries.
  */
 export async function scanSecurityBatch(filePaths: string[]): Promise<{
-  results: SecurityScanResult[];
+  results: (SecurityScanResult & { filePath: string })[];
   highestRisk: SecurityScanResult | null;
   summary: string;
 }> {
-  const results: SecurityScanResult[] = [];
+  const results: (SecurityScanResult & { filePath: string })[] = [];
 
-  for (const path of filePaths) {
+  for (const fp of filePaths) {
     try {
-      const result = await scanSecurity(path);
-      results.push(result);
+      const result = await scanSecurity(fp);
+      results.push({ ...result, filePath: fp });
     } catch (error) {
-      // Push a failed scan result
+      // Push a failed-scan placeholder so the UI sees it (filtered out client-side)
       results.push({
+        filePath: fp,
         riskScore: 0,
         riskLevel: "clean",
         sha1: "error",
@@ -647,7 +652,7 @@ export async function scanSecurityBatch(filePaths: string[]): Promise<{
     curr.riskScore > (max?.riskScore ?? 0) ? curr : max
   , null as SecurityScanResult | null);
 
-  const criticalCount = results.filter(r => r.riskLevel === "critical").length;
+  const criticalCount   = results.filter(r => r.riskLevel === "critical").length;
   const suspiciousCount = results.filter(r => r.riskLevel === "suspicious").length;
 
   const summary = `Scanned ${results.length} files. ` +

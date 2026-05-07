@@ -329,6 +329,34 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
     }
   };
 
+  const handleSyncResourcepacks = async () => {
+    if (!activeProject) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/tweak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectName: activeProject.name,
+          version: activeProject.version,
+          action: "sync-resourcepacks",
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setMessage({ text: json.message || "Sincronización completada", type: "success" });
+        fetchData(); // Refresh to show updated pack list
+      } else {
+        setMessage({ text: json.error || "Error al sincronizar", type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Error de conexión", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Drag and drop handlers for resource packs
   const handleDragStartPack = (e: React.DragEvent, visualIndex: number) => {
     setDraggedPackIdx(visualIndex);
@@ -364,13 +392,13 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   };
 
   return (
-    <div 
+    <aside 
       ref={sidebarRef}
       className={`fixed inset-y-0 right-0 w-[400px] z-[100] flex flex-col shadow-2xl border-l transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
       style={{ 
-        background: "rgba(10, 10, 12, 0.95)",
+        background: "color-mix(in srgb, var(--color-card) 95%, transparent)",
         borderColor: "var(--color-border)",
         backdropFilter: "blur(24px)",
       }}
@@ -722,22 +750,58 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       <RefreshCw className="w-5 h-5" />
                     </div>
                     <div>
-                      <h5 className="text-sm font-subhead text-white">Sincronización con el Juego</h5>
-                      <p className="text-[10px] text-muted">Intercambia packs entre MIM y tu juego.</p>
+                      <h5 className="text-sm font-subhead text-white">Sincronizar Resource Packs</h5>
+                      <p className="text-[10px] text-muted">
+                        Envía los packs del proyecto al juego · Recupera los del juego al proyecto.
+                      </p>
                     </div>
                   </div>
                   <button 
                     disabled={saving}
-                    onClick={() => handleAction("sync-resourcepacks")}
-                    className="w-full py-3 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl text-xs font-subhead transition-all flex items-center justify-center gap-2"
+                    onClick={handleSyncResourcepacks}
+                    className="w-full py-3 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl text-xs font-subhead transition-all duration-300 flex items-center justify-center gap-2 border border-indigo-500/30 hover:border-indigo-500 disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
                   >
                     {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
-                    Sincronizar Texturas (Pull/Push)
+                    {saving ? "Sincronizando..." : "Sincronizar con el Juego ↕"}
                   </button>
                   <p className="text-[9px] text-muted/50 mt-3 text-center px-4 leading-tight italic">
-                    * Mueve packs externos al proyecto y envía los del proyecto al juego automáticamente.
+                    Push: copia los packs del proyecto a .minecraft · Pull: recupera los del juego al proyecto.
                   </p>
                 </section>
+
+                {/* Shader Viewer — read-only listing of .minecraft/shaderpacks */}
+                {data.shadersInGame && (
+                  <section className="p-4 rounded-3xl bg-purple-500/5 border border-purple-500/20 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                        <Cpu className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-subhead text-white">Shaders en el Juego</h5>
+                        <p className="text-[10px] text-muted">
+                          Shaders instalados en .minecraft/shaderpacks (solo lectura).
+                        </p>
+                      </div>
+                    </div>
+                    {data.shadersInGame.length === 0 ? (
+                      <p className="text-[10px] text-muted/50 text-center italic py-2">
+                        No hay shaders instalados en el juego.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {data.shadersInGame.map((shader, idx) => (
+                          <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-xl bg-purple-500/8 border border-purple-500/15">
+                            <span className="text-[11px] font-mono text-purple-200/80 truncate flex-1 mr-2">{shader.name}</span>
+                            <span className="text-[9px] text-purple-400/60 shrink-0 font-label">
+                              {(shader.size / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
 
                 {/* Save Changes & Apply Buttons */}
                 {hasPackChanges && (
@@ -1044,6 +1108,6 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
           )}
         </>
       )}
-    </div>
+    </aside>
   );
 }

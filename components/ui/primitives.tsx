@@ -190,7 +190,7 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
 
   return (
     <div 
-      className={`relative flex p-1 rounded-2xl ${className}`} 
+      className={`relative flex p-1.5 rounded-2xl ${className}`} 
       style={{ background: "var(--fomo-secondary-bg)", border: "1px solid var(--fomo-border)", ...style }} 
       role="radiogroup" 
       aria-label={ariaLabel}
@@ -198,10 +198,10 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
       {/* Liquid Sliding Background */}
       {activeIndex !== -1 && (
         <div 
-          className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none inset-y-1"
+          className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none inset-y-1.5"
           style={{
-            width: `calc(100% / ${options.length} - 12px)`,
-            left: `calc((${activeIndex} * 100% / ${options.length}) + 6px)`,
+            width: `calc((100% - 12px) / ${options.length} - 4px)`,
+            left: `calc((${activeIndex} * (100% - 12px) / ${options.length}) + 8px)`,
             background: activeOpt?.activeBg || "var(--color-primary-bg)",
             border: `1px solid ${activeOpt?.activeBorder || "var(--color-primary-border)"}`,
             boxShadow: "0 8px 24px rgba(0,0,0,0.2)",

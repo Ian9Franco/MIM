@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/env";
+import { getApiKey } from "@/lib/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
     } 
     // Si el mod viene de Modrinth, lo buscamos en CurseForge
     else if (source === "modrinth") {
-      const apiKey = getRawEnv("CURSEFORGE_API_KEY") || "";
+      const apiKey = getApiKey("curseforge");
       if (!apiKey) return NextResponse.json({ exists: false });
 
       // Aumentamos pageSize a 10 para buscar entre los primeros resultados

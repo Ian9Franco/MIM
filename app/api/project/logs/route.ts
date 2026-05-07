@@ -8,22 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/constants";
 import path from "path";
 import fs from "fs";
-import os from "os";
+import { getSettings } from "@/lib/settings";
 
-// Helper to resolve global .minecraft path depending on OS
-function getGlobalMcPath(): string {
-  const homeDir = os.homedir();
-  if (process.platform === "win32") {
-    return path.join(process.env.APPDATA || path.join(homeDir, "AppData", "Roaming"), ".minecraft");
-  } else if (process.platform === "darwin") {
-    return path.join(homeDir, "Library", "Application Support", "minecraft");
-  } else {
-    return path.join(homeDir, ".minecraft");
-  }
-}
+// Se eliminó getGlobalMcPath ya que ahora usamos globalSettings.minecraftPath
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -38,9 +27,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const projectPath = path.join(SOURCE_BASE, "_projects", project);
+  const globalSettings = getSettings();
+  const projectPath = path.join(globalSettings.sourceBase, "_projects", project);
   const projectPathExists = fs.existsSync(projectPath);
-  const globalMcPath = getGlobalMcPath();
+  const globalMcPath = globalSettings.minecraftPath;
 
   // ── MODO 1: Leer el contenido de un archivo específico ───────────────────────
   if (fileToRead) {
@@ -177,7 +167,17 @@ export async function GET(req: NextRequest) {
   // Ordenar de más reciente a más antiguo
   files.sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime());
 
-  return NextResponse.json({ files });
+  const projectLogsExists = projectPathExists && fs.existsSync(path.join(projectPath, "logs"));
+  const projectCrashesExists = projectPathExists && fs.existsSync(path.join(projectPath, "crash-reports"));
+  const minecraftPathExists = fs.existsSync(globalMcPath);
+
+  return NextResponse.json({
+    files,
+    projectPathExists,
+    minecraftPathExists,
+    projectLogsExists,
+    projectCrashesExists
+  });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -193,12 +193,11 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  const projectPath = path.join(SOURCE_BASE, "_projects", project);
-  const globalMcPath = getGlobalMcPath();
-
+  const globalSettings = getSettings();
+  const projectPath = path.join(globalSettings.sourceBase, "_projects", project);
   const isGlobal = fileToDelete.startsWith("global:");
   const relativePath = isGlobal ? fileToDelete.substring(7) : fileToDelete;
-  const basePath = isGlobal ? globalMcPath : projectPath;
+  const basePath = isGlobal ? globalSettings.minecraftPath : projectPath;
 
   // Evitar directory traversal
   const resolvedPath = path.resolve(basePath, relativePath);

@@ -24,6 +24,7 @@ interface FomoModCardProps {
   isSelected?:      boolean;
   onToggleSelect?:  (mod: ModHit) => void;
   sinytraActive?:   boolean;
+  hasUpdateAvailable?: boolean;
 }
 
 interface CompatibilityPrediction {
@@ -88,7 +89,7 @@ function predictConnectorCompatibility(title: string, categories: string[] = [])
 
 export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions, onAddToCollection,
-  isSelected, onToggleSelect, sinytraActive,
+  isSelected, onToggleSelect, sinytraActive, hasUpdateAvailable = false,
 }: FomoModCardProps) {
   const isCurseForge = mod._source === "curseforge";
   const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
@@ -120,7 +121,9 @@ export const FomoModCard = memo(function FomoModCard({
   return (
     <article
       onClick={() => onToggleSelect?.(mod)}
-      className={`flex flex-col transition-all duration-200 shadow-md relative group cursor-pointer h-full ${isSelected ? 'ring-2 ring-primary' : ''} ${
+      className={`flex flex-col transition-all duration-200 shadow-md relative group cursor-pointer h-full ${
+        isSelected ? 'ring-2 ring-primary' : (hasUpdateAvailable ? 'ring-1 ring-amber-500/20' : '')
+      } ${
         isCurseForge 
           ? 'rounded-none border-2 border-orange-900/30' 
           : 'rounded-[1.35rem] border glass-hover backdrop-blur-[14px]'
@@ -128,13 +131,28 @@ export const FomoModCard = memo(function FomoModCard({
       style={{ 
         background: isCurseForge 
           ? "var(--color-cf-bg)" 
-          : (isSelected ? "rgba(187,150,228,0.1)" : COLORS.card), 
+          : (isSelected 
+              ? "rgba(187,150,228,0.1)" 
+              : (hasUpdateAvailable 
+                  ? "linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(217,119,6,0.02) 100%)" 
+                  : COLORS.card)), 
         borderColor: isCurseForge 
           ? (isSelected ? COLORS.curseforgeOrange : "var(--color-cf-border)")
-          : (isSelected ? COLORS.primary : COLORS.border),
+          : (isSelected 
+              ? COLORS.primary 
+              : (hasUpdateAvailable 
+                  ? "rgba(245,158,11,0.35)" 
+                  : COLORS.border)),
       }}
       aria-label={mod.title}
     >
+      {/* Insignia elegante de Update Disponible */}
+      {hasUpdateAvailable && (
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[8px] shadow-[0_0_12px_rgba(245,158,11,0.15)] uppercase tracking-wider animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          Update Disponible
+        </div>
+      )}
       {/* Selection Toggle - Reubicado para no tapar el chip de tipo */}
       {onToggleSelect && (
         <button

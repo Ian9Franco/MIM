@@ -78,9 +78,9 @@
 # 🚧 Roadmap y Próximos Pasos (PENDIENTE)
 
 ## 🎯 Prioridades Inmediatas (S+)
-1. **Conflict Detection Engine (Avanzado)**: Extender SAGE para detectar colisiones lógicas complejas de bytecode (Mixins del mismo método) previas al lanzamiento físico del juego.
-2. **Security UI Completa**: Badge de risk score en ModCard con visualización de VirusTotal y estado verificado.
-3. **Auto-Optimization (Fase 2)**: Ajuste automático de Java Args y Shaders según hardware.
+1. **Event-Driven Orchestration & ALRT Central**: Diseñar e implementar el bus de eventos centralizado (`MIM Event Bus`) y el núcleo inteligente de correlación en `ALRT` para intercomunicar de forma asíncrona y desacoplada a FOMO, SAGE, TWEAK y Watcher.
+2. **Conflict Detection Engine (Avanzado)**: Extender SAGE para detectar colisiones lógicas complejas de bytecode (Mixins del mismo método) previas al lanzamiento físico del juego.
+3. **Security UI Completa**: Badge de risk score en ModCard con visualización de VirusTotal y estado verificado.
 
 ## 🗺️ Roadmap Estratégico
 
@@ -108,11 +108,27 @@
 - [ ] **Technical Case Study**: Documentación de trade-offs y arquitectura senior.
 - [ ] **Portfolio Integration**: Integración en portfolio profesional.
 
-### Fase 5: Inteligencia Artificial (Futuro) 📋 --- evitar la IA
-- [ ] **AI Recommendations**: "Si usas esto, probablemente quieras esto".
-- [ ] **Natural Language Search**: "mods medievales oscuros con magia".
-- [ ] **Auto-Curation**: Creación automática de colecciones basadas en preferencias.
-- [ ] **Predictive Updates**: Predicción de necesidades de actualización.
+### 🌐 Fase 5: Event-Driven Orchestration & Centralized Intelligence 📋
+
+- [ ] **MIM Event Bus (Core Kernel)**
+  Bus de eventos centralizado, ligero y completamente tipado para desacoplar la comunicación entre módulos (`FOMO`, `SAGE`, `ALRT`, `TWEAK`, `Watcher`, etc.) mediante arquitectura reactiva basada en eventos.
+
+- [ ] **ALRT Central Intelligence Layer**
+  Evolución del Centro de Alertas hacia un núcleo de inteligencia operacional capaz de escuchar, priorizar, agrupar y contextualizar eventos provenientes de toda la aplicación en tiempo real.
+
+- [ ] **Cross-Module Incident Correlation Engine**
+  Motor reactivo de correlación capaz de detectar relaciones entre eventos independientes y consolidarlos en un único incidente contextual.
+  Ejemplo:
+  `FOMO → mod.downloaded`
+  `SAGE → dependency.missing`
+  `TWEAK → shader.incompatible`
+  ➔ ALRT genera: `"Entorno inconsistente detectado"`.
+
+- [ ] **Incident Persistence & Session Memory**
+  Persistencia local de incidentes, estados `unread/unseen`, historial de resolución y trazabilidad temporal para permitir auditoría, continuidad entre sesiones y debugging avanzado.
+
+- [ ] **Reactive Rule System**
+  Sistema extensible de reglas (`IF event A + event B → create incident`) para automatizar diagnósticos, recomendaciones y flujos de recuperación entre módulos.
 
 ### Fase 6: Ecosistema y Comunidad (Futuro) 📋
 - [ ] **Sync en la Nube**: Sincronización de proyectos entre dispositivos.

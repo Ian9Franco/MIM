@@ -109,12 +109,35 @@ export async function POST(req: NextRequest) {
 
     const existingPath = findExistingByHash(downloadsDir, hashes);
     if (existingPath) {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        existingPath,
-        reason: "already_exists",
-      });
+      // Si el archivo ya existe pero está en SOURCE_BASE (la librería) y NO en Downloads,
+      // lo copiamos localmente a la carpeta Downloads para que el watcher lo detecte
+      // y lo asigne/copie al proyecto activo. ¡Esto ahorra internet y soluciona la duplicidad!
+      const isInDownloads = existingPath.toLowerCase().startsWith(downloadsDir.toLowerCase());
+      if (!isInDownloads) {
+        const ext = path.extname(safeFilename);
+        const base = path.basename(safeFilename, ext);
+        let targetPath = path.join(downloadsDir, safeFilename);
+
+        if (fs.existsSync(targetPath)) {
+          targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+        }
+
+        try {
+          fs.copyFileSync(existingPath, targetPath);
+          console.log(`[/api/modrinth/download] Copied locally from library to Downloads: ${path.basename(targetPath)}`);
+          return NextResponse.json({ success: true, targetPath, copiedLocally: true });
+        } catch (copyErr) {
+          console.error("[/api/modrinth/download] Failed to copy locally, proceeding to download:", copyErr);
+          // Si falla, continúa para descargar normalmente
+        }
+      } else {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          existingPath,
+          reason: "already_exists",
+        });
+      }
     }
 
     // ── Collision guard ────────────────────────────────────────────────────────

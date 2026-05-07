@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Package, FolderOpen } from "lucide-react";
+import { Package, FolderOpen, Inbox } from "lucide-react";
 import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
 import { CATEGORY_HOTKEYS }   from "../constants/app";
@@ -54,6 +54,12 @@ function getPendingFingerprint(file: PendingFile): string {
 export default function Page() {
   const projects = useProjects();
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("active-project-changed", { detail: projects.activeProject }));
+    }
+  }, [projects.activeProject]);
+
   const [pendingFiles,     setPendingFiles]     = useState<PendingFile[]>([]);
   const [selectedFiles,    setSelectedFiles]    = useState<PendingFile[]>([]);
   const [selectedLibFiles, setSelectedLibFiles] = useState<LibraryFile[]>([]);
@@ -61,11 +67,35 @@ export default function Page() {
   const [showSubcategories,setShowSubcategories]= useState<string | null>(null);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
   const [fomoOpen,         setFomoOpen]         = useState(false);
+  const [sageOpen,         setSageOpen]         = useState(false);
   const [detailsOpen,      setDetailsOpen]      = useState(false);
+  const [downloadsSidebarCollapsed, setDownloadsSidebarCollapsed] = useState(false);
+  const prevPendingCountRef = useRef(pendingFiles.length);
   const [mounted,          setMounted]          = useState(false);
   const [autoClassify,     setAutoClassify]     = useState(false);
   const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
   const autoProcessing = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (fomoOpen) {
+      setDownloadsSidebarCollapsed(false);
+    }
+  }, [fomoOpen]);
+
+  useEffect(() => {
+    const prevCount = prevPendingCountRef.current;
+    prevPendingCountRef.current = pendingFiles.length;
+
+    if (fomoOpen && pendingFiles.length > prevCount) {
+      setDownloadsSidebarCollapsed(false);
+      
+      const timer = setTimeout(() => {
+        setDownloadsSidebarCollapsed(true);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pendingFiles.length, fomoOpen]);
 
 
 
@@ -83,6 +113,10 @@ export default function Page() {
       const customEvent = e as CustomEvent<boolean>;
       setFomoOpen(customEvent.detail);
     };
+    const handleSageToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setSageOpen(customEvent.detail);
+    };
     const handleDetailsToggle = (e: Event) => {
       const customEvent = e as CustomEvent<{ open: boolean }>;
       setDetailsOpen(customEvent.detail.open);
@@ -97,10 +131,12 @@ export default function Page() {
       } catch (_) {}
     };
     window.addEventListener("fomo-toggle", handleFomoToggle);
+    window.addEventListener("sage-toggle", handleSageToggle);
     window.addEventListener("fomo-details-toggle", handleDetailsToggle);
     window.addEventListener("refresh-system", handleRefreshRequest);
     return () => {
       window.removeEventListener("fomo-toggle", handleFomoToggle);
+      window.removeEventListener("sage-toggle", handleSageToggle);
       window.removeEventListener("fomo-details-toggle", handleDetailsToggle);
       window.removeEventListener("refresh-system", handleRefreshRequest);
     };
@@ -114,12 +150,12 @@ export default function Page() {
 
   // Bloquear scroll de fondo cuando hay sidebars abiertas
   useEffect(() => {
-    if (sidebarOpen || fomoOpen) {
+    if (sidebarOpen || fomoOpen || sageOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-  }, [sidebarOpen, fomoOpen]);
+  }, [sidebarOpen, fomoOpen, sageOpen]);
 
   const allSelected = [...selectedFiles, ...selectedLibFiles];
 
@@ -445,35 +481,65 @@ export default function Page() {
 
         {/* Right Floating Sidebar for Downloads or Project Details when FOMO is open */}
         {mounted && typeof window !== "undefined" && createPortal(
-          <div
-            className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
-              detailsOpen ? "w-[600px] max-w-[90vw]" : "w-[380px]"
-            } ${
-              fomoOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-            }`}
+          (() => {
+            const isSidebarVisible = fomoOpen && (detailsOpen || !downloadsSidebarCollapsed);
+            return (
+              <div
+                className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
+                  detailsOpen ? "w-[600px] max-w-[90vw]" : "w-[380px]"
+                } ${
+                  isSidebarVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
+                }`}
+                style={{
+                  background: "color-mix(in srgb, var(--color-card) 94%, transparent)",
+                  borderColor: "var(--color-border)",
+                  backdropFilter: "blur(20px)",
+                }}
+              >
+                <div className={`flex-1 flex flex-col min-h-0 ${detailsOpen ? "" : "p-6 overflow-y-auto custom-scrollbar"}`}>
+                  {detailsOpen ? (
+                    <div id="fomo-details-sidebar-portal" className="flex-1 flex flex-col min-h-0" />
+                  ) : (
+                    <PendingFilesSection
+                      pendingFiles={pendingFiles}
+                      loading={loading}
+                      selectedFiles={selectedFiles}
+                      setSelectedFiles={setSelectedFiles}
+                      activeProject={projects.activeProject}
+                      onDeleteFile={handleDeletePendingFile}
+                      modrinthStatus={lib.modrinthStatus}
+                      onCloseSidebar={() => setDownloadsSidebarCollapsed(true)}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })(),
+          document.body
+        )}
+
+        {/* Floating pill to expand downloads sidebar if manually collapsed */}
+        {fomoOpen && !detailsOpen && downloadsSidebarCollapsed && (
+          <button
+            onClick={() => setDownloadsSidebarCollapsed(false)}
+            className="fixed right-5 top-20 z-50 flex items-center gap-2.5 px-4 py-3 rounded-full border bg-card/95 backdrop-blur-md hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-fade-in border-primary/30 hover:border-primary/50 text-primary group"
             style={{
-              background: "color-mix(in srgb, var(--color-card) 94%, transparent)",
-              borderColor: "var(--color-border)",
-              backdropFilter: "blur(20px)",
+              borderColor: "rgba(99, 102, 241, 0.3)",
+              background: "color-mix(in srgb, var(--color-card) 95%, transparent)"
             }}
           >
-            <div className={`flex-1 flex flex-col min-h-0 ${detailsOpen ? "" : "p-6 overflow-y-auto custom-scrollbar"}`}>
-              {detailsOpen ? (
-                <div id="fomo-details-sidebar-portal" className="flex-1 flex flex-col min-h-0" />
-              ) : (
-                <PendingFilesSection
-                  pendingFiles={pendingFiles}
-                  loading={loading}
-                  selectedFiles={selectedFiles}
-                  setSelectedFiles={setSelectedFiles}
-                  activeProject={projects.activeProject}
-                  onDeleteFile={handleDeletePendingFile}
-                  modrinthStatus={lib.modrinthStatus}
-                />
+            <div className="relative shrink-0">
+              <Inbox className="w-4 h-4 group-hover:animate-pulse text-indigo-400" />
+              {pendingFiles.length > 0 && (
+                <span className="absolute -top-2 -right-2 w-4.5 h-4.5 rounded-full bg-rose-500 text-white text-[8px] font-extrabold flex items-center justify-center shadow-md animate-pulse">
+                  {pendingFiles.length}
+                </span>
               )}
             </div>
-          </div>,
-          document.body
+            <span className="text-[10px] font-black uppercase tracking-wider text-foreground/70 group-hover:text-indigo-400">
+              Ver Descargas
+            </span>
+          </button>
         )}
       </div>
 

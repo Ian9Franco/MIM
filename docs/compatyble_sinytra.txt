@@ -1,0 +1,266 @@
+se puede presumir como es que un mod de fabric va aser compatible mediante sinytra connector con forge? o es suerte?
+
+
+Sí se puede “presumir” parcialmente.
+No es pura suerte. Pero tampoco existe garantía absoluta.
+
+Sinytra funciona más como:
+
+# una capa de traducción/runtime bridge
+
+entre APIs, mixins y comportamiento interno de:
+
+* Fabric
+* Forge/NeoForge
+
+Entonces la compatibilidad depende de:
+
+# QUÉ toca el mod internamente.
+
+---
+
+# 🟢 Mods con ALTA probabilidad de funcionar
+
+## Mods simples/content mods
+
+Ejemplos:
+
+* bloques,
+* items,
+* mobs,
+* biomas,
+* recetas,
+* estructuras.
+
+Porque usan APIs relativamente normales.
+
+Ejemplo:
+
+```txt id="5jv9ki"
+"agrega 20 espadas"
+```
+
+Eso suele funcionar.
+
+---
+
+# 🟡 Compatibilidad media
+
+## Mods gameplay/QOL
+
+Ejemplos:
+
+* minimaps,
+* inventory tweaks,
+* HUDs,
+* animations simples.
+
+Depende mucho de:
+
+* rendering hooks,
+* keybind APIs,
+* networking.
+
+---
+
+# 🔴 Mods con alta probabilidad de EXPLOTAR
+
+## Mods que tocan internals pesados
+
+Ejemplos:
+
+* rendering,
+* shaders,
+* chunk engine,
+* lighting,
+* threading,
+* networking profundo,
+* physics,
+* optimization,
+* Sodium ecosystem,
+* Iris,
+* Lithium,
+* Krypton,
+* mods con ASM raro,
+* access wideners complejos.
+
+Ahí Sinytra empieza a sudar sangre.
+
+---
+
+# 🧠 Entonces:
+
+## SAGE podría calcular un:
+
+# “Connector Compatibility Estimate”
+
+---
+
+# Basado en qué?
+
+## 1. Dependencias Fabric API
+
+Si usa:
+
+```txt id="q8aqij"
+fabric-rendering-v1
+```
+
+→ riesgo alto.
+
+Si usa:
+
+```txt id="wzn03w"
+fabric-item-group-api-v1
+```
+
+→ riesgo bajo.
+
+---
+
+# 2. Cantidad de mixins
+
+Muchos mixins =
+más chances de colisión.
+
+---
+
+# 3. Access Wideners
+
+MUY importante.
+
+Si el mod usa:
+
+```txt id="cvzh8o"
+accessWidener
+```
+
+sube el riesgo.
+
+---
+
+# 4. Categoría del mod
+
+| Tipo         | Riesgo   |
+| ------------ | -------- |
+| Content mod  | Bajo     |
+| Library/API  | Medio    |
+| Rendering    | Alto     |
+| Optimization | Muy alto |
+| Physics      | Alto     |
+| Networking   | Alto     |
+
+---
+
+# 5. Historial comunitario
+
+Acá está la magia.
+
+SAGE podría tener:
+
+# fingerprints comunitarios
+
+Ejemplo:
+
+```ts id="kz8nq4"
+{
+  mod: "Sodium",
+  status: "replace_with_embeddium"
+}
+```
+
+o:
+
+```ts id="2gvcdd"
+{
+  mod: "Traveler's Backpack",
+  connectorCompatibility: "stable"
+}
+```
+
+---
+
+# 🔥 Y ahí aparece algo MUY interesante:
+
+## “Compatibility Prediction”
+
+Ejemplo UI:
+
+```txt id="w8o6ma"
+Connector Compatibility Estimate
+
+Stable: 82%
+Warnings: 2
+Risk Level: Medium
+```
+
+---
+
+# O incluso:
+
+```txt id="9pc5jb"
+Potential Issues:
+- rendering hooks
+- unsupported Fabric networking mixins
+```
+
+---
+
+# Porque Sinytra NO hace magia.
+
+La gente piensa:
+
+> “Fabric mod en Forge”
+
+pero en realidad pasa esto:
+
+```txt id="4d74ya"
+Fabric Mod
+   ↓
+Connector remaps APIs
+   ↓
+Forge runtime intenta entenderlas
+   ↓
+Mixin system reinyecta clases
+   ↓
+Minecraft reza
+```
+
+---
+
+# La realidad brutal:
+
+## Compatibilidad real depende de:
+
+* cuánto se desvía el mod de APIs estándar,
+* cuánto hackea Minecraft,
+* qué tan cursed es el autor,
+* si usa mixins agresivos,
+* si toca rendering,
+* si depende de timing/threading.
+
+---
+
+# Lo MÁS poderoso para SAGE:
+
+## “Red Flags”
+
+Ejemplo:
+
+```txt id="sqb4z7"
+⚠ Uses rendering mixins
+⚠ Uses access wideners
+⚠ Uses Fabric Renderer API
+⚠ Uses custom networking
+```
+
+Y abajo:
+
+```txt id="x31wlc"
+Expected Connector Stability: LOW
+```
+
+Eso sería extremadamente útil.
+
+Porque antes de instalar:
+el usuario YA SABE si está jugando a Minecraft o a desactivar bombas.

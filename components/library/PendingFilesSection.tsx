@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Inbox, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { Inbox, FolderOpen, Loader2, Trash2, X } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
 import { EmptyState } from "../ui/EmptyState";
@@ -16,6 +16,7 @@ interface PendingFilesSectionProps {
   onDeleteFile?: (file: PendingFile) => Promise<void>;
   layout?: "sidebar" | "main";
   modrinthStatus?: Record<string, any>;
+  onCloseSidebar?: () => void;
 }
 
 export function PendingFilesSection({
@@ -26,7 +27,8 @@ export function PendingFilesSection({
   activeProject,
   onDeleteFile,
   layout = "sidebar",
-  modrinthStatus = {}
+  modrinthStatus = {},
+  onCloseSidebar
 }: PendingFilesSectionProps) {
   const [openingFolder, setOpeningFolder] = useState(false);
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
@@ -93,16 +95,27 @@ export function PendingFilesSection({
             accentColor="var(--color-primary)"
           />
         </div>
-        <button
-          onClick={handleOpenDownloadsFolder}
-          disabled={openingFolder}
-          className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50 shrink-0"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
-          title="Abrir carpeta de origen (Descargas)"
-        >
-          {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
-          Carpeta
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={handleOpenDownloadsFolder}
+            disabled={openingFolder}
+            className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50 shrink-0"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
+            title="Abrir carpeta de origen (Descargas)"
+          >
+            {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
+            Carpeta
+          </button>
+          {onCloseSidebar && (
+            <button
+              onClick={onCloseSidebar}
+              className="flex items-center justify-center w-7 h-7 mt-1 rounded-xl transition-all hover:bg-white/10 hover:scale-105 active:scale-95 shrink-0 border border-white/10 bg-white/5 text-foreground/50 hover:text-foreground"
+              title="Ocultar descargas"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       <div 
         className={layout === "main" ? "space-y-2.5 max-h-[590px] overflow-y-auto pr-2 custom-scrollbar p-1 snap-y snap-mandatory scroll-pt-1 scroll-pb-1" : "space-y-2.5"}

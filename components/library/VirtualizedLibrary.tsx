@@ -28,6 +28,7 @@ interface ModItemData {
     badgeColor?: string;
     onDownload?: () => void;
   };
+  onOpenDetails: (f: LibraryFile) => void;
 }
 
 // Función render para cada item en la lista virtualizada (compatible con react-window)
@@ -41,7 +42,8 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
     modrinthStatus,
     ignoredUpdates,
     handleDownloadUpdate,
-    getBadge
+    getBadge,
+    onOpenDetails
   } = data;
 
   const mod = mods[index];
@@ -74,6 +76,7 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
         onDownload={badge.onDownload}
         isDownloading={downloadingMods[mod.path]}
         categories={modrinthStatus[mod.path]?.categories || mod.meta?.categories}
+        onOpenDetails={() => data.onOpenDetails(mod)}
       />
     </div>
   );
@@ -141,7 +144,31 @@ export function VirtualizedLibrary({
     modrinthStatus,
     ignoredUpdates,
     handleDownloadUpdate,
-    getBadge
+    getBadge,
+    onOpenDetails: (f: LibraryFile) => {
+      const modHit: any = {
+        projectId: f.meta?.modId || "",
+        slug: f.meta?.modId || f.fileName,
+        title: f.meta?.modName || f.fileName,
+        description: "",
+        iconUrl: f.meta?.iconBase64 || null,
+        author: f.meta?.author || "Unknown",
+        downloads: 0,
+        follows: 0,
+        latestVersion: null,
+        categories: f.meta?.categories || [],
+        dateCreated: "",
+        url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
+        _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
+      };
+      
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+        }, 300);
+      }
+    }
   }), [library, selectedLibFiles, setSelectedLibFiles, activeProject, downloadingMods, modrinthStatus, ignoredUpdates, handleDownloadUpdate, getBadge]);
 
   // Si hay pocos mods (< 50), usar renderizado normal para evitar complejidad innecesaria
@@ -189,6 +216,30 @@ export function VirtualizedLibrary({
                           onDownload={badge.onDownload}
                           isDownloading={downloadingMods[f.path]}
                           categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
+                          onOpenDetails={() => {
+                            const modHit: any = {
+                              projectId: f.meta?.modId || "",
+                              slug: f.meta?.modId || f.fileName,
+                              title: f.meta?.modName || f.fileName,
+                              description: "",
+                              iconUrl: f.meta?.iconBase64 || null,
+                              author: f.meta?.author || "Unknown",
+                              downloads: 0,
+                              follows: 0,
+                              latestVersion: null,
+                              categories: f.meta?.categories || [],
+                              dateCreated: "",
+                              url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
+                              _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
+                            };
+                            
+                            if (typeof window !== "undefined") {
+                              window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                              setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                              }, 300);
+                            }
+                          }}
                         />
                       );
                     })}

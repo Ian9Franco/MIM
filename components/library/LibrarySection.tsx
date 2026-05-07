@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight } from "lucide-react";
+import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight, Cpu } from "lucide-react";
 import { ModCard } from "@/components/library/ModCard";
 import { VirtualizedLibrary } from "@/components/library/VirtualizedLibrary";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
@@ -64,7 +64,7 @@ export function LibrarySection({
   useEffect(() => {
     const updateCount = Object.values(modrinthStatus).filter(s => s.status === "update_available" && !ignoredUpdates.has(s.path)).length;
     const currentCount = conflicts.length + updateCount;
-    
+
     if (currentCount > prevAlertCount.current) {
       setShouldShake(true);
       const timer = setTimeout(() => setShouldShake(false), 600);
@@ -88,8 +88,8 @@ export function LibrarySection({
       badgeColor: "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]",
       onDownload: () => handleDownloadUpdate(f.path, s.downloadUrl, f.fileName.replace(f.meta?.modVersion ?? "", s.latestVersion)),
     };
-    if (s.status === "updated")           return { badgeText: "Al día",             badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
-    if (s.status === "updated_downloaded") return { badgeText: "Descargado",         badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
+    if (s.status === "updated") return { badgeText: "Al día", badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
+    if (s.status === "updated_downloaded") return { badgeText: "Descargado", badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
     return { badgeText: "No encontrado", badgeColor: "bg-white/8 text-foreground/40" };
   }
 
@@ -141,10 +141,34 @@ export function LibrarySection({
           {/* View Description - Solo cuando hay 1 seleccionado */}
           {selectedLibFiles.length === 1 && (
             <ActionButton
-              onClick={handleViewDescription}
+              onClick={() => {
+                const f = selectedLibFiles[0];
+                const modHit: any = {
+                  projectId: f.meta?.modId || "",
+                  slug: f.meta?.modId || f.fileName,
+                  title: f.meta?.modName || f.fileName,
+                  description: "",
+                  iconUrl: f.meta?.iconBase64 || null,
+                  author: f.meta?.author || "Unknown",
+                  downloads: 0,
+                  follows: 0,
+                  latestVersion: null,
+                  categories: f.meta?.categories || [],
+                  dateCreated: "",
+                  url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
+                  _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
+                };
+
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                  }, 300);
+                }
+              }}
               disabled={loadingDescription}
               icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
-              label={loadingDescription ? "Cargando..." : "Ver Info"}
+              label={loadingDescription ? "Cargando..." : "Ver Detalles"}
               color="success"
             />
           )}
@@ -165,7 +189,7 @@ export function LibrarySection({
             <div className="flex items-center gap-2">
               <ActionButton
                 onClick={() => setAutoClassify(!autoClassify)}
-                icon={<RefreshCw className={`w-3.5 h-3.5 ${autoClassify ? "animate-spin-slow" : ""}`} />}
+                icon={<Cpu className={`w-3.5 h-3.5 ${autoClassify ? "animate-pulse text-emerald-400" : ""}`} />}
                 label="Auto"
                 color={autoClassify ? "success" : "neutral"}
                 title={autoClassify ? "Clasificación automática activa" : "Activar clasificación automática"}
@@ -196,10 +220,10 @@ export function LibrarySection({
             data-sidebar-toggle="true"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-110 active:scale-90 group"
-            style={{ 
-              background: "rgba(255,255,255,0.03)", 
-              border: "1px solid var(--color-border)", 
-              color: "var(--color-muted)" 
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-muted)"
             }}
             title={sidebarOpen ? "Cerrar Centro de Alertas" : "Abrir Centro de Alertas"}
             onMouseEnter={(e) => {
@@ -293,9 +317,9 @@ function ActionButton({ onClick, disabled, icon, label, color, title, highlighte
   const colorStyles = {
     primary: { bg: "rgba(187,150,228,0.12)", border: "rgba(187,150,228,0.3)", color: "#BB96E4" },
     success: { bg: "rgba(102,200,160,0.12)", border: "rgba(102,200,160,0.3)", color: "#66C8A0" },
-    danger:  { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.3)", color: "#f87171" },
+    danger: { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.3)", color: "#f87171" },
     neutral: { bg: "var(--color-secondary-bg)", border: "var(--color-border)", color: "var(--color-foreground)" },
-    accent:  { bg: "var(--color-accent-bg)", border: "var(--color-accent-border)", color: "var(--color-accent)" },
+    accent: { bg: "var(--color-accent-bg)", border: "var(--color-accent-border)", color: "var(--color-accent)" },
   };
   const style = colorStyles[color];
 

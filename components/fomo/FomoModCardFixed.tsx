@@ -150,23 +150,20 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
             color={isCurseForge ? COLORS.curseforgeOrange : COLORS.primary} 
             bg={isCurseForge ? "rgba(239,108,0,0.14)" : "rgba(187,150,228,0.12)"} 
             className={isCurseForge ? 'rounded-none border border-orange-900/30' : ''}
-            style={{ height: "24px" }}
           >
             {typeLabel}
           </Chip>
           <Chip 
             bg="rgba(255,255,255,0.06)" 
             className={isCurseForge ? 'rounded-none' : ''}
-            style={{ height: "24px" }}
           >
             ↓ {formatNumber(mod.downloads)}
           </Chip>
-          {mod.latestVersion && (
+          {mod.latestVersion && !/^[a-zA-Z0-9]{7,12}$/.test(mod.latestVersion) && (
             <Chip 
               color={COLORS.emerald} 
               bg="rgba(102,200,160,0.14)" 
               className={isCurseForge ? 'rounded-none' : ''}
-              style={{ height: "24px" }}
             >
               v{mod.latestVersion}
             </Chip>

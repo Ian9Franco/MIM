@@ -23,13 +23,75 @@ interface FomoModCardProps {
   onAddToCollection:(mod: ModHit) => void;
   isSelected?:      boolean;
   onToggleSelect?:  (mod: ModHit) => void;
+  sinytraActive?:   boolean;
+}
+
+interface CompatibilityPrediction {
+  percentage: number;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
+  label: string;
+  reason: string;
+}
+
+function predictConnectorCompatibility(title: string, categories: string[] = []): CompatibilityPrediction {
+  const t = title.toLowerCase();
+  const cats = categories.map(c => c.toLowerCase());
+
+  // 1. Sodium/Iris/Lithium ecosystem - EXTREMELY HIGH RISK / INCOMPATIBLE
+  if (
+    t.includes("sodium") || t.includes("rubidium") || t.includes("iris") || t.includes("oculus") || 
+    t.includes("lithium") || t.includes("canary") || t.includes("krypton") || t.includes("indium") || 
+    t.includes("modernfix") || t.includes("connector-extras")
+  ) {
+    return {
+      percentage: 15,
+      riskLevel: "VERY_HIGH",
+      label: "Muy Inestable",
+      reason: "Toca el motor de renderizado profundo o la lógica del chunk engine. Se recomienda buscar el equivalente nativo de Forge."
+    };
+  }
+
+  // 2. Heavy render/optimization/physics categories - HIGH RISK
+  const hasHighRiskCat = cats.some(c => 
+    c.includes("optimization") || c.includes("rendering") || c.includes("physics") || c.includes("performance") || c.includes("graphics")
+  );
+  if (hasHighRiskCat || t.includes("physics") || t.includes("render") || t.includes("lighting") || t.includes("embeddium") || t.includes("distant horizons")) {
+    return {
+      percentage: 45,
+      riskLevel: "HIGH",
+      label: "Riesgo Alto",
+      reason: "Usa hooks de renderizado pesados o inyecciones de bytecode profundas que pueden colisionar en Forge."
+    };
+  }
+
+  // 3. Gameplay/QoL/UI mods - MEDIUM RISK
+  const hasMediumRiskCat = cats.some(c =>
+    c.includes("gui") || c.includes("hud") || c.includes("interface") || c.includes("minimap") || c.includes("map") || c.includes("utility") || c.includes("keybind") || c.includes("networking")
+  );
+  if (hasMediumRiskCat || t.includes("map") || t.includes("tweaks") || t.includes("hud") || t.includes("inventory") || t.includes("menu") || t.includes("jei") || t.includes("rei") || t.includes("emi")) {
+    return {
+      percentage: 75,
+      riskLevel: "MEDIUM",
+      label: "Estabilidad Media",
+      reason: "Mod de interfaz o QoL simple. Puede depender de métodos de renderizado de UI ligeros o keybinds."
+    };
+  }
+
+  // 4. Pure content mods / blocks / items / biomes - HIGH STABILITY (LOW RISK)
+  return {
+    percentage: 92,
+    riskLevel: "LOW",
+    label: "Alta Estabilidad",
+    reason: "Mod de contenido puro (bloques, ítems, biomas). Utiliza APIs estándar con altísima compatibilidad."
+  };
 }
 
 export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions, onAddToCollection,
-  isSelected, onToggleSelect,
+  isSelected, onToggleSelect, sinytraActive,
 }: FomoModCardProps) {
   const isCurseForge = mod._source === "curseforge";
+  const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
   
   // Iconos de plataforma para exclusividad
   const ModrinthIcon = () => (
@@ -128,7 +190,13 @@ export const FomoModCard = memo(function FomoModCard({
                 {typeLabel}
               </Chip>
               <Chip bg="rgba(255,255,255,0.06)" className={isCurseForge ? 'rounded-none' : ''}>↓ {formatNumber(mod.downloads)}</Chip>
-              {mod.latestVersion && <Chip color={COLORS.emerald} bg="rgba(102,200,160,0.14)" className={isCurseForge ? 'rounded-none' : ''}>v{mod.latestVersion}</Chip>}
+              {mod.latestVersion && !/^[a-zA-Z0-9]{7,12}$/.test(mod.latestVersion) && <Chip color={COLORS.emerald} bg="rgba(102,200,160,0.14)" className={isCurseForge ? 'rounded-none' : ''}>v{mod.latestVersion}</Chip>}
+              
+              {sinytraActive && isFabricOnly && (
+                <Chip color="#22d3ee" bg="rgba(34,211,238,0.14)" className={`${isCurseForge ? 'rounded-none' : ''} border border-cyan-500/20 shadow-[0_0_12px_rgba(34,211,238,0.15)]`}>
+                  🔌 Sinytra Bridge
+                </Chip>
+              )}
               
               {/* Badge de Plataforma y Exclusividad Real */}
               <div className="flex items-center gap-1 ml-auto">
@@ -172,6 +240,40 @@ export const FomoModCard = memo(function FomoModCard({
         <p className="font-caption mt-4 leading-relaxed line-clamp-2 text-sm" style={{ color: COLORS.muted }}>
           {mod.description}
         </p>
+
+        {/* Connector Compatibility Estimate UI */}
+        {sinytraActive && isFabricOnly && (
+          (() => {
+            const pred = predictConnectorCompatibility(mod.title, mod.categories);
+            return (
+              <div 
+                className={`mt-4 p-3 rounded-xl border flex flex-col gap-1.5 transition-all relative overflow-hidden group/compat ${
+                  pred.riskLevel === "VERY_HIGH" ? "bg-red-500/5 border-red-500/20 text-red-200/90" :
+                  pred.riskLevel === "HIGH" ? "bg-orange-500/5 border-orange-500/20 text-orange-200/90" :
+                  pred.riskLevel === "MEDIUM" ? "bg-amber-500/5 border-amber-500/20 text-amber-200/90" :
+                  "bg-emerald-500/5 border-emerald-500/20 text-emerald-200/90"
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-bold">
+                  <span className="flex items-center gap-1 opacity-80 uppercase tracking-wider text-cyan-400">
+                    🔌 Compatibilidad Sinytra
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${
+                    pred.riskLevel === "VERY_HIGH" ? "bg-red-500/15 border-red-500/25 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]" :
+                    pred.riskLevel === "HIGH" ? "bg-orange-500/15 border-orange-500/25 text-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.1)]" :
+                    pred.riskLevel === "MEDIUM" ? "bg-amber-500/15 border-amber-500/25 text-amber-400" :
+                    "bg-emerald-500/15 border-emerald-500/25 text-emerald-400"
+                  }`}>
+                    {pred.label} ({pred.percentage}%)
+                  </span>
+                </div>
+                <p className="text-[10px] text-foreground/60 leading-relaxed font-medium">
+                  {pred.reason}
+                </p>
+              </div>
+            );
+          })()
+        )}
 
         {/* Tags Section */}
         {mod.categories && mod.categories.length > 0 && (

@@ -6,7 +6,7 @@
 "use client";
 
 import React, { memo, useCallback, useMemo } from "react";
-import { Folder, AlertTriangle, Download, Loader2, Trash2, ArrowUp, X, Shield } from "lucide-react";
+import { Folder, AlertTriangle, Download, Loader2, Trash2, ArrowUp, X, Shield, Info } from "lucide-react";
 import { LOADER_STYLES } from "@/theme/tokens";
 import { COLORS } from "@/theme/tokens";
 import type { LoaderKey } from "@/theme/tokens";
@@ -34,6 +34,7 @@ interface ModCardProps {
   isDeleting?:   boolean;
   riskScore?:    number;
   categories?:   string[];
+  onOpenDetails?: () => void;
 }
 
 function getProjectTypeLabel(type: string): string {
@@ -50,6 +51,7 @@ export const ModCard = memo(function ModCard({
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, author, categories,
+  onOpenDetails,
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -97,6 +99,10 @@ export const ModCard = memo(function ModCard({
   const stopPropDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); onDelete?.();
   }, [onDelete]);
+
+  const stopPropDetails = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); onOpenDetails?.();
+  }, [onOpenDetails]);
 
   const getSecurityColor = (score?: number) => {
     if (score === undefined) return null;
@@ -154,21 +160,34 @@ export const ModCard = memo(function ModCard({
                 {name}
               </p>
               
-              {isPending && onDelete && (
-                <button
-                  onClick={stopPropDelete}
-                  disabled={isDeleting}
-                  aria-label="Eliminar archivo"
-                  className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-110 shrink-0"
-                  style={{ 
-                    background: "rgba(239,68,68,0.12)", 
-                    border: "1px solid rgba(239,68,68,0.25)", 
-                    color: "#ef4444" 
-                  }}
-                >
-                  {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                </button>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                 {onOpenDetails && (
+                   <button
+                     onClick={stopPropDetails}
+                     aria-label="Ver detalles"
+                     title="Ver detalles del mod"
+                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-primary/20 hover:border-primary/40 shadow-sm"
+                   >
+                     <Info className="w-3 h-3" />
+                     <span>Detalles</span>
+                   </button>
+                 )}
+                {isPending && onDelete && (
+                  <button
+                    onClick={stopPropDelete}
+                    disabled={isDeleting}
+                    aria-label="Eliminar archivo"
+                    className="flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:scale-110 shrink-0"
+                    style={{ 
+                      background: "rgba(239,68,68,0.12)", 
+                      border: "1px solid rgba(239,68,68,0.25)", 
+                      color: "#ef4444" 
+                    }}
+                  >
+                    {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  </button>
+                )}
+              </div>
             </div>
 
             {author && author !== "unknown" && (
@@ -186,7 +205,7 @@ export const ModCard = memo(function ModCard({
               
               {(isVersionError || isLoaderError) && (
                 <div className="flex items-center gap-1 shrink-0">
-                  {isVersionError && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ver</span>}
+                  {isVersionError && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ vers</span>}
                   {isLoaderError  && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ldr</span>}
                 </div>
               )}

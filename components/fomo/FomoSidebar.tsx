@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { Flame, X, Search, Library, Download, Layers, Plus, ChevronLeft } from "lucide-react";
+import { Flame, X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -31,7 +31,7 @@ import { FomoPagination }      from "./FomoPagination";
 import { FomoVersionOverlay }  from "./FomoVersionOverlay";
 import { FomoCollections }     from "./FomoCollections";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
-import type { ModHit, VersionEntry } from "@/lib/types";
+import type { ModHit, VersionEntry, Project } from "@/lib/types";
 import type { SortOrder } from "@/constants/app";
 import "./fomo.css";
 
@@ -42,6 +42,7 @@ interface FomoSidebarProps {
   onClose:         () => void;
   defaultLoader?:  string;
   defaultVersion?: string;
+  activeProject?:  Project | null;
 }
 
 const TAB_OPTIONS = [
@@ -82,7 +83,7 @@ const SIDEBAR_TITLE: Record<Mode, (source: string) => string> = {
 };
 
 export function FomoSidebar({
-  open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1",
+  open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1", activeProject,
 }: FomoSidebarProps) {
   const [mode, setMode] = useState<Mode>("discover");
   const [addingToCollectionFor, setAddingToCollectionFor] = useState<ModHit | null>(null);
@@ -91,11 +92,73 @@ export function FomoSidebar({
   const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
 
   React.useEffect(() => {
+    if (activeProject) {
+      discover.setLoader(activeProject.loader);
+      discover.setGameVersions([activeProject.version]);
+      
+      // Auto-detect Sinytra Connector
+      fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
+        .then(r => r.json())
+        .then(data => {
+          const hasConnector = data.library?.some((m: any) => 
+            m.meta?.modId === "connector" || 
+            m.fileName.toLowerCase().includes("connector") || 
+            m.fileName.toLowerCase().includes("sinytra")
+          );
+          discover.setSinytraActive(!!hasConnector);
+        })
+        .catch(err => console.warn("[FomoSidebar] Error detecting Sinytra Connector:", err));
+    }
+  }, [activeProject]);
+
+  React.useEffect(() => {
     const isDetailsOpen = !!discover.selectingVersionFor;
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: isDetailsOpen } }));
     }
   }, [discover.selectingVersionFor]);
+
+  React.useEffect(() => {
+    const handleExternalDetails = (e: Event) => {
+      const customEvent = e as CustomEvent<ModHit>;
+      if (customEvent.detail) {
+        setMode("discover");
+        discover.handleOpenVersionSelector(customEvent.detail);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("fomo-open-details", handleExternalDetails);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("fomo-open-details", handleExternalDetails);
+      }
+    };
+  }, [discover]);
+
+  React.useEffect(() => {
+    const handleSearchAndOpen = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query: string }>;
+      if (customEvent.detail && customEvent.detail.query) {
+        setMode("discover");
+        discover.setSelectingVersionFor(null);
+        discover.setQuery(customEvent.detail.query);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+        }
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("fomo-search-and-open", handleSearchAndOpen);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("fomo-search-and-open", handleSearchAndOpen);
+      }
+    };
+  }, [discover]);
 
   React.useEffect(() => {
     if (!open) {
@@ -223,6 +286,59 @@ export function FomoSidebar({
                   borderColor: "var(--fomo-border)" 
                 }}
               >
+                {/* Sinytra Connector Card (Hybrid Fabric+Forge) */}
+                {(discover.loader === "forge" || discover.loader === "neoforge") && discover.projectType === "mod" && (
+                  <div 
+                    className={`p-3.5 rounded-xl border flex flex-col gap-2.5 transition-all duration-300 relative overflow-hidden shrink-0 ${
+                      discover.sinytraActive 
+                        ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_8px_32px_rgba(6,182,212,0.1)]" 
+                        : "bg-white/5 border-white/5 text-foreground/60 hover:bg-white/10 hover:border-white/10"
+                    }`}
+                  >
+                    {/* Glowing effect inside the card */}
+                    {discover.sinytraActive && (
+                      <div className="absolute -inset-10 bg-cyan-500/15 blur-2xl rounded-full pointer-events-none" />
+                    )}
+                    
+                    <div className="flex items-center justify-between gap-2.5 relative z-10">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg transition-colors ${discover.sinytraActive ? "bg-cyan-500/20 text-cyan-400 animate-pulse" : "bg-white/5 text-foreground/40"}`}>
+                          <Workflow className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black tracking-wider uppercase">Híbrido Sinytra</span>
+                          <span className="text-[8px] opacity-60 font-bold">Forge + Fabric</span>
+                        </div>
+                      </div>
+                      <button
+                        role="switch"
+                        aria-checked={discover.sinytraActive}
+                        onClick={() => {
+                          const nextVal = !discover.sinytraActive;
+                          discover.setSinytraActive(nextVal);
+                          showStatus(nextVal ? "Modo híbrido Sinytra activado: mostrando mods de Forge y Fabric" : "Modo híbrido desactivado: mostrando solo Forge", "info");
+                        }}
+                        className={`w-9 h-5 rounded-full relative transition-all duration-300 border ${
+                          discover.sinytraActive 
+                            ? "bg-cyan-500/30 border-cyan-500/40" 
+                            : "bg-white/5 border-white/10"
+                        }`}
+                      >
+                        <div 
+                          className={`w-3.5 h-3.5 rounded-full absolute top-[2px] transition-all duration-300 ${
+                            discover.sinytraActive 
+                              ? "left-[18px] bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" 
+                              : "left-[3px] bg-foreground/40"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <p className="text-[9px] leading-relaxed relative z-10 opacity-75">
+                      Busca e instala mods de <strong>Fabric</strong> en tu entorno de Forge.
+                    </p>
+                  </div>
+                )}
+
                 <FomoDiscoverFilters
                   loader={discover.loader} gameVersions={discover.gameVersions}
                   projectType={discover.projectType} sortOrder={discover.sortOrder}
@@ -284,6 +400,7 @@ export function FomoSidebar({
                     onAddToCollection={handleAddToCollection}
                     isSelected={discover.selectedMods.some(m => m.projectId === mod.projectId)}
                     onToggleSelect={discover.toggleModSelection}
+                    sinytraActive={discover.sinytraActive}
                   />
                 ))}
               </div>
@@ -349,6 +466,7 @@ export function FomoSidebar({
             onToggleSelect={discover.toggleModSelection}
             onClearSelection={discover.clearSelection}
             isDetailsOpen={!!discover.selectingVersionFor}
+            sinytraActive={discover.sinytraActive}
           />
         )}
 

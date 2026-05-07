@@ -35,12 +35,14 @@ interface FomoCollectionsProps {
   onToggleSelect?: (mod: ModHit) => void;
   onClearSelection?: () => void;
   isDetailsOpen?: boolean;
+  sinytraActive?: boolean;
 }
 
 export const FomoCollections = memo(function FomoCollections({
   loader, gameVersion, onStatus, addingForMod, onClearAddingFor,
   downloading, onDownloadMod, onOpenVersions,
   selectedMods = [], onToggleSelect, onClearSelection, isDetailsOpen = false,
+  sinytraActive = false,
 }: FomoCollectionsProps) {
   const [collections,    setCollections]    = useState<CollectionEntry[]>([]);
   const [loading,        setLoading]        = useState(false);
@@ -288,6 +290,7 @@ export const FomoCollections = memo(function FomoCollections({
                   onAddToCollection={() => {}} 
                   isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
                   onToggleSelect={onToggleSelect}
+                  sinytraActive={sinytraActive}
                 />
               ))}
             </div>

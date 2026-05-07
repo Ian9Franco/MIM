@@ -151,6 +151,13 @@ class MIMIndexedDB {
     console.log('[MIMIndexedDB] Database initialized successfully');
   }
 
+  getDB(): IDBPDatabase<MIMDatabase> {
+    if (!this.db) {
+      throw new Error('[MIMIndexedDB] Database not initialized. Call init() first.');
+    }
+    return this.db;
+  }
+
   // === Descriptions Store ===
   
   async getDescription(fileName: string): Promise<ModDescription | undefined> {

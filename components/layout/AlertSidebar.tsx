@@ -42,7 +42,55 @@ export function AlertSidebar({
   const [expandedChangelog, setExpandedChangelog] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  const [seenVersions, setSeenVersions] = useState<Record<string, string>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return JSON.parse(localStorage.getItem("mim_seen_collection_versions") || "{}");
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
+
+  // On mount or when modrinthStatus changes, initialize any unseen collection projects to their current latestVersion
+  useEffect(() => {
+    let changed = false;
+    const updatedSeen = { ...seenVersions };
+    
+    Object.entries(modrinthStatus).forEach(([path, s]) => {
+      if (path.startsWith("collection:") && s.status === "update_available" && s.latestVersion) {
+        const projectId = path.replace("collection:", "");
+        if (!updatedSeen[projectId]) {
+          updatedSeen[projectId] = s.latestVersion;
+          changed = true;
+        }
+      }
+    });
+    
+    if (changed) {
+      setSeenVersions(updatedSeen);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mim_seen_collection_versions", JSON.stringify(updatedSeen));
+      }
+    }
+  }, [modrinthStatus]);
+
+  const handleMarkSeen = (projectId: string, latestVersion: string) => {
+    const updated = { ...seenVersions, [projectId]: latestVersion };
+    setSeenVersions(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mim_seen_collection_versions", JSON.stringify(updated));
+    }
+  };
+
   const updates = Object.entries(modrinthStatus).filter(([path, s]) => {
+    if (path.startsWith("collection:")) {
+      const projectId = path.replace("collection:", "");
+      const lastSeen = seenVersions[projectId];
+      // Only show if we have seen it before and the latest version is different than what we last saw
+      return s.status === "update_available" && s.latestVersion && lastSeen && lastSeen !== s.latestVersion;
+    }
     const mod = library.find(l => l.path === path);
     return s.status === "update_available" && mod && !ignoredUpdates.has(path);
   });
@@ -140,17 +188,59 @@ export function AlertSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
-        {/* Empty State */}
-        {conflicts.length === 0 && updates.length === 0 && criticalAlerts.length === 0 && (
+        {/* Empty State - Global */}
+        {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && criticalAlerts.length === 0 && (
           <div className="text-center py-12">
             <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: "var(--color-success-bg)" }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-bounce"
+              style={{ background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)" }}
             >
               <CheckCircle className="w-8 h-8" style={{ color: "var(--color-success)" }} />
             </div>
             <p className="font-subhead text-base" style={{ color: "var(--color-foreground)" }}>Todo al día</p>
-            <p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>No hay alertas pendientes</p>
+            <p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>No hay alertas pendientes en tu biblioteca</p>
+          </div>
+        )}
+
+        {/* Empty State - Security */}
+        {activeTab === "security" && criticalAlerts.length === 0 && (
+          <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
+              style={{ background: "rgba(102,200,160,0.12)", border: "1px solid rgba(102,200,160,0.2)" }}
+            >
+              <Shield className="w-8 h-8 text-[#66C8A0]" />
+            </div>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Biblioteca Protegida</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>No se han detectado amenazas, malware ni vulnerabilidades de seguridad en tus archivos JAR.</p>
+          </div>
+        )}
+
+        {/* Empty State - Conflicts */}
+        {activeTab === "conflicts" && conflicts.length === 0 && (
+          <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
+              style={{ background: "rgba(187,150,228,0.12)", border: "1px solid rgba(187,150,228,0.2)" }}
+            >
+              <CheckCircle className="w-8 h-8 text-[#BB96E4]" />
+            </div>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Sin Conflictos</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todos los mods instalados son perfectamente compatibles entre sí y sin duplicados detectados.</p>
+          </div>
+        )}
+
+        {/* Empty State - Updates */}
+        {activeTab === "updates" && updates.length === 0 && (
+          <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
+              style={{ background: "rgba(255,108,62,0.12)", border: "1px solid rgba(255,108,62,0.2)" }}
+            >
+              <RefreshCw className="w-8 h-8 text-[#FF6C3E]" />
+            </div>
+            <p className="font-headline text-base font-bold" style={{ color: "var(--color-foreground)" }}>Mods al Día</p>
+            <p className="text-sm mt-1 px-6 leading-relaxed" style={{ color: "var(--color-muted)" }}>Todos tus mods instalados o seguidos están actualizados a su última versión disponible.</p>
           </div>
         )}
 
@@ -205,8 +295,9 @@ export function AlertSidebar({
           >
             <div className="flex flex-col gap-2">
               {updates.map(([path, s]) => {
-                const mod = library.find(l => l.path === path);
-                if (!mod || ignoredUpdates.has(path)) return null;
+                const isCollection = path.startsWith("collection:");
+                const mod = isCollection ? null : library.find(l => l.path === path);
+                if (!isCollection && (!mod || ignoredUpdates.has(path))) return null;
                 return (
                   <div 
                     key={path} 
@@ -221,26 +312,60 @@ export function AlertSidebar({
                         <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>{mod.meta?.modName}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
+                            {isCollection ? s.slug : (mod?.meta?.modName || mod?.fileName)}
+                          </p>
+                          {isCollection && (
+                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 uppercase shrink-0">Seguido</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1 text-xs">
-                          <span style={{ color: "var(--color-muted)" }}>v{mod.meta?.modVersion}</span>
-                          <span style={{ color: "var(--color-accent)" }}>→</span>
-                          <span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span>
+                          {isCollection ? (
+                            <span style={{ color: "var(--color-success)" }}>Nuevo: v{s.latestVersion}</span>
+                          ) : (
+                            <>
+                              <span style={{ color: "var(--color-muted)" }}>v{mod?.meta?.modVersion}</span>
+                              <span style={{ color: "var(--color-accent)" }}>→</span>
+                              <span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      <ActionButton
-                        primary
-                        onClick={() => handleDownloadUpdate(path, s.downloadUrl!, mod.fileName.replace(mod.meta?.modVersion ?? "", s.latestVersion!))}
-                        disabled={downloadingMods[path]}
-                        icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
-                        label={downloadingMods[path] ? "Descargando..." : "Actualizar"}
-                      />
-                      <ActionButton
-                        onClick={() => handleDismissUpdate(path)}
-                        label="Ignorar"
-                      />
+                      {isCollection ? (
+                        <>
+                          <ActionButton
+                            primary
+                            onClick={() => handleDownloadUpdate(path, s.downloadUrl!, `${s.slug || "mod"}-${s.latestVersion}.jar`)}
+                            disabled={downloadingMods[path]}
+                            icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+                            label={downloadingMods[path] ? "Descargando..." : "Descargar"}
+                          />
+                          <ActionButton
+                            onClick={() => {
+                              const projectId = path.replace("collection:", "");
+                              handleMarkSeen(projectId, s.latestVersion!);
+                            }}
+                            label="Visto"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <ActionButton
+                            primary
+                            onClick={() => handleDownloadUpdate(path, s.downloadUrl!, mod!.fileName.replace(mod!.meta?.modVersion ?? "", s.latestVersion!))}
+                            disabled={downloadingMods[path]}
+                            icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+                            label={downloadingMods[path] ? "Descargando..." : "Actualizar"}
+                          />
+                          <ActionButton
+                            onClick={() => handleDismissUpdate(path)}
+                            label="Ignorar"
+                          />
+                        </>
+                      )}
                       
                       {/* New Buttons: Web & Info */}
                       <div className="w-full flex gap-2 mt-1">

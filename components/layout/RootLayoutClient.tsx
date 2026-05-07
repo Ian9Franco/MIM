@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { FomoSidebar } from "@/components/fomo/FomoSidebar";
+import { SageSidebar } from "@/components/sage/SageSidebar";
 import { SettingsModal } from "@/components/layout/SettingsModal";
-import { Settings, RefreshCw, ChevronRight } from "lucide-react";
+import { Settings, RefreshCw, ChevronRight, Activity } from "lucide-react";
+import type { Project } from "@/lib/types";
 
 /**
  * Cliente de Layout Principal (Client Component).
@@ -15,6 +17,8 @@ import { Settings, RefreshCw, ChevronRight } from "lucide-react";
  */
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [fomoOpen, setFomoOpen] = useState(false);
+  const [sageOpen, setSageOpen] = useState(false);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertSidebarOpen, setAlertSidebarOpen] = useState(false);
 
@@ -24,18 +28,45 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       setAlertSidebarOpen(customEvent.detail);
     };
 
+    const handleFomoToggleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setFomoOpen(customEvent.detail);
+    };
+
+    const handleSageToggleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setSageOpen(customEvent.detail);
+    };
+
+    const handleProjectChange = (e: Event) => {
+      const customEvent = e as CustomEvent<Project | null>;
+      setActiveProject(customEvent.detail);
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
+      window.addEventListener("fomo-toggle", handleFomoToggleEvent);
+      window.addEventListener("sage-toggle", handleSageToggleEvent);
+      window.addEventListener("active-project-changed", handleProjectChange);
     }
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
+        window.removeEventListener("fomo-toggle", handleFomoToggleEvent);
+        window.removeEventListener("sage-toggle", handleSageToggleEvent);
+        window.removeEventListener("active-project-changed", handleProjectChange);
       }
     };
   }, []);
 
   const handleToggleFomo = (isOpen: boolean) => {
     setFomoOpen(isOpen);
+    if (isOpen) {
+      setSageOpen(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sage-toggle", { detail: false }));
+      }
+    }
     
     if (typeof window !== "undefined") {
       const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
@@ -44,6 +75,25 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       audio.play().catch(e => console.warn("Audio play failed:", e));
 
       window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: isOpen }));
+    }
+  };
+
+  const handleToggleSage = (isOpen: boolean) => {
+    setSageOpen(isOpen);
+    if (isOpen) {
+      setFomoOpen(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: false }));
+      }
+    }
+    
+    if (typeof window !== "undefined") {
+      const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
+      const audio = new Audio(soundFile);
+      audio.volume = 0.3;
+      audio.play().catch(e => console.warn("Audio play failed:", e));
+
+      window.dispatchEvent(new CustomEvent("sage-toggle", { detail: isOpen }));
     }
   };
 
@@ -71,13 +121,16 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       />
 
       {/* ── FOMO Sidebar ─────────────────────────────────────────────────────── */}
-      <FomoSidebar open={fomoOpen} onClose={() => handleToggleFomo(false)} />
+      <FomoSidebar open={fomoOpen} onClose={() => handleToggleFomo(false)} activeProject={activeProject} />
+
+      {/* ── SAGE Sidebar ─────────────────────────────────────────────────────── */}
+      <SageSidebar open={sageOpen} onClose={() => handleToggleSage(false)} activeProject={activeProject} />
 
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
         className="relative z-10 min-h-screen flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] overflow-x-hidden"
         style={{ 
-          transform: `translateX(${fomoOpen ? 500 : 0}px)`,
+          transform: `translateX(${fomoOpen || sageOpen ? 500 : 0}px)`,
           paddingRight: alertSidebarOpen ? "400px" : "0px",
           width: "100%",
         }}
@@ -189,6 +242,20 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
               >
                 <Settings className="w-4 h-4" />
               </button>
+
+              {/* SAGE (Systematic Analyzer for Glitches & Exceptions) Minimalist Toggle */}
+              <button
+                onClick={() => handleToggleSage(!sageOpen)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-indigo-500/10 ${sageOpen ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'hover:bg-white/5'}`}
+                style={{ 
+                  border: sageOpen ? "1px solid rgba(99,102,241,0.4)" : "1px solid var(--color-border)", 
+                  color: sageOpen ? "#818cf8" : "var(--color-muted)" 
+                }}
+                title={sageOpen ? "Cerrar SAGE" : "Analizar Logs y Crashes (SAGE)"}
+              >
+                <Activity className={`w-4 h-4 transition-all ${sageOpen ? 'animate-pulse text-indigo-400 scale-110' : ''}`} />
+              </button>
+
               <ThemeToggle />
             </div>
           </div>

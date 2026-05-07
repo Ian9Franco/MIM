@@ -176,6 +176,17 @@ class SmartCache {
   }
 
   /**
+   * Mapear el tipo de cache a los valores permitidos por la base de datos
+   */
+  private mapTypeForDB(key: string): "modrinth" | "curseforge" | "description" | "metadata" {
+    const type = this.detectType(key);
+    if (type.includes('description')) return 'description';
+    if (type.startsWith('modrinth_') || type === 'mod_updates') return 'modrinth';
+    if (type.startsWith('curseforge_')) return 'curseforge';
+    return 'metadata';
+  }
+
+  /**
    * Fetch y cache con estrategia
    */
   private async fetchAndCache<T>(
@@ -187,7 +198,7 @@ class SmartCache {
     
     try {
       const data = await fetcher();
-      await mimDB.setCache(key, data, strategy.ttl, this.detectType(key));
+      await mimDB.setCache(key, data, strategy.ttl, this.mapTypeForDB(key));
       return data;
     } finally {
       this.isRefreshing.delete(key);
@@ -208,7 +219,7 @@ class SmartCache {
     
     try {
       const data = await fetcher();
-      await mimDB.setCache(key, data, strategy.ttl, this.detectType(key));
+      await mimDB.setCache(key, data, strategy.ttl, this.mapTypeForDB(key));
       console.log(`[SmartCache] Background refreshed: ${key}`);
     } catch (error) {
       console.warn(`[SmartCache] Background refresh failed: ${key}`, error);

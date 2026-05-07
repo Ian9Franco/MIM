@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 
   const loaderPath = project
     ? path.join(SOURCE_BASE, version, "_projects", project, "mods")
-    : path.join(SOURCE_BASE, version, loader);
+    : path.join(SOURCE_BASE, version, loader!);
 
   // Version+loader combination doesn't exist yet — not an error, just empty
   if (!fs.existsSync(loaderPath)) {

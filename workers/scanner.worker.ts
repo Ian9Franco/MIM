@@ -10,7 +10,7 @@
  * worker.onmessage = (e) => { handleResults(e.data); };
  */
 
-import { scanMod } from '@/lib/mod-scanner';
+import { scanMod } from '@/lib/scanner';
 
 interface ScanRequest {
   filePaths: string[];
@@ -145,11 +145,11 @@ async function scanJarFiles(filePaths: string[], scanId: string) {
 }
 
 // Manejar errores no capturados
-self.onerror = (error) => {
+self.onerror = (error: any) => {
   const errorMessage: ScanError = {
     id: 'unknown',
     type: 'error',
-    error: error.message || 'Unknown worker error'
+    error: error?.message || String(error) || 'Unknown worker error'
   };
   self.postMessage(errorMessage);
 };

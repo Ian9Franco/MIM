@@ -57,14 +57,49 @@ export function useLibrary(
   }, [projectHash]);
 
   const checkUpdates = useCallback(async (force = false) => {
-    if (!activeProject || (library.length === 0 && pendingFiles.length === 0)) return;
+    if (!activeProject) return;
     setCheckingUpdates(true);
     try {
+      // 1. Gather local mods
+      const localMods = [...library, ...pendingFiles];
+      
+      // 2. Fetch collection mods (optional background check)
+      let collectionMods: any[] = [];
+      try {
+        const collRes = await fetch("/api/modrinth/collections");
+        if (collRes.ok) {
+          const { collections } = await collRes.json();
+          for (const coll of (collections || [])) {
+            if (coll.isLocal) continue;
+            // Note: We don't fetch every collection's mods to avoid hitting rate limits, 
+            // but we can fetch 'followed-projects' which is the main one.
+            if (coll.id === "followed-projects") {
+              const modsRes = await fetch(`/api/modrinth/collections?collectionId=${coll.id}`);
+              if (modsRes.ok) {
+                const { mods: collItems } = await modsRes.json();
+                collectionMods = (collItems || []).map((m: any) => ({
+                  path: `collection:${m.projectId}`, // Special path for virtual mods
+                  fileName: m.title,
+                  meta: {
+                    modId: m.projectId,
+                    modName: m.title,
+                    modVersion: "0.0.0", // Assume we want to know any update if not installed
+                    projectType: m.projectType || "mod"
+                  }
+                }));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[useLibrary] Failed to fetch collection mods for updates", e);
+      }
+
       const res = await fetch("/api/modrinth/check-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          mods: [...library, ...pendingFiles], 
+          mods: [...localMods, ...collectionMods], 
           loader: activeProject.loader, 
           gameVersion: activeProject.version,
           forceRefresh: force

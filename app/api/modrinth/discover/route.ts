@@ -42,7 +42,12 @@ export async function GET(req: NextRequest) {
 
   // Loader (AND with the rest)
   if (projectType === "mod" && loader !== "unknown") {
-    facetsArray.push([`categories:${loader}`]);
+    if (loader.includes(",")) {
+      const loaders = loader.split(",");
+      facetsArray.push(loaders.map((l: string) => `categories:${l.trim()}`));
+    } else {
+      facetsArray.push([`categories:${loader}`]);
+    }
   }
 
   // Categories (OR within categories group)

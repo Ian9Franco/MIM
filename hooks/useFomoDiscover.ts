@@ -31,6 +31,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [environments, setEnvironments] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("relevance");
   const [query, setQuery] = useState("");
+  const [sinytraActive, setSinytraActive] = useState(false);
 
   // Resetear a página 1 al cambiar cualquier filtro o búsqueda
   useEffect(() => {
@@ -95,8 +96,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     const q = typeof overrideQuery === "string" ? overrideQuery : query;
     try {
       // Modrinth y CurseForge ahora usan 'gameVersions' (array JSON).
+      const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge") && source === "modrinth")
+        ? "forge,fabric"
+        : loader;
+      
       const params = new URLSearchParams({
-        loader,
+        loader: effectiveLoader,
         gameVersions: JSON.stringify(gameVersions),
         categories: JSON.stringify(categories),
         environments: JSON.stringify(environments),
@@ -202,7 +207,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       setMods([]);
     }
     setLoading(false);
-  }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page]);
+  }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page, sinytraActive]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -236,9 +241,11 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
 
       if (!downloadUrl) {
         // Fetch latest version if not provided
+        const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
+        const modNativeLoader = (sinytraActive && isFabricOnly && modSource === "modrinth") ? "fabric" : loader;
         const vParams = new URLSearchParams({ 
           projectId: mod.projectId, 
-          loader, 
+          loader: modNativeLoader, 
           gameVersion: gameVersions[0] || "1.20.1", 
           projectType 
         });
@@ -289,7 +296,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       showStatus(`Error crítico al descargar ${mod.title}`, "error");
       setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
     }
-  }, [loader, gameVersions, projectType, showStatus, source, downloading]);
+  }, [loader, gameVersions, projectType, showStatus, source, downloading, sinytraActive]);
 
   // Función auxiliar para ejecutar la descarga
   const executeDownload = useCallback(async (
@@ -387,10 +394,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     setVersLoading(true);
     setProjectVersions([]);
     try {
+      const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
+      const modNativeLoader = (sinytraActive && isFabricOnly && modSource === "modrinth") ? "fabric" : loader;
+
       const params = new URLSearchParams({ 
         projectId: mod.projectId, 
         gameVersion: gameVersions[0] || "1.20.1", 
-        loader, 
+        loader: modNativeLoader, 
         projectType 
       });
       
@@ -420,7 +430,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       console.error("[useFomoDiscover] Error fetching details:", err);
     }
     setVersLoading(false);
-  }, [gameVersions, loader, projectType, source]);
+  }, [gameVersions, loader, projectType, source, sinytraActive]);
 
   // Función para confirmar descarga con dependencias
   const confirmDownloadWithDeps = useCallback(async (includeDeps: boolean) => {
@@ -455,6 +465,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     dependencyPrompt, setDependencyPrompt,
     confirmDownloadWithDeps,
     selectedMods, toggleModSelection, clearSelection,
+    sinytraActive, setSinytraActive,
     sortOptions: SORT_OPTIONS
   };
 }

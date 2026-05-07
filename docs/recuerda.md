@@ -24,13 +24,28 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
   - Mejoras en la detección de versiones desde nombres de archivos y paths.
   - Creación de la [Guía de Implementación](file:///D:/.mine/manager/docs/enhanced-components-guide.md).
 
+### 🧠 SAGE (Systematic Analyzer for Glitches & Exceptions) — Diagnosis Engine
+- **Crash Log Interpreter (S+):** Analizador heurístico avanzado 100% local que parsea stack traces de Java de Minecraft, extrayendo hilos caídos, tipos de excepciones, Mixins conflictivos y causantes del crash.
+- **Detector de Dependencias Rígido:** Identifica dependencias faltantes (ej: LionfishAPI, ResourcefulConfig) y asocia de forma inteligente qué mod las está requiriendo.
+- **Acción Rápida SAGE → FOMO:** Integración directa para buscar, descargar e instalar dependencias faltantes con un solo clic directamente desde el panel FOMO.
+- **Lector Resiliente de Logs:** Escaneo dual inteligente que busca de forma local en la carpeta del proyecto activo y de forma global en `.minecraft` (garantizando listar reportes de crash pasados incluso si el proyecto aún no se ha compilado o no existe la carpeta local física).
+- **Borrado Seguro:** Implementación de borrado físico real de archivos de crash directo de disco, protegido contra ataques de Directory Traversal y con ventana de confirmación glassmórfica (`SageDeleteModal`).
+- **Limpieza de UI de Desarrollo:** Eliminación del bug 400 Bad Request en la API de colecciones de Modrinth, optimizando el rendimiento y velocidad a la mitad de tiempo.
+
 ### 👁️ FOMO 3.0 (Discovery & Cloud)
 - **Discovery Sidebar:** Integración total con Modrinth y CurseForge.
 - **Multi-Filtro Avanzado:** Filtrado por versiones, categorías, loaders y entornos (Client/Server).
 - **Manual Version Selector:** Capacidad de elegir versiones específicas para Assets y Datapacks.
-- **Modrinth Collections:** Sincronización de colecciones personales y "Following".
+- **Modrinth Collections:** Sincronización de colecciones personales y "Following" (depurado de errores de API v3).
 - **Bulk Download:** Barra de acciones masivas para descargas en lote.
-- **Layout "Glass Gutter":** Transiciones fluidas y redimensionamiento dinámico de sidebars.
+- **Layout "Glass Gutter":** Transiciones fluidas y redimensionamiento dinámico de sidebars con auto-colapso inteligente de 3 segundos al completarse descargas en segundo plano.
+
+### 🔌 Soporte Híbrido Sinytra Connector (Forge + Fabric)
+- **Auto-Detección Inteligente:** Sincroniza automáticamente la UI con el loader y versión del proyecto activo, y escanea las librerías físicas del disco para auto-activar el soporte híbrido si detecta Sinytra Connector instalado.
+- **Búsqueda Multi-Loader Optimizada:** Cuando está activo el modo híbrido en proyectos de Forge, busca mods de Forge y Fabric de manera unificada en una sola petición OR hacia la API de Modrinth.
+- **Identificación Visual Premium:** Insignia 🔌 Sinytra Bridge con efectos holográficos y micro-animaciones en los mods de Fabric que el puente es capaz de ejecutar.
+- **Resolución Inteligente de Descargas:** Descarga y extrae dinámicamente versiones nativas de Fabric para mods exclusivos de Fabric cuando se instalan dentro de un perfil de Forge.
+- **Heurísticas SAGE para Modos Híbridos:** Diagnóstico inteligente capaz de detectar fallos de traducción de bytecode de clases de Fabric en tiempo de ejecución (fase de transformación/classloader de Sinytra) y reportarlos de forma simplificada en español con planes de acción adaptados.
 
 ### 🛡️ Security Layer v1.0
 - **Threat Detection Engine:** Análisis de bytecode para detectar malware y llamadas de red sospechosas.
@@ -48,20 +63,19 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
 # 🚧 Roadmap y Próximos Pasos (PENDIENTE)
 
 ### 🎯 Prioridades Inmediatas (S+)
-1. **Conflict Detection Engine:** Detectar incompatibilidades entre mods antes de lanzar el juego.
-2. **Crash Log Interpreter:** Traducir los logs de Java a sugerencias humanas accionables ("Diagnosis Engine").
-3. **JAR Scanner Avanzado:** Detección de dependencias rotas y APIs faltantes.
+1. **Conflict Detection Engine (Avanzado):** Extender SAGE para detectar colisiones lógicas complejas de bytecode (Mixins del mismo método) previas al lanzamiento físico del juego.
+2. **Memory de Clasificación (Fase 1):** Pre-seleccionar categorías basadas en el historial de uso manual del usuario.
 
 ### 🗺️ Roadmap Estratégico
 
 #### Fase 1: Inteligencia de Clasificación
 - [x] **Smart Categories (Modo Auto):** Clasificación automática de mods comunes (Librerías, Tech, Sonidos).
 - [x] **Universal Tagging:** Integración de tags temáticos de Modrinth en toda la app.
-- [ ] **Memory de Clasificación:** Pre-seleccionar categorías basadas en el historial de uso manual.
-- [ ] **Cross-Platform Exclusivity Check:** Identificar visualmente si un mod es exclusivo de una plataforma o está en ambas.
+- [x] **Memory de Clasificación:** Pre-seleccionar categorías basadas en el historial de uso manual.
+- [x] **Cross-Platform Exclusivity Check:** Identificar visualmente si un mod es exclusivo de una plataforma o está en ambas.
 
 #### Fase 2: Compatibilidad y Optimización
-- [ ] **Sinytra Connector Flag:** Vista combinada Fabric+Forge para builds híbridos.
+- [x] **Sinytra Connector Flag:** Vista combinada Fabric+Forge para builds híbridos.
 - [ ] **Auto-Optimization:** Ajuste automático de Java Args y Shaders según hardware.
 
 #### Fase 3: Seguridad Avanzada

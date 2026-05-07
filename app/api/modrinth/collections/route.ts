@@ -88,9 +88,9 @@ async function tryFetchUserCollections(userId: string, headers: Record<string, s
   const collections: any[] = [];
   const seenIds = new Set<string>();
   
-  // 1. Fetch ALL user collections using v3 API (includes owned and followed)
+  // 1. Fetch user's OWN collections from v2 API
   try {
-    const res = await fetch(`${MODRINTH_API_V3}/collections`, { headers, cache: "no-store" });
+    const res = await fetch(`${MODRINTH_API}/user/${userId}/collections`, { headers, cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -102,33 +102,13 @@ async function tryFetchUserCollections(userId: string, headers: Record<string, s
         }
       }
     } else {
-      console.error("[Modrinth API] Error fetching collections from v3:", res.status, await res.text().catch(() => ""));
+      console.error("[Modrinth API] Error fetching user collections from v2:", res.status, await res.text().catch(() => ""));
     }
   } catch (err) {
-    console.error("[Modrinth API] Error fetching user collections from v3:", err);
+    console.error("[Modrinth API] Error fetching user collections from v2:", err);
   }
 
-  // 2. Fallback: Fetch user's OWN collections from v2 API (for backwards compatibility)
-  if (collections.length === 0) {
-    try {
-      const res = await fetch(`${MODRINTH_API}/user/${userId}/collections`, { headers, cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          for (const coll of data) {
-            if (!seenIds.has(coll.id)) {
-              collections.push(coll);
-              seenIds.add(coll.id);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("[Modrinth API] Error fetching user collections from v2:", err);
-    }
-  }
-
-  // 3. Fetch FOLLOWED collections (as backup, in case v3 doesn't include them)
+  // 2. Fetch FOLLOWED collections (as backup)
   try {
     const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers, cache: "no-store" });
     if (followsRes.ok) {

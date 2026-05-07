@@ -250,7 +250,7 @@ function parseForgeTomlEnhanced(content: string, isNeoForge: boolean): Partial<E
     if (authorMatch) result.author = authorMatch[1];
 
     // Extraer descripción
-    const descMatch = content.match(/description\s*=\s*"""([^"]+)"""/s);
+    const descMatch = content.match(/description\s*=\s*"""([^"]+)"""/);
     if (descMatch) result.description = descMatch[1].trim();
 
     // Extraer URL

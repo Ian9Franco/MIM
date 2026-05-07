@@ -64,6 +64,11 @@ export function LibrarySection({
   useEffect(() => {
     const updateCount = Object.values(modrinthStatus).filter(s => s.status === "update_available" && !ignoredUpdates.has(s.path)).length;
     const currentCount = conflicts.length + updateCount;
+    const hasAlerts = currentCount > 0;
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("alert-status-changed", { detail: hasAlerts }));
+    }
 
     if (currentCount > prevAlertCount.current) {
       setShouldShake(true);
@@ -215,40 +220,6 @@ export function LibrarySection({
             title="Abrir la carpeta de mods en el explorador de archivos"
           />
 
-          {/* Alert Center Button */}
-          <button
-            data-sidebar-toggle="true"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:scale-110 active:scale-90 group"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-muted)"
-            }}
-            title={sidebarOpen ? "Cerrar Centro de Alertas" : "Abrir Centro de Alertas"}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = "var(--color-accent-bg)";
-              el.style.borderColor = "var(--color-accent-border)";
-              el.style.color = "var(--color-accent)";
-              el.style.boxShadow = "0 0 15px var(--color-accent-bg)";
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = "rgba(255,255,255,0.03)";
-              el.style.borderColor = "var(--color-border)";
-              el.style.color = "var(--color-muted)";
-              el.style.boxShadow = "none";
-            }}
-          >
-            <Bell className={`w-4 h-4 transition-transform ${sidebarOpen ? "scale-110" : ""} ${shouldShake ? "animate-bell-ring" : "group-hover:animate-bell-ring"}`} />
-            {(conflicts.length > 0 || Object.entries(modrinthStatus).some(([p, s]) => s.status === "update_available" && !ignoredUpdates.has(p))) && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f87171] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#f87171]"></span>
-              </span>
-            )}
-          </button>
         </div>
       </div>
 

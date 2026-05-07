@@ -174,7 +174,8 @@ function verifyNoServerLeak(
  *   mods/          ← all .jar from .essential + .local (essential has priority)
  *   resourcepacks/ ← from source/[version]/common/resourcepacks/
  *   shaderpacks/   ← from assets/shaders/  (version-agnostic)
- *   config/        ← from presets/[version]/  (optional)
+ *   config/        ← from project/config/  (optional)
+ *   options.txt    ← from project/options.txt (game settings, keybinds, resource packs)
  *
  * Output: `[buildPath]_alluser.zip`
  *
@@ -212,7 +213,7 @@ export function buildAllUser(
 
   // ── 2. Collect and copy mods ────────────────────────────────────────────────
   // .essential is listed first → it wins on duplicate filenames
-  const projectModsPath = path.join(sourceBase, version, "_projects", projectName, "mods");
+  const projectModsPath = path.join(sourceBase, "_projects", projectName, "mods");
   const loaderPath = fs.existsSync(projectModsPath)
     ? projectModsPath
     : path.join(sourceBase, version, loader);
@@ -225,16 +226,25 @@ export function buildAllUser(
   console.log(`[builder] Collected ${jars.size} mods.`);
 
   // ── 3. ResourcePacks ────────────────────────────────────────────────────────
-  const srcResources = path.join(sourceBase, version, "_projects", projectName, "resourcepacks");
+  const srcResources = path.join(sourceBase, "_projects", projectName, "resourcepacks");
   copyIfExists(srcResources, resourcesDir, "resourcepacks");
 
   // ── 4. ShaderPacks ──────────────────────────────────────────────────────────
-  const srcShaders = path.join(sourceBase, version, "_projects", projectName, "shaderpacks");
+  const srcShaders = path.join(sourceBase, "_projects", projectName, "shaderpacks");
   copyIfExists(srcShaders, shadersDir, "shaderpacks");
 
   // ── 5. Config Presets ────────────────────────────────────────────────────────
-  const srcConfig = path.join(sourceBase, version, "_projects", projectName, "config");
+  const srcConfig = path.join(sourceBase, "_projects", projectName, "config");
   copyIfExists(srcConfig, path.join(stagingDir, "config"), "config presets");
+
+  // ── 5b. Options.txt (Game Settings) ───────────────────────────────────────────
+  const srcOptions = path.join(sourceBase, "_projects", projectName, "options.txt");
+  if (fs.existsSync(srcOptions)) {
+    fs.copyFileSync(srcOptions, path.join(stagingDir, "options.txt"));
+    console.log(`[builder] Copied game settings (options.txt)`);
+  } else {
+    console.log(`[builder] Skipped options.txt (not found)`);
+  }
 
   // ── 6. Safety: verify no server-only mods leaked into the player build ───────
   verifyNoServerLeak(loaderPath, jars);
@@ -302,7 +312,7 @@ export function buildAllHost(
 
   // ── 2. Collect and copy mods ────────────────────────────────────────────────
   // .essential is listed first → wins on duplicate filenames
-  const projectModsPath = path.join(sourceBase, version, "_projects", projectName, "mods");
+  const projectModsPath = path.join(sourceBase, "_projects", projectName, "mods");
   const loaderPath = fs.existsSync(projectModsPath)
     ? projectModsPath
     : path.join(sourceBase, version, loader);
@@ -315,11 +325,11 @@ export function buildAllHost(
   console.log(`[builder] Collected ${jars.size} mods.`);
 
   // ── 3. Datapacks ────────────────────────────────────────────────────────────
-  const srcDatapacks = path.join(sourceBase, version, "_projects", projectName, "datapacks");
+  const srcDatapacks = path.join(sourceBase, "_projects", projectName, "datapacks");
   copyIfExists(srcDatapacks, datapacksDir, "datapacks");
 
   // ── 4. Config Presets ────────────────────────────────────────────────────────
-  const srcConfig = path.join(sourceBase, version, "_projects", projectName, "config");
+  const srcConfig = path.join(sourceBase, "_projects", projectName, "config");
   copyIfExists(srcConfig, path.join(outputDir, "config"), "config presets");
 
   const message =

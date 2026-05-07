@@ -87,6 +87,26 @@ export async function GET(req: NextRequest) {
 
     if (!Array.isArray(rawVersions)) return NextResponse.json({ versions: [] });
 
+    // 2.5 Filter versions based on projectType priority
+    if (projectType === "datapack" || projectType === "resourcepack") {
+      const isDatapack = projectType === "datapack";
+      const isRp = projectType === "resourcepack";
+
+      // Split into "matching" and "non-matching" entries
+      const matching = rawVersions.filter((v: any) => {
+        const nameMatch = v.name?.toLowerCase().includes(projectType) || v.version_number?.toLowerCase().includes(projectType);
+        const loaderMatch = v.loaders?.includes(projectType);
+        const fileMatch = v.files?.some((f: any) => f.filename.toLowerCase().endsWith(".zip"));
+        return nameMatch || loaderMatch || fileMatch;
+      });
+
+      // If we have matching entries, we can either use only them or put them at the top.
+      // Usually, if a user filters by "Datapack", they ONLY want datapacks.
+      if (matching.length > 0) {
+        rawVersions = matching;
+      }
+    }
+
     // 3. Recolectar todos los IDs de dependencias para resolverlos en un único batch
     const depIds = new Set<string>();
     rawVersions.forEach((v: any) => {
@@ -119,7 +139,23 @@ export async function GET(req: NextRequest) {
 
     // 4. Mapear versiones al formato VersionEntry normalizado
     const versions = rawVersions.map((v: any) => {
-      const primaryFile = v.files?.find((f: any) => f.primary) ?? v.files?.[0] ?? null;
+      // Prioritize ZIP files if it's a datapack and no primary is marked, or if we need to force it
+      let primaryFile = v.files?.find((f: any) => f.primary);
+      if (!primaryFile && v.files?.length > 0) {
+        if (projectType === "datapack") {
+          primaryFile = v.files.find((f: any) => f.filename.endsWith(".zip")) ?? v.files[0];
+        } else if (projectType === "resourcepack") {
+          primaryFile = v.files.find((f: any) => f.filename.endsWith(".zip")) ?? v.files[0];
+        } else {
+          primaryFile = v.files[0];
+        }
+      }
+      
+      // Secondary safety: if it IS a datapack filter, but the primary file is a .jar, try to find a .zip fallback
+      if (projectType === "datapack" && primaryFile && primaryFile.filename.endsWith(".jar")) {
+        const zipFile = v.files.find((f: any) => f.filename.endsWith(".zip"));
+        if (zipFile) primaryFile = zipFile;
+      }
       return {
         id:            v.id,
         versionNumber: v.version_number,

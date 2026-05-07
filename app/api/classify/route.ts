@@ -26,6 +26,7 @@ import { getProjectSubcategories } from "@/lib/projectSubcategories";
 import { scanMod } from "@/lib/scanner";
 import path from "path";
 import fs from "fs";
+import os from "os";
 
 export async function POST(req: NextRequest) {
   try {
@@ -105,23 +106,24 @@ export async function POST(req: NextRequest) {
         const meta = scanMod(p);
         if (meta.projectType === "resourcepack") {
           if (!projectName) throw new Error("projectName required for resourcepack classification");
-          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "resourcepacks");
+          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
         } else if (meta.projectType === "shader") {
-          if (!projectName) throw new Error("projectName required for shader classification");
-          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "shaderpacks");
+          // Shaders go directly to the game folder as they are version-independent
+          const homeDir = os.homedir();
+          finalTargetDir = path.join(homeDir, "AppData", "Roaming", ".minecraft", "shaderpacks");
         } else if (meta.projectType === "datapack") {
           if (!projectName) throw new Error("projectName required for datapack classification");
-          finalTargetDir = path.join(SOURCE_BASE, version, "_projects", projectName, "datapacks");
+          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
         } else {
           // It's a mod (or unknown) — use isolated or standard library path
           finalTargetDir = projectName
-            ? path.join(SOURCE_BASE, version, "_projects", projectName, "mods", category, sub)
+            ? path.join(SOURCE_BASE, "_projects", projectName, "mods", category, sub)
             : path.join(SOURCE_BASE, version, modloader, category, sub);
         }
       } catch (e) {
         console.warn(`[/api/classify] Scan failed, falling back to mod path: ${p}`, e);
         finalTargetDir = projectName
-          ? path.join(SOURCE_BASE, version, "_projects", projectName, "mods", category, sub)
+          ? path.join(SOURCE_BASE, "_projects", projectName, "mods", category, sub)
           : path.join(SOURCE_BASE, version, modloader, category, sub);
       }
 

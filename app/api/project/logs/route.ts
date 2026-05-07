@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const projectPath = path.join(SOURCE_BASE, version, "_projects", project);
+  const projectPath = path.join(SOURCE_BASE, "_projects", project);
   const projectPathExists = fs.existsSync(projectPath);
   const globalMcPath = getGlobalMcPath();
 
@@ -193,7 +193,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  const projectPath = path.join(SOURCE_BASE, version, "_projects", project);
+  const projectPath = path.join(SOURCE_BASE, "_projects", project);
   const globalMcPath = getGlobalMcPath();
 
   const isGlobal = fileToDelete.startsWith("global:");

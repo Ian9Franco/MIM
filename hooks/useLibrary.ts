@@ -262,6 +262,7 @@ export function useLibrary(
             targetCategory: `${targetConflict.oldFile.category}\\${targetConflict.oldFile.sub}`,
             modloader: activeProject.loader,
             version: activeProject.version,
+            projectName: activeProject.name,
           }),
         });
         setPendingFiles((prev) => prev.filter((f) => f.path !== targetConflict.newFile.path));

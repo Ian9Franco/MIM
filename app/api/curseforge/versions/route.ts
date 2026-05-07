@@ -68,18 +68,33 @@ export async function GET(req: NextRequest) {
       })),
     }));
 
+    const projectType = searchParams.get("projectType") ?? "mod";
+
     // Filtrar por versión y loader si se proveen
     let filtered = versions;
     if (gameVersion) {
       filtered = filtered.filter((v: any) => v.gameVersions.includes(gameVersion));
     }
-    if (cfLoaderId) {
+    
+    // El filtro de loader solo aplica para mods
+    if (cfLoaderId && projectType === "mod") {
       const loaderName = Object.keys(LOADER_TO_CF_ID).find(k => LOADER_TO_CF_ID[k] === cfLoaderId);
       if (loaderName) {
         filtered = filtered.filter((v: any) => 
           v.gameVersions.some((gv: string) => gv.toLowerCase() === loaderName.toLowerCase())
         );
       }
+    }
+
+    // Priorizar ZIPs y entradas que coincidan con el tipo para datapacks/resourcepacks
+    if (projectType === "datapack" || projectType === "resourcepack") {
+      const matching = filtered.filter((v: any) => {
+        const nameMatch = v.name?.toLowerCase().includes(projectType) || v.versionNumber?.toLowerCase().includes(projectType);
+        const fileMatch = v.primaryFile.filename.toLowerCase().endsWith(".zip");
+        const loaderMatch = v.gameVersions.some((gv: string) => gv.toLowerCase() === projectType.toLowerCase());
+        return nameMatch || fileMatch || loaderMatch;
+      });
+      if (matching.length > 0) filtered = matching;
     }
 
     return NextResponse.json({ versions: filtered });

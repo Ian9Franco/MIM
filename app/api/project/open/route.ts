@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid project name" }, { status: 400 });
     }
 
-    const projectPath = path.join(SOURCE_BASE, version, "_projects", safeName);
+    const projectPath = path.join(SOURCE_BASE, "_projects", safeName);
     
     // Create necessary folders
     fs.mkdirSync(path.join(projectPath, "resourcepacks"), { recursive: true });

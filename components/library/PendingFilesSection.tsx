@@ -34,6 +34,58 @@ export function PendingFilesSection({
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
   const [filesToDelete, setFilesToDelete] = useState<PendingFile[]>([]);
 
+  // ── Conflict Detection Logic ───────────────────────────────────────────────
+  const conflicts = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    const modIdToPaths: Record<string, string[]> = {};
+
+    // 1. Group by modId to find duplicates (including provided aliases/stubs)
+    pendingFiles.forEach(f => {
+      const allIds = Array.from(new Set([
+        f.meta?.modId,
+        ...(f.meta?.providedIds || [])
+      ])).filter(id => id && id !== "unknown") as string[];
+
+      allIds.forEach(id => {
+        if (!modIdToPaths[id]) modIdToPaths[id] = [];
+        // Only add if not already in the list for this ID
+        if (!modIdToPaths[id].includes(f.path)) {
+          modIdToPaths[id].push(f.path);
+        }
+      });
+    });
+
+    Object.entries(modIdToPaths).forEach(([mid, paths]) => {
+      if (paths.length > 1) {
+        paths.forEach(p => {
+          map[p] = "Duplicado";
+        });
+      }
+    });
+
+    // 2. Check for explicit conflicts/breaks
+    pendingFiles.forEach(f => {
+      const allConflictIds = [
+        ...(f.meta?.conflicts || []),
+        ...(f.meta?.breaks || [])
+      ];
+
+      if (allConflictIds.length > 0) {
+        pendingFiles.forEach(other => {
+          if (f.path === other.path) return;
+          const otherId = other.meta?.modId;
+          if (otherId && allConflictIds.includes(otherId)) {
+            const otherName = other.meta?.modName || otherId;
+            map[f.path] = `Conflicto con ${otherName}`;
+            map[other.path] = `Conflicto con ${f.meta?.modName || f.meta?.modId || f.fileName}`;
+          }
+        });
+      }
+    });
+
+    return map;
+  }, [pendingFiles]);
+
   const handleOpenDownloadsFolder = async () => {
     setOpeningFolder(true);
     try {
@@ -151,6 +203,7 @@ export function PendingFilesSection({
                   onDelete={onDeleteFile ? () => handleDeleteRequest(f) : undefined}
                   isDeleting={deletingFiles[f.path]}
                   categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
+                  conflict={conflicts[f.path]}
                 />
               );
             })

@@ -93,6 +93,8 @@ export interface ModMeta {
   iconBase64?:  string;
   sha1?:        string;
   categories?:  string[];
+  conflicts?:   string[];
+  breaks?:      string[];
 }
 
 export interface PendingFile {
@@ -149,4 +151,40 @@ export interface SecurityScanResult {
   findings: SecurityFinding[];
   summary: string;
   scannedAt: string;
+}
+
+// ── Tweak (Tuning Workspace) Types ──────────────────────────────────────────
+
+export interface Keybind {
+  id: string;
+  name: string;
+  key: string;
+  category: string;
+}
+
+export interface TweakSnapshot {
+  name: string;
+  fileName: string;
+  createdAt: string;
+}
+
+export interface TweakRecommendation {
+  title: string;
+  desc: string;
+  impact: "low" | "medium" | "high";
+  settingKey: string;
+  recommendedValue: string;
+}
+
+export interface TweakData {
+  optionsExists: boolean;
+  keybinds: Keybind[];
+  settings: Record<string, string>;
+  resourcePacks: {
+    active: string[];
+    available: string[];
+  };
+  recommendations: TweakRecommendation[];
+  snapshots: TweakSnapshot[];
+  modCount: number;
 }

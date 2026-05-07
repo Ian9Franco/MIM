@@ -56,9 +56,9 @@ export async function POST(req: NextRequest) {
     // Determine source directory: either a project-specific mods folder or the global loader folder
     const sourceBaseDir = sourceProject === "__global__"
       ? path.join(SOURCE_BASE, version, loader)
-      : path.join(SOURCE_BASE, version, "_projects", sourceProject, "mods");
+      : path.join(SOURCE_BASE, "_projects", sourceProject, "mods");
 
-    const targetBaseDir = path.join(SOURCE_BASE, version, "_projects", targetProject, "mods");
+    const targetBaseDir = path.join(SOURCE_BASE, "_projects", targetProject, "mods");
 
     if (!fs.existsSync(sourceBaseDir)) {
       const errorMsg = sourceProject === "__global__"

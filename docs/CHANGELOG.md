@@ -1,4 +1,18 @@
 # MIM — Backend Changelog
+2: 
+3: ### 🛠️ Tweak UI Mastery & Control Synergy (2026-05-07)
+4: - **Tweak Sidebar UX Refinement**:
+5:     - **Outside Click Closure**: Implementado cierre automático del panel Tweak al hacer clic fuera para fluidez de navegación.
+6:     - **Header Toggle Integrity**: Los botones de la cabecera (ALRT, SAGE, TWEAK, FOMO) ahora actúan como interruptores On/Off confiables, integrados con el sistema de cierre por fuera.
+7: - **Gestión Avanzada de Keybinds**:
+8:     - **Dynamic Mod Support**: El scanner de teclas ahora detecta automáticamente cualquier prefijo `key_` en `options.txt`, permitiendo editar teclas de mods como **Iris** o **Sodium** sin configuración previa.
+9:     - **Direct Sync**: Sincronización instantánea de cambios de teclas con el archivo real de Minecraft.
+10: - **Visual Priority Stack (Resource Packs)**:
+11:     - **Pila de Prioridad Invertida**: Implementación visual del "Minecraft Inverted Stack". El primer pack de la lista MIM es el de mayor prioridad en el juego (último en el array).
+12:     - **Controles de Ordenación**: Añadidos botones ↑ y ↓ para reordenar packs activos de forma intuitiva.
+13:     - **Validación de Reglas ⚠**: Advertencia visual automática si **Fresh Animations** no tiene mayor prioridad que sus patches (ej: Fresh Moves).
+14: - **Z-Index Architecture**: Refactorización de niveles visuales. El header ahora reside en `z-[150]`, asegurando accesibilidad permanente sobre sidebars y backdrops.
+15: 
 
 ### 🚀 MIM Beta 5.0 — Thematic Tags & Intelligent Automation (2026-05-06)
 - **Sistema de Tags Unificado**: Integración de tags temáticos (Aventura, Optimización, Tecnología, etc.) en toda la app. Sustitución del término genérico "Categorías" por "Tags" para mayor precisión.

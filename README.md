@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.0**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.2**
 
 [📸 Ver Screenshots](#-screenshots) • [🚀 Demo en Vivo](#-demo) • [📖 Documentación](./docs/) • [🐛 Reportar Bug](../../issues)
 
@@ -46,6 +46,9 @@ Crear modpacks de Minecraft es **frustrante**:
 - **🌈 Multi-Aesthetic UI:** Soporte para modos Claro/Oscuro y estilos visuales específicos por fuente (CurseForge Rústico vs Modrinth Moderno).
 - **🔍 Escaneo Profundo:** Identificación de JARs por metadatos internos y **hashes SHA1**.
 - **📦 Integridad Total:** Sincronización exacta con Modrinth/CurseForge verificando integridad de archivos.
+- **🛠️ Tweak UI Mastery:** Panel de configuración del juego con soporte para cierre por fuera (outside-click) y botones de header sincronizados.
+- **🧩 Visual Priority Stack:** Sistema de gestión de texturas que respeta la prioridad real de Minecraft (Inverted Stack). Incluye controles de ordenación y alertas de incompatibilidad (ej: Fresh Animations).
+- **🎹 Advanced Keybinds:** Scanner dinámico de teclas que detecta cualquier prefijo en `options.txt`, permitiendo editar controles de mods como Iris o Sodium de forma nativa.
 - **📜 Detalles Enriquecidos:** Environment badges (Client/Server), plataformas expandidas y resaltado de versiones Main (1.20.1/1.21.1).
 
 ```
@@ -63,6 +66,8 @@ Crear modpacks de Minecraft es **frustrante**:
 | **🔄 Update Checker** | Scanea toda tu librería vs APIs | 2 horas/pack |
 | **⚡ Hotkey System** | Clasificación con teclado (1,2,3) | 90% más rápido |
 | **📂 Aislamiento Total** | Cada proyecto tiene su config/mods/shaders separados | 0 conflictos |
+| **🧩 Priority Stack** | Gestión visual de texturas con prioridad invertida | Evita bugs visuales |
+| **🎹 Keybind Editor** | Edición de teclas de mods (Iris, Sodium, etc.) | 100% control |
 
 ---
 

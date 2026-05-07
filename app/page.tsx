@@ -121,6 +121,10 @@ export default function Page() {
       const customEvent = e as CustomEvent<{ open: boolean }>;
       setDetailsOpen(customEvent.detail.open);
     };
+    const handleAlertToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setSidebarOpen(customEvent.detail);
+    };
     const handleRefreshRequest = async () => {
       lib.refreshLibrary();
       // También re-escanear descargas pendientes
@@ -130,13 +134,15 @@ export default function Page() {
         if (data.pending) setPendingFiles(data.pending);
       } catch (_) {}
     };
-    window.addEventListener("fomo-toggle", handleFomoToggle);
+    window.addEventListener("fomo-toggle", handleFomoToggle)
     window.addEventListener("sage-toggle", handleSageToggle);
+    window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
     window.addEventListener("fomo-details-toggle", handleDetailsToggle);
     window.addEventListener("refresh-system", handleRefreshRequest);
     return () => {
       window.removeEventListener("fomo-toggle", handleFomoToggle);
       window.removeEventListener("sage-toggle", handleSageToggle);
+      window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
       window.removeEventListener("fomo-details-toggle", handleDetailsToggle);
       window.removeEventListener("refresh-system", handleRefreshRequest);
     };
@@ -223,16 +229,26 @@ export default function Page() {
 
   /* ── Auto-Classification Logic ───────────────────────────────────────── */
   useEffect(() => {
-    if (!autoClassify || !projects.activeProject) return;
+    if (!projects.activeProject) return;
 
     pendingFiles.forEach(f => {
       if (autoProcessing.current.has(f.path)) return;
+
+      // 1. Automatic Resource Pack / Datapack / Shader Classification (Always active if project selected)
+      if (f.meta?.projectType === "resourcepack" || f.meta?.projectType === "datapack" || f.meta?.projectType === "shader") {
+        autoProcessing.current.add(f.path);
+        // We use a dummy category because /api/classify will override it for these types
+        lib.handleClassify(".local", "rendimiento", [f], setPendingFiles, clearSelected);
+        return;
+      }
+
+      // 2. Regular Mod Auto-Classification (Only if enabled)
+      if (!autoClassify) return;
 
       const status = lib.modrinthStatus[f.path];
       if (!status || !status.categories) return;
 
       const tags = status.categories.map((c: string) => c.toLowerCase());
-      
       let target: { cat: string, sub: string } | null = null;
 
       if (tags.includes("library") || tags.includes("api-and-library")) {

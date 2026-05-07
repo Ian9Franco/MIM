@@ -2,7 +2,7 @@
 
 Este documento centraliza el estado actual del proyecto, separando los hitos alcanzados de la visión a futuro.
 
-**Última actualización:** 06-05-2026 — Beta 5.0 (Automation & Tags)
+**Última actualización:** 07-05-2026 — Beta 5.2 (Tweak & Controls)
 
 ---
 
@@ -23,6 +23,11 @@ Este documento centraliza el estado actual del proyecto, separando los hitos alc
   - Fixes de TypeScript en `enhanced-mod-scanner`.
   - Mejoras en la detección de versiones desde nombres de archivos y paths.
   - Creación de la [Guía de Implementación](file:///D:/.mine/manager/docs/enhanced-components-guide.md).
+- **🛠️ Tweak & Control Synergy (Sesión 07-05-2026):**
+  - **Tweak Sidebar UX:** Soporte para cierre por fuera (outside-click) y botones de header toggle (On/Off).
+  - **Visual Stack Inversion:** Reordenamiento de texturas con prioridad real invertida (Minecraft style).
+  - **Advanced Keybinds:** Edición directa de teclas de mods (Iris, Sodium, etc.) mediante scanner dinámico de prefijos.
+  - **Header Stability:** Z-Index refactor para mantener controles accesibles sobre backdrops.
 
 ### 🧠 SAGE (Systematic Analyzer for Glitches & Exceptions) — Diagnosis Engine
 - **Crash Log Interpreter (S+):** Analizador heurístico avanzado 100% local que parsea stack traces de Java de Minecraft, extrayendo hilos caídos, tipos de excepciones, Mixins conflictivos y causantes del crash.

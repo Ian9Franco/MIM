@@ -29,6 +29,7 @@ interface ModItemData {
     onDownload?: () => void;
   };
   onOpenDetails: (f: LibraryFile) => void;
+  conflicts: Record<string, string>;
 }
 
 // Función render para cada item en la lista virtualizada (compatible con react-window)
@@ -77,6 +78,7 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
         isDownloading={downloadingMods[mod.path]}
         categories={modrinthStatus[mod.path]?.categories || mod.meta?.categories}
         onOpenDetails={() => data.onOpenDetails(mod)}
+        conflict={data.conflicts[mod.path]}
       />
     </div>
   );
@@ -107,6 +109,48 @@ export function VirtualizedLibrary({
     Object.keys(modrinthStatus).sort().join('|'),
     [Object.keys(modrinthStatus).length]
   );
+
+  // ── Conflict Detection Logic ───────────────────────────────────────────────
+  const conflicts = useMemo(() => {
+    const map: Record<string, string> = {};
+    const modIdToPaths: Record<string, string[]> = {};
+
+    library.forEach(f => {
+      const allIds = Array.from(new Set([
+        f.meta?.modId,
+        ...(f.meta?.providedIds || [])
+      ])).filter(id => id && id !== "unknown") as string[];
+
+      allIds.forEach(id => {
+        if (!modIdToPaths[id]) modIdToPaths[id] = [];
+        if (!modIdToPaths[id].includes(f.path)) {
+          modIdToPaths[id].push(f.path);
+        }
+      });
+    });
+
+    Object.entries(modIdToPaths).forEach(([mid, paths]) => {
+      if (paths.length > 1) {
+        paths.forEach(p => { map[p] = "Duplicado"; });
+      }
+    });
+
+    library.forEach(f => {
+      const allConflictIds = [...(f.meta?.conflicts || []), ...(f.meta?.breaks || [])];
+      if (allConflictIds.length > 0) {
+        library.forEach(other => {
+          if (f.path === other.path) return;
+          const otherId = other.meta?.modId;
+          if (otherId && allConflictIds.includes(otherId)) {
+            map[f.path] = `Conflicto con ${other.meta?.modName || otherId}`;
+            map[other.path] = `Conflicto con ${f.meta?.modName || f.meta?.modId || f.fileName}`;
+          }
+        });
+      }
+    });
+
+    return map;
+  }, [library]);
 
   // Función para obtener badge info (extraída del componente original)
   const getBadge = useCallback((f: LibraryFile) => {
@@ -145,6 +189,7 @@ export function VirtualizedLibrary({
     ignoredUpdates,
     handleDownloadUpdate,
     getBadge,
+    conflicts,
     onOpenDetails: (f: LibraryFile) => {
       const modHit: any = {
         projectId: f.meta?.modId || "",
@@ -216,6 +261,7 @@ export function VirtualizedLibrary({
                           onDownload={badge.onDownload}
                           isDownloading={downloadingMods[f.path]}
                           categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
+                          conflict={conflicts[f.path]}
                           onOpenDetails={() => {
                             const modHit: any = {
                               projectId: f.meta?.modId || "",

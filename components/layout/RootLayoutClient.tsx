@@ -5,8 +5,9 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { FomoSidebar } from "@/components/fomo/FomoSidebar";
 import { SageSidebar } from "@/components/sage/SageSidebar";
+import { TweakSidebar } from "@/components/layout/TweakSidebar";
 import { SettingsModal } from "@/components/layout/SettingsModal";
-import { Settings, RefreshCw, ChevronRight, Activity } from "lucide-react";
+import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell } from "lucide-react";
 import type { Project } from "@/lib/types";
 
 /**
@@ -18,9 +19,11 @@ import type { Project } from "@/lib/types";
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [fomoOpen, setFomoOpen] = useState(false);
   const [sageOpen, setSageOpen] = useState(false);
+  const [tweakOpen, setTweakOpen] = useState(false);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertSidebarOpen, setAlertSidebarOpen] = useState(false);
+  const [hasAlerts, setHasAlerts] = useState(false);
 
   React.useEffect(() => {
     const handleAlertToggle = (e: Event) => {
@@ -38,22 +41,36 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       setSageOpen(customEvent.detail);
     };
 
+    const handleTweakToggleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setTweakOpen(customEvent.detail);
+    };
+
     const handleProjectChange = (e: Event) => {
       const customEvent = e as CustomEvent<Project | null>;
       setActiveProject(customEvent.detail);
     };
 
+    const handleAlertStatus = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setHasAlerts(customEvent.detail);
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
+      window.addEventListener("alert-status-changed", handleAlertStatus);
       window.addEventListener("fomo-toggle", handleFomoToggleEvent);
       window.addEventListener("sage-toggle", handleSageToggleEvent);
+      window.addEventListener("tweak-toggle", handleTweakToggleEvent);
       window.addEventListener("active-project-changed", handleProjectChange);
     }
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
+        window.removeEventListener("alert-status-changed", handleAlertStatus);
         window.removeEventListener("fomo-toggle", handleFomoToggleEvent);
         window.removeEventListener("sage-toggle", handleSageToggleEvent);
+        window.removeEventListener("tweak-toggle", handleTweakToggleEvent);
         window.removeEventListener("active-project-changed", handleProjectChange);
       }
     };
@@ -61,13 +78,6 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
   const handleToggleFomo = (isOpen: boolean) => {
     setFomoOpen(isOpen);
-    if (isOpen) {
-      setSageOpen(false);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("sage-toggle", { detail: false }));
-      }
-    }
-    
     if (typeof window !== "undefined") {
       const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
       const audio = new Audio(soundFile);
@@ -75,18 +85,19 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       audio.play().catch(e => console.warn("Audio play failed:", e));
 
       window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: isOpen }));
+      if (isOpen) {
+        window.dispatchEvent(new CustomEvent("sage-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("tweak-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
+        setSageOpen(false);
+        setTweakOpen(false);
+        setAlertSidebarOpen(false);
+      }
     }
   };
 
   const handleToggleSage = (isOpen: boolean) => {
     setSageOpen(isOpen);
-    if (isOpen) {
-      setFomoOpen(false);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: false }));
-      }
-    }
-    
     if (typeof window !== "undefined") {
       const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
       const audio = new Audio(soundFile);
@@ -94,6 +105,54 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       audio.play().catch(e => console.warn("Audio play failed:", e));
 
       window.dispatchEvent(new CustomEvent("sage-toggle", { detail: isOpen }));
+      if (isOpen) {
+        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("tweak-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
+        setFomoOpen(false);
+        setTweakOpen(false);
+        setAlertSidebarOpen(false);
+      }
+    }
+  };
+
+  const handleToggleTweak = (isOpen: boolean) => {
+    setTweakOpen(isOpen);
+    if (typeof window !== "undefined") {
+      const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
+      const audio = new Audio(soundFile);
+      audio.volume = 0.35;
+      audio.play().catch(e => console.warn("Audio play failed:", e));
+
+      window.dispatchEvent(new CustomEvent("tweak-toggle", { detail: isOpen }));
+      if (isOpen) {
+        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("sage-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
+        setFomoOpen(false);
+        setSageOpen(false);
+        setAlertSidebarOpen(false);
+      }
+    }
+  };
+
+  const handleToggleAlerts = (isOpen: boolean) => {
+    setAlertSidebarOpen(isOpen);
+    if (typeof window !== "undefined") {
+      const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
+      const audio = new Audio(soundFile);
+      audio.volume = 0.3;
+      audio.play().catch(e => console.warn("Audio play failed:", e));
+
+      window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: isOpen }));
+      if (isOpen) {
+        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("sage-toggle", { detail: false }));
+        window.dispatchEvent(new CustomEvent("tweak-toggle", { detail: false }));
+        setFomoOpen(false);
+        setSageOpen(false);
+        setTweakOpen(false);
+      }
     }
   };
 
@@ -126,23 +185,27 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       {/* ── SAGE Sidebar ─────────────────────────────────────────────────────── */}
       <SageSidebar open={sageOpen} onClose={() => handleToggleSage(false)} activeProject={activeProject} />
 
+      {/* ── TWEAK Sidebar ────────────────────────────────────────────────────── */}
+      <TweakSidebar isOpen={tweakOpen} onClose={() => handleToggleTweak(false)} activeProject={activeProject} />
+
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
         className="relative z-10 min-h-screen flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] overflow-x-hidden"
         style={{ 
           transform: `translateX(${fomoOpen || sageOpen ? 500 : 0}px)`,
-          paddingRight: alertSidebarOpen ? "400px" : "0px",
+          paddingRight: (alertSidebarOpen || tweakOpen) ? "400px" : "0px",
           width: "100%",
         }}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-40 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-[150] border-b border-primary/20 bg-background/80 backdrop-blur-xl">
           <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between gap-6">
 
             {/* Left side: FOMO toggle + App Title */}
             <div className="flex items-center gap-6 animate-fade-up">
               {/* FOMO button (Premium Minimalist style) */}
               <button
+                data-header-toggle="true"
                 onClick={() => handleToggleFomo(!fomoOpen)}
                 className="flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass"
                 style={{
@@ -243,17 +306,57 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 <Settings className="w-4 h-4" />
               </button>
 
-              {/* SAGE (Systematic Analyzer for Glitches & Exceptions) Minimalist Toggle */}
+              {/* ALRT Button */}
               <button
+                data-header-toggle="true"
+                onClick={() => handleToggleAlerts(!alertSidebarOpen)}
+                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 hover:bg-red-500/10 ${alertSidebarOpen ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]' : 'hover:bg-white/5'}`}
+                style={{ 
+                  border: alertSidebarOpen ? "1px solid rgba(239,68,68,0.4)" : "1px solid var(--color-border)", 
+                  color: alertSidebarOpen ? "#f87171" : "var(--color-muted)" 
+                }}
+                title={alertSidebarOpen ? "Cerrar Alertas" : "Centro de Alertas e Incompatibilidades (ALRT)"}
+              >
+                <div className="relative">
+                  <Bell className={`w-3.5 h-3.5 transition-all ${alertSidebarOpen ? 'animate-bell-ring text-red-400 scale-110' : 'group-hover:animate-bell-ring'}`} />
+                  {hasAlerts && (
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-400"></span>
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-headline tracking-widest font-bold">ALRT</span>
+              </button>
+
+              {/* SGE Button */}
+              <button
+                data-header-toggle="true"
                 onClick={() => handleToggleSage(!sageOpen)}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-indigo-500/10 ${sageOpen ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'hover:bg-white/5'}`}
+                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 hover:bg-indigo-500/10 ${sageOpen ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'hover:bg-white/5'}`}
                 style={{ 
                   border: sageOpen ? "1px solid rgba(99,102,241,0.4)" : "1px solid var(--color-border)", 
                   color: sageOpen ? "#818cf8" : "var(--color-muted)" 
                 }}
                 title={sageOpen ? "Cerrar SAGE" : "Analizar Logs y Crashes (SAGE)"}
               >
-                <Activity className={`w-4 h-4 transition-all ${sageOpen ? 'animate-pulse text-indigo-400 scale-110' : ''}`} />
+                <Activity className={`w-3.5 h-3.5 transition-all ${sageOpen ? 'animate-pulse text-indigo-400 scale-110' : ''}`} />
+                <span className="text-[10px] font-headline tracking-widest font-bold">SAGE</span>
+              </button>
+
+              {/* TWK Button */}
+              <button
+                data-header-toggle="true"
+                onClick={() => handleToggleTweak(!tweakOpen)}
+                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 ${tweakOpen ? 'bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_rgba(187,150,228,0.25)]' : 'hover:bg-white/5'}`}
+                style={{ 
+                  border: tweakOpen ? "1px solid rgba(187,150,228,0.4)" : "1px solid var(--color-border)", 
+                  color: tweakOpen ? "var(--color-primary)" : "var(--color-muted)" 
+                }}
+                title={tweakOpen ? "Cerrar TWEAK" : "Ajustes de Juego y Optimización (TWEAK)"}
+              >
+                <Settings2 className={`w-3.5 h-3.5 transition-all ${tweakOpen ? 'animate-spin-slow text-primary scale-110' : ''}`} />
+                <span className="text-[10px] font-headline tracking-widest font-bold">TWEAK</span>
               </button>
 
               <ThemeToggle />

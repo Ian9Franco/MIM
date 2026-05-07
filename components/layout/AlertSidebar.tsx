@@ -102,7 +102,7 @@ export function AlertSidebar({
       if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         // Don't close if we clicked the toggle button itself
         const target = event.target as HTMLElement;
-        if (target.closest('[data-sidebar-toggle="true"]')) return;
+        if (target.closest('[data-sidebar-toggle="true"]') || target.closest('[data-header-toggle="true"]')) return;
         
         setSidebarOpen(false);
       }

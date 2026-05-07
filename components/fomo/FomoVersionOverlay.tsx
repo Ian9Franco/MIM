@@ -135,6 +135,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
   const requiredDeps = allDependencies.filter(d => d.dependencyType === "required");
   const optionalDeps = allDependencies.filter(d => d.dependencyType === "optional");
+  const incompatibleDeps = allDependencies.filter(d => d.dependencyType === "incompatible");
   const descriptionHtml = mod.body?.trim()
     ? markdownToHtml(mod.body)
     : mod.description?.trim()
@@ -346,6 +347,27 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     </div>
                   </div>
                 )}
+                {incompatibleDeps.length > 0 && (
+                  <div>
+                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-orange-500 mb-3 px-1 flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5" />
+                      Incompatible con:
+                    </h4>
+                    <div className="grid gap-2">
+                      {incompatibleDeps.map(dep => (
+                        <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border bg-orange-500/5" style={{ borderColor: "rgba(249,115,22,0.2)" }}>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold truncate text-orange-200">{dep.title || dep.projectId}</p>
+                            <p className="text-[0.6rem] mt-0.5 text-orange-500/60 font-bold uppercase">Incompatible</p>
+                          </div>
+                          <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
+                            <X className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -463,11 +485,15 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                                   style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: dep.dependencyType === "required" ? COLORS.red : COLORS.primary }} />
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ 
+                                      background: dep.dependencyType === "required" ? COLORS.red : 
+                                                 dep.dependencyType === "incompatible" ? "#f97316" : COLORS.primary 
+                                    }} />
                                     <span className="text-xs font-medium" style={{ color: COLORS.foreground }}>{dep.title}</span>
                                   </div>
                                   <span className="text-[0.6rem] uppercase tracking-widest opacity-30 font-bold">
-                                    {dep.dependencyType === "required" ? "Requerido" : "Opcional"}
+                                    {dep.dependencyType === "required" ? "Requerido" : 
+                                     dep.dependencyType === "incompatible" ? "Incompatible" : "Opcional"}
                                   </span>
                                 </div>
                               ))}

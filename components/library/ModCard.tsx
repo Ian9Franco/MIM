@@ -35,11 +35,12 @@ interface ModCardProps {
   riskScore?:    number;
   categories?:   string[];
   onOpenDetails?: () => void;
+  conflict?:     string;
 }
 
 function getProjectTypeLabel(type: string): string {
   const map: Record<string, string> = {
-    resourcepack: "🖼️ Textura",
+    resourcepack: "🖼️ TEXTURAS",
     datapack:     "📦 Datapack",
     shader:       "✨ Shader",
   };
@@ -51,7 +52,7 @@ export const ModCard = memo(function ModCard({
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, author, categories,
-  onOpenDetails,
+  onOpenDetails, conflict,
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -82,14 +83,18 @@ export const ModCard = memo(function ModCard({
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
-  const cardBorder = isSelected && !isError ? "var(--color-accent-border)"
+  const cardBorder = isSelected && !isError && !conflict ? "var(--color-accent-border)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
+    : conflict    ? (isSelected ? "rgba(249,115,22,0.6)" : "rgba(249,115,22,0.3)")
     : "var(--color-border)";
-  const cardBg = isSelected && !isError ? "var(--color-accent-bg)"
+  const cardBg = isSelected && !isError && !conflict ? "var(--color-accent-bg)"
     : isError   ? "rgba(127,29,29,0.12)"
+    : conflict  ? "rgba(124,45,18,0.12)"
     : "color-mix(in srgb, var(--color-card) 82%, transparent)";
-  const cardShadow = isSelected && !isError
+  const cardShadow = isSelected && !isError && !conflict
     ? "0 0 28px var(--glow-accent), 0 4px 16px rgba(0,0,0,0.1)"
+    : conflict && isSelected
+    ? "0 0 20px rgba(249,115,22,0.15)"
     : "none";
 
   const stopPropDownload = useCallback((e: React.MouseEvent) => {
@@ -150,13 +155,14 @@ export const ModCard = memo(function ModCard({
             }}
           >
             {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
+            : conflict  ? <AlertTriangle className="w-5 h-5 text-orange-400" />
             : iconBase64 ? <img src={iconBase64} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
             : <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />}
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : COLORS.foreground }}>
+              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : COLORS.foreground }}>
                 {name}
               </p>
               
@@ -203,11 +209,18 @@ export const ModCard = memo(function ModCard({
               )}
               <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.55rem" }}>{ls.label}</span>
               
-              {(isVersionError || isLoaderError) && (
+              {(isVersionError || isLoaderError || conflict) && (
                 <div className="flex items-center gap-1 shrink-0">
                   {isVersionError && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ vers</span>}
                   {isLoaderError  && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ldr</span>}
+                  {conflict && <span className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", fontSize: "0.55rem", border: "1px solid rgba(249,115,22,0.3)" }}>⚠ {conflict}</span>}
                 </div>
+              )}
+
+              {projectType && projectType !== "mod" && projectType !== "unknown" && (
+                <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "rgba(102,200,160,0.15)", color: "#66C8A0", border: "1px solid rgba(102,200,160,0.3)", fontSize: "0.55rem" }}>
+                  {getProjectTypeLabel(projectType).toUpperCase()}
+                </span>
               )}
               
               {securityInfo && (

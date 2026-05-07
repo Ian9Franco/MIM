@@ -1,6 +1,10 @@
 "use client";
 
-export function SkeletonLoader() {
+interface SkeletonLoaderProps {
+  message?: string;
+}
+
+export function SkeletonLoader({ message = "Cargando..." }: SkeletonLoaderProps) {
   return (
     <div
       className="relative overflow-hidden rounded-2xl animate-fade-in"
@@ -59,10 +63,10 @@ export function SkeletonLoader() {
             style={{ borderColor: "rgba(187,150,228,0.25)", borderTopColor: "var(--color-primary)" }}
           />
           <span className="font-label" style={{ color: "var(--color-accent)", opacity: 0.8, fontSize: "0.62rem" }}>
-            Escaneando descargas...
+            {message}
           </span>
         </div>
       </div>
     </div>
   );
-}
+}

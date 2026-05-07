@@ -5,7 +5,7 @@ import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 export const metadata: Metadata = {
   title: "MIM — Minecraft Intelligent Manager",
   description: "Gestor inteligente de mods, builds y assets para packs de Minecraft.",
-  icons: { icon: "/MIMico.png", apple: "/MIMico.png" },
+  icons: { icon: "/icon.png", apple: "/icon.png" },
 };
 
 /**

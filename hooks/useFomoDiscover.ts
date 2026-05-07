@@ -36,6 +36,9 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   // Resetear a página 1 al cambiar cualquier filtro o búsqueda
   useEffect(() => {
     setPage(1);
+    // Limpiar mods y total inmediatamente para forzar el estado de Skeleton si estamos cargando
+    setMods([]);
+    setTotal(0);
   }, [loader, gameVersions, projectType, categories, environments, sortOrder, query, source]);
 
   // Limpiar categorías y entornos al cambiar de projectType (el reset de página ya lo hace el efecto de arriba)

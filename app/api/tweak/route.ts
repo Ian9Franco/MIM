@@ -779,13 +779,14 @@ export async function POST(req: Request) {
 
     // ──── Action: INITIALIZE ────
     if (action === "initialize") {
+      const settings = getSettings();
       let imported = false;
-      const systemMcPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt");
+      const systemMcPath = path.join(settings.minecraftPath, "options.txt");
 
       if (fs.existsSync(systemMcPath)) {
         try {
           // ALWAYS backup the original system options.txt before touching it
-          const systemBackupPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt.mim-backup-original");
+          const systemBackupPath = path.join(settings.minecraftPath, "options.txt.mim-backup-original");
           if (!fs.existsSync(systemBackupPath)) {
             fs.copyFileSync(systemMcPath, systemBackupPath);
             console.log(`[Tweak] Backed up original Minecraft options.txt to ${systemBackupPath}`);
@@ -793,7 +794,7 @@ export async function POST(req: Request) {
           
           fs.copyFileSync(systemMcPath, optionsPath);
           imported = true;
-          console.log(`[Tweak] Successfully imported options.txt from user system .minecraft folder`);
+          console.log(`[Tweak] Successfully imported options.txt from user system Minecraft folder`);
         } catch (e) {
           console.error("[Tweak] Failed to copy system options.txt:", e);
         }
@@ -1234,8 +1235,9 @@ key_key.togglePerspective:key.keyboard.f5
 
     // ──── Action: SYNC RESOURCEPACKS (Project <-> Game) ────
     if (action === "sync-resourcepacks") {
+      const settings = getSettings();
       const projectRpDir = path.join(projectDir, "resourcepacks");
-      const gameRpDir = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "resourcepacks");
+      const gameRpDir = path.join(settings.minecraftPath, "resourcepacks");
 
       if (!fs.existsSync(projectRpDir)) fs.mkdirSync(projectRpDir, { recursive: true });
       if (!fs.existsSync(gameRpDir)) fs.mkdirSync(gameRpDir, { recursive: true });
@@ -1281,8 +1283,9 @@ key_key.togglePerspective:key.keyboard.f5
 
     // ──── Action: PUSH TO MINECRAFT ────
     if (action === "push-to-minecraft") {
-      const systemMcPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt");
-      const systemBackupPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "options.txt.mim-backup");
+      const settings = getSettings();
+      const systemMcPath = path.join(settings.minecraftPath, "options.txt");
+      const systemBackupPath = path.join(settings.minecraftPath, "options.txt.mim-backup");
       
       if (!fs.existsSync(optionsPath)) {
         return NextResponse.json({ error: "No hay options.txt en el proyecto" }, { status: 404 });
@@ -1293,7 +1296,7 @@ key_key.togglePerspective:key.keyboard.f5
         if (fs.existsSync(systemMcPath)) {
           // Always keep one backup, but rotate if we push multiple times
           const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-          const timestampedBackup = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", `options.txt.mim-backup-${timestamp}`);
+          const timestampedBackup = path.join(settings.minecraftPath, `options.txt.mim-backup-${timestamp}`);
           
           // Keep latest backup as simple .mim-backup
           fs.copyFileSync(systemMcPath, systemBackupPath);

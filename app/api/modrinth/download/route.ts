@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE } from "@/lib/constants";
+import { getSettings } from "@/lib/settings";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -102,7 +103,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const downloadsDir = path.join(os.homedir(), "Downloads");
+    const settings = getSettings();
+    const downloadsDir = settings.downloadsPath;
     if (!fs.existsSync(downloadsDir)) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }

@@ -30,6 +30,7 @@ import { FomoModCard }         from "./FomoModCard";
 import { FomoPagination }      from "./FomoPagination";
 import { FomoVersionOverlay }  from "./FomoVersionOverlay";
 import { FomoCollections }     from "./FomoCollections";
+import { FomoSkeleton }        from "./FomoSkeleton";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
 import type { ModHit, VersionEntry, Project } from "@/lib/types";
 import type { SortOrder } from "@/constants/app";
@@ -388,9 +389,18 @@ export function FomoSidebar({
                 </p>
               </div>
 
-              {/* Mod list */}
+                {/* Mod list */}
               <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${!!discover.selectingVersionFor ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start`} role="feed" aria-label="Lista de mods" aria-busy={discover.loading}>
-                {discover.mods.map((mod) => (
+                {(discover.loading || discover.mods.length === 0) && !discover.sourceError && discover.total === 0 ? (
+                  <div className="col-span-full">
+                    <FomoSkeleton 
+                      variant="card"
+                      isCurseForge={discover.source === "curseforge"}
+                      message={discover.source === "modrinth" ? "Consultando Modrinth..." : "Consultando CurseForge..."} 
+                      count={9} 
+                    />
+                  </div>
+                ) : discover.mods.map((mod) => (
                   <FomoModCard
                     key={mod.projectId}
                     mod={mod}

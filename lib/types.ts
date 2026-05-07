@@ -95,6 +95,7 @@ export interface ModMeta {
   categories?:  string[];
   conflicts?:   string[];
   breaks?:      string[];
+  providedIds?: string[];
 }
 
 export interface PendingFile {

@@ -90,7 +90,7 @@ export function LibrarySection({
     if (!s) return {};
     if (s.status === "update_available" && !ignoredUpdates.has(f.path)) return {
       badgeText: "↑ " + s.latestVersion,
-      badgeColor: "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]",
+      badgeColor: "bg-[rgba(250,204,21,0.15)] text-[#facc15] border border-[rgba(250,204,21,0.3)]",
       onDownload: () => handleDownloadUpdate(f.path, s.downloadUrl, f.fileName.replace(f.meta?.modVersion ?? "", s.latestVersion)),
     };
     if (s.status === "updated") return { badgeText: "Al día", badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
@@ -225,7 +225,11 @@ export function LibrarySection({
 
       {/* Library grouped by category */}
       {loadingLibrary ? (
-        <SkeletonLoader />
+        <div className="space-y-4">
+          <SkeletonLoader message="Escaneando librería..." />
+          <SkeletonLoader message="Analizando metadatos..." />
+          <SkeletonLoader message="Buscando actualizaciones..." />
+        </div>
       ) : library.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed transition-all shadow-inner" style={{ background: "var(--color-secondary-bg)", borderColor: "var(--color-border)" }}>
           <Layers className="w-12 h-12 mb-4 opacity-20" style={{ color: "var(--color-accent)" }} />

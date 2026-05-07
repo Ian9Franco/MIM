@@ -7,7 +7,9 @@ import { FomoSidebar } from "@/components/fomo/FomoSidebar";
 import { SageSidebar } from "@/components/sage/SageSidebar";
 import { TweakSidebar } from "@/components/layout/TweakSidebar";
 import { SettingsModal } from "@/components/layout/SettingsModal";
-import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell } from "lucide-react";
+import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package } from "lucide-react";
+import { useStaging } from "@/hooks/useStaging";
+import { StagingModal } from "@/components/layout/StagingModal";
 import type { Project } from "@/lib/types";
 
 /**
@@ -24,6 +26,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertSidebarOpen, setAlertSidebarOpen] = useState(false);
   const [hasAlerts, setHasAlerts] = useState(false);
+  const [stagingOpen, setStagingOpen] = useState(false);
+  const staging = useStaging();
 
   React.useEffect(() => {
     const handleAlertToggle = (e: Event) => {
@@ -259,7 +263,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 
                 <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
                   <span className="bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-3">
-                    <Image src="/MIMico.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
+                    <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
                     MIM
                   </span>
                   
@@ -304,6 +308,21 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 title="Ajustes de Ubicaciones"
               >
                 <Settings className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => setStagingOpen(true)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 relative ${staging.hasFiles ? 'text-amber-400 border-amber-500/30 bg-amber-500/5' : 'hover:bg-white/5 text-muted-foreground'}`}
+                style={{ border: staging.hasFiles ? "1px solid rgba(251,191,36,0.3)" : "1px solid var(--color-border)" }}
+                title="Archivos en Staging (Pendientes)"
+              >
+                <Package className={`w-4 h-4 ${staging.hasFiles ? 'animate-bounce-subtle' : ''}`} />
+                {staging.hasFiles && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+                  </span>
+                )}
               </button>
 
               {/* ALRT Button */}
@@ -375,7 +394,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
             
             <div className="flex flex-col items-center md:items-start gap-2">
               <div className="flex items-center gap-2">
-                <Image src="/MIMico.png" alt="" width={20} height={20} className="w-5 h-5 grayscale opacity-50" />
+                <Image src="/icon.png" alt="" width={20} height={20} className="w-5 h-5 grayscale opacity-50" />
                 <span className="font-headline text-[10px] tracking-[0.3em] uppercase text-foreground/50">Minecraft Intelligent Manager</span>
               </div>
               <p className="text-[10px] font-light tracking-wide text-foreground/30">
@@ -417,6 +436,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       </div>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {stagingOpen && <StagingModal onClose={() => setStagingOpen(false)} />}
     </div>
   );
 }

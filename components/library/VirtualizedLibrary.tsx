@@ -79,6 +79,7 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
         categories={modrinthStatus[mod.path]?.categories || mod.meta?.categories}
         onOpenDetails={() => data.onOpenDetails(mod)}
         conflict={data.conflicts[mod.path]}
+        hasUpdate={modrinthStatus[mod.path]?.status === "update_available" && !ignoredUpdates.has(mod.path)}
       />
     </div>
   );
@@ -158,7 +159,7 @@ export function VirtualizedLibrary({
     if (!s) return {};
     if (s.status === "update_available" && !ignoredUpdates.has(f.path)) return {
       badgeText: "↑ " + s.latestVersion,
-      badgeColor: "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent-border)]",
+      badgeColor: "bg-[rgba(250,204,21,0.15)] text-[#facc15] border border-[rgba(250,204,21,0.3)]",
       onDownload: () => handleDownloadUpdate(f.path, s.downloadUrl, f.fileName.replace(f.meta?.modVersion ?? "", s.latestVersion)),
     };
     if (s.status === "updated") return { badgeText: "Al día", badgeColor: "bg-[rgba(102,200,160,0.15)] text-[#66C8A0] border border-[rgba(102,200,160,0.25)]" };
@@ -262,6 +263,7 @@ export function VirtualizedLibrary({
                           isDownloading={downloadingMods[f.path]}
                           categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
                           conflict={conflicts[f.path]}
+                          hasUpdate={modrinthStatus[f.path]?.status === "update_available" && !ignoredUpdates.has(f.path)}
                           onOpenDetails={() => {
                             const modHit: any = {
                               projectId: f.meta?.modId || "",

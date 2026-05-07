@@ -24,9 +24,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, isValidCategory } from "@/lib/constants";
 import { getProjectSubcategories } from "@/lib/projectSubcategories";
 import { scanMod } from "@/lib/scanner";
+import { getSettings } from "@/lib/settings";
 import path from "path";
 import fs from "fs";
-import os from "os";
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
 
     const moved: string[] = [];
     const skipped: string[] = [];
+    const settings = getSettings();
 
     for (const p of pathsToProcess) {
       if (!fs.existsSync(p)) {
@@ -106,11 +107,21 @@ export async function POST(req: NextRequest) {
         const meta = scanMod(p);
         if (meta.projectType === "resourcepack") {
           if (!projectName) throw new Error("projectName required for resourcepack classification");
-          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+          // Check if we should move to game folder or project folder
+          // Based on user request, tweaks uses the game's resourcepacks folder
+          const gameRpDir = path.join(settings.minecraftPath, "resourcepacks");
+          if (fs.existsSync(settings.minecraftPath)) {
+            finalTargetDir = gameRpDir;
+          } else {
+            finalTargetDir = path.join(settings.stagingPath, "resourcepacks");
+          }
         } else if (meta.projectType === "shader") {
-          // Shaders go directly to the game folder as they are version-independent
-          const homeDir = os.homedir();
-          finalTargetDir = path.join(homeDir, "AppData", "Roaming", ".minecraft", "shaderpacks");
+          const shaderpacksDir = path.join(settings.minecraftPath, "shaderpacks");
+          if (fs.existsSync(settings.minecraftPath)) {
+            finalTargetDir = shaderpacksDir;
+          } else {
+            finalTargetDir = path.join(settings.stagingPath, "shaderpacks");
+          }
         } else if (meta.projectType === "datapack") {
           if (!projectName) throw new Error("projectName required for datapack classification");
           finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
@@ -127,7 +138,9 @@ export async function POST(req: NextRequest) {
           : path.join(SOURCE_BASE, version, modloader, category, sub);
       }
 
-      fs.mkdirSync(finalTargetDir, { recursive: true });
+      if (!fs.existsSync(finalTargetDir)) {
+        fs.mkdirSync(finalTargetDir, { recursive: true });
+      }
       const fileName = path.basename(p);
       const targetPath = path.join(finalTargetDir, fileName);
 

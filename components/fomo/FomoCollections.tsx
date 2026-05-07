@@ -18,6 +18,7 @@ import {
 } from "@/services/api";
 import { COLORS } from "@/theme/tokens";
 import { LoadingSpinner, EmptyState } from "../ui/primitives";
+import { FomoSkeleton }               from "./FomoSkeleton";
 import { FomoModCard }               from "./FomoModCard";
 import type { CollectionEntry, ModHit } from "@/lib/types";
 import type { StatusType } from "@/hooks/useStatusBanner";
@@ -277,7 +278,7 @@ export const FomoCollections = memo(function FomoCollections({
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {viewLoading ? (
-            <div className="p-12"><LoadingSpinner label="Cargando mods..." /></div>
+            <FomoSkeleton message="Cargando mods..." count={6} />
           ) : (
             <div className={`grid grid-cols-1 ${isDetailsOpen ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start p-6`}>
               {viewMods.map((mod) => (
@@ -336,7 +337,7 @@ export const FomoCollections = memo(function FomoCollections({
   }
 
   // Collection list view
-  if (loading) return <LoadingSpinner label="Cargando colecciones..." />;
+  if (loading) return <FomoSkeleton message="Cargando colecciones..." />;
   if (error && collections.length === 0) return <EmptyState icon={<Library className="w-12 h-12" />} title="Error al cargar" subtitle={error} />;
 
   return (

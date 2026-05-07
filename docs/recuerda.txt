@@ -1,0 +1,10 @@
+que en collections nos marque con amarillo los mod que tuvieron una update. PARA revisarlo y ver que trae de nuevo con la seccion detalles.
+
+
+
+en config, editar rutas. poder elegir donde esta la ruta del juego para encontrar el archivo optiosn o los shaderpacks y resourcepacks
+ya que tweaks usa el options.txt y la carpeta resourcepacks.
+
+y shaderpacks se guarda automaticamente en la descarga
+
+implementar una carpeta staging donde estas cosas se guarden cuando no este definida la carpeta de minecraft, o no la encuntre., para asi no perder los archivos o que ocurra un bug en la app

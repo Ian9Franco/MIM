@@ -36,6 +36,7 @@ interface ModCardProps {
   categories?:   string[];
   onOpenDetails?: () => void;
   conflict?:     string;
+  hasUpdate?:    boolean;
 }
 
 function getProjectTypeLabel(type: string): string {
@@ -52,7 +53,7 @@ export const ModCard = memo(function ModCard({
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, author, categories,
-  onOpenDetails, conflict,
+  onOpenDetails, conflict, hasUpdate,
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -83,18 +84,22 @@ export const ModCard = memo(function ModCard({
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
-  const cardBorder = isSelected && !isError && !conflict ? "var(--color-accent-border)"
+  const cardBorder = isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-border)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
     : conflict    ? (isSelected ? "rgba(249,115,22,0.6)" : "rgba(249,115,22,0.3)")
+    : hasUpdate   ? (isSelected ? "rgba(250,204,21,0.6)" : "rgba(250,204,21,0.3)")
     : "var(--color-border)";
-  const cardBg = isSelected && !isError && !conflict ? "var(--color-accent-bg)"
+  const cardBg = isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-bg)"
     : isError   ? "rgba(127,29,29,0.12)"
     : conflict  ? "rgba(124,45,18,0.12)"
+    : hasUpdate ? "rgba(113,101,18,0.12)"
     : "color-mix(in srgb, var(--color-card) 82%, transparent)";
-  const cardShadow = isSelected && !isError && !conflict
+  const cardShadow = isSelected && !isError && !conflict && !hasUpdate
     ? "0 0 28px var(--glow-accent), 0 4px 16px rgba(0,0,0,0.1)"
     : conflict && isSelected
     ? "0 0 20px rgba(249,115,22,0.15)"
+    : hasUpdate && isSelected
+    ? "0 0 20px rgba(250,204,21,0.15)"
     : "none";
 
   const stopPropDownload = useCallback((e: React.MouseEvent) => {
@@ -139,8 +144,8 @@ export const ModCard = memo(function ModCard({
           aria-hidden="true"
           className="absolute left-0 top-0 w-[3px] h-full rounded-l-[1px] transition-all duration-300"
           style={{
-            background: isSelected ? COLORS.accent : isError ? "#ef4444" : COLORS.primary,
-            opacity:    isSelected ? 1 : isError ? 0.7 : 0.3,
+            background: isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary,
+            opacity:    isSelected ? 1 : isError ? 0.7 : hasUpdate ? 0.7 : 0.3,
           }}
         />
 
@@ -162,7 +167,7 @@ export const ModCard = memo(function ModCard({
 
           <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : COLORS.foreground }}>
+              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : hasUpdate ? "#fef08a" : COLORS.foreground }}>
                 {name}
               </p>
               

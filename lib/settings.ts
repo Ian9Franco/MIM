@@ -6,6 +6,8 @@ export interface MimSettings {
   sourceBase: string;
   buildsBase: string;
   downloadsPath: string;
+  minecraftPath: string;
+  stagingPath: string;
 }
 
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
@@ -52,20 +54,27 @@ function getSettingsPath(): string {
 
 export function getSettings(): MimSettings {
   const settingsFile = getSettingsPath();
+  const defaultMinecraft = path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+  const defaultStaging = path.join(getPortableDir(), "staging");
+
   if (fs.existsSync(settingsFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
       return {
         sourceBase: data.sourceBase || path.join("D:", ".mine", "source"),
         buildsBase: data.buildsBase || path.join("D:", ".mine", "builds"),
-        downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads")
+        downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads"),
+        minecraftPath: data.minecraftPath || defaultMinecraft,
+        stagingPath: data.stagingPath || defaultStaging
       };
     } catch (e) {}
   }
   return {
     sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".mine", "source"),
     buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".mine", "builds"),
-    downloadsPath: path.join(os.homedir(), "Downloads")
+    downloadsPath: path.join(os.homedir(), "Downloads"),
+    minecraftPath: defaultMinecraft,
+    stagingPath: defaultStaging
   };
 }
 

@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Logo principal de MIM -->
-<img src="public/MIMico.png" width="120" height="120" alt="MIM Logo" style="border-radius: 24px;">
+<img src="public/icon.png" width="120" height="120" alt="MIM Logo" style="border-radius: 24px;">
 
 # 🎮 Minecraft Intelligent Manager
 

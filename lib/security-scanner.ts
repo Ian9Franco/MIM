@@ -149,57 +149,49 @@ const KNOWN_MALWARE_HASHES: Set<string> = new Set([
 
 // ── Whitelist & Cloud Verification Helpers ─────────────────────────────────────
 
-const WHITELISTED_MODS = new Set([
-  "fabric-api",
-  "fabric",
-  "forge",
-  "minecraft",
-  "architectury",
-  "cloth-config",
-  "sodium",
-  "iris",
-  "indium",
-  "lithium",
-  "phosphor",
-  "ferritecore",
-  "modernfix",
-  "krypton",
-  "canary",
-  "plushie",
-  "jei",
-  "rei",
-  "emi",
-  "citresewn",
-  "entitytexturefeatures",
-  "animatica",
-  "continuity",
-  "rubidium",
-  "oculus",
-  "embeddium",
-  "kotlin-for-forge",
-  "cloth-config-lite",
-  "cloth-config2",
-  "curios",
-  "patchouli",
-  "geckolib",
-  "citadel",
-  "creativecore",
-  "cupboard",
-  "searchables",
-  "architectury-api",
-  "pehkui",
-  "clumps",
-  "fastsuite",
-  "placebo",
-  "controlling",
-  "appleskin",
-  "bookshelf",
-  "balm",
-  "waystones",
-  "journeymap",
-  "xaerominimap",
-  "xaeroworldmap",
-]);
+function getWhitelistedMods(): Set<string> {
+  const localWhitelist = require("./data/whitelist.json") as string[];
+  const modsSet = new Set<string>(localWhitelist.map(m => m.toLowerCase().trim()));
+
+  try {
+    const baseDir = path.join("D:", ".mine", "source");
+    if (fs.existsSync(baseDir)) {
+      const portableDir = path.join(baseDir, ".mim-index");
+      if (!fs.existsSync(portableDir)) {
+        fs.mkdirSync(portableDir, { recursive: true });
+      }
+      const portableFile = path.join(portableDir, "whitelist.json");
+      
+      // If portable whitelist does not exist, initialize it with defaults for user customizability
+      if (!fs.existsSync(portableFile)) {
+        try {
+          fs.writeFileSync(portableFile, JSON.stringify(localWhitelist, null, 2), "utf-8");
+          console.log(`[Security] Initialized portable whitelist file at: ${portableFile}`);
+        } catch (err) {
+          console.error("[Security] Failed to initialize portable whitelist:", err);
+        }
+      } else {
+        // Load custom portable whitelist
+        try {
+          const customList = JSON.parse(fs.readFileSync(portableFile, "utf-8")) as string[];
+          if (Array.isArray(customList)) {
+            customList.forEach(m => {
+              if (typeof m === "string") {
+                modsSet.add(m.toLowerCase().trim());
+              }
+            });
+          }
+        } catch (e) {
+          console.warn("[Security] Could not parse custom portable whitelist:", e);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[Security] Could not access or load portable whitelist:", e);
+  }
+
+  return modsSet;
+}
 
 function calculateSha256(filePath: string): string {
   const hash = crypto.createHash("sha256");
@@ -282,13 +274,14 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   }
 
   // ── Whitelist & Verification Check (Local Whitelist System) ──────────────────
+  const whitelistSet = getWhitelistedMods();
   let isWhitelisted = false;
   let modId = "";
   try {
     const { scanMod } = require("./scanner"); // Dynamic require to avoid circular imports
     const meta = scanMod(filePath);
     modId = meta.modId;
-    if (WHITELISTED_MODS.has(meta.modId.toLowerCase())) {
+    if (whitelistSet.has(meta.modId.toLowerCase())) {
       isWhitelisted = true;
     }
   } catch {
@@ -298,7 +291,7 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   // Fallback to filename-based whitelist checking
   if (!isWhitelisted) {
     const filenameLower = path.basename(filePath).toLowerCase();
-    for (const item of WHITELISTED_MODS) {
+    for (const item of whitelistSet) {
       if (filenameLower.includes(item)) {
         isWhitelisted = true;
         modId = item;

@@ -8,29 +8,59 @@ export interface MimSettings {
   downloadsPath: string;
 }
 
-const SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
+const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
+
+function getSettingsPath(): string {
+  try {
+    const baseDir = path.join("D:", ".mine", "source");
+    if (fs.existsSync(baseDir)) {
+      const portableDir = path.join(baseDir, ".mim-index");
+      if (!fs.existsSync(portableDir)) {
+        fs.mkdirSync(portableDir, { recursive: true });
+      }
+      const portableFile = path.join(portableDir, "mim-settings.json");
+      
+      // Migrate local settings if portable doesn't exist yet but local does
+      if (!fs.existsSync(portableFile) && fs.existsSync(LOCAL_SETTINGS_FILE)) {
+        try {
+          fs.copyFileSync(LOCAL_SETTINGS_FILE, portableFile);
+          fs.unlinkSync(LOCAL_SETTINGS_FILE);
+          console.log(`[Settings] Migrated local settings to portable location: ${portableFile}`);
+        } catch (err) {
+          console.error("[Settings] Migration failed:", err);
+        }
+      }
+      return portableFile;
+    }
+  } catch (e) {
+    console.warn("[Settings] Could not access or create portable settings path:", e);
+  }
+  return LOCAL_SETTINGS_FILE;
+}
 
 export function getSettings(): MimSettings {
-  if (fs.existsSync(SETTINGS_FILE)) {
+  const settingsFile = getSettingsPath();
+  if (fs.existsSync(settingsFile)) {
     try {
-      const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+      const data = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
       return {
-        sourceBase: data.sourceBase || path.join("D:", "\\.mine", "source"),
-        buildsBase: data.buildsBase || path.join("D:", "\\.mine", "builds"),
+        sourceBase: data.sourceBase || path.join("D:", ".mine", "source"),
+        buildsBase: data.buildsBase || path.join("D:", ".mine", "builds"),
         downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads")
       };
     } catch (e) {}
   }
   return {
-    sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", "\\.mine", "source"),
-    buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", "\\.mine", "builds"),
+    sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".mine", "source"),
+    buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".mine", "builds"),
     downloadsPath: path.join(os.homedir(), "Downloads")
   };
 }
 
 export function saveSettings(settings: Partial<MimSettings>) {
+  const settingsFile = getSettingsPath();
   const current = getSettings();
   const next = { ...current, ...settings };
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), "utf-8");
+  fs.writeFileSync(settingsFile, JSON.stringify(next, null, 2), "utf-8");
   return next;
 }

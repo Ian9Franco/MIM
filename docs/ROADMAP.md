@@ -110,7 +110,7 @@
 
 ### 🌐 Fase 5: Event-Driven Orchestration & Centralized Intelligence 📋
 
-- [ ] **MIM Event Bus (Core Kernel)**
+- [ ] **MIM Event Bus**
   Bus de eventos centralizado, ligero y completamente tipado para desacoplar la comunicación entre módulos (`FOMO`, `SAGE`, `ALRT`, `TWEAK`, `Watcher`, etc.) mediante arquitectura reactiva basada en eventos.
 
 - [ ] **ALRT Central Intelligence Layer**

@@ -264,47 +264,58 @@ export default function Page() {
       // 2. Regular Mod Auto-Classification (Only if enabled)
       if (!autoClassify) return;
 
-      const status = lib.modrinthStatus[f.path];
-      if (!status || !status.categories) return;
+      const activeVer = projects.activeProject?.version || "";
+      const activeLdr = projects.activeProject?.loader || "";
+      const modVer = f.meta?.gameVersion || "unknown";
+      const modLdr = f.meta?.loader || "unknown";
 
-      const tags = status.categories.map((c: string) => c.toLowerCase());
-      let target: { cat: string, sub: string } | null = null;
+      const isCompatibleRange = (() => {
+        if (modVer === "unknown" || modVer === activeVer) return true;
+        if (modVer.includes(" - ")) {
+          const [start, end] = modVer.split(" - ").map(v => v.trim());
+          const toParts = (vStr: string) => vStr.split(".").map(Number);
+          const actParts = toParts(activeVer);
+          const startParts = toParts(start);
+          const endParts = toParts(end);
 
-      if (tags.includes("library") || tags.includes("api-and-library")) {
-        target = { cat: ".essential", sub: "librerias" };
-      } else if (tags.includes("technology")) {
-        target = { cat: ".essential", sub: "tecnologia" };
-      } else if (tags.includes("audio") || tags.includes("sound")) {
-        target = { cat: ".local", sub: "sonidos" };
-      }
-
-      if (target) {
-        const activeVer = projects.activeProject?.version || "";
-        const activeLdr = projects.activeProject?.loader || "";
-        const modVer = f.meta?.gameVersion || "unknown";
-        const modLdr = f.meta?.loader || "unknown";
-
-        const isCompatibleRange = (() => {
-          if (modVer === "unknown" || modVer === activeVer) return true;
-          if (modVer.endsWith("+")) return activeVer.startsWith(modVer.slice(0, -1));
-          if (activeVer.startsWith(modVer + ".")) return true;
-          return false;
-        })();
-
-        const isCompatibleLoader = (() => {
-          if (modLdr === "unknown" || activeLdr === "" || modLdr === activeLdr) return true;
-          if (activeVer === "1.20.1") {
-            const l = modLdr.toLowerCase();
-            const al = activeLdr.toLowerCase();
-            if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) return true;
-          }
-          return false;
-        })();
-
-        if (isCompatibleRange && isCompatibleLoader) {
-          autoProcessing.current.add(f.path);
-          lib.handleClassify(target.cat, target.sub, [f], setPendingFiles, clearSelected);
+          const ge = (a: number[], b: number[]) => {
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+              const na = a[i] || 0;
+              const nb = b[i] || 0;
+              if (na > nb) return true;
+              if (na < nb) return false;
+            }
+            return true;
+          };
+          const le = (a: number[], b: number[]) => {
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+              const na = a[i] || 0;
+              const nb = b[i] || 0;
+              if (na < nb) return true;
+              if (na > nb) return false;
+            }
+            return true;
+          };
+          return ge(actParts, startParts) && le(actParts, endParts);
         }
+        if (modVer.endsWith("+")) return activeVer.startsWith(modVer.slice(0, -1));
+        if (activeVer.startsWith(modVer + ".")) return true;
+        return false;
+      })();
+
+      const isCompatibleLoader = (() => {
+        if (modLdr === "unknown" || activeLdr === "" || modLdr === activeLdr) return true;
+        if (activeVer === "1.20.1") {
+          const l = modLdr.toLowerCase();
+          const al = activeLdr.toLowerCase();
+          if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) return true;
+        }
+        return false;
+      })();
+
+      if (isCompatibleRange && isCompatibleLoader) {
+        autoProcessing.current.add(f.path);
+        lib.handleClassify("auto", "", [f], setPendingFiles, clearSelected);
       }
     });
   }, [autoClassify, pendingFiles, lib.modrinthStatus, projects.activeProject, lib, setPendingFiles, clearSelected]);

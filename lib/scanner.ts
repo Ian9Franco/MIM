@@ -37,6 +37,10 @@ export interface ModMeta {
   conflicts?: string[]; // IDs of mods this mod is incompatible with
   breaks?: string[];    // Fabric/Quilt 'breaks' field
   providedIds?: string[]; // IDs this mod provides (aliases/stubs)
+  dependencies?: string[];
+  categories?: string[];
+  clientSide?: string;
+  serverSide?: string;
 }
 
 // ── Internal Defaults ─────────────────────────────────────────────────────────
@@ -86,6 +90,13 @@ function gameVersionFromFilename(filePath: string): string | null {
   return null;
 }
 
+function extractVersionFromFilename(filename: string): string | null {
+  const base = filename.replace(/\.(zip|jar)$/i, "");
+  const match = base.match(/[vr]([0-9]+(?:\.[0-9]+)+)/i) || 
+                base.match(/(?:\D|^)([0-9]+\.[0-9]+(?:\.[0-9]+)*)(?:\D|$)/);
+  return match ? match[1] : null;
+}
+
 function normalizeModVersion(version: string): string {
   if (!version || version === "unknown") return version;
   let clean = version.trim()
@@ -108,18 +119,44 @@ function gameVersionFromPath(filePath: string): string | null {
 
 function parseForgeToml(content: string): Partial<ModMeta> {
   const result: Partial<ModMeta> = {};
-  const idMatch = content.match(/^modId\s*=\s*["']([^"']+)["']/m);
-  if (idMatch) result.modId = idMatch[1];
-  const allIds = [...content.matchAll(/modId\s*=\s*["']([^"']+)["']/g)].map(m => m[1]);
-  if (allIds.length > 0) (result as any).providedIds = Array.from(new Set(allIds));
-  const nameMatch = content.match(/displayName\s*=\s*"([^"]+)"/);
-  if (nameMatch) result.modName = nameMatch[1];
-  const verMatch = content.match(/^version\s*=\s*"(?![^"]*\$\{)([^"]+)"/m);
-  if (verMatch) {
-    result.modVersion = normalizeModVersion(verMatch[1]);
+  
+  // Parse all [[mods]] sections to extract real mod IDs and avoid matching dependency modIds
+  const modSections = content.split(/\[\[mods\]\]/i).slice(1);
+  const mainModIds: string[] = [];
+  let firstDisplayName = "";
+  let firstVersion = "";
+  let firstAuthor = "";
+
+  for (const section of modSections) {
+    const modContent = section.split("[[")[0];
+    const idMatch = modContent.match(/modId\s*=\s*["']([^"']+)["']/);
+    if (idMatch) {
+      mainModIds.push(idMatch[1]);
+    }
+    if (!firstDisplayName) {
+      const nameMatch = modContent.match(/displayName\s*=\s*"([^"]+)"/);
+      if (nameMatch) firstDisplayName = nameMatch[1];
+    }
+    if (!firstVersion) {
+      const verMatch = modContent.match(/^version\s*=\s*"(?![^"]*\$\{)([^"]+)"/m);
+      if (verMatch) firstVersion = normalizeModVersion(verMatch[1]);
+    }
+    if (!firstAuthor) {
+      const authorMatch = modContent.match(/authors?\s*=\s*"([^"]+)"/i);
+      if (authorMatch) firstAuthor = authorMatch[1];
+    }
   }
-  const authorMatch = content.match(/authors?\s*=\s*"([^"]+)"/i);
-  if (authorMatch) (result as any).author = authorMatch[1];
+
+  if (mainModIds.length > 0) {
+    result.modId = mainModIds[0];
+    (result as any).providedIds = mainModIds;
+  }
+
+  if (firstDisplayName) result.modName = firstDisplayName;
+  if (firstVersion) result.modVersion = firstVersion;
+  if (firstAuthor) (result as any).author = firstAuthor;
+
+  // Extract game version from [[dependencies]] sections
   const sections = content.split(/\[\[dependencies/i);
   let foundGv = null;
   for (const section of sections) {
@@ -138,12 +175,21 @@ function parseForgeToml(content: string): Partial<ModMeta> {
   if (logoMatch) (result as any)._logoFile = logoMatch[1];
 
   const conflicts: string[] = [];
+  const dependencies: string[] = [];
   for (const section of sections) {
     const typeMatch = section.match(/type\s*=\s*["']incompatible["']/i);
     const modIdMatch = section.match(/modId\s*=\s*["']([^"']+)["']/i);
-    if (typeMatch && modIdMatch) conflicts.push(modIdMatch[1]);
+    if (modIdMatch) {
+      const depId = modIdMatch[1];
+      if (typeMatch) {
+        conflicts.push(depId);
+      } else if (depId !== "minecraft" && depId !== "forge" && depId !== "neoforge") {
+        dependencies.push(depId);
+      }
+    }
   }
   if (conflicts.length > 0) result.conflicts = conflicts;
+  if (dependencies.length > 0) result.dependencies = dependencies;
 
   return result;
 }
@@ -151,7 +197,7 @@ function parseForgeToml(content: string): Partial<ModMeta> {
 // ── Cache Layer ───────────────────────────────────────────────────────────────
 
 const CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "mod-cache.json");
-const CURRENT_CACHE_VERSION = 3;
+const CURRENT_CACHE_VERSION = 4;
 let modCache: { version: number; entries: Record<string, { mtimeMs: number; size: number; meta: ModMeta }> } | null = null;
 let saveTimeout: NodeJS.Timeout | null = null;
 
@@ -204,7 +250,15 @@ function scanModRaw(filePath: string): ModMeta {
   const sha1 = crypto.createHash("sha1").update(fileBuffer).digest("hex");
   const zip = new AdmZip(fileBuffer);
   const entries = zip.getEntries();
-  const findEntry = (name: string) => entries.find((e: AdmZip.IZipEntry) => e.entryName === name);
+  const findEntry = (name: string) => {
+    const exact = entries.find((e: AdmZip.IZipEntry) => e.entryName === name);
+    if (exact) return exact;
+    const normalized = name.toLowerCase().replace(/^\//, "");
+    return entries.find((e: AdmZip.IZipEntry) => {
+      const entryLower = e.entryName.toLowerCase();
+      return entryLower === normalized || entryLower.endsWith("/" + normalized);
+    });
+  };
 
   // 1. NeoForge
   const neoforgeEntry = findEntry("META-INF/neoforge.mods.toml");
@@ -250,7 +304,8 @@ function scanModRaw(filePath: string): ModMeta {
       const conflicts = data.conflicts ? Object.keys(data.conflicts) : [];
       const provides = data.provides ? (Array.isArray(data.provides) ? data.provides : Object.keys(data.provides)) : [];
 
-      return { ...DEFAULT_META, loader: "fabric", projectType: "mod", modId: data.id ?? UNKNOWN, modName: data.name ?? UNKNOWN, modVersion: data.version ? normalizeModVersion(data.version) : UNKNOWN, gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN, isCompatibleWithConnector: true, ...(iconBase64 ? { iconBase64 } : {}), sha1, ...(breaks.length > 0 ? { breaks } : {}), ...(conflicts.length > 0 ? { conflicts } : {}), ...(provides.length > 0 ? { providedIds: provides } : {}) };
+      const depends = data.depends ? Object.keys(data.depends).filter(k => k !== "minecraft" && k !== "fabricloader" && k !== "fabric") : [];
+      return { ...DEFAULT_META, loader: "fabric", projectType: "mod", modId: data.id ?? UNKNOWN, modName: data.name ?? UNKNOWN, modVersion: data.version ? normalizeModVersion(data.version) : UNKNOWN, gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN, isCompatibleWithConnector: true, ...(iconBase64 ? { iconBase64 } : {}), sha1, ...(breaks.length > 0 ? { breaks } : {}), ...(conflicts.length > 0 ? { conflicts } : {}), ...(provides.length > 0 ? { providedIds: provides } : {}), ...(depends.length > 0 ? { dependencies: depends } : {}) };
     } catch { return { ...DEFAULT_META, loader: "fabric", projectType: "mod", isCompatibleWithConnector: true, sha1 }; }
   }
 
@@ -269,13 +324,27 @@ function scanModRaw(filePath: string): ModMeta {
         if (iconEntry) try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
       }
       const breaks = ql.breaks ? Object.keys(ql.breaks) : [];
-      return { ...DEFAULT_META, loader: "quilt", projectType: "mod", modId: ql.id ?? UNKNOWN, modName: ql.metadata?.name ?? UNKNOWN, modVersion: ql.version ?? UNKNOWN, gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN, ...(iconBase64 ? { iconBase64 } : {}), sha1, ...(breaks.length > 0 ? { breaks } : {}) };
+      const depends = ql.depends ? ql.depends.map((d: any) => d.id).filter((id: string) => id && id !== "minecraft" && id !== "quilt_loader" && id !== "quilt") : [];
+      return { ...DEFAULT_META, loader: "quilt", projectType: "mod", modId: ql.id ?? UNKNOWN, modName: ql.metadata?.name ?? UNKNOWN, modVersion: ql.version ?? UNKNOWN, gameVersion: gv ?? gameVersionFromFilename(filePath) ?? UNKNOWN, ...(iconBase64 ? { iconBase64 } : {}), sha1, ...(breaks.length > 0 ? { breaks } : {}), ...(depends.length > 0 ? { dependencies: depends } : {}) };
     } catch { return { ...DEFAULT_META, loader: "quilt", projectType: "mod", sha1 }; }
   }
 
   // 5. Shader / Pack Heuristic
   const isShader = entries.some(e => e.entryName.startsWith("shaders/"));
-  if (isShader) return { ...DEFAULT_META, projectType: "shader", modId: path.basename(filePath, path.extname(filePath)), modName: path.basename(filePath, path.extname(filePath)), gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, sha1 };
+  const baseName = path.basename(filePath);
+  const versionFromFilename = extractVersionFromFilename(baseName) || UNKNOWN;
+
+  if (isShader) {
+    return { 
+      ...DEFAULT_META, 
+      projectType: "shader", 
+      modId: path.basename(filePath, path.extname(filePath)), 
+      modName: path.basename(filePath, path.extname(filePath)), 
+      modVersion: versionFromFilename,
+      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, 
+      sha1 
+    };
+  }
 
   const packMcmetaEntry = findEntry("pack.mcmeta");
   const isResourcePack = entries.some(e => e.entryName.startsWith("assets/"));
@@ -293,7 +362,16 @@ function scanModRaw(filePath: string): ModMeta {
     const packPngEntry = findEntry("pack.png");
     if (packPngEntry) try { iconBase64 = `data:image/png;base64,${packPngEntry.getData().toString("base64")}`; } catch {}
     
-    return { ...DEFAULT_META, projectType: isResourcePack ? "resourcepack" : isDataPack ? "datapack" : UNKNOWN, modId: path.basename(filePath, path.extname(filePath)), modName: description, gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, ...(iconBase64 ? { iconBase64 } : {}), sha1 };
+    return { 
+      ...DEFAULT_META, 
+      projectType: isResourcePack ? "resourcepack" : isDataPack ? "datapack" : UNKNOWN, 
+      modId: path.basename(filePath, path.extname(filePath)), 
+      modName: description, 
+      modVersion: versionFromFilename,
+      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, 
+      ...(iconBase64 ? { iconBase64 } : {}), 
+      sha1 
+    };
   }
 
   return { ...DEFAULT_META, projectType: UNKNOWN, gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, sha1 };

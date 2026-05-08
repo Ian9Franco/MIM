@@ -1,0 +1,14 @@
+
+# CurseForge (Eternal/Overwolf API)
+CURSEFORGE_API_KEY=$2a$10$xgwjjM/WecSZQuXm9maj7uboAiLjFERSSWo6IOl.pFweJiPOKqJay
+
+# Modrinth API Token (Opcional pero recomendado para evitar límites de rate limit)
+
+MODRINTH_TOKEN=mrp_zAl2Im5Wgnk26HUQh7D881dpTxbE9U9gu8ZtCF6CZzuNw7cOoUuuMG1Ede2x
+MODRINTH_API_KEY=mrp_zAl2Im5Wgnk26HUQh7D881dpTxbE9U9gu8ZtCF6CZzuNw7cOoUuuMG1Ede2x
+
+MIM_SOURCE_BASE=D:\.mine\source
+MIM_BUILDS_BASE=D:\.mine\builds
+
+# virus total 
+VIRUSTOTAL_API_KEY=d7bb8bee9b8b31e150aaf49a03c8e14e16deac44c9f7b96c472f1dd127afe232

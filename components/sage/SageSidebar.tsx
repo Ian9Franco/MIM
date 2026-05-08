@@ -21,6 +21,7 @@ import { analyzeMinecraftLog, type SageAnalysisResult } from "@/utils/sageAnalyz
 import type { Project } from "@/lib/types";
 import { SageAnalysisView } from "./SageAnalysisView";
 import { SageDeleteModal } from "./SageDeleteModal";
+import { eventBus } from "@/lib/eventBus";
 
 export interface SageSidebarProps {
   open: boolean;
@@ -34,6 +35,7 @@ export interface LocalLogFile {
   size: number;
   mtime: string;
   type: "log" | "crash";
+  date?: string;
 }
 
 export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) {
@@ -91,12 +93,19 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          setRescueSuccess(true);
           setRescueLogs(data.logs || ["Jugador rescatado correctamente."]);
           // Recargar lista para ver nuevas coordenadas o inventario vacío
           fetchPlayersList();
+          eventBus.emit("sage:player-rescued", {
+            playerName: selectedPlayer.fileName.replace(".dat", ""),
+            success: true
+          });
         } else {
           setRescueLogs([`Error: ${data.error || "No se pudo rescatar al jugador"}`]);
+          eventBus.emit("sage:player-rescued", {
+            playerName: selectedPlayer.fileName.replace(".dat", ""),
+            success: false
+          });
         }
       } else {
         const data = await res.json();
@@ -375,6 +384,18 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
           setLogAnalysis(result);
           setLastLogAnalysisTime(new Date());
         }
+
+        eventBus.emit("sage:analysis-completed", {
+          type: file.type,
+          success: true,
+          category: result.rule || "unknown"
+        });
+      } else {
+        eventBus.emit("sage:analysis-completed", {
+          type: file.type,
+          success: false,
+          category: "http-error"
+        });
       }
     } catch (e) {
       console.error("[SAGE] Error reading and analyzing file:", e);
@@ -386,11 +407,18 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
   useEffect(() => {
     if (!open || localFiles.length === 0) return;
 
+    // Determinamos la fecha de la sesión actual
+    const logFile = localFiles.find(f => f.path === "logs/latest.log") || 
+                    localFiles.find(f => f.path === "global:logs/latest.log");
+    const sessionDate = logFile?.date || new Date().toISOString().split("T")[0];
+
     if (mode === "crash") {
       const crashFiles = localFiles.filter(f => f.type === "crash");
       if (crashFiles.length > 0) {
-        // Seleccionar el crash más reciente por defecto si no hay ninguno seleccionado
-        const defaultFile = crashFiles[0];
+        // Priorizar crashes activos (mismo día que el log)
+        const activeCrashes = crashFiles.filter(f => f.date === sessionDate);
+        const defaultFile = activeCrashes.length > 0 ? activeCrashes[0] : crashFiles[0];
+
         if (!selectedCrashFile || !crashFiles.some(f => f.path === selectedCrashFile.path)) {
           setSelectedCrashFile(defaultFile);
           handleLoadAndAnalyze(defaultFile);
@@ -400,12 +428,12 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
         setSelectedCrashFile(null);
       }
     } else if (mode === "latest-log") {
-      const logFile = localFiles.find(f => f.path === "logs/latest.log") || 
-                      localFiles.find(f => f.path === "global:logs/latest.log");
-      if (logFile) {
-        setLatestLogFile(logFile);
+      const logFileObj = localFiles.find(f => f.path === "logs/latest.log") || 
+                         localFiles.find(f => f.path === "global:logs/latest.log");
+      if (logFileObj) {
+        setLatestLogFile(logFileObj);
         if (!logAnalysis) {
-          handleLoadAndAnalyze(logFile);
+          handleLoadAndAnalyze(logFileObj);
         }
       } else {
         setLogAnalysis(null);
@@ -439,6 +467,12 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
                 const result = analyzeMinecraftLog(readData.content || "");
                 setLogAnalysis(result);
                 setLastLogAnalysisTime(new Date());
+
+                eventBus.emit("sage:analysis-completed", {
+                  type: "log",
+                  success: true,
+                  category: result.rule || "clean"
+                });
               }
             }
           }
@@ -906,59 +940,130 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
                   )}
 
                   {/* Historial de Crashes Anteriores */}
-                  {localFiles.filter(f => f.type === "crash").length > 0 && (
-                    <div className="space-y-3 pt-2">
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground/40">Historial de Caídas de Juego (Crashes)</h4>
-                      <div className="flex flex-col gap-2">
-                        {localFiles.filter(f => f.type === "crash").map((file) => {
-                          const isActive = selectedCrashFile?.path === file.path;
-                          return (
-                            <div
-                              key={file.path}
-                              onClick={() => {
-                                setSelectedCrashFile(file);
-                                handleLoadAndAnalyze(file);
-                              }}
-                              className={`w-full cursor-pointer text-left p-3.5 rounded-xl border transition-all flex items-center justify-between gap-4 group hover:scale-[1.005] ${
-                                isActive
-                                  ? "bg-rose-500/5 border-rose-500/30 text-rose-300 shadow-[0_0_15px_rgba(239,68,68,0.05)]"
-                                  : "bg-white/1 border-white/5 text-foreground/50 hover:bg-white/5 hover:border-white/10"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <ShieldAlert className={`w-4 h-4 shrink-0 ${isActive ? "text-rose-400" : "text-foreground/25"}`} />
-                                <div className="min-w-0">
-                                  <p className={`text-xs font-bold truncate ${isActive ? "text-rose-300" : "text-foreground/70"}`}>
-                                    {file.name.replace(" (Instancia del Proyecto)", "").replace(" (Global .minecraft)", "")}
-                                  </p>
-                                  <div className="flex gap-2 text-[10px] text-foreground/30 mt-1 font-mono">
-                                    <span>{formatSize(file.size)}</span>
-                                    <span>•</span>
-                                    <span>{new Date(file.mtime).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}</span>
+                  {localFiles.filter(f => f.type === "crash").length > 0 && (() => {
+                    const logFile = localFiles.find(f => f.path === "logs/latest.log") || 
+                                    localFiles.find(f => f.path === "global:logs/latest.log");
+                    const sessionDate = logFile?.date || new Date().toISOString().split("T")[0];
+                    
+                    const crashFiles = localFiles.filter(f => f.type === "crash");
+                    const activeCrashes = crashFiles.filter(f => f.date === sessionDate);
+                    const historyCrashes = crashFiles.filter(f => f.date !== sessionDate);
+
+                    return (
+                      <div className="space-y-6 pt-2">
+                        {/* SECCIÓN: CRASHES ACTIVOS */}
+                        {activeCrashes.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-rose-400 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                              Crashes de la Sesión Actual
+                            </h4>
+                            <div className="flex flex-col gap-2">
+                              {activeCrashes.map((file) => {
+                                const isActive = selectedCrashFile?.path === file.path;
+                                return (
+                                  <div
+                                    key={file.path}
+                                    onClick={() => {
+                                      setSelectedCrashFile(file);
+                                      handleLoadAndAnalyze(file);
+                                    }}
+                                    className={`w-full cursor-pointer text-left p-3.5 rounded-xl border transition-all flex items-center justify-between gap-4 group hover:scale-[1.005] ${
+                                      isActive
+                                        ? "bg-rose-500/10 border-rose-500/30 text-rose-300 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+                                        : "bg-white/3 border-white/10 text-foreground/70 hover:bg-white/5 hover:border-rose-500/20"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <ShieldAlert className={`w-4 h-4 shrink-0 ${isActive ? "text-rose-400" : "text-rose-400/50"}`} />
+                                      <div className="min-w-0">
+                                        <p className={`text-xs font-bold truncate ${isActive ? "text-rose-300" : "text-foreground/80"}`}>
+                                          {file.name.replace(" (Instancia del Proyecto)", "").replace(" (Global .minecraft)", "")}
+                                        </p>
+                                        <div className="flex gap-2 text-[9px] text-foreground/40 mt-1 font-mono">
+                                          <span>{formatSize(file.size)}</span>
+                                          <span>•</span>
+                                          <span>Hoy, {new Date(file.mtime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        onClick={(e) => requestDeleteFile(file, e)}
+                                        disabled={deletingFilePath === file.path}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:bg-rose-500/10 border border-transparent hover:border-rose-500/25 text-foreground/20 hover:text-rose-400 active:scale-90"
+                                        title="Eliminar reporte de crash"
+                                      >
+                                        {deletingFilePath === file.path ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                        ) : (
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                      <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${isActive ? "text-rose-400" : "text-foreground/20"}`} />
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  onClick={(e) => requestDeleteFile(file, e)}
-                                  disabled={deletingFilePath === file.path}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:bg-rose-500/10 border border-transparent hover:border-rose-500/25 text-foreground/20 hover:text-rose-400 active:scale-90"
-                                  title="Eliminar reporte de crash"
-                                >
-                                  {deletingFilePath === file.path ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400 pointer-events-none" />
-                                  ) : (
-                                    <Trash2 className="w-3.5 h-3.5 pointer-events-none" />
-                                  )}
-                                </button>
-                                <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${isActive ? "text-rose-400" : "text-foreground/20"}`} />
-                              </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
+
+                        {/* SECCIÓN: HISTORIAL */}
+                        {historyCrashes.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground/30 flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5" />
+                              Historial de Caídas Anteriores
+                            </h4>
+                            <div className="flex flex-col gap-2">
+                              {historyCrashes.map((file) => {
+                                const isActive = selectedCrashFile?.path === file.path;
+                                return (
+                                  <div
+                                    key={file.path}
+                                    onClick={() => {
+                                      setSelectedCrashFile(file);
+                                      handleLoadAndAnalyze(file);
+                                    }}
+                                    className={`w-full cursor-pointer text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-4 group hover:scale-[1.002] ${
+                                      isActive
+                                        ? "bg-white/10 border-white/20 text-white shadow-inner"
+                                        : "bg-white/1 border-white/5 text-foreground/40 hover:bg-white/2 hover:border-white/10"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <Clock className={`w-4 h-4 shrink-0 ${isActive ? "text-foreground/60" : "text-foreground/20"}`} />
+                                      <div className="min-w-0">
+                                        <p className={`text-[11px] font-medium truncate ${isActive ? "text-foreground/90" : "text-foreground/60"}`}>
+                                          {file.name.replace(" (Instancia del Proyecto)", "").replace(" (Global .minecraft)", "")}
+                                        </p>
+                                        <div className="flex gap-2 text-[9px] text-foreground/30 mt-0.5 font-mono">
+                                          <span>{formatSize(file.size)}</span>
+                                          <span>•</span>
+                                          <span>{new Date(file.mtime).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        onClick={(e) => requestDeleteFile(file, e)}
+                                        disabled={deletingFilePath === file.path}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:bg-white/10 border border-transparent hover:border-white/20 text-foreground/20 hover:text-rose-400 active:scale-90"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                      <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${isActive ? "text-foreground/40" : "text-foreground/15"}`} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 

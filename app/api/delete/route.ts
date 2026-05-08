@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!fs.existsSync(path)) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+      return NextResponse.json({ success: true, message: "File already deleted or moved" });
     }
 
     fs.unlinkSync(path);

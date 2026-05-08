@@ -63,7 +63,7 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
         version={mod.meta?.gameVersion ?? mod.meta?.version ?? "unknown"}
         modVersion={mod.meta?.modVersion}
         projectType={mod.meta?.projectType}
-        iconBase64={mod.meta?.iconBase64}
+        iconBase64={mod.meta?.iconBase64 || modrinthStatus[mod.path]?.iconUrl}
         author={mod.meta?.author}
         loader={mod.meta?.loader ?? "unknown"}
         isSelected={isSelected}
@@ -116,11 +116,12 @@ export function VirtualizedLibrary({
     const map: Record<string, string> = {};
     const modIdToPaths: Record<string, string[]> = {};
 
+    const SYSTEM_IDS = ["minecraft", "forge", "neoforge", "fabric", "quilt", "java", "fabricloader", "quiltloader", "loader"];
     library.forEach(f => {
       const allIds = Array.from(new Set([
         f.meta?.modId,
         ...(f.meta?.providedIds || [])
-      ])).filter(id => id && id !== "unknown") as string[];
+      ])).filter(id => id && id !== "unknown" && !SYSTEM_IDS.includes(id.toLowerCase())) as string[];
 
       allIds.forEach(id => {
         if (!modIdToPaths[id]) modIdToPaths[id] = [];
@@ -132,7 +133,27 @@ export function VirtualizedLibrary({
 
     Object.entries(modIdToPaths).forEach(([mid, paths]) => {
       if (paths.length > 1) {
-        paths.forEach(p => { map[p] = "Duplicado"; });
+        // Find files for these paths to check their top-level categories
+        const filesForPaths = library.filter(f => paths.includes(f.path));
+        const categories = new Set(filesForPaths.map(f => f.category));
+
+        // If they are in different categories, this is an intentional duplication
+        if (categories.size === paths.length) {
+          return;
+        }
+
+        // Only mark duplicates that are in the same category
+        const catGroupedPaths: Record<string, string[]> = {};
+        filesForPaths.forEach(f => {
+          if (!catGroupedPaths[f.category]) catGroupedPaths[f.category] = [];
+          catGroupedPaths[f.category].push(f.path);
+        });
+
+        Object.values(catGroupedPaths).forEach(pths => {
+          if (pths.length > 1) {
+            pths.forEach(p => { map[p] = "Duplicado"; });
+          }
+        });
       }
     });
 
@@ -248,7 +269,7 @@ export function VirtualizedLibrary({
                           version={f.meta?.gameVersion ?? f.meta?.version ?? "unknown"}
                           modVersion={f.meta?.modVersion}
                           projectType={f.meta?.projectType}
-                          iconBase64={f.meta?.iconBase64}
+                          iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
                           author={f.meta?.author}
                           loader={f.meta?.loader ?? "unknown"}
                           isSelected={isSelected}

@@ -57,13 +57,14 @@ export async function GET(req: NextRequest) {
        * Never throws — a scan failure still produces an event with empty meta
        * so the frontend can display the file in the pending list.
        */
-      const processFile = async (filePath: string) => {
+      const processFile = async (filePath: string, delayMs = 500) => {
         const fileName = path.basename(filePath);
         let meta: Partial<ModMeta> = {};
         try {
-          // Small delay to ensure the file has finished writing and is no longer locked
-          // (especially important for larger shaders/resourcepacks)
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Small delay to ensure the file has finished writing (only for newly added files)
+          if (delayMs > 0) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
           meta = scanMod(filePath);
         } catch {
           console.warn(`[/api/watcher] scanMod failed for: ${fileName}`);
@@ -72,9 +73,13 @@ export async function GET(req: NextRequest) {
       };
 
       // ── 1. Flush existing files ───────────────────────────────────────────────
-      for (const filePath of existingFiles) {
-        processFile(filePath);
-      }
+      // Process existing files sequentially without delay to avoid blocking the event loop or hammering Disk I/O
+      const flushExistingFiles = async () => {
+        for (const filePath of existingFiles) {
+          await processFile(filePath, 0);
+        }
+      };
+      void flushExistingFiles();
 
       // ── 2. Subscribe to events ────────────────────────────────────────────────
       const listener = (filePath: string) => processFile(filePath);

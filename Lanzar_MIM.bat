@@ -25,4 +25,5 @@ if not exist "node_modules" (
 
 :: Inicia Tauri (Tauri ya se encarga de abrir Next.js segun tauri.conf.json)
 echo Lanzando interfaz...
-npx tauri dev
+call node_modules\.bin\tauri dev
+

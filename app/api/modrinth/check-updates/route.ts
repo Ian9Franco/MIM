@@ -46,8 +46,10 @@ interface ModCheckResult {
   downloadUrl?: string;
   projectId?: string;
   slug?: string;
+  title?: string;
   changelog?: string;
   categories?: string[];
+  iconUrl?: string;
 }
 
 interface ModrinthHit {
@@ -123,6 +125,13 @@ function chunkArray<T>(arr: T[], n: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < arr.length; i += n) chunks.push(arr.slice(i, i + n));
   return chunks;
+}
+
+function extractVersionFromFilename(filename: string): string | null {
+  const base = filename.replace(/\.(zip|jar)$/i, "");
+  const match = base.match(/[vr]([0-9]+(?:\.[0-9]+)+)/i) || 
+                base.match(/(?:\D|^)([0-9]+\.[0-9]+(?:\.[0-9]+)*)(?:\D|$)/);
+  return match ? match[1] : null;
 }
 
 /**
@@ -262,17 +271,23 @@ export async function POST(req: NextRequest) {
           ? mod.meta.modName
           : mod.fileName.replace(".jar", "");
 
-      const currentVersion = mod.meta?.modVersion ?? "0.0.0";
+      let currentVersion = mod.meta?.modVersion ?? "0.0.0";
+      if (currentVersion === "unknown" || currentVersion === "0.0.0") {
+        const parsedGv = extractVersionFromFilename(mod.fileName);
+        if (parsedGv) {
+          currentVersion = parsedGv;
+        }
+      }
 
       try {
         let projectId: string | null = null;
+        let slug: string | null = null;
+        let projectTitle: string | null = null;
 
         // Step 1 — Direct lookup by SHA1 hash
         if (mod.meta?.sha1 && hashToProject[mod.meta.sha1]) {
           projectId = hashToProject[mod.meta.sha1];
         }
-
-        let slug: string | null = null;
 
         // Step 2 — Direct lookup by modId
         if (!projectId && mod.meta?.modId && mod.meta.modId !== "unknown") {
@@ -284,6 +299,7 @@ export async function POST(req: NextRequest) {
             const data = await res.json();
             projectId = data.id;
             slug = data.slug;
+            projectTitle = data.title;
           }
         }
 
@@ -319,6 +335,7 @@ export async function POST(req: NextRequest) {
               if (hit) {
                 projectId = hit.project_id;
                 slug = hit.slug;
+                projectTitle = hit.title;
               }
             }
           }
@@ -367,6 +384,7 @@ export async function POST(req: NextRequest) {
           downloadUrl: primaryFile?.url,
           projectId,
           slug: slug || projectId,
+          title: projectTitle || mod.meta?.modName || mod.fileName || undefined,
           changelog: latest.changelog || "No hay información de cambios disponible.",
         };
 
@@ -391,9 +409,11 @@ export async function POST(req: NextRequest) {
     // Combine cached and fresh results
     const allResults = [...cachedResults, ...freshResults];
 
-    // ── Bulk Project Enrichment (Categories) ───────────────────────────────────
+    // ── Bulk Project Enrichment (Categories & Icons) ───────────────────────────
     const projectIdsToEnrich = [...new Set(allResults.map(r => r.projectId).filter(Boolean))] as string[];
     const categoryMap: Record<string, string[]> = {};
+    const iconMap: Record<string, string> = {};
+    const titleMap: Record<string, string> = {};
 
     if (projectIdsToEnrich.length > 0) {
       try {
@@ -402,6 +422,10 @@ export async function POST(req: NextRequest) {
           const projectsData = await projectsRes.json();
           for (const p of projectsData) {
             categoryMap[p.id] = p.categories || [];
+            titleMap[p.id] = p.title;
+            if (p.icon_url) {
+              iconMap[p.id] = p.icon_url;
+            }
           }
         }
       } catch (err) {
@@ -409,11 +433,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Convert to map and attach categories
+    // Convert to map and attach categories, icons, and titles
     const updatesByPath: Record<string, ModCheckResult> = {};
     for (const result of allResults) {
-      if (result.projectId && categoryMap[result.projectId]) {
-        result.categories = categoryMap[result.projectId];
+      if (result.projectId) {
+        if (categoryMap[result.projectId]) {
+          result.categories = categoryMap[result.projectId];
+        }
+        if (iconMap[result.projectId]) {
+          result.iconUrl = iconMap[result.projectId];
+        }
+        if (titleMap[result.projectId]) {
+          result.title = titleMap[result.projectId];
+        }
       }
       updatesByPath[result.path] = result;
     }

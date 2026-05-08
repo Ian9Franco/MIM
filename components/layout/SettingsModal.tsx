@@ -30,7 +30,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [canEdit, setCanEdit] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pathValidation, setPathValidation] = useState<Record<string, boolean>>({});
+  const [keyValidation, setKeyValidation] = useState<Record<string, boolean | null>>({
+    curseforge: null,
+    modrinth: null,
+    virusTotal: null
+  });
   const [isValidating, setIsValidating] = useState(false);
+  const [isValidatingKeys, setIsValidatingKeys] = useState(false);
   const [showStagingWarning, setShowStagingWarning] = useState<{ pathName: string; stagingPath: string } | null>(null);
   const [pathPickWarning, setPathPickWarning] = useState<{
     message: string;
@@ -59,8 +65,32 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         validatePaths([
           d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.stagingPath
         ]);
+        validateKeys(d.curseforgeApiKey, d.modrinthApiKey, d.virusTotalApiKey);
       });
   }, []);
+
+  const validateKeys = async (cf: string, mr: string, vt: string) => {
+    if (!cf && !mr && !vt) {
+      setKeyValidation({ curseforge: false, modrinth: true, virusTotal: true });
+      return;
+    }
+    
+    setIsValidatingKeys(true);
+    try {
+      const res = await fetch("/api/settings/validate-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curseforge: cf, modrinth: mr, virusTotal: vt })
+      });
+      if (res.ok) {
+        const { results } = await res.json();
+        setKeyValidation(results);
+      }
+    } catch (e) {
+      console.error("Error validando keys", e);
+    }
+    setIsValidatingKeys(false);
+  };
 
   const validatePaths = async (paths: string[]) => {
     setIsValidating(true);
@@ -92,6 +122,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       return () => clearTimeout(timer);
     }
   }, [sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath, loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        validateKeys(curseforgeApiKey, modrinthApiKey, virusTotalApiKey);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, loading]);
 
   const handlePickFolder = async (setter: React.Dispatch<React.SetStateAction<string>>, isMinecraft = false, currentPath = "") => {
     // Si la ruta no es válida (está en rojo), avisamos antes de abrir el selector del sistema
@@ -726,13 +765,18 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                           onChange={e => setCurseforgeApiKey(e.target.value)} 
                           className={`input-base w-full pr-12 text-sm font-mono transition-all duration-300 ${
                             canEdit 
-                              ? "text-foreground bg-white/4 border-primary/30 focus:border-primary focus:shadow-[0_0_15px_rgba(217,119,87,0.15)]" 
+                              ? `text-foreground bg-white/4 border-primary/30 focus:border-primary focus:shadow-[0_0_15px_rgba(217,119,87,0.15)] ${keyValidation.curseforge === false && curseforgeApiKey ? "border-red-500/50" : ""}` 
                               : "text-foreground/40 bg-white/1 border-white/5 cursor-not-allowed select-none"
                           }`}
                           style={{ paddingLeft: "2.5rem" }}
                           placeholder="Tu clave de CurseForge (ej. $2a$10$...)"
                           disabled={saving || !canEdit}
                         />
+                        <div className="absolute right-12 flex items-center gap-2">
+                          {isValidatingKeys && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted/40" />}
+                          {!isValidatingKeys && curseforgeApiKey && keyValidation.curseforge === false && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                          {!isValidatingKeys && curseforgeApiKey && keyValidation.curseforge === true && <Check className="w-3.5 h-3.5 text-[#66C8A0]" />}
+                        </div>
                         <button
                           type="button"
                           onClick={() => setShowCurseforge(!showCurseforge)}
@@ -775,13 +819,18 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                           onChange={e => setModrinthApiKey(e.target.value)} 
                           className={`input-base w-full pr-12 text-sm font-mono transition-all duration-300 ${
                             canEdit 
-                              ? "text-foreground bg-white/4 border-emerald-500/20 focus:border-emerald-400 focus:shadow-[0_0_15px_rgba(16,185,129,0.08)]" 
+                              ? `text-foreground bg-white/4 border-emerald-500/20 focus:border-emerald-400 focus:shadow-[0_0_15px_rgba(16,185,129,0.08)] ${keyValidation.modrinth === false && modrinthApiKey ? "border-red-500/50" : ""}` 
                               : "text-foreground/40 bg-white/1 border-white/5 cursor-not-allowed select-none"
                           }`}
                           style={{ paddingLeft: "2.5rem" }}
                           placeholder="Tu token PAT de Modrinth (mrp_...)"
                           disabled={saving || !canEdit}
                         />
+                        <div className="absolute right-12 flex items-center gap-2">
+                          {isValidatingKeys && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted/40" />}
+                          {!isValidatingKeys && modrinthApiKey && keyValidation.modrinth === false && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                          {!isValidatingKeys && modrinthApiKey && keyValidation.modrinth === true && <Check className="w-3.5 h-3.5 text-[#66C8A0]" />}
+                        </div>
                         <button
                           type="button"
                           onClick={() => setShowModrinth(!showModrinth)}
@@ -824,13 +873,18 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                           onChange={e => setVirusTotalApiKey(e.target.value)} 
                           className={`input-base w-full pr-12 text-sm font-mono transition-all duration-300 ${
                             canEdit 
-                              ? "text-foreground bg-white/4 border-blue-500/20 focus:border-blue-400 focus:shadow-[0_0_15px_rgba(59,130,246,0.08)]" 
+                              ? `text-foreground bg-white/4 border-blue-500/20 focus:border-blue-400 focus:shadow-[0_0_15px_rgba(59,130,246,0.08)] ${keyValidation.virusTotal === false && virusTotalApiKey ? "border-red-500/50" : ""}` 
                               : "text-foreground/40 bg-white/1 border-white/5 cursor-not-allowed select-none"
                           }`}
                           style={{ paddingLeft: "2.5rem" }}
                           placeholder="Tu clave API de VirusTotal..."
                           disabled={saving || !canEdit}
                         />
+                        <div className="absolute right-12 flex items-center gap-2">
+                          {isValidatingKeys && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted/40" />}
+                          {!isValidatingKeys && virusTotalApiKey && keyValidation.virusTotal === false && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                          {!isValidatingKeys && virusTotalApiKey && keyValidation.virusTotal === true && <Check className="w-3.5 h-3.5 text-[#66C8A0]" />}
+                        </div>
                         <button
                           type="button"
                           onClick={() => setShowVirusTotal(!showVirusTotal)}
@@ -855,18 +909,48 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <span className="flex items-center gap-2 text-accent">
                       <MoveRight className="w-3.5 h-3.5" /> {moveProgress}
                     </span>
-                  ) : isValidating ? (
+                  ) : (isValidating || isValidatingKeys) ? (
                     <span className="flex items-center gap-2 text-muted">
-                      <RefreshCw className="w-3 h-3 animate-spin" /> Comprobando rutas...
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Comprobando {activeTab === "paths" ? "rutas" : "conectividad"}...
                     </span>
-                  ) : Object.values(pathValidation).every(v => v === true) ? (
-                    <span className="flex items-center gap-2 text-[#66C8A0]">
-                      <Check className="w-3 h-3" /> Todas las rutas son válidas
-                    </span>
+                  ) : activeTab === "paths" ? (
+                    Object.values(pathValidation).every(v => v === true) ? (
+                      <span className="flex items-center gap-2 text-[#66C8A0]">
+                        <Check className="w-3 h-3" /> Todas las rutas son válidas
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 text-red-400">
+                        <AlertTriangle className="w-3 h-3" /> Corregí las rutas en rojo
+                      </span>
+                    )
                   ) : (
-                    <span className="flex items-center gap-2 text-red-400">
-                      <AlertTriangle className="w-3 h-3" /> Corregí las rutas en rojo
-                    </span>
+                    (() => {
+                      const activeCount = Object.values(keyValidation).filter(v => v === true).length;
+                      const hasError = Object.values(keyValidation).some(v => v === false);
+                      const isComplete = activeCount === 3;
+
+                      if (hasError) {
+                        return (
+                          <span className="flex items-center gap-2 text-red-400">
+                            <AlertTriangle className="w-3 h-3" /> Verificá las claves ingresadas
+                          </span>
+                        );
+                      }
+                      
+                      if (activeCount > 0) {
+                        return (
+                          <span className="flex items-center gap-2 text-[#66C8A0]">
+                            <Check className="w-3 h-3" /> {activeCount === 1 ? "1 servicio activo" : `${activeCount} servicios activos`} {isComplete && "(Todo OK)"}
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <span className="flex items-center gap-2 text-amber-400">
+                          <AlertTriangle className="w-3 h-3" /> Falta configurar claves
+                        </span>
+                      );
+                    })()
                   )}
                 </div>
                 <div className="flex items-center gap-3">

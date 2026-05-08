@@ -24,6 +24,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import crypto from "crypto";
+import { enrichUpdatesCache } from "@/lib/cache-enricher";
 
 function collectJarFiles(dir: string, bucket: string[]) {
   if (!fs.existsSync(dir)) return;
@@ -67,7 +68,7 @@ function findExistingByHash(downloadsDir: string, hashes?: Record<string, string
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename, hashes } = await req.json();
+    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json(
@@ -127,12 +128,31 @@ export async function POST(req: NextRequest) {
         try {
           fs.copyFileSync(existingPath, targetPath);
           console.log(`[/api/modrinth/download] Copied locally from library to Downloads: ${path.basename(targetPath)}`);
+          
+          enrichUpdatesCache({
+            filePath: targetPath,
+            projectId,
+            iconUrl,
+            loader,
+            gameVersion,
+            sha1: hashes?.sha1
+          });
+
           return NextResponse.json({ success: true, targetPath, copiedLocally: true });
         } catch (copyErr) {
           console.error("[/api/modrinth/download] Failed to copy locally, proceeding to download:", copyErr);
           // Si falla, continúa para descargar normalmente
         }
       } else {
+        enrichUpdatesCache({
+          filePath: existingPath,
+          projectId,
+          iconUrl,
+          loader,
+          gameVersion,
+          sha1: hashes?.sha1
+        });
+
         return NextResponse.json({
           success: true,
           skipped: true,
@@ -176,6 +196,15 @@ export async function POST(req: NextRequest) {
     }
 
     fs.writeFileSync(targetPath, nodeBuffer);
+
+    enrichUpdatesCache({
+      filePath: targetPath,
+      projectId,
+      iconUrl,
+      loader,
+      gameVersion,
+      sha1: hashes?.sha1
+    });
 
     console.log(`[/api/modrinth/download] Saved: ${path.basename(targetPath)}`);
     return NextResponse.json({ success: true, targetPath });

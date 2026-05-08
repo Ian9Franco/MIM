@@ -14,9 +14,16 @@ import {
   Globe, 
   ChevronDown, 
   ChevronUp,
+  Settings,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  History,
   Activity,
-  Settings
+  Search
 } from "lucide-react";
+import { eventBus } from "@/lib/eventBus";
+import { incidentManager, Incident } from "@/lib/incidentManager";
 
 interface AlertSidebarProps {
   sidebarOpen: boolean;
@@ -73,6 +80,7 @@ export function AlertSidebar({
     detail: string;
     type: "danger" | "warning";
   }>>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
 
   const [seenVersions, setSeenVersions] = useState<Record<string, string>>(() => {
     if (typeof window !== "undefined") {
@@ -116,15 +124,51 @@ export function AlertSidebar({
     }
   };
 
-  const updates = Object.entries(modrinthStatus).filter(([path, s]) => {
-    if (path.startsWith("collection:")) {
-      const projectId = path.replace("collection:", "");
-      const lastSeen = seenVersions[projectId];
-      return s.status === "update_available" && s.latestVersion && lastSeen && lastSeen !== s.latestVersion;
-    }
-    const mod = library.find(l => l.path === path);
-    return s.status === "update_available" && mod && !ignoredUpdates.has(path);
-  });
+  const { modUpdates, collectionUpdates, shaderUpdates, resourcePackUpdates } = React.useMemo(() => {
+    const modsList: [string, any][] = [];
+    const collsList: [string, any][] = [];
+    const shadersList: [string, any][] = [];
+    const rpsList: [string, any][] = [];
+
+    Object.entries(modrinthStatus).forEach(([path, s]) => {
+      if (s.status !== "update_available" || !s.latestVersion) return;
+
+      if (path.startsWith("collection:")) {
+        const projectId = path.replace("collection:", "");
+        const lastSeen = seenVersions[projectId];
+        if (lastSeen && lastSeen !== s.latestVersion) {
+          collsList.push([path, s]);
+        }
+      } else if (path.toLowerCase().includes("shaderpacks")) {
+        if (!ignoredUpdates.has(path)) {
+          shadersList.push([path, s]);
+        }
+      } else if (path.toLowerCase().includes("resourcepacks")) {
+        if (!ignoredUpdates.has(path)) {
+          rpsList.push([path, s]);
+        }
+      } else {
+        const mod = library.find(l => l.path === path);
+        if (mod && !ignoredUpdates.has(path)) {
+          modsList.push([path, s]);
+        }
+      }
+    });
+
+    return { 
+      modUpdates: modsList, 
+      collectionUpdates: collsList, 
+      shaderUpdates: shadersList, 
+      resourcePackUpdates: rpsList 
+    };
+  }, [modrinthStatus, library, seenVersions, ignoredUpdates]);
+
+  const updates = [
+    ...modUpdates,
+    ...collectionUpdates,
+    ...shaderUpdates,
+    ...resourcePackUpdates,
+  ];
 
   // Unified real-time fetch of configuration errors and SAGE crash logs/security warnings
   const fetchConfigAndSageAlerts = async (proj = activeProject) => {
@@ -200,6 +244,17 @@ export function AlertSidebar({
         }
       }
       setConfigAlerts(alerts);
+      
+      // Emit config alerts as incidents
+      alerts.forEach(a => {
+        incidentManager.createIncident({
+          id: a.id,
+          title: a.title,
+          detail: a.detail,
+          severity: a.type === "danger" ? "danger" : "warning",
+          module: "CONFIG"
+        });
+      });
 
       // 2. Fetch SAGE analysis warnings
       const sage: any[] = [];
@@ -209,13 +264,25 @@ export function AlertSidebar({
         if (logsRes.ok) {
           const logFilesData = await logsRes.json();
           const logFilesList = logFilesData?.files || [];
+          
+          // Determinamos la fecha de la sesión actual buscando el log más reciente (latest.log)
+          const latestLog = logFilesList.find((f: any) => f.path === "logs/latest.log" || f.path === "global:logs/latest.log");
+          const sessionDate = latestLog?.date || new Date().toISOString().split("T")[0];
+
           const crashFiles = logFilesList.filter((f: any) => f.type === "crash");
-          if (crashFiles.length > 0) {
-            sage.push({
-              id: "sage-crashes",
-              title: `¡Se detectaron caídas de juego! (${crashFiles.length})`,
-              detail: `Se encontraron ${crashFiles.length} reportes en la carpeta crash-reports de este proyecto. Revisa SAGE para analizarlos.`,
-              type: "danger"
+          
+          // Solo alertamos sobre crashes que ocurrieron el mismo día que el log activo (crashes de la sesión)
+          const activeCrashes = crashFiles.filter((f: any) => f.date === sessionDate);
+          
+          if (activeCrashes.length > 0) {
+            eventBus.emit("sage:crash-detected", {
+              crashId: `crash-${Date.now()}`,
+              crashType: "mod", // Default a mod, podría ser más específico
+              severity: activeCrashes.length > 2 ? "critical" : "high",
+              logFile: activeCrashes[0].path,
+              stackTrace: undefined, // Podría extraerse del archivo si es necesario
+              suspectedMods: [], // Podría analizarse el stack trace
+              sessionId: sessionDate
             });
           }
         }
@@ -236,27 +303,48 @@ export function AlertSidebar({
                 const criticalCount = scanData.results.filter((r: any) => r.riskLevel === "critical").length;
                 const suspiciousCount = scanData.results.filter((r: any) => r.riskLevel === "suspicious").length;
                 
-                if (criticalCount > 0) {
-                  sage.push({
-                    id: "sage-malware",
-                    title: `¡SAGE detectó riesgo crítico! (${criticalCount})`,
-                    detail: `Se encontraron ${criticalCount} archivos que contienen malware o firmas potencialmente peligrosas. ¡No inicies el juego!`,
-                    type: "danger"
-                  });
-                } else if (suspiciousCount > 0) {
-                  sage.push({
-                    id: "sage-suspicious",
-                    title: `Riesgos moderados detectados (${suspiciousCount})`,
-                    detail: `Se identificaron ${suspiciousCount} archivos sospechosos en tus mods. Te sugerimos escanearlos detalladamente en SAGE.`,
-                    type: "warning"
+                if (criticalCount > 0 || suspiciousCount > 0) {
+                  const riskFiles = scanData.results.filter((r: any) => 
+                    r.riskLevel === "critical" || r.riskLevel === "suspicious"
+                  );
+                  
+                  eventBus.emit("sage:security-risk", {
+                    riskId: `security-${Date.now()}`,
+                    riskType: criticalCount > 0 ? "malware" : "file-system",
+                    severity: criticalCount > 0 ? "critical" : "suspicious",
+                    fileName: riskFiles[0]?.fileName || "unknown",
+                    riskScore: criticalCount > 0 ? 90 : 60,
+                    findings: riskFiles.map((r: any) => r.summary || r.riskLevel)
                   });
                 }
               }
             }
           }
         }
+
+        // 3. Dependency Ownership Check
+        const dRes = await fetch(`/api/library/resolve-ownership?project=${proj.name}&version=${proj.version}&loader=${proj.loader}`);
+        if (dRes.ok) {
+          const dData = await dRes.json();
+          if (dData.success && dData.actions && dData.actions.length > 0) {
+            dData.actions.forEach((act: any) => {
+              incidentManager.createIncident({
+                id: `dep-ownership-${act.modId}`,
+                title: `Librería mal aislada: ${act.modName}`,
+                detail: `${act.reason} Se recomienda moverla a ${act.suggestedCategory}.`,
+                severity: act.severity === "warning" ? "warning" : "info",
+                module: "SYSTEM",
+                meta: {
+                  type: "dependency_move",
+                  modId: act.modId,
+                  currentPath: act.currentPath,
+                  suggestedCategory: act.suggestedCategory,
+                }
+              });
+            });
+          }
+        }
       }
-      setSageAlerts(sage);
     } catch (e) {
       console.error("Error al actualizar alertas unificadas:", e);
     }
@@ -290,6 +378,17 @@ export function AlertSidebar({
     if (typeof window !== "undefined") {
       window.addEventListener("active-project-changed", handleActiveProject);
       window.addEventListener("refresh-system", handleRefresh);
+      
+      const handleIncidents = (e: any) => {
+        setIncidents([...e.detail]);
+      };
+      window.addEventListener("mim:incidents-updated", handleIncidents);
+      
+      // Initial load
+      incidentManager.getIncidents("active").then(setIncidents).catch(err => {
+        console.error("[AlertSidebar] Error loading incidents:", err);
+        setIncidents([]);
+      });
     }
 
     fetchConfigAndSageAlerts(activeProject);
@@ -298,6 +397,9 @@ export function AlertSidebar({
       if (typeof window !== "undefined") {
         window.removeEventListener("active-project-changed", handleActiveProject);
         window.removeEventListener("refresh-system", handleRefresh);
+        window.removeEventListener("mim:incidents-updated", (e: any) => {
+          setIncidents([...e.detail]);
+        });
       }
     };
   }, [activeProject]);
@@ -306,16 +408,139 @@ export function AlertSidebar({
   useEffect(() => {
     if (sidebarOpen) {
       fetchConfigAndSageAlerts(activeProject);
+      incidentManager.markAsSeen();
     }
   }, [sidebarOpen, activeProject]);
 
-  // Update global alert status dot (unifies everything!)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const total = conflicts.length + updates.length + configAlerts.length + sageAlerts.length;
-      window.dispatchEvent(new CustomEvent("alert-status-changed", { detail: total > 0 }));
-    }
-  }, [conflicts.length, updates.length, configAlerts.length, sageAlerts.length]);
+  const renderUpdateCard = (path: string, s: any, type: "mod" | "collection" | "shader" | "resourcepack") => {
+    const isCollection = type === "collection";
+    const mod = isCollection ? null : library.find(l => l.path === path);
+    
+    // Prefer human-readable title from Modrinth.
+    // For assets without a Modrinth match, use the filename — NEVER the internal hash slug.
+    const rawFilename = path.substring(path.lastIndexOf("\\") + 1).replace(/\.(zip|jar)$/i, "");
+    const displayName = s.title || s.slug ||
+      (isCollection
+        ? "Mod Seguido"
+        : type === "shader" || type === "resourcepack"
+          ? rawFilename
+          : (mod?.meta?.modName || mod?.fileName));
+
+    const currentVersion = isCollection ? null : mod?.meta?.modVersion;
+    const hasCurrentVersion = currentVersion && currentVersion !== "unknown";
+
+    return (
+      <div 
+        key={path} 
+        className="p-3 rounded-xl border animate-fade-in transition-all duration-300 hover:border-white/10"
+        style={{ borderColor: "var(--color-accent-border)", background: "var(--color-accent-bg)" }}
+      >
+        <div className="flex items-start gap-2">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--color-accent-hover)" }}
+          >
+            <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
+                {displayName}
+              </p>
+              {isCollection && (
+                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 uppercase shrink-0">Seguido</span>
+              )}
+              {type === "shader" && (
+                <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold border border-yellow-500/20 uppercase shrink-0">Shader</span>
+              )}
+              {type === "resourcepack" && (
+                <span className="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-500 text-[10px] font-bold border border-teal-500/20 uppercase shrink-0">Textura</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              {!isCollection && hasCurrentVersion ? (
+                <>
+                  <span style={{ color: "var(--color-muted)" }}>v{currentVersion}</span>
+                  <span style={{ color: "var(--color-accent)" }}>→</span>
+                  <span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span>
+                </>
+              ) : (
+                <span style={{ color: "var(--color-success)" }}>Nuevo: v{s.latestVersion}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {isCollection ? (
+            <>
+              <ActionButton
+                primary
+                onClick={() => handleDownloadUpdate(path, s.downloadUrl!, `${s.slug || "mod"}-${s.latestVersion}.jar`)}
+                disabled={downloadingMods[path]}
+                icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+                label={downloadingMods[path] ? "Descargando..." : "Descargar"}
+              />
+              <ActionButton
+                onClick={() => {
+                  const projectId = path.replace("collection:", "");
+                  handleMarkSeen(projectId, s.latestVersion!);
+                }}
+                label="Visto"
+              />
+            </>
+          ) : (
+            <>
+              <ActionButton
+                primary
+                onClick={() => {
+                  let filename = path.substring(path.lastIndexOf("\\") + 1);
+                  if (type === "mod" && mod?.meta?.modVersion) {
+                    filename = mod.fileName.replace(mod.meta.modVersion, s.latestVersion!);
+                  } else {
+                    const ext = filename.substring(filename.lastIndexOf("."));
+                    const base = filename.substring(0, filename.lastIndexOf("."));
+                    filename = `${base}-${s.latestVersion}${ext}`;
+                  }
+                  handleDownloadUpdate(path, s.downloadUrl!, filename);
+                }}
+                disabled={downloadingMods[path]}
+                icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+                label={downloadingMods[path] ? "Descargando..." : (type === "mod" ? "Actualizar" : "Descargar")}
+              />
+              <ActionButton
+                onClick={() => handleDismissUpdate(path)}
+                label="Ignorar"
+              />
+            </>
+          )}
+          
+          <div className="w-full flex gap-2 mt-1">
+            <ActionButton
+              onClick={() => window.open(`https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
+              icon={<Globe className="w-3.5 h-3.5" />}
+              label="Web"
+              small
+            />
+            <ActionButton
+              onClick={() => setExpandedChangelog(expandedChangelog === path ? null : path)}
+              icon={expandedChangelog === path ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              label="Más Info"
+              small
+            />
+          </div>
+        </div>
+
+        {expandedChangelog === path && (
+          <div className="mt-3 p-3 rounded-lg bg-black/20 border border-white/5 animate-fade-in">
+            <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mb-2">Registro de cambios:</p>
+            <div className="text-xs max-h-40 overflow-y-auto custom-scrollbar font-sans leading-relaxed whitespace-pre-wrap pr-2" style={{ color: "var(--color-muted)" }}>
+              {s.changelog || "Sin detalles disponibles."}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -330,9 +555,9 @@ export function AlertSidebar({
         <h2 className="text-lg font-headline flex items-center gap-2" style={{ color: "var(--color-foreground)" }}>
           <Bell className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
           Centro de Alertas
-          {(conflicts.length + updates.length + configAlerts.length + sageAlerts.length) > 0 && (
+          {(conflicts.length + updates.length + incidents.filter(i => i.status === "active").length) > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--color-danger-bg)", color: "var(--color-danger)" }}>
-              {conflicts.length + updates.length + configAlerts.length + sageAlerts.length}
+              {conflicts.length + updates.length + incidents.filter(i => i.status === "active").length}
             </span>
           )}
         </h2>
@@ -372,8 +597,8 @@ export function AlertSidebar({
           onClick={() => setActiveTab("sage")}
           icon={<Activity className="w-3.5 h-3.5" />}
           label="SAGE"
-          count={sageAlerts.length}
-          alert={sageAlerts.some(a => a.type === "danger")}
+          count={incidents.filter(i => i.status === "active" && i.module === "SAGE").length}
+          alert={incidents.some(i => i.status === "active" && i.module === "SAGE" && i.severity === "danger")}
         />
         <TabButton
           active={activeTab === "updates"}
@@ -394,14 +619,14 @@ export function AlertSidebar({
           onClick={() => setActiveTab("config")}
           icon={<Settings className="w-3.5 h-3.5" />}
           label="Ajustes"
-          count={configAlerts.length}
-          alert={configAlerts.some(a => a.type === "danger")}
+          count={incidents.filter(i => i.status === "active" && i.module === "CONFIG").length}
+          alert={incidents.some(i => i.status === "active" && i.module === "CONFIG" && i.severity === "danger")}
         />
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {/* Empty State - Global */}
-        {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && sageAlerts.length === 0 && configAlerts.length === 0 && (
+        {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && incidents.filter(i => i.status === "active").length === 0 && (
           <div className="text-center py-12">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-bounce"
@@ -415,7 +640,7 @@ export function AlertSidebar({
         )}
 
         {/* Empty State - SAGE */}
-        {activeTab === "sage" && sageAlerts.length === 0 && (
+        {activeTab === "sage" && incidents.filter(i => i.status === "active" && i.module === "SAGE").length === 0 && (
           <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
@@ -429,7 +654,7 @@ export function AlertSidebar({
         )}
 
         {/* Empty State - Ajustes */}
-        {activeTab === "config" && configAlerts.length === 0 && (
+        {activeTab === "config" && incidents.filter(i => i.status === "active" && i.module === "CONFIG").length === 0 && (
           <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110"
@@ -470,159 +695,177 @@ export function AlertSidebar({
           </div>
         )}
 
-        {/* ──────── SAGE ALERTS SECTION ──────── */}
-        {(activeTab === "all" || activeTab === "sage") && sageAlerts.length > 0 && (
-          <AlertSection
-            icon={<Activity className="w-4 h-4 text-indigo-400 animate-pulse" />}
-            title="Diagnósticos de SAGE"
-            count={sageAlerts.length}
-            color="#818cf8"
-          >
-            <div className="flex flex-col gap-2">
-              {sageAlerts.map((alert) => {
-                const isDanger = alert.type === "danger";
-                return (
-                  <div 
-                    key={alert.id} 
-                    className="p-3 rounded-xl border animate-fade-in transition-all duration-300"
-                    style={{ 
-                      borderColor: isDanger ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)", 
-                      background: isDanger ? "rgba(239, 68, 68, 0.04)" : "rgba(245, 158, 11, 0.04)" 
-                    }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: isDanger ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)" }}
-                      >
-                        <AlertTriangle className={`w-4 h-4 ${isDanger ? 'text-red-400' : 'text-amber-400'}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-headline text-xs font-bold ${isDanger ? 'text-red-300' : 'text-amber-300'}`}>
-                          {alert.title}
-                        </p>
-                        <p className="text-[10px] mt-1 leading-relaxed text-foreground/70">{alert.detail}</p>
-                      </div>
-                    </div>
+        {/* ──────── INCIDENTS SECTION (SAGE / CONFIG / SYSTEM) ──────── */}
+        {(activeTab === "all" || activeTab === "sage" || activeTab === "config") && incidents.filter(i => i.status === "active").length > 0 && (
+          <div className="flex flex-col gap-6">
+            {["SAGE", "CONFIG", "SYSTEM"].map(mod => {
+              const modIncidents = incidents.filter(i => i.status === "active" && i.module === mod);
+              if (modIncidents.length === 0) return null;
+              if (activeTab === "sage" && mod !== "SAGE") return null;
+              if (activeTab === "config" && mod !== "CONFIG") return null;
+
+              const modInfo = {
+                SAGE: { icon: <Activity className="w-4 h-4" />, title: "Diagnósticos SAGE", color: "#818cf8" },
+                CONFIG: { icon: <Settings className="w-4 h-4" />, title: "Ajustes del Sistema", color: "#a78bfa" },
+                SYSTEM: { icon: <Shield className="w-4 h-4" />, title: "Alertas de Sistema", color: "#fb7185" }
+              }[mod as "SAGE" | "CONFIG" | "SYSTEM"];
+
+              return (
+                <AlertSection
+                  key={mod}
+                  icon={modInfo.icon}
+                  title={modInfo.title}
+                  count={modIncidents.length}
+                  color={modInfo.color}
+                >
+                  <div className="flex flex-col gap-3">
+                    {modIncidents.map((incident) => {
+                      const isDanger = incident.severity === "danger";
+                      return (
+                        <div 
+                          key={incident.id} 
+                          className="p-3.5 rounded-2xl border animate-fade-in transition-all duration-300 relative group overflow-hidden"
+                          style={{ 
+                            borderColor: isDanger ? "rgba(239, 68, 68, 0.2)" : "rgba(167, 139, 250, 0.2)", 
+                            background: isDanger ? "rgba(239, 68, 68, 0.04)" : "rgba(167, 139, 250, 0.04)" 
+                          }}
+                        >
+                          {!incident.seen && (
+                            <div className="absolute top-0 left-0 w-1 h-full bg-primary animate-pulse" />
+                          )}
+                          <div className="flex items-start gap-3">
+                            <div 
+                              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
+                              style={{ background: isDanger ? "rgba(239, 68, 68, 0.08)" : "rgba(167, 139, 250, 0.08)" }}
+                            >
+                              {incident.severity === "danger" ? <ShieldX className="w-4 h-4 text-red-400" /> : <ShieldAlert className="w-4 h-4 text-purple-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className={`font-headline text-xs font-bold ${isDanger ? 'text-red-300' : 'text-purple-300'}`}>
+                                  {incident.title}
+                                </p>
+                                <span className="text-[8px] opacity-30 font-mono">
+                                  {new Date(incident.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-[10px] mt-1 leading-relaxed text-foreground/70">{incident.detail}</p>
+                              
+                              <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={async () => {
+                                     await incidentManager.resolveIncident(incident.id);
+                                     const refreshed = await incidentManager.getIncidents("active");
+                                     setIncidents(refreshed);
+                                   }}
+                                  className="text-[9px] font-bold px-2 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3 h-3 text-emerald-400" />
+                                  Resolver
+                                </button>
+                                                                 {incident.module === "SAGE" && (
+                                   <button
+                                     onClick={() => {
+                                       setSidebarOpen(false);
+                                        setTimeout(() => {
+                                          window.dispatchEvent(new CustomEvent("sage-toggle", { detail: true }));
+                                        }, 150);
+                                     }}
+                                     className="text-[9px] font-bold px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 transition-colors"
+                                   >
+                                     Ver en SAGE
+                                   </button>
+                                 )}
+                                 {incident.meta?.type === "dependency_move" && (
+                                   <button
+                                     onClick={async (e) => {
+                                       e.stopPropagation();
+                                       try {
+                                         const res = await fetch("/api/classify", {
+                                           method: "POST",
+                                           headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({
+                                             sourcePaths: [incident.meta.currentPath],
+                                             targetCategory: incident.meta.suggestedCategory,
+                                             modloader: activeProject?.loader,
+                                             version: activeProject?.version,
+                                             projectName: activeProject?.name,
+                                           }),
+                                         });
+                                         if (res.ok) {
+                                           await incidentManager.resolveIncident(incident.id);
+                                           const refreshed = await incidentManager.getIncidents("active");
+                                           setIncidents(refreshed);
+                                           window.dispatchEvent(new CustomEvent("refresh-system"));
+                                         }
+                                       } catch (err) {
+                                         console.error("Error correcting library location:", err);
+                                       }
+                                     }}
+                                     className="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 animate-pulse"
+                                   >
+                                     <CheckCircle className="w-3 h-3 text-emerald-400" />
+                                     Corregir Ubicación
+                                   </button>
+                                 )}
+                                 {incident.meta?.dependency && (
+                                   <button
+                                     onClick={() => {
+                                       setSidebarOpen(false);
+                                       setTimeout(() => {
+                                         window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query: incident.meta.dependency } }));
+                                       }, 150);
+                                     }}
+                                     className="text-[9px] font-bold px-2 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-300 hover:bg-pink-500/20 transition-colors flex items-center gap-1 animate-pulse"
+                                   >
+                                     <Search className="w-3 h-3 text-pink-400" />
+                                     Buscar en FOMO
+                                   </button>
+                                 )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          </AlertSection>
+                </AlertSection>
+              );
+            })}
+          </div>
         )}
 
-        {/* ──────── UPDATES SECTION ──────── */}
-        {(activeTab === "all" || activeTab === "updates") && updates.length > 0 && (
+        {/* ──────── 1. MODS UPDATES SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "updates") && modUpdates.length > 0 && (
           <AlertSection
             icon={<RefreshCw className="w-4 h-4" />}
             title="Actualizaciones de Mods"
-            count={updates.length}
+            count={modUpdates.length}
             color="var(--color-accent)"
           >
             <div className="flex flex-col gap-2">
-              {updates.map(([path, s]) => {
-                const isCollection = path.startsWith("collection:");
-                const mod = isCollection ? null : library.find(l => l.path === path);
-                if (!isCollection && (!mod || ignoredUpdates.has(path))) return null;
-                return (
-                  <div 
-                    key={path} 
-                    className="p-3 rounded-xl border animate-fade-in"
-                    style={{ borderColor: "var(--color-accent-border)", background: "var(--color-accent-bg)" }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: "var(--color-accent-hover)" }}
-                      >
-                        <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
-                            {isCollection ? s.slug : (mod?.meta?.modName || mod?.fileName)}
-                          </p>
-                          {isCollection && (
-                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 uppercase shrink-0">Seguido</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs">
-                          {isCollection ? (
-                            <span style={{ color: "var(--color-success)" }}>Nuevo: v{s.latestVersion}</span>
-                          ) : (
-                            <>
-                              <span style={{ color: "var(--color-muted)" }}>v{mod?.meta?.modVersion}</span>
-                              <span style={{ color: "var(--color-accent)" }}>→</span>
-                              <span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {isCollection ? (
-                        <>
-                          <ActionButton
-                            primary
-                            onClick={() => handleDownloadUpdate(path, s.downloadUrl!, `${s.slug || "mod"}-${s.latestVersion}.jar`)}
-                            disabled={downloadingMods[path]}
-                            icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
-                            label={downloadingMods[path] ? "Descargando..." : "Descargar"}
-                          />
-                          <ActionButton
-                            onClick={() => {
-                              const projectId = path.replace("collection:", "");
-                              handleMarkSeen(projectId, s.latestVersion!);
-                            }}
-                            label="Visto"
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <ActionButton
-                            primary
-                            onClick={() => handleDownloadUpdate(path, s.downloadUrl!, mod!.fileName.replace(mod!.meta?.modVersion ?? "", s.latestVersion!))}
-                            disabled={downloadingMods[path]}
-                            icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
-                            label={downloadingMods[path] ? "Descargando..." : "Actualizar"}
-                          />
-                          <ActionButton
-                            onClick={() => handleDismissUpdate(path)}
-                            label="Ignorar"
-                          />
-                        </>
-                      )}
-                      
-                      <div className="w-full flex gap-2 mt-1">
-                        <ActionButton
-                          onClick={() => window.open(`https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
-                          icon={<Globe className="w-3.5 h-3.5" />}
-                          label="Web"
-                          small
-                        />
-                        <ActionButton
-                          onClick={() => setExpandedChangelog(expandedChangelog === path ? null : path)}
-                          icon={expandedChangelog === path ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                          label="Más Info"
-                          small
-                        />
-                      </div>
-                    </div>
-
-                    {expandedChangelog === path && (
-                      <div className="mt-3 p-3 rounded-lg bg-black/20 border border-white/5 animate-fade-in">
-                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mb-2">Registro de cambios:</p>
-                        <div className="text-xs max-h-40 overflow-y-auto custom-scrollbar font-sans leading-relaxed whitespace-pre-wrap pr-2" style={{ color: "var(--color-muted)" }}>
-                          {s.changelog || "Sin detalles disponibles."}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {modUpdates.map(([path, s]) => renderUpdateCard(path, s, "mod"))}
             </div>
           </AlertSection>
         )}
+
+        {/* ──────── 2. COLLECTIONS UPDATES SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "updates") && collectionUpdates.length > 0 && (
+          <AlertSection
+            icon={<RefreshCw className="w-4 h-4" />}
+            title="Mods Seguidos (Colecciones)"
+            count={collectionUpdates.length}
+            color="var(--color-primary)"
+          >
+            <div className="flex flex-col gap-2">
+              {collectionUpdates.map(([path, s]) => renderUpdateCard(path, s, "collection"))}
+            </div>
+          </AlertSection>
+        )}
+
+        
+
+        
 
         {/* ──────── CONFLICTS SECTION ──────── */}
         {(activeTab === "all" || activeTab === "conflicts") && conflicts.length > 0 && (
@@ -674,45 +917,23 @@ export function AlertSidebar({
           </AlertSection>
         )}
 
-        {/* ──────── CONFIG / SETTINGS SECTION ──────── */}
-        {(activeTab === "all" || activeTab === "config") && configAlerts.length > 0 && (
-          <AlertSection
-            icon={<Settings className="w-4 h-4 text-purple-400" />}
-            title="Alertas de Configuración"
-            count={configAlerts.length}
-            color="#a78bfa"
-          >
+        {/* Historial de Incidentes Resolvidos */}
+        {(activeTab === "all" || activeTab === "sage") && incidents.filter(i => i.status === "resolved").length > 0 && (
+          <div className="mt-8 border-t border-white/5 pt-6 opacity-40 hover:opacity-100 transition-opacity">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 mb-4 flex items-center gap-2">
+              <History className="w-3.5 h-3.5" />
+              Incidentes Recientes Resolvidos
+            </h4>
             <div className="flex flex-col gap-2">
-              {configAlerts.map((alert) => {
-                const isDanger = alert.type === "danger";
-                return (
-                  <div 
-                    key={alert.id} 
-                    className="p-3 rounded-xl border animate-fade-in transition-all duration-300"
-                    style={{ 
-                      borderColor: isDanger ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)", 
-                      background: isDanger ? "rgba(239, 68, 68, 0.04)" : "rgba(245, 158, 11, 0.04)" 
-                    }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: isDanger ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)" }}
-                      >
-                        <FileWarning className={`w-4 h-4 ${isDanger ? 'text-red-400' : 'text-amber-400'}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-headline text-xs font-bold ${isDanger ? 'text-red-300' : 'text-purple-300'}`}>
-                          {alert.title}
-                        </p>
-                        <p className="text-[10px] mt-1 leading-relaxed text-foreground/70">{alert.detail}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {incidents.filter(i => i.status === "resolved").slice(0, 5).map(incident => (
+                <div key={incident.id} className="flex items-center gap-2 text-[10px] text-foreground/50">
+                  <CheckCircle className="w-3 h-3 text-emerald-500/50" />
+                  <span className="truncate flex-1">{incident.title}</span>
+                  <span className="text-[8px] font-mono">{new Date(incident.timestamp).toLocaleDateString()}</span>
+                </div>
+              ))}
             </div>
-          </AlertSection>
+          </div>
         )}
       </div>
     </div>
@@ -773,29 +994,45 @@ function TabButton({ active, onClick, icon, label, count, alert }: TabButtonProp
 }
 
 interface AlertSectionProps {
+  key?: string;
   icon: React.ReactNode;
   title: string;
   count: number;
   color: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  defaultOpen?: boolean;
 }
 
-function AlertSection({ icon, title, count, color, children }: AlertSectionProps) {
+function AlertSection({ icon, title, count, color, children, defaultOpen = true }: AlertSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="mb-4 border border-white/5 rounded-2xl overflow-hidden transition-all duration-300" style={{ background: "rgba(255, 255, 255, 0.01)" }}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-2 p-3.5 text-left transition-colors hover:bg-white/5"
+      >
         <span style={{ color }}>{icon}</span>
-        <h3 className="text-xs font-headline tracking-wider uppercase" style={{ color }}>
+        <h3 className="text-xs font-headline tracking-wider uppercase font-bold" style={{ color }}>
           {title}
         </h3>
         <span 
-          className="ml-auto text-xs px-2 py-0.5 rounded-full" 
-          style={{ background: "var(--color-secondary-bg)", color: "var(--color-muted)" }}
+          className="text-xs px-2 py-0.5 rounded-full font-bold ml-2 transition-all" 
+          style={{ background: "rgba(255, 255, 255, 0.08)", color: "var(--color-foreground)" }}
         >
           {count}
         </span>
-      </div>
-      {children}
+        <ChevronDown 
+          className="w-4 h-4 ml-auto transition-transform duration-300 opacity-60" 
+          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", color }}
+        />
+      </button>
+      
+      {isOpen && (
+        <div className="p-3.5 border-t border-white/5 flex flex-col gap-3 animate-fade-in bg-black/15">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

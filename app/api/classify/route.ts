@@ -22,6 +22,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, isValidCategory } from "@/lib/constants";
+import { MimClassifier } from "@/lib/classifier";
 import { getProjectSubcategories } from "@/lib/projectSubcategories";
 import { scanMod } from "@/lib/scanner";
 import { getSettings } from "@/lib/settings";
@@ -30,7 +31,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -53,40 +54,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Parse targetCategory ───────────────────────────────────────────────────
-    // Format is always "category\sub" (backslash delimiter).
-    // Using indexOf+slice instead of split("\\") because split produces ["category", ""]
-    // when there is no backslash, hiding the malformed input instead of rejecting it.
-    const sepIdx = (targetCategory as string).indexOf("\\");
-    if (sepIdx === -1) {
-      return NextResponse.json(
-        {
-          error: `Invalid targetCategory format. Expected "category\\sub", received: "${targetCategory}"`,
-        },
-        { status: 400 }
-      );
-    }
+    // ── Parse targetCategory (Skip backslash parsing if "auto") ────────────────
+    const isAuto = targetCategory === "auto";
+    let category = "";
+    let sub = "";
 
-    const category = (targetCategory as string).slice(0, sepIdx);
-    const sub = (targetCategory as string).slice(sepIdx + 1);
+    if (!isAuto) {
+      const sepIdx = (targetCategory as string).indexOf("\\");
+      if (sepIdx === -1) {
+        return NextResponse.json(
+          {
+            error: `Invalid targetCategory format. Expected "category\\\\sub", received: "${targetCategory}"`,
+          },
+          { status: 400 }
+        );
+      }
 
-    // ── Validate category+sub ──────────────────────────────────────────────────
-    // Primero verificar contra las subcategorías por defecto
-    let isValid = isValidCategory(category, sub);
-    
-    // Si no es válida por defecto, verificar contra las subcategorías del proyecto
-    if (!isValid && projectName) {
-      const projectSubs = getProjectSubcategories(projectName);
-      isValid = projectSubs[category]?.includes(sub) ?? false;
-    }
-    
-    if (!isValid) {
-      return NextResponse.json(
-        {
-          error: `Invalid category/sub combination: "${category}" / "${sub}"`,
-        },
-        { status: 400 }
-      );
+      category = (targetCategory as string).slice(0, sepIdx);
+      sub = (targetCategory as string).slice(sepIdx + 1);
+
+      // ── Validate category+sub ──────────────────────────────────────────────────
+      let isValid = isValidCategory(category, sub);
+      if (!isValid && projectName) {
+        const projectSubs = getProjectSubcategories(projectName);
+        isValid = projectSubs[category]?.includes(sub) ?? false;
+      }
+      
+      if (!isValid) {
+        return NextResponse.json(
+          {
+            error: `Invalid category/sub combination: "${category}" / "${sub}"`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const moved: string[] = [];
@@ -102,18 +103,19 @@ export async function POST(req: NextRequest) {
 
       // ── Determine Target Path ───────────────────────────────────────────────
       let finalTargetDir = "";
+      let finalCategory = category;
+      let finalSub = sub;
+      let confidence = 1.0;
+      let matchedRules: string[] = [];
       
       try {
         const meta = scanMod(p);
         const effectiveProjectType = projectType || meta.projectType;
 
         if (effectiveProjectType === "resourcepack") {
-          // Resource packs always go to the project folder in SOURCE.
-          // They are pushed to the game on demand via "Sync with Game" in Tweak.
           if (!projectName) throw new Error("projectName required for resourcepack classification");
           finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
         } else if (effectiveProjectType === "shader") {
-          // Shaders go directly to .minecraft/shaderpacks (or staging as fallback).
           const shaderpacksDir = path.join(settings.minecraftPath, "shaderpacks");
           if (settings.minecraftPath && fs.existsSync(settings.minecraftPath)) {
             finalTargetDir = shaderpacksDir;
@@ -125,21 +127,67 @@ export async function POST(req: NextRequest) {
           if (!projectName) throw new Error("projectName required for datapack classification");
           finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
         } else {
-          // It's a mod (or unknown) — use isolated or standard library path
+          // Automatic or Explicit Mod Classification
+          if (isAuto) {
+            // Run semantic classification engine
+            const clRes = MimClassifier.classify({
+              fileName: path.basename(p),
+              modName: meta.modName !== "unknown" ? meta.modName : undefined,
+              categories: meta.categories,
+              clientSide: meta.clientSide,
+              serverSide: meta.serverSide
+            });
+            finalCategory = forceParentCategory || clRes.category;
+            finalSub = clRes.sub;
+            confidence = clRes.confidence;
+            matchedRules = clRes.matchedRules;
+            console.log(`[/api/classify] Auto-classified ${path.basename(p)} to ${finalCategory}\\${finalSub} (Confidence: ${confidence * 100}%, Rules: ${matchedRules.join(', ') || 'none'})`);
+          }
+
           finalTargetDir = projectName
-            ? path.join(SOURCE_BASE, "_projects", projectName, "mods", category, sub)
-            : path.join(SOURCE_BASE, version, modloader, category, sub);
+            ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
+            : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
         }
       } catch (e) {
-        console.warn(`[/api/classify] Scan failed, falling back to mod path: ${p}`, e);
+        console.warn(`[/api/classify] Scan failed, falling back to default/explicit path: ${p}`, e);
+        if (isAuto) {
+          finalCategory = forceParentCategory || ".essential";
+          finalSub = "vanilla + & qol";
+        }
         finalTargetDir = projectName
-          ? path.join(SOURCE_BASE, "_projects", projectName, "mods", category, sub)
-          : path.join(SOURCE_BASE, version, modloader, category, sub);
+          ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
+          : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
       }
 
       if (!fs.existsSync(finalTargetDir)) {
         fs.mkdirSync(finalTargetDir, { recursive: true });
       }
+
+      // ── Replace previous versions of the same modId ──────────────────────────
+      try {
+        const currentMeta = scanMod(p);
+        if (currentMeta && currentMeta.modId && currentMeta.modId !== "unknown" && fs.existsSync(finalTargetDir)) {
+          const destFiles = fs.readdirSync(finalTargetDir);
+          for (const df of destFiles) {
+            if (!df.endsWith(".jar")) continue;
+            const dfPath = path.join(finalTargetDir, df);
+            if (path.resolve(dfPath) === path.resolve(p)) continue;
+
+            try {
+              const dfMeta = scanMod(dfPath);
+              if (dfMeta && dfMeta.modId && dfMeta.modId.toLowerCase() === currentMeta.modId.toLowerCase()) {
+                console.log(`[/api/classify] Replacing older version of modId "${currentMeta.modId}": deleting ${dfPath}`);
+                fs.unlinkSync(dfPath);
+              }
+            } catch (e) {
+              // Ignore scan issues on individual files
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore errors during metadata replacement check
+      }
+
       const fileName = path.basename(p);
       const targetPath = path.join(finalTargetDir, fileName);
 
@@ -149,11 +197,11 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Cross-drive move: copy first, then delete source.
-      // fs.rename throws EXDEV when src and dest are on different drives (C: → D:).
       try {
         fs.copyFileSync(p, targetPath);
-        fs.unlinkSync(p);
+        if (!isCopy) {
+          fs.unlinkSync(p);
+        }
         moved.push(targetPath);
       } catch (err: any) {
         console.error(`[/api/classify] Failed to move file: ${fileName}. Error: ${err.message}`);

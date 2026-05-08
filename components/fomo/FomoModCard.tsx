@@ -10,6 +10,7 @@ import React, { memo } from "react";
 import {
   Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle, Check, Info, Droplet
 } from "lucide-react";
+import { SecurityBadgeCompact } from "@/components/security/SecurityBadge";
 import { formatNumber, openExternal, CATEGORY_TRANSLATIONS } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { Chip } from "../ui/primitives";
@@ -25,6 +26,9 @@ interface FomoModCardProps {
   onToggleSelect?:  (mod: ModHit) => void;
   sinytraActive?:   boolean;
   hasUpdateAvailable?: boolean;
+  riskScore?:       number;
+  riskLevel?:       "clean" | "caution" | "suspicious" | "critical";
+  onSecurityDetails?: () => void;
 }
 
 interface CompatibilityPrediction {
@@ -90,6 +94,7 @@ function predictConnectorCompatibility(title: string, categories: string[] = [])
 export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions, onAddToCollection,
   isSelected, onToggleSelect, sinytraActive, hasUpdateAvailable = false,
+  riskScore, riskLevel, onSecurityDetails,
 }: FomoModCardProps) {
   const isCurseForge = mod._source === "curseforge";
   const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
@@ -204,6 +209,15 @@ export const FomoModCard = memo(function FomoModCard({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap mt-3" role="list" aria-label="Metadatos">
+              {/* Security Badge */}
+              {riskScore !== undefined && riskLevel && (
+                <SecurityBadgeCompact
+                  riskScore={riskScore}
+                  riskLevel={riskLevel}
+                  onClick={onSecurityDetails}
+                />
+              )}
+              
               <Chip color={isCurseForge ? COLORS.curseforgeOrange : COLORS.primary} bg={isCurseForge ? "rgba(239,108,0,0.14)" : "rgba(187,150,228,0.12)"} className={isCurseForge ? 'rounded-none border border-orange-900/30' : ''}>
                 {typeLabel}
               </Chip>

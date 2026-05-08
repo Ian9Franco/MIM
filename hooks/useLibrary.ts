@@ -130,18 +130,12 @@ export function useLibrary(
     setLoadingLibrary(false);
   }, [projectHash]);
 
+  // Sincronización automática en tiempo real de actualizaciones cuando cambia la librería o archivos pendientes
   useEffect(() => {
-    if (activeProject && library.length > 0 && !autoCheckedProjects.current.has(activeProject.id)) {
-      autoCheckedProjects.current.add(activeProject.id);
+    if (activeProject && (library.length > 0 || pendingFiles.length > 0)) {
       checkUpdates(false);
     }
-  }, [activeProject, library, checkUpdates]);
-
-  useEffect(() => {
-    if (activeProject && pendingFiles.length > 0) {
-      checkUpdates(false);
-    }
-  }, [activeProject, pendingFiles.length, checkUpdates]);
+  }, [activeProject, libraryHash, pendingFiles.length, checkUpdates]);
 
   const handleClassify = useCallback(async (
     category: string, sub: string, allSelected: (PendingFile | LibraryFile)[],
@@ -154,7 +148,7 @@ export function useLibrary(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourcePaths: allSelected.map((f) => f.path),
-          targetCategory: `${category}\\${sub}`,
+          targetCategory: category === "auto" ? "auto" : `${category}\\${sub}`,
           modloader: activeProject.loader,
           version: activeProject.version,
           projectName: activeProject.name,
@@ -292,11 +286,29 @@ export function useLibrary(
     }
     for (const mods of grouped.values()) {
       if (mods.length > 1) {
-        const id1 = mods[0].path;
-        const id2 = mods[1].path;
-        const conflictId = [id1, id2].sort().join("|");
-        if (!ignoredConflicts.has(conflictId)) {
-          newConflicts.push({ newFile: mods[1], oldFile: mods[0], conflictId });
+        // If they reside in different top-level categories (.local, .essential, .server),
+        // we treat this as an intentional duplication and allow it.
+        // If there are duplicates in the same category, we trigger a conflict.
+        const categories = new Set(mods.map(m => m.category));
+        if (categories.size === mods.length) {
+          continue; // No conflict, they are in completely different categories
+        }
+
+        const catGrouped = new Map<string, LibraryFile[]>();
+        for (const m of mods) {
+          if (!catGrouped.has(m.category)) catGrouped.set(m.category, []);
+          catGrouped.get(m.category)!.push(m);
+        }
+
+        for (const catMods of catGrouped.values()) {
+          if (catMods.length > 1) {
+            const id1 = catMods[0].path;
+            const id2 = catMods[1].path;
+            const conflictId = [id1, id2].sort().join("|");
+            if (!ignoredConflicts.has(conflictId)) {
+              newConflicts.push({ newFile: catMods[1], oldFile: catMods[0], conflictId });
+            }
+          }
         }
       }
     }

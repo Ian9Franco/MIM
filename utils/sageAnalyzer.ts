@@ -40,6 +40,7 @@ export interface SageAnalysisResult {
   hybridRiskScore?: number;
   hybridStabilityRisk?: "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
   detectedFabricModulesCount?: number;
+  rule?: string;
 }
 
 export function analyzeMinecraftLog(rawText: string): SageAnalysisResult {

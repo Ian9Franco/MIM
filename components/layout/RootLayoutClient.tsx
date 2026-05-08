@@ -11,6 +11,9 @@ import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package }
 import { useStaging } from "@/hooks/useStaging";
 import { StagingModal } from "@/components/layout/StagingModal";
 import type { Project } from "@/lib/types";
+import { incidentManager } from "@/lib/incidentManager";
+import { correlationEngine } from "@/lib/correlationEngine";
+import type { Incident } from "@/lib/incidentManager";
 
 /**
  * Cliente de Layout Principal (Client Component).
@@ -36,8 +39,31 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (alertSidebarOpen) {
       setAlertsSeen(true);
+      incidentManager.markAsSeen();
     }
   }, [alertSidebarOpen]);
+
+  // Sincronizar conteo de incidentes del IncidentManager
+  React.useEffect(() => {
+    const updateCounts = async () => {
+      try {
+        const activeIncidents = await incidentManager.getIncidents("active");
+        const unseeenCount = activeIncidents.filter(i => !i.seen).length;
+        
+        setAlertCount(activeIncidents.length);
+        setHasAlerts(activeIncidents.length > 0);
+        setAlertsSeen(unseeenCount === 0);
+      } catch (error) {
+        console.error("[RootLayout] Error updating incident counts:", error);
+        setAlertCount(0);
+        setHasAlerts(false);
+        setAlertsSeen(true);
+      }
+    };
+
+    updateCounts();
+    return incidentManager.subscribe(updateCounts);
+  }, []);
 
   React.useEffect(() => {
     const handleAlertToggle = (e: Event) => {

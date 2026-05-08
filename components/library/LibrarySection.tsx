@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight, Cpu } from "lucide-react";
+import { Layers, Loader2, BookOpen, RefreshCw, Bell, FolderOpen, ArrowLeftRight, Cpu, Copy } from "lucide-react";
 import { ModCard } from "@/components/library/ModCard";
 import { VirtualizedLibrary } from "@/components/library/VirtualizedLibrary";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
@@ -58,7 +58,37 @@ export function LibrarySection({
 }: LibrarySectionProps) {
   const [transferOpen, setTransferOpen] = useState(false);
   const [shouldShake, setShouldShake] = useState(false);
+  const [showDupOptions, setShowDupOptions] = useState(false);
   const prevAlertCount = useRef(0);
+
+  const handleDuplicateTo = async (targetParentCat: string) => {
+    if (selectedLibFiles.length !== 1 || !activeProject) return;
+    const f = selectedLibFiles[0];
+    setShowDupOptions(false);
+    try {
+      const res = await fetch("/api/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourcePaths: [f.path],
+          targetCategory: "auto",
+          forceParentCategory: targetParentCat,
+          isCopy: true,
+          modloader: activeProject.loader,
+          version: activeProject.version,
+          projectName: activeProject.name
+        })
+      });
+      if (res.ok) {
+        setSelectedLibFiles([]); // Clear selection
+        window.dispatchEvent(new CustomEvent("refresh-system"));
+      } else {
+        console.error("Failed to duplicate mod:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error duplicating mod:", err);
+    }
+  };
 
   // Detectar nuevas alertas para sacudir la campana
   useEffect(() => {
@@ -171,6 +201,55 @@ export function LibrarySection({
               label={loadingDescription ? "Cargando..." : "Ver Detalles"}
               color="success"
             />
+          )}
+
+          {/* Duplicate Mod - Solo cuando hay 1 seleccionado */}
+          {selectedLibFiles.length === 1 && (
+            <div className="relative">
+              <ActionButton
+                onClick={() => setShowDupOptions(!showDupOptions)}
+                icon={<Copy className="w-3.5 h-3.5" />}
+                label="Duplicar"
+                color="primary"
+                title="Duplicar mod y llevar copia a otra categoría"
+                highlighted={showDupOptions}
+              />
+              {showDupOptions && (
+                <div 
+                  className="absolute top-full right-0 mt-2 p-2 rounded-2xl bg-[#1A1625]/95 border border-white/10 shadow-2xl z-50 flex flex-col gap-1.5 min-w-[175px]"
+                >
+                  <p className="text-[9px] text-white/50 font-bold px-2 py-0.5 uppercase tracking-wider">Llevar copia a:</p>
+                  
+                  {selectedLibFiles[0].category !== ".local" && (
+                    <button
+                      onClick={() => handleDuplicateTo(".local")}
+                      className="text-left text-[11px] px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors font-bold text-purple-300 hover:text-white flex items-center gap-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                      .local (Cliente)
+                    </button>
+                  )}
+                  {selectedLibFiles[0].category !== ".essential" && (
+                    <button
+                      onClick={() => handleDuplicateTo(".essential")}
+                      className="text-left text-[11px] px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors font-bold text-purple-300 hover:text-white flex items-center gap-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                      .essential (Ambos)
+                    </button>
+                  )}
+                  {selectedLibFiles[0].category !== ".server" && (
+                    <button
+                      onClick={() => handleDuplicateTo(".server")}
+                      className="text-left text-[11px] px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors font-bold text-purple-300 hover:text-white flex items-center gap-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                      .server (Servidor)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Unclassify - Cuando hay seleccionados */}

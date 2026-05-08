@@ -84,12 +84,36 @@ export async function GET(req: NextRequest) {
         const latestLogPath = path.join(logsDir, "latest.log");
         if (fs.existsSync(latestLogPath)) {
           const stats = fs.statSync(latestLogPath);
+          
+          // Leer primera línea para extraer fecha: [07may.2026 02:11:18.482]
+          let logDate = stats.mtime.toISOString().split("T")[0];
+          try {
+            const buffer = Buffer.alloc(50);
+            const fd = fs.openSync(latestLogPath, 'r');
+            fs.readSync(fd, buffer, 0, 50, 0);
+            fs.closeSync(fd);
+            const firstLine = buffer.toString('utf-8');
+            const logDateMatch = firstLine.match(/\[(\d{2})([a-z]{3})\.(\d{4})/i);
+            if (logDateMatch) {
+              const day = logDateMatch[1];
+              const monthStr = logDateMatch[2].toLowerCase();
+              const year = logDateMatch[3];
+              const months: Record<string, string> = {
+                jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+                ene: "01", abr: "04", ago: "08", dic: "12" // Spanish support
+              };
+              const month = months[monthStr] || "01";
+              logDate = `${year}-${month}-${day}`;
+            }
+          } catch (e) {}
+
           files.push({
             name: "latest.log (Instancia del Proyecto)",
             path: "logs/latest.log",
             size: stats.size,
             mtime: stats.mtime.toISOString(),
             type: "log",
+            date: logDate
           });
         }
       } catch (e) {
@@ -106,12 +130,18 @@ export async function GET(req: NextRequest) {
           if (file.endsWith(".txt")) {
             const filePath = path.join(crashReportsDir, file);
             const stats = fs.statSync(filePath);
+            
+            // Extraer fecha del nombre del archivo: crash-2026-05-06_22.57.38-client.txt
+            const dateMatch = file.match(/crash-(\d{4}-\d{2}-\d{2})/);
+            const date = dateMatch ? dateMatch[1] : null;
+
             files.push({
               name: `${file} (Instancia del Proyecto)`,
               path: `crash-reports/${file}`,
               size: stats.size,
               mtime: stats.mtime.toISOString(),
               type: "crash",
+              date: date || stats.mtime.toISOString().split("T")[0],
             });
           }
         }
@@ -128,12 +158,36 @@ export async function GET(req: NextRequest) {
       const latestLogPath = path.join(globalLogsDir, "latest.log");
       if (fs.existsSync(latestLogPath)) {
         const stats = fs.statSync(latestLogPath);
+        
+        // Leer primera línea para extraer fecha: [07may.2026 02:11:18.482]
+        let logDate = stats.mtime.toISOString().split("T")[0];
+        try {
+          const buffer = Buffer.alloc(50);
+          const fd = fs.openSync(latestLogPath, 'r');
+          fs.readSync(fd, buffer, 0, 50, 0);
+          fs.closeSync(fd);
+          const firstLine = buffer.toString('utf-8');
+          const logDateMatch = firstLine.match(/\[(\d{2})([a-z]{3})\.(\d{4})/i);
+          if (logDateMatch) {
+            const day = logDateMatch[1];
+            const monthStr = logDateMatch[2].toLowerCase();
+            const year = logDateMatch[3];
+            const months: Record<string, string> = {
+              jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+              ene: "01", abr: "04", ago: "08", dic: "12"
+            };
+            const month = months[monthStr] || "01";
+            logDate = `${year}-${month}-${day}`;
+          }
+        } catch (e) {}
+
         files.push({
           name: "latest.log (Global .minecraft)",
           path: "global:logs/latest.log",
           size: stats.size,
           mtime: stats.mtime.toISOString(),
           type: "log",
+          date: logDate
         });
       }
     } catch (e) {
@@ -150,12 +204,18 @@ export async function GET(req: NextRequest) {
         if (file.endsWith(".txt")) {
           const filePath = path.join(globalCrashReportsDir, file);
           const stats = fs.statSync(filePath);
+          
+          // Extraer fecha del nombre del archivo: crash-2026-05-06_22.57.38-client.txt
+          const dateMatch = file.match(/crash-(\d{4}-\d{2}-\d{2})/);
+          const date = dateMatch ? dateMatch[1] : null;
+
           files.push({
             name: `${file} (Global .minecraft)`,
             path: `global:crash-reports/${file}`,
             size: stats.size,
             mtime: stats.mtime.toISOString(),
             type: "crash",
+            date: date || stats.mtime.toISOString().split("T")[0],
           });
         }
       }

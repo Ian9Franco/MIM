@@ -90,53 +90,89 @@
 - [x] **Memory de Clasificación**: Pre-seleccionar categorías basadas en el historial de uso manual.
 - [x] **Cross-Platform Exclusivity Check**: Identificar visualmente si un mod es exclusivo de una plataforma o está en ambas.
 
-### Fase 2: Compatibilidad y Optimización 🔄
+### Fase 2: Compatibilidad y Optimización ✅
 - [x] **Sinytra Connector Flag**: Vista combinada Fabric+Forge para builds híbridos.
 - [x] **SAGE Diagnostics**: Análisis de crash logs y compatibilidad.
-- [ ] **Auto-Optimization**: Ajuste automático de Java Args y Shaders según hardware.
-- [ ] **Conflict Detection Engine**: Detección de colisiones de Mixins previa al lanzamiento.
 
 ### Fase 3: Seguridad Avanzada ✅
 - [x] **Threat Detection Engine**: Análisis de bytecode.
 - [x] **Known Threat DB**: Integración con APIs externas de reputación (VirusTotal).
 - [x] **Whitelist System**: Mods verificados oficialmente.
-- [ ] **Security UI**: Badges visuales completos en toda la app.
+- [x] **Security UI**: Badges visuales completos en toda la app.
+  **Badges interactivos en ModCard/FomoModCard con tooltips detallados y modal de análisis estético.**
 
-### Fase 4: Posicionamiento Profesional 📋
+### Fase 3.1: Ecosistema Interactivo  
+- [ ] **Rule-Based Optimization Engine**: Sistema de optimización automática basado en reglas.
+  - Detección de hardware (GPU/RAM/CPU) y perfil de carga de mods
+  - Presets automáticos: RTX 3060 + 300 mods → HIGH preset
+  - Sugerencias específicas: JVM args, memoria óptima, nivel shader
+  - Integración con TWEAK para aplicar configuraciones optimizadas
+  - Conexión con SAGE/ALRT para detección de problemas de rendimiento----(orientado con mas precision a low/mid profiles)
+  
+- [ ] **Conflict Detection Engine**: Motor de detección de conflictos de bytecode.
+  - Detección previa al lanzamiento: mixin collisions, access transformer conflicts
+  - Análisis de inyecciones duplicadas y dependencias circulares
+  - Risk scoring basado en tipo de conflicto (0-100%)
+  - Sugerencias automáticas: downgrade mods, instalar compatibilidad, desactivar módulos
+  - Integración con SAGE para debugging profundo de incompatibilidades
+  
+- [x] **SAGE Recovery Engine**: Flujos interactivos de recuperación automatizada.
+  - Detección de crash → instalación automática de dependencias faltantes
+  - Desactivación de mods conflictivos con un clic
+  - Reparación de jugadores corruptos y reordenamiento de packs
+  - Sugerencias inteligentes de JVM args basadas en configuración
+  **Motor de recuperación completo con análisis heurístico de crashes y acciones correctivas automatizadas.**
+  
+- [x] **ALRT Intelligence**: Sistema de conciencia contextual avanzada.
+  - Correlación de patrones entre eventos independientes
+  - Detección de incidentes escalonados con contexto
+  - Sistema de awareness basado en arquitectura event-driven
+  - Escalación inteligente de alertas con recomendaciones contextuales
+  **Capa de inteligencia operacional con correlación temporal y lifecycle management de incidentes.**
+  
+- [ ] **Mod Packaging Assistant**: Pipeline de validación y distribución.
+  - Validador automático de manifiestos modrinth.index.json
+  - Sistema de dependencias con detección de conflictos
+  - Integración con build system y checks de compatibilidad
+  - Pipeline de distribución con checklist interactivo
+
+
+
+
+### Fase 4: Event-Driven Orchestration & Centralized Intelligence 
+
+- [x] **MIM Event Bus**
+  Bus de eventos centralizado, ligero y completamente tipado para desacoplar la comunicación entre módulos (`FOMO`, `SAGE`, `ALRT`, `TWEAK`, `Watcher`, etc.) mediante arquitectura reactiva basada en eventos.
+  **Optimizado con batch processing, requestAnimationFrame y estadísticas de debugging.**
+
+- [x] **ALRT Central Intelligence Layer**
+  Evolución del Centro de Alertas hacia un núcleo de inteligencia operacional capaz de escuchar, priorizar, agrupar y contextualizar eventos provenientes de toda la aplicación en tiempo real.
+  **Con cache inteligente de 30 segundos y carga bajo demanda desde IndexedDB.**
+
+- [x] **Cross-Module Incident Correlation Engine**
+  Motor reactivo de correlación capaz de detectar relaciones entre eventos independientes y consolidarlos en un único incidente contextual.
+  **Optimizado con memoización, fingerprinting de eventos y cache TTL de 5 segundos.**
+  Ejemplo:
+  `FOMO → mod.downloaded` 
+  `SAGE → dependency.missing` 
+  `TWEAK → shader.incompatible` 
+  ➔ ALRT genera: `"Entorno inconsistente detectado"`.
+
+- [x] **Incident Persistence & Session Memory**
+  Persistencia local de incidentes, estados `unread/unseen`, historial de resolución y trazabilidad temporal para permitir auditoría, continuidad entre sesiones y debugging avanzado.
+  **Migrado a IndexedDB escalable para 10,000+ incidentes con índices optimizados y fallback a localStorage.**
+
+- [x] **Reactive Rule System**
+  Sistema extensible de reglas (`IF event A + event B → create incident`) para automatizar diagnósticos, recomendaciones y flujos de recuperación entre módulos.
+  **Sistema dinámico runtime con addRule(), removeRule(), enableRule() y priorización.**
+
+
+### Fase 5: Posicionamiento Profesional 
 - [ ] **Demo Deployable**: Showcase visual o landing funcional.
 - [ ] **Video Demo**: "Problema → Solución → Wow factor".
 - [ ] **Technical Case Study**: Documentación de trade-offs y arquitectura senior.
 - [ ] **Portfolio Integration**: Integración en portfolio profesional.
 
-### 🌐 Fase 5: Event-Driven Orchestration & Centralized Intelligence 📋
-
-- [ ] **MIM Event Bus**
-  Bus de eventos centralizado, ligero y completamente tipado para desacoplar la comunicación entre módulos (`FOMO`, `SAGE`, `ALRT`, `TWEAK`, `Watcher`, etc.) mediante arquitectura reactiva basada en eventos.
-
-- [ ] **ALRT Central Intelligence Layer**
-  Evolución del Centro de Alertas hacia un núcleo de inteligencia operacional capaz de escuchar, priorizar, agrupar y contextualizar eventos provenientes de toda la aplicación en tiempo real.
-
-- [ ] **Cross-Module Incident Correlation Engine**
-  Motor reactivo de correlación capaz de detectar relaciones entre eventos independientes y consolidarlos en un único incidente contextual.
-  Ejemplo:
-  `FOMO → mod.downloaded`
-  `SAGE → dependency.missing`
-  `TWEAK → shader.incompatible`
-  ➔ ALRT genera: `"Entorno inconsistente detectado"`.
-
-- [ ] **Incident Persistence & Session Memory**
-  Persistencia local de incidentes, estados `unread/unseen`, historial de resolución y trazabilidad temporal para permitir auditoría, continuidad entre sesiones y debugging avanzado.
-
-- [ ] **Reactive Rule System**
-  Sistema extensible de reglas (`IF event A + event B → create incident`) para automatizar diagnósticos, recomendaciones y flujos de recuperación entre módulos.
-
-### Fase 6: Ecosistema y Comunidad (Futuro) 📋
-- [ ] **Sync en la Nube**: Sincronización de proyectos entre dispositivos.
-- [ ] **Sharing Hub**: Compartir modpacks con la comunidad.
-- [ ] **Mod Developer Tools**: Herramientas para creadores de mods.
-- [ ] **Analytics Dashboard**: Métricas de uso y rendimiento.
-
----
 
 ## 📊 Métricas de Éxito
 

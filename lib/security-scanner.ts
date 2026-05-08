@@ -81,12 +81,12 @@ const THREAT_WEIGHTS: Record<ThreatCategory, number> = {
   known_malware: 100,      // Instant max score
   process_execution: 25,     // Very dangerous
   native_code: 20,          // Could be legitimate but risky
-  network_call: 15,         // Common in legit mods (update checks)
-  reflection_abuse: 15,     // Often used for compatibility
-  file_system: 10,          // Context matters
-  obfuscation: 10,          // Could be for protection
-  suspicious_string: 5,      // Weak indicator
-  manifest_anomaly: 3,       // Usually benign
+  network_call: 8,          // Common in legit mods (update checks) - REDUCED
+  reflection_abuse: 8,      // Often used for compatibility - REDUCED
+  file_system: 5,           // Context matters - REDUCED
+  obfuscation: 5,           // Could be for protection - REDUCED
+  suspicious_string: 3,      // Weak indicator - REDUCED
+  manifest_anomaly: 2,       // Usually benign - REDUCED
 };
 
 /** Suspicious patterns in bytecode/strings */
@@ -142,17 +142,57 @@ const OBFUSCATION_PATTERNS = {
   stringEncryption: /for.*\{.*char.*\^.*\}/,
 };
 
-/** Known malware hashes (SHA-1) - Starter database */
+/** Known malware hashes (SHA-1) - Local threat database */
 const KNOWN_MALWARE_HASHES: Set<string> = new Set([
-  // Example entries - in production, this would be regularly updated
-  // "a1b2c3d4e5f6...", // Example malware hash
+  // Add known malicious hashes here
+]);
+
+/** Popular and trusted mods - Whitelist to reduce false positives */
+const TRUSTED_MODS: Set<string> = new Set([
+  // Essential utility mods
+  "fabric-api", "fabricloader", "forge", "neoforge",
+  // Performance mods
+  "sodium", "lithium", "phosphor", "starlight", "rubidium", "krypton", "hydrogen",
+  "optifine", "iris", "oculus", "embeddium", "continuity",
+  // Popular content mods
+  "jei", "jade", "jade-addons", "roughly-enough-items", "roughly-enough-resources",
+  "rei", "hwyla", "wthit", "jade",
+  // Configuration mods
+  "modmenu", "cloth-config", "cloth-config2", "architectury-api", "cardinal-components-api",
+  "mafgs", "mod-fabric-gui-screenshots", "modmenu",
+  // Popular gameplay mods
+  "tweakeroo", "itemscroller", "litematica", "minihud", "replay-mod", "worldedit",
+  "journeymap", "xaeros-minimap", "xaeros-world-map", "ftb-chunks", "ftb-quests",
+  "ftb-library", "ftb-teams", "ftb-backups",
+  // Shader and graphics
+  "complementary-reimagined", "complementary-unbound", "seus", "sildurs-vibrations",
+  "bsl-shaders", "continuity", "distant-horizons", "distant-horizons-fabric",
+  // Technology and automation
+  "techreborn", "applied-energistics-2", "thermal-series", "mekanism", "immersive-engineering",
+  "botania", "create", "refined-storage", "rftools", "industrial-foregoing",
+  // Magic and adventure
+  "botania", "thaumcraft", "blood-magic", "astral-sorcery", "twilight-forest",
+  "the-betweenlands", "aether", "undergarden", "blue-skies",
+  // Multiplayer and utilities
+  "voice-chat", "plasmovoice", "simple-voice-chat", "ferritecore", "memoryleakfix",
+  "krypton", "lazydfu", "entityculling", "no-chat-reports", "no-telemetry",
+  // Building and decoration
+  "chisel", "bibliocraft", "storage-drawers", "quark", "botania", "malisis-doors",
+  "decorative-blocks", "block-carpentry", "little-tiles", "chisels-bits",
 ]);
 
 // ── Whitelist & Cloud Verification Helpers ─────────────────────────────────────
 
 function getWhitelistedMods(): Set<string> {
-  const localWhitelist = require("./data/whitelist.json") as string[];
-  const modsSet = new Set<string>(localWhitelist.map(m => m.toLowerCase().trim()));
+  const modsSet = new Set<string>(TRUSTED_MODS); // Start with trusted mods
+  
+  // Add local whitelist if exists
+  try {
+    const localWhitelist = require("./data/whitelist.json") as string[];
+    localWhitelist.forEach(m => modsSet.add(m.toLowerCase().trim()));
+  } catch {
+    // Local whitelist doesn't exist, continue with trusted mods only
+  }
 
   try {
     const { getPortableDir } = require("./settings");
@@ -164,10 +204,10 @@ function getWhitelistedMods(): Set<string> {
       }
       const portableFile = path.join(portableDir, "whitelist.json");
       
-      // If portable whitelist does not exist, initialize it with defaults for user customizability
+      // If portable whitelist does not exist, initialize it with trusted mods
       if (!fs.existsSync(portableFile)) {
         try {
-          fs.writeFileSync(portableFile, JSON.stringify(localWhitelist, null, 2), "utf-8");
+          fs.writeFileSync(portableFile, JSON.stringify(Array.from(TRUSTED_MODS), null, 2), "utf-8");
           console.log(`[Security] Initialized portable whitelist file at: ${portableFile}`);
         } catch (err) {
           console.error("[Security] Failed to initialize portable whitelist:", err);
@@ -193,6 +233,25 @@ function getWhitelistedMods(): Set<string> {
   }
 
   return modsSet;
+}
+
+function isTrustedMod(modId: string, filename: string): boolean {
+  const whitelistSet = getWhitelistedMods();
+  
+  // Check exact mod ID match
+  if (whitelistSet.has(modId.toLowerCase())) {
+    return true;
+  }
+  
+  // Check filename contains trusted mod name
+  const filenameLower = filename.toLowerCase();
+  for (const trustedMod of whitelistSet) {
+    if (filenameLower.includes(trustedMod)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 function calculateSha256(filePath: string): string {
@@ -246,6 +305,60 @@ async function checkVirusTotalHash(sha256: string): Promise<{ maliciousCount: nu
 }
 
 
+// ── Security Cache ──────────────────────────────────────────────────────────────
+
+interface SecurityCacheEntry {
+  mtime: number;
+  size: number;
+  result: SecurityScanResult;
+}
+
+interface SecurityCache {
+  version: number;
+  entries: Record<string, SecurityCacheEntry>;
+}
+
+let securityCache: SecurityCache | null = null;
+
+function getCacheFilePath(): string {
+  try {
+    const { SOURCE_BASE } = require("./constants");
+    return path.join(SOURCE_BASE, ".mim-index", "security-cache.json");
+  } catch {
+    return path.join(process.cwd(), ".mim-index", "security-cache.json");
+  }
+}
+
+function loadSecurityCache(): SecurityCache {
+  if (securityCache) return securityCache;
+  
+  securityCache = { version: 1, entries: {} };
+  try {
+    const cacheFile = getCacheFilePath();
+    if (fs.existsSync(cacheFile)) {
+      const content = fs.readFileSync(cacheFile, "utf-8");
+      securityCache = JSON.parse(content);
+    }
+  } catch (error) {
+    console.error("[Security Cache] Error loading cache file, resetting cache:", error);
+  }
+  return securityCache!;
+}
+
+function saveSecurityCache() {
+  if (!securityCache) return;
+  try {
+    const cacheFile = getCacheFilePath();
+    const dir = path.dirname(cacheFile);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(cacheFile, JSON.stringify(securityCache, null, 2), "utf-8");
+  } catch (error) {
+    console.error("[Security Cache] Error writing cache to disk:", error);
+  }
+}
+
 // ── Main Scanner Function ───────────────────────────────────────────────────────
 
 /**
@@ -255,6 +368,16 @@ async function checkVirusTotalHash(sha256: string): Promise<{ maliciousCount: nu
  * @returns SecurityScanResult with risk assessment
  */
 export async function scanSecurity(filePath: string): Promise<SecurityScanResult> {
+  // Check cache first!
+  try {
+    const stats = fs.statSync(filePath);
+    const cache = loadSecurityCache();
+    const cached = cache.entries[filePath];
+    if (cached && cached.mtime === stats.mtimeMs && cached.size === stats.size) {
+      return cached.result;
+    }
+  } catch (_) {}
+
   const findings: SecurityFinding[] = [];
   const scannedAt = new Date().toISOString();
 
@@ -275,45 +398,40 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
     return buildResult(100, findings, sha1, scannedAt, sha256, null);
   }
 
-  // ── Whitelist & Verification Check (Local Whitelist System) ──────────────────
-  const whitelistSet = getWhitelistedMods();
-  let isWhitelisted = false;
+  // ── Enhanced Whitelist & Verification Check ───────────────────────────────
   let modId = "";
+  let isTrusted = false;
+  
   try {
     const { scanMod } = require("./scanner"); // Dynamic require to avoid circular imports
     const meta = scanMod(filePath);
     modId = meta.modId;
-    if (whitelistSet.has(meta.modId.toLowerCase())) {
-      isWhitelisted = true;
-    }
+    isTrusted = isTrustedMod(meta.modId, path.basename(filePath));
   } catch {
     // If scanning metadata fails, fall back to filename checking
-  }
-
-  // Fallback to filename-based whitelist checking
-  if (!isWhitelisted) {
-    const filenameLower = path.basename(filePath).toLowerCase();
-    for (const item of whitelistSet) {
-      if (filenameLower.includes(item)) {
-        isWhitelisted = true;
-        modId = item;
-        break;
-      }
-    }
-  }
-
-  if (isWhitelisted) {
-    findings.push({
-      category: "manifest_anomaly",
-      severity: "info",
-      description: `🛡️ Mod verificado oficialmente (${modId || "Comunidad"})`,
-      details: ["Este mod es popular y confiable. Las advertencias de bytecode se marcan como seguras para evitar falsos positivos."],
-      scoreImpact: 0,
-    });
+    const filename = path.basename(filePath);
+    isTrusted = isTrustedMod("", filename);
   }
 
   // ── VirusTotal Reputation Check (Cloud Threat DB) ───────────────────────────
   let vtResult = null;
+
+  if (isTrusted) {
+    findings.push({
+      category: "manifest_anomaly",
+      severity: "info",
+      description: `🛡️ Mod Coliable (${modId || "Reconocido"})`,
+      details: ["Este mod es popular y verificado por la comunidad. Las advertencias de bytecode se marcan como seguras."],
+      scoreImpact: 0,
+    });
+    
+    // Para mods coliables, reducir drásticamente el impacto de otros findings
+    const originalFindings = [...findings];
+    findings.length = 0; // Limpiar findings anteriores
+    findings.push(originalFindings[originalFindings.length - 1]); // Mantener solo el mensaje de confianza
+    
+    return buildResult(0, findings, sha1, scannedAt, sha256, vtResult);
+  }
   try {
     vtResult = await checkVirusTotalHash(sha256);
     if (vtResult) {
@@ -343,6 +461,14 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
     const zip = new AdmZip(filePath);
     const entries = zip.getEntries();
 
+    const globalFindingsMap = new Map<string, SecurityFinding>();
+    
+    // Add existing findings (like blacklist, trusted status, or VirusTotal results) to the map
+    for (const f of findings) {
+      const key = `${f.category}:${f.description}`;
+      globalFindingsMap.set(key, { ...f, details: f.details ? [...f.details] : [] });
+    }
+
     // Analyze each class file
     let classFileCount = 0;
     let obfuscatedClassCount = 0;
@@ -365,7 +491,24 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
 
         // Analyze bytecode for suspicious patterns
         const bytecodeFindings = analyzeBytecode(entry.getData());
-        findings.push(...bytecodeFindings);
+        for (const bf of bytecodeFindings) {
+          const key = `${bf.category}:${bf.description}`;
+          if (globalFindingsMap.has(key)) {
+            const existing = globalFindingsMap.get(key)!;
+            if (existing.details && !existing.details.includes(className)) {
+              if (existing.details.length < 5) {
+                existing.details.push(className);
+              } else if (existing.details.length === 5) {
+                existing.details.push("... y más clases");
+              }
+            }
+          } else {
+            globalFindingsMap.set(key, {
+              ...bf,
+              details: [className]
+            });
+          }
+        }
       }
 
       // Analyze manifest, metadata and config files for suspicious strings
@@ -379,12 +522,24 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
         try {
           const content = entry.getData().toString("utf-8");
           const stringFindings = analyzeStrings(content, entryName);
-          findings.push(...stringFindings);
+          for (const sf of stringFindings) {
+            const key = `${sf.category}:${sf.description}`;
+            if (!globalFindingsMap.has(key)) {
+              globalFindingsMap.set(key, {
+                ...sf,
+                details: [`Encontrado en ${entryName}`]
+              });
+            }
+          }
         } catch {
           // Binary file or unreadable, skip
         }
       }
     }
+
+    // Rebuild findings array from our deduplicated map
+    findings.length = 0;
+    findings.push(...Array.from(globalFindingsMap.values()));
 
     // Check obfuscation ratio
     if (classFileCount > 0) {
@@ -421,18 +576,45 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
     });
   }
 
-  // Calculate total risk score
+  // Calculate total risk score with optimized scoring
   let totalScore = findings.reduce((sum, f) => sum + f.scoreImpact, 0);
-  const hasCriticalMalware = findings.some(f => f.category === "known_malware" && f.severity === "critical");
 
-  if (isWhitelisted && !hasCriticalMalware) {
-    // Whitelisted mods are capped at a very safe score of 15 (Clean) to ignore bytecode false positives
-    totalScore = Math.min(15, Math.max(0, totalScore));
-  } else {
-    totalScore = Math.min(100, Math.max(0, totalScore));
+  // Apply scoring optimizations for common false positives
+  if (totalScore > 0 && totalScore < 40) {
+    // Para scores bajos, reducir aún más si hay VirusTotal limpio
+    if (vtResult && vtResult.maliciousCount === 0 && vtResult.totalEngineCount > 0) {
+      totalScore = Math.max(0, totalScore - 10); // Reducir score si VT confirma que es limpio
+    }
+    
+    // Si solo hay findings de bajo riesgo, marcar como limpio
+    const hasOnlyLowRiskFindings = findings.every(f => 
+      f.category === "network_call" || 
+      f.category === "reflection_abuse" || 
+      f.category === "manifest_anomaly"
+    );
+    
+    if (hasOnlyLowRiskFindings && totalScore < 25) {
+      totalScore = 0; // Marcar como completamente limpio
+    }
   }
 
-  return buildResult(totalScore, findings, sha1, scannedAt, sha256, vtResult);
+  const finalResult = buildResult(totalScore, findings, sha1, scannedAt, sha256, vtResult);
+
+  // Save to cache
+  try {
+    const stats = fs.statSync(filePath);
+    const cache = loadSecurityCache();
+    cache.entries[filePath] = {
+      mtime: stats.mtimeMs,
+      size: stats.size,
+      result: finalResult
+    };
+    saveSecurityCache();
+  } catch (err) {
+    console.error("[Security Scanner] Failed to write cache entry:", err);
+  }
+
+  return finalResult;
 }
 
 // ── Analysis Helpers ─────────────────────────────────────────────────────────────

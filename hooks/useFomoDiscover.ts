@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/types";
 import { SORT_OPTIONS } from "../constants/app";
 import type { SortOrder } from "../constants/app";
+import { eventBus } from "@/lib/eventBus";
 
 export interface PendingDependency {
   projectId: string;
@@ -205,6 +206,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           ));
         }
       }
+      
+      // Emit search event
+      if (q?.trim()) {
+        eventBus.emit("fomo:search", { query: q.trim(), source });
+      }
+
     } catch (err) {
       console.warn("[useFomoDiscover] Error fetching mods:", err);
       setMods([]);
@@ -318,7 +325,15 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       const dlRes = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: downloadUrl, filename, hashes }),
+        body: JSON.stringify({
+          url: downloadUrl,
+          filename,
+          hashes,
+          iconUrl: mod.iconUrl,
+          projectId: mod.projectId,
+          loader,
+          gameVersion: gameVersions[0] || "1.20.1"
+        }),
       });
       const dlData = await dlRes.json().catch(() => ({}));
 
@@ -329,6 +344,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           showStatus(`${mod.title} descargado con éxito`, "success");
         }
         setSelectingVersionFor(null);
+
+        // Emitir evento de descarga exitosa
+        eventBus.emit("fomo:mod-downloaded", {
+          modId: mod.projectId,
+          fileName: filename,
+          source: modSource as any
+        });
 
         // Descargar dependencias si las hay
         if (depsToDownload && depsToDownload.length > 0) {

@@ -7,6 +7,7 @@
 
 import React, { memo, useCallback, useMemo } from "react";
 import { Folder, AlertTriangle, Download, Loader2, Trash2, ArrowUp, X, Shield, Info } from "lucide-react";
+import { SecurityBadgeCompact } from "@/components/security/SecurityBadge";
 import { LOADER_STYLES } from "@/theme/tokens";
 import { COLORS } from "@/theme/tokens";
 import type { LoaderKey } from "@/theme/tokens";
@@ -33,8 +34,15 @@ interface ModCardProps {
   onDelete?:     () => void;
   isDeleting?:   boolean;
   riskScore?:    number;
+  riskLevel?:    "clean" | "caution" | "suspicious" | "critical";
+  virusTotal?:   {
+    maliciousCount: number;
+    totalEngineCount: number;
+    detailsUrl?: string;
+  } | null;
   categories?:   string[];
   onOpenDetails?: () => void;
+  onSecurityDetails?: () => void;
   conflict?:     string;
   hasUpdate?:    boolean;
 }
@@ -52,8 +60,8 @@ export const ModCard = memo(function ModCard({
   name, version, modVersion, loader, isSelected, onClick,
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
-  isPending, onDelete, isDeleting, riskScore, author, categories,
-  onOpenDetails, conflict, hasUpdate,
+  isPending, onDelete, isDeleting, riskScore, riskLevel, virusTotal, author, categories,
+  onOpenDetails, onSecurityDetails, conflict, hasUpdate,
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -114,14 +122,9 @@ export const ModCard = memo(function ModCard({
     e.stopPropagation(); onOpenDetails?.();
   }, [onOpenDetails]);
 
-  const getSecurityColor = (score?: number) => {
-    if (score === undefined) return null;
-    if (score <= 30) return { color: "#22c55e", bg: "rgba(34,197,94,0.12)", label: "✓ Seguro" };
-    if (score <= 60) return { color: "#eab308", bg: "rgba(234,179,8,0.12)", label: "⚠ Precaución" };
-    if (score <= 85) return { color: "#f97316", bg: "rgba(249,115,22,0.12)", label: "⚠ Sospechoso" };
-    return { color: "#ef4444", bg: "rgba(239,68,68,0.12)", label: "✕ Crítico" };
-  };
-  const securityInfo = getSecurityColor(riskScore);
+  const stopPropSecurityDetails = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); onSecurityDetails?.();
+  }, [onSecurityDetails]);
 
   return (
     <article
@@ -172,6 +175,15 @@ export const ModCard = memo(function ModCard({
               </p>
               
               <div className="flex items-center gap-1.5 shrink-0">
+                {/* Security Badge */}
+                {riskScore !== undefined && riskLevel && (
+                  <SecurityBadgeCompact
+                    riskScore={riskScore}
+                    riskLevel={riskLevel}
+                    onClick={() => onSecurityDetails?.()}
+                  />
+                )}
+                
                  {onOpenDetails && (
                    <button
                      onClick={stopPropDetails}
@@ -228,13 +240,7 @@ export const ModCard = memo(function ModCard({
                 </span>
               )}
               
-              {securityInfo && (
-                <span className="font-label rounded-full px-2 py-0.5 flex items-center gap-1 shrink-0" style={{ background: securityInfo.bg, color: securityInfo.color, fontSize: "0.55rem" }}>
-                  <Shield className="w-2.5 h-2.5" />
-                  {securityInfo.label}
-                </span>
-              )}
-            </div>
+                          </div>
           </div>
         </div>
 

@@ -16,11 +16,10 @@ interface FomoVersionOverlayProps {
   projectType: string;
   onClose:     () => void;
   onDownload:  (mod: ModHit, version: VersionEntry) => void;
-  onDownloadDependency?: (dependency: any) => void;
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onDownloadDependency,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload,
 }: FomoVersionOverlayProps) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">("versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
@@ -96,7 +95,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       const depVersions = await versionsRes.json();
       if (!depVersions || depVersions.length === 0) throw new Error("No hay versiones compatibles");
 
-      const primaryFileRaw = depVersions[0].files.find((f: any) => f.primary) || depVersions[0].files[0];
+      const primaryFileRaw = depVersions[0].files.find((f: { primary?: boolean }) => f.primary) || depVersions[0].files[0];
 
       // 3. Download the latest one
       onDownload(depMod, {
@@ -119,8 +118,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
         } : null,
       });
     } catch (err) {
-      console.error("Error downloading dependency:", err);
-      alert(err instanceof Error ? err.message : "Error al descargar la dependencia");
+      console.error(`Error downloading dependency ${depTitle}:`, err);
+      alert(err instanceof Error ? err.message : `Error al descargar la dependencia ${depTitle}`);
     } finally {
       setDepDownloading(null);
     }
@@ -174,6 +173,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       <div className="px-5 py-5 flex flex-col gap-5 border-b" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border shadow-sm" style={{ background: "var(--color-hover)", borderColor: COLORS.borderStrong }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             {mod.iconUrl && <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />}
           </div>
           <div className="min-w-0 flex-1">
@@ -194,7 +194,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
         {/* New: Quick Metadata Grid */}
         <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-[140px] p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
+          <div className="flex-1 min-w-35 p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
             <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Entorno</p>
             <div className="flex flex-wrap gap-1.5">
               <EnvironmentBadge type={mod.client_side || "unknown"} label="Cliente" icon={<Laptop className="w-3 h-3" />} />
@@ -202,7 +202,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             </div>
           </div>
 
-          <div className="flex-1 min-w-[110px] p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
+          <div className="flex-1 min-w-27.5 p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
             <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Plataformas</p>
             <div className="flex flex-wrap gap-1">
               {Array.from(new Set(versions.flatMap(v => v.loaders))).map(l => (
@@ -287,7 +287,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
               </div>
             ) : (
               <div 
-                className="text-sm font-body break-words"
+                className="text-sm font-body wrap-break-word"
                 style={{ lineHeight: "1.7", color: COLORS.foreground }}
                 onClick={handleDescriptionClick}
                 dangerouslySetInnerHTML={{ __html: descriptionHtml }}
@@ -550,7 +550,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={`Detalles de ${mod.title}`}
-      className="absolute inset-0 z-[60] flex flex-col backdrop-blur-xl animate-fade-in"
+      className="absolute inset-0 z-60 flex flex-col backdrop-blur-xl animate-fade-in"
       style={{ background: "color-mix(in srgb, var(--color-background) 80%, transparent)" }}
     >
       {content}

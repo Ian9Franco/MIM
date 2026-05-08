@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { Flame, X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow } from "lucide-react";
+import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -32,8 +32,7 @@ import { FomoVersionOverlay }  from "./FomoVersionOverlay";
 import { FomoCollections }     from "./FomoCollections";
 import { FomoSkeleton }        from "./FomoSkeleton";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
-import type { ModHit, VersionEntry, Project } from "@/lib/types";
-import type { SortOrder } from "@/constants/app";
+import type { ModHit, Project } from "@/lib/types";
 import "./fomo.css";
 
 type Mode = "discover" | "collections";
@@ -91,26 +90,34 @@ export function FomoSidebar({
 
   const { status, showStatus, clearStatus } = useStatusBanner();
   const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
+  const {
+    setLoader,
+    setGameVersions,
+    setSinytraActive,
+    setSelectingVersionFor,
+    setQuery,
+    handleOpenVersionSelector,
+  } = discover;
 
   React.useEffect(() => {
     if (activeProject) {
-      discover.setLoader(activeProject.loader);
-      discover.setGameVersions([activeProject.version]);
+      setLoader(activeProject.loader);
+      setGameVersions([activeProject.version]);
       
       // Auto-detect Sinytra Connector
       fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
         .then(r => r.json())
         .then(data => {
-          const hasConnector = data.library?.some((m: any) => 
+          const hasConnector = data.library?.some((m: { meta?: { modId?: string }; fileName: string }) => 
             m.meta?.modId === "connector" || 
             m.fileName.toLowerCase().includes("connector") || 
             m.fileName.toLowerCase().includes("sinytra")
           );
-          discover.setSinytraActive(!!hasConnector);
+          setSinytraActive(!!hasConnector);
         })
         .catch(err => console.warn("[FomoSidebar] Error detecting Sinytra Connector:", err));
     }
-  }, [activeProject]);
+  }, [activeProject, setLoader, setGameVersions, setSinytraActive]);
 
   React.useEffect(() => {
     const isDetailsOpen = !!discover.selectingVersionFor;
@@ -124,7 +131,7 @@ export function FomoSidebar({
       const customEvent = e as CustomEvent<ModHit>;
       if (customEvent.detail) {
         setMode("discover");
-        discover.handleOpenVersionSelector(customEvent.detail);
+        handleOpenVersionSelector(customEvent.detail);
       }
     };
 
@@ -136,15 +143,15 @@ export function FomoSidebar({
         window.removeEventListener("fomo-open-details", handleExternalDetails);
       }
     };
-  }, [discover]);
+  }, [handleOpenVersionSelector]);
 
   React.useEffect(() => {
     const handleSearchAndOpen = (e: Event) => {
       const customEvent = e as CustomEvent<{ query: string }>;
       if (customEvent.detail && customEvent.detail.query) {
         setMode("discover");
-        discover.setSelectingVersionFor(null);
-        discover.setQuery(customEvent.detail.query);
+        setSelectingVersionFor(null);
+        setQuery(customEvent.detail.query);
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
         }
@@ -159,16 +166,16 @@ export function FomoSidebar({
         window.removeEventListener("fomo-search-and-open", handleSearchAndOpen);
       }
     };
-  }, [discover]);
+  }, [setSelectingVersionFor, setQuery]);
 
   React.useEffect(() => {
     if (!open) {
-      discover.setSelectingVersionFor(null);
+      setSelectingVersionFor(null);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: false } }));
       }
     }
-  }, [open, discover]);
+  }, [open, setSelectingVersionFor]);
 
   const handleAddToCollection = useCallback((mod: ModHit) => {
     setAddingToCollectionFor(mod);
@@ -218,7 +225,7 @@ export function FomoSidebar({
               </div>
               <div>
                 <h2 className="font-headline text-base leading-none" style={{ color: COLORS.foreground }}>FOMO</h2>
-                <p className="font-label text-[8px] opacity-40 mt-1 tracking-[0.1em] uppercase">
+                <p className="font-label text-[8px] opacity-40 mt-1 tracking-widest uppercase">
                   {SIDEBAR_TITLE[mode](discover.source)}
                 </p>
               </div>
@@ -231,7 +238,7 @@ export function FomoSidebar({
               options={TAB_OPTIONS} 
               value={mode} 
               onChange={(v) => setMode(v as Mode)} 
-              className="p-1.5 min-w-[280px]" 
+              className="p-1.5 min-w-70" 
               style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
               ariaLabel="Secciones de FOMO" 
             />
@@ -244,8 +251,8 @@ export function FomoSidebar({
               <PillToggleGroup 
                 options={SOURCE_OPTIONS} 
                 value={discover.source} 
-                onChange={(v) => discover.setSource(v as any)} 
-                className="p-1.5 shadow-inner min-w-[240px]" 
+                onChange={(v) => discover.setSource(v as "modrinth" | "curseforge")} 
+                className="p-1.5 shadow-inner min-w-60" 
                 style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
                 ariaLabel="Fuente de mods" 
               />
@@ -281,7 +288,7 @@ export function FomoSidebar({
             {/* Left Sidebar Filters */}
             <div className="p-4 pr-2 flex flex-col h-full shrink-0">
               <aside 
-                className="w-[260px] flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 p-5 rounded-2xl border"
+                className="w-65 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 p-5 rounded-2xl border"
                 style={{ 
                   background: "color-mix(in srgb, var(--color-card) 50%, transparent)", 
                   borderColor: "var(--fomo-border)" 
@@ -326,10 +333,10 @@ export function FomoSidebar({
                         }`}
                       >
                         <div 
-                          className={`w-3.5 h-3.5 rounded-full absolute top-[2px] transition-all duration-300 ${
+                          className={`w-3.5 h-3.5 rounded-full absolute top-0.5 transition-all duration-300 ${
                             discover.sinytraActive 
-                              ? "left-[18px] bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" 
-                              : "left-[3px] bg-foreground/40"
+                              ? "left-4.5 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" 
+                              : "left-0.75 bg-foreground/40"
                           }`}
                         />
                       </button>
@@ -358,19 +365,19 @@ export function FomoSidebar({
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Toolbar: Search */}
               <div className="px-6 py-4 flex items-center gap-4 border-b shrink-0 fomo-header-border" style={{ borderColor: "var(--color-border)" }}>
-                <div className="flex-1 flex items-center gap-3 rounded-xl px-4 py-2.5 bg-[var(--fomo-secondary-bg)] border border-[var(--fomo-border)] focus-within:border-primary/50 transition-all">
-                  <Search className="w-5 h-5 text-[var(--fomo-text-muted)] opacity-50" />
+                <div className="flex-1 flex items-center gap-3 rounded-xl px-4 py-2.5 bg-(--fomo-secondary-bg) border border-(--fomo-border) focus-within:border-primary/50 transition-all">
+                  <Search className="w-5 h-5 text-(--fomo-text-muted) opacity-50" />
                   <input
                     type="search"
                     value={discover.query}
                     onChange={(e) => discover.setQuery(e.target.value)}
                     placeholder={`Buscar en ${discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
-                    className="flex-1 bg-transparent border-none !outline-none focus:!outline-none focus-visible:!outline-none !ring-0 text-sm font-medium text-[var(--fomo-text-primary)] placeholder:text-[var(--fomo-text-muted)]/50"
+                    className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-sm font-medium text-(--fomo-text-primary) placeholder:text-(--fomo-text-muted)/50"
                     style={{ outline: "none", boxShadow: "none" }}
                   />
                   {discover.query && (
-                    <button onClick={() => discover.setQuery("")} className="p-1 hover:bg-[var(--fomo-secondary-bg)] rounded-full">
-                      <X className="w-4 h-4 text-[var(--fomo-text-muted)]" />
+                    <button onClick={() => setQuery("")} className="p-1 hover:bg-(--fomo-secondary-bg) rounded-full">
+                      <X className="w-4 h-4 text-(--fomo-text-muted)" />
                     </button>
                   )}
                 </div>
@@ -524,6 +531,7 @@ export function FomoSidebar({
                   style={{ background: "var(--color-secondary-bg)" }}
                 >
                   {dep.iconUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={dep.iconUrl} alt="" className="w-6 h-6 rounded" />
                   ) : (
                     <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: "var(--color-hover)" }}>

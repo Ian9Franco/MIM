@@ -12,7 +12,7 @@
 
 import React, { memo } from "react";
 import {
-  Flame, ExternalLink, Download, Loader2, Library, ListTree, Layers3, CheckCircle2, Circle, Check, Info, Droplet
+  Flame, ExternalLink, Download, Loader2, Library, ListTree, CheckCircle2, Circle
 } from "lucide-react";
 import { formatNumber, openExternal, CATEGORY_TRANSLATIONS } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
@@ -106,7 +106,10 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
             style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.borderStrong }}
           >
             {mod.iconUrl
-              ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} loading="lazy" />
+              ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} loading="lazy" />
+              )
               : <Flame className="w-7 h-7 opacity-25" aria-hidden="true" />
             }
           </div>
@@ -225,7 +228,7 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
         {/* SECCIÓN DE TAGS - Altura fija */}
         {mod.categories && mod.categories.length > 0 && (
           <div className="mt-2" style={{ height: "36px" }}>
-            <p className="text-[0.62rem] font-black uppercase tracking-[0.1em] mb-1 opacity-30" style={{ color: COLORS.foreground, height: "12px" }}>Tags</p>
+            <p className="text-[0.62rem] font-black uppercase tracking-widest mb-1 opacity-30" style={{ color: COLORS.foreground, height: "12px" }}>Tags</p>
             <div className="flex flex-wrap gap-1.5" style={{ height: "20px" }}>
               {mod.categories
                 .filter(cat => !["forge", "fabric", "neoforge", "quilt", "iris", "optifine"].includes(cat.toLowerCase()))

@@ -37,7 +37,7 @@ export const FomoPagination = memo(function FomoPagination({
   return (
     <nav
       aria-label="Paginación de mods"
-      className="flex items-center justify-between px-4 py-3.5 border-t shrink-0 gap-2 fomo-pagination-bar rounded-bl-[2rem] rounded-br-[2.5rem]"
+      className="flex items-center justify-between px-4 py-3.5 border-t shrink-0 gap-2 fomo-pagination-bar rounded-bl-4xl rounded-br-[2.5rem]"
       style={{ borderColor: "var(--color-border)" }}
     >
       <button

@@ -310,7 +310,7 @@ export const FomoModCard = memo(function FomoModCard({
         {/* Tags Section */}
         {mod.categories && mod.categories.length > 0 && (
           <div className="mt-4">
-            <p className="text-[0.62rem] font-black uppercase tracking-[0.1em] mb-2 opacity-30" style={{ color: COLORS.foreground }}>Tags</p>
+            <p className="text-[0.62rem] font-black uppercase tracking-widest mb-2 opacity-30" style={{ color: COLORS.foreground }}>Tags</p>
             <div className="flex flex-wrap gap-1.5">
               {mod.categories
                 .filter(cat => !["forge", "fabric", "neoforge", "quilt", "iris", "optifine"].includes(cat.toLowerCase()))

@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, memo } from "react";
-import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, AlertTriangle, Download } from "lucide-react";
+import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, Download } from "lucide-react";
 import {
   fetchCollections,
   fetchCollectionMods,
@@ -17,7 +17,7 @@ import {
   downloadCollection,
 } from "@/services/api";
 import { COLORS } from "@/theme/tokens";
-import { LoadingSpinner, EmptyState } from "../ui/primitives";
+import { EmptyState } from "../ui/primitives";
 import { FomoSkeleton }               from "./FomoSkeleton";
 import { FomoModCard }               from "./FomoModCard";
 import type { CollectionEntry, ModHit } from "@/lib/types";
@@ -39,6 +39,12 @@ interface FomoCollectionsProps {
   sinytraActive?: boolean;
 }
 
+interface LibraryUpdateInfo {
+  projectId: string;
+  status:    string;
+  [key: string]: unknown;
+}
+
 export const FomoCollections = memo(function FomoCollections({
   loader, gameVersion, onStatus, addingForMod, onClearAddingFor,
   downloading, onDownloadMod, onOpenVersions,
@@ -58,7 +64,7 @@ export const FomoCollections = memo(function FomoCollections({
   const [deletingColl,   setDeletingColl]   = useState<string | null>(null);
   const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null);
 
-  const [libraryUpdates, setLibraryUpdates] = useState<Record<string, any>>({});
+  const [libraryUpdates, setLibraryUpdates] = useState<Record<string, LibraryUpdateInfo>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,7 +78,7 @@ export const FomoCollections = memo(function FomoCollections({
 
   useEffect(() => {
     const handleUpdates = (e: Event) => {
-      const customEvent = e as CustomEvent<Record<string, any>>;
+      const customEvent = e as CustomEvent<Record<string, LibraryUpdateInfo>>;
       if (customEvent.detail) {
         setLibraryUpdates(customEvent.detail);
       }
@@ -194,6 +200,7 @@ export const FomoCollections = memo(function FomoCollections({
         onStatus(data.error || "Error al eliminar colección", "error");
       }
     } catch (err) {
+      console.error("Error deleting collection:", err);
       onStatus("Error de red al eliminar colección", "error");
     } finally {
       setDeletingColl(null);
@@ -201,15 +208,13 @@ export const FomoCollections = memo(function FomoCollections({
     }
   }, [onStatus, load]);
 
-  // Collection-selector overlay (when adding a mod to a collection)
   if (addingForMod || creating || (selectedMods.length > 0 && !viewing)) {
-    const isBulk = selectedMods.length > 1 && !addingForMod;
     return (
       <div className="flex-1 flex flex-col p-4 space-y-3 overflow-y-auto custom-scrollbar">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-headline text-lg">{creating ? "Nueva Colección" : "Añadir a Colección"}</h3>
-            <p className="font-caption text-xs mt-1 truncate max-w-[340px]" style={{ color: COLORS.muted }}>
+            <p className="font-caption text-xs mt-1 truncate max-w-85" style={{ color: COLORS.muted }}>
               {creating 
                 ? "Crea una nueva colección" 
                 : (addingForMod ? `Para: "${addingForMod.title}"` : `Para: ${selectedMods.length} items seleccionados`)}
@@ -247,7 +252,7 @@ export const FomoCollections = memo(function FomoCollections({
             />
             <div className="flex gap-2">
               <button onClick={() => setCreating(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5" style={{ color: COLORS.muted }}>Cancelar</button>
-              <button onClick={() => handleCreate(newName)} className="flex-[2] py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20" style={{ background: COLORS.primary, color: "white" }}>
+              <button onClick={() => handleCreate(newName)} className="flex-2 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20" style={{ background: COLORS.primary, color: "white" }}>
                 {targetType === "modrinth" ? "Crear en Modrinth" : "Crear Local"}
               </button>
             </div>
@@ -261,6 +266,7 @@ export const FomoCollections = memo(function FomoCollections({
             {collections.filter((c) => c.id !== "followed-projects").map((coll) => (
               <button key={coll.id} onClick={() => handleAddTo(coll)} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-transparent hover:border-primary/30 hover:bg-white/10 transition-all text-left group">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-5 h-5 opacity-40" style={{ color: COLORS.primary }} />}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -312,7 +318,7 @@ export const FomoCollections = memo(function FomoCollections({
                   onToggleSelect={onToggleSelect}
                   sinytraActive={sinytraActive}
                   hasUpdateAvailable={Object.values(libraryUpdates).some(
-                    (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                    (s: LibraryUpdateInfo) => s.projectId === mod.projectId && s.status === "update_available"
                   )}
                 />
               ))}
@@ -374,6 +380,7 @@ export const FomoCollections = memo(function FomoCollections({
           <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
             <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
               <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-6 h-6 opacity-30" style={{ color: COLORS.primary }} />}
               </div>
               <div className="flex-1 min-w-0">

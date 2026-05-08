@@ -394,7 +394,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   return (
     <aside 
       ref={sidebarRef}
-      className={`fixed inset-y-0 right-0 w-[400px] z-[100] flex flex-col shadow-2xl border-l transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
+      className={`fixed inset-y-0 right-0 w-100 z-100 flex flex-col shadow-2xl border-l transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
       style={{ 
@@ -723,7 +723,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setListeningKey(kb.id)}
-                                className={`px-2 py-1 rounded-lg border text-[10px] font-label uppercase min-w-[60px] text-center transition-all duration-200 ease-out hover:scale-105 active:scale-95 ${
+                                className={`px-2 py-1 rounded-lg border text-[10px] font-label uppercase min-w-15 text-center transition-all duration-200 ease-out hover:scale-105 active:scale-95 ${
                                   listeningKey === kb.id 
                                     ? "bg-primary border-primary text-white animate-pulse scale-110" 
                                     : "bg-white/10 border-white/10 text-white group-hover:border-primary/30 group-hover:bg-white/20"

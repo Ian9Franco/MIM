@@ -285,8 +285,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-[150] border-b border-primary/20 bg-background/80 backdrop-blur-xl">
-          <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between gap-6">
+        <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
+          <div className="max-w-400 mx-auto px-6 py-4 flex items-center justify-between gap-6">
 
             {/* Left side: FOMO toggle + App Title */}
             <div className="flex items-center gap-6 animate-fade-up">
@@ -342,10 +342,10 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
               {/* App Title Wrapper with Premium Styling */}
               <div className="flex flex-col relative group/title">
                 {/* Decorative background glow for the title area */}
-                <div className="absolute -inset-x-4 -inset-y-2 bg-gradient-to-r from-primary/5 via-transparent to-transparent rounded-2xl opacity-0 group-hover/title:opacity-100 transition-opacity duration-500" />
+                <div className="absolute -inset-x-4 -inset-y-2 bg-linear-to-r from-primary/5 via-transparent to-transparent rounded-2xl opacity-0 group-hover/title:opacity-100 transition-opacity duration-500" />
                 
                 <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
-                  <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent flex items-center gap-3">
+                  <span className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent flex items-center gap-3">
                     <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
                     MIM
                   </span>
@@ -353,7 +353,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                   {/* Premium divider & decorative gliph */}
                   <div className="w-px h-4 bg-primary/30" />
                   
-                  <span className="font-caption text-[10px] text-primary/80 uppercase tracking-[0.2em] font-medium hidden sm:inline-block translate-y-[1px]">
+                  <span className="font-caption text-[10px] text-primary/80 uppercase tracking-[0.2em] font-medium hidden sm:inline-block translate-y-px">
                     Intelligent <span className="text-foreground/40">Manager</span>
                   </span>
 
@@ -471,13 +471,13 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* ── Main Content Area ───────────────────────────────────────────────── */}
-        <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <main className="flex-1 w-full max-w-400 mx-auto px-4 sm:px-6 py-8 sm:py-10">
           {children}
         </main>
 
         {/* ── Sticky Footer ───────────────────────────────────────────────────── */}
         <footer className="px-6 py-10 border-t border-primary/10 bg-background/40 backdrop-blur-md">
-          <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60 hover:opacity-100 transition-opacity duration-700">
+          <div className="max-w-400 mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60 hover:opacity-100 transition-opacity duration-700">
             
             <div className="flex flex-col items-center md:items-start gap-2">
               <div className="flex items-center gap-2">
@@ -514,7 +514,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden lg:block">
-              <p className="text-[10px] text-foreground/20 font-thin italic max-w-[200px] text-right leading-relaxed">
+              <p className="text-[10px] text-foreground/20 font-thin italic max-w-50 text-right leading-relaxed">
                 Hecho con mucho cold brew y demasiadas <br /> noches sin dormir por Ian.
               </p>
             </div>

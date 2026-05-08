@@ -332,7 +332,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
                     key={env.value}
                     onClick={() => toggleFilter(environments, onEnvironments, env.value)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
-                      active ? "bg-[var(--color-emerald)]/15 text-[var(--color-emerald)] border-[var(--color-emerald)]/30" : "fomo-pill-inactive"
+                      active ? "bg-(--color-emerald)/15 text-(--color-emerald) border-(--color-emerald)/30" : "fomo-pill-inactive"
                     }`}
                   >
                     {env.value === 'client' ? <Laptop className="w-3 h-3" /> : env.value === 'server' ? <Server className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
@@ -366,7 +366,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
                         onClick={() => toggleFilter(categories, onCategories, val)}
                         className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[0.65rem] font-bold border transition-all ${
                           active 
-                            ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)] border-[var(--color-primary)]/30" 
+                            ? "bg-primary/15 text-primary border-primary/30" 
                             : "fomo-pill-inactive"
                         }`}
                       >

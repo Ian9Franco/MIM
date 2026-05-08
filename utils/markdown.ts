@@ -58,6 +58,7 @@ export function markdownToHtml(md: string): string {
     .replace(/<br\s*\/?>/gi, (match) => preserve(match));
 
   html = escapeHtml(html)
+    .replace(/HTMLBLOCK(\d+)/g, "") // Limpiar marcadores residuales de la API
     .replace(/^###\s+(.*)$/gim, '<h3 class="text-lg font-bold mt-5 mb-2 text-white">$1</h3>')
     .replace(/^##\s+(.*)$/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-white">$1</h2>')
     .replace(/^#\s+(.*)$/gim, '<h1 class="text-2xl font-bold mt-7 mb-4 text-white">$1</h1>')

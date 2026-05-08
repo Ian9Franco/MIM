@@ -226,6 +226,12 @@ export type MimEventMap = {
     success: boolean;
     backupCreated: boolean;
   };
+  
+  "sage:analysis-completed": {
+    type: string;
+    success: boolean;
+    category: string;
+  };
 
   // -------------------------------------------------------------------------
   // TWEAK EVENTS - Configuración y Optimización

@@ -277,7 +277,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       {/* Centered Premium Modal Wrapper */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="relative w-full max-w-2xl rounded-3xl pointer-events-auto p-8 animate-scale-in overflow-hidden shadow-2xl border border-primary/20"
+          className="relative w-full max-w-2xl rounded-3xl pointer-events-auto p-8 animate-bounce-in overflow-hidden shadow-2xl border border-primary/20"
           style={{ 
             background: "color-mix(in srgb, var(--color-card) 95%, transparent)", 
             backdropFilter: "blur(24px)",

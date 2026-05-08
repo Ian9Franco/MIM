@@ -1,4 +1,7 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState } from "react";
+import { 
+  ChevronDown, Layout
+} from "lucide-react";
 import { List } from "react-window";
 import { ModCard } from "@/components/library/ModCard";
 import type { LibraryFile, Project } from "@/lib/types";
@@ -238,18 +241,70 @@ export function VirtualizedLibrary({
     }
   }), [library, selectedLibFiles, setSelectedLibFiles, activeProject, downloadingMods, modrinthStatus, ignoredUpdates, handleDownloadUpdate, getBadge]);
 
+  const [isNavOpen, setIsNavOpen] = useState(false);
+
   // Si hay pocos mods (< 50), usar renderizado normal para evitar complejidad innecesaria
   if (library.length < 50) {
     return (
-      <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
-        {Object.entries(groupedLibrary).map(([category, subGroups]) => (
-          <div key={category} className="animate-fade-up mb-8">
-            <div className="flex items-center gap-2 mb-4 px-1 border-b border-white/5 pb-2">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: category === ".essential" ? "var(--color-primary)" : category === ".local" ? "var(--color-accent)" : "#66C8A0" }} />
-              <h3 className="font-headline text-sm uppercase tracking-wider opacity-80">
-                {category}
-              </h3>
-            </div>
+      <div className="flex flex-col h-full gap-4">
+        {/* Category Quick Nav */}
+        <div className="flex items-center justify-end gap-4 shrink-0">
+          <div className="relative">
+            <button
+              onClick={() => setIsNavOpen(!isNavOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-label text-xs"
+            >
+              <Layout className="w-3.5 h-3.5 text-primary" />
+              Categorías
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isNavOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isNavOpen && (
+              <div className="absolute top-full right-0 mt-2 w-48 p-2 rounded-2xl glass z-50 animate-in fade-in zoom-in-95 duration-200">
+                {Object.keys(groupedLibrary).map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: 'smooth' });
+                      setIsNavOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors text-[10px] font-black uppercase tracking-wider flex items-center justify-between group"
+                  >
+                    <span className="group-hover:translate-x-1 transition-transform">{cat}</span>
+                    <span className="opacity-40">{Object.values(groupedLibrary[cat] || {}).flat().length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-8 max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
+          {Object.entries(groupedLibrary).map(([category, subGroups]) => {
+          const items = Object.values(subGroups).flat();
+          const categoryColors: Record<string, string> = {
+            ".essential": "#F2562B", // Naranja vibrante
+            ".local": "#BB96E4",     // Púrpura
+            ".server": "#66C8A0"      // Verde esmeralda
+          };
+
+          const catColor = categoryColors[category.toLowerCase()] || "var(--color-primary)";
+
+          return (
+            <div 
+              key={category} 
+              id={`cat-${category}`}
+              className="animate-fade-up mb-8 scroll-mt-24 space-y-4"
+            >
+              <div className="flex items-center justify-between group mb-4 px-1 border-b border-white/5 pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-6 rounded-full" style={{ background: catColor }} />
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: catColor }}>
+                    {category}
+                    <span className="ml-2 text-[10px] opacity-40 font-bold">{items.length}</span>
+                  </h3>
+                </div>
+              </div>
             <div className="space-y-6 pl-2">
               {Object.entries(subGroups).map(([sub, mods]) => (
                 <div key={sub}>
@@ -262,54 +317,55 @@ export function VirtualizedLibrary({
                       const isSelected = selectedLibFiles.some((s) => s.path === f.path);
                       const badge = getBadge(f);
                       return (
-                        <ModCard
-                          key={f.path}
-                          index={i}
-                          name={displayName}
-                          version={f.meta?.gameVersion ?? f.meta?.version ?? "unknown"}
-                          modVersion={f.meta?.modVersion}
-                          projectType={f.meta?.projectType}
-                          iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
-                          author={f.meta?.author}
-                          loader={f.meta?.loader ?? "unknown"}
-                          isSelected={isSelected}
-                          onClick={() => setSelectedLibFiles((prev) =>
-                            isSelected ? prev.filter((s) => s.path !== f.path) : [...prev, f]
-                          )}
-                          activeVersion={activeProject?.version ?? ""}
-                          activeLoader={activeProject?.loader ?? ""}
-                          badgeText={badge.badgeText}
-                          badgeColor={badge.badgeColor}
-                          onDownload={badge.onDownload}
-                          isDownloading={downloadingMods[f.path]}
-                          categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
-                          conflict={conflicts[f.path]}
-                          hasUpdate={modrinthStatus[f.path]?.status === "update_available" && !ignoredUpdates.has(f.path)}
-                          onOpenDetails={() => {
-                            const modHit: any = {
-                              projectId: f.meta?.modId || "",
-                              slug: f.meta?.modId || f.fileName,
-                              title: f.meta?.modName || f.fileName,
-                              description: "",
-                              iconUrl: f.meta?.iconBase64 || null,
-                              author: f.meta?.author || "Unknown",
-                              downloads: 0,
-                              follows: 0,
-                              latestVersion: null,
-                              categories: f.meta?.categories || [],
-                              dateCreated: "",
-                              url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
-                              _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
-                            };
-                            
-                            if (typeof window !== "undefined") {
-                              window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-                              setTimeout(() => {
-                                window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
-                              }, 300);
-                            }
-                          }}
-                        />
+                        <div key={f.path} className="bg-transparent overflow-visible">
+                          <ModCard
+                            index={i}
+                            name={displayName}
+                            version={f.meta?.gameVersion ?? f.meta?.version ?? "unknown"}
+                            modVersion={f.meta?.modVersion}
+                            projectType={f.meta?.projectType}
+                            iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
+                            author={f.meta?.author}
+                            loader={f.meta?.loader ?? "unknown"}
+                            isSelected={isSelected}
+                            onClick={() => setSelectedLibFiles((prev) =>
+                              isSelected ? prev.filter((s) => s.path !== f.path) : [...prev, f]
+                            )}
+                            activeVersion={activeProject?.version ?? ""}
+                            activeLoader={activeProject?.loader ?? ""}
+                            badgeText={badge.badgeText}
+                            badgeColor={badge.badgeColor}
+                            onDownload={badge.onDownload}
+                            isDownloading={downloadingMods[f.path]}
+                            categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
+                            conflict={conflicts[f.path]}
+                            hasUpdate={modrinthStatus[f.path]?.status === "update_available" && !ignoredUpdates.has(f.path)}
+                            onOpenDetails={() => {
+                              const modHit: any = {
+                                projectId: f.meta?.modId || "",
+                                slug: f.meta?.modId || f.fileName,
+                                title: f.meta?.modName || f.fileName,
+                                description: "",
+                                iconUrl: f.meta?.iconBase64 || null,
+                                author: f.meta?.author || "Unknown",
+                                downloads: 0,
+                                follows: 0,
+                                latestVersion: null,
+                                categories: f.meta?.categories || [],
+                                dateCreated: "",
+                                url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
+                                _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
+                              };
+                              
+                              if (typeof window !== "undefined") {
+                                window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                                setTimeout(() => {
+                                  window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                                }, 300);
+                              }
+                            }}
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -317,7 +373,9 @@ export function VirtualizedLibrary({
               ))}
             </div>
           </div>
-        ))}
+        );
+      })}
+      </div>
       </div>
     );
   }

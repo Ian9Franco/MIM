@@ -44,7 +44,7 @@ export function StagingModal({ onClose }: StagingModalProps) {
     <div className="fixed inset-0 z-1000 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl glass rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-2xl glass rounded-3xl overflow-hidden shadow-2xl animate-bounce-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">

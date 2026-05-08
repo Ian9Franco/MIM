@@ -100,17 +100,17 @@ export const FomoModCard = memo(function FomoModCard({
   const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
   
   // Iconos de plataforma para exclusividad
-  const ModrinthIcon = () => (
+  const ModrinthIcon = memo(() => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" height="14" width="14" className="shrink-0" style={{ color: "#1bd672" }}>
       <path d="M12.252 0.004a11.78 11.768 0 0 0 -8.92 3.73 11 10.999 0 0 0 -2.17 3.11 11.37 11.359 0 0 0 -1.16 5.169c0 1.42 0.17 2.5 0.6 3.77 0.24 0.759 0.77 1.899 1.17 2.529a12.3 12.298 0 0 0 8.85 5.639c0.44 0.05 2.54 0.07 2.76 0.02 0.2 -0.04 0.22 0.1 -0.26 -1.7l-0.36 -1.37 -1.01 -0.06a8.5 8.489 0 0 1 -5.18 -1.8 5.34 5.34 0 0 1 -1.3 -1.26c0 -0.05 0.34 -0.28 0.74 -0.5a37.572 37.545 0 0 1 2.88 -1.629c0.03 0 0.5 0.45 1.06 0.98l1 0.97 2.07 -0.43 2.06 -0.43 1.47 -1.47c0.8 -0.8 1.48 -1.5 1.48 -1.52 0 -0.09 -0.42 -1.63 -0.46 -1.7 -0.04 -0.06 -0.2 -0.03 -1.02 0.18 -0.53 0.13 -1.2 0.3 -1.45 0.4l-0.48 0.15 -0.53 0.53 -0.53 0.53 -0.93 0.1 -0.93 0.07 -0.52 -0.5a2.7 2.7 0 0 1 -0.96 -1.7l-0.13 -0.6 0.43 -0.57c0.68 -0.9 0.68 -0.9 1.46 -1.1 0.4 -0.1 0.65 -0.2 0.83 -0.33 0.13 -0.099 0.65 -0.579 1.14 -1.069l0.9 -0.9 -0.7 -0.7 -0.7 -0.7 -1.95 0.54c-1.07 0.3 -1.96 0.53 -1.97 0.53 -0.03 0 -2.23 2.48 -2.63 2.97l-0.29 0.35 0.28 1.03c0.16 0.56 0.3 1.16 0.31 1.34l0.03 0.3 -0.34 0.23c-0.37 0.23 -2.22 1.3 -2.84 1.63 -0.36 0.2 -0.37 0.2 -0.44 0.1 -0.08 -0.1 -0.23 -0.6 -0.32 -1.03 -0.18 -0.86 -0.17 -2.75 0.02 -3.73a8.84 8.839 0 0 1 7.9 -6.93c0.43 -0.03 0.77 -0.08 0.78 -0.1 0.06 -0.17 0.5 -2.999 0.47 -3.039 -0.01 -0.02 -0.1 -0.02 -0.2 -0.03Zm3.68 0.67c-0.2 0 -0.3 0.1 -0.37 0.38 -0.06 0.23 -0.46 2.42 -0.46 2.52 0 0.04 0.1 0.11 0.22 0.16a8.51 8.499 0 0 1 2.99 2 8.38 8.379 0 0 1 2.16 3.449 6.9 6.9 0 0 1 0.4 2.8c0 1.07 0 1.27 -0.1 1.73a9.37 9.369 0 0 1 -1.76 3.769c-0.32 0.4 -0.98 1.06 -1.37 1.38 -0.38 0.32 -1.54 1.1 -1.7 1.14 -0.1 0.03 -0.1 0.06 -0.07 0.26 0.03 0.18 0.64 2.56 0.7 2.78l0.06 0.06a12.07 12.058 0 0 0 7.27 -9.4c0.13 -0.77 0.13 -2.58 0 -3.4a11.96 11.948 0 0 0 -5.73 -8.578c-0.7 -0.42 -2.05 -1.06 -2.25 -1.06Z" fill="currentColor" />
     </svg>
-  );
+  ));
 
-  const CurseForgeIcon = () => (
+  const CurseForgeIcon = memo(() => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" height="14" width="14" className="shrink-0" style={{ color: COLORS.curseforgeOrange }}>
       <path d="M18.326 9.2145S23.2261 8.4418 24 6.1882h-7.5066V4.4H0l2.0318 2.3576V9.173s5.1267 -0.2665 7.1098 1.2372c2.7146 2.516 -3.053 5.917 -3.053 5.917L5.0995 19.6c1.5465 -1.4726 4.494 -3.3775 9.8983 -3.2857 -2.0565 0.65 -4.1245 1.6651 -5.7344 3.2857h10.9248l-1.0288 -3.2726s-7.918 -4.6688 -0.8336 -7.1127z" fill="currentColor" />
     </svg>
-  );
+  ));
 
   // Mejorar la detección del tipo basándose en los metadatos de Modrinth si están disponibles
   const rawType = mod.projectType || (mod.url?.includes('/resourcepack/') ? 'resourcepack' : mod.url?.includes('/shader/') ? 'shader' : mod.url?.includes('/datapack/') ? 'datapack' : 'mod');
@@ -126,31 +126,34 @@ export const FomoModCard = memo(function FomoModCard({
   return (
     <article
       onClick={() => onToggleSelect?.(mod)}
-      className={`flex flex-col transition-all duration-200 shadow-md relative group cursor-pointer h-full ${
+      className={`flex flex-col transition-all duration-300 relative group cursor-pointer h-full hover-slime ${
         isSelected ? 'ring-2 ring-primary' : (hasUpdateAvailable ? 'ring-1 ring-amber-500/20' : '')
       } ${
         isCurseForge 
-          ? 'rounded-none border-2 border-orange-900/30' 
-          : 'rounded-[1.35rem] border glass-hover backdrop-blur-[14px]'
+          ? 'rounded-none border-0' 
+          : 'rounded-[1.35rem] border-0'
       }`}
       style={{ 
         background: isCurseForge 
           ? "var(--color-cf-bg)" 
-          : (isSelected 
-              ? "rgba(187,150,228,0.1)" 
-              : (hasUpdateAvailable 
-                  ? "linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(217,119,6,0.02) 100%)" 
-                  : COLORS.card)), 
-        borderColor: isCurseForge 
-          ? (isSelected ? COLORS.curseforgeOrange : "var(--color-cf-border)")
-          : (isSelected 
-              ? COLORS.primary 
-              : (hasUpdateAvailable 
-                  ? "rgba(245,158,11,0.35)" 
-                  : COLORS.border)),
+          : "var(--glass-bg)",
+        // Usamos box-shadow para el borde para evitar problemas de clipping en bordes redondeados
+        boxShadow: isCurseForge 
+          ? `0 0 0 1px var(--color-cf-border), var(--shadow-drop)`
+          : `0 0 0 1px var(--glass-border), var(--shadow-drop)`,
+        backdropFilter: "var(--liquid-blur)",
+        transform: "translateZ(0)",
+        WebkitTransform: "translateZ(0)",
       }}
       aria-label={mod.title}
     >
+      {/* Liquid Glass Highlight para premium feel en ambos */}
+      <div className={`absolute inset-0 pointer-events-none opacity-30 ${isCurseForge ? 'rounded-none' : 'rounded-[1.35rem]'}`} 
+           style={{ 
+             background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)",
+             boxShadow: "inset 0 1px 1px rgba(255,255,255,0.1)"
+           }} 
+      />
       {/* Insignia elegante de Update Disponible */}
       {hasUpdateAvailable && (
         <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[8px] shadow-[0_0_12px_rgba(245,158,11,0.15)] uppercase tracking-wider animate-pulse">
@@ -269,9 +272,12 @@ export const FomoModCard = memo(function FomoModCard({
           </div>
         </div>
 
-        <p className="font-caption mt-4 leading-relaxed line-clamp-2 text-sm" style={{ color: COLORS.muted }}>
-          {mod.description}
-        </p>
+        <div className="font-caption mt-4 leading-relaxed text-sm h-10 overflow-hidden relative" style={{ color: COLORS.muted }}>
+          <span className="line-clamp-2">{mod.description}</span>
+          {mod.description && mod.description.length > 80 && (
+            <div className="absolute bottom-0 right-0 w-16 h-5 bg-gradient-to-l from-[var(--color-card)] via-[var(--color-card)]/80 to-transparent pointer-events-none" />
+          )}
+        </div>
 
         {/* Connector Compatibility Estimate UI */}
         {sinytraActive && isFabricOnly && (
@@ -344,7 +350,7 @@ export const FomoModCard = memo(function FomoModCard({
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }}
             aria-label={`Seleccionar ${mod.title} para colección`}
-            className={`flex items-center justify-center gap-1.5 h-9 px-2 rounded-xl text-[0.65rem] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A]' : ''}`}
+            className={`flex items-center justify-center gap-1.5 h-9 px-2 rounded-xl text-[0.65rem] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A] animate-duplicate' : ''}`}
             style={{ 
               background: isSelected ? COLORS.primary : (isCurseForge ? "rgba(239, 108, 0, 0.12)" : "rgba(187,150,228,0.12)"), 
               color: isSelected ? "#FFF" : (isCurseForge ? COLORS.curseforgeOrange : COLORS.primary), 

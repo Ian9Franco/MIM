@@ -118,6 +118,12 @@ class IncidentManager {
         changes: { status: "resolved" },
         updatedBy: "ALRT"
       });
+    } else {
+      await incidentStorage.resolveIncident(id);
+      this.cacheExpiry = 0;
+      // Reload active incidents to ensure memory synchronization
+      this.incidents = await this.getIncidents("all", { limit: 100 });
+      this.notify();
     }
   }
 

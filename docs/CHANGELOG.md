@@ -1,8 +1,34 @@
 # MIM — Changelog de Cambios
 
 > Auditoría completa de cambios, features y mejoras del proyecto.  
-> **Versión Actual:** Beta 5.4 (Event-Driven Intelligence)  
-> **Última actualización:** 2026-05-07
+> **Versión Actual:** Beta 5.5 (Tailwind v4 & Integrated Security)  
+> **Última actualización:** 2026-05-08
+
+---
+
+## 🚀 Beta 5.5 — Tailwind v4 & Integrated Security (2026-05-08)
+
+### Migración a Tailwind CSS v4 Nativo
+- **Limpieza de Utilidades**: Eliminación de corchetes arbitrarios redundantes (`z-[100]` ➔ `z-100`, `w-[400px]` ➔ `w-100` / `w-400`, `max-w-[1600px]` ➔ `max-w-400`) adoptando los sistemas de escala simplificados de Tailwind v4.
+- **Gradientes Modernos**: Migración de reglas de gradiente obsoletas a la nueva sintaxis nativa de Tailwind v4 (ej. `bg-gradient-to-r` ➔ `bg-linear-to-r`).
+- **Alineación de Layout**: Optimización de contenedores y transiciones, resultando en un renderizado más limpio y mejor rendimiento visual global.
+
+### SAGE Recovery Engine Integrado
+- **Flujos de Recuperación Automatizados**: Implementación completa de `sageRecoveryEngine.ts` que permite la auto-recuperación del sistema ante fallos.
+- **Resolución de Dependencias en 1-Clic**: Al detectar un crash por dependencias faltantes en el log, el sistema se conecta directamente con la sidebar de FOMO para buscar, sugerir y permitir la descarga del archivo exacto requerido.
+- **Acciones Correctivas Directas**: Permite deshabilitar de forma segura mods conflictivos de la lista de carga activa de Minecraft y reparar archivos de jugadores `.dat` corruptos con respaldos `.mim_bak` automatizados.
+
+### Capa de Seguridad Interactiva y Detallada
+- **Modal de Detalles de Seguridad (`SecurityDetailsModal.tsx`)**: Sofisticado modal que ofrece una radiografía del escaneo estático de bytecode de cada mod. Detalla llamadas del sistema sospechosas (`ProcessBuilder`, ejecuciones de red, accesos reflexivos de JNI) de forma visualmente premium.
+- **Badges y Tooltips Enriquecidos (`SecurityBadge.tsx`)**: Integración de tooltips animados de alta fidelidad que visualizan los votos de VirusTotal, reputación del hash SHA-256 en la nube y comprobaciones de la Whitelist local.
+
+### Depurador de Eventos en Tiempo Real
+- **UI del Depurador (`EventDebuggerUI.tsx`)**: Panel interactivo integrado en el entorno de desarrollo para auditar y depurar visualmente los eventos del `MIM Event Bus` a 60fps con contadores en tiempo real.
+- **Mapeo de Datos de Diagnóstico**: Registro detallado de incidentes escalonados y correlación temporal para depuración asíncrona avanzada.
+
+### APIs de Validación y Control de Activos
+- **Validación de Keys**: Endpoint `/api/settings/validate-keys` para comprobaciones instantáneas de conectividad de claves con Modrinth, CurseForge y VirusTotal.
+- **Resolución de Propiedad**: Endpoint `/api/library/resolve-ownership` para auditar la pertenencia de assets locales.
 
 ---
 

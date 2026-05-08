@@ -41,6 +41,16 @@ export interface LocalLogFile {
 export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) {
   const [mode, setMode] = useState<"crash" | "latest-log" | "paste" | "security" | "player-rescue">("security");
 
+  // Persistence for mode
+  useEffect(() => {
+    const saved = localStorage.getItem("sage_mode");
+    if (saved) setMode(saved as any);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("sage_mode", mode);
+  }, [mode]);
+
   // ── Player Rescue (Rescate de Jugador) state ──
   const [players, setPlayers] = useState<any[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
@@ -97,14 +107,20 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
           // Recargar lista para ver nuevas coordenadas o inventario vacío
           fetchPlayersList();
           eventBus.emit("sage:player-rescued", {
-            playerName: selectedPlayer.fileName.replace(".dat", ""),
-            success: true
+            playerId: selectedPlayer.fileName.replace(".dat", ""),
+            playerName: selectedPlayer.isHost ? "Host/Singleplayer" : selectedPlayer.fileName.replace(".dat", ""),
+            rescueType: clearInventory ? "inventory" : changeDimension ? "dimension" : "position",
+            success: true,
+            backupCreated: data.backupCreated ?? true
           });
         } else {
           setRescueLogs([`Error: ${data.error || "No se pudo rescatar al jugador"}`]);
           eventBus.emit("sage:player-rescued", {
-            playerName: selectedPlayer.fileName.replace(".dat", ""),
-            success: false
+            playerId: selectedPlayer.fileName.replace(".dat", ""),
+            playerName: selectedPlayer.isHost ? "Host/Singleplayer" : selectedPlayer.fileName.replace(".dat", ""),
+            rescueType: clearInventory ? "inventory" : changeDimension ? "dimension" : "position",
+            success: false,
+            backupCreated: false
           });
         }
       } else {
@@ -542,16 +558,17 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
         role="dialog"
         aria-modal="true"
         aria-label="Diagnóstico SAGE"
-        className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-r ${
+        className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border-r ${
           open ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-full opacity-0 pointer-events-none"
         }`}
         style={{
-          width: "550px",
+          width: "1100px",
           maxWidth: "92vw",
-          background: "color-mix(in srgb, var(--color-card) 95%, transparent)",
-          borderColor: "var(--color-border)",
-          backdropFilter: "blur(30px)",
+          background: "var(--glass-bg)",
+          borderColor: "var(--glass-border)",
+          backdropFilter: "var(--liquid-blur)",
           borderRadius: "0 2rem 2rem 0",
+          boxShadow: "var(--shadow-drop)",
         }}
       >
         {/* Unified Premium Header */}

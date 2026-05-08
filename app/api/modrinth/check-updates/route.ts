@@ -43,6 +43,7 @@ interface ModCheckResult {
   path: string;
   status: "updated" | "update_available" | "unknown" | "error" | "updated_downloaded";
   latestVersion?: string;
+  latestVersionId?: string; // Nuevo: ID único de la versión en Modrinth
   downloadUrl?: string;
   projectId?: string;
   slug?: string;
@@ -59,9 +60,10 @@ interface ModrinthHit {
 }
 
 interface ModrinthVersionObj {
+  id: string; // ID único de la versión
   version_number: string;
   changelog?: string;
-  files?: { url: string, primary?: boolean }[];
+  files?: { url: string, primary?: boolean, hashes?: { sha1?: string } }[];
 }
 
 // ── Persistent Remote Cache ───────────────────────────────────────────────────
@@ -151,6 +153,9 @@ function normalizeVersion(v: string): string {
   
   // 4. Estandarizar separadores a puntos y quitar todo lo que no sea número o punto
   clean = clean.replace(/[_-]/g, ".").replace(/[^0-9.]/g, "");
+  
+  // 4.5 Quitar ceros a la izquierda en cada segmento para evitar 1.0.0 !== 1.0
+  clean = clean.split(".").map(s => s.replace(/^0+/, "") || "0").join(".");
   
   // 5. Limpiar puntos extra
   clean = clean.replace(/^\.+|\.+$/g, "").replace(/\.{2,}/g, ".");
@@ -370,9 +375,23 @@ export async function POST(req: NextRequest) {
 
         const latest = versions[0];
         const latestVersion = latest.version_number;
+        const latestHash = latest.files?.find(f => f.primary)?.hashes?.sha1 || latest.files?.[0]?.hashes?.sha1;
 
-        // Use the new robust comparison logic
-        const hasUpdate = hasRealUpdate(latestVersion, currentVersion);
+        // Step 5 — Robust comparison (Hash first, then version number)
+        let hasUpdate = false;
+        
+        if (mod.meta?.sha1 && latestHash) {
+          // Si tenemos ambos hashes y son diferentes, es un posible update.
+          // Pero si son IGUALES, definitivamente NO hay update.
+          if (mod.meta.sha1 === latestHash) {
+            hasUpdate = false;
+          } else {
+            hasUpdate = hasRealUpdate(latestVersion, currentVersion);
+          }
+        } else {
+          // Fallback a comparación de strings de versión
+          hasUpdate = hasRealUpdate(latestVersion, currentVersion);
+        }
 
         const primaryFile = latest.files?.find(f => f.primary) || latest.files?.[0];
         const status = hasUpdate ? "update_available" : "updated";
@@ -381,6 +400,7 @@ export async function POST(req: NextRequest) {
           path: mod.path,
           status,
           latestVersion,
+          latestVersionId: latest.id,
           downloadUrl: primaryFile?.url,
           projectId,
           slug: slug || projectId,

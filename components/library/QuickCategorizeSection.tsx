@@ -1,5 +1,5 @@
 import React from "react";
-import { Zap, ChevronRight, Package, Server, Trash2 } from "lucide-react";
+import { Zap, ChevronRight, Package, Server, Trash2, X } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
 import { HotkeyCard } from "../ui/HotkeyCard";
 import type { PendingFile, LibraryFile, Project } from "@/lib/types";
@@ -62,16 +62,17 @@ export function QuickCategorizeSection({
               </div>
               <button
                 onClick={() => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all group hover:scale-105 active:scale-95 shadow-sm"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all group hover:scale-105 active:scale-95 shadow-sm hover:bg-white/5"
                 style={{ 
-                  background: "rgba(239,68,68,0.1)", 
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  color: "#ef4444"
+                  background: "rgba(255, 255, 255, 0.03)", 
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-muted)"
                 }}
+                title="Quitar todos los archivos de la bandeja y devolverlos a la lista"
               >
-                <Trash2 className="w-3 h-3" />
+                <X className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
                 <span className="font-headline text-[9px] tracking-widest uppercase font-bold">
-                  Limpiar todo
+                  Deseleccionar todo
                 </span>
               </button>
             </div>

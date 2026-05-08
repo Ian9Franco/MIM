@@ -65,6 +65,12 @@ export const ModCard = memo(function ModCard({
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
+  // Normalizar el nombre para visualización
+  const cleanName = useMemo(() => {
+    // Si el nombre viene con [vX.X.X] o similares, lo limpiamos para la cabecera
+    return name.replace(/\[.*?\]/g, '').trim();
+  }, [name]);
+  
   const isCompatibleRange = useMemo(() => {
     if (!version || version === "unknown") return true;
     if (version === activeVersion) return true;
@@ -92,17 +98,20 @@ export const ModCard = memo(function ModCard({
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
-  const cardBorder = isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-border)"
+  const cardBorder = isPending ? "rgba(255, 255, 255, 0.08)"
+    : isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-border)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
     : conflict    ? (isSelected ? "rgba(249,115,22,0.6)" : "rgba(249,115,22,0.3)")
     : hasUpdate   ? (isSelected ? "rgba(250,204,21,0.6)" : "rgba(250,204,21,0.3)")
     : "var(--color-border)";
-  const cardBg = isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-bg)"
+  const cardBg = isPending ? "rgba(255, 255, 255, 0.02)"
+    : isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-bg)"
     : isError   ? "rgba(127,29,29,0.12)"
     : conflict  ? "rgba(124,45,18,0.12)"
     : hasUpdate ? "rgba(113,101,18,0.12)"
     : "color-mix(in srgb, var(--color-card) 82%, transparent)";
-  const cardShadow = isSelected && !isError && !conflict && !hasUpdate
+  const cardShadow = isPending ? "none"
+    : isSelected && !isError && !conflict && !hasUpdate
     ? "0 0 28px var(--glow-accent), 0 4px 16px rgba(0,0,0,0.1)"
     : conflict && isSelected
     ? "0 0 20px rgba(249,115,22,0.15)"
@@ -135,31 +144,46 @@ export const ModCard = memo(function ModCard({
       aria-label={`${name} – ${version}`}
     >
       <div
-        className="group relative flex flex-col rounded-[1.5rem] cursor-pointer overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-[500px] px-4 py-3"
+        className={`group relative flex flex-col rounded-[1.8rem] overflow-hidden cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] px-4 py-3 ${isPending ? 'border-dashed opacity-70 grayscale-[0.4]' : 'border-solid opacity-100'}`}
         style={{ 
-          height: "140px", 
-          border: `1px solid ${cardBorder}`, 
-          background: cardBg, 
-          boxShadow: cardShadow,
+          minHeight: isPending ? "100px" : "130px", 
+          borderWidth: isPending ? "1px" : "0px",
+          borderColor: cardBorder, 
+          background: isPending ? cardBg : "var(--glass-bg)", 
+          backdropFilter: isPending ? "none" : "var(--liquid-blur)",
+          boxShadow: isPending ? "none" : "var(--shadow-drop)",
+          margin: "8px", // AÑADIDO MARGEN PARA QUE LA SOMBRA NO SE CORTE
+          transform: "translateZ(0)",
+          WebkitTransform: "translateZ(0)",
         }}
       >
+        {/* Liquid Glass Highlight */}
+        {!isPending && (
+          <div className="absolute inset-0 pointer-events-none opacity-50" 
+               style={{ 
+                 background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)",
+                 boxShadow: "var(--shadow-inner)"
+               }} 
+          />
+        )}
         <div
           aria-hidden="true"
-          className="absolute left-0 top-0 w-[3px] h-full rounded-l-[1px] transition-all duration-300"
+          className="absolute left-2 top-4 bottom-4 w-[4px] rounded-full transition-all duration-300 z-10"
           style={{
-            background: isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary,
-            opacity:    isSelected ? 1 : isError ? 0.7 : hasUpdate ? 0.7 : 0.3,
+            background: isPending ? "rgba(255,255,255,0.2)" : (isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary),
+            opacity:    isPending ? 0.3 : (isSelected ? 1 : isError ? 0.9 : hasUpdate ? 0.9 : 0.6),
+            boxShadow: isPending ? "none" : `0 0 15px ${isSelected ? COLORS.accent : COLORS.primary}40`,
           }}
         />
 
-        {/* Top Content: Icon + Metadata */}
-        <div className="flex items-start gap-3.5 flex-1 min-h-0">
-          <div
+        {/* Icon/Metadata Area */}
+        <div className="flex gap-3 items-start flex-1 min-h-0">
+          <div 
             aria-hidden="true"
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden mt-1"
-            style={{
-              background: isError ? "rgba(239,68,68,0.1)" : isSelected ? "var(--color-accent-bg)" : "var(--color-secondary-bg)",
-              border: `1px solid ${isError ? "rgba(239,68,68,0.25)" : isSelected ? "var(--color-accent-border)" : "var(--color-border)"}`,
+            className={`relative shrink-0 rounded-2xl overflow-hidden transition-all duration-300 mt-1 ${isPending ? 'w-10 h-10' : 'w-14 h-14'}`}
+            style={{ 
+              background: isPending ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)",
+              border: `1px solid ${isPending ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)"}`
             }}
           >
             {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -168,15 +192,15 @@ export const ModCard = memo(function ModCard({
             : <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />}
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : hasUpdate ? "#fef08a" : COLORS.foreground }}>
-                {name}
-              </p>
+          <div className="flex-1 flex flex-col min-w-0 relative z-10">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : hasUpdate ? "#fef08a" : "var(--color-foreground)" }}>
+                  {cleanName}
+                </p>
               
               <div className="flex items-center gap-1.5 shrink-0">
                 {/* Security Badge */}
-                {riskScore !== undefined && riskLevel && (
+                {!isPending && riskScore !== undefined && riskLevel && (
                   <SecurityBadgeCompact
                     riskScore={riskScore}
                     riskLevel={riskLevel}
@@ -184,7 +208,7 @@ export const ModCard = memo(function ModCard({
                   />
                 )}
                 
-                 {onOpenDetails && (
+                 {!isPending && onOpenDetails && (
                    <button
                      onClick={stopPropDetails}
                      aria-label="Ver detalles"
@@ -213,21 +237,21 @@ export const ModCard = memo(function ModCard({
               </div>
             </div>
 
-            {author && author !== "unknown" && (
-              <span className="font-caption text-[10px] opacity-40 truncate -mt-1.5">
-                by {author}
-              </span>
+            {!isPending && author && author !== "unknown" && (
+              <p className="text-[11px] font-body truncate mt-0.5" style={{ color: "var(--color-muted)" }}>
+                por {author}
+              </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-1.5 overflow-hidden max-h-[44px]" role="list">
+            <div className="flex flex-wrap items-center gap-1.5 overflow-hidden" role="list">
               <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)", fontSize: "0.55rem" }}>{version}</span>
               {modVersion && modVersion !== "unknown" && (
-                <span className="font-label rounded-full px-2 py-0.5 truncate max-w-[80px]" style={{ background: "rgba(187,150,228,0.08)", border: "1px solid rgba(187,150,228,0.2)", color: COLORS.primary, fontSize: "0.55rem" }}>v{modVersion}</span>
+                <span className="font-label rounded-full px-2 py-0.5 truncate max-w-[120px]" style={{ background: "rgba(187,150,228,0.12)", border: "1px solid rgba(187,150,228,0.25)", color: "var(--color-primary)", fontSize: "0.55rem" }}>v{modVersion}</span>
               )}
               <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.55rem" }}>{ls.label}</span>
               
               {(isVersionError || isLoaderError || conflict) && (
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex flex-wrap items-center gap-1 shrink-0">
                   {isVersionError && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ vers</span>}
                   {isLoaderError  && <span className="font-label rounded-full px-2 py-0.5" style={{ background: COLORS.redBg, color: COLORS.red, fontSize: "0.55rem", border: "1px solid rgba(239,68,68,0.2)" }}>⚠ ldr</span>}
                   {conflict && <span className="font-label rounded-full px-2 py-0.5" style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", fontSize: "0.55rem", border: "1px solid rgba(249,115,22,0.3)" }}>⚠ {conflict}</span>}
@@ -239,8 +263,10 @@ export const ModCard = memo(function ModCard({
                   {getProjectTypeLabel(projectType).toUpperCase()}
                 </span>
               )}
-              
-                          </div>
+            </div>
+
+            {/* Separator - Ajustado para no tocar los tags */}
+            <div className="h-[1px] w-full bg-white/5 my-2.5" />
           </div>
         </div>
 

@@ -23,7 +23,7 @@ export function FomoSkeleton({
           {Array.from({ length: count }).map((_, i) => (
             <div 
               key={i} 
-              className={`relative p-4 flex flex-col h-[380px] transition-all overflow-hidden ${
+              className={`relative p-4 flex flex-col h-[380px] transition-all ${
                 isCurseForge ? "rounded-none border-2 border-orange-900/20" : "rounded-[1.35rem] border border-white/5"
               }`}
               style={{ 
@@ -38,7 +38,7 @@ export function FomoSkeleton({
                 aria-hidden="true"
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  animation: "shimmer 2.4s ease-in-out infinite",
+                  animation: "shimmer 2s ease-in-out infinite",
                   backgroundImage: `linear-gradient(90deg, transparent 0%, ${isCurseForge ? "rgba(241, 100, 54, 0.05)" : "color-mix(in srgb, var(--color-primary) 10%, transparent)"} 50%, transparent 100%)`,
                   animationDelay: `${i * 0.15}s`
                 }}

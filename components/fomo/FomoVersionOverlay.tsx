@@ -1,6 +1,6 @@
 import React, { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Laptop, Server } from "lucide-react";
+import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Laptop, Server, Languages } from "lucide-react";
 import { formatSize, openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml } from "@/utils/markdown";
@@ -25,6 +25,14 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedBody, setTranslatedBody] = useState<string | null>(null);
+
+  // Reiniciar traducción al cambiar de mod
+  useEffect(() => {
+    setTranslatedBody(null);
+    setIsTranslating(false);
+  }, [mod.projectId]);
 
   // Extract all unique game versions from the mod versions list
   const allGameVersions = React.useMemo(() => {
@@ -135,11 +143,98 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const requiredDeps = allDependencies.filter(d => d.dependencyType === "required");
   const optionalDeps = allDependencies.filter(d => d.dependencyType === "optional");
   const incompatibleDeps = allDependencies.filter(d => d.dependencyType === "incompatible");
-  const descriptionHtml = mod.body?.trim()
+
+  const handleTranslate = async () => {
+    if (!mod.body || isTranslating) return;
+    
+    if (translatedBody) {
+      setTranslatedBody(null);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      // 1. Limpiar HTML/Markdown y extraer texto útil
+      let text = mod.body;
+
+      // Convertir enlaces markdown [Texto](URL) a solo "Texto" para no enviarle links a la API
+      text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+      // Eliminar imágenes markdown ![Alt](URL)
+      text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
+
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = text;
+      
+      // Reemplazar enlaces HTML <a> con su texto interno para no perder palabras críticas de la oración
+      tempDiv.querySelectorAll("a").forEach(el => {
+        const txt = el.textContent || "";
+        el.replaceWith(txt);
+      });
+
+      // Eliminar imágenes HTML, scripts, estilos, código que no aportan a la traducción
+      tempDiv.querySelectorAll("img, script, style, code").forEach(el => el.remove());
+      
+      const fullText = tempDiv.innerText.trim();
+      if (!fullText) throw new Error("No hay texto para traducir");
+
+      // 2. Dividir en tandas de 450 caracteres (seguridad ante el límite de 500 de MyMemory)
+      const chunks = fullText.match(/.{1,450}(\s|$)/g) || [fullText];
+      const translatedChunks: string[] = [];
+
+      // Aumentamos a un máximo de 15 tandas para leer descripciones largas completas
+      const maxChunks = chunks.slice(0, 15);
+
+      for (let i = 0; i < maxChunks.length; i++) {
+        const chunk = maxChunks[i];
+        
+        // Agregar un pequeño delay de 300ms a partir de la segunda tanda para que MyMemory API no nos rechace/haga throttle
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        try {
+          const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk.trim())}&langpair=en|es`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.responseData?.translatedText) {
+              translatedChunks.push(data.responseData.translatedText);
+            } else {
+              // Fallback si la API devuelve respuesta vacía: dejamos el texto original para no perderlo
+              translatedChunks.push(chunk);
+            }
+          } else {
+            // Fallback si la petición falla: dejamos el texto original
+            translatedChunks.push(chunk);
+          }
+        } catch (fetchErr) {
+          console.error("Error fetching translation chunk:", fetchErr);
+          translatedChunks.push(chunk);
+        }
+      }
+
+      setTranslatedBody(translatedChunks.join(" "));
+    } catch (err) {
+      console.error("Error translating:", err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const rawDescriptionHtml = mod.body?.trim()
     ? markdownToHtml(mod.body)
     : mod.description?.trim()
     ? markdownToHtml(mod.description)
     : "El autor no ha proporcionado una descripción detallada.";
+
+  const descriptionHtml = translatedBody 
+    ? `<div class="p-4 rounded-2xl bg-primary/5 border border-primary/20 mb-4 animate-in fade-in slide-in-from-top-2">
+         <p class="text-[10px] font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+           🌐 Traducción Automática (Beta)
+         </p>
+         <p class="italic opacity-90">${translatedBody}</p>
+       </div>
+       <div class="opacity-40 pointer-events-none grayscale scale-95 origin-top transition-all">${rawDescriptionHtml}</div>`
+    : rawDescriptionHtml;
 
   const handleDescriptionClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
@@ -281,14 +376,34 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {activeTab === "description" ? (
           <div className="space-y-4">
+            {!loading && mod.body && (
+              <button
+                onClick={handleTranslate}
+                disabled={isTranslating}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold transition-all hover:bg-white/5 disabled:opacity-50"
+                style={{ borderColor: COLORS.border, color: COLORS.muted }}
+              >
+                {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+                {translatedBody ? "Ver Original" : "Traducir a Español"}
+              </button>
+            )}
             {loading && !mod.body ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin opacity-30" />
+              <div className="space-y-4 animate-fade-in">
+                <div className="h-4 w-3/4 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-3 w-full bg-white/5 rounded-full animate-pulse" />
+                <div className="h-3 w-5/6 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-4 w-1/2 bg-white/5 rounded-full animate-pulse pt-4" />
+                <div className="h-3 w-full bg-white/5 rounded-full animate-pulse" />
+                <div className="h-3 w-2/3 bg-white/5 rounded-full animate-pulse" />
               </div>
             ) : (
               <div 
-                className="text-sm font-body wrap-break-word"
-                style={{ lineHeight: "1.7", color: COLORS.foreground }}
+                className="text-sm font-body wrap-break-word prose prose-invert prose-sm max-w-none"
+                style={{ 
+                  lineHeight: "1.7", 
+                  color: COLORS.foreground,
+                  wordBreak: "break-word"
+                }}
                 onClick={handleDescriptionClick}
                 dangerouslySetInnerHTML={{ __html: descriptionHtml }}
               />

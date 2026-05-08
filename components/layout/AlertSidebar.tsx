@@ -63,6 +63,17 @@ export function AlertSidebar({
   securityAlerts = [],
 }: AlertSidebarProps) {
   const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config">("all");
+
+  // Persistence for activeTab
+  useEffect(() => {
+    const saved = localStorage.getItem("alert_active_tab");
+    if (saved) setActiveTab(saved as any);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("alert_active_tab", activeTab);
+  }, [activeTab]);
+
   const [expandedChangelog, setExpandedChangelog] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -256,6 +267,16 @@ export function AlertSidebar({
         });
       });
 
+      // Automatically resolve configuration incidents that are no longer active
+      const activeConfigIds = new Set(alerts.map(a => a.id));
+      const possibleConfigIds = ["cfg-virustotal", "cfg-modrinth", "cfg-source", "cfg-builds", "cfg-minecraft"];
+      
+      for (const id of possibleConfigIds) {
+        if (!activeConfigIds.has(id)) {
+          await incidentManager.resolveIncident(id);
+        }
+      }
+
       // 2. Fetch SAGE analysis warnings
       const sage: any[] = [];
       if (proj) {
@@ -404,12 +425,28 @@ export function AlertSidebar({
     };
   }, [activeProject]);
 
-  // Reload when the sidebar is opened
+  // Reload when the sidebar is opened, and set up auto-refresh on window focus & interval
   useEffect(() => {
-    if (sidebarOpen) {
+    if (!sidebarOpen) return;
+
+    fetchConfigAndSageAlerts(activeProject);
+    incidentManager.markAsSeen();
+
+    // Auto-refresh periodically (e.g., every 15 seconds) while sidebar is open
+    const intervalId = setInterval(() => {
       fetchConfigAndSageAlerts(activeProject);
-      incidentManager.markAsSeen();
-    }
+    }, 15000);
+
+    // Auto-refresh immediately when window gains focus (user returned after fixing configs manually)
+    const handleWindowFocus = () => {
+      fetchConfigAndSageAlerts(activeProject);
+    };
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
   }, [sidebarOpen, activeProject]);
 
   const renderUpdateCard = (path: string, s: any, type: "mod" | "collection" | "shader" | "resourcepack") => {
@@ -545,10 +582,12 @@ export function AlertSidebar({
   return (
     <div 
       ref={sidebarRef}
-      className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
       style={{ 
-        background: "var(--color-card)", 
-        borderLeft: "1px solid var(--color-border)",
+        background: "var(--glass-bg)", 
+        borderLeft: "1px solid var(--glass-border)",
+        backdropFilter: "var(--liquid-blur)",
+        boxShadow: "var(--shadow-drop)",
       }}
     >
       <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border)" }}>

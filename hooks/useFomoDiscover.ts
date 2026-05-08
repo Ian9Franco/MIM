@@ -33,11 +33,43 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [sortOrder, setSortOrder] = useState<SortOrder>("relevance");
   const [query, setQuery] = useState("");
   const [sinytraActive, setSinytraActive] = useState(false);
+  const [page, setPage] = useState(1);
 
-  // Resetear a página 1 al cambiar cualquier filtro o búsqueda
+  // Persistence for filters and search
   useEffect(() => {
+    const saved = localStorage.getItem("fomo_discover_state");
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.source) setSource(state.source);
+        if (state.loader) setLoader(state.loader);
+        if (state.gameVersions) setGameVersions(state.gameVersions);
+        if (state.projectType) setProjectType(state.projectType);
+        if (state.categories) setCategories(state.categories);
+        if (state.environments) setEnvironments(state.environments);
+        if (state.sortOrder) setSortOrder(state.sortOrder);
+        if (state.query) setQuery(state.query);
+        if (state.sinytraActive !== undefined) setSinytraActive(state.sinytraActive);
+        if (state.page) setPage(state.page);
+      } catch (e) {
+        console.warn("Error loading FOMO state from localStorage", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const state = { source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page };
+    localStorage.setItem("fomo_discover_state", JSON.stringify(state));
+  }, [source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page]);
+
+  // Resetear a página 1 al cambiar cualquier filtro o búsqueda (EXCEPTO al cargar el estado inicial)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     setPage(1);
-    // Limpiar mods y total inmediatamente para forzar el estado de Skeleton si estamos cargando
     setMods([]);
     setTotal(0);
   }, [loader, gameVersions, projectType, categories, environments, sortOrder, query, source]);
@@ -51,7 +83,6 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [loading, setLoading] = useState(false);
   const [mods, setMods] = useState<ModHit[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedMods, setSelectedMods] = useState<ModHit[]>([]);
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
@@ -97,6 +128,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const refetch = useCallback(async (overrideQuery?: string) => {
     setLoading(true);
     setSourceError("");
+    const startTime = Date.now();
     const q = typeof overrideQuery === "string" ? overrideQuery : query;
     try {
       // Modrinth y CurseForge ahora usan 'gameVersions' (array JSON).
@@ -216,6 +248,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       console.warn("[useFomoDiscover] Error fetching mods:", err);
       setMods([]);
     }
+
+    // Asegurar que el skeleton se vea al menos 1 segundo en la primera página
+    const elapsedTime = Date.now() - startTime;
+    if (page === 1 && elapsedTime < 1000) {
+      await new Promise(r => setTimeout(r, 1000 - elapsedTime));
+    }
+
     setLoading(false);
   }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page, sinytraActive]);
 
@@ -424,7 +463,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
 
       const params = new URLSearchParams({ 
         projectId: mod.projectId, 
-        gameVersion: gameVersions[0] || "1.20.1", 
+        // Eliminamos gameVersion para obtener TODAS las versiones del mod en la vista de detalles
         loader: modNativeLoader, 
         projectType 
       });

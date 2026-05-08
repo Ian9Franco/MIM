@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow } from "lucide-react";
+import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow, ChevronRight, Loader2 } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -32,6 +32,7 @@ import { FomoVersionOverlay }  from "./FomoVersionOverlay";
 import { FomoCollections }     from "./FomoCollections";
 import { FomoSkeleton }        from "./FomoSkeleton";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
+import { fetchCollections, createCollection, addModToCollection } from "@/services/api";
 import type { ModHit, Project } from "@/lib/types";
 import "./fomo.css";
 
@@ -87,6 +88,99 @@ export function FomoSidebar({
 }: FomoSidebarProps) {
   const [mode, setMode] = useState<Mode>("discover");
   const [addingToCollectionFor, setAddingToCollectionFor] = useState<ModHit | null>(null);
+
+  // Bulk collection adding states
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [collectionsList, setCollectionsList] = useState<any[]>([]);
+  const [loadingColls, setLoadingColls] = useState(false);
+  const [isCreatingColl, setIsCreatingColl] = useState(false);
+  const [newCollName, setNewCollName] = useState("");
+  const [newCollTarget, setNewCollTarget] = useState<"local" | "modrinth">("local");
+  const [addingToCollId, setAddingToCollId] = useState<string | null>(null);
+
+  const loadCollectionsForBulk = async () => {
+    setLoadingColls(true);
+    try {
+      const { collections: colls } = await fetchCollections();
+      setCollectionsList(colls || []);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoadingColls(false);
+  };
+
+  const handleOpenBulkAddToCollection = () => {
+    setBulkAdding(true);
+    setIsCreatingColl(false);
+    setNewCollName("");
+    loadCollectionsForBulk();
+  };
+
+  const handleBulkAddToCollection = async (coll: any) => {
+    setAddingToCollId(coll.id);
+    const modsToAdd = discover.selectedMods;
+    if (modsToAdd.length === 0) return;
+
+    const target: "local" | "modrinth" = coll.isLocal ? "local" : "modrinth";
+    let successCount = 0;
+    let lastError = null;
+
+    for (const mod of modsToAdd) {
+      const { error } = await addModToCollection(coll.id, mod, target);
+      if (!error) successCount++;
+      else lastError = error;
+    }
+
+    if (lastError && successCount < modsToAdd.length) {
+      showStatus(`Se añadieron ${successCount}/${modsToAdd.length} ítems a ${coll.name}. Algunos fallaron.`, "info");
+    } else {
+      showStatus(`${modsToAdd.length} ítems añadidos con éxito a la colección "${coll.name}"`, "success");
+    }
+
+    setBulkAdding(false);
+    setAddingToCollId(null);
+    discover.clearSelection();
+  };
+
+  const handleBulkCreateCollection = async () => {
+    const name = newCollName.trim() || "Nueva Colección";
+    const modsToAdd = discover.selectedMods;
+    if (modsToAdd.length === 0) return;
+
+    setLoadingColls(true);
+    let successCount = 0;
+    let lastError = null;
+
+    // Crear la colección primero con el primer mod
+    const { collection, error } = await createCollection(name, modsToAdd[0], newCollTarget);
+    
+    if (error) { 
+      showStatus(error, "error"); 
+      setLoadingColls(false);
+      return; 
+    }
+    
+    successCount++;
+
+    // Añadir el resto de los mods
+    if (modsToAdd.length > 1) {
+      for (let i = 1; i < modsToAdd.length; i++) {
+        const { error: addErr } = await addModToCollection(collection!.id, modsToAdd[i], newCollTarget);
+        if (!addErr) successCount++;
+        else lastError = addErr;
+      }
+    }
+
+    if (lastError && successCount < modsToAdd.length) {
+      showStatus(`Colección creada, pero solo se añadieron ${successCount}/${modsToAdd.length} ítems.`, "info");
+    } else {
+      showStatus(`Nueva colección "${name}" creada y ${modsToAdd.length} ítems añadidos.`, "success");
+    }
+
+    setBulkAdding(false);
+    setLoadingColls(false);
+    discover.clearSelection();
+  };
 
   const { status, showStatus, clearStatus } = useStatusBanner();
   const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
@@ -200,7 +294,7 @@ export function FomoSidebar({
         role="dialog"
         aria-modal="true"
         aria-label="Panel FOMO"
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
           discover.source === "curseforge" ? "fomo-source-curseforge" : "fomo-source-modrinth"
         } ${
           open ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-full opacity-0 pointer-events-none"
@@ -294,23 +388,16 @@ export function FomoSidebar({
                   borderColor: "var(--fomo-border)" 
                 }}
               >
-                {/* Sinytra Connector Card (Hybrid Fabric+Forge) */}
                 {(discover.loader === "forge" || discover.loader === "neoforge") && discover.projectType === "mod" && (
-                  <div 
-                    className={`p-3.5 rounded-xl border flex flex-col gap-2.5 transition-all duration-300 relative overflow-hidden shrink-0 ${
-                      discover.sinytraActive 
-                        ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_8px_32px_rgba(6,182,212,0.1)]" 
-                        : "bg-white/5 border-white/5 text-foreground/60 hover:bg-white/10 hover:border-white/10"
-                    }`}
-                  >
+                  <div className={`fomo-sinytra-card ${discover.sinytraActive ? "active" : ""}`}>
                     {/* Glowing effect inside the card */}
                     {discover.sinytraActive && (
-                      <div className="absolute -inset-10 bg-cyan-500/15 blur-2xl rounded-full pointer-events-none" />
+                      <div className="fomo-sinytra-glow" />
                     )}
                     
                     <div className="flex items-center justify-between gap-2.5 relative z-10">
                       <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg transition-colors ${discover.sinytraActive ? "bg-cyan-500/20 text-cyan-400 animate-pulse" : "bg-white/5 text-foreground/40"}`}>
+                        <div className={`fomo-sinytra-icon-container ${discover.sinytraActive ? "animate-pulse" : ""}`}>
                           <Workflow className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
@@ -326,19 +413,9 @@ export function FomoSidebar({
                           discover.setSinytraActive(nextVal);
                           showStatus(nextVal ? "Modo híbrido Sinytra activado: mostrando mods de Forge y Fabric" : "Modo híbrido desactivado: mostrando solo Forge", "info");
                         }}
-                        className={`w-9 h-5 rounded-full relative transition-all duration-300 border ${
-                          discover.sinytraActive 
-                            ? "bg-cyan-500/30 border-cyan-500/40" 
-                            : "bg-white/5 border-white/10"
-                        }`}
+                        className={`fomo-sinytra-switch ${discover.sinytraActive ? "active" : ""}`}
                       >
-                        <div 
-                          className={`w-3.5 h-3.5 rounded-full absolute top-0.5 transition-all duration-300 ${
-                            discover.sinytraActive 
-                              ? "left-4.5 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" 
-                              : "left-0.75 bg-foreground/40"
-                          }`}
-                        />
+                        <div className="fomo-sinytra-switch-knob" />
                       </button>
                     </div>
                     <p className="text-[9px] leading-relaxed relative z-10 opacity-75">
@@ -397,8 +474,13 @@ export function FomoSidebar({
               </div>
 
                 {/* Mod list */}
-              <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${!!discover.selectingVersionFor ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start`} role="feed" aria-label="Lista de mods" aria-busy={discover.loading}>
-                {(discover.loading || discover.mods.length === 0) && !discover.sourceError && discover.total === 0 ? (
+              <div 
+                className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${!!discover.selectingVersionFor ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-2 content-start transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${discover.loading && discover.mods.length > 0 ? 'opacity-40' : 'opacity-100'}`} 
+                role="feed" 
+                aria-label="Lista de mods" 
+                aria-busy={discover.loading}
+              >
+                {discover.loading && (discover.mods.length === 0 || discover.page === 1) ? (
                   <div className="col-span-full">
                     <FomoSkeleton 
                       variant="card"
@@ -407,18 +489,34 @@ export function FomoSidebar({
                       count={9} 
                     />
                   </div>
+                ) : discover.mods.length === 0 && !discover.loading ? (
+                   <div className="col-span-full py-20 text-center opacity-40">
+                     <p className="font-subhead">No se encontraron resultados</p>
+                   </div>
                 ) : discover.mods.map((mod) => (
-                  <FomoModCard
-                    key={mod.projectId}
-                    mod={mod}
-                    isDownloading={!!discover.downloading[mod.projectId]}
-                    onDownload={discover.handleDownload}
-                    onOpenVersions={discover.handleOpenVersionSelector}
-                    onAddToCollection={handleAddToCollection}
-                    isSelected={discover.selectedMods.some(m => m.projectId === mod.projectId)}
-                    onToggleSelect={discover.toggleModSelection}
-                    sinytraActive={discover.sinytraActive}
-                  />
+                  <div key={mod.projectId} className="p-2 bg-transparent overflow-visible">
+                    <FomoModCard
+                      mod={mod}
+                      isDownloading={!!discover.downloading[mod.projectId]}
+                      onDownload={discover.handleDownload}
+                      onOpenVersions={(m) => {
+                        discover.handleOpenVersionSelector(m);
+                        if (!discover.selectedMods.some(sel => sel.projectId === m.projectId)) {
+                          discover.toggleModSelection(m);
+                        }
+                      }}
+                      onAddToCollection={handleAddToCollection}
+                      isSelected={discover.selectedMods.some(m => m.projectId === mod.projectId)}
+                      onToggleSelect={(m) => {
+                        discover.toggleModSelection(m);
+                        // Proactivamente abrir detalles al seleccionar
+                        if (!discover.selectedMods.some(sel => sel.projectId === m.projectId)) {
+                          discover.handleOpenVersionSelector(m);
+                        }
+                      }}
+                      sinytraActive={discover.sinytraActive}
+                    />
+                  </div>
                 ))}
               </div>
 
@@ -440,7 +538,7 @@ export function FomoSidebar({
                       Cancelar
                     </button>
                     <button
-                      onClick={() => setMode("collections")}
+                      onClick={handleOpenBulkAddToCollection}
                       className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all border border-white/10 hover:bg-white/5 active:scale-95"
                       style={{ color: COLORS.foreground }}
                     >
@@ -502,7 +600,6 @@ export function FomoSidebar({
               projectType={discover.projectType}
               onClose={() => discover.setSelectingVersionFor(null)}
               onDownload={discover.handleDownload}
-              onDownloadDependency={discover.handleDownloadDependency}
             />
           );
         })()}
@@ -543,6 +640,159 @@ export function FomoSidebar({
               ))}
             </div>
           </ConfirmModal>
+        )}
+
+        {/* Bulk Add to Collection In-Place Modal Overlay */}
+        {bulkAdding && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/65 backdrop-blur-xl animate-fade-in">
+            <div 
+              className="w-full max-w-sm rounded-2xl border p-5 flex flex-col gap-4 shadow-2xl animate-scale-in"
+              style={{ 
+                background: "var(--color-card)", 
+                borderColor: "rgba(255, 255, 255, 0.08)",
+                boxShadow: "0 24px 64px rgba(0,0,0,0.6)"
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-headline text-base font-bold" style={{ color: COLORS.foreground }}>
+                    {isCreatingColl ? "Nueva Colección" : "Añadir a Colección"}
+                  </h3>
+                  <p className="text-[11px] opacity-50 mt-0.5">
+                    {isCreatingColl 
+                      ? "Crea una colección para tus mods" 
+                      : `Selecciona una colección para añadir ${discover.selectedMods.length} ítems`}
+                  </p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setBulkAdding(false)} 
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                  style={{ color: COLORS.muted }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content */}
+              {isCreatingColl ? (
+                <div className="flex flex-col gap-3.5 py-1">
+                  {/* Platform toggle */}
+                  <div className="flex p-1 bg-black/40 rounded-xl gap-1 border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setNewCollTarget("modrinth")}
+                      className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        newCollTarget === "modrinth" ? "bg-primary text-white shadow-sm" : "opacity-45 hover:opacity-100"
+                      }`}
+                    >
+                      Modrinth
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewCollTarget("local")}
+                      className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        newCollTarget === "local" ? "bg-white/10 text-white shadow-sm" : "opacity-45 hover:opacity-100"
+                      }`}
+                    >
+                      Local
+                    </button>
+                  </div>
+
+                  {/* Name Input */}
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="new-collection-name" className="text-[9px] uppercase tracking-wider opacity-40 font-bold">Nombre</label>
+                    <input
+                      id="new-collection-name"
+                      autoFocus
+                      type="text"
+                      value={newCollName}
+                      onChange={(e) => setNewCollName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleBulkCreateCollection()}
+                      placeholder={newCollTarget === "modrinth" ? "Ej: Mis Optimizaciones" : "Ej: Local Pack"}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-3.5 py-2.5 outline-none focus:border-primary/50 text-xs font-medium transition-all"
+                      style={{ color: COLORS.foreground }}
+                    />
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-2 pt-1">
+                    <button 
+                      type="button"
+                      onClick={() => setIsCreatingColl(false)} 
+                      className="flex-1 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all active:scale-95" 
+                      style={{ color: COLORS.muted }}
+                    >
+                      Volver
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleBulkCreateCollection} 
+                      disabled={!newCollName.trim() || loadingColls}
+                      className="flex-2 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:scale-100 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      {loadingColls ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Crear y Añadir"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5 max-h-72 overflow-y-auto custom-scrollbar pr-0.5 py-0.5">
+                  {/* Create New Collection Option */}
+                  <button 
+                    type="button"
+                    onClick={() => { setIsCreatingColl(true); setNewCollName(""); }} 
+                    className="w-full p-3 rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group active:scale-98"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-xs" style={{ color: COLORS.foreground }}>Nueva Colección</span>
+                  </button>
+
+                  {/* Collections List */}
+                  {loadingColls ? (
+                    <div className="py-10 flex flex-col items-center gap-2 text-foreground/40">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <p className="text-[11px]">Cargando colecciones...</p>
+                    </div>
+                  ) : collectionsList.length === 0 ? (
+                    <p className="text-xs text-center py-6 opacity-40">No tienes colecciones creadas todavía.</p>
+                  ) : (
+                    collectionsList
+                      .filter(c => c.id !== "followed-projects")
+                      .map((coll) => (
+                        <button 
+                          key={coll.id} 
+                          type="button"
+                          onClick={() => handleBulkAddToCollection(coll)} 
+                          disabled={addingToCollId != null}
+                          className="flex items-center gap-3 p-2 rounded-xl bg-white/3 hover:bg-white/8 border border-white/5 hover:border-primary/20 transition-all text-left group disabled:opacity-40"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
+                            {coll.iconUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Library className="w-3.5 h-3.5 text-primary/80" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-xs truncate" style={{ color: COLORS.foreground }}>{coll.name}</p>
+                            <p className="text-[10px]" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                          </div>
+                          <div className="shrink-0">
+                            {addingToCollId === coll.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            )}
+                          </div>
+                        </button>
+                      ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </aside>
     </>

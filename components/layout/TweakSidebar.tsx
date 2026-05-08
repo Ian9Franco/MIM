@@ -32,6 +32,17 @@ interface TweakSidebarProps {
 
 export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarProps) {
   const [activeTab, setActiveTab] = useState<"optimize" | "keybinds" | "resourcepacks" | "profiles">("optimize");
+
+  // Persistence for activeTab
+  useEffect(() => {
+    const saved = localStorage.getItem("tweak_active_tab");
+    if (saved) setActiveTab(saved as any);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("tweak_active_tab", activeTab);
+  }, [activeTab]);
+
   const [data, setData] = useState<TweakData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -394,13 +405,14 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   return (
     <aside 
       ref={sidebarRef}
-      className={`fixed inset-y-0 right-0 w-100 z-100 flex flex-col shadow-2xl border-l transition-transform duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
-        isOpen ? "translate-x-0" : "translate-x-full"
+      className={`fixed inset-y-0 right-0 w-100 z-100 flex flex-col shadow-2xl border-l transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+        isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       }`}
       style={{ 
-        background: "color-mix(in srgb, var(--color-card) 95%, transparent)",
-        borderColor: "var(--color-border)",
-        backdropFilter: "blur(24px)",
+        background: "var(--glass-bg)",
+        borderColor: "var(--glass-border)",
+        backdropFilter: "var(--liquid-blur)",
+        boxShadow: "var(--shadow-drop)",
       }}
     >
       {/* Header */}

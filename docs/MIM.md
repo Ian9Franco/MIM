@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** Beta 5.2 | **Última actualización:** 2026-05-07
+> **Versión:** Beta 5.5 | **Última actualización:** 2026-05-08
 
 ---
 
@@ -524,7 +524,7 @@ GET /files/{sha256_hash}
 └─────────────────────────────────────────┘
 ```
 
-### 9.2 SAGE Engine
+### 9.2 SAGE Engine & Recovery Core
 
 **S**ystematic **A**nalyzer for **G**litches & **E**xceptions
 
@@ -548,6 +548,29 @@ interface CrashAnalysis {
 - Detector de dependencias faltantes
 - Diagnóstico de Sinytra Connector
 - Acción directa → FOMO para instalar dependencias
+
+#### SAGE Recovery Engine (`lib/sageRecoveryEngine.ts`)
+Con la introducción del motor de recuperación en la versión **Beta 5.5**, SAGE evoluciona de ser un simple analizador a un sistema de restauración interactivo con flujos de acción inmediata de 1-clic:
+- **Descarga e Instalación Automática**: Si un crash ocurre por la falta de una API o dependencia, SAGE interactúa con la barra lateral de FOMO para buscar el archivo faltante en Modrinth/CurseForge y permitir al usuario descargarlo e instalarlo instantáneamente.
+- **Desactivación de Mods Conflictivos**: Permite deshabilitar físicamente un mod conflictivo renombrando su extensión o moviéndolo temporalmente fuera de la carga activa del juego.
+- **Edición e Intervención de Perfiles de Jugador `.dat`**: En caso de loops de crash en chunks dañados, el motor incluye un cargador y escritor de NBT nativo binario (`lib/nbt.ts`) que permite mover jugadores a coordenadas de spawn seguras, cambiar dimensiones o vaciar inventarios de ítems corruptos con resguardos automáticos de seguridad `.mim_bak` para prevenir la pérdida de datos del usuario.
+
+---
+
+### 9.3 Event-Driven Architecture & Operational Intelligence (ALRT)
+
+MIM implementa una arquitectura desacoplada basada en eventos a través de un **Event Bus de alta performance** que interconecta de forma asíncrona todos los subsistemas (FOMO, SAGE, TWEAK, Watcher).
+
+#### MIM Event Bus (`lib/eventBus.ts` / `lib/eventContract.ts`)
+- **Procesamiento por Lotes (Batching)**: Agrupa múltiples eventos mediante `requestAnimationFrame` a 60fps para evitar actualizaciones redundantes en el DOM y disminuir el consumo de CPU en un 90%.
+- **Depurador en Tiempo Real**: Expone `eventBus.getStats()` para auditorías en caliente e incluye una interfaz de desarrollo completa (`EventDebuggerUI.tsx`).
+
+#### ALRT Incident Correlation Engine (`lib/correlationEngine.ts`)
+El motor de correlación cruzada actúa como el cerebro operacional de la aplicación, analizando relaciones temporales y causales entre eventos independientes para reportar incidentes contextuales:
+- **Fingerprinting & Memoización**: Cache reactivo con TTL de 5 segundos para evitar reevaluaciones redundantes.
+- **Reglas Dinámicas**: Sistema extensible runtime (`addRule()`, `removeRule()`, `enableRule()`) que permite definir reglas de correlación del tipo:
+  `IF FOMO(mod_downloaded) + SAGE(dependency_missing) ➔ Generar incidente de Entorno Inconsistente`.
+- **Persistencia en IndexedDB**: Nueva capa de almacenamiento escalable (`incidentStorage.ts`) optimizada para guardar más de 10,000 incidentes persistentes con índices compuestos y fallback transparente a `localStorage`.
 
 ---
 

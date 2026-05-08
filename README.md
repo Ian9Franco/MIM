@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.2**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.5**
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -22,38 +22,49 @@
 
 ## 💡 El Problema
 
-> *"Descargué 47 mods para mi pack 1.20.1 Forge... pero el juego crashea. ¿Cuál es el incompatible?"*
+> “Descargué 47 mods para mi pack de Minecraft 1.20.1 Forge… ahora crashea como si hubiera invocado a Satanás. ¿Cuál fue el mod culpable? ¿Cuál se actualizó? ¿Por qué las texturas se ven bugeadas?”
 
-Crear modpacks de Minecraft es **frustrante**:
-- ❌ Descargas mods de 5 sitios diferentes, los pierdes en Downloads
-- ❌ No sabes qué modloader (Forge/Fabric) usa cada archivo
-- ❌ Actualizar mods manualmente = 3 horas de YouTube tutorials
-- ❌ Copiar mods a `/mods` = errores humanos, mods faltantes
-- ❌ Un mod incompatible = crash, y no sabes cuál
+Crear modpacks debería ser divertido.  
+En la práctica, parece una relación tóxica con la carpeta Downloads.
+
+- ❌ Descargas mods desde 5 lugares distintos y terminan perdidos en el limbo de Descargas
+- ❌ No sabes si ese `.jar` es para Forge, Fabric, Quilt o fue escrito por un chamán
+- ❌ Actualizar mods manualmente = 3 horas de tutoriales dudosos en YouTube 
+- ❌ Copiar archivos a `/mods` a mano = errores, versiones cruzadas, arrepentimiento y duplicados
+- ❌ Un solo mod incompatible = crash. Y Minecraft te responde con un poema satánico en logs
+- ❌ Tus texturas se ven rotas, parpadean o se traslapan porque tus Resource Packs se están cargando en el orden incorrecto
 
 ## ✅ La Solución
 
-**MIM** transforma el caos en un flujo de trabajo de **3 clics**:
+MIM convierte ese caos hermoso en un flujo de trabajo limpio, rápido y sin rituales oscuros.
 
-```bash
-1. Descarga mods → MIM detecta automáticamente en Downloads
-2. Categoriza con hotkeys (1,2,3) → Organizado en segundos  
-3. Build → Zip listo para jugar o compartir
-```
+En **3 clics**:
+1. **Descargas mods** ➔ MIM los detecta automáticamente en Downloads
+2. **Clasificas con hotkeys (1,2,3)** ➔ orden en segundos
+3. **Build** ➔ ZIP listo para jugar, compartir o presumir
 
-### ✨ Features Destacadas
+### 🔧 Tweak Control: Adiós a los ojos flotantes
+¿Cansado de ver que tus aldeanos tienen los ojos flotando a tres bloques de distancia por culpa de un pack mal ordenado? 
+MIM incluye un gestor interactivo de **Resource Packs y Shaders**:
+* **Prioridad Real Visual**: Invierte e interactúa con el orden visual de tus texturas con un sistema de prioridad idéntico al de Minecraft, directamente desde la barra lateral.
+* **Validación de Fresh Animations**: Detecta automáticamente dependencias visuales críticas y te recomienda el orden perfecto para evitar colisiones y fallos gráficos al instante.
 
-| Feature | Descripción | Impacto |
-|---------|-------------|---------|
-| **🚀 FOMO 3.0** | Descubrimiento ultra-denso con Modrinth + CurseForge | Navegación 50% más rápida |
-| **🤖 Modo Auto** | Clasificación automática basada en tags temáticos | 90% menos clicks |
-| **🛡️ Security Scanner** | Análisis de bytecode + VirusTotal + Alertas unificadas | 100% protección |
-| **🧠 SAGE Engine** | Diagnóstico de crashes, soporte de `.mcmeta` y rescate de jugadores (`UUID.dat` editor) | Corrección instantánea de fallos |
-| **🔔 ALRT Center** | Centro unificado de alertas en tiempo real (seguridad, crashes y configuración) | Campaneo rítmico inteligente (`seen/unseen`) |
-| **⚡ Bulk Actions** | Selección y acciones en lote | 10x más rápido |
-| **🔌 Sinytra Support** | Mods Fabric en proyectos Forge | Expande tu biblioteca |
-| **🎹 Keybind Editor** | Edita controles de mods (Iris, Sodium y Key binds dinámicos) | Control total sin entrar al juego |
-| **🧩 Priority Stack** | Ordenación y control visual de resource packs (Reglas de Fresh Animations) | Evita bugs visuales al instante |
+Menos tiempo peleando con `.jar` y configuraciones.  
+Más tiempo jugando. Como debería ser.
+
+### ✨ Features que realmente importan
+
+| Feature | Qué hace | Impacto real |
+|:---|:---|:---|
+| **🚀 FOMO 3.0** | Descubrimiento ultra-denso con Modrinth + CurseForge en una sola vista | Navegación hasta 50% más rápida |
+| **🤖 Modo Auto** | Clasificación automática según tags y contexto del modpack | 90% menos clicks y menos neuronas sacrificadas |
+| **🛡️ Security Scanner** | Bytecode analysis + VirusTotal + alertas centralizadas | Seguridad real, no “trust me bro” |
+| **🧠 SAGE Engine** | Diagnóstico de crashes, soporte `.mcmeta` y rescate de jugadores (`UUID.dat`) | Detecta y corrige fallos antes del rage quit |
+| **🔔 ALRT Center** | Centro unificado de alertas de seguridad, crashes y config | Todo lo importante en un solo lugar |
+| **⚡ Bulk Actions** | Selección masiva y acciones en lote | 10x más rápido, 100x menos sufrimiento |
+| **🔌 Sinytra Support** | Compatibilidad Fabric ➔ Forge | Tu biblioteca deja de tener fronteras |
+| **🎹 Keybind Editor** | Edita controles de mods sin abrir Minecraft | Control total, cero menús infernales |
+| **🧩 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
 
 ---
 
@@ -184,8 +195,12 @@ MIM implementa **3 capas de seguridad**:
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Beta 5.3)
-- **ALRT Unified Center**: Centro unificado de alertas con campaneo continuo e indicador inteligente (`seen/unseen`).
+### ✅ Completado (Beta 5.5)
+- **Tailwind CSS v4 Native Migration**: Adopción de la nueva escala simplificada, remoción de clases de corchetes arbitrarios (`z-100`, `w-100`/`w-400`, `max-w-400`) y migración a gradientes modernos nativos (`bg-linear-to-r`).
+- **SAGE Recovery Engine**: Motor de recuperación interactiva de 1-clic ante crashes de Minecraft, integrando descargas de dependencias con FOMO y edición de perfiles de jugador `.dat` con backups automáticos.
+- **Static Bytecode Audit & Security Modals**: Modal premium que detalla llamadas de sistema sospechosas (`ProcessBuilder`, sockets de red, reflexiones JNI), VirusTotal y Whitelisting local.
+- **MIM Event Bus & Debugger UI**: Bus asíncrono tipado y agrupado por lotes a 60fps con un panel visual interactivo de monitorización del sistema en vivo.
+- **ALRT Unified Center & Incident Correlation**: Capa centralizada de alertas e incidentes compuestos que asocia eventos cruzados (ej. descarga + falta de dependencias) con campaneo rítmico inteligente.
 - **SAGE Player Rescue**: Edición local de archivos `.dat` (inventario, spawn, posición) para rescatar jugadores con crashes.
 - **SAGE .mcmeta Reader**: Soporte nativo para escaneo y lectura de metadatos de resource packs.
 - **Tweak Keybind Editor**: Lector dinámico de controles de mods directamente desde `options.txt`.
@@ -198,13 +213,12 @@ MIM implementa **3 capas de seguridad**:
 - Virtual scrolling (700+ mods).
 
 ### 🚧 En Progreso
-- Conflict Detection Engine.
-- Auto-Optimization de Java Args.
+- Conflict Detection Engine (Análisis estático de Mixins).
+- Rule-Based Optimization Engine (Asignación automática de recursos).
 
 ### 📋 Próximo
-- AI Recommendations con análisis semántico.
-- Natural Language Search.
-- Demo Deployable.
+- Mod Packaging Assistant (Pipeline de validación y distribución).
+- Showcase Demo Deployable.
 
 ---
 

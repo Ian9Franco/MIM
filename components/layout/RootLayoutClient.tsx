@@ -43,6 +43,24 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     }
   }, [alertSidebarOpen]);
 
+  // Persistence for activeProject
+  React.useEffect(() => {
+    const saved = localStorage.getItem("mim_active_project");
+    if (saved) {
+      try {
+        setActiveProject(JSON.parse(saved));
+      } catch (e) {
+        console.warn("Error loading active project from localStorage", e);
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (activeProject) {
+      localStorage.setItem("mim_active_project", JSON.stringify(activeProject));
+    }
+  }, [activeProject]);
+
   // Sincronizar conteo de incidentes del IncidentManager
   React.useEffect(() => {
     const updateCounts = async () => {
@@ -277,7 +295,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
-        className="relative z-10 min-h-screen flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] overflow-x-hidden"
+          className="relative z-10 min-h-screen flex flex-col transition-all duration-600 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-x-hidden"
         style={{ 
           transform: `translateX(${fomoOpen || sageOpen ? 500 : 0}px)`,
           paddingRight: (alertSidebarOpen || tweakOpen) ? "400px" : "0px",

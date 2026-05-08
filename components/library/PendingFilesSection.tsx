@@ -235,7 +235,10 @@ export function PendingFilesSection({
         } : {}}
       >
         {loading ? (
-          <SkeletonLoader />
+          <div className="space-y-3">
+            <SkeletonLoader message="Buscando archivos..." />
+            <SkeletonLoader message="Analizando metadatos..." />
+          </div>
         ) : pendingFiles.length === 0 ? (
           <EmptyState message="Monitoreando Descargas... Descargá un .jar para verlo aquí" />
         ) : (

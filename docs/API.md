@@ -2,7 +2,7 @@
 
 > Guía completa de integraciones API: Modrinth, CurseForge y VirusTotal.  
 > Estrategias de optimización, rate limiting y seguridad.  
-> **Versión:** Beta 5.2 | **Última actualización:** 2026-05-07
+> **Versión:** Beta 5.5 | **Última actualización:** 2026-05-08
 
 ---
 
@@ -15,6 +15,7 @@
 5. [Estrategias de Optimización](#5-estrategias-de-optimización)
 6. [Gestión de Rate Limits](#6-gestión-de-rate-limits)
 7. [Seguridad y Cache](#7-seguridad-y-cache)
+8. [MIM Core APIs (Control Interno)](#8-mim-core-apis-control-interno)
 
 ---
 
@@ -319,6 +320,105 @@ SOURCE_BASE/.mim-index/remote-cache.json
 ```
 
 Cache en disco duro con TTL de 12 horas para datos de actualización.
+
+---
+
+## 8. MIM Core APIs (Control Interno)
+
+Además de los conectores en la nube, MIM expone un conjunto de APIs locales para la gestión física del proyecto, diagnósticos en tiempo real y validación de entornos.
+
+### 8.1 Validación de Credenciales
+`POST /api/settings/validate-keys`
+
+Valida la conectividad física y el formato de las credenciales configuradas para CurseForge, Modrinth y VirusTotal en tiempo real.
+
+**Request Body:**
+```json
+{
+  "curseforge": "tu_key_curseforge",
+  "modrinth": "tu_token_modrinth",
+  "virusTotal": "tu_key_virustotal"
+}
+```
+
+**Response:**
+```json
+{
+  "results": {
+    "curseforge": true,
+    "modrinth": true,
+    "virusTotal": false
+  }
+}
+```
+
+---
+
+### 8.2 Resolución de Propiedad de Dependencias
+`GET /api/library/resolve-ownership?version={v}&loader={l}&project={p}`
+
+Escanea los mods de un proyecto o versión, analiza el grafo de dependencias y propaga el ámbito de uso para sugerir si un mod/api/librería compartido pertenece a un entorno cliente, servidor o esencial (ambos).
+
+**Parámetros:**
+- `version` (Obligatorio): Ej. `1.20.1`
+- `loader`: `forge`, `neoforge` o `fabric` (Requerido si `project` está ausente)
+- `project` (Opcional): Nombre de la instancia activa del proyecto
+
+**Response:**
+```json
+{
+  "success": true,
+  "actions": [
+    {
+      "modId": "architectury",
+      "modName": "Architectury API",
+      "currentPath": "D:\\.mine\\source\\1.20.1\\forge\\.essential\\librerias\\architectury-9.2.14.jar",
+      "suggestedCategory": ".essential\\librerias",
+      "reason": "Es requerida por una mezcla de entornos o por mods compartidos activos: Create, Alex's Mobs.",
+      "severity": "warning"
+    }
+  ]
+}
+```
+
+---
+
+### 8.3 Escáner de Shaders y Texturas locales
+`GET /api/library/assets?project={project}`
+
+Escanea globalmente `.minecraft` y localmente la carpeta del proyecto actual para detectar texturas (`resourcepacks`) y cargadores de shaderpacks activos, unificando su estado en la interfaz.
+
+**Response:**
+```json
+{
+  "shaders": [
+    {
+      "path": "C:\\Users\\...\\AppData\\Roaming\\.minecraft\\shaderpacks\\ComplementaryReimagined.zip",
+      "fileName": "ComplementaryReimagined.zip",
+      "projectType": "shader",
+      "meta": { "modId": "complementary", "modName": "Complementary Shaders", ... }
+    }
+  ],
+  "resourcepacks": []
+}
+```
+
+---
+
+### 8.4 Auditoría de Logs y Crash Reports (SAGE API)
+`GET /api/project/logs` | `DELETE /api/project/logs`
+
+Módulo API para listar logs y crash reports, leer contenidos de diagnóstico limitados (hasta 5MB) protegiendo el sistema contra directory traversal y eliminando logs antiguos de forma segura.
+
+**Listar logs:**
+`GET /api/project/logs?project={project}&version={version}`
+
+**Leer un log específico:**
+`GET /api/project/logs?project={project}&version={version}&file={relative_file_path}`
+*(Ej. `file=logs/latest.log` o `file=global:crash-reports/crash-2026-05-08.txt`)*
+
+**Eliminar un log:**
+`DELETE /api/project/logs?project={project}&version={version}&file={relative_file_path}`
 
 ---
 

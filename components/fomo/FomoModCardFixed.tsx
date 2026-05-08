@@ -62,19 +62,21 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
   return (
     <article
       onClick={() => onToggleSelect?.(mod)}
-      className={`transition-all duration-200 shadow-md relative group cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''} ${
+      className={`transition-all duration-200 relative group cursor-pointer hover-slime ${isSelected ? 'ring-2 ring-primary' : ''} ${
         isCurseForge 
           ? 'rounded-none border-2 border-orange-900/30' 
-          : 'rounded-[1.35rem] border glass-hover backdrop-blur-[14px]'
+          : 'rounded-[1.35rem] border'
       }`}
       style={{ 
-        height: "220px", // ALTURA FIJA - NO CAMBIA
+        height: "220px", 
         background: isCurseForge 
           ? "var(--color-cf-bg)" 
-          : (isSelected ? "rgba(187,150,228,0.1)" : COLORS.card), 
+          : "var(--glass-bg)", 
         borderColor: isCurseForge 
           ? (isSelected ? COLORS.curseforgeOrange : "var(--color-cf-border)")
-          : (isSelected ? COLORS.primary : COLORS.border),
+          : (isSelected ? COLORS.primary : "var(--glass-border)"),
+        backdropFilter: isCurseForge ? "none" : "var(--liquid-blur)",
+        boxShadow: isCurseForge ? "none" : "var(--shadow-drop)",
       }}
       aria-label={mod.title}
     >
@@ -212,7 +214,7 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
         {/* SECCIÓN DE DESCRIPCIÓN - Altura fija con truncado */}
         <div className="flex-1" style={{ minHeight: "48px", maxHeight: "48px" }}>
           <p 
-            className="font-caption leading-relaxed text-sm line-clamp-2" 
+            className="font-caption leading-relaxed text-sm line-clamp-2 h-12 overflow-hidden" 
             style={{ 
               color: COLORS.muted,
               display: "-webkit-box",
@@ -268,7 +270,7 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
               isCurseForge 
                 ? 'bg-orange-600 hover:bg-orange-700 text-white disabled:bg-orange-800 disabled:text-orange-200' 
                 : 'bg-primary hover:bg-primary/90 text-white disabled:bg-primary/50 disabled:text-white/50'
-            }`}
+            } ${isDownloading ? 'animate-transfer' : ''}`}
             style={{ height: "36px" }}
           >
             {isDownloading ? (

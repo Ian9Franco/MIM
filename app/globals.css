@@ -4,122 +4,71 @@
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 /* OFFICIAL (Default - Antracita & Terracota) */
 :root {
-  --color-background: #141416;
-  --color-surface:    #1c1c1f;
-  --color-card:       #222226;
-  --color-primary:    #D97757; /* Naranja arcilla / Terracota */
-  --color-accent:     #E28A6B;
+  --color-background: #0D0D0F;
+  --color-surface:    #151518;
+  --color-card:       #1C1C21;
+  --color-primary:    #F2562B; /* Naranja vibrante de la paleta */
+  --color-accent:     #FF7A55;
   --color-emerald:    #66C8A0;
-  --color-foreground: #F4F4F5; /* Blanco hueso */
-  --color-muted:      #A1A1AA; /* Gris medio */
-  --color-border:     rgba(255, 255, 255, 0.08); /* Gris ceniza sutil */
-  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-foreground: #F4F4F5;
+  --color-muted:      #777777; /* Gris oscuro de la paleta */
+  --color-border:     rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
 
-  /* Semantic States */
-  --color-danger:     #EF4444;
-  --color-danger-bg:  rgba(239, 68, 68, 0.08);
-  --color-danger-hover: rgba(239, 68, 68, 0.15);
-  --color-danger-border: rgba(239, 68, 68, 0.2);
-  
-  --color-success:    #10B981;
-  --color-success-bg: rgba(16, 185, 129, 0.08);
-  
-  --color-warning:    #F59E0B;
-  --color-warning-bg: rgba(245, 158, 11, 0.08);
-  
-  --color-accent-bg:  rgba(217, 119, 87, 0.08);
-  --color-accent-hover: rgba(217, 119, 87, 0.15);
-  --color-accent-border: rgba(217, 119, 87, 0.2);
-
-  --color-secondary-bg: rgba(255, 255, 255, 0.04);
-  --color-hover:      rgba(255, 255, 255, 0.06);
+  /* Liquid Glass & Neomorphism Effects */
+  --glass-bg: rgba(28, 28, 33, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-drop: 0 15px 35px rgba(0, 0, 0, 0.3);
+  --shadow-inner: inset 0 2px 4px rgba(255, 255, 255, 0.05), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+  --liquid-blur: blur(20px);
 
   /* CurseForge Specific Tokens */
-  --color-cf-bg:      rgba(30, 20, 10, 0.85);
-  --color-cf-border:  rgba(241, 100, 54, 0.2);
+  --color-cf-bg:      rgba(30, 20, 10, 0.7);
+  --color-cf-border:  rgba(242, 86, 43, 0.15);
 }
 
-/* VAMPIRE (Old Dark) */
+/* VAMPIRE (Dark Purple) */
 [data-theme="vampire"] {
-  --color-background: #200D2D;
-  --color-surface:    #1a0a24;
-  --color-card:       #1e0d29;
+  --color-background: #171717; /* Negro profundo de la paleta */
+  --color-surface:    #1E1E1E;
+  --color-card:       #242424;
   --color-primary:    #BB96E4;
   --color-accent:     #FFD066;
-  --color-emerald:    #66C8A0;
-  --color-foreground: #F2ECF9;
-  --color-muted:      rgba(242, 236, 249, 0.60);
-  --color-border:     rgba(187, 150, 228, 0.16);
-  --color-border-strong: rgba(187, 150, 228, 0.32);
+  --color-foreground: #DEDEDE; /* Gris claro de la paleta */
+  --color-muted:      #777777;
+  --color-border:     rgba(187, 150, 228, 0.12);
+  
+  --glass-bg: rgba(30, 30, 30, 0.8);
+  --glass-border: rgba(187, 150, 228, 0.15);
+  --shadow-drop: 0 15px 35px rgba(0, 0, 0, 0.4);
+  --shadow-inner: inset 0 2px 4px rgba(187, 150, 228, 0.1), inset 0 -2px 4px rgba(0, 0, 0, 0.5);
 
-  --glow-primary: rgba(187, 150, 228, 0.18);
-  --glow-accent:  rgba(255, 208, 102, 0.14);
-
-  /* Semantic States */
-  --color-danger:     #FF6B6B;
-  --color-danger-bg:  rgba(255, 107, 107, 0.12);
-  --color-danger-hover: rgba(255, 107, 107, 0.2);
-  --color-danger-border: rgba(255, 107, 107, 0.3);
-
-  --color-success:    #66C8A0;
-  --color-success-bg: rgba(102, 200, 160, 0.12);
-
-  --color-warning:    #FFD066;
-  --color-warning-bg: rgba(255, 208, 102, 0.12);
-
-  --color-accent-bg:  rgba(187, 150, 228, 0.12);
-  --color-accent-hover: rgba(187, 150, 228, 0.2);
-  --color-accent-border: rgba(187, 150, 228, 0.3);
-
-  --color-secondary-bg: rgba(187, 150, 228, 0.06);
-  --color-hover:      rgba(187, 150, 228, 0.1);
-
-  /* CurseForge Specific Tokens */
-  --color-cf-bg:      rgba(30, 20, 10, 0.85);
-  --color-cf-border:  rgba(241, 100, 54, 0.3);
+  /* CurseForge Vampire */
+  --color-cf-bg:      rgba(20, 15, 30, 0.7);
+  --color-cf-border:  rgba(187, 150, 228, 0.2);
 }
 
-/* MODERN (Old Light) */
+/* MODERN (Light Neomorphic) */
 [data-theme="modern"] {
-  --color-background: #F0F2F9; /* Un tono ligeramente más azulado y profundo */
-  --color-surface:    #E5E7EB;
-  --color-card:       #FFFFFF;
+  --color-background: #E8EAEC; /* Color de fondo de la paleta */
+  --color-surface:    #F0F2F4;
+  --color-card:       #E8EAEC; /* Mismo que el fondo para neomorfismo */
   --color-primary:    #7C3AED;
-  --color-accent:     #0891B2; /* Cyan vibrante para mejor contraste y frescura */
-  --color-emerald:    #059669; 
-  --color-foreground: #1E1B4B;
-  --color-muted:      #4B5563; /* Gris más oscuro para legibilidad */
-  --color-border:     rgba(124, 58, 237, 0.15);
-  --color-border-strong: rgba(124, 58, 237, 0.3);
+  --color-accent:     #0891B2;
+  --color-foreground: #0D2750; /* Color oscuro de la paleta */
+  --color-muted:      #777777;
+  --color-border:     rgba(13, 39, 80, 0.05);
+  
+  /* Neomorphic Shadows from palette - Reduced for better clipping */
+  --shadow-drop: 12px 12px 25px rgba(13, 39, 80, 0.12), -10px -10px 20px #FFFFFF;
+  --shadow-inner: inset -8px -8px 12px #FFFFFF, inset 8px 8px 12px rgba(13, 39, 80, 0.12);
+  --glass-bg: rgba(232, 234, 236, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --liquid-blur: blur(12px);
 
-  --glow-primary: rgba(124, 58, 237, 0.1);
-  --glow-accent:  rgba(8, 145, 178, 0.08);
-
-  /* Semantic States */
-  --color-danger:     #DC2626;
-  --color-danger-bg:  #FEE2E2;
-  --color-danger-hover: #FECACA;
-  --color-danger-border: #FCA5A5;
-
-  --color-success:    #059669;
-  --color-success-bg: #D1FAE5;
-
-  --color-warning:    #0891B2;
-  --color-warning-bg: #ECFEFF;
-
-  --color-accent-bg:  #ECFEFF; 
-  --color-accent-hover: #CFFAFE;
-  --color-accent-border: #A5F3FC;
-
-  --color-secondary-bg: rgba(124, 58, 237, 0.08);
-  --color-hover:      rgba(124, 58, 237, 0.12);
-
-  /* CurseForge Specific Tokens (Modern Light) */
-  --color-cf-bg:      rgba(8, 145, 178, 0.06);
-  --color-cf-border:  rgba(8, 145, 178, 0.2);
-
-  /* Global Contrast Adjustments for Modern (Light) */
-  --opacity-muted: 0.7; /* Mayor opacidad para textos secundarios */
+  /* CurseForge Modern */
+  --color-cf-bg:      rgba(255, 255, 255, 0.4);
+  --color-cf-border:  rgba(242, 86, 43, 0.1);
 }
 
 [data-theme="modern"] input,
@@ -255,10 +204,36 @@
   --color-foreground: var(--color-foreground);
   --font-poppins:     "Poppins", sans-serif;
   
+  --shadow-neomorphic-drop: var(--shadow-drop);
+  --shadow-neomorphic-inner: var(--shadow-inner);
+
   --animate-grow: grow 0.6s ease-out forwards;
+  --animate-bounce-slide-left: bounce-slide-left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-bounce-slide-right: bounce-slide-right 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-bounce-in: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-slime-hover: slime-squish-subtle 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+
   @keyframes grow {
     from { transform: scaleX(0); opacity: 0; }
     to { transform: scaleX(1); opacity: 1; }
+  }
+
+  @keyframes bounce-slide-left {
+    0% { transform: translateX(-100%); opacity: 0; }
+    70% { transform: translateX(10px); opacity: 1; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes bounce-slide-right {
+    0% { transform: translateX(100%); opacity: 0; }
+    70% { transform: translateX(-10px); opacity: 1; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes bounce-in {
+    0% { transform: scale(0.9) translateY(10px); opacity: 0; }
+    70% { transform: scale(1.02) translateY(-2px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
   }
 }
 
@@ -316,13 +291,11 @@ html, body {
 
 /* ── Glassmorphism ──────────────────────────────────────────────────────────── */
 .glass {
-  background: color-mix(in srgb, var(--color-card) 85%, transparent);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid var(--color-border);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
+  backdrop-filter: var(--liquid-blur);
+  -webkit-backdrop-filter: var(--liquid-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-drop);
   border-radius: 1.25rem;
 }
 
@@ -476,6 +449,24 @@ select:focus {
   40%            { opacity: 1;   transform: scale(1); }
 }
 
+@keyframes slime-squish-subtle { 
+  0%, 100% { 
+    transform: scale(1, 1) translateY(0); 
+  } 
+  25% { 
+    /* Aplastamiento mínimo: ancho 1.02x, alto 0.98x y baja 0.5px */ 
+    transform: scale(1.02, 0.98) translateY(0.5px); 
+  } 
+  50% { 
+    /* Estiramiento mínimo: ancho 0.99x, alto 1.01x y sube 1px */ 
+    transform: scale(0.99, 1.01) translateY(-1px); 
+  } 
+  75% { 
+    /* Estabilización casi instantánea */ 
+    transform: scale(1.005, 0.995) translateY(0); 
+  } 
+}
+
 @keyframes slime-squish {
   0%, 100% { transform: scale(1, 1) translateY(0); }
   15% { transform: scale(1.2, 0.8) translateY(2px); }
@@ -498,6 +489,34 @@ select:focus {
   75% { transform: translateX(-2px) rotate(-2deg); }
   90% { transform: translateX(2px) rotate(2deg); }
 }
+
+@keyframes item-transfer {
+  0% { transform: scale(1) translateY(0); opacity: 1; }
+  50% { transform: scale(0.9) translateY(-10px); opacity: 0.5; }
+  100% { transform: scale(0.8) translateY(-20px); opacity: 0; }
+}
+
+@keyframes item-collect {
+  0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+  50% { transform: scale(1.1) translateY(-5px); opacity: 0.8; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes delete-dust {
+  0% { transform: scale(1); opacity: 1; filter: grayscale(0); }
+  100% { transform: scale(0.8); opacity: 0; filter: grayscale(1) blur(4px); }
+}
+
+@keyframes duplicate-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-transfer { animation: item-transfer 0.4s ease-in forwards; }
+.animate-collect { animation: item-collect 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-delete { animation: delete-dust 0.4s ease-out forwards; }
+.animate-duplicate { animation: duplicate-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
 @keyframes ender-particle {
   0% { transform: translate(0, 0) scale(0); opacity: 0; }
@@ -528,7 +547,35 @@ select:focus {
 .animate-bounce-subtle { animation: bounce-subtle 2s ease-in-out infinite; }
 .animate-spin       { animation: spin      1s   linear infinite; }
 .animate-spin-slow  { animation: spin-slow 4s   linear infinite; }
-.animate-slime      { animation: slime-squish 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; transform-origin: bottom; }
+.animate-slime       { animation: slime-squish 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; transform-origin: bottom; }
+
+/* Efecto Slime Suave con retorno elástico */
+.hover-slime {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom;
+}
+
+.hover-slime:hover {
+  animation: slime-squish-subtle 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
+}
+
+@keyframes slime-squish-subtle { 
+  0% { 
+    transform: scale(1, 1) translateY(0); 
+  } 
+  30% { 
+    /* Aplastamiento mínimo */ 
+    transform: scale(1.03, 0.97) translateY(0.5px); 
+  } 
+  60% { 
+    /* Estiramiento mínimo */ 
+    transform: scale(0.98, 1.02) translateY(-1px); 
+  } 
+  100% { 
+    /* Se queda un poquito estirado durante el hover */ 
+    transform: scale(1.01, 0.99) translateY(-0.5px); 
+  } 
+}
 .animate-ender-eye  { animation: ender-eye-pulse 3s ease-in-out infinite; }
 .animate-ender-particle { animation: ender-particle 2s ease-out infinite; }
 

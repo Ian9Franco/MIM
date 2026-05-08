@@ -20,6 +20,27 @@
   --fomo-pill-inactive-text: rgba(255, 255, 255, 0.6);
   --fomo-pill-inactive-border: rgba(255, 255, 255, 0.08);
   --fomo-icon-color: rgba(255, 255, 255, 0.4);
+
+  /* Sinytra Switch Custom Tokens */
+  --fomo-sinytra-bg-inactive: rgba(255, 255, 255, 0.04);
+  --fomo-sinytra-border-inactive: rgba(255, 255, 255, 0.06);
+  --fomo-sinytra-text-inactive: rgba(255, 255, 255, 0.55);
+  
+  --fomo-sinytra-bg-active: rgba(6, 182, 212, 0.1);
+  --fomo-sinytra-border-active: rgba(6, 182, 212, 0.3);
+  --fomo-sinytra-text-active: #22d3ee;
+  --fomo-sinytra-shadow-active: 0 8px 32px rgba(6, 182, 212, 0.1);
+  --fomo-sinytra-icon-bg-active: rgba(6, 182, 212, 0.2);
+  --fomo-sinytra-glow-bg: rgba(6, 182, 212, 0.15);
+  
+  --fomo-sinytra-switch-bg-inactive: rgba(255, 255, 255, 0.05);
+  --fomo-sinytra-switch-border-inactive: rgba(255, 255, 255, 0.1);
+  --fomo-sinytra-switch-knob-inactive: rgba(255, 255, 255, 0.4);
+  
+  --fomo-sinytra-switch-bg-active: rgba(6, 182, 212, 0.3);
+  --fomo-sinytra-switch-border-active: rgba(6, 182, 212, 0.4);
+  --fomo-sinytra-switch-knob-active: #22d3ee;
+  --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
 }
 
 /* Vampire Theme Overrides */
@@ -42,6 +63,27 @@
   --fomo-pill-inactive-text: rgba(242, 236, 249, 0.6);
   --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
   --fomo-icon-color: rgba(187, 150, 228, 0.4);
+
+  /* Sinytra Switch Vampire Custom Tokens */
+  --fomo-sinytra-bg-inactive: rgba(187, 150, 228, 0.04);
+  --fomo-sinytra-border-inactive: rgba(187, 150, 228, 0.1);
+  --fomo-sinytra-text-inactive: rgba(242, 236, 249, 0.6);
+  
+  --fomo-sinytra-bg-active: rgba(187, 150, 228, 0.12);
+  --fomo-sinytra-border-active: rgba(187, 150, 228, 0.35);
+  --fomo-sinytra-text-active: #BB96E4;
+  --fomo-sinytra-shadow-active: 0 8px 32px rgba(187, 150, 228, 0.15);
+  --fomo-sinytra-icon-bg-active: rgba(187, 150, 228, 0.22);
+  --fomo-sinytra-glow-bg: rgba(187, 150, 228, 0.15);
+  
+  --fomo-sinytra-switch-bg-inactive: rgba(187, 150, 228, 0.08);
+  --fomo-sinytra-switch-border-inactive: rgba(187, 150, 228, 0.16);
+  --fomo-sinytra-switch-knob-inactive: rgba(242, 236, 249, 0.5);
+  
+  --fomo-sinytra-switch-bg-active: rgba(187, 150, 228, 0.35);
+  --fomo-sinytra-switch-border-active: rgba(187, 150, 228, 0.45);
+  --fomo-sinytra-switch-knob-active: #BB96E4;
+  --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(187, 150, 228, 0.8);
 }
 
 /* Modern Theme Overrides (LIGHT THEME) */
@@ -64,6 +106,27 @@
   --fomo-pill-inactive-text: #4F46E5;
   --fomo-pill-inactive-border: rgba(124, 58, 237, 0.15);
   --fomo-icon-color: rgba(30, 27, 75, 0.4);
+
+  /* Sinytra Switch Modern Custom Tokens */
+  --fomo-sinytra-bg-inactive: rgba(124, 58, 237, 0.04);
+  --fomo-sinytra-border-inactive: rgba(124, 58, 237, 0.1);
+  --fomo-sinytra-text-inactive: #4F46E5;
+  
+  --fomo-sinytra-bg-active: rgba(8, 145, 178, 0.08);
+  --fomo-sinytra-border-active: rgba(8, 145, 178, 0.25);
+  --fomo-sinytra-text-active: #0891b2;
+  --fomo-sinytra-shadow-active: 0 8px 32px rgba(8, 145, 178, 0.08);
+  --fomo-sinytra-icon-bg-active: rgba(8, 145, 178, 0.12);
+  --fomo-sinytra-glow-bg: rgba(8, 145, 178, 0.08);
+  
+  --fomo-sinytra-switch-bg-inactive: rgba(124, 58, 237, 0.1);
+  --fomo-sinytra-switch-border-inactive: rgba(124, 58, 237, 0.15);
+  --fomo-sinytra-switch-knob-inactive: #4F46E5;
+  
+  --fomo-sinytra-switch-bg-active: rgba(8, 145, 178, 0.2);
+  --fomo-sinytra-switch-border-active: rgba(8, 145, 178, 0.35);
+  --fomo-sinytra-switch-knob-active: #0891b2;
+  --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(8, 145, 178, 0.5);
 }
 
 /* Structural Components */
@@ -265,4 +328,89 @@
 .fomo-select-element:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05), 0 0 15px var(--brand-color)22;
+}
+
+/* ==========================================
+   SINYTRA CONNECTOR HYBRID TOGGLE
+   ========================================== */
+
+.fomo-sinytra-card {
+  padding: 0.875rem; /* p-3.5 */
+  border-radius: 0.75rem; /* rounded-xl */
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem; /* gap-2.5 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--fomo-sinytra-border-inactive);
+  background: var(--fomo-sinytra-bg-inactive);
+  color: var(--fomo-sinytra-text-inactive);
+}
+
+.fomo-sinytra-card:hover {
+  background: color-mix(in srgb, var(--fomo-sinytra-bg-inactive) 150%, transparent);
+  border-color: var(--fomo-card-hover-border);
+}
+
+.fomo-sinytra-card.active {
+  background: var(--fomo-sinytra-bg-active) !important;
+  border-color: var(--fomo-sinytra-border-active) !important;
+  color: var(--fomo-sinytra-text-active) !important;
+  box-shadow: var(--fomo-sinytra-shadow-active) !important;
+}
+
+.fomo-sinytra-glow {
+  position: absolute;
+  inset: -2.5rem; /* -inset-10 */
+  background: var(--fomo-sinytra-glow-bg);
+  filter: blur(24px); /* blur-2xl */
+  border-radius: 9999px; /* rounded-full */
+  pointer-events: none;
+}
+
+.fomo-sinytra-icon-container {
+  padding: 0.375rem; /* p-1.5 */
+  border-radius: 0.5rem; /* rounded-lg */
+  transition: background-color 0.3s, color 0.3s;
+  background-color: var(--fomo-secondary-bg);
+  color: var(--fomo-icon-color);
+}
+
+.fomo-sinytra-card.active .fomo-sinytra-icon-container {
+  background-color: var(--fomo-sinytra-icon-bg-active) !important;
+  color: var(--fomo-sinytra-text-active) !important;
+}
+
+.fomo-sinytra-switch {
+  width: 2.25rem; /* w-9 */
+  height: 1.25rem; /* h-5 */
+  border-radius: 9999px; /* rounded-full */
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--fomo-sinytra-switch-border-inactive);
+  background-color: var(--fomo-sinytra-switch-bg-inactive);
+}
+
+.fomo-sinytra-switch.active {
+  background-color: var(--fomo-sinytra-switch-bg-active) !important;
+  border-color: var(--fomo-sinytra-switch-border-active) !important;
+}
+
+.fomo-sinytra-switch-knob {
+  width: 0.875rem; /* w-3.5 */
+  height: 0.875rem; /* h-3.5 */
+  border-radius: 9999px; /* rounded-full */
+  position: absolute;
+  top: 0.125rem; /* top-0.5 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  left: 0.1875rem; /* left-0.75 in rem */
+  background-color: var(--fomo-sinytra-switch-knob-inactive);
+}
+
+.fomo-sinytra-switch.active .fomo-sinytra-switch-knob {
+  left: 1.125rem; /* left-4.5 in rem */
+  background-color: var(--fomo-sinytra-switch-knob-active) !important;
+  box-shadow: var(--fomo-sinytra-switch-knob-shadow) !important;
 }

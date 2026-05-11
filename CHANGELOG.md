@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Standalone Electron Build Plan** - Plan integral para compilar Next.js + Electron de forma portable sin Tauri ([standalone-build-plan.md](file:///d:/Dev/CodeProjects/MIM/docs/standalone-build-plan.md))
+- **Sorting Methods** - Nuevos criterios de ordenación FOMO de Modrinth y CurseForge (Nuevos, Seguidores, Actividad) mapeados y unificados
+- **Hardware-Accelerated Liquid Shimmer** - Animaciones líquidas 3D por GPU (`translate3d`) y renders aislados de composición libre de lag para los esqueletos de carga de mods
 - **SAGE Recovery Engine** - Motor de recuperación automatizada con análisis heurístico de crashes
 - **ALRT Intelligence** - Capa de inteligencia operacional con correlación temporal de eventos
 - **Event Schema Registry** - Sistema de versionamiento y validación de eventos
@@ -15,10 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Formal Event Contract** - Taxonomía de 70+ eventos tipados con metadata estándar
 
 ### Enhanced
+- **Fomo Grid-Filters UI** - Rediseño premium de los filtros de ordenamiento en cuadrícula compacta 2x2, coronado por Relevancia a ancho completo con iconos personalizados para cada opción
+- **Smooth Column transitions** - Búfer de animación de 450ms con esqueleto de vidrio líquido en `FomoSidebar.tsx` que suaviza la transición de 3 a 2 columnas (y viceversa) al abrir/cerrar detalles de mod
 - **Security UI** - Badges interactivos con tooltips detallados y modal de análisis
 - **Incident Management** - Sistema completo de lifecycle con estados unseen → unread → acknowledged → resolved
 - **Cross-Module Correlation** - Detección de patrones entre eventos independientes
 - **Recovery Actions** - Acciones correctivas automatizadas con rollback seguro
+
+### Fixed
+- **TypeScript logs date parameter** - Declaración de tipos corregida en `api/project/logs` previniendo fallos en la futura compilación de producción de la app
+- **Theme toggle duplicate icon** - Reemplazo de icono `Sparkles` por el de sol `Sun` para el tema Modern, previniendo duplicidades con el nuevo icono de Relevancia de los filtros de búsqueda
 
 ### Technical
 - **Event-Driven Architecture** - Sistema distribuido de observabilidad para entornos Minecraft

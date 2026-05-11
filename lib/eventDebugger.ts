@@ -156,7 +156,7 @@ class EventDebugger {
     // Interceptar todos los eventos del bus
     const originalEmit = eventBus.emit.bind(eventBus);
     
-    eventBus.emit = function<T extends EventName>(event: T, payload: EventPayload<T>) {
+    eventBus.emit = <T extends EventName>(event: T, payload: EventPayload<T>) => {
       const startTime = performance.now();
       
       // Capturar evento si estamos en debug mode
@@ -175,7 +175,7 @@ class EventDebugger {
       }
 
       return result;
-    }.bind(this);
+    };
   }
 
   /**
@@ -216,7 +216,9 @@ class EventDebugger {
     // Limitar tamaño del historial
     if (this.eventHistory.size > this.maxHistorySize) {
       const oldestKey = this.eventHistory.keys().next().value;
-      this.eventHistory.delete(oldestKey);
+      if (oldestKey !== undefined) {
+        this.eventHistory.delete(oldestKey);
+      }
     }
   }
 

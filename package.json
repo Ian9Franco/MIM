@@ -2,6 +2,7 @@
   "name": "temp_next",
   "version": "0.1.0",
   "private": true,
+  "main": "standalone/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

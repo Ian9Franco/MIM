@@ -43,6 +43,8 @@ export interface SchemaDefinition {
   enum?: any[];
   minimum?: number;
   maximum?: number;
+  minLength?: number;
+  maxLength?: number;
   pattern?: string;
   format?: "email" | "uri" | "date-time";
   nullable?: boolean;
@@ -182,7 +184,9 @@ class EventSchemaRegistry {
     // Limitar tamaño del cache
     if (this.validationCache.size > 1000) {
       const firstKey = this.validationCache.keys().next().value;
-      this.validationCache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.validationCache.delete(firstKey);
+      }
     }
 
     return result;

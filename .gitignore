@@ -43,3 +43,9 @@ next-env.d.ts
 
 # scratch y tests locales
 /scratch/
+
+# electron y empaquetado
+/dist/
+dist/
+*.exe
+*.asar

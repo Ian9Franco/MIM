@@ -38,7 +38,10 @@ import {
   Eye, Glasses, Box,
   
   // Resolutions
-  Grid2x2, Grid3x3, LayoutGrid, Grip, Image as ImageIcon, Monitor, Maximize, Maximize2
+  Grid2x2, Grid3x3, LayoutGrid, Grip, Image as ImageIcon, Monitor, Maximize, Maximize2,
+
+  // Sort Icons
+  Download, Clock, Calendar, Heart
 } from "lucide-react";
 
 
@@ -190,6 +193,14 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   "128x": <Monitor className="w-3.5 h-3.5" />,
   "256x": <Maximize className="w-3.5 h-3.5" />,
   "512x or higher": <Maximize2 className="w-3.5 h-3.5" />,
+};
+
+const SORT_ICONS: Record<string, React.ReactNode> = {
+  relevance: <Sparkles className="w-3.5 h-3.5" />,
+  downloads: <Download className="w-3.5 h-3.5" />,
+  updated: <Clock className="w-3.5 h-3.5" />,
+  newest: <Calendar className="w-3.5 h-3.5" />,
+  follows: <Heart className="w-3.5 h-3.5" />,
 };
 
 export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
@@ -428,19 +439,26 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
           Limpiar Filtros
         </button>
 
-        <div className="flex flex-col gap-1.5">
-          {SORT_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => onSort(opt.value as SortOrder)}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
-                sortOrder === opt.value ? "bg-orange-500/10 text-orange-400 border-orange-500/30" : "fomo-pill-inactive"
-              }`}
-            >
-              {opt.label}
-              {sortOrder === opt.value && <Check className="w-3 h-3" />}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-1.5">
+          {SORT_OPTIONS.map(opt => {
+            const isActive = sortOrder === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onSort(opt.value as SortOrder)}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[0.65rem] font-bold border transition-all ${
+                  isActive 
+                    ? "bg-orange-500/10 text-orange-400 border-orange-500/30" 
+                    : "fomo-pill-inactive"
+                } ${opt.value === "relevance" ? "col-span-2 justify-center" : ""}`}
+              >
+                <span className={`${isActive ? "text-orange-400" : "text-white/40"} shrink-0`}>
+                  {SORT_ICONS[opt.value] || <SlidersHorizontal className="w-3.5 h-3.5" />}
+                </span>
+                <span className="truncate">{opt.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         <button

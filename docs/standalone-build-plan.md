@@ -1,174 +1,327 @@
-# 🚀 Plan de Compilación Standalone (EXE / MSI) sin Requisitos
+# 🚀 Plan de Compilación Standalone (EXE / MSI) con Electron + Next.js Standalone
 
-Este documento detalla la hoja de ruta técnica y los fundamentos para empaquetar **MIM** en un único instalador ejecutable (`.exe` o `.msi`) para Windows. El objetivo es lograr una aplicación que **arranque instantáneamente (<50ms)**, no requiera Node.js, Rust, npm, ni ningún software preinstalado en la máquina del usuario, y use el mínimo de recursos del sistema (~15MB RAM en reposo).
+Este documento detalla la hoja de ruta técnica y los fundamentos para empaquetar **MIM (Minecraft Intelligent Manager)** en un único ejecutable o instalador de Windows (`.exe` o `.msi`). 
 
----
-
-## 🎯 El Objetivo Final
-* **Para el Usuario**: Descarga un único archivo `.msi` de menos de 10MB, lo instala en 5 segundos, y la aplicación se abre de inmediato. Cero dependencias externas.
-* **Para el Desarrollador**: Next.js se compila a activos estáticos (`HTML/CSS/JS`) ultra-rápidos, y toda la lógica de sistema (manipulación de archivos, watcher, lectura de NBT, seguridad bytecode) corre en la capa nativa de Rust en Tauri v2.
+El objetivo es empaquetar tu base de código actual en TypeScript y Node.js de forma **100% segura, robusta y portable**, protegiendo tu código fuente mediante empaquetado cifrado/comprimido y sin forzar al usuario a instalar nada ni obligarte a reescribir tu lógica en Rust.
 
 ---
 
-## 🏗️ Arquitectura de Alto Rendimiento
+## 🏗️ Arquitectura de Ejecución
 
-Para que la app funcione sin requisitos y arranque instantáneamente, utilizaremos la arquitectura nativa de **Tauri v2**:
+En lugar de reescribir las complejas capas de negocio a Rust con Tauri, utilizaremos la arquitectura de **Next.js Standalone + Electron**:
 
 ```mermaid
 graph TD
-    A[React/Next.js Frontend] <-->|IPC / Tauri Invoke| B[Tauri v2 Rust Core]
-    A <-->|Direct Local Storage| C[(IndexedDB / LocalStorage)]
-    B <-->|Acceso Nativo Directo| D[Disco Local: D:\.mine, %appdata%]
-    B <-->|File System Watcher| E[notify Crate]
-    B <-->|Bytecode Scanner / Zip| F[zip Crate]
-    B <-->|Edición NBT| G[nbt Crate]
-    style B fill:#f96,stroke:#333,stroke-width:2px
+    A[Ventana de Escritorio de Electron] <-->|Navegación Interna| B(Servidor Local de Next.js Standalone)
+    B <-->|Node.js Local API| C[SAGE Analyzer + Security Scanner]
+    B <-->|FS Operaciones Locales| D[Disco Local: D:\.mine o %USERPROFILE%\.mim-index]
+    B <-->|Llamados de Red Seguros| E[APIs Externas: Modrinth, CurseForge, VirusTotal]
+    C <-->|Almacenamiento Local| F[(IndexedDB / mim-settings.json)]
 ```
+
+### ¿Por qué esta arquitectura es perfecta para MIM?
+1. **Peticiones HTTP sin CORS**: Dado que las peticiones a Modrinth y CurseForge las realiza el micro-servidor local de Node.js de Next.js en lugar de la ventana del navegador directamente, **CORS no interfiere en absoluto**.
+2. **Cero exposición de API Keys**: Las claves del usuario se leen desde su `%USERPROFILE%\.mim-index\mim-settings.json` en el lado del servidor local, garantizando la privacidad de las credenciales de cada usuario.
+3. **Acceso total al File System**: El backend sigue usando `fs` de Node.js de forma nativa para mover, eliminar y clonar tus mods sin las restricciones de sandbox de Tauri.
 
 ---
 
-## 📋 Pasos de Implementación
+## 📋 Pasos de Implementación Paso a Paso
 
-### Paso 1: Configurar Next.js para Exportación Estática (SSG)
+### Paso 1: Configurar Next.js en Modo Standalone
 
-Para que el frontend esté embebido dentro del ejecutable y no necesite un servidor de Node.js corriendo detrás, configuramos Next.js en modo **Static Export**.
+Para que Next.js compile todo tu servidor y frontend en una carpeta minimalista auto-contenida con solo las dependencias necesarias de `node_modules`, activamos la compilación Standalone.
 
-1. Edita [next.config.ts](file:///d:/Dev/CodeProjects/MIM/next.config.ts):
+1. Edita tu archivo [next.config.ts](file:///d:/Dev/CodeProjects/MIM/next.config.ts):
 ```typescript
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export', // Fuerza a Next.js a compilar a HTML/CSS/JS puros
+  output: "standalone", // Genera la carpeta compacta .next/standalone/
   images: {
-    unoptimized: true, // Requerido para exportaciones estáticas
+    unoptimized: true,   // Necesario para evitar procesamiento pesado de imágenes nativo
   },
 };
 
 export default nextConfig;
 ```
 
-2. Al ejecutar `npm run build`, Next.js creará una carpeta llamada `/out` en la raíz del proyecto. Este es el frontend estático que Tauri meterá dentro del `.exe`.
-
 ---
 
-### Paso 2: Migración de APIs de Node.js a Comandos de Rust (Tauri)
+### Paso 2: Crear el Script de Preparación (`scripts/prepare-standalone.js`)
 
-Actualmente, algunas operaciones pesadas (como el escáner de seguridad en `lib/security-scanner.ts` o el lector de NBT de SAGE) usan Node.js en las rutas de API. 
+Por diseño, Next.js no copia automáticamente los assets estáticos (`public` y `.next/static`) a la carpeta standalone para ahorrar espacio, ya que asume que un CDN se encargará de ello. Nosotros los copiaremos automáticamente mediante un sencillo script de post-construcción.
 
-Para lograr el arranque instantáneo y eliminar dependencias, migramos estas llamadas a **Tauri Commands** en Rust.
+Crea el archivo [`scripts/prepare-standalone.js`](file:///d:/Dev/CodeProjects/MIM/scripts/prepare-standalone.js):
+```javascript
+const fs = require('fs');
+const path = require('path');
 
-#### Ejemplo: Migración del Localizador de Directorios y Generador de Estructuras
+function copyDir(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  let entries = fs.readdirSync(src, { withFileTypes: true });
 
-1. **En Rust ([src-tauri/src/lib.rs](file:///d:/Dev/CodeProjects/MIM/src-tauri/src/lib.rs))**:
-   Rust ya tiene implementado el comando `generate_structure` y el watcher automático de descargas nativo. Expondremos y añadiremos comandos nativos adicionales:
+  for (let entry of entries) {
+    let srcPath = path.join(src, entry.name);
+    let destPath = path.join(dest, entry.name);
 
-```rust
-#[tauri::command]
-fn get_downloads_path() -> Result<String, String> {
-    directories::UserDirs::new()
-        .and_then(|dirs| dirs.download_dir().map(|path| path.to_string_lossy().to_string()))
-        .ok_or_else(|| "No se pudo determinar la carpeta de descargas".to_string())
-}
-```
-
-2. **En el Frontend React ([FomoSidebar.tsx](file:///d:/Dev/CodeProjects/MIM/components/fomo/FomoSidebar.tsx))**:
-   Para llamar a estos comandos y escuchar eventos de archivos descargados de forma 100% nativa en tiempo real:
-
-```typescript
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useEffect } from "react";
-
-// Escuchar descargas en tiempo real (enviadas por el Setup nativo de Rust)
-useEffect(() => {
-  const unlisten = listen("new_file", (event) => {
-    const { path, fileName, meta } = event.payload as { path: string, fileName: string, meta: any };
-    console.log(`Nuevo mod detectado nativamente: ${fileName}`, meta);
-    // Añadir a la UI al instante
-  });
-  
-  return () => {
-    unlisten.then(f => f());
-  };
-}, []);
-
-// Llamar a la clasificación súper rápida de un mod
-const handleClassify = async (fileName: string, sourcePath: string, category: string) => {
-  try {
-    const result = await invoke("classify_mod", {
-      fileName,
-      sourcePath,
-      targetCategory: category,
-      modloader: "forge", // Dinámico
-      version: "1.20.1"    // Dinámico
-    });
-    console.log(result); // "Moved to category"
-  } catch (err) {
-    console.error("Error clasificando mod nativamente:", err);
-  }
-};
-```
-
----
-
-### Paso 3: Optimización del Escáner de Seguridad en Rust
-
-La lectura y el análisis de bytecode de archivos `.jar` grandes (que son archivos ZIP renombrados) es increíblemente ineficiente en JS. Al moverlo a Rust usando la biblioteca `zip`, el escaneo de amenazas pasa de tardar **segundos** a resolverse en **milisegundos**.
-
-En [src-tauri/src/lib.rs](file:///d:/Dev/CodeProjects/MIM/src-tauri/src/lib.rs), ya tenemos la base optimizada de `deep_scan_mod` para detectar loaders. Podemos exponerla como un comando directo para la UI:
-
-```rust
-#[tauri::command]
-fn scan_jar_security(file_path: String) -> Result<serde_json::Value, String> {
-    let path = std::path::Path::new(&file_path);
-    if !path.exists() {
-        return Err("El archivo no existe".to_string());
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
     }
-    
-    // Ejecuta la función de escaneo profundo de firmas y bytecode
-    let scan_result = deep_scan_mod(path);
-    Ok(scan_result)
+  }
+}
+
+const standaloneDir = path.join(__dirname, '../.next/standalone');
+
+if (fs.existsSync(standaloneDir)) {
+  console.log('[Build] Copiando recursos estáticos a .next/standalone...');
+  
+  // Copiar carpeta public
+  const publicSrc = path.join(__dirname, '../public');
+  const publicDest = path.join(standaloneDir, 'public');
+  if (fs.existsSync(publicSrc)) {
+    copyDir(publicSrc, publicDest);
+  }
+
+  // Copiar assets estáticos compilados
+  const staticSrc = path.join(__dirname, '../.next/static');
+  const staticDest = path.join(standaloneDir, '.next/static');
+  if (fs.existsSync(staticSrc)) {
+    copyDir(staticSrc, staticDest);
+  }
+
+  console.log('[Build] ¡Recursos estáticos integrados con éxito!');
+} else {
+  console.error('[Build] Error: Carpeta standalone no encontrada. Corre next build primero.');
 }
 ```
 
 ---
 
-### Paso 4: El Pipeline de Compilación (EXE / MSI)
+### Paso 3: Instalar Dependencias de Electron
 
-Para generar el instalador standalone de producción en tu máquina de desarrollo, sigue estos simples pasos:
-
-#### 🛠️ Pre-requisitos (Solo para ti, el desarrollador, una sola vez):
-1. **Rust**: Instala Rust desde [rustup.rs](https://rustup.rs/).
-2. **WiX Toolset v3**: Requerido por Tauri para empaquetar el instalador `.msi`. Se instala automáticamente mediante Tauri CLI o puedes descargarlo desde su web oficial.
-
-#### 📦 Comando de Compilación Unificado:
-En tu consola de comandos, ejecuta:
+Agregamos Electron y su empaquetador de producción a las dependencias de desarrollo. Corre en tu terminal de comandos:
 
 ```powershell
-npm run build         # Genera el frontend optimizado en /out
-npx tauri build       # Compila el núcleo Rust + Frontend estático en un instalador nativo
+npm install --save-dev electron electron-builder
 ```
 
-> [!TIP]
-> Puedes añadir un script de acceso rápido en tu [package.json](file:///d:/Dev/CodeProjects/MIM/package.json):
-> `"tauri:build": "next build && tauri build"`
-> Para compilar todo en un único comando rápido: `npm run tauri:build`
+---
+
+### Paso 4: Crear el Punto de Entrada de Electron (`main.js`)
+
+Este script en JavaScript puro controlará el ciclo de vida de la aplicación. Hará lo siguiente:
+1. Buscará un puerto libre automáticamente o usará un puerto por defecto (ej. `3011`) para arrancar tu servidor local de Next.js Standalone.
+2. Lanzará el servidor local de Next.js de forma asíncrona como un proceso secundario (*Child Process*).
+3. Esperará activamente a que el puerto esté listo (evitando que el usuario vea una ventana blanca).
+4. Levantará una ventana gráfica nativa de Chromium, con dimensiones premium, apuntando a `http://localhost:3011`.
+5. Escuchará el cierre de la ventana para destruir de forma segura el proceso del servidor en segundo plano, evitando dejar puertos abiertos en el sistema del usuario.
+
+Crea el archivo [`main.js`](file:///d:/Dev/CodeProjects/MIM/main.js) en la raíz de tu proyecto:
+```javascript
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+const { spawn } = require('child_process');
+const http = require('http');
+
+let mainWindow;
+let serverProcess;
+const PORT = 3011; // Usamos un puerto no convencional para evitar colisiones con el dev (3000)
+
+function startNextServer() {
+  const serverPath = path.join(__dirname, '.next/standalone/server.js');
+  
+  console.log('[Electron] Iniciando servidor Next.js Standalone...');
+  
+  // Ejecutamos "node .next/standalone/server.js" en segundo plano
+  serverProcess = spawn('node', [serverPath], {
+    env: {
+      ...process.env,
+      PORT: PORT.toString(),
+      HOSTNAME: '127.0.0.1', // Previene prompts del Firewall de Windows
+      NODE_ENV: 'production'
+    },
+    cwd: path.join(__dirname, '.next/standalone')
+  });
+
+  serverProcess.stdout.on('data', (data) => {
+    console.log(`[Next Server]: ${data.toString().trim()}`);
+  });
+
+  serverProcess.stderr.on('data', (data) => {
+    console.error(`[Next Error]: ${data.toString().trim()}`);
+  });
+
+  serverProcess.on('close', (code) => {
+    console.log(`[Next Server] Detenido con código: ${code}`);
+  });
+}
+
+function checkServerReady(callback, retries = 50) {
+  http.get(`http://127.0.0.1:${PORT}`, (res) => {
+    if (res.statusCode === 200 || res.statusCode === 307) {
+      callback();
+    } else {
+      setTimeout(() => checkServerReady(callback, retries - 1), 100);
+    }
+  }).on('error', () => {
+    if (retries > 0) {
+      setTimeout(() => checkServerReady(callback, retries - 1), 100);
+    } else {
+      console.error('[Electron] El servidor Next.js tardó demasiado en responder.');
+      app.quit();
+    }
+  });
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    title: 'MIM — Minecraft Intelligent Manager',
+    icon: path.join(__dirname, 'public/icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+    autoHideMenuBar: true, 
+  });
+
+  mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+app.whenReady().then(() => {
+  // 1. Encendemos el servidor en segundo plano
+  startNextServer();
+  
+  // 2. Esperamos a que responda HTTP y abrimos la ventana nativa
+  checkServerReady(() => {
+    createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  // Aseguramos matar el servidor local al cerrar la app para liberar recursos y puertos
+  if (serverProcess) {
+    serverProcess.kill();
+  }
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('will-quit', () => {
+  if (serverProcess) {
+    serverProcess.kill();
+  }
+});
+```
 
 ---
 
-## 💎 Ventajas de este Enfoque
+### Paso 5: Configurar `package.json` para Electron y `electron-builder`
 
-1. **Arranque Instantáneo**: Al no haber servidor de Node corriendo de fondo ni peticiones de red locales que inicializar, el WebView nativo cargará los activos estáticos directamente desde la memoria RAM del ejecutable.
-2. **Consumo de Memoria Reducido**: Se elimina todo el peso del runtime de Node.js en producción. La app consume apenas ~15MB a 30MB en reposo.
-3. **Distribución Simple**: El compilador te entregará dos archivos en `src-tauri/target/release/bundle/`:
-   * Un `.msi` (instalador tradicional de Windows).
-   * Un `.exe` (ejecutable portátil que puedes llevar en un pendrive).
-4. **Seguridad Total**: Al no exponer puertos locales abiertos (como el puerto `3000`), no hay peligro de colisiones de puertos ni vulnerabilidades de red locales.
+Modificamos el archivo `package.json` para definir la estructura de empaquetado de producción e inyectar los comandos unificados de empaquetado.
+
+Edita tu archivo [`package.json`](file:///d:/Dev/CodeProjects/MIM/package.json):
+
+1. Define a `main.js` como el archivo de entrada agregando `"main": "main.js"`.
+2. Agrega los scripts de compilación:
+   * `"build": "next build && node scripts/prepare-standalone.js"`
+   * `"electron:dev": "electron ."`
+   * `"electron:pack": "npm run build && electron-builder --dir"` (Para probar localmente el empaquetado rápido sin instalador)
+   * `"electron:dist": "npm run build && electron-builder"` (Para compilar el `.exe` o `.msi` final redistribuible)
+3. Define la sección `"build"` de `electron-builder` al final del archivo para empaquetar de forma hermética solo las carpetas necesarias (`.next/standalone`, `public`, `main.js`), excluyendo archivos fuente del repositorio para que la aplicación sea súper liviana y tu código original esté seguro en un `.asar`.
+
+Ejemplo de configuración en [`package.json`](file:///d:/Dev/CodeProjects/MIM/package.json):
+
+```json
+{
+  "name": "mim",
+  "version": "5.5.0",
+  "main": "main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node scripts/prepare-standalone.js",
+    "start": "next start",
+    "lint": "next lint",
+    "electron:dev": "electron .",
+    "electron:pack": "npm run build && electron-builder --dir",
+    "electron:dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    // Tus dependencias normales...
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+    // Tus otras devDependencies...
+  },
+  "build": {
+    "appId": "com.mim.manager",
+    "productName": "MIM",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "public/**/*",
+      ".next/standalone/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MIM"
+    }
+  }
+}
+```
 
 ---
 
-## 🗺️ Siguientes Pasos Recomendados
+## ⚡ El Flujo de Compilación (Cómo crear tu EXE final)
 
-1. **Establecer exportación estática**: Añadir `"output": "export"` en `next.config.ts`.
-2. **Mapear funciones críticas**: Reemplazar progresivamente las llamadas de `/api/` en el frontend por invocaciones `invoke(...)` de Tauri.
-3. **Compilar versión Alpha local**: Correr `npx tauri build` localmente para comprobar que el primer paquete `.exe` standalone se genera correctamente.
+Cuando quieras publicar una nueva versión estable de MIM para tu comunidad:
+
+1. **Compilar**: Abre tu terminal y ejecuta:
+   ```powershell
+   npm run electron:dist
+   ```
+2. **Qué hace este comando tras bambalinas**:
+   * Corre `next build` para generar el frontend de React optimizado y compilar el backend de rutas Node.js a código de producción Standalone.
+   * Corre el script de copia para fusionar los recursos estáticos (`public` y `.next/static`) en la carpeta `.next/standalone`.
+   * Llama a `electron-builder`, el cual empaqueta en un contenedor seguro (`.asar`) los archivos de tu servidor, de la ventana y los iconos.
+   * Genera en la carpeta `/dist` dos archivos listos para subir a tus Releases de GitHub:
+     * **`MIM Setup 5.5.0.exe`**: El instalador tradicional con asistente de instalación paso a paso, creación de accesos directos en el escritorio y panel de desinstalación.
+     * **`MIM Portable 5.5.0.exe`**: Una versión portable de un solo clic que puedes compartir por pendrive o Discord, que corre de forma directa y limpia.
+
+---
+
+## 💎 Ventajas Técnicas Ganadas
+
+1. **Preservación Completa del Código Sano**: SAGE, el analizador de NBT, el lector de bytecode Java de seguridad y tu API de carpetas de mods funcionan con su rendimiento óptimo de Node.js actual. No tienes que depurar complejas conversiones a Rust.
+2. **Protección Intelectual**: El formato `.asar` previene que usuarios promedio puedan husmear en el código original en TypeScript o robar tu lógica de scraping y optimizaciones visuales.
+3. **Mapeo Inteligente de Keys por Usuario**: Gracias a tu excelente implementación en [`lib/settings.ts`](file:///d:/Dev/CodeProjects/MIM/lib/settings.ts), el servidor local de Next.js persistirá los tokens privados de Modrinth, CurseForge y VirusTotal de cada usuario en su carpeta de usuario `%USERPROFILE%\.mim-index\mim-settings.json` sin que tengas que suministrar claves globales que puedan ser sobreexplotadas.
+4. **Instalación de 5 Segundos**: El usuario descarga tu EXE de Releases, hace doble clic, y tiene MIM ejecutándose nativamente con soporte offline y en una interfaz de escritorio fluida.
+
+---
+
+*MIM — Compilación nativa, robusta y segura con el poder de Next.js Standalone y la madurez de Electron.*

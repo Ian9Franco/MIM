@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const pageSize     = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
   const sortParam    = searchParams.get("sort") ?? "relevance";
-  const sort         = ["updated", "relevance", "downloads", "newest"].includes(sortParam) ? sortParam : "relevance";
+  const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "relevance";
   const projectType  = searchParams.get("projectType") ?? "mod";
   const q            = searchParams.get("q")?.trim() ?? "";
   const offset       = (page - 1) * pageSize;

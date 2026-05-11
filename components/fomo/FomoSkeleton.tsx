@@ -23,26 +23,15 @@ export function FomoSkeleton({
           {Array.from({ length: count }).map((_, i) => (
             <div 
               key={i} 
-              className={`relative p-4 flex flex-col h-[380px] transition-all ${
-                isCurseForge ? "rounded-none border-2 border-orange-900/20" : "rounded-[1.35rem] border border-white/5"
+              className={`relative p-4 flex flex-col h-[380px] transition-all fomo-skeleton-glass ${
+                isCurseForge ? "rounded-none!" : ""
               }`}
               style={{ 
-                animationDelay: `${i * 0.1}s`,
+                animationDelay: `${i * 0.08}s`,
                 opacity: 1 - (i * 0.08),
-                background: isCurseForge ? "rgba(30, 20, 10, 0.4)" : "color-mix(in srgb, var(--color-card) 60%, transparent)",
-                borderColor: isCurseForge ? "rgba(241, 100, 54, 0.15)" : "var(--color-border)"
+                borderWidth: isCurseForge ? "2px" : "1px",
               }}
             >
-              {/* Shimmer sweep */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  animation: "shimmer 2s ease-in-out infinite",
-                  backgroundImage: `linear-gradient(90deg, transparent 0%, ${isCurseForge ? "rgba(241, 100, 54, 0.05)" : "color-mix(in srgb, var(--color-primary) 10%, transparent)"} 50%, transparent 100%)`,
-                  animationDelay: `${i * 0.15}s`
-                }}
-              />
 
               <div className="flex items-start gap-4 mb-4 relative z-10">
                 {/* Icon Mockup */}

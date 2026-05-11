@@ -156,6 +156,7 @@ const SORT_TO_CF_FIELD: Record<string, number> = {
   downloads: 2,
   updated:   3,
   newest:    11, // Date Created
+  follows:   2,  // Fallback elegante a Popularidad
 };
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────

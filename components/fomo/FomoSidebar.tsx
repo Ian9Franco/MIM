@@ -193,6 +193,25 @@ export function FomoSidebar({
     handleOpenVersionSelector,
   } = discover;
 
+  const [isTransitioningColumns, setIsTransitioningColumns] = useState(false);
+  const [transitionTarget, setTransitionTarget] = useState<"two" | "three">("three");
+  const lastDetailsState = React.useRef(!!discover.selectingVersionFor);
+
+  React.useEffect(() => {
+    const nextState = !!discover.selectingVersionFor;
+    if (nextState !== lastDetailsState.current) {
+      setIsTransitioningColumns(true);
+      setTransitionTarget(nextState ? "two" : "three");
+      
+      const timer = setTimeout(() => {
+        setIsTransitioningColumns(false);
+      }, 450); // 450ms makes it completely instant and fluid without any heavy GPU burden
+      
+      lastDetailsState.current = nextState;
+      return () => clearTimeout(timer);
+    }
+  }, [discover.selectingVersionFor]);
+
   React.useEffect(() => {
     if (activeProject) {
       setLoader(activeProject.loader);
@@ -480,7 +499,16 @@ export function FomoSidebar({
                 aria-label="Lista de mods" 
                 aria-busy={discover.loading}
               >
-                {discover.loading && (discover.mods.length === 0 || discover.page === 1) ? (
+                {isTransitioningColumns ? (
+                  <div className="col-span-full animate-fade-in">
+                    <FomoSkeleton 
+                      variant="card"
+                      isCurseForge={discover.source === "curseforge"}
+                      message={transitionTarget === "two" ? "Adaptando columnas..." : "Expandiendo catálogo..."} 
+                      count={transitionTarget === "two" ? 6 : 9} 
+                    />
+                  </div>
+                ) : discover.loading && (discover.mods.length === 0 || discover.page === 1) ? (
                   <div className="col-span-full">
                     <FomoSkeleton 
                       variant="card"

@@ -23,7 +23,9 @@ export const PROJECT_TYPES: { value: string; label: string }[] = [
 export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "relevance", label: "Relevancia" },
   { value: "downloads", label: "Descargas" },
-  { value: "updated", label: "Recientes" }
+  { value: "updated", label: "Actividad" },
+  { value: "newest", label: "Nuevos" },
+  { value: "follows", label: "Seguidores" }
 ];
 
 export const MODRINTH_CATEGORIES = [

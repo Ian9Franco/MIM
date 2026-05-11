@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── MODO 2: Listar archivos disponibles (latest.log + crash-reports) ─────────
-  const files: Array<{ name: string; path: string; size: number; mtime: string; type: "log" | "crash" }> = [];
+  const files: Array<{ name: string; path: string; size: number; mtime: string; type: "log" | "crash"; date?: string | null }> = [];
 
   // 1. Escanear logs del proyecto local (latest.log)
   if (projectPathExists) {

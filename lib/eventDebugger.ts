@@ -92,7 +92,11 @@ class EventDebugger {
     console.log("[ALRT Debugger] Debug mode enabled - capturing all events");
     
     // Emitir evento de debugging activado
-    eventBus.emit("system:refresh", undefined);
+    eventBus.emit("system:refresh", {
+      trigger: "manual",
+      scope: "full",
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**

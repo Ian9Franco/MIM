@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Event Debugger UI** - Timeline visual interactiva para debugging del sistema event-driven
 - **Formal Event Contract** - Taxonomía de 70+ eventos tipados con metadata estándar
 - **Automated Windows Packaging (`npm run package:win`)** - Configuración completa de `electron-builder` en `package.json` para generar instaladores NSIS nativos y `.exe` portables automáticamente, incluyendo solución manual de caché de `winCodeSign` para PCs corporativas.
+- **No-ASAR Standalone Run** - Desactivación de compresión ASAR (`"asar": false`) en `package.json` para permitir la ejecución nativa del servidor Next.js standalone vía `child_process.fork`.
 
 ### Enhanced
 - **Fomo Grid-Filters UI** - Rediseño premium de los filtros de ordenamiento en cuadrícula compacta 2x2, coronado por Relevancia a ancho completo con iconos personalizados para cada opción
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Strict TypeScript Event Payloads** - Resolución global de tipado en `system:refresh` y limpieza de iteradores nulos en cachés de `eventDebugger.ts` y `eventSchemaRegistry.ts`, logrando un build de producción 100% verde.
 - **TypeScript logs date parameter** - Declaración de tipos corregida en `api/project/logs` previniendo fallos en la futura compilación de producción de la app
 - **Theme toggle duplicate icon** - Reemplazo de icono `Sparkles` por el de sol `Sun` para el tema Modern, previniendo duplicidades con el nuevo icono de Relevancia de los filtros de búsqueda
+- **Corporate Network Pinger & Localhost Bypassing** - Reconfiguración del pinger de inicio `waitForServer` y del cargador de ventanas en `standalone/main.js` para usar la IP `127.0.0.1` y ping offline local, evitando bloqueos por proxies corporativos y consultas API externas.
 
 ### Technical
 - **Event-Driven Architecture** - Sistema distribuido de observabilidad para entornos Minecraft

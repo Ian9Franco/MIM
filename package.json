@@ -42,6 +42,7 @@
   "build": {
     "appId": "com.mim.app",
     "productName": "MIM",
+    "asar": false,
     "directories": {
       "output": "dist"
     },

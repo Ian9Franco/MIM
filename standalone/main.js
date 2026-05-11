@@ -34,8 +34,8 @@ function startNextServer() {
 
 // Check if Next.js server is fully booted and ready before loading the URL
 function waitForServer(callback) {
-  // We make a lightweight request to a public route to confirm the server is responsive
-  const req = http.get(`http://localhost:${PORT}/api/modrinth/discover?loader=forge&gameVersions=%5B%221.20.1%22%5D&page=1`, (res) => {
+  // We make a lightweight request to the offline root to confirm the server is responsive
+  const req = http.get(`http://127.0.0.1:${PORT}/`, (res) => {
     // If we get any response, the server is ready!
     callback();
   });
@@ -65,7 +65,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 
   // Load local server URL
-  mainWindow.loadURL(`http://localhost:${PORT}`);
+  mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
 
   mainWindow.on('closed', () => {
     mainWindow = null;

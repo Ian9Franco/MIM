@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { curseforge, modrinth, virusTotal } = await req.json();
-    const results: Record<string, boolean> = {};
+    const results: Record<string, boolean | null> = {};
 
     // 1. CurseForge Validation (Required)
     if (curseforge) {
@@ -22,8 +22,16 @@ export async function POST(req: NextRequest) {
     // 2. Modrinth Validation (Optional)
     if (modrinth) {
       try {
+        let token = modrinth.trim();
+        if (!token.startsWith("mrp_") && !token.startsWith("Bearer ") && token.length < 100) {
+          token = `mrp_${token}`;
+        }
+
         const modRes = await fetch("https://api.modrinth.com/v2/user", {
-          headers: { "Authorization": modrinth }
+          headers: { 
+            "User-Agent": "MIM-App/1.0 (contact@mim.local)",
+            "Authorization": token 
+          }
         });
         results.modrinth = modRes.ok;
       } catch {

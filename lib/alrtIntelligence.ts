@@ -87,8 +87,8 @@ class AlrtIntelligence {
       "tweak:mod-toggled",
       "tweak:config-updated",
       "tweak:keybind-synced",
-      "alert:incident-created",
-      "alert:incident-resolved",
+      "alrt:incident-created",
+      "alrt:incident-updated",
       "system:error",
       "system:refresh",
       "system:project-changed",
@@ -173,7 +173,11 @@ class AlrtIntelligence {
     this.analyzePatterns(event);
 
     // Emitir evento de awareness (usando system:refresh como placeholder)
-    eventBus.emit("system:refresh", undefined);
+    eventBus.emit("system:refresh", {
+      trigger: "auto",
+      scope: "module",
+      timestamp: new Date().toISOString()
+    });
   }
 
   private determineEventSource(eventType: keyof MimEventMap): "FOMO" | "SAGE" | "TWEAK" | "CONFIG" | "SYSTEM" {
@@ -295,12 +299,15 @@ class AlrtIntelligence {
     // Crear incidente en ALRT
     this.createIncidentFromCorrelation(correlation);
 
-    // Emitir evento de correlación (usando alert:incident-created como placeholder)
-    eventBus.emit("alert:incident-created", {
-      id: correlationId,
+    // Emitir evento de correlación (usando alrt:incident-created)
+    eventBus.emit("alrt:incident-created", {
+      incidentId: `alrt-correlation-${correlationId}`,
       title: `Correlación: ${pattern.name}`,
-      severity: pattern.severity,
-      module: "SYSTEM"
+      description: pattern.description,
+      severity: pattern.severity === "danger" ? "danger" : pattern.severity === "warning" ? "warning" : "info",
+      status: "unseen",
+      module: "SYSTEM",
+      correlationId
     });
   }
 
@@ -339,7 +346,7 @@ class AlrtIntelligence {
       title: `Correlación Detectada: ${correlation.pattern.name}`,
       detail: `${correlation.context.summary}. Módulos afectados: ${correlation.context.affectedModules.join(", ")}.`,
       severity: correlation.severity,
-      module: "ALRT",
+      module: "SYSTEM",
       meta: {
         correlationId: correlation.id,
         pattern: correlation.pattern.id,
@@ -397,7 +404,7 @@ class AlrtIntelligence {
       title: `Patrón Anómalo Detectado: ${pattern.description}`,
       detail: `Se detectó un patrón de comportamiento anómalo: ${reason}. Frecuencia: ${pattern.frequency} ocurrencias.`,
       severity: pattern.riskLevel === "high" ? "danger" : "warning",
-      module: "ALRT",
+      module: "SYSTEM",
       meta: {
         patternId: pattern.id,
         reason,

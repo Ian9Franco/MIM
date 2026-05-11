@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "build:standalone": "next build && node standalone/prepare.js",
-    "start:standalone": "electron standalone/main.js"
+    "start:standalone": "electron standalone/main.js",
+    "package:win": "npm run build:standalone && electron-builder build --win"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.1",
@@ -30,9 +31,46 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^1.8.8",
+    "electron": "^42.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.mim.app",
+    "productName": "MIM",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "standalone/main.js",
+      "standalone/prepare.js",
+      ".next/standalone/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MIM"
+    }
   }
 }

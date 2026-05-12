@@ -20,6 +20,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
+  // CurseForge IDs are strictly numeric. If a non-numeric ID is passed, return 404 gracefully
+  if (!/^\d+$/.test(projectId)) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
   if (!apiKey) {
     return NextResponse.json({ error: "CURSEFORGE_API_KEY not set" }, { status: 503 });
   }

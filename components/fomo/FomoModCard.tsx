@@ -113,14 +113,16 @@ export const FomoModCard = memo(function FomoModCard({
   ));
 
   // Mejorar la detección del tipo basándose en los metadatos de Modrinth si están disponibles
-  const rawType = mod.projectType || (mod.url?.includes('/resourcepack/') ? 'resourcepack' : mod.url?.includes('/shader/') ? 'shader' : mod.url?.includes('/datapack/') ? 'datapack' : 'mod');
+  const rawType = mod.projectType || (mod.url?.includes('/resourcepack/') ? 'resourcepack' : mod.url?.includes('/shader/') ? 'shader' : mod.url?.includes('/datapack/') ? 'datapack' : mod.url?.includes('/modpack/') ? 'modpack' : 'mod');
   
-  const typeLabel = rawType === "resourcepack"
+  const typeLabel = rawType === "resourcepack" || rawType === "texture"
     ? "Textura"
     : rawType === "shader"
     ? "Shader"
     : rawType === "datapack"
     ? "Datapack"
+    : rawType === "modpack"
+    ? "Modpack"
     : "Mod";
 
   return (
@@ -154,13 +156,7 @@ export const FomoModCard = memo(function FomoModCard({
              boxShadow: "inset 0 1px 1px rgba(255,255,255,0.1)"
            }} 
       />
-      {/* Insignia elegante de Update Disponible */}
-      {hasUpdateAvailable && (
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[8px] shadow-[0_0_12px_rgba(245,158,11,0.15)] uppercase tracking-wider animate-pulse">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-          Update Disponible
-        </div>
-      )}
+
       {/* Selection Toggle - Reubicado para no tapar el chip de tipo */}
       {onToggleSelect && (
         <button
@@ -180,17 +176,27 @@ export const FomoModCard = memo(function FomoModCard({
 
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-start gap-4">
-          <div
-            aria-hidden="true"
-            className={`w-16 h-16 overflow-hidden shrink-0 flex items-center justify-center ${
-              isCurseForge ? 'rounded-none border-2 border-orange-900/40' : 'rounded-2xl border'
-            }`}
-            style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.borderStrong }}
-          >
-            {mod.iconUrl
-              ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} loading="lazy" />
-              : <Flame className="w-7 h-7 opacity-25" aria-hidden="true" />
-            }
+          <div className="relative shrink-0">
+            <div
+              aria-hidden="true"
+              className={`w-16 h-16 overflow-hidden flex items-center justify-center ${
+                isCurseForge ? 'rounded-none border-2 border-orange-900/40' : 'rounded-2xl border'
+              }`}
+              style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.borderStrong }}
+            >
+              {mod.iconUrl
+                ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} loading="lazy" />
+                : <Flame className="w-7 h-7 opacity-25" aria-hidden="true" />
+              }
+            </div>
+            {hasUpdateAvailable && (
+              <span className="absolute -top-1 -right-1 z-20 flex h-3.5 w-3.5" title="Update disponible">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500 border-2 border-[#1A1A1A] justify-center items-center text-[8px] font-black text-black">
+                  !
+                </span>
+              </span>
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -219,6 +225,22 @@ export const FomoModCard = memo(function FomoModCard({
                   riskLevel={riskLevel}
                   onClick={onSecurityDetails}
                 />
+              )}
+              
+              {/* Update Disponible Badge inline */}
+              {hasUpdateAvailable && (
+                <div 
+                  className={`flex items-center gap-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 animate-pulse relative ${
+                    isCurseForge ? 'rounded-none border border-orange-900/30' : 'rounded-full'
+                  }`}
+                  style={{ textShadow: "0 0 8px rgba(245,158,11,0.4)" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 relative flex shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
+                  </span>
+                  Update Disponible
+                </div>
               )}
               
               <Chip color={isCurseForge ? COLORS.curseforgeOrange : COLORS.primary} bg={isCurseForge ? "rgba(239,108,0,0.14)" : "rgba(187,150,228,0.12)"} className={isCurseForge ? 'rounded-none border border-orange-900/30' : ''}>

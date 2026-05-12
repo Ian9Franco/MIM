@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow, ChevronRight, Loader2 } from "lucide-react";
+import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow, ChevronRight, Loader2, Spotlight } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -29,6 +29,7 @@ import { FomoDiscoverFilters } from "./FomoDiscoverFilters";
 import { FomoModCard }         from "./FomoModCard";
 import { FomoPagination }      from "./FomoPagination";
 import { FomoVersionOverlay }  from "./FomoVersionOverlay";
+import { FomoSpotlight }       from "./FomoSpotlight";
 import { FomoCollections }     from "./FomoCollections";
 import { FomoSkeleton }        from "./FomoSkeleton";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
@@ -36,7 +37,7 @@ import { fetchCollections, createCollection, addModToCollection } from "@/servic
 import type { ModHit, Project } from "@/lib/types";
 import "./fomo.css";
 
-type Mode = "discover" | "collections";
+type Mode = "spotlight" | "discover" | "collections";
 
 interface FomoSidebarProps {
   open:            boolean;
@@ -47,8 +48,9 @@ interface FomoSidebarProps {
 }
 
 const TAB_OPTIONS = [
-  { value: "discover",    label: "Descubrir",      icon: <Search className="w-4 h-4" />,        activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
-  { value: "collections", label: "Mis Colecciones", icon: <Library className="w-4 h-4" />,      activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
+  { value: "spotlight",   label: "Spotlight",      icon: <Spotlight className="w-4 h-4" />,      activeColor: "#F59E0B", activeBg: "rgba(245,158,11,0.15)", activeBorder: "rgba(245,158,11,0.3)" },
+  { value: "discover",    label: "Explorar",      icon: <Search className="w-4 h-4" />,        activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
+  { value: "collections", label: "Colecciones",    icon: <Library className="w-4 h-4" />,       activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
 ];
 
 const SOURCE_OPTIONS = [
@@ -79,14 +81,15 @@ const SOURCE_OPTIONS = [
 ];
 
 const SIDEBAR_TITLE: Record<Mode, (source: string) => string> = {
-  discover:    (src) => src === "modrinth" ? "Novedades de Modrinth" : "Catálogo CurseForge",
+  spotlight:   ()    => "Destacados y Novedades",
+  discover:    (src) => src === "modrinth" ? "Catálogo Modrinth" : "Catálogo CurseForge",
   collections: ()    => "Mis Colecciones de Modrinth",
 };
 
 export function FomoSidebar({
   open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1", activeProject,
 }: FomoSidebarProps) {
-  const [mode, setMode] = useState<Mode>("discover");
+  const [mode, setMode] = useState<Mode>("spotlight");
   const [addingToCollectionFor, setAddingToCollectionFor] = useState<ModHit | null>(null);
 
   // Bulk collection adding states
@@ -396,7 +399,18 @@ export function FomoSidebar({
         )}
 
         {/* Tab content */}
-        {mode === "discover" ? (
+        {mode === "spotlight" ? (
+          <FomoSpotlight
+            onOpenVersions={discover.handleOpenVersionSelector}
+            onDownloadMod={discover.handleDownload}
+            downloading={discover.downloading}
+            selectedMods={discover.selectedMods}
+            onToggleSelect={discover.toggleModSelection}
+            sinytraActive={discover.sinytraActive}
+            loader={discover.loader}
+            gameVersion={discover.gameVersions[0]}
+          />
+        ) : mode === "discover" ? (
           <div className="flex-1 flex overflow-hidden">
             {/* Left Sidebar Filters */}
             <div className="p-4 pr-2 flex flex-col h-full shrink-0">
@@ -628,6 +642,11 @@ export function FomoSidebar({
               projectType={discover.projectType}
               onClose={() => discover.setSelectingVersionFor(null)}
               onDownload={discover.handleDownload}
+              onSearchProject={(title) => {
+                discover.setSelectingVersionFor(null);
+                setMode("discover");
+                discover.setQuery(title);
+              }}
             />
           );
         })()}

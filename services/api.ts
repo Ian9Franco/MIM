@@ -104,6 +104,50 @@ export async function downloadCollection(collId: string, loader: string, gameVer
   }
 }
 
+export async function fetchOfficialCollections(): Promise<{ collections: CollectionEntry[], error: string | null }> {
+  try {
+    const res = await fetch("https://api.modrinth.com/v3/user/modrinth/collections");
+    if (!res.ok) throw new Error("Network error");
+    const data = await res.json();
+    const mapped = data.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      projectCount: Array.isArray(c.projects) ? c.projects.length : (c.project_count ?? 0),
+      iconUrl: c.icon_url,
+      isLocal: false,
+      source: "modrinth",
+      webUrl: `https://modrinth.com/collection/${c.slug || c.id}`,
+      visibility: c.status,
+      created: c.created
+    }));
+    
+    // Sort by created descending so the latest month (Vol. XX) is first
+    mapped.sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    
+    return { collections: mapped, error: null };
+  } catch (err) {
+    return { collections: [], error: "No se pudieron cargar las colecciones oficiales" };
+  }
+}
+
+export async function fetchCurseForgeFeatured(): Promise<{ featured: ModHit[], popular: ModHit[], recentlyUpdated: ModHit[], error: string | null }> {
+  try {
+    const res = await fetch("/api/curseforge/featured");
+    if (!res.ok) throw new Error("Network error");
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return { 
+      featured: data.featured || [], 
+      popular: data.popular || [], 
+      recentlyUpdated: data.recentlyUpdated || [], 
+      error: null 
+    };
+  } catch (err: any) {
+    return { featured: [], popular: [], recentlyUpdated: [], error: err.message || "Error al cargar destacados de CurseForge" };
+  }
+}
+
 export const api = {
   collections: {
     sync: async () => [],

@@ -246,7 +246,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
       return [{ title: "Categorías (CurseForge)", items: cfCats }];
     }
 
-    if (projectType === "mod" || projectType === "datapack") {
+    if (projectType === "mod" || projectType === "datapack" || projectType === "modpack") {
       return [{ title: "Categorías", items: MODRINTH_CATEGORIES.map(c => ({ value: c })) }];
     }
     if (projectType === "resourcepack") {

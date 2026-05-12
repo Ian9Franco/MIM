@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, memo } from "react";
+import React, { useState, useEffect, useCallback, memo, useRef } from "react";
 import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, Download } from "lucide-react";
 import {
   fetchCollections,
@@ -15,9 +15,10 @@ import {
   createCollection,
   addModToCollection,
   downloadCollection,
+  fetchOfficialCollections,
 } from "@/services/api";
 import { COLORS } from "@/theme/tokens";
-import { EmptyState } from "../ui/primitives";
+import { EmptyState, PillToggleGroup } from "../ui/primitives";
 import { FomoSkeleton }               from "./FomoSkeleton";
 import { FomoModCard }               from "./FomoModCard";
 import type { CollectionEntry, ModHit } from "@/lib/types";
@@ -52,6 +53,8 @@ export const FomoCollections = memo(function FomoCollections({
   sinytraActive = false,
 }: FomoCollectionsProps) {
   const [collections,    setCollections]    = useState<CollectionEntry[]>([]);
+  const [officialCollections, setOfficialCollections] = useState<CollectionEntry[]>([]);
+  const [activeTab,      setActiveTab]      = useState<"official" | "mim" | "followed">("official");
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState<string | null>(null);
   const [viewing,        setViewing]        = useState<CollectionEntry | null>(null);
@@ -64,13 +67,35 @@ export const FomoCollections = memo(function FomoCollections({
   const [deletingColl,   setDeletingColl]   = useState<string | null>(null);
   const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null);
 
+  const [isTransitioningColumns, setIsTransitioningColumns] = useState(false);
+  const [transitionTarget, setTransitionTarget] = useState<"two" | "three">("three");
+  const lastDetailsState = useRef(isDetailsOpen);
+
+  useEffect(() => {
+    if (isDetailsOpen !== lastDetailsState.current) {
+      setIsTransitioningColumns(true);
+      setTransitionTarget(isDetailsOpen ? "two" : "three");
+      
+      const timer = setTimeout(() => {
+        setIsTransitioningColumns(false);
+      }, 450); // 450ms makes it completely instant and fluid without any heavy GPU burden
+      
+      lastDetailsState.current = isDetailsOpen;
+      return () => clearTimeout(timer);
+    }
+  }, [isDetailsOpen]);
+
   const [libraryUpdates, setLibraryUpdates] = useState<Record<string, LibraryUpdateInfo>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     const { collections: colls, error: err } = await fetchCollections();
     setCollections(colls);
-    setError(err);
+    
+    const { collections: official, error: offErr } = await fetchOfficialCollections();
+    setOfficialCollections(official);
+    
+    setError(err || offErr);
     setLoading(false);
   }, []);
 
@@ -301,28 +326,39 @@ export const FomoCollections = memo(function FomoCollections({
             {collDl === viewing.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "↓ Descargar todos"}
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${isDetailsOpen ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-2 content-start transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]`}>
           {viewLoading ? (
-            <FomoSkeleton message="Cargando mods..." count={6} />
-          ) : (
-            <div className={`grid grid-cols-1 ${isDetailsOpen ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-4 content-start p-6`}>
-              {viewMods.map((mod) => (
-                <FomoModCard 
-                  key={mod.projectId} 
-                  mod={mod} 
-                  isDownloading={!!downloading[mod.projectId]} 
-                  onDownload={onDownloadMod} 
-                  onOpenVersions={onOpenVersions} 
-                  onAddToCollection={() => {}} 
-                  isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
-                  onToggleSelect={onToggleSelect}
-                  sinytraActive={sinytraActive}
-                  hasUpdateAvailable={Object.values(libraryUpdates).some(
-                    (s: LibraryUpdateInfo) => s.projectId === mod.projectId && s.status === "update_available"
-                  )}
-                />
-              ))}
+            <div className="col-span-full">
+              <FomoSkeleton variant="card" message="Cargando mods..." count={6} />
             </div>
+          ) : (
+            <>
+              {isTransitioningColumns ? (
+                <div className="col-span-full animate-fade-in">
+                  <FomoSkeleton 
+                    variant="card"
+                    message={transitionTarget === "two" ? "Adaptando columnas..." : "Expandiendo catálogo..."} 
+                    count={transitionTarget === "two" ? 6 : 9} 
+                  />
+                </div>
+              ) : viewMods.map((mod) => (
+                <div key={mod.projectId} className="p-2 bg-transparent overflow-visible">
+                  <FomoModCard 
+                    mod={mod} 
+                    isDownloading={!!downloading[mod.projectId]} 
+                    onDownload={onDownloadMod} 
+                    onOpenVersions={onOpenVersions} 
+                    onAddToCollection={() => {}} 
+                    isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
+                    onToggleSelect={onToggleSelect}
+                    sinytraActive={sinytraActive}
+                    hasUpdateAvailable={Object.values(libraryUpdates).some(
+                      (s: LibraryUpdateInfo) => s.projectId === mod.projectId && s.status === "update_available"
+                    )}
+                  />
+                </div>
+              ))}
+            </>
           )}
         </div>
 
@@ -366,66 +402,100 @@ export const FomoCollections = memo(function FomoCollections({
 
   // Collection list view
   if (loading) return <FomoSkeleton message="Cargando colecciones..." />;
-  if (error && collections.length === 0) return <EmptyState icon={<Library className="w-12 h-12" />} title="Error al cargar" subtitle={error} />;
+  if (error && collections.length === 0 && officialCollections.length === 0) return <EmptyState icon={<Library className="w-12 h-12" />} title="Error al cargar" subtitle={error} />;
+
+  let displayedCollections: CollectionEntry[] = [];
+  if (activeTab === "official") {
+    displayedCollections = officialCollections;
+  } else if (activeTab === "mim") {
+    displayedCollections = collections.filter(c => c.id !== "followed-projects");
+  } else if (activeTab === "followed") {
+    displayedCollections = collections.filter(c => c.id === "followed-projects");
+  }
+
+  const TABS = [
+    { value: "official", label: "Modrinth Official", activeColor: "#1ED760", activeBg: "rgba(30,215,96,0.15)", activeBorder: "rgba(30,215,96,0.3)" },
+    { value: "mim", label: "Colecciones MIM", activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
+    { value: "followed", label: "Proyectos Seguidos", activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
+  ];
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-3" role="list" aria-label="Tus colecciones">
-      <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 mb-2">
-        <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
-        <span className="font-bold text-sm">Nueva Colección</span>
-      </button>
-      {collections.length === 0
-        ? <EmptyState icon={<Library className="w-12 h-12" />} title="Sin colecciones" subtitle="Crea una para empezar" />
-        : collections.map((coll) => (
-          <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
-            <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-6 h-6 opacity-30" style={{ color: COLORS.primary }} />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-headline text-sm truncate" style={{ color: COLORS.foreground }}>{coll.name}</p>
-                <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
-                  {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
-                </div>
-              </div>
-            </button>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Tabs Header */}
+      <div className="px-4 py-3 border-b shrink-0 flex items-center justify-center" style={{ borderColor: COLORS.border, background: "rgba(0,0,0,0.2)" }}>
+        <PillToggleGroup 
+          options={TABS} 
+          value={activeTab} 
+          onChange={(v) => setActiveTab(v as any)} 
+          className="p-1.5 w-full max-w-xl" 
+          style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}
+          ariaLabel="Pestañas de colecciones" 
+        />
+      </div>
 
-            {/* Delete Button / Confirmation */}
-            {confirmDelete === coll.id ? (
-              <div className="flex items-center gap-1.5 animate-fade-in">
-                <button
-                  onClick={() => handleDeleteCollection(coll)}
-                  disabled={deletingColl === coll.id}
-                  className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
-                  title="Confirmar eliminación"
-                >
-                  {deletingColl === coll.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(null)}
-                  disabled={deletingColl === coll.id}
-                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 transition-all"
-                  title="Cancelar"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(coll.id)}
-                className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${coll.id === "followed-projects" ? "pointer-events-none invisible" : "hover:bg-red-500/20 text-white/40 hover:text-red-400"}`}
-                title={coll.id === "followed-projects" ? "No se puede eliminar" : "Eliminar colección"}
-                disabled={coll.id === "followed-projects"}
-              >
-                <Trash2 className="w-4 h-4" />
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-3" role="list" aria-label="Tus colecciones">
+        {activeTab === "mim" && (
+          <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 mb-2">
+            <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
+            <span className="font-bold text-sm">Nueva Colección</span>
+          </button>
+        )}
+        {displayedCollections.length === 0
+          ? <EmptyState icon={<Library className="w-12 h-12" />} title="Sin colecciones" subtitle={activeTab === "official" ? "No se encontraron colecciones oficiales" : "Crea una para empezar"} />
+          : displayedCollections.map((coll) => (
+            <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
+              <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
+                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-6 h-6 opacity-30" style={{ color: COLORS.primary }} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-headline text-sm truncate flex items-center gap-2" style={{ color: COLORS.foreground }}>
+                    {coll.name}
+                    {activeTab === "official" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(30,215,96,0.12)", color: "#1ED760", border: "1px solid rgba(30,215,96,0.3)" }}>✓ Oficial</span>}
+                  </p>
+                  <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
+                    {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
+                  </div>
+                </div>
               </button>
-            )}
-          </div>
-        ))
-      }
+
+              {/* Delete Button / Confirmation */}
+              {activeTab === "mim" && coll.id !== "followed-projects" && (
+                confirmDelete === coll.id ? (
+                  <div className="flex items-center gap-1.5 animate-fade-in">
+                    <button
+                      onClick={() => handleDeleteCollection(coll)}
+                      disabled={deletingColl === coll.id}
+                      className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
+                      title="Confirmar eliminación"
+                    >
+                      {deletingColl === coll.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(null)}
+                      disabled={deletingColl === coll.id}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 transition-all"
+                      title="Cancelar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(coll.id)}
+                    className="p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-red-400/50 hover:text-red-400"
+                    title="Eliminar colección"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )
+              )}
+            </div>
+          ))}
+      </div>
     </div>
   );
 });

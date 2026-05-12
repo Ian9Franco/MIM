@@ -461,11 +461,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
       const modNativeLoader = (sinytraActive && isFabricOnly && modSource === "modrinth") ? "fabric" : loader;
 
+      const actualProjectType = mod.projectType || projectType;
       const params = new URLSearchParams({ 
         projectId: mod.projectId, 
         // Eliminamos gameVersion para obtener TODAS las versiones del mod en la vista de detalles
-        loader: modNativeLoader, 
-        projectType 
+        loader: (actualProjectType === "mod" || actualProjectType === "modpack") ? modNativeLoader : "", 
+        projectType: actualProjectType 
       });
       
       // Fetch versions and project details in parallel
@@ -510,6 +511,114 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     }
   }, [dependencyPrompt, executeDownload]);
 
+  const handleOpenProjectById = useCallback(async (projectId: string, sourceOverride?: "modrinth" | "curseforge") => {
+    const activeSource = sourceOverride || source;
+    setVersLoading(true);
+    const tempMod: ModHit = {
+      projectId,
+      slug: projectId,
+      title: "Cargando...",
+      description: "",
+      iconUrl: null,
+      author: "",
+      downloads: 0,
+      follows: 0,
+      latestVersion: null,
+      categories: [],
+      dateCreated: "",
+      url: activeSource === "modrinth" ? `https://modrinth.com/project/${projectId}` : `https://www.curseforge.com/projects/${projectId}`,
+      projectType: "mod",
+      _source: activeSource as "modrinth" | "curseforge"
+    };
+    setSelectingVersionFor(tempMod);
+    setProjectVersions([]);
+
+    try {
+      const pEndpoint = activeSource === "modrinth" ? "/api/modrinth/project" : "/api/curseforge/project";
+      const pRes = await fetch(`${pEndpoint}?projectId=${projectId}`);
+      if (!pRes.ok) throw new Error("No se pudo obtener el proyecto");
+      const pData = await pRes.json();
+
+      let fullMod: ModHit;
+      if (activeSource === "modrinth") {
+        fullMod = {
+          projectId: pData.id || projectId,
+          slug: pData.slug || projectId,
+          title: pData.title || pData.name || "Sin título",
+          description: pData.description || "",
+          iconUrl: pData.icon_url || pData.iconUrl || null,
+          author: pData.author || "Desconocido",
+          downloads: pData.downloads || 0,
+          follows: pData.followers || 0,
+          latestVersion: null,
+          categories: pData.categories || [],
+          dateCreated: pData.published || pData.dateCreated || "",
+          url: `https://modrinth.com/project/${pData.slug}`,
+          projectType: pData.project_type || "mod",
+          _source: activeSource,
+          body: pData.body || "",
+          client_side: pData.client_side,
+          server_side: pData.server_side
+        };
+      } else {
+        const logoUrl = pData.logo?.thumbnailUrl || pData.logo?.url || null;
+        const authorName = pData.authors?.[0]?.name || "Desconocido";
+        const websiteUrl = pData.links?.websiteUrl || `https://www.curseforge.com/projects/${projectId}`;
+        
+        let cfProjectType: string = "mod";
+        if (pData.classId === 12) cfProjectType = "resourcepack";
+        else if (pData.classId === 6) cfProjectType = "datapack";
+        else if (pData.classId === 6552) cfProjectType = "shader";
+        else if (pData.classId === 4471) cfProjectType = "modpack";
+
+        fullMod = {
+          projectId: String(pData.id),
+          slug: pData.slug || projectId,
+          title: pData.name || "Sin título",
+          description: pData.summary || "",
+          iconUrl: logoUrl,
+          author: authorName,
+          downloads: pData.downloadCount || 0,
+          follows: pData.thumbsUpCount || 0,
+          latestVersion: null,
+          categories: (pData.categories || []).map((c: any) => c.slug),
+          dateCreated: pData.dateCreated || "",
+          url: websiteUrl,
+          projectType: cfProjectType,
+          _source: activeSource as "modrinth" | "curseforge",
+          body: pData.body || "",
+          client_side: pData.client_side || "required",
+          server_side: pData.server_side || "required"
+        };
+      }
+
+      setSelectingVersionFor(fullMod);
+
+      const isFabricOnly = fullMod.categories?.includes("fabric") && !fullMod.categories?.includes("forge");
+      const modNativeLoader = (sinytraActive && isFabricOnly && activeSource === "modrinth") ? "fabric" : loader;
+      const actualProjectType = fullMod.projectType || projectType;
+
+      const params = new URLSearchParams({ 
+        projectId: fullMod.projectId, 
+        loader: (actualProjectType === "mod" || actualProjectType === "modpack") ? modNativeLoader : "", 
+        projectType: actualProjectType 
+      });
+
+      const vEndpoint = activeSource === "modrinth" ? "/api/modrinth/versions" : "/api/curseforge/versions";
+      const vRes = await fetch(`${vEndpoint}?${params}`);
+      if (vRes.ok) {
+        const vData = await vRes.json();
+        setProjectVersions(vData.versions ?? []);
+      }
+    } catch (err) {
+      console.warn("[useFomoDiscover] Error fetching project by id:", err);
+      showStatus("No se pudo cargar la información detallada de este mod", "error");
+      setSelectingVersionFor(null);
+    } finally {
+      setVersLoading(false);
+    }
+  }, [source, loader, projectType, sinytraActive, showStatus]);
+
   return {
     source, setSource, sourceError,
     loader, setLoader,
@@ -526,6 +635,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     selectingVersionFor, setSelectingVersionFor,
     projectVersions, versLoading,
     handleOpenVersionSelector,
+    handleOpenProjectById,
     dependencyPrompt, setDependencyPrompt,
     confirmDownloadWithDeps,
     selectedMods, toggleModSelection, clearSelection,

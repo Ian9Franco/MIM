@@ -1,6 +1,6 @@
 # MIM Changelog
 
-All notable changes to MIM (Minecraft Instance Manager) will be documented in this file.
+All notable changes to MIM (Minecraft Intelligent Manager) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CurseForge Modpack Embedded Dependencies Parser** - Algoritmo que descarga y analiza dinámicamente en caliente el archivo `manifest.json` interno de modpacks de CurseForge a través de enlaces reconstruidos de Edge CDN (`edge.forgecdn.net`), resolviendo la falta de datos de dependencias en la API oficial de CurseForge.
+- **Persistent Local Dependency Cache** - Almacenamiento persistente en disco (`fomo_modpack_dependencies_cache.json`) que guarda el mapeo de dependencias de modpacks procesados de CurseForge, logrando cargas instantáneas de milisegundos en consultas posteriores.
+
+### Enhanced
+- **Extrema Optimización de Latencia (Cache Misses)** - Limitación del parseo en cache-misses a únicamente la versión más reciente por consulta API, reduciendo descargas en red a un tercio (1/3) del tiempo original (ahorrando hasta 30 segundos).
+- **Badge Unificado "MODPACK" & "DATAPACK"** - Incorporación de etiquetas distintivas de tipología para "Modpack" y "Datapack" tanto en las tarjetas del catálogo de Explorar (`FomoModCard.tsx`) como en las sugerencias destacadas de Spotlight (`FomoSpotlight.tsx`).
+- **Navegación Interactiva desde Dependencias (Ver Modcard)** - Redirección fluida que cambia a la pestaña "Explorar", cierra el overlay y auto-completa la búsqueda en el catálogo al hacer clic en cualquier mod requerido, opcional o incluido en el detalle, permitiendo ver su Modcard general de inmediato.
+
+### Fixed
+- **Bug de Selección Cruzada en Spotlight** - Unificación del estado global `activeSource` para solucionar el problema de carga de detalles y descargas de picks destacados en Spotlight tras alternar el distribuidor activo en Explorar.
 - **Standalone Electron Build Plan** - Plan integral para compilar Next.js + Electron de forma portable sin Tauri ([standalone-build-plan.md](file:///d:/Dev/CodeProjects/MIM/docs/standalone-build-plan.md))
 - **Sorting Methods** - Nuevos criterios de ordenación FOMO de Modrinth y CurseForge (Nuevos, Seguidores, Actividad) mapeados y unificados
 - **Hardware-Accelerated Liquid Shimmer** - Animaciones líquidas 3D por GPU (`translate3d`) y renders aislados de composición libre de lag para los esqueletos de carga de mods

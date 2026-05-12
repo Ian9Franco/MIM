@@ -16,10 +16,11 @@ interface FomoVersionOverlayProps {
   projectType: string;
   onClose:     () => void;
   onDownload:  (mod: ModHit, version: VersionEntry) => void;
+  onSearchProject?: (title: string) => void;
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject,
 }: FomoVersionOverlayProps) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">("versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
@@ -143,6 +144,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const requiredDeps = allDependencies.filter(d => d.dependencyType === "required");
   const optionalDeps = allDependencies.filter(d => d.dependencyType === "optional");
   const incompatibleDeps = allDependencies.filter(d => d.dependencyType === "incompatible");
+  const embeddedDeps = allDependencies.filter(d => d.dependencyType === "embedded");
 
   const handleTranslate = async () => {
     if (!mod.body || isTranslating) return;
@@ -362,7 +364,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           active={activeTab === "dependencies"} 
           onClick={() => setActiveTab("dependencies")} 
           icon={<Package className="w-3.5 h-3.5" />}
-          label={`Dependencias (${allDependencies.length})`}
+          label={projectType === "modpack" ? `Mods Incluidos (${allDependencies.length})` : `Dependencias (${allDependencies.length})`}
         />
         <TabButton 
           active={activeTab === "description"} 
@@ -422,21 +424,98 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                   <div>
                     <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-red-400 mb-3 px-1">Requeridas</h4>
                     <div className="grid gap-2">
-                      {requiredDeps.map(dep => (
-                        <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/10" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold truncate" style={{ color: COLORS.foreground }}>{dep.title || dep.projectId}</p>
-                            <p className="text-[0.6rem] mt-0.5" style={{ color: COLORS.muted }}>ID: {dep.projectId}</p>
+                      {requiredDeps.map(dep => {
+                        const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
+                        return (
+                          <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
+                            <div 
+                              onClick={() => onSearchProject?.(dep.title || dep.projectId)}
+                              className={`min-w-0 flex-1 pr-2 ${onSearchProject ? "cursor-pointer group/dep" : ""}`}
+                            >
+                              <p className={`text-sm font-bold truncate transition-colors ${onSearchProject ? "group-hover/dep:text-red-400" : ""}`} style={{ color: COLORS.foreground }}>
+                                {dep.title || dep.projectId}
+                              </p>
+                              <p className="text-[0.6rem] mt-0.5 flex items-center gap-1.5" style={{ color: COLORS.muted }}>
+                                <span>ID: {dep.projectId}</span>
+                                {onSearchProject && (
+                                  <span className="opacity-0 group-hover/dep:opacity-100 transition-opacity text-[0.55rem] font-bold text-red-400 flex items-center gap-0.5">
+                                    • <Info className="w-2.5 h-2.5 inline" /> Buscar en Catálogo
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openExternal(depUrl)}
+                                className="p-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                                title="Ver en web"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadDependency(dep.projectId, dep.title || dep.projectId)}
+                                disabled={!!depDownloading}
+                                className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-30"
+                                title="Descargar versión compatible"
+                              >
+                                {depDownloading === dep.projectId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => handleDownloadDependency(dep.projectId, dep.title || dep.projectId)}
-                            disabled={!!depDownloading}
-                            className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-30"
-                          >
-                            {depDownloading === dep.projectId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {embeddedDeps.length > 0 && (
+                  <div>
+                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-emerald-400 mb-3 px-1 flex items-center gap-2">
+                      <ListTree className="w-3.5 h-3.5" />
+                      Incluidos en el Modpack
+                    </h4>
+                    <div className="grid gap-2">
+                      {embeddedDeps.map(dep => {
+                        const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
+                        return (
+                          <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
+                            <div 
+                              onClick={() => onSearchProject?.(dep.title || dep.projectId)}
+                              className={`min-w-0 flex-1 pr-2 ${onSearchProject ? "cursor-pointer group/dep" : ""}`}
+                            >
+                              <p className={`text-sm font-bold truncate transition-colors ${onSearchProject ? "group-hover/dep:text-emerald-400" : ""}`} style={{ color: COLORS.foreground }}>
+                                {dep.title || dep.projectId}
+                              </p>
+                              <p className="text-[0.6rem] mt-0.5 flex items-center gap-1.5" style={{ color: COLORS.muted }}>
+                                <span>ID: {dep.projectId}</span>
+                                {onSearchProject && (
+                                  <span className="opacity-0 group-hover/dep:opacity-100 transition-opacity text-[0.55rem] font-bold text-emerald-400 flex items-center gap-0.5">
+                                    • <Info className="w-2.5 h-2.5 inline" /> Buscar en Catálogo
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openExternal(depUrl)}
+                                className="p-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                                title="Ver en web"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadDependency(dep.projectId, dep.title || dep.projectId)}
+                                disabled={!!depDownloading}
+                                className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-30"
+                                title="Descargar versión compatible"
+                              >
+                                {depDownloading === dep.projectId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -444,21 +523,47 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                   <div>
                     <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-primary mb-3 px-1">Opcionales</h4>
                     <div className="grid gap-2">
-                      {optionalDeps.map(dep => (
-                        <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/10" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold truncate" style={{ color: COLORS.foreground }}>{dep.title || dep.projectId}</p>
-                            <p className="text-[0.6rem] mt-0.5" style={{ color: COLORS.muted }}>ID: {dep.projectId}</p>
+                      {optionalDeps.map(dep => {
+                        const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
+                        return (
+                          <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
+                            <div 
+                              onClick={() => onSearchProject?.(dep.title || dep.projectId)}
+                              className={`min-w-0 flex-1 pr-2 ${onSearchProject ? "cursor-pointer group/dep" : ""}`}
+                            >
+                              <p className={`text-sm font-bold truncate transition-colors ${onSearchProject ? "group-hover/dep:text-primary" : ""}`} style={{ color: COLORS.foreground }}>
+                                {dep.title || dep.projectId}
+                              </p>
+                              <p className="text-[0.6rem] mt-0.5 flex items-center gap-1.5" style={{ color: COLORS.muted }}>
+                                <span>ID: {dep.projectId}</span>
+                                {onSearchProject && (
+                                  <span className="opacity-0 group-hover/dep:opacity-100 transition-opacity text-[0.55rem] font-bold text-primary flex items-center gap-0.5">
+                                    • <Info className="w-2.5 h-2.5 inline" /> Buscar en Catálogo
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openExternal(depUrl)}
+                                className="p-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                                title="Ver en web"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadDependency(dep.projectId, dep.title || dep.projectId)}
+                                disabled={!!depDownloading}
+                                className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-30"
+                                title="Descargar versión compatible"
+                              >
+                                {depDownloading === dep.projectId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => handleDownloadDependency(dep.projectId, dep.title || dep.projectId)}
-                            disabled={!!depDownloading}
-                            className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-30"
-                          >
-                            {depDownloading === dep.projectId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -469,17 +574,42 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       Incompatible con:
                     </h4>
                     <div className="grid gap-2">
-                      {incompatibleDeps.map(dep => (
-                        <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border bg-orange-500/5" style={{ borderColor: "rgba(249,115,22,0.2)" }}>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold truncate text-orange-200">{dep.title || dep.projectId}</p>
-                            <p className="text-[0.6rem] mt-0.5 text-orange-500/60 font-bold uppercase">Incompatible</p>
+                      {incompatibleDeps.map(dep => {
+                        const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
+                        return (
+                          <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border bg-orange-500/5 transition-colors hover:bg-white/5" style={{ borderColor: "rgba(249,115,22,0.2)" }}>
+                            <div 
+                              onClick={() => onSearchProject?.(dep.title || dep.projectId)}
+                              className={`min-w-0 flex-1 pr-2 ${onSearchProject ? "cursor-pointer group/dep" : ""}`}
+                            >
+                              <p className={`text-sm font-bold truncate transition-colors ${onSearchProject ? "group-hover/dep:text-orange-400" : ""}`} style={{ color: COLORS.foreground }}>
+                                {dep.title || dep.projectId}
+                              </p>
+                              <p className="text-[0.6rem] mt-0.5 flex items-center gap-1.5" style={{ color: COLORS.muted }}>
+                                <span>ID: {dep.projectId}</span>
+                                {onSearchProject && (
+                                  <span className="opacity-0 group-hover/dep:opacity-100 transition-opacity text-[0.55rem] font-bold text-orange-400 flex items-center gap-0.5">
+                                    • <Info className="w-2.5 h-2.5 inline" /> Buscar en Catálogo
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openExternal(depUrl)}
+                                className="p-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                                title="Ver en web"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
+                                <X className="w-4 h-4" />
+                              </div>
+                            </div>
                           </div>
-                          <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
-                            <X className="w-4 h-4" />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -602,13 +732,15 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                                   <div className="flex items-center gap-3">
                                     <div className="w-1.5 h-1.5 rounded-full" style={{ 
                                       background: dep.dependencyType === "required" ? COLORS.red : 
-                                                 dep.dependencyType === "incompatible" ? "#f97316" : COLORS.primary 
+                                                 dep.dependencyType === "incompatible" ? "#f97316" : 
+                                                 dep.dependencyType === "embedded" ? "#34d399" : COLORS.primary 
                                     }} />
                                     <span className="text-xs font-medium" style={{ color: COLORS.foreground }}>{dep.title}</span>
                                   </div>
                                   <span className="text-[0.6rem] uppercase tracking-widest opacity-30 font-bold">
                                     {dep.dependencyType === "required" ? "Requerido" : 
-                                     dep.dependencyType === "incompatible" ? "Incompatible" : "Opcional"}
+                                     dep.dependencyType === "incompatible" ? "Incompatible" : 
+                                     dep.dependencyType === "embedded" ? "Incluido" : "Opcional"}
                                   </span>
                                 </div>
                               ))}

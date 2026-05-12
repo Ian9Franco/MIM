@@ -119,7 +119,7 @@ async function tryFetchUserCollections(userId: string, headers: Record<string, s
       for (const fc of followedCollections) {
         if (seenIds.has(fc.id)) continue; // Skip if already have it
         try {
-          const cRes = await fetch(`${MODRINTH_API}/collection/${fc.id}`, { headers, cache: "no-store" });
+          const cRes = await fetch(`${MODRINTH_API_V3}/collection/${fc.id}`, { headers, cache: "no-store" });
           if (cRes.ok) {
             const fullColl = await cRes.json();
             collections.push(fullColl);
@@ -222,7 +222,7 @@ export async function GET(_req: NextRequest) {
     }
 
     if (collectionId) {
-      const collectionRes = await fetch(`${MODRINTH_API}/collection/${encodeURIComponent(collectionId)}`, { headers, cache: "no-store" });
+      const collectionRes = await fetch(`${MODRINTH_API_V3}/collection/${encodeURIComponent(collectionId)}`, { headers, cache: "no-store" });
       if (!collectionRes.ok) {
         return NextResponse.json({ error: "No se pudo cargar la colección" }, { status: 502 });
       }
@@ -343,7 +343,7 @@ export async function POST(req: NextRequest) {
       }
 
       // 1. Get current projects
-      const getRes = await fetch(`${MODRINTH_API}/collection/${collectionId}`, { headers });
+      const getRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { headers });
       if (!getRes.ok) return NextResponse.json({ error: "No se pudo obtener la colección" }, { status: 502 });
       const current = await getRes.json();
       const projects = Array.isArray(current.projects) ? current.projects : [];
@@ -353,7 +353,7 @@ export async function POST(req: NextRequest) {
       }
 
       // 2. Update with new project
-      const patchRes = await fetch(`${MODRINTH_API}/collection/${collectionId}`, {
+      const patchRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
         method: "PATCH",
         headers: {
           ...headers,
@@ -381,7 +381,7 @@ export async function POST(req: NextRequest) {
 
     // Obtener detalle de la colección (incluye lista de project IDs)
     const collectionRes = await fetch(
-      `${MODRINTH_API}/collection/${encodeURIComponent(collectionId)}`,
+      `${MODRINTH_API_V3}/collection/${encodeURIComponent(collectionId)}`,
       { headers }
     );
 

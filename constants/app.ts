@@ -16,6 +16,7 @@ export const GAME_VERSIONS: string[] = [
 ];
 export const PROJECT_TYPES: { value: string; label: string }[] = [
   { value: "mod", label: "Mods" },
+  { value: "modpack", label: "Modpacks" },
   { value: "resourcepack", label: "Texturas" },
   { value: "shader", label: "Shaders" },
   { value: "datapack", label: "Data Packs" }
@@ -71,6 +72,9 @@ export const CURSEFORGE_CATEGORIES = {
   ],
   shader: [
     "fantasy", "realistic", "vanilla"
+  ],
+  modpack: [
+    "adventure-and-rpg", "combat-pvp", "exploration", "hardcore", "magic", "map-based", "mini-game", "multiplayer", "quests", "sci-fi", "skyblock", "small-light", "tech", "vanilla"
   ]
 };
 

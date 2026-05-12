@@ -42,6 +42,7 @@ const MINECRAFT_GAME_ID = 432;
 /** Mapeo de tipo de proyecto a classId de CurseForge. */
 const PROJECT_TYPE_TO_CLASS_ID: Record<string, number> = {
   mod:          6,
+  modpack:      4471,
   resourcepack: 12,
   shader:       6552,
   datapack:     6945,

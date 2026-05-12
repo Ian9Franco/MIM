@@ -195,22 +195,22 @@ export function FomoSidebar({
 
   const [isTransitioningColumns, setIsTransitioningColumns] = useState(false);
   const [transitionTarget, setTransitionTarget] = useState<"two" | "three">("three");
-  const lastDetailsState = React.useRef(!!discover.selectingVersionFor);
+  const isDetailsOpen = !!discover.selectingVersionFor;
+  const lastDetailsState = React.useRef(isDetailsOpen);
 
   React.useEffect(() => {
-    const nextState = !!discover.selectingVersionFor;
-    if (nextState !== lastDetailsState.current) {
+    if (isDetailsOpen !== lastDetailsState.current) {
       setIsTransitioningColumns(true);
-      setTransitionTarget(nextState ? "two" : "three");
+      setTransitionTarget(isDetailsOpen ? "two" : "three");
       
       const timer = setTimeout(() => {
         setIsTransitioningColumns(false);
       }, 450); // 450ms makes it completely instant and fluid without any heavy GPU burden
       
-      lastDetailsState.current = nextState;
+      lastDetailsState.current = isDetailsOpen;
       return () => clearTimeout(timer);
     }
-  }, [discover.selectingVersionFor]);
+  }, [isDetailsOpen]);
 
   React.useEffect(() => {
     if (activeProject) {
@@ -294,8 +294,8 @@ export function FomoSidebar({
     setAddingToCollectionFor(mod);
   }, []);
 
-  const isDetailsOpen = !!discover.selectingVersionFor;
   const sidebarWidth = isDetailsOpen ? "calc(100vw - 600px - 40px)" : "75vw";
+
 
   return (
     <>

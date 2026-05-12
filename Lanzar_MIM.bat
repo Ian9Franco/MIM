@@ -23,7 +23,7 @@ if not exist "node_modules" (
     exit
 )
 
-:: Inicia Tauri (Tauri ya se encarga de abrir Next.js segun tauri.conf.json)
+:: Inicia la aplicación usando Electron con el servidor Standalone
 echo Lanzando interfaz...
-call node_modules\.bin\tauri dev
+call npm run start:standalone
 

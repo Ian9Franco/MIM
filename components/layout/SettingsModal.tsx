@@ -66,6 +66,11 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.stagingPath
         ]);
         validateKeys(d.curseforgeApiKey, d.modrinthApiKey, d.virusTotalApiKey);
+      })
+      .catch((e) => {
+        console.error(e);
+        alert("Error crítico cargando ajustes de la API: " + e.message);
+        setLoading(false);
       });
   }, []);
 

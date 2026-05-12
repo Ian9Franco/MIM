@@ -10,14 +10,17 @@ const PORT = process.env.PORT || 3000;
 // Start the Next.js standalone server as a background subprocess
 function startNextServer() {
   const serverPath = path.join(__dirname, '..', '.next', 'standalone', 'server.js');
+  const serverDir = path.join(__dirname, '..', '.next', 'standalone');
   
   console.log(`🚀 Spawning Next.js server from: ${serverPath}`);
+  console.log(`Working directory (cwd): ${serverDir}`);
   
   serverProcess = fork(serverPath, [], {
+    cwd: serverDir,
     env: {
       ...process.env,
       PORT: String(PORT),
-      HOSTNAME: 'localhost',
+      HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production'
     },
     silent: false // Lets us see server logs in the terminal
@@ -54,6 +57,7 @@ function createWindow() {
     minHeight: 600,
     title: 'MIM - Minecraft Instance Manager',
     backgroundColor: '#141416',
+    icon: path.join(__dirname, '..', 'app', 'favicon.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

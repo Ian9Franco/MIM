@@ -13,7 +13,6 @@
     "package:win": "npm run build:standalone && electron-builder build --win"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.1",
     "adm-zip": "^0.5.17",
     "chokidar": "^4.0.3",
     "idb": "^8.0.3",
@@ -26,7 +25,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tauri-apps/cli": "^2.0.0-rc.18",
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -53,6 +51,7 @@
       "package.json"
     ],
     "win": {
+      "icon": "public/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -69,8 +68,8 @@
       ]
     },
     "nsis": {
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MIM"

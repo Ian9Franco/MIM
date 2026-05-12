@@ -1,0 +1,43 @@
+tengo una duda respecto a la api de curseforge.
+
+puedo traer las noticias o los mods destacados que ponen en el banner principal con la api? https://www.curseforge.com/minecraft
+
+
+
+creo que vienen de aca: https://www.curseforge.com/community-picks/minecraft
+
+
+
+
+Sobre tu duda con la API de CurseForge (la Eternal API de Overwolf) para tu app de MIM, aquí te cuento lo que es posible:
+
+1. Mods destacados (Banner principal)
+Sí, podés obtener los mods destacados usando el endpoint específico para eso. En la documentación oficial existe el método Get Featured Mods.
+
+Endpoint: GET https://api.curseforge.com/v1/mods/featured
+
+Cómo funciona: Tenés que enviar un body (JSON) con el gameId de Minecraft (que es 432).
+
+Lo que devuelve: Te va a entregar un objeto con varias listas:
+
+featured: Los que suelen rotar en el banner principal.
+
+popular: Los más descargados.
+
+recentlyUpdated: Los últimos en actualizarse.
+
+Es muy probable que lo que ves en la sección de "Community Picks" coincida con la lista de featured que devuelve la API, aunque a veces el sitio web tiene curaciones manuales que tardan un poco más en reflejarse en la respuesta del JSON.
+
+
+
+Para los mods del banner, usá el endpoint de featured
+
+
+
+
+https://modrinth.com/dashboard/notifications
+
+https://modrinth.com/dashboard
+
+
+modrinth collections official

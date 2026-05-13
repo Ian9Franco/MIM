@@ -213,7 +213,7 @@ export const ModCard = memo(function ModCard({
                      onClick={stopPropDetails}
                      aria-label="Ver detalles"
                      title="Ver detalles del mod"
-                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all bg-[var(--fomo-pill-inactive-bg,rgba(255,255,255,0.04))] border border-[var(--fomo-border,rgba(255,255,255,0.1))] text-[var(--fomo-pill-inactive-text,rgba(255,255,255,0.6))] hover:text-white hover:bg-primary/20 hover:border-primary/40 shadow-sm"
+                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all bg-[var(--fomo-pill-inactive-bg,color-mix(in_srgb,var(--color-foreground)_5%,transparent))] border border-[var(--fomo-border,color-mix(in_srgb,var(--color-foreground)_10%,transparent))] text-[var(--fomo-pill-inactive-text,var(--color-muted))] hover:text-white hover:bg-primary/20 hover:border-primary/40 shadow-sm"
                    >
                      <Info className="w-3 h-3" />
                      <span>Detalles</span>
@@ -265,11 +265,11 @@ export const ModCard = memo(function ModCard({
               )}
             </div>
 
-            <div className="h-[1px] w-full bg-[var(--fomo-border,rgba(255,255,255,0.05))] my-2.5" />
+            <div className="h-[1px] w-full bg-[var(--fomo-border,var(--color-border))] my-2.5 opacity-50" />
           </div>
         </div>
 
-        <div className="flex items-center justify-between w-full mt-auto pt-2 border-t border-[var(--fomo-border,rgba(255,255,255,0.05))]" style={{ height: "32px" }}>
+        <div className="flex items-center justify-between w-full mt-auto pt-2 border-t border-[var(--fomo-border,var(--color-border))] opacity-90" style={{ height: "32px" }}>
           <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
             {categories && categories.slice(0, 2).map((cat) => (
               <span 

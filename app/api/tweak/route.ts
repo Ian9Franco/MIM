@@ -484,6 +484,7 @@ export async function GET(req: NextRequest) {
 
     // Get installed mods for orphan detection
     const installedMods = new Set<string>();
+    const rawJarNames: string[] = [];
     const modsDir = path.join(projectDir, "mods");
     if (fs.existsSync(modsDir)) {
       try {
@@ -493,16 +494,40 @@ export async function GET(req: NextRequest) {
           if (fs.statSync(subPath).isDirectory()) {
             const files = fs.readdirSync(subPath);
             files.filter(f => f.endsWith(".jar")).forEach(f => {
+              rawJarNames.push(f);
               const modId = f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase();
               installedMods.add(modId);
             });
           } else if (sub.endsWith(".jar")) {
+            rawJarNames.push(sub);
             const modId = sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase();
             installedMods.add(modId);
           }
         }
       } catch (e) {}
     }
+
+    let detectedLoader = loader;
+    const hasForgeOrSinytra = rawJarNames.some(f => f.toLowerCase().includes("forge") || f.toLowerCase().includes("embeddium") || f.toLowerCase().includes("sinytra") || f.toLowerCase().includes("connector"));
+    const hasNeoForge = rawJarNames.some(f => f.toLowerCase().includes("neoforge"));
+
+    if (hasNeoForge) {
+      detectedLoader = "neoforge";
+    } else if (hasForgeOrSinytra) {
+      detectedLoader = "forge";
+    } else if (rawJarNames.some(f => f.toLowerCase().includes("fabric-api") || f.toLowerCase().includes("fabric-loader") || f.toLowerCase().includes("quilt") || f.toLowerCase().includes("indium") || f.toLowerCase().includes("sodium"))) {
+      detectedLoader = "fabric";
+    }
+
+    let detectedVersion = version;
+    for (const f of rawJarNames) {
+      const match = f.match(/(?:mc|-|\+)(1\.\d+(?:\.\d+)?)(?:-|\+|$|\.)/i);
+      if (match && match[1]) {
+        detectedVersion = match[1];
+        break;
+      }
+    }
+    if (!detectedVersion) detectedVersion = "1.20.1";
 
     const responseData: any = {
       optionsExists: false,
@@ -651,12 +676,119 @@ export async function GET(req: NextRequest) {
       } catch (e) {}
     }
 
-    // 4. Smart Recommendations
+    // 4. Smart Recommendations & Rule-Based Optimization Engine
     const modCount = getModCount(projectDir);
     const ramAllocated = ramParam ? parseInt(ramParam) : 8;
     const hasIntegratedGpu = gpuParam.toLowerCase() === "integrated" || gpuParam.toLowerCase() === "intel" || gpuParam.toLowerCase() === "amd radeon graphics";
 
+    // Hardware Detection via Node OS
+    const totalRamGB = Math.round(os.totalmem() / (1024 * 1024 * 1024));
+    const cpuCores = os.cpus().length;
+    const hardwareProfile = totalRamGB <= 8 || cpuCores <= 4 ? "low" : totalRamGB <= 16 ? "mid" : "high";
+
+    // Optimal JVM Arguments string calculation
+    let jvmArgs = "";
+    if (hardwareProfile === "low") {
+      jvmArgs = `-Xmx${Math.min(4, Math.max(2, totalRamGB - 2))}G -Xms2G -XX:+UseG1GC -XX:MaxGCPauseMillis=25 -XX:+AlwaysPreTouch`;
+    } else if (hardwareProfile === "mid") {
+      jvmArgs = `-Xmx${Math.min(8, Math.max(4, totalRamGB - 4))}G -Xms4G -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20`;
+    } else {
+      jvmArgs = `-Xmx${Math.min(12, Math.max(8, totalRamGB - 6))}G -Xms8G -XX:+UseZGC -XX:+ZProactive -XX:+AlwaysPreTouch`;
+    }
+
     const recommendations: any[] = [];
+
+    // Experience & Performance Boosters (FOMO links) per loader
+    const isFabric = detectedLoader.toLowerCase() === "fabric" || detectedLoader.toLowerCase() === "quilt";
+
+    if (isFabric) {
+      if (!installedMods.has("sodium")) {
+        recommendations.push({
+          title: "⚡ Motor de Renderizado Vulkan/OpenGL (Sodium)",
+          desc: `Detectamos entorno ${detectedLoader.toUpperCase()} (${detectedVersion}). Reemplazar el renderizador nativo de Minecraft por Sodium multiplicará tus FPS x3, eliminando tirones en generación de chunks.`,
+          impact: "high",
+          action: "open-fomo",
+          fomoQuery: "project:sodium",
+        });
+      }
+      if (!installedMods.has("iris")) {
+        recommendations.push({
+          title: "🌈 Soporte Optimizador de Shaders (Iris)",
+          desc: "Iris trabaja en perfecta sinergia con Sodium para habilitar shaders de ultra alta fidelidad (Complementary, BSL) usando una fracción de la VRAM habitual.",
+          impact: "medium",
+          action: "open-fomo",
+          fomoQuery: "project:iris",
+        });
+      }
+      if (!installedMods.has("lithium")) {
+        recommendations.push({
+          title: "🧠 Optimización de Física e IA (Lithium)",
+          desc: "Lithium optimiza la física de colisiones, el pathfinding de aldeanos/mobs y la carga de granjas sin alterar absolutamente ninguna mecánica de Minecraft Vanilla.",
+          impact: "medium",
+          action: "open-fomo",
+          fomoQuery: "project:lithium",
+        });
+      }
+    } else {
+      // Forge / NeoForge
+      if (!installedMods.has("embeddium") && !installedMods.has("rubidium")) {
+        recommendations.push({
+          title: `⚡ Motor de Renderizado Avanzado (Embeddium para ${detectedLoader.toUpperCase()})`,
+          desc: `En ecosistemas ${detectedLoader.toUpperCase()}, Embeddium (fork oficial de Sodium) reescribe el pipeline de renderizado para duplicar la fluidez sin romper la compatibilidad con los mods de Forge.`,
+          impact: "high",
+          action: "open-fomo",
+          fomoQuery: "project:embeddium",
+        });
+      }
+      if (!installedMods.has("oculus")) {
+        recommendations.push({
+          title: "🌈 Pipeline Shaders de Alto Rendimiento (Oculus)",
+          desc: `Oculus es la pasarela oficial para ejecutar shaders en ${detectedLoader.toUpperCase()} sobre Embeddium, con soporte nativo para sombreados dinámicos y reflejos PBR.`,
+          impact: "medium",
+          action: "open-fomo",
+          fomoQuery: "project:oculus",
+        });
+      }
+      if (!installedMods.has("modernfix")) {
+        recommendations.push({
+          title: "🛠️ Parches Estructurales de Memoria (ModernFix)",
+          desc: `ModernFix soluciona los conocidos bugs de fugas de memoria en ${detectedLoader.toUpperCase()}, acelerando el arranque del juego hasta un 50% y reduciendo la RAM estática del menú principal.`,
+          impact: "high",
+          action: "open-fomo",
+          fomoQuery: "project:modernfix",
+        });
+      }
+    }
+
+    if (!installedMods.has("ferritecore")) {
+      recommendations.push({
+        title: "🗜️ Compresión de Memoria de Modelos (FerriteCore)",
+        desc: "FerriteCore desduplica los vértices y estados de bloque en la memoria RAM, reduciendo el consumo total de memoria del modpack hasta en 3 GB.",
+        impact: "high",
+        action: "open-fomo",
+        fomoQuery: "project:ferritecore",
+      });
+    }
+
+    if (hardwareProfile === "low") {
+      recommendations.push({
+        title: "📉 Estrategia de Inmersión Ligera (Low Profile)",
+        desc: `Tu equipo cuenta con ${totalRamGB}GB RAM. Para evitar cuellos de botella con ${modCount} mods instalados, te sugerimos utilizar texturas 16x/32x e instalar Smooth Chunks para suavizar la carga de terreno en segundo plano.`,
+        impact: "high",
+        action: "open-fomo",
+        fomoQuery: "project:smooth-chunks",
+      });
+    } else {
+      if (!installedMods.has("sound-physics-remastered")) {
+        recommendations.push({
+          title: "✨ Inmersión Acústica Realista (Sound Physics)",
+          desc: `Tu hardware (${totalRamGB}GB RAM / ${cpuCores} Cores) tiene potencia de sobra. Instalar Sound Physics Remastered añade reverberación de cuevas, atenuación por paredes y eco tridimensional.`,
+          impact: "low",
+          action: "open-fomo",
+          fomoQuery: "project:sound-physics-remastered",
+        });
+      }
+    }
 
     if (ramAllocated <= 6) {
       recommendations.push({
@@ -676,29 +808,15 @@ export async function GET(req: NextRequest) {
         settingKey: "entityShadows",
         recommendedValue: "false",
       });
-      recommendations.push({
-        title: "Reducir Filtro de Texturas",
-        desc: "Desactivar Mipmaps reduce enormemente el cuello de botella en gráficas integradas.",
-        impact: "medium",
-        settingKey: "mipmapLevels",
-        recommendedValue: "0",
-      });
     }
 
     if (modCount > 120) {
       recommendations.push({
         title: "Modpack Pesado Detectado",
-        desc: `Tenés ${modCount} mods instalados. Bajar la Distancia de Simulación a 5 descongestionará el procesador (CPU) y evitará picos de lag por ticks.`,
+        desc: `Tenés ${modCount} mods instalados. Bajar la Distancia de Simulación a 5 descongestionará la CPU y evitará picos de lag por ticks.`,
         impact: "high",
         settingKey: "simulationDistance",
         recommendedValue: "5",
-      });
-      recommendations.push({
-        title: "Optimizar Partículas de Mods",
-        desc: "Muchos mods añaden partículas innecesarias. Establecer partículas en 'Mínimo' estabiliza los fotogramas en peleas.",
-        impact: "medium",
-        settingKey: "particles",
-        recommendedValue: "2",
       });
     }
 
@@ -741,6 +859,10 @@ export async function GET(req: NextRequest) {
     responseData.recommendations = recommendations;
     responseData.modCount = modCount;
     responseData.loader = loader;
+    responseData.hardwareProfile = hardwareProfile;
+    responseData.totalRamGB = totalRamGB;
+    responseData.cpuCores = cpuCores;
+    responseData.jvmArgs = jvmArgs;
 
     return NextResponse.json(responseData);
   } catch (error: any) {

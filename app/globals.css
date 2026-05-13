@@ -29,6 +29,8 @@
   /* CurseForge Specific Tokens */
   --color-cf-bg:      rgba(30, 20, 10, 0.7);
   --color-cf-border:  rgba(242, 86, 43, 0.15);
+  --color-secondary-bg: rgba(255, 255, 255, 0.04);
+  --color-hover:        rgba(255, 255, 255, 0.08);
 }
 
 /* VAMPIRE (Dark Purple) */
@@ -54,6 +56,8 @@
   /* CurseForge Vampire */
   --color-cf-bg:      rgba(20, 15, 30, 0.7);
   --color-cf-border:  rgba(187, 150, 228, 0.2);
+  --color-secondary-bg: rgba(187, 150, 228, 0.06);
+  --color-hover:        rgba(187, 150, 228, 0.12);
 }
 
 /* MODERN (Light Neomorphic) */
@@ -81,6 +85,8 @@
   /* CurseForge Modern */
   --color-cf-bg:      rgba(255, 255, 255, 0.4);
   --color-cf-border:  rgba(242, 86, 43, 0.1);
+  --color-secondary-bg: rgba(13, 39, 80, 0.04);
+  --color-hover:        rgba(13, 39, 80, 0.08);
 }
 
 [data-theme="modern"] input,

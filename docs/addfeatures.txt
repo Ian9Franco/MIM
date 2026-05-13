@@ -1,44 +1,173 @@
-tengo una duda respecto a la api de curseforge.
+Feature: Intelligent Pack Validation & Environment-Aware Build System
 
-puedo traer las noticias o los mods destacados que ponen en el banner principal con la api? https://www.curseforge.com/minecraft
+Traducción al español:
 
+“Voy a impedir que el usuario haga boludeces antes de exportar un modpack roto.”
 
+Porque claramente confiar en users es como dejarle una Ferrari a un mapache.
 
-creo que vienen de aca: https://www.curseforge.com/community-picks/minecraft
+Qué hace
 
+Antes de generar alluser.zip y allhost.zip, MIM valida:
 
+dependencias faltantes
+conflictos entre mods
+mods mal ubicados por entorno (client/server/both)
+librerías huérfanas
+configs inválidas
+datapacks incompatibles
+shaders/resourcepacks mal asociados
 
+Y recién después permite exportar.
 
-Sobre tu duda con la API de CurseForge (la Eternal API de Overwolf) para tu app de MIM, aquí te cuento lo que es posible:
+No más:
 
-1. Mods destacados (Banner principal)
-Sí, podés obtener los mods destacados usando el endpoint específico para eso. En la documentación oficial existe el método Get Featured Mods.
+“pasé el pack y explotó todo”
 
-Endpoint: GET https://api.curseforge.com/v1/mods/featured
+Ahora explota antes, con dignidad.
 
-Cómo funciona: Tenés que enviar un body (JSON) con el gameId de Minecraft (que es 432).
+Cómo implementarlo (sin hacer un ritual satánico)
+STEP 1 — Persistir metadata real
 
-Lo que devuelve: Te va a entregar un objeto con varias listas:
+Ahora no alcanza con guardar .jar.
 
-featured: Los que suelen rotar en el banner principal.
+Necesitás una entidad por mod:
 
-popular: Los más descargados.
+{
+  "id": "sodium",
+  "name": "Sodium",
+  "version": "mc1.20.1-0.5.3",
+  "loader": "Fabric",
+  "environment": "client",
+  "category": "performance",
+  "dependencies": ["fabric-api"],
+  "conflicts": ["optifine"],
+  "requiredFor": [],
+  "projectId": "my-pack"
+}
 
-recentlyUpdated: Los últimos en actualizarse.
+No importa el archivo.
 
-Es muy probable que lo que ves en la sección de "Community Picks" coincida con la lista de featured que devuelve la API, aunque a veces el sitio web tiene curaciones manuales que tardan un poco más en reflejarse en la respuesta del JSON.
+Importa saber qué carajo es.
 
+Ese metadata viene de:
 
+FOMO
+Modrinth
+CurseForge
+metadata inspection local
 
-Para los mods del banner, usá el endpoint de featured
+Tu app necesita memoria, no amnesia.
 
+STEP 2 — Priority Classification System
 
+No clasificar así:
 
+performance = essential
 
-https://modrinth.com/dashboard/notifications
+Eso es criminal.
 
-https://modrinth.com/dashboard
+Clasificar así:
 
+environment metadata → source of truth
+type → second layer
+tags → visual classification only
 
-modrinth collections official
-https://modrinth.com/user/Modrinth
+Orden:
+
+environment > type > tags
+
+Siempre.
+
+Sodium no decide su destino por vibes.
+
+STEP 3 — Validation Engine
+
+Antes de build:
+
+validateProject(project)
+
+y devuelve:
+
+{
+  errors: [],
+  warnings: [],
+  suggestions: []
+}
+
+Ejemplo:
+
+errors = [
+  "Fresh Animations requires EMF"
+]
+
+warnings = [
+  "Sodium detected in server pack"
+]
+
+suggestions = [
+  "Remove unused library: Architectury API"
+]
+
+Eso es el cerebro.
+
+STEP 4 — Build Gate
+
+Si hay errores graves:
+
+Build blocked
+
+No export.
+
+No negociación.
+
+No democracia.
+
+Si hay warnings:
+
+Build allowed with warnings
+
+porque a veces la gente quiere vivir peligrosamente.
+
+STEP 5 — Smart Split Export
+
+Generar:
+
+alluser.zip
+local + essential
+resourcepacks
+shaderpacks
+config
+allhost.zip
+server + essential
+datapacks
+config
+
+Pero ahora validado.
+
+No a ciegas.
+
+STEP 6 — Pack Health Score (opcional pero sexy)
+Pack Health: 91/100
+
+Eso vende humo premium y encima sirve.
+
+Perfecto.
+
+Resultado final
+
+MIM pasa de:
+
+smart downloader
+
+a
+
+modpack integrity system
+
+Y eso cambia todo.
+
+Porque ya no ayudás a descargar.
+
+Ayudás a no romper.
+
+Y eso vale muchísimo más.

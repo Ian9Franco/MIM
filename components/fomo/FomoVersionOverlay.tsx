@@ -17,10 +17,11 @@ interface FomoVersionOverlayProps {
   onClose:     () => void;
   onDownload:  (mod: ModHit, version: VersionEntry) => void;
   onSearchProject?: (title: string) => void;
+  onSearchAuthor?: (author: string) => void;
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject, onSearchAuthor,
 }: FomoVersionOverlayProps) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">("versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
@@ -453,6 +454,16 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 >
                   <Heart className={`w-2.5 h-2.5 ${isFollowingAuthor(displayedAuthor) ? "fill-pink-400 text-pink-400" : ""}`} />
                   {isFollowingAuthor(displayedAuthor) ? "Siguiendo Creador" : "Seguir Creador"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSearchAuthor?.(displayedAuthor)}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-all flex items-center gap-1 hover:scale-105 active:scale-95 shadow-sm"
+                  title={`Buscar más proyectos creados por ${displayedAuthor}`}
+                >
+                  <Search className="w-2.5 h-2.5" />
+                  <span>Proyectos del Autor</span>
                 </button>
 
                 <button

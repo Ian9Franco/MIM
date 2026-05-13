@@ -8,6 +8,7 @@ import type { ModHit } from "@/lib/types";
 
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
+  onSearchProject?: (title: string) => void;
   onOpenVersions?: (mod: ModHit) => void;
   onDownloadMod?: (mod: ModHit) => Promise<void>;
   downloading?: Record<string, boolean>;
@@ -15,6 +16,7 @@ interface FomoFollowedAuthorsProps {
 
 export function FomoFollowedAuthors({ 
   onSearchAuthor, 
+  onSearchProject,
   onOpenVersions, 
   onDownloadMod, 
   downloading = {} 
@@ -411,6 +413,16 @@ export function FomoFollowedAuthors({
                         </span>
 
                         <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSearchProject?.(mod.title);
+                            }}
+                            className="p-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--fomo-text-primary)_8%,transparent)] text-[var(--fomo-text-muted)] hover:text-[var(--fomo-text-primary)] transition-colors"
+                            title="Buscar mod en ambos catálogos (Modrinth + CurseForge)"
+                          >
+                            <Search className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => onOpenVersions?.(mod)}
                             className="p-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--fomo-text-primary)_8%,transparent)] text-[var(--fomo-text-muted)] hover:text-[var(--fomo-text-primary)] transition-colors"

@@ -1,12 +1,18 @@
 # MIM — Roadmap Estratégico
 
 > Logros alcanzados y visión de futuro.  
-> **Versión Actual:** Beta 5.5  
-> **Última actualización:** 2026-05-08
+> **Versión Actual:** Beta 5.6  
+> **Última actualización:** 2026-05-13
 
 ---
 
 # ✅ Logros Implementados (HECHO)
+
+## 🚀 Beta 5.6 — Spotlight, Collections Update & Stock Ticker
+- **Spotlight Feed & Discovery**: Sistema de destacados premium con picks recomendados en tiempo real desde Modrinth y CurseForge con navegación fluida y descarga directa.
+- **Project Followers & Hybrid Search**: Seguimiento de autores (`author:`) y proyectos (`project:`) comparando versiones simultáneamente entre plataformas en modo "Ambos".
+- **Collections & Modpack Dependencies**: Sincronización de colecciones de Modrinth con plantillas pre-armadas y parseo de dependencias internas de modpacks de CurseForge con resguardo en caché local.
+- **Stock Ticker & Contraste Maestro**: Marquesina autodesplazable superior para actualizaciones de mods y tokens semánticos de contraste en UI.
 
 ## 🔄 Sincronización y Estabilidad
 - **Sincronización Maestra (Disk Sync)**: Botón de refresco manual que sincroniza la app con el estado real del disco (Mods, Proyectos y Descargas).
@@ -35,12 +41,12 @@
 - **Limpieza de UI de Desarrollo**: Eliminación del bug 400 Bad Request en la API de colecciones de Modrinth.
 
 ## 👁️ FOMO 3.0 (Discovery & Cloud)
-- **Discovery Sidebar**: Integración total con Modrinth y CurseForge.
-- **Multi-Filtro Avanzado**: Filtrado por versiones, categorías, loaders y entornos (Client/Server).
+- **Spotlight Feed (Destacados)**: Exhibición curada en tiempo real de novedades, selecciones de la comunidad y proyectos virales tanto de Modrinth como de CurseForge.
+- **Seguidos (Following & Hybrid Search)**: Seguimiento dedicado de creadores y proyectos favoritos. Incluye lupa de búsqueda híbrida (`author:` y `project:`) para comparar al instante versiones y plataformas (Modrinth vs CurseForge) en un único catálogo combinado ("Ambos").
 - **Manual Version Selector**: Capacidad de elegir versiones específicas para Assets y Datapacks.
-- **Modrinth Collections**: Sincronización de colecciones personales y "Following".
+- **Modrinth Collections**: Sincronización de colecciones personales y listas de seguimiento.
 - **Bulk Download**: Barra de acciones masivas para descargas en lote.
-- **Layout "Glass Gutter"**: Transiciones fluidas y redimensionamiento dinámico de sidebars.
+- **Layout "Glass Gutter"**: Transiciones fluidas y redimensionamiento dinámico de sidebars con interacción de filtros tipo "pill" en la barra de búsqueda.
 
 ## 🔌 Soporte Híbrido Sinytra Connector (Forge + Fabric)
 - **Auto-Detección Inteligente**: Sincroniza automáticamente la UI con el loader y versión del proyecto activo.
@@ -87,16 +93,7 @@
 - **SAGE Recovery Engine**: Motor de recuperación automatizado (`sageRecoveryEngine.ts`) con flujos interactivos para solucionar crashes (descarga de dependencias faltantes interactuando con FOMO, desactivación segura de mods conflictivos y reparación de perfiles `.dat` con backups automáticos).
 - **MIM Event Debugger**: Interfaz de desarrollo visual (`EventDebuggerUI.tsx`) para supervisar en vivo el flujo del Event Bus a 60fps con estadísticas de rendimiento en tiempo real.
 
----
-
-# 🚧 Roadmap y Próximos Pasos (PENDIENTE)
-
-## 🎯 Prioridades Inmediatas (S+)
-1. **Conflict Detection Engine (Avanzado)**: Extender SAGE para realizar análisis estático de colisiones lógicas de bytecode (Mixins modificando el mismo método de Minecraft) previo al lanzamiento físico del juego.
-2. **Rule-Based Optimization Engine**: Perfiles y optimizaciones automáticas de rendimiento (JVM args, asignación de memoria, presets óptimos de video) según el hardware detectado (CPU/GPU/RAM) y el volumen de mods activos.
-3. **Mod Packaging Assistant**: Pipeline de distribución integrado para validación de manifiestos `modrinth.index.json` y dependencias de publicación.
-
-## 🗺️ Roadmap Estratégico
+## 🗺️ Fases Estratégicas Implementadas
 
 ### Fase 1: Inteligencia de Clasificación ✅
 - [x] **Smart Categories (Modo Auto)**: Clasificación automática de mods comunes.
@@ -115,13 +112,30 @@
 - [x] **Security UI**: Badges visuales completos en toda la app.
   **Badges interactivos en ModCard/FomoModCard con tooltips detallados y modal de análisis estético.**
 
+### Fase 4: Event-Driven Orchestration & Centralized Intelligence ✅
+- [x] **MIM Event Bus**: Bus centralizado para desacoplar comunicación entre módulos con batching y requestAnimationFrame.
+- [x] **ALRT Central Intelligence Layer**: Evolución del Centro de Alertas hacia un núcleo de inteligencia operacional.
+- [x] **Cross-Module Incident Correlation Engine**: Motor reactivo de correlación para detectar relaciones entre eventos independientes.
+- [x] **Incident Persistence & Session Memory**: Persistencia local en IndexedDB con índices compuestos y fallback a localStorage.
+- [x] **Reactive Rule System**: Sistema extensible runtime de reglas con addRule(), removeRule() y enableRule().
+
+---
+
+# 🚧 Roadmap y Próximos Pasos (PENDIENTE)
+
+## 🎯 Prioridades Inmediatas (S+)
+1. **Conflict Detection Engine (Avanzado)**: Extender SAGE para realizar análisis estático de colisiones lógicas de bytecode (Mixins modificando el mismo método de Minecraft) previo al lanzamiento físico del juego.
+2. **Intelligent Pack Validation & Build Gate**: Pipeline de validación de dependencias, conflictos y entornos previo al empaquetado de exportación.
+
+## 🗺️ Roadmap Estratégico
+
 ### Fase 3.1: Ecosistema Interactivo  
-- [ ] **Rule-Based Optimization Engine**: Sistema de optimización automática basado en reglas.
+- [x] **Rule-Based Optimization Engine**: Sistema de optimización automática basado en reglas.
   - Detección de hardware (GPU/RAM/CPU) y perfil de carga de mods
   - Presets automáticos: RTX 3060 + 300 mods → HIGH preset
   - Sugerencias específicas: JVM args, memoria óptima, nivel shader
   - Integración con TWEAK para aplicar configuraciones optimizadas
-  - Conexión con SAGE/ALRT para detección de problemas de rendimiento----(orientado con mas precision a low/mid profiles)
+  - Conexión con SAGE/ALRT para detección de problemas de rendimiento (orientado con más precisión a low/mid profiles)
   
 - [ ] **Conflict Detection Engine**: Motor de detección de conflictos de bytecode.
   - Detección previa al lanzamiento: mixin collisions, access transformer conflicts
@@ -144,49 +158,20 @@
   - Escalación inteligente de alertas con recomendaciones contextuales
   **Capa de inteligencia operacional con correlación temporal y lifecycle management de incidentes.**
   
-- [ ] **Mod Packaging Assistant**: Pipeline de validación y distribución.
-  - Validador automático de manifiestos modrinth.index.json
-  - Sistema de dependencias con detección de conflictos
-  - Integración con build system y checks de compatibilidad
-  - Pipeline de distribución con checklist interactivo
-
-
-
-
-### Fase 4: Event-Driven Orchestration & Centralized Intelligence 
-
-- [x] **MIM Event Bus**
-  Bus de eventos centralizado, ligero y completamente tipado para desacoplar la comunicación entre módulos (`FOMO`, `SAGE`, `ALRT`, `TWEAK`, `Watcher`, etc.) mediante arquitectura reactiva basada en eventos.
-  **Optimizado con batch processing, requestAnimationFrame y estadísticas de debugging.**
-
-- [x] **ALRT Central Intelligence Layer**
-  Evolución del Centro de Alertas hacia un núcleo de inteligencia operacional capaz de escuchar, priorizar, agrupar y contextualizar eventos provenientes de toda la aplicación en tiempo real.
-  **Con cache inteligente de 30 segundos y carga bajo demanda desde IndexedDB.**
-
-- [x] **Cross-Module Incident Correlation Engine**
-  Motor reactivo de correlación capaz de detectar relaciones entre eventos independientes y consolidarlos en un único incidente contextual.
-  **Optimizado con memoización, fingerprinting de eventos y cache TTL de 5 segundos.**
-  Ejemplo:
-  `FOMO → mod.downloaded` 
-  `SAGE → dependency.missing` 
-  `TWEAK → shader.incompatible` 
-  ➔ ALRT genera: `"Entorno inconsistente detectado"`.
-
-- [x] **Incident Persistence & Session Memory**
-  Persistencia local de incidentes, estados `unread/unseen`, historial de resolución y trazabilidad temporal para permitir auditoría, continuidad entre sesiones y debugging avanzado.
-  **Migrado a IndexedDB escalable para 10,000+ incidentes con índices optimizados y fallback a localStorage.**
-
-- [x] **Reactive Rule System**
-  Sistema extensible de reglas (`IF event A + event B → create incident`) para automatizar diagnósticos, recomendaciones y flujos de recuperación entre módulos.
-  **Sistema dinámico runtime con addRule(), removeRule(), enableRule() y priorización.**
-
+- [ ] **Intelligent Pack Validation & Environment-Aware Build System (Mod Packaging Assistant repensado)**
+  - **Meta de Diseño**: "Impedir que el usuario exporte un modpack roto antes de tiempo".
+  - **Persistencia de Metadata Real**: Entidades completas por mod con su ID, versión, loader, entorno (client/server/both), dependencias y conflictos.
+  - **Priority Classification System**: Clasificación estricta basada en jerarquía `entorno > tipo > tags`.
+  - **Validation Engine (`validateProject`)**: Análisis preventivo previo a la exportación que retorna errores graves (bloqueantes), advertencias y sugerencias de optimización.
+  - **Build Gate Inflexible**: Bloqueo absoluto de exportación ante errores graves ("No negociación, no democracia") y exportación permitida bajo advertencia para perfiles experimentales.
+  - **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
+  - **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
 
 ### Fase 5: Posicionamiento Profesional 
 - [ ] **Demo Deployable**: Showcase visual o landing funcional.
 - [ ] **Video Demo**: "Problema → Solución → Wow factor".
 - [ ] **Technical Case Study**: Documentación de trade-offs y arquitectura senior.
 - [ ] **Portfolio Integration**: Integración en portfolio profesional.
-
 
 ## 📊 Métricas de Éxito
 

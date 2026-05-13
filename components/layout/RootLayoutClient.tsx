@@ -7,13 +7,15 @@ import { FomoSidebar } from "@/components/fomo/FomoSidebar";
 import { SageSidebar } from "@/components/sage/SageSidebar";
 import { TweakSidebar } from "@/components/layout/TweakSidebar";
 import { SettingsModal } from "@/components/layout/SettingsModal";
-import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package } from "lucide-react";
+import { Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert } from "lucide-react";
 import { useStaging } from "@/hooks/useStaging";
 import { StagingModal } from "@/components/layout/StagingModal";
 import type { Project } from "@/lib/types";
 import { incidentManager } from "@/lib/incidentManager";
 import { correlationEngine } from "@/lib/correlationEngine";
 import type { Incident } from "@/lib/incidentManager";
+import { PackHealthPanel } from "@/components/layout/PackHealthModal";
+import type { PackHealthReport } from "@/lib/types";
 
 /**
  * Cliente de Layout Principal (Client Component).
@@ -33,6 +35,11 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [alertsSeen, setAlertsSeen] = useState(false);
   const [stagingOpen, setStagingOpen] = useState(false);
   const [hasStagingFiles, setHasStagingFiles] = useState(false);
+  const [packHealthOpen, setPackHealthOpen] = useState(false);
+  const [packHealthReport, setPackHealthReport] = useState<PackHealthReport | null>(null);
+  const [isValidatingHealth, setIsValidatingHealth] = useState(false);
+  const [pendingBuildType, setPendingBuildType] = useState<"alluser" | "allhost" | null>(null);
+  const [onForceBuildCallback, setOnForceBuildCallback] = useState<(() => void) | null>(null);
   const staging = useStaging();
 
   // Marcar alertas como vistas si se abre el panel lateral de alertas
@@ -142,6 +149,23 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       setHasStagingFiles(customEvent.detail);
     };
 
+    const handlePackHealthToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean | { open: boolean, report?: PackHealthReport, onForceBuild?: () => void, buildType?: "alluser" | "allhost" }>;
+      const detail = customEvent.detail;
+      
+      if (typeof detail === "boolean") {
+        setPackHealthOpen(detail);
+      } else if (detail && typeof detail === "object") {
+        setPackHealthOpen(detail.open);
+        if (detail.report) setPackHealthReport(detail.report);
+        if (detail.onForceBuild) {
+          const fn = detail.onForceBuild;
+          setOnForceBuildCallback(() => fn);
+        }
+        if (detail.buildType) setPendingBuildType(detail.buildType);
+      }
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("alert-sidebar-toggle", handleAlertToggle);
       window.addEventListener("alert-status-changed", handleAlertStatus);
@@ -150,6 +174,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       window.addEventListener("sage-toggle", handleSageToggleEvent);
       window.addEventListener("tweak-toggle", handleTweakToggleEvent);
       window.addEventListener("active-project-changed", handleProjectChange);
+      window.addEventListener("pack-health-toggle", handlePackHealthToggle);
     }
     if (staging.hasFiles) setHasStagingFiles(true);
     
@@ -162,6 +187,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         window.removeEventListener("sage-toggle", handleSageToggleEvent);
         window.removeEventListener("tweak-toggle", handleTweakToggleEvent);
         window.removeEventListener("active-project-changed", handleProjectChange);
+        window.removeEventListener("pack-health-toggle", handlePackHealthToggle);
       }
     };
   }, []);
@@ -270,6 +296,42 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
+  const handleCheckHealth = async () => {
+    if (!activeProject || isValidatingHealth) return;
+    setIsValidatingHealth(true);
+    try {
+      const res = await fetch("/api/validate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ 
+          projectName: activeProject.name, 
+          version: activeProject.version, 
+          loader: activeProject.loader, 
+          buildTarget: "both" 
+        }),
+      });
+      if (res.ok) {
+        const report = await res.json();
+        setPackHealthReport(report);
+        setPackHealthOpen(true);
+        setPendingBuildType(null);
+        setOnForceBuildCallback(null);
+      }
+    } catch (err) {
+      console.error("[RootLayout] Health check failed:", err);
+    } finally {
+      setIsValidatingHealth(false);
+    }
+  };
+
+  const handleFomoSearch = (query: string) => {
+    setPackHealthOpen(false);
+    handleToggleFomo(true);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+    }, 400);
+  };
+
   return (
     <div className="font-poppins">
       {/* ── Ambient overlay ──────────────────────────────────────────────────── */}
@@ -298,7 +360,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           className="relative z-10 min-h-screen flex flex-col transition-all duration-600 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-x-hidden"
         style={{ 
           transform: `translateX(${fomoOpen || sageOpen ? 500 : 0}px)`,
-          paddingRight: (alertSidebarOpen || tweakOpen) ? "400px" : "0px",
+          paddingRight: (alertSidebarOpen || tweakOpen || packHealthOpen) ? "400px" : "0px",
           width: "100%",
         }}
       >
@@ -483,6 +545,29 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 <span className="text-[10px] font-headline tracking-widest font-bold">TWEAK</span>
               </button>
 
+              {/* Pack Health GATE Button */}
+              <button
+                onClick={handleCheckHealth}
+                disabled={!activeProject || isValidatingHealth}
+                className={`group h-9 px-3 rounded-xl flex items-center gap-2 transition-all duration-300 disabled:opacity-30 disabled:grayscale ${
+                  packHealthOpen 
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)]' 
+                    : 'hover:bg-white/5 border-transparent'
+                }`}
+                style={{ 
+                  border: "1px solid " + (packHealthOpen ? "rgba(245,158,11,0.4)" : "var(--color-border)"), 
+                  color: packHealthOpen ? "#fbbf24" : "var(--color-muted)" 
+                }}
+                title="Estado de Salud del Pack (GATE)"
+              >
+                {isValidatingHealth ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <BookAlert className={`w-3.5 h-3.5 transition-all ${packHealthOpen ? 'animate-pulse' : ''}`} />
+                )}
+                <span className="text-[10px] font-headline tracking-widest font-bold">GATE</span>
+              </button>
+
               <ThemeToggle />
             </div>
           </div>
@@ -494,15 +579,15 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ── Sticky Footer ───────────────────────────────────────────────────── */}
-        <footer className="px-6 py-10 border-t border-primary/10 bg-background/40 backdrop-blur-md">
-          <div className="max-w-400 mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-60 hover:opacity-100 transition-opacity duration-700">
+        <footer className="px-6 py-10 border-t border-primary/20 bg-background/60 backdrop-blur-md transition-colors duration-500">
+          <div className="max-w-400 mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-80 hover:opacity-100 transition-opacity duration-700">
             
             <div className="flex flex-col items-center md:items-start gap-2">
               <div className="flex items-center gap-2">
-                <Image src="/icon.png" alt="" width={20} height={20} className="w-5 h-5 grayscale opacity-50" />
-                <span className="font-headline text-[10px] tracking-[0.3em] uppercase text-foreground/50">Minecraft Intelligent Manager</span>
+                <Image src="/icon.png" alt="" width={20} height={20} className="w-5 h-5 grayscale opacity-70 animate-slime" />
+                <span className="font-headline text-[10px] tracking-[0.3em] uppercase text-foreground/70 font-medium">Minecraft Intelligent Manager</span>
               </div>
-              <p className="text-[10px] font-light tracking-wide text-foreground/30">
+              <p className="text-[10px] font-light tracking-wide text-foreground/50">
                 &copy; {new Date().getFullYear()} MIM Project. Porque organizar mods manualmente debería ser ilegal.
               </p>
             </div>
@@ -514,11 +599,11 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center gap-1 transition-all duration-300"
               >
-                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/20 group-hover:text-primary/60 transition-colors">Repository</span>
-                <span className="text-[11px] font-medium text-foreground/40 group-hover:text-foreground/80 transition-colors">github.com/Ian9Franco/MIM</span>
+                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/50 group-hover:text-primary transition-colors">Repository</span>
+                <span className="text-[11px] font-medium text-foreground/70 group-hover:text-foreground transition-colors">github.com/Ian9Franco/MIM</span>
               </a>
 
-              <div className="w-px h-6 bg-white/5" />
+              <div className="w-px h-6 bg-primary/20" />
 
               <a
                 href="https://github.com/Ian9Franco"
@@ -526,15 +611,20 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center gap-1 transition-all duration-300"
               >
-                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/20 group-hover:text-primary/60 transition-colors">Developer</span>
-                <span className="text-[11px] font-medium text-foreground/40 group-hover:text-foreground/80 transition-colors">@Ian9Franco</span>
+                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-foreground/50 group-hover:text-primary transition-colors">Developer</span>
+                <span className="text-[11px] font-medium text-foreground/70 group-hover:text-foreground transition-colors">@Ian9Franco</span>
               </a>
             </div>
 
             <div className="hidden lg:block">
-              <p className="text-[10px] text-foreground/20 font-thin italic max-w-50 text-right leading-relaxed">
+              <a 
+                href="https://ian-pontorno-portfolio.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[10px] text-foreground/50 hover:text-primary font-thin italic max-w-50 text-right leading-relaxed block transition-colors"
+              >
                 Hecho con mucho cold brew y demasiadas <br /> noches sin dormir por Ian.
-              </p>
+              </a>
             </div>
           </div>
         </footer>
@@ -542,6 +632,24 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {stagingOpen && <StagingModal onClose={() => setStagingOpen(false)} />}
+      
+      {/* ── Global Pack Health Panel ────────────────────────────────────────── */}
+      {packHealthOpen && packHealthReport && (
+        <PackHealthPanel
+          report={packHealthReport}
+          onClose={() => {
+            setPackHealthOpen(false);
+            // Pequeño delay para limpiar el reporte después de la animación de cierre
+            setTimeout(() => setPackHealthReport(null), 500);
+          }}
+          onForceBuild={() => {
+            if (onForceBuildCallback) onForceBuildCallback();
+            setPackHealthOpen(false);
+          }}
+          onFomoSearch={handleFomoSearch}
+          isBuilding={false}
+        />
+      )}
     </div>
   );
 }

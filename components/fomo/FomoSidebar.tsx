@@ -82,9 +82,21 @@ const SOURCE_OPTIONS = [
   },
 ];
 
+const SOURCE_OPTIONS_AUTHORS = [
+  { 
+    value: "all",   
+    label: "Ambos",   
+    icon: <Layers className="w-3.5 h-3.5" />, 
+    activeColor: "#3B82F6", 
+    activeBg: "rgba(59,130,246,0.15)", 
+    activeBorder: "rgba(59,130,246,0.3)" 
+  },
+  ...SOURCE_OPTIONS
+];
+
 const SIDEBAR_TITLE: Record<Mode, (source: string) => string> = {
   spotlight:   ()    => "Destacados y Novedades",
-  discover:    (src) => src === "modrinth" ? "Catálogo Modrinth" : "Catálogo CurseForge",
+  discover:    (src) => src === "all" ? "Catálogo Híbrido (Modrinth + CurseForge)" : src === "modrinth" ? "Catálogo Modrinth" : "Catálogo CurseForge",
   collections: ()    => "Mis Colecciones de Modrinth",
   followed:    ()    => "Mi Contenido Seguido",
 };
@@ -320,7 +332,7 @@ export function FomoSidebar({
         aria-modal="true"
         aria-label="Panel FOMO"
         className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border-r fomo-sidebar fomo-sidebar-container overflow-hidden ${
-          discover.source === "curseforge" ? "fomo-source-curseforge" : "fomo-source-modrinth"
+          discover.source === "all" ? "fomo-source-hybrid" : discover.source === "curseforge" ? "fomo-source-curseforge" : "fomo-source-modrinth"
         } ${
           open ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-full opacity-0 pointer-events-none"
         }`}
@@ -368,9 +380,9 @@ export function FomoSidebar({
             {/* Source Options (Modrinth | CurseForge) - Only in discover mode */}
             {mode === "discover" && (
               <PillToggleGroup 
-                options={SOURCE_OPTIONS} 
+                options={(discover.query.startsWith("author:") || discover.query.startsWith("project:")) ? SOURCE_OPTIONS_AUTHORS : SOURCE_OPTIONS} 
                 value={discover.source} 
-                onChange={(v) => discover.setSource(v as "modrinth" | "curseforge")} 
+                onChange={(v) => discover.setSource(v as any)} 
                 className="p-1.5 shadow-inner min-w-60" 
                 style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}
                 ariaLabel="Fuente de mods" 
@@ -480,37 +492,51 @@ export function FomoSidebar({
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Toolbar: Search */}
               <div className="px-6 py-4 flex items-center gap-4 border-b shrink-0 fomo-header-border" style={{ borderColor: "var(--color-border)" }}>
-                <div className="flex-1 flex items-center gap-3 rounded-xl px-4 py-2.5 bg-(--fomo-secondary-bg) border border-(--fomo-border) focus-within:border-primary/50 transition-all min-h-[46px]">
+                <div 
+                  onClick={() => {
+                    if (discover.query.startsWith("author:") || discover.query.startsWith("project:")) {
+                      discover.setQuery("");
+                    }
+                  }}
+                  className="flex-1 flex items-center gap-3 rounded-2xl px-5 py-3 bg-(--fomo-secondary-bg) border border-(--fomo-border) focus-within:border-primary/50 transition-all cursor-text min-h-[52px]"
+                >
                   <Search className="w-5 h-5 text-(--fomo-text-muted) opacity-50 shrink-0" />
-                  {discover.query.startsWith("author:") ? (
-                    <div className="flex-1 flex items-center justify-between min-w-0">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-bold truncate">
-                        <span>Autor: {discover.query.substring(7)}</span>
-                      </div>
-                      <button 
-                        onClick={() => discover.setQuery("")} 
-                        className="p-1 hover:bg-white/10 rounded-full transition-colors shrink-0"
-                        title="Quitar filtro de autor"
-                      >
-                        <X className="w-4 h-4 text-(--fomo-text-muted)" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="search"
-                        value={discover.query}
-                        onChange={(e) => discover.setQuery(e.target.value)}
-                        placeholder={`Buscar en ${discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
-                        className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-sm font-medium text-(--fomo-text-primary) placeholder:text-(--fomo-text-muted)/50"
-                        style={{ outline: "none", boxShadow: "none" }}
+                  
+                  {discover.query.startsWith("author:") && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold shrink-0">
+                      <span>Autor: {discover.query.substring(7)}</span>
+                      <X 
+                        onClick={(e) => { e.stopPropagation(); discover.setQuery(""); }} 
+                        className="w-3.5 h-3.5 opacity-60 hover:opacity-100 cursor-pointer ml-1" 
                       />
-                      {discover.query && (
-                        <button onClick={() => discover.setQuery("")} className="p-1 hover:bg-(--fomo-secondary-bg) rounded-full transition-colors">
-                          <X className="w-4 h-4 text-(--fomo-text-muted)" />
-                        </button>
-                      )}
-                    </>
+                    </div>
+                  )}
+
+                  {discover.query.startsWith("project:") && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-bold shrink-0">
+                      <span>Mod: {discover.query.substring(8)}</span>
+                      <X 
+                        onClick={(e) => { e.stopPropagation(); discover.setQuery(""); }} 
+                        className="w-3.5 h-3.5 opacity-60 hover:opacity-100 cursor-pointer ml-1" 
+                      />
+                    </div>
+                  )}
+
+                  <input
+                    type="search"
+                    value={(discover.query.startsWith("author:") || discover.query.startsWith("project:")) ? "" : discover.query}
+                    onChange={(e) => discover.setQuery(e.target.value)}
+                    placeholder={(discover.query.startsWith("author:") || discover.query.startsWith("project:")) 
+                      ? "Escribir para buscar otra cosa..." 
+                      : `Buscar en ${discover.source === 'all' ? 'Modrinth y CurseForge' : discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
+                    className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-sm font-medium text-(--fomo-text-primary) placeholder:text-(--fomo-text-muted)/50 w-full"
+                    style={{ outline: "none", boxShadow: "none" }}
+                  />
+
+                  {discover.query && !discover.query.startsWith("author:") && !discover.query.startsWith("project:") && (
+                    <button onClick={() => discover.setQuery("")} className="p-1 hover:bg-(--fomo-secondary-bg) rounded-full transition-colors">
+                      <X className="w-4 h-4 text-(--fomo-text-muted)" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -549,7 +575,7 @@ export function FomoSidebar({
                     <FomoSkeleton 
                       variant="card"
                       isCurseForge={discover.source === "curseforge"}
-                      message={discover.source === "modrinth" ? "Consultando Modrinth..." : "Consultando CurseForge..."} 
+                      message={discover.source === "all" ? "Consultando catálogos en paralelo..." : discover.source === "modrinth" ? "Consultando Modrinth..." : "Consultando CurseForge..."} 
                       count={9} 
                     />
                   </div>
@@ -684,7 +710,13 @@ export function FomoSidebar({
           <FomoFollowedAuthors
             onSearchAuthor={(author) => {
               setMode("discover");
+              discover.setSource("all");
               discover.setQuery(`author:${author}`);
+            }}
+            onSearchProject={(title) => {
+              setMode("discover");
+              discover.setSource("all");
+              discover.setQuery(`project:${title}`);
             }}
             onOpenVersions={discover.handleOpenVersionSelector}
             onDownloadMod={discover.handleDownload}
@@ -711,6 +743,12 @@ export function FomoSidebar({
                 // No cerramos la sección detalles para mantenerla abierta
                 setMode("discover");
                 discover.setQuery(title);
+              }}
+              onSearchAuthor={(author) => {
+                discover.setSelectingVersionFor(null);
+                setMode("discover");
+                discover.setSource("all");
+                discover.setQuery(`author:${author}`);
               }}
             />
           );

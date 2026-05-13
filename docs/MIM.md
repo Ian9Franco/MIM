@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** Beta 5.5 | **Última actualización:** 2026-05-08
+> **Versión:** Beta 5.6 | **Última actualización:** 2026-05-13
 
 ---
 
@@ -343,6 +343,25 @@ type BuildMode = 'alluser' | 'allhost';
 // • Salida: Carpeta lista para hosting
 ```
 
+### 5.6 Rule-Based Optimization Engine (TWEAK)
+
+Motor inteligente de tuning y optimización de perfiles de juego (`app/api/tweak/route.ts`):
+
+```typescript
+interface HardwareProfile {
+  ram: number;
+  cpuCores: number;
+  profile: "low" | "mid" | "high";
+  jvmArgs: string;
+}
+```
+
+**Capacidades Principales:**
+- **Detección de Hardware Local**: Evalúa hilos de CPU (`os.cpus()`) y memoria RAM disponible (`os.totalmem()`).
+- **Cálculo de JVM Arguments**: Sugerencias precisas de flags de optimización de recolección de basura (G1GC/ZGC) y memoria asignada.
+- **Tuning Heurístico Dinámico**: Monitorea el recuento de mods activos para ajustar distancias de simulación, mipmaps y sombras de entidades.
+- **Presets Rápidos**: Perfiles instantáneos orientados a FPS máximos, fluidez o fidelidad de shaders.
+
 ---
 
 ## 6. Frontend Architecture
@@ -418,6 +437,36 @@ Para bibliotecas de 700+ mods:
 // • Memory: 40-60MB (vs 200-300MB)
 // • Scroll: 60fps consistente
 ```
+
+### 6.4 FOMO Discovery & Cloud Ecosystem
+
+El ecosistema de descubrimiento avanzado (FOMO) actúa como un agregador unificado de catálogos en la nube, integrando de manera nativa Modrinth y CurseForge bajo una experiencia visual e interactiva fluida:
+
+```
+┌────────────────────────────────────────────────────────┐
+│               FOMO Discovery Ecosystem                 │
+├──────────────────────────┬─────────────────────────────┤
+│      Spotlight Feed      │    Seguidos (Following)     │
+│  (Novedades / Curados)   │   (Autores y Proyectos)     │
+└────────────┬─────────────┴──────────────┬──────────────┘
+             │                            │
+             ▼                            ▼
+┌──────────────────────────┐┌────────────────────────────┐
+│   Catálogo en Vivo       ││ Búsqueda Híbrida ("Ambos") │
+│ • Community Picks        ││ • author:NombreAutor       │
+│ • Featured / Popular     ││ • project:NombreMod        │
+│ • Recently Updated       ││ • Comparativa Simultánea   │
+└──────────────────────────┘└────────────────────────────┘
+```
+
+#### 1. Spotlight Feed (Destacados y Novedades)
+Actúa como la vitrina principal de aterrizaje, presentando las recomendaciones curadas de la comunidad (*Community Picks*), proyectos que marcan tendencia, los más descargados y las actualizaciones más recientes extraídas en tiempo real desde las APIs de Modrinth y CurseForge. Esto permite descubrir mods de alta calidad al instante sin abandonar la aplicación.
+
+#### 2. Seguidos (Following & Tracking Dedicado)
+Una sección especializada para monitorizar creadores de contenido y mods individuales favoritos en ambas plataformas.
+- **Búsqueda Híbrida Inteligente**: Al hacer clic en el botón de búsqueda (lupa) de un autor o mod seguido, FOMO activa de forma autónoma la fuente combinada `"all"` (Ambos) y realiza una consulta exacta (`author:XYZ` o `project:XYZ`).
+- **Comparativa Cruzada**: Muestra las tarjetas del mismo mod de Modrinth y CurseForge lado a lado, permitiendo al usuario contrastar de un vistazo versiones, fechas de actualización y loaders soportados (Forge vs Fabric/NeoForge) para detectar posibles discrepancias entre catálogos.
+- **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado, permitiendo iniciar nuevas búsquedas de forma continua sin requerir la eliminación manual previa del filtro.
 
 ---
 

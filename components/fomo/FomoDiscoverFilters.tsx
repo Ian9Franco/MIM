@@ -60,7 +60,7 @@ interface FomoDiscoverFiltersProps {
   sortOrder:    SortOrder;
   query:        string;
   loading:      boolean;
-  source:       "modrinth" | "curseforge";
+  source:       "modrinth" | "curseforge" | "all";
   onLoader:       (v: string) => void;
   onVersions:     (v: string[]) => void;
   onProjectType:  (v: string) => void;

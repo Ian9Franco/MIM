@@ -1,40 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen } from "lucide-react";
+/**
+ * BuildPanel — con Build Gate integrado.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Flujo:
+ *   1. Usuario hace click en Build alluser / allhost
+ *   2. Se llama a /api/validate (instantáneo gracias al scanner cache)
+ *   3a. Si score perfecto (sin issues) → build directo, toast
+ *   3b. Si hay issues → abre PackHealthModal
+ *      3b-I.  Errores: modal bloqueado, solo permite "← Corregir"
+ *      3b-II. Warnings: permite "Exportar con advertencias"
+ *      3b-III. Sin errores: permite "Exportar Pack" directamente
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { useState, useCallback } from "react";
+import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck } from "lucide-react";
+import type { PackHealthReport } from "@/lib/types";
 
 type BuildType = "alluser" | "allhost";
 
 interface BuildResult {
-  success: boolean;
-  message: string;
-  modsCount: number;
+  success:    boolean;
+  message:    string;
+  modsCount:  number;
   outputPath: string;
 }
 
 interface BuildPanelProps {
   projectName: string;
-  version: string;
-  loader: string;
+  version:     string;
+  loader:      string;
 }
 
-/**
- * Panel de construcción (Build). Permite generar las versiones "alluser" 
- * (para el cliente) o "allhost" (para el servidor) enviando una petición
- * al endpoint de la API.
- */
 export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
-  const [building, setBuilding] = useState<BuildType | null>(null);
-  const [result, setResult]     = useState<{ type: BuildType; data: BuildResult } | null>(null);
+  const [building, setBuilding]       = useState<BuildType | null>(null);
+  const [validating, setValidating]   = useState<BuildType | null>(null);
+  const [result, setResult]           = useState<{ type: BuildType; data: BuildResult } | null>(null);
+  const [healthReport, setHealthReport] = useState<PackHealthReport | null>(null);
+  const [pendingBuildType, setPendingBuildType] = useState<BuildType | null>(null);
 
-  const runBuild = async (buildType: BuildType) => {
+  // ── Core build execution (called after validation passes) ─────────────────
+  const executeBuild = useCallback(async (buildType: BuildType) => {
+    setHealthReport(null);
+    setPendingBuildType(null);
     setBuilding(buildType);
     setResult(null);
     try {
       const res  = await fetch("/api/build", {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectName, version, loader, buildType }),
+        body:    JSON.stringify({ projectName, version, loader, buildType }),
       });
       const data = await res.json();
       setResult({
@@ -48,13 +64,74 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
     } finally {
       setBuilding(null);
     }
-  };
+  }, [projectName, version, loader]);
+
+  // ── Gate: validate first, then decide ─────────────────────────────────────
+  const handleBuildClick = useCallback(async (buildType: BuildType) => {
+    setValidating(buildType);
+    setResult(null);
+    try {
+      const res = await fetch("/api/validate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ projectName, version, loader, buildTarget: buildType }),
+      });
+      const report: PackHealthReport = await res.json();
+
+      if (!res.ok) {
+        // API error — proceed without gate (fail-open: don't block on validator crash)
+        console.warn("[BuildPanel] Validation API error, proceeding anyway:", report);
+        executeBuild(buildType);
+        return;
+      }
+
+      if (report.issues.length === 0) {
+        // Perfect pack — build directly
+        executeBuild(buildType);
+        return;
+      }
+
+      // Has issues — show modal
+      setHealthReport(report);
+      setPendingBuildType(buildType);
+    } catch (err) {
+      console.warn("[BuildPanel] Validation failed, proceeding without gate:", err);
+      executeBuild(buildType);
+    } finally {
+      setValidating(null);
+    }
+  }, [projectName, version, loader, executeBuild]);
+
+  // ── Sync health report to global panel ──────────────────────────────────
+  const [lastReportId, setLastReportId] = useState<string | null>(null);
+  if (healthReport && pendingBuildType && healthReport.validatedAt !== lastReportId) {
+    setLastReportId(healthReport.validatedAt);
+    window.dispatchEvent(new CustomEvent("pack-health-toggle", { 
+      detail: { 
+        open: true, 
+        report: healthReport, 
+        onForceBuild: () => executeBuild(pendingBuildType),
+        buildType: pendingBuildType
+      } 
+    }));
+    setHealthReport(null);
+  }
+
+  // ── FOMO search integration ────────────────────────────────────────────────
+  const handleFomoSearch = useCallback((query: string) => {
+    setHealthReport(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+    }
+  }, []);
+
+  const busy = !!(building || validating);
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-        {/* ── alluser ─────────────────────────────────────────────── */}
+        {/* alluser */}
         <BuildButton
           type="alluser"
           icon={<Archive className="w-4.5 h-4.5" />}
@@ -64,12 +141,13 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
           accentColor="var(--color-primary)"
           accentBg="rgba(187,150,228,0.08)"
           accentBorder="rgba(187,150,228,0.2)"
+          isValidating={validating === "alluser"}
           isBuilding={building === "alluser"}
-          disabled={!!building}
-          onClick={() => runBuild("alluser")}
+          disabled={busy}
+          onClick={() => handleBuildClick("alluser")}
         />
 
-        {/* ── allhost ─────────────────────────────────────────────── */}
+        {/* allhost */}
         <BuildButton
           type="allhost"
           icon={<Server className="w-4.5 h-4.5" />}
@@ -79,19 +157,20 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
           accentColor="var(--color-accent)"
           accentBg="rgba(255,208,102,0.06)"
           accentBorder="rgba(255,208,102,0.18)"
+          isValidating={validating === "allhost"}
           isBuilding={building === "allhost"}
-          disabled={!!building}
-          onClick={() => runBuild("allhost")}
+          disabled={busy}
+          onClick={() => handleBuildClick("allhost")}
         />
       </div>
 
-      {/* ── Result ──────────────────────────────────────────────────── */}
+      {/* Build result */}
       {result && (
         <div
           className="flex items-start gap-3 p-4 rounded-[1.5rem] border animate-scale-in"
           style={{
-            background: result.data.success ? "rgba(16,92,64,0.25)"  : "rgba(92,16,16,0.25)",
-            borderColor: result.data.success ? "rgba(102,200,160,0.25)" : "rgba(239,68,68,0.25)",
+            background:   result.data.success ? "rgba(16,92,64,0.25)"  : "rgba(92,16,16,0.25)",
+            borderColor:  result.data.success ? "rgba(102,200,160,0.25)" : "rgba(239,68,68,0.25)",
           }}
         >
           {result.data.success
@@ -119,53 +198,57 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
         </div>
       )}
 
+      {/* Pack Health is now handled globally by RootLayoutClient via events */}
     </div>
   );
 }
 
-/* ── Internal sub-component ─────────────────────────────────────────────────── */
+// ── Internal sub-component ────────────────────────────────────────────────────
+
 function BuildButton({
   icon, title, subtitle, tags,
   accentColor, accentBg, accentBorder,
-  isBuilding, disabled, onClick,
+  isValidating, isBuilding, disabled, onClick,
 }: {
-  type: BuildType;
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  tags: string;
-  accentColor: string;
-  accentBg: string;
-  accentBorder: string;
-  isBuilding: boolean;
-  disabled: boolean;
-  onClick: () => void;
+  type:          BuildType;
+  icon:          React.ReactNode;
+  title:         string;
+  subtitle:      string;
+  tags:          string;
+  accentColor:   string;
+  accentBg:      string;
+  accentBorder:  string;
+  isValidating:  boolean;
+  isBuilding:    boolean;
+  disabled:      boolean;
+  onClick:       () => void;
 }) {
+  const busy = isValidating || isBuilding;
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className="group relative text-left rounded-[1.5rem] overflow-hidden transition-all duration-250 disabled:opacity-40 disabled:cursor-not-allowed"
       style={{
-        background: accentBg,
-        border: `1px solid ${accentBorder}`,
-        padding: "1.1rem",
+        background:     accentBg,
+        border:         `1px solid ${accentBorder}`,
+        padding:        "1.1rem",
         backdropFilter: "blur(14px)",
       }}
       onMouseEnter={(e) => {
         if (!disabled) {
           const el = e.currentTarget as HTMLElement;
-          el.style.transform = "translateY(-2px)";
-          el.style.borderColor = accentColor.replace(")", ", 0.4)").replace("var(", "rgba(");
-          el.style.boxShadow = `0 10px 28px rgba(0,0,0,0.2)`;
+          el.style.transform   = "translateY(-2px)";
+          el.style.boxShadow   = "0 10px 28px rgba(0,0,0,0.2)";
         }
       }}
       onMouseLeave={(e) => {
         if (!disabled) {
           const el = e.currentTarget as HTMLElement;
-          el.style.transform = "translateY(0)";
+          el.style.transform   = "translateY(0)";
           el.style.borderColor = accentBorder;
-          el.style.boxShadow = "none";
+          el.style.boxShadow   = "none";
         }
       }}
     >
@@ -176,14 +259,18 @@ function BuildButton({
         >
           {isBuilding
             ? <Loader2 className="w-4 h-4 animate-spin" />
-            : icon
+            : isValidating
+              ? <ShieldCheck className="w-4 h-4 animate-pulse" />
+              : icon
           }
         </div>
         <div>
           <p className="font-subhead text-sm transition-colors duration-200" style={{ color: "var(--color-foreground)" }}>
             {title}
           </p>
-          <p className="font-caption mt-0.5" style={{ color: "var(--color-muted)" }}>{subtitle}</p>
+          <p className="font-caption mt-0.5" style={{ color: "var(--color-muted)" }}>
+            {isValidating ? "Validando pack…" : isBuilding ? "Generando…" : subtitle}
+          </p>
           <p className="font-label mt-2" style={{ color: accentColor, opacity: 0.5, fontSize: "0.58rem" }}>{tags}</p>
         </div>
       </div>

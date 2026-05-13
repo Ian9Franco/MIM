@@ -395,7 +395,6 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
 
     setData({ ...data, resourcePacks: { ...data.resourcePacks, active } });
     setHasPackChanges(true);
-    setDraggedPackIdx(null);
   };
 
   const handleDragEndPack = () => {
@@ -403,161 +402,219 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   };
 
   return (
-    <aside 
-      ref={sidebarRef}
-      className={`fixed inset-y-0 right-0 w-100 z-100 flex flex-col shadow-2xl border-l transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
-        isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
-      }`}
-      style={{ 
-        background: "var(--glass-bg)",
-        borderColor: "var(--glass-border)",
-        backdropFilter: "var(--liquid-blur)",
-        boxShadow: "var(--shadow-drop)",
-      }}
-    >
-      {/* Header */}
-      <div className="p-6 border-b border-white/5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-            <Settings2 className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-xl font-subhead text-white leading-none">TWEAK</h2>
-            <p className="text-xs text-muted mt-1 uppercase tracking-wider font-label">Tuning Workspace</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {data?.optionsExists && (
-            <button
-              onClick={handleApplyToGame}
-              disabled={saving}
-              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-lg text-xs font-label transition-all duration-300 ease-out flex items-center gap-1.5 border border-emerald-500/30 hover:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-              title="Copiar options.txt al juego de Minecraft"
-            >
-              <Download className={`w-3.5 h-3.5 ${saving ? 'animate-pulse' : 'group-hover:animate-bounce'}`} />
-              {saving ? "Aplicando..." : "Aplicar al Juego"}
-            </button>
-          )}
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors text-muted hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+    <>
+      {/* Backdrop */}
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className={`fixed inset-0 z-[60] bg-black/50 backdrop-blur-md transition-opacity duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      />
 
-      {!activeProject ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-          <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center mb-6 opacity-20">
-            <AlertCircle className="w-10 h-10" />
-          </div>
-          <h3 className="text-lg font-subhead text-white mb-2">No hay proyecto activo</h3>
-          <p className="text-sm text-muted">Seleccioná un proyecto para poder ajustar sus configuraciones y optimizarlo.</p>
-        </div>
-      ) : loading && !data ? (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <RefreshCw className="w-8 h-8 text-primary animate-spin mb-4" />
-          <p className="text-sm text-muted font-label">Analizando opciones...</p>
-        </div>
-      ) : !data?.optionsExists ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-          <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 text-primary">
-            <Zap className="w-8 h-8" />
-          </div>
-          <h3 className="text-lg font-subhead text-white mb-2">Inicializar TWEAK</h3>
-          <p className="text-sm text-muted mb-8">No detectamos un archivo <code className="text-primary/80">options.txt</code> en este proyecto. Podemos crearlo ahora o importar el tuyo de Minecraft Vanilla.</p>
-          <button 
-            disabled={saving}
-            onClick={() => handleAction("initialize")}
-            className="w-full py-3 bg-primary text-white rounded-xl font-subhead hover:bg-primary/80 transition-all duration-300 ease-out flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group shadow-lg shadow-primary/20 hover:shadow-primary/40"
-          >
-            {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5 group-hover:animate-pulse" />}
-            Inicializar Perfil
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Navigation Tabs */}
-          <div className="flex px-4 pt-2 border-b border-white/5 gap-1">
-            {[
-              { id: "optimize", icon: Zap, label: "Optimizar" },
-              { id: "keybinds", icon: Keyboard, label: "Teclas" },
-              { id: "resourcepacks", icon: Package, label: "Packs" },
-              { id: "profiles", icon: History, label: "Perfiles" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex flex-col items-center py-3 px-1 rounded-t-xl transition-all duration-300 ease-out relative hover:scale-105 active:scale-95 ${
-                  activeTab === tab.id ? "text-primary bg-white/5" : "text-muted hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <tab.icon className={`w-5 h-5 mb-1 transition-all duration-300 ${activeTab === tab.id ? "animate-pulse scale-110" : "group-hover:scale-110"}`} />
-                <span className="text-[10px] font-label uppercase tracking-tighter transition-all duration-300">{tab.label}</span>
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full animate-in slide-in-from-left-2 duration-300" />
+      <aside 
+        ref={sidebarRef}
+        className={`fixed inset-y-0 right-0 z-[70] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border-l ${
+          isOpen ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-0 pointer-events-none"
+        }`}
+        style={{ 
+          width: "1100px",
+          maxWidth: "92vw",
+          background: "var(--glass-bg)",
+          borderColor: "var(--glass-border)",
+          backdropFilter: "var(--liquid-blur)",
+          borderRadius: "2rem 0 0 2rem",
+          boxShadow: "var(--shadow-drop)",
+        }}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <Settings2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-subhead text-white leading-none flex items-center gap-2">
+                TWEAK
+                {!activeProject && (
+                  <span className="text-[9px] font-label px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    Modo Local / Autónomo
+                  </span>
                 )}
-              </button>
-            ))}
+              </h2>
+              <p className="text-xs text-muted mt-1 uppercase tracking-wider font-label">Tuning Workspace</p>
+            </div>
           </div>
-
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-            {message && (
-              <div className={`p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 ${
-                message.type === "success" ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"
-              }`}>
-                {message.type === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}
-                <p className="text-sm">{message.text}</p>
-              </div>
+          <div className="flex items-center gap-2">
+            {data?.optionsExists && (
+              <button
+                onClick={handleApplyToGame}
+                disabled={saving}
+                className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-lg text-xs font-label transition-all duration-300 ease-out flex items-center gap-1.5 border border-emerald-500/30 hover:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                title="Copiar options.txt al juego de Minecraft"
+              >
+                <Download className={`w-3.5 h-3.5 ${saving ? 'animate-pulse' : 'group-hover:animate-bounce'}`} />
+                {saving ? "Aplicando..." : "Aplicar al Juego"}
+              </button>
             )}
+            <button 
+              onClick={onClose}
+              className="w-8 h-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors text-muted hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-            {/* Tab 1: Optimize */}
-            {activeTab === "optimize" && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <section>
-                  <h4 className="text-xs font-label text-muted uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Cpu className="w-3.5 h-3.5" /> Hardware Analysis
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <p className="text-[10px] text-muted font-label uppercase">RAM Asignada</p>
-                      <p className="text-lg font-subhead text-white">{hardware.ram} GB</p>
+        {loading && !data ? (
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <RefreshCw className="w-8 h-8 text-primary animate-spin mb-4" />
+            <p className="text-sm text-muted font-label">Analizando entorno de juego...</p>
+          </div>
+        ) : !data?.optionsExists ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 text-primary">
+              <Zap className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-subhead text-white mb-2">Inicializar TWEAK</h3>
+            <p className="text-sm text-muted mb-8">No detectamos un archivo <code className="text-primary/80">options.txt</code> en este proyecto. Podemos crearlo ahora o importar el tuyo de Minecraft Vanilla.</p>
+            <button 
+              disabled={saving}
+              onClick={() => handleAction("initialize")}
+              className="w-full py-3 bg-primary text-white rounded-xl font-subhead hover:bg-primary/80 transition-all duration-300 ease-out flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group shadow-lg shadow-primary/20 hover:shadow-primary/40"
+            >
+              {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5 group-hover:animate-pulse" />}
+              Inicializar Perfil
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Navigation Tabs */}
+            <div className="flex px-4 pt-2 border-b border-white/5 gap-1">
+              {[
+                { id: "optimize", icon: Zap, label: "Optimizar" },
+                { id: "keybinds", icon: Keyboard, label: "Teclas" },
+                { id: "resourcepacks", icon: Package, label: "Packs" },
+                { id: "profiles", icon: History, label: "Perfiles" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 flex flex-col items-center py-3 px-1 rounded-t-xl transition-all duration-300 ease-out relative hover:scale-105 active:scale-95 ${
+                    activeTab === tab.id ? "text-primary bg-white/5" : "text-muted hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <tab.icon className={`w-5 h-5 mb-1 transition-all duration-300 ${activeTab === tab.id ? "animate-pulse scale-110" : "group-hover:scale-110"}`} />
+                  <span className="text-[10px] font-label uppercase tracking-tighter transition-all duration-300">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full animate-in slide-in-from-left-2 duration-300" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+              {message && (
+                <div className={`p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 ${
+                  message.type === "success" ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"
+                }`}>
+                  {message.type === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}
+                  <p className="text-sm">{message.text}</p>
+                </div>
+              )}
+
+              {/* Tab 1: Optimize */}
+              {activeTab === "optimize" && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <section>
+                    <h4 className="text-xs font-label text-muted uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Cpu className="w-3.5 h-3.5" /> Hardware & Entorno Local
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-2xl bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] border border-[var(--color-border)]">
+                      <p className="text-[10px] text-muted font-label uppercase">Perfil PC</p>
+                      <p className={`text-sm font-subhead uppercase font-bold ${data.hardwareProfile === 'low' ? 'text-red-500' : data.hardwareProfile === 'mid' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {data.hardwareProfile || "Mid"}
+                      </p>
                     </div>
-                    <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <p className="text-[10px] text-muted font-label uppercase">GPU Detectada</p>
-                      <p className="text-xs font-subhead text-white truncate">{hardware.gpu === "integrated" ? "Integrada" : "Dedicada"}</p>
+                    <div className="p-3 rounded-2xl bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] border border-[var(--color-border)]">
+                      <p className="text-[10px] text-muted font-label uppercase">RAM Total</p>
+                      <p className="text-sm font-subhead text-[var(--color-foreground)] font-bold">{data.totalRamGB || hardware.ram} GB</p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] border border-[var(--color-border)]">
+                      <p className="text-[10px] text-muted font-label uppercase">CPU Cores</p>
+                      <p className="text-sm font-subhead text-[var(--color-foreground)] font-bold">{data.cpuCores || 8} Hilos</p>
                     </div>
                   </div>
                 </section>
 
+                {data.jvmArgs && (
+                  <section className="p-4 rounded-2xl bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] border border-primary/20">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div>
+                        <h5 className="text-xs font-label text-primary uppercase tracking-wider flex items-center gap-2 font-bold">
+                          <span>⚡</span> JVM Args Recomendados
+                        </h5>
+                        <p className="text-[11px] text-muted leading-relaxed mt-1 mb-2">
+                          Pegá esta línea en la configuración de Java de tu launcher (CurseForge, Prism, Modrinth o Vanilla). MIM no puede editar la base de datos externa de tu launcher de forma automática.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(data.jvmArgs || "");
+                          setMessage({ text: "JVM Args copiados al portapapeles", type: "success" });
+                        }}
+                        className="px-3 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-xl text-xs font-subhead transition-all shrink-0 shadow-md shadow-primary/20"
+                      >
+                        Copiar String
+                      </button>
+                    </div>
+                    <code className="text-xs text-[var(--color-foreground)] font-bold block bg-[color-mix(in_srgb,var(--color-foreground)_8%,transparent)] p-3 rounded-xl border border-[var(--color-border)] font-mono select-all overflow-x-auto">
+                      {data.jvmArgs}
+                    </code>
+                  </section>
+                )}
+
                 <section>
                   <h4 className="text-xs font-label text-muted uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5" /> Recomendaciones Smart
+                    <AlertCircle className="w-3.5 h-3.5" /> Recomendaciones & Tuning
                   </h4>
                   <div className="space-y-3">
                     {data.recommendations.length > 0 ? data.recommendations.map((rec, i) => (
                       <div key={i} className="p-4 rounded-2xl bg-primary/5 border border-primary/10 group hover:border-primary/30 transition-all">
                         <div className="flex justify-between items-start mb-2">
-                          <h5 className="text-sm font-subhead text-white">{rec.title}</h5>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-label uppercase ${
-                            rec.impact === "high" ? "bg-red-500/20 text-red-400" : rec.impact === "medium" ? "bg-orange-500/20 text-orange-400" : "bg-blue-500/20 text-blue-400"
+                          <h5 className="text-sm font-subhead text-[var(--color-foreground)] font-bold">{rec.title}</h5>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-label uppercase font-bold ${
+                            rec.impact === "high" ? "bg-red-500/20 text-red-500" : rec.impact === "medium" ? "bg-orange-500/20 text-orange-500" : "bg-blue-500/20 text-blue-500"
                           }`}>
                             Impacto {rec.impact}
                           </span>
                         </div>
                         <p className="text-xs text-muted mb-4 leading-relaxed">{rec.desc}</p>
-                        <button 
-                          onClick={() => handleAction("save", { settings: { [rec.settingKey]: rec.recommendedValue } })}
-                          className="w-full py-2 bg-primary/20 hover:bg-primary text-primary hover:text-white text-[11px] font-subhead rounded-lg transition-all"
-                        >
-                          Aplicar Mejora
-                        </button>
+                        {rec.action === "open-fomo" ? (
+                          <button 
+                            onClick={() => {
+                              if (typeof window !== "undefined") {
+                                window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query: rec.fomoQuery } }));
+                              }
+                            }}
+                            className="w-full py-2 bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)] text-[var(--color-primary)] hover:text-white text-[11px] font-subhead rounded-lg transition-all flex items-center justify-center gap-2 font-bold"
+                          >
+                            <span>🔍</span> Buscar en FOMO ({rec.fomoQuery})
+                          </button>
+                        ) : rec.settingKey ? (
+                          <button 
+                            onClick={() => handleAction("save", { settings: rec.settingKey ? { [rec.settingKey]: rec.recommendedValue } : {} })}
+                            className="w-full py-2 bg-primary/20 hover:bg-primary text-primary hover:text-white text-[11px] font-subhead rounded-lg transition-all font-bold"
+                          >
+                            Aplicar Mejora
+                          </button>
+                        ) : null}
                       </div>
                     )) : (
-                      <div className="p-8 text-center bg-white/5 rounded-2xl border border-dashed border-white/10">
-                        <CheckCircle2 className="w-8 h-8 text-green-500/50 mx-auto mb-3" />
+                      <div className="p-8 text-center bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                        <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-3" />
                         <p className="text-sm text-muted">Tu perfil parece estar bien optimizado.</p>
                       </div>
                     )}
@@ -578,9 +635,9 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       <button 
                         key={p.id}
                         onClick={() => handleAction("apply-preset", { presetName: p.id })}
-                        className="p-3 text-left rounded-2xl bg-white/5 border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                        className="p-3 text-left rounded-2xl bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] border border-[var(--color-border)] hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] transition-all group"
                       >
-                        <p className="text-sm font-subhead text-white group-hover:text-primary transition-colors">{p.label}</p>
+                        <p className="text-sm font-subhead text-[var(--color-foreground)] group-hover:text-primary transition-colors font-bold">{p.label}</p>
                         <p className="text-[10px] text-muted mt-1">{p.desc}</p>
                       </button>
                     ))}
@@ -1005,8 +1062,8 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                              projectName: activeProject.name,
-                              version: activeProject.version,
+                              projectName: activeProject ? activeProject.name : "standalone",
+                              version: activeProject ? activeProject.version : "1.20.1",
                               action: "restore-original-backup",
                             }),
                           });
@@ -1121,5 +1178,6 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
         </>
       )}
     </aside>
+    </>
   );
 }

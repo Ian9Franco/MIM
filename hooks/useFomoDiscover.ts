@@ -23,7 +23,7 @@ export interface DependencyPrompt {
 }
 
 export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any) {
-  const [source, setSource] = useState<"modrinth" | "curseforge">("modrinth");
+  const [source, setSource] = useState<"modrinth" | "curseforge" | "all">("modrinth");
   const [sourceError, setSourceError] = useState("");
   const [loader, setLoader] = useState(defaultLoader);
   const [gameVersions, setGameVersions] = useState<string[]>([defaultGameVersion]);
@@ -35,6 +35,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [sinytraActive, setSinytraActive] = useState(false);
   const [page, setPage] = useState(1);
   const [onlyExclusives, setOnlyExclusives] = useState(false);
+
+  useEffect(() => {
+    if (source === "all" && !query.startsWith("author:") && !query.startsWith("project:")) {
+      setSource("modrinth");
+    }
+  }, [source, query]);
 
   // Persistence for filters and search
   useEffect(() => {
@@ -131,64 +137,134 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     setLoading(true);
     setSourceError("");
     const startTime = Date.now();
-    const q = typeof overrideQuery === "string" ? overrideQuery : query;
+    const rawQ = typeof overrideQuery === "string" ? overrideQuery : query;
+    const qClean = rawQ?.startsWith("project:") ? rawQ.replace("project:", "").trim() : rawQ?.trim();
     try {
-      // Modrinth y CurseForge ahora usan 'gameVersions' (array JSON).
-      const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge") && source === "modrinth")
-        ? "forge,fabric"
-        : loader;
-      
-      const params = new URLSearchParams({
-        loader: effectiveLoader,
-        gameVersions: JSON.stringify(gameVersions),
-        categories: JSON.stringify(categories),
-        environments: JSON.stringify(environments),
-        projectType,
-        page: String(page),
-        pageSize: "20",
-        sort: sortOrder,
-        ...(q?.trim() ? { q: q.trim() } : {}),
-      });
-      
-      const endpoint = source === "modrinth" 
-        ? `/api/modrinth/discover?${params}`
-        : `/api/curseforge/discover?${params}`;
-        
-      const res = await fetch(endpoint);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        if (res.status === 503 && (errorData.error?.includes("CURSEFORGE_API_KEY") || errorData.error?.includes("configurada"))) {
-          setSourceError("Error en la API (falta CURSEFORGE_API_KEY)");
-        } else if (res.status === 401 || res.status === 403) {
-          setSourceError(`Error de autenticación: ${errorData.error || "API key inválida"}`);
-        } else if (res.status === 429) {
-          setSourceError("Rate limit excedido - intentá más tarde");
-        } else {
-          setSourceError(`Error: ${errorData.error || errorData.message || res.statusText || "Unknown error"}`);
+      let mappedMods: ModHit[] = [];
+      let totalResult = 0;
+      let totalPagesResult = 0;
+
+      if (source === "all") {
+        const modLoader = (sinytraActive && (loader === "forge" || loader === "neoforge")) ? "forge,fabric" : loader;
+        const curLoader = loader;
+
+        const modParams = new URLSearchParams({
+          loader: modLoader,
+          gameVersions: JSON.stringify(gameVersions),
+          categories: JSON.stringify(categories),
+          environments: JSON.stringify(environments),
+          projectType,
+          page: String(page),
+          pageSize: "20",
+          sort: sortOrder,
+          ...(qClean ? { q: qClean } : {}),
+        });
+
+        const curParams = new URLSearchParams({
+          loader: curLoader,
+          gameVersions: JSON.stringify(gameVersions),
+          categories: JSON.stringify(categories),
+          environments: JSON.stringify(environments),
+          projectType,
+          page: String(page),
+          pageSize: "20",
+          sort: sortOrder,
+          ...(qClean ? { q: qClean } : {}),
+        });
+
+        const [modRes, curRes] = await Promise.allSettled([
+          fetch(`/api/modrinth/discover?${modParams}`),
+          fetch(`/api/curseforge/discover?${curParams}`)
+        ]);
+
+        let modData: any = { mods: [], total: 0, totalPages: 0 };
+        let curData: any = { mods: [], total: 0, totalPages: 0 };
+
+        if (modRes.status === "fulfilled" && modRes.value.ok) {
+          modData = await modRes.value.json().catch(() => ({ mods: [], total: 0, totalPages: 0 }));
+        } else if (modRes.status === "fulfilled" && !modRes.value.ok) {
+          if (modRes.value.status === 503 || modRes.value.status === 401) {
+            setSourceError(prev => prev ? `${prev} | Modrinth error` : "Modrinth API error");
+          }
         }
+
+        if (curRes.status === "fulfilled" && curRes.value.ok) {
+          curData = await curRes.value.json().catch(() => ({ mods: [], total: 0, totalPages: 0 }));
+        } else if (curRes.status === "fulfilled" && !curRes.value.ok) {
+          if (curRes.value.status === 503 || curRes.value.status === 401) {
+            setSourceError(prev => prev ? `${prev} | Falta CURSEFORGE_API_KEY` : "Falta CURSEFORGE_API_KEY");
+          }
+        }
+
+        const mappedModrinth = (modData.mods ?? []).map((m: ModHit) => ({ ...m, _source: "modrinth" as const }));
+        const mappedCurse = (curData.mods ?? []).map((m: ModHit) => ({ ...m, _source: "curseforge" as const }));
+
+        const combined = [...mappedModrinth, ...mappedCurse];
+        if (sortOrder === "downloads") {
+          combined.sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0));
+        } else if (sortOrder === "newest" || sortOrder === "updated") {
+          combined.sort((a, b) => new Date(b.dateCreated || 0).getTime() - new Date(a.dateCreated || 0).getTime());
+        } else {
+          combined.sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0));
+        }
+
+        mappedMods = combined;
+        totalResult = (modData.total ?? 0) + (curData.total ?? 0);
+        totalPagesResult = Math.max(modData.totalPages ?? 0, curData.totalPages ?? 0);
+      } else {
+        const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge") && source === "modrinth")
+          ? "forge,fabric"
+          : loader;
         
-        console.warn(`[useFomoDiscover] Search failed (${res.status}):`, errorData.error || res.statusText);
-        setMods([]);
-        setLoading(false);
-        return;
+        const params = new URLSearchParams({
+          loader: effectiveLoader,
+          gameVersions: JSON.stringify(gameVersions),
+          categories: JSON.stringify(categories),
+          environments: JSON.stringify(environments),
+          projectType,
+          page: String(page),
+          pageSize: "20",
+          sort: sortOrder,
+          ...(qClean ? { q: qClean } : {}),
+        });
+        
+        const endpoint = source === "modrinth" 
+          ? `/api/modrinth/discover?${params}`
+          : `/api/curseforge/discover?${params}`;
+          
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          if (res.status === 503 && (errorData.error?.includes("CURSEFORGE_API_KEY") || errorData.error?.includes("configurada"))) {
+            setSourceError("Error en la API (falta CURSEFORGE_API_KEY)");
+          } else if (res.status === 401 || res.status === 403) {
+            setSourceError(`Error de autenticación: ${errorData.error || "API key inválida"}`);
+          } else if (res.status === 429) {
+            setSourceError("Rate limit excedido - intentá más tarde");
+          } else {
+            setSourceError(`Error: ${errorData.error || errorData.message || res.statusText || "Unknown error"}`);
+          }
+          
+          console.warn(`[useFomoDiscover] Search failed (${res.status}):`, errorData.error || res.statusText);
+          setMods([]);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        mappedMods = (data.mods ?? []).map((m: ModHit) => ({
+          ...m,
+          _source: m._source || source
+        }));
+        totalResult = data.total ?? 0;
+        totalPagesResult = data.totalPages ?? 0;
       }
-      const data = await res.json();
-      
-      // Asegurar que los mods tengan el campo _source correcto
-      const mappedMods = (data.mods ?? []).map((m: ModHit) => ({
-        ...m,
-        _source: m._source || source
-      }));
       
       setMods(mappedMods);
-      setTotal(data.total ?? 0);
-      setTotalPages(data.totalPages ?? 0);
+      setTotal(totalResult);
+      setTotalPages(totalPagesResult);
 
       // --- Background Exclusivity Check (Optimizado Batch) ---
-      // Realizamos el check de disponibilidad en la otra plataforma en batch
-      // para reducir de N solicitudes a 1 sola solicitud por búsqueda
       if (mappedMods.length > 0) {
-        // Inicializar estado de chequeo para todos los mods
         setMods(prev => prev.map((m: any) => 
           mappedMods.some((mapped: any) => mapped.projectId === m.projectId)
             ? { ...m, availability: { modrinth: m._source === "modrinth", curseforge: m._source === "curseforge", checking: true } }
@@ -196,7 +272,6 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         ));
 
         try {
-          // Preparar batch request
           const batchData = mappedMods.map((mod: any) => ({
             title: mod.title,
             slug: mod.slug || undefined,
@@ -212,7 +287,6 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           if (batchRes.ok) {
             const { results } = await batchRes.json();
             
-            // Actualizar resultados para todos los mods
             setMods(prev => prev.map((m: any) => {
               const mappedMod = mappedMods.find((mapped: any) => mapped.projectId === m.projectId);
               if (!mappedMod) return m;
@@ -232,7 +306,6 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           }
         } catch (err) {
           console.warn("[useFomoDiscover] Error en batch cross-check:", err);
-          // En caso de error, quitar el estado de checking para todos
           setMods(prev => prev.map((m: any) => 
             mappedMods.some((mapped: any) => mapped.projectId === m.projectId)
               ? { ...m, availability: { ...m.availability!, checking: false } }
@@ -241,9 +314,8 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         }
       }
       
-      // Emit search event
-      if (q?.trim()) {
-        eventBus.emit("fomo:search", { query: q.trim(), source });
+      if (qClean) {
+        eventBus.emit("fomo:search", { query: qClean, source: source === "all" ? "modrinth" : source });
       }
 
     } catch (err) {
@@ -251,7 +323,6 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       setMods([]);
     }
 
-    // Asegurar que el skeleton se vea al menos 1 segundo en la primera página
     const elapsedTime = Date.now() - startTime;
     if (page === 1 && elapsedTime < 1000) {
       await new Promise(r => setTimeout(r, 1000 - elapsedTime));
@@ -266,7 +337,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, [refetch]);
 
   const handleDownload = useCallback(async (mod: ModHit, version?: VersionEntry) => {
-    const modSource = mod._source || source;
+    const modSource = mod._source || (source === "all" ? "modrinth" : source);
     // Check if mod already exists in library or is already being downloaded
     if (downloading[mod.projectId]) return;
 
@@ -357,7 +428,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     hashes?: Record<string, string>,
     depsToDownload?: PendingDependency[]
   ) => {
-    const modSource = mod._source || source;
+    const modSource = mod._source || (source === "all" ? "modrinth" : source);
     setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
     showStatus(`Descargando ${mod.title}...`, "info");
     
@@ -455,7 +526,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, [handleDownload, showStatus]);
 
   const handleOpenVersionSelector = useCallback(async (mod: ModHit) => {
-    const modSource = mod._source || source;
+    const modSource = mod._source || (source === "all" ? "modrinth" : source);
     setSelectingVersionFor(mod);
     setVersLoading(true);
     setProjectVersions([]);
@@ -515,7 +586,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, [dependencyPrompt, executeDownload]);
 
   const handleOpenProjectById = useCallback(async (projectId: string, sourceOverride?: "modrinth" | "curseforge") => {
-    const activeSource = sourceOverride || source;
+    const activeSource = sourceOverride || (source === "all" ? "modrinth" : source);
     setVersLoading(true);
     const tempMod: ModHit = {
       projectId,

@@ -270,7 +270,9 @@ function scanModRaw(filePath: string): ModMeta {
       if (iconEntry) try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
       delete (parsed as any)._logoFile;
     }
-    return { ...DEFAULT_META, ...parsed, loader: "neoforge", projectType: "mod", gameVersion: parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN, ...(iconBase64 ? { iconBase64 } : {}), sha1 };
+    const gvFilename = gameVersionFromFilename(filePath);
+    const finalGv = (gvFilename && parsed.gameVersion && gvFilename.length > parsed.gameVersion.length) ? gvFilename : (parsed.gameVersion ?? gvFilename ?? UNKNOWN);
+    return { ...DEFAULT_META, ...parsed, loader: "neoforge", projectType: "mod", gameVersion: finalGv, ...(iconBase64 ? { iconBase64 } : {}), sha1 };
   }
 
   // 2. Forge
@@ -283,7 +285,9 @@ function scanModRaw(filePath: string): ModMeta {
       if (iconEntry) try { iconBase64 = `data:image/png;base64,${iconEntry.getData().toString("base64")}`; } catch {}
       delete (parsed as any)._logoFile;
     }
-    return { ...DEFAULT_META, ...parsed, loader: "forge", projectType: "mod", gameVersion: parsed.gameVersion ?? gameVersionFromFilename(filePath) ?? UNKNOWN, ...(iconBase64 ? { iconBase64 } : {}), sha1 };
+    const gvFilename = gameVersionFromFilename(filePath);
+    const finalGv = (gvFilename && parsed.gameVersion && gvFilename.length > parsed.gameVersion.length) ? gvFilename : (parsed.gameVersion ?? gvFilename ?? UNKNOWN);
+    return { ...DEFAULT_META, ...parsed, loader: "forge", projectType: "mod", gameVersion: finalGv, ...(iconBase64 ? { iconBase64 } : {}), sha1 };
   }
 
   // 3. Fabric

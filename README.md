@@ -12,9 +12,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 FOMO Beta 5.5**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 Beta 5.6**
 
-[📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
+[📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
 </div>
 
@@ -57,8 +57,8 @@ Más tiempo jugando. Como debería ser.
 | Feature | Qué hace | Impacto real |
 |:---|:---|:---|
 | **🚀 FOMO 3.0** | Descubrimiento ultra-denso con Modrinth + CurseForge en una sola vista | Navegación hasta 50% más rápida |
-| **✨ Spotlight** | Sistema de destacados premium con picks recomendados de Modrinth y CurseForge | Descubre mods de calidad al instante |
-| **👥 Project Followers** | Seguimiento de proyectos y autores con actualizaciones en tiempo real | Nunca te pierdas una actualización de tus creadores favoritos |
+| **✨ Spotlight Feed** | Exhibición curada en tiempo real de novedades, selecciones de la comunidad (Community Picks) y proyectos virales tanto de Modrinth como de CurseForge | Descubre tendencias y joyas ocultas al instante sin salir del gestor |
+| **👥 Seguidos (Following)** | Seguimiento dedicado de creadores y proyectos con lupa de búsqueda híbrida (`author:` y `project:`) para comparar al instante versiones y plataformas en un catálogo combinado ("Ambos") | Detecta discrepancias de versión entre plataformas y unifica lanzamientos en un solo display |
 | **📚 Collections Update** | Sincronización de colecciones de Modrinth con plantillas pre-armadas | Organiza tus mods en colecciones compartibles |
 | **🔍 Modpack Search** | Búsqueda de modpacks con visualización de mods incluidos y dependencias | Analiza modpacks completos antes de descargar |
 | **🤖 Modo Auto** | Clasificación automática según tags y contexto del modpack | 90% menos clicks y menos neuronas sacrificadas |
@@ -69,6 +69,7 @@ Más tiempo jugando. Como debería ser.
 | **🔌 Sinytra Support** | Compatibilidad Fabric ➔ Forge | Tu biblioteca deja de tener fronteras |
 | **🎹 Keybind Editor** | Edita controles de mods sin abrir Minecraft | Control total, cero menús infernales |
 | **🔧 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
+| **⚙️ TWEAK Optimizer** | Perfiles automáticos de rendimiento y tuning heurístico de JVM args según hardware detectado | Maximiza FPS y estabilidad sin tocar configuraciones manuales complejas |
 
 ---
 
@@ -199,7 +200,11 @@ MIM implementa **3 capas de seguridad**:
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Beta 5.5)
+### ✅ Completado (Beta 5.6)
+- **Spotlight Feed & Project Followers**: Exhibición curada de novedades y seguimiento de creadores con búsqueda híbrida entre plataformas.
+- **Collections & Modpack Dependencies**: Sincronización de colecciones de Modrinth y caché local de dependencias internas de CurseForge.
+- **Stock Ticker & Contraste Maestro**: Marquesina autodesplazable superior y tokens semánticos de contraste.
+- **Rule-Based Optimization Engine**: Sistema inteligente de optimización de recursos, perfiles automáticos y sugerencias de JVM args según hardware.
 - **Tailwind CSS v4 Native Migration**: Adopción de la nueva escala simplificada, remoción de clases de corchetes arbitrarios (`z-100`, `w-100`/`w-400`, `max-w-400`) y migración a gradientes modernos nativos (`bg-linear-to-r`).
 - **SAGE Recovery Engine**: Motor de recuperación interactiva de 1-clic ante crashes de Minecraft, integrando descargas de dependencias con FOMO y edición de perfiles de jugador `.dat` con backups automáticos.
 - **Static Bytecode Audit & Security Modals**: Modal premium que detalla llamadas de sistema sospechosas (`ProcessBuilder`, sockets de red, reflexiones JNI), VirusTotal y Whitelisting local.
@@ -218,10 +223,9 @@ MIM implementa **3 capas de seguridad**:
 
 ### 🚧 En Progreso
 - Conflict Detection Engine (Análisis estático de Mixins).
-- Rule-Based Optimization Engine (Asignación automática de recursos).
 
 ### 📋 Próximo
-- Mod Packaging Assistant (Pipeline de validación y distribución).
+- Intelligent Pack Validation & Build Gate (Mod Packaging Assistant repensado).
 - Showcase Demo Deployable.
 
 ---

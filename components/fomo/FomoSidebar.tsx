@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
-import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow, ChevronRight, Loader2, Spotlight } from "lucide-react";
+import { X, Search, Library, Download, Layers, Plus, ChevronLeft, Workflow, ChevronRight, Loader2, Spotlight, Heart } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -31,13 +31,14 @@ import { FomoPagination }      from "./FomoPagination";
 import { FomoVersionOverlay }  from "./FomoVersionOverlay";
 import { FomoSpotlight }       from "./FomoSpotlight";
 import { FomoCollections }     from "./FomoCollections";
+import { FomoFollowedAuthors } from "./FomoFollowedAuthors";
 import { FomoSkeleton }        from "./FomoSkeleton";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
 import { fetchCollections, createCollection, addModToCollection } from "@/services/api";
 import type { ModHit, Project } from "@/lib/types";
 import "./fomo.css";
 
-type Mode = "spotlight" | "discover" | "collections";
+type Mode = "spotlight" | "discover" | "collections" | "followed";
 
 interface FomoSidebarProps {
   open:            boolean;
@@ -51,6 +52,7 @@ const TAB_OPTIONS = [
   { value: "spotlight",   label: "Spotlight",      icon: <Spotlight className="w-4 h-4" />,      activeColor: "#F59E0B", activeBg: "rgba(245,158,11,0.15)", activeBorder: "rgba(245,158,11,0.3)" },
   { value: "discover",    label: "Explorar",      icon: <Search className="w-4 h-4" />,        activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
   { value: "collections", label: "Colecciones",    icon: <Library className="w-4 h-4" />,       activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
+  { value: "followed",    label: "Seguidos",       icon: <Heart className="w-4 h-4" />,          activeColor: "#EC4899", activeBg: "rgba(236,72,153,0.15)", activeBorder: "rgba(236,72,153,0.3)" },
 ];
 
 const SOURCE_OPTIONS = [
@@ -84,6 +86,7 @@ const SIDEBAR_TITLE: Record<Mode, (source: string) => string> = {
   spotlight:   ()    => "Destacados y Novedades",
   discover:    (src) => src === "modrinth" ? "Catálogo Modrinth" : "Catálogo CurseForge",
   collections: ()    => "Mis Colecciones de Modrinth",
+  followed:    ()    => "Mi Contenido Seguido",
 };
 
 export function FomoSidebar({
@@ -463,10 +466,12 @@ export function FomoSidebar({
                   categories={discover.categories} environments={discover.environments}
                   query={discover.query} loading={discover.loading}
                   source={discover.source}
+                  onlyExclusives={discover.onlyExclusives}
                   onLoader={discover.setLoader} onVersions={discover.setGameVersions}
                   onProjectType={discover.setProjectType} onSort={discover.setSortOrder}
                   onCategories={discover.setCategories} onEnvironments={discover.setEnvironments}
                   onQuery={discover.setQuery} onRefresh={discover.refetch}
+                  onOnlyExclusives={discover.setOnlyExclusives}
                 />
               </aside>
             </div>
@@ -475,20 +480,37 @@ export function FomoSidebar({
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Toolbar: Search */}
               <div className="px-6 py-4 flex items-center gap-4 border-b shrink-0 fomo-header-border" style={{ borderColor: "var(--color-border)" }}>
-                <div className="flex-1 flex items-center gap-3 rounded-xl px-4 py-2.5 bg-(--fomo-secondary-bg) border border-(--fomo-border) focus-within:border-primary/50 transition-all">
-                  <Search className="w-5 h-5 text-(--fomo-text-muted) opacity-50" />
-                  <input
-                    type="search"
-                    value={discover.query}
-                    onChange={(e) => discover.setQuery(e.target.value)}
-                    placeholder={`Buscar en ${discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
-                    className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-sm font-medium text-(--fomo-text-primary) placeholder:text-(--fomo-text-muted)/50"
-                    style={{ outline: "none", boxShadow: "none" }}
-                  />
-                  {discover.query && (
-                    <button onClick={() => setQuery("")} className="p-1 hover:bg-(--fomo-secondary-bg) rounded-full">
-                      <X className="w-4 h-4 text-(--fomo-text-muted)" />
-                    </button>
+                <div className="flex-1 flex items-center gap-3 rounded-xl px-4 py-2.5 bg-(--fomo-secondary-bg) border border-(--fomo-border) focus-within:border-primary/50 transition-all min-h-[46px]">
+                  <Search className="w-5 h-5 text-(--fomo-text-muted) opacity-50 shrink-0" />
+                  {discover.query.startsWith("author:") ? (
+                    <div className="flex-1 flex items-center justify-between min-w-0">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-bold truncate">
+                        <span>Autor: {discover.query.substring(7)}</span>
+                      </div>
+                      <button 
+                        onClick={() => discover.setQuery("")} 
+                        className="p-1 hover:bg-white/10 rounded-full transition-colors shrink-0"
+                        title="Quitar filtro de autor"
+                      >
+                        <X className="w-4 h-4 text-(--fomo-text-muted)" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="search"
+                        value={discover.query}
+                        onChange={(e) => discover.setQuery(e.target.value)}
+                        placeholder={`Buscar en ${discover.source === 'modrinth' ? 'Modrinth' : 'CurseForge'}...`}
+                        className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-sm font-medium text-(--fomo-text-primary) placeholder:text-(--fomo-text-muted)/50"
+                        style={{ outline: "none", boxShadow: "none" }}
+                      />
+                      {discover.query && (
+                        <button onClick={() => discover.setQuery("")} className="p-1 hover:bg-(--fomo-secondary-bg) rounded-full transition-colors">
+                          <X className="w-4 h-4 text-(--fomo-text-muted)" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -497,7 +519,7 @@ export function FomoSidebar({
                 <p className="font-caption text-xs uppercase tracking-widest" style={{ color: "var(--fomo-text-muted)" }}>
                   {discover.loading ? "Cargando..." : (
                     <>
-                      <span className="font-bold" style={{ color: "var(--fomo-text-primary)" }}>{formatNumber(discover.total)}</span> {getProjectTypeLabel(discover.projectType)} encontrados
+                      <span className="font-bold" style={{ color: "var(--fomo-text-primary)" }}>{formatNumber(discover.total)}</span> {discover.query?.startsWith("author:") ? "proyectos" : getProjectTypeLabel(discover.projectType)} encontrados
                     </>
                   )}
                 </p>
@@ -532,8 +554,41 @@ export function FomoSidebar({
                     />
                   </div>
                 ) : discover.mods.length === 0 && !discover.loading ? (
-                   <div className="col-span-full py-20 text-center opacity-40">
-                     <p className="font-subhead">No se encontraron resultados</p>
+                   <div className="col-span-full py-16 text-center max-w-md mx-auto flex flex-col items-center gap-4">
+                     <p className="font-headline text-lg font-bold text-white/40">No se encontraron resultados</p>
+                     {discover.query.startsWith("author:") && (
+                       <div className="p-5 rounded-2xl bg-pink-500/5 border border-pink-500/15 text-xs text-left text-(--fomo-text-muted) leading-relaxed">
+                         <p className="font-headline text-sm font-bold text-pink-400 mb-2 flex items-center gap-1.5">
+                           <span>💡 Sugerencia de compatibilidad</span>
+                         </p>
+                         <p className="mb-3">
+                           Tenés filtros activos en la barra izquierda para <span className="text-white font-semibold">Loader ({discover.loader})</span> y <span className="text-white font-semibold">Versión ({discover.gameVersions.join(", ")})</span>.
+                         </p>
+                         <p className="mb-4">
+                           Si el creador <span className="text-pink-300 font-bold">"{discover.query.substring(7)}"</span> solo publica mods para otras plataformas (como Fabric en lugar de Forge), no aparecerán resultados aquí.
+                         </p>
+                         <div className="flex gap-2 justify-end">
+                           {discover.loader !== "unknown" && (
+                             <button 
+                               onClick={() => {
+                                 discover.setLoader(discover.loader === "forge" ? "fabric" : "forge");
+                               }}
+                               className="px-3 py-1.5 rounded-xl bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-300 font-bold transition-all text-[11px]"
+                             >
+                               Cambiar a {discover.loader === "forge" ? "Fabric" : "Forge"}
+                             </button>
+                           )}
+                           <button 
+                             onClick={() => {
+                               discover.setCategories([]);
+                             }}
+                             className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 transition-all text-[11px]"
+                           >
+                             Limpiar Categorías
+                           </button>
+                         </div>
+                       </div>
+                     )}
                    </div>
                 ) : discover.mods.map((mod) => (
                   <div key={mod.projectId} className="p-2 bg-transparent overflow-visible">
@@ -609,7 +664,7 @@ export function FomoSidebar({
               <FomoPagination page={discover.page} totalPages={discover.totalPages} loading={discover.loading} onPage={discover.setPage} />
             </div>
           </div>
-        ) : (
+        ) : mode === "collections" ? (
           <FomoCollections
             loader={discover.loader}
             gameVersion={discover.gameVersions[0] || "1.20.1"}
@@ -624,6 +679,16 @@ export function FomoSidebar({
             onClearSelection={discover.clearSelection}
             isDetailsOpen={!!discover.selectingVersionFor}
             sinytraActive={discover.sinytraActive}
+          />
+        ) : (
+          <FomoFollowedAuthors
+            onSearchAuthor={(author) => {
+              setMode("discover");
+              discover.setQuery(`author:${author}`);
+            }}
+            onOpenVersions={discover.handleOpenVersionSelector}
+            onDownloadMod={discover.handleDownload}
+            downloading={discover.downloading}
           />
         )}
 
@@ -643,7 +708,7 @@ export function FomoSidebar({
               onClose={() => discover.setSelectingVersionFor(null)}
               onDownload={discover.handleDownload}
               onSearchProject={(title) => {
-                discover.setSelectingVersionFor(null);
+                // No cerramos la sección detalles para mantenerla abierta
                 setMode("discover");
                 discover.setQuery(title);
               }}

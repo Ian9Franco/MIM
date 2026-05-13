@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-05-13
+
 ### Added
+- **Spotlight Feature** - Sistema de destacados premium que muestra mods y proyectos recomendados con visualización enriquecida, incluyendo picks destacados de Modrinth y CurseForge con navegación fluida.
+- **Project Followers & FOMO** - Sistema completo de seguimiento de proyectos y autores, permitiendo seguir creadores y recibir actualizaciones en tiempo real de sus mods favoritos.
+- **Collections Update** - Actualización completa del sistema de colecciones de Modrinth con sincronización de colecciones creadas por el usuario, "Following", y plantillas pre-armadas (Starter Tech, Vanilla+, etc.).
+- **Modpack Search & Included Mods** - Capacidad de buscar modpacks y visualizar los mods incluidos en cada uno, con análisis de dependencias integrado para CurseForge y Modrinth.
+- **Ticker-Style Updates Carousel** - Animación e interfaz estilo marquesina autodesplazable ("ticker de bolsa de valores") para la visualización de mods y texturas seguidos actualizados, maximizando la legibilidad con fuentes y escalas agrandadas.
+- **Semantic Text Tokens** - Definición de `--color-theme-error`, `--color-theme-warning`, y `--color-theme-info` para soportar estados de error y advertencias con contraste premium garantizado en cualquier esquema claro u oscuro.
+
+### Enhanced
+- **Persistent FOMO Details Recovery** - Restauración asíncrona automatizada de la vista de descripción de mods después de replegar temporalmente la barra para mostrar descargas activas, mejorando la fluidez.
+- **Real-Time Creator Resolution** - Integración de resolución en caliente para nombres de autores y proyectos en el catálogo de colecciones de Modrinth, solucionando errores de API key y devolviendo nombres precisos.
+- **Modern Theme Contrast Optimization** - Rediseño del contraste de fuentes y bordes en "Mi Contenido Seguido" (proyectos y autores), descargas pendientes, etiquetas de categorías de modcard y placeholders vacíos de la librería principal.
+
+### Fixed
+- **Local Author Scanning** - Corrección en la extracción heurística de metadatos de autores para mods mensuales locales, evitando que aparezcan como creadores desconocidos.
+- **Undefined CSS Variable Typo** - Corrección de `--color-foreground-muted` por `--color-muted` en el badge de proyectos incompatibles.
 - **CurseForge Modpack Embedded Dependencies Parser** - Algoritmo que descarga y analiza dinámicamente en caliente el archivo `manifest.json` interno de modpacks de CurseForge a través de enlaces reconstruidos de Edge CDN (`edge.forgecdn.net`), resolviendo la falta de datos de dependencias en la API oficial de CurseForge.
 - **Persistent Local Dependency Cache** - Almacenamiento persistente en disco (`fomo_modpack_dependencies_cache.json`) que guarda el mapeo de dependencias de modpacks procesados de CurseForge, logrando cargas instantáneas de milisegundos en consultas posteriores.
 

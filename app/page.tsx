@@ -87,15 +87,22 @@ export default function Page() {
     prevPendingCountRef.current = pendingFiles.length;
 
     if (fomoOpen && pendingFiles.length > prevCount) {
+      const hadDetailsOpen = detailsOpen;
+      if (hadDetailsOpen) {
+        setDetailsOpen(false);
+      }
       setDownloadsSidebarCollapsed(false);
       
       const timer = setTimeout(() => {
         setDownloadsSidebarCollapsed(true);
-      }, 3000);
+        if (hadDetailsOpen) {
+          setDetailsOpen(true);
+        }
+      }, 2000); // Se guarda automáticamente tras 2 segundos y restaura Detalles
       
       return () => clearTimeout(timer);
     }
-  }, [pendingFiles.length, fomoOpen]);
+  }, [pendingFiles.length, fomoOpen, detailsOpen]);
 
 
 
@@ -530,15 +537,15 @@ export default function Page() {
           (() => {
             const isSidebarVisible = fomoOpen && (detailsOpen || !downloadsSidebarCollapsed);
             return (
-              <div
-                className={`fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
+              <aside
+                className={`fomo-sidebar fomo-sidebar-container fixed top-0 right-0 h-screen z-50 flex flex-col shadow-[0_0_50px_rgba(13,39,80,0.12)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
                   detailsOpen ? "w-[600px] max-w-[90vw]" : "w-[380px]"
                 } ${
                   isSidebarVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
                 }`}
                 style={{
-                  background: "color-mix(in srgb, var(--color-card) 94%, transparent)",
-                  borderColor: "var(--color-border)",
+                  background: "var(--fomo-bg, color-mix(in srgb, var(--color-card) 94%, transparent))",
+                  borderColor: "var(--fomo-border, var(--color-border))",
                   backdropFilter: "blur(20px)",
                 }}
               >
@@ -558,7 +565,7 @@ export default function Page() {
                     />
                   )}
                 </div>
-              </div>
+              </aside>
             );
           })(),
           document.body

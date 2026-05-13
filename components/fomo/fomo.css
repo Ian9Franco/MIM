@@ -481,3 +481,58 @@
     transform: translate3d(100%, 0, 0);
   }
 }
+
+/* Spotlight animations */
+@keyframes spotlight-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spotlight-glow-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spotlight-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.spotlight-animate-fade-in {
+  animation: spotlight-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.spotlight-animate-glow {
+  animation: spotlight-glow-pulse 3s ease-in-out infinite;
+}
+
+.spotlight-animate-float {
+  animation: spotlight-float 6s ease-in-out infinite;
+}
+
+/* Stock Market Ticker Animation */
+@keyframes fomo-ticker-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-33.3333%, 0, 0);
+  }
+}
+
+.fomo-ticker-container {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.fomo-ticker-track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  animation: fomo-ticker-scroll 22s linear infinite;
+}
+
+.fomo-ticker-track:hover {
+  animation-play-state: paused;
+}

@@ -98,13 +98,13 @@ export const ModCard = memo(function ModCard({
   const isError        = isVersionError || isLoaderError;
   const ls             = LOADER_STYLES[loader?.toLowerCase() || "default"] ?? LOADER_STYLES.default;
 
-  const cardBorder = isPending ? "rgba(255, 255, 255, 0.08)"
+  const cardBorder = isPending ? "var(--fomo-border, rgba(255, 255, 255, 0.08))"
     : isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-border)"
     : isError     ? (isSelected ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.3)")
     : conflict    ? (isSelected ? "rgba(249,115,22,0.6)" : "rgba(249,115,22,0.3)")
     : hasUpdate   ? (isSelected ? "rgba(250,204,21,0.6)" : "rgba(250,204,21,0.3)")
     : "var(--color-border)";
-  const cardBg = isPending ? "rgba(255, 255, 255, 0.02)"
+  const cardBg = isPending ? "var(--fomo-secondary-bg, rgba(255, 255, 255, 0.02))"
     : isSelected && !isError && !conflict && !hasUpdate ? "var(--color-accent-bg)"
     : isError   ? "rgba(127,29,29,0.12)"
     : conflict  ? "rgba(124,45,18,0.12)"
@@ -144,7 +144,7 @@ export const ModCard = memo(function ModCard({
       aria-label={`${name} – ${version}`}
     >
       <div
-        className={`group relative flex flex-col rounded-[1.8rem] overflow-hidden cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] px-4 py-3 ${isPending ? 'border-dashed opacity-70 grayscale-[0.4]' : 'border-solid opacity-100'}`}
+        className={`group relative flex flex-col rounded-[1.8rem] overflow-hidden cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] px-4 py-3 ${isPending ? 'border-dashed opacity-[0.8] grayscale-[0.2]' : 'border-solid opacity-100'}`}
         style={{ 
           minHeight: isPending ? "100px" : "130px", 
           borderWidth: isPending ? "1px" : "0px",
@@ -170,8 +170,8 @@ export const ModCard = memo(function ModCard({
           aria-hidden="true"
           className="absolute left-2 top-4 bottom-4 w-[4px] rounded-full transition-all duration-300 z-10"
           style={{
-            background: isPending ? "rgba(255,255,255,0.2)" : (isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary),
-            opacity:    isPending ? 0.3 : (isSelected ? 1 : isError ? 0.9 : hasUpdate ? 0.9 : 0.6),
+            background: isPending ? "var(--fomo-icon-color, rgba(255,255,255,0.2))" : (isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary),
+            opacity:    isPending ? 0.4 : (isSelected ? 1 : isError ? 0.9 : hasUpdate ? 0.9 : 0.6),
             boxShadow: isPending ? "none" : `0 0 15px ${isSelected ? COLORS.accent : COLORS.primary}40`,
           }}
         />
@@ -182,8 +182,8 @@ export const ModCard = memo(function ModCard({
             aria-hidden="true"
             className={`relative shrink-0 rounded-2xl overflow-hidden transition-all duration-300 mt-1 ${isPending ? 'w-10 h-10' : 'w-14 h-14'}`}
             style={{ 
-              background: isPending ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)",
-              border: `1px solid ${isPending ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)"}`
+              background: isPending ? "var(--fomo-secondary-bg, rgba(255,255,255,0.03))" : "rgba(255,255,255,0.05)",
+              border: `1px solid ${isPending ? "var(--fomo-border, rgba(255,255,255,0.05))" : "rgba(255,255,255,0.1)"}`
             }}
           >
             {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -194,7 +194,7 @@ export const ModCard = memo(function ModCard({
 
           <div className="flex-1 flex flex-col min-w-0 relative z-10">
               <div className="flex items-baseline justify-between gap-2">
-                <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "#fca5a5" : conflict ? "#fdba74" : hasUpdate ? "#fef08a" : "var(--color-foreground)" }}>
+                <p className="font-subhead text-sm truncate leading-tight flex-1" style={{ color: isError ? "var(--color-theme-error)" : conflict ? "var(--color-theme-warning)" : hasUpdate ? "var(--color-theme-info)" : "var(--color-foreground)" }}>
                   {cleanName}
                 </p>
               
@@ -213,7 +213,7 @@ export const ModCard = memo(function ModCard({
                      onClick={stopPropDetails}
                      aria-label="Ver detalles"
                      title="Ver detalles del mod"
-                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-primary/20 hover:border-primary/40 shadow-sm"
+                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all bg-[var(--fomo-pill-inactive-bg,rgba(255,255,255,0.04))] border border-[var(--fomo-border,rgba(255,255,255,0.1))] text-[var(--fomo-pill-inactive-text,rgba(255,255,255,0.6))] hover:text-white hover:bg-primary/20 hover:border-primary/40 shadow-sm"
                    >
                      <Info className="w-3 h-3" />
                      <span>Detalles</span>
@@ -265,22 +265,20 @@ export const ModCard = memo(function ModCard({
               )}
             </div>
 
-            {/* Separator - Ajustado para no tocar los tags */}
-            <div className="h-[1px] w-full bg-white/5 my-2.5" />
+            <div className="h-[1px] w-full bg-[var(--fomo-border,rgba(255,255,255,0.05))] my-2.5" />
           </div>
         </div>
 
-        {/* Footer: Categories + Update */}
-        <div className="flex items-center justify-between w-full mt-auto pt-2 border-t border-white/5" style={{ height: "32px" }}>
+        <div className="flex items-center justify-between w-full mt-auto pt-2 border-t border-[var(--fomo-border,rgba(255,255,255,0.05))]" style={{ height: "32px" }}>
           <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
             {categories && categories.slice(0, 2).map((cat) => (
               <span 
                 key={cat}
                 className="px-2 py-0.5 rounded-full text-[0.55rem] font-bold border shrink-0"
                 style={{ 
-                  background: "rgba(255,255,255,0.03)", 
-                  borderColor: "rgba(255,255,255,0.06)",
-                  color: "rgba(255,255,255,0.4)",
+                  background: "var(--fomo-secondary-bg, rgba(255,255,255,0.03))", 
+                  borderColor: "var(--fomo-border, rgba(255,255,255,0.06))",
+                  color: "var(--color-muted, rgba(255,255,255,0.45))",
                 }}
               >
                 {CATEGORY_TRANSLATIONS[cat] || cat}

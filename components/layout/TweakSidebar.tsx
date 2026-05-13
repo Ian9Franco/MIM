@@ -670,7 +670,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   <input 
                     type="text" 
                     placeholder="Buscar tecla o mod..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-muted focus:outline-none focus:border-primary/50 transition-all"
+                    className="w-full bg-[color-mix(in_srgb,var(--color-foreground)_3%,transparent)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] placeholder:opacity-60 focus:outline-none focus:border-primary/50 transition-all"
                   />
                   <div className="absolute right-4 top-3.5 text-muted opacity-50">
                     <Keyboard className="w-4 h-4" />
@@ -692,7 +692,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     if (conflicts.length > 0) {
                       return (
                         <div className="space-y-2">
-                          <h5 className="text-[10px] font-label text-red-400 uppercase ml-2 tracking-widest flex items-center gap-2">
+                          <h5 className="text-[10px] font-label text-red-500 uppercase ml-2 tracking-widest flex items-center gap-2">
                             <AlertTriangle className="w-3 h-3" /> Conflictos Detectados
                           </h5>
                           <div className="space-y-2">
@@ -706,7 +706,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                                 </div>
                                 <div className="flex flex-wrap gap-1">
                                   {kbs.map((kb, kidx) => (
-                                    <span key={kidx} className="text-[11px] text-white/80 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">{kb.name}</span>
+                                    <span key={kidx} className="text-[11px] text-[var(--color-foreground)] bg-[color-mix(in_srgb,var(--color-foreground)_6%,transparent)] px-2 py-0.5 rounded-md border border-[var(--color-border)] opacity-90">{kb.name}</span>
                                   ))}
                                 </div>
                               </div>
@@ -728,17 +728,17 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   ).map(([category, items]) => (
                     <div key={category} className="space-y-2">
                       <h5 className="text-[10px] font-label text-muted/60 uppercase ml-2 tracking-widest">{category}</h5>
-                      <div className="bg-white/5 rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden">
+                      <div className="bg-[color-mix(in_srgb,var(--color-foreground)_3%,transparent)] rounded-2xl border border-[var(--color-border)] divide-y divide-[var(--color-border)] overflow-hidden">
                         {items.map((kb) => (
-                          <div key={kb.id} className="p-3 flex items-center justify-between group hover:bg-white/5 transition-all">
-                            <span className="text-sm text-white/90 font-body">{kb.name}</span>
+                          <div key={kb.id} className="p-3 flex items-center justify-between group hover:bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] transition-all">
+                            <span className="text-sm text-[var(--color-foreground)] opacity-90 font-body font-medium">{kb.name}</span>
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setListeningKey(kb.id)}
                                 className={`px-2 py-1 rounded-lg border text-[10px] font-label uppercase min-w-15 text-center transition-all duration-200 ease-out hover:scale-105 active:scale-95 ${
                                   listeningKey === kb.id 
-                                    ? "bg-primary border-primary text-white animate-pulse scale-110" 
-                                    : "bg-white/10 border-white/10 text-white group-hover:border-primary/30 group-hover:bg-white/20"
+                                    ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white animate-pulse scale-110" 
+                                    : "bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] border-[var(--color-border)] text-[var(--color-foreground)] group-hover:border-[color-mix(in_srgb,var(--color-primary)_35%,transparent)] group-hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)]"
                                 }`}
                               >
                                 {listeningKey === kb.id ? "???" : kb.key.replace("key.keyboard.", "").replace("key.mouse.", "M").toUpperCase()}
@@ -909,8 +909,8 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                               </div>
                               
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-white truncate">{pack.replace("file/", "").replace(/\.zip$/, "")}</p>
-                                {reverseIdx === 0 && <span className="text-[9px] text-primary font-bold uppercase tracking-widest opacity-60">Prioridad Máxima</span>}
+                                <p className="text-sm text-[var(--color-foreground)] font-bold truncate">{pack.replace("file/", "").replace(/\.zip$/, "")}</p>
+                                {reverseIdx === 0 && <span className="text-[9px] text-primary font-bold uppercase tracking-widest opacity-80">Prioridad Máxima</span>}
                               </div>
 
                               <button 
@@ -944,11 +944,11 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   </h4>
                   <div className="space-y-2">
                     {data.resourcePacks.available.filter(p => !data.resourcePacks.active.includes(`file/${p}`) && p !== "vanilla" && p !== "mod_resources").map((pack, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-2xl group hover:border-primary/30 transition-all">
-                        <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                      <div key={i} className="flex items-center gap-3 p-3 bg-white/5 border border-[var(--color-border)] rounded-2xl group hover:border-primary/30 transition-all">
+                        <div className="w-10 h-10 rounded-lg bg-[color-mix(in_srgb,var(--color-foreground)_8%,transparent)] flex items-center justify-center shrink-0">
                           <Package className="w-5 h-5 text-muted" />
                         </div>
-                        <span className="text-sm text-white/70 flex-1 truncate">{pack}</span>
+                        <span className="text-sm text-[var(--color-foreground)] opacity-85 flex-1 truncate">{pack}</span>
                         <button 
                           onClick={() => togglePack(`file/${pack}`, true)}
                           className="p-2 text-primary hover:scale-110 transition-all"
@@ -965,9 +965,9 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
             {/* Tab 4: Profiles */}
             {activeTab === "profiles" && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="p-6 rounded-3xl bg-primary/10 border border-primary/20 text-center relative overflow-hidden">
+                <div className="p-6 rounded-3xl bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] border border-primary/20 text-center relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-1 bg-primary text-white text-[8px] font-label uppercase px-2 rounded-bl-lg">Snapshot System</div>
-                  <h4 className="text-lg font-subhead text-white mb-2">Congelar Estado</h4>
+                  <h4 className="text-lg font-subhead text-[var(--color-foreground)] mb-2">Congelar Estado</h4>
                   <p className="text-xs text-muted mb-6">Guardá tus binds y optimizaciones actuales en un snapshot para recuperarlos después.</p>
                   
                   <div className="flex gap-2">
@@ -975,7 +975,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       type="text" 
                       id="snapName"
                       placeholder="Nombre (ej. PvP, Survival...)"
-                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                      className="flex-1 bg-[color-mix(in_srgb,var(--color-foreground)_6%,transparent)] border border-[var(--color-border)] rounded-xl px-4 py-2 text-xs text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] placeholder:opacity-60 focus:outline-none focus:border-primary/50"
                     />
                     <button 
                       onClick={() => {
@@ -993,7 +993,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                 <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h5 className="text-sm font-subhead text-white">Restaurar Original</h5>
+                      <h5 className="text-sm font-subhead text-[var(--color-foreground)]">Restaurar Original</h5>
                       <p className="text-[10px] text-muted mt-1">Volver al options.txt original del juego (backup)</p>
                     </div>
                     <button
@@ -1040,10 +1040,10 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     const isValidDate = dateObj && !isNaN(dateObj.getTime());
                     
                     return (
-                      <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-all">
+                      <div key={i} className="p-4 rounded-2xl bg-white/5 border border-[var(--color-border)] group hover:border-primary/30 transition-all">
                         <div className="flex items-center justify-between mb-2">
                           <div>
-                            <h5 className="text-sm font-subhead text-white group-hover:text-primary transition-colors">{snap.name}</h5>
+                            <h5 className="text-sm font-subhead text-[var(--color-foreground)] group-hover:text-primary transition-colors">{snap.name}</h5>
                             <p className="text-[10px] text-muted mt-1 font-label">
                               {isValidDate 
                                 ? `${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
@@ -1054,21 +1054,21 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           <div className="flex items-center gap-2">
                             <button 
                               onClick={() => handleAction("load-snapshot", { snapshotName: snap.name })}
-                              className="p-2 rounded-lg bg-white/10 text-white hover:bg-amber-500 hover:text-white transition-colors"
+                              className="p-2 rounded-lg bg-[color-mix(in_srgb,var(--color-foreground)_10%,transparent)] text-[var(--color-foreground)] hover:bg-amber-500 hover:text-white transition-colors"
                               title="Cargar al proyecto (para editar)"
                             >
                               <Download className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={() => handleAction("restore-snapshot", { snapshotName: snap.name })}
-                              className="p-2 rounded-lg bg-white/10 text-white hover:bg-primary transition-colors"
+                              className="p-2 rounded-lg bg-[color-mix(in_srgb,var(--color-foreground)_10%,transparent)] text-[var(--color-foreground)] hover:bg-primary hover:text-white transition-colors"
                               title="Restaurar al proyecto"
                             >
                               <RefreshCw className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={() => handleAction("delete-snapshot", { snapshotName: snap.name })}
-                              className="p-2 rounded-lg bg-white/10 text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                              className="p-2 rounded-lg bg-[color-mix(in_srgb,var(--color-foreground)_10%,transparent)] text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1078,14 +1078,14 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                         <div className="flex gap-2 mt-2">
                           <button
                             onClick={() => handleAction("load-snapshot", { snapshotName: snap.name })}
-                            className="flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-label transition-all border border-amber-500/20"
+                            className="flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-[10px] font-label transition-all border border-amber-500/20"
                           >
                             Cargar para Editar
                           </button>
                           <button
                             onClick={() => handleAction("push-snapshot-to-game", { snapshotName: snap.name })}
                             disabled={saving}
-                            className="flex-1 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-label transition-all border border-emerald-500/20"
+                            className="flex-1 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg text-[10px] font-label transition-all border border-emerald-500/20"
                           >
                             Cargar y Enviar al Juego
                           </button>
@@ -1093,7 +1093,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       </div>
                     );
                   }) : (
-                    <div className="p-12 text-center text-muted font-label border border-dashed border-white/10 rounded-2xl">
+                    <div className="p-12 text-center text-muted font-label border border-dashed border-[var(--color-border)] rounded-2xl">
                       No hay snapshots guardados.
                     </div>
                   )}

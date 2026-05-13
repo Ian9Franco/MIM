@@ -1,8 +1,43 @@
 # MIM — Changelog de Cambios
 
 > Auditoría completa de cambios, features y mejoras del proyecto.  
-> **Versión Actual:** Beta 5.5 (Tailwind v4 & Integrated Security)  
-> **Última actualización:** 2026-05-08
+> **Versión Actual:** Beta 5.6 (Stock Ticker & Contrast Optimization)  
+> **Última actualización:** 2026-05-13
+
+---
+
+## 🚀 Beta 5.6 — Spotlight, Collections Update & Stock Ticker (2026-05-13)
+
+### Spotlight Feature
+- **Sistema de Destacados Premium**: Implementación completa de Spotlight que muestra mods y proyectos recomendados con visualización enriquecida, incluyendo picks destacados de Modrinth y CurseForge con navegación fluida.
+- **Visualización Enriquecida**: Cards premium con información detallada de mods destacados, integración con el sistema de FOMO para descarga directa.
+
+### Project Followers & FOMO
+- **Sistema de Seguimiento Completo**: Capacidad de seguir proyectos y autores, recibiendo actualizaciones en tiempo real de sus mods favoritos.
+- **Mi Contenido Seguido**: Sección dedicada para visualizar proyectos y autores seguidos con actualizaciones automáticas.
+
+### Collections Update
+- **Actualización de Colecciones de Modrinth**: Sincronización completa de colecciones creadas por el usuario, "Following", y plantillas pre-armadas (Starter Tech, Vanilla+, etc.).
+- **Plantillas Pre-armadas**: 5 plantillas pre-configuradas para inicio rápido de diferentes tipos de modpacks.
+
+### Modpack Search & Included Mods
+- **Búsqueda de Modpacks**: Capacidad de buscar modpacks en Modrinth y CurseForge con filtros avanzados.
+- **Visualización de Mods Incluidos**: Análisis de dependencias integrado que muestra todos los mods incluidos en cada modpack, con navegación interactiva a cada dependencia.
+
+### Carrusel de Actualizaciones Estilo Bolsa de Valores (Stock Ticker)
+- **Visualizador Dinámico**: Implementación de un carrusel autodesplazable animado infinitamente con CSS de alto rendimiento (`@keyframes scroll-ticker`) en el panel superior, simulando una cinta ticker financiera para modpacks y mods actualizados.
+- **Tipografía y Legibilidad Mejoradas**: Ajuste y aumento de la escala tipográfica, iconos y recuentos cuantitativos para asegurar una visibilidad y lectura cómodas en cualquier resolución.
+
+### Sincronización y Recuperación de Detalles en FOMO
+- **Mantenimiento del Estado de Detalles**: Solucionada la desconexión del panel de detalles de un mod al realizar descargas. Ahora la sidebar de descargas se repliega tras 2 segundos y recupera exactamente la vista del mod en el que el usuario se encontraba.
+- **Búsqueda de Autores Reales**: Corregida la consulta `/api/modrinth/discover` en las colecciones de Modrinth. Se implementó una resolución en caliente de usernames para autores que antes fallaba con errores de credenciales API, permitiendo seguir a creadores reales de forma fluida.
+- **Metadatos de Autores Locales**: Optimización del escaneo heurístico de metadatos locales para evitar que mods mensuales se muestren como autor "Desconocido".
+
+### Contraste Maestro en Modern Theme (Light Mode)
+- **Tokens Semánticos de Contraste**: Creación de tres nuevas variables CSS semánticas de texto (`--color-theme-error`, `--color-theme-warning`, `--color-theme-info`) en `globals.css` que proveen tonos crimson-red, amber-orange y emerald-green de alto contraste en el tema claro, y tonos pastel legibles en el tema oscuro.
+- **Tarjetas Seguidas y Descargas**: Rediseño de las tarjetas en la sección de Seguidos (Proyectos y Autores) y Descargas Pendientes para mapear colores dinámicos en vez de opacidades transparentes blancas fijas que causaban invisibilidad total sobre fondos claros.
+- **Tags de Categorías**: Reemplazo del estilo hardcodeado en las categorías inferiores de `ModCard.tsx` para usar `var(--color-muted)`, garantizando legibilidad total.
+- **Empty States**: Adaptación del placeholder vacío de la librería de Source a las fuentes y opacidades variables del tema actual.
 
 ---
 

@@ -1,9 +1,9 @@
 import React, { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Laptop, Server, Languages } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Loader2, Download, CheckCircle2, Info, FileText, ListTree, ChevronDown, ChevronUp, ExternalLink, Package, Laptop, Server, Languages, Heart, Search } from "lucide-react";
 import { formatSize, openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
-import { markdownToHtml } from "@/utils/markdown";
+import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
 interface FomoVersionOverlayProps {
@@ -28,6 +28,16 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
+  const [depSearchQuery, setDepSearchQuery] = useState("");
+  const [requiredPage, setRequiredPage] = useState(1);
+  const [embeddedPage, setEmbeddedPage] = useState(1);
+  const [optionalPage, setOptionalPage] = useState(1);
+
+  useEffect(() => {
+    setRequiredPage(1);
+    setEmbeddedPage(1);
+    setOptionalPage(1);
+  }, [depSearchQuery]);
 
   // Reiniciar traducción al cambiar de mod
   useEffect(() => {
@@ -45,6 +55,87 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(() => {
     return gameVersions.find(gv => allGameVersions.includes(gv)) || null;
   });
+
+  // Followed authors and projects sync logic
+  const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
+  const [followedMods, setFollowedMods] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadFollowed = () => {
+      try {
+        const storedAuthors = localStorage.getItem("mim_followed_authors");
+        if (storedAuthors) setFollowedAuthors(JSON.parse(storedAuthors));
+        const storedMods = localStorage.getItem("mim_followed_mods");
+        if (storedMods) setFollowedMods(JSON.parse(storedMods));
+      } catch (e) {
+        console.error("Error loading followed authors/mods:", e);
+      }
+    };
+
+    loadFollowed();
+
+    window.addEventListener("mim-followed-authors-changed", loadFollowed);
+    window.addEventListener("mim-followed-mods-changed", loadFollowed);
+    return () => {
+      window.removeEventListener("mim-followed-authors-changed", loadFollowed);
+      window.removeEventListener("mim-followed-mods-changed", loadFollowed);
+    };
+  }, []);
+
+  const toggleFollowAuthor = useCallback((author: string) => {
+    let current: string[] = [];
+    try {
+      const stored = localStorage.getItem("mim_followed_authors");
+      if (stored) current = JSON.parse(stored);
+    } catch {}
+
+    const next = current.includes(author)
+      ? current.filter((a) => a !== author)
+      : [...current, author];
+
+    setFollowedAuthors(next);
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mim_followed_authors", JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent("mim-followed-authors-changed", { detail: next }));
+      } catch (e) {
+        console.error("Error updating followed authors storage/events:", e);
+      }
+    }
+  }, []);
+
+  const isFollowingAuthor = useCallback((author: string) => {
+    return followedAuthors.includes(author);
+  }, [followedAuthors]);
+
+  const toggleFollowMod = useCallback((m: ModHit) => {
+    let current: any[] = [];
+    try {
+      const stored = localStorage.getItem("mim_followed_mods");
+      if (stored) current = JSON.parse(stored);
+    } catch {}
+
+    const exists = current.some((x) => x.projectId === m.projectId);
+    const next = exists
+      ? current.filter((x) => x.projectId !== m.projectId)
+      : [...current, m];
+
+    setFollowedMods(next);
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mim_followed_mods", JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent("mim-followed-mods-changed", { detail: next }));
+      } catch (e) {
+        console.error("Error updating followed mods storage/events:", e);
+      }
+    }
+  }, []);
+
+  const isFollowingMod = useCallback((projectId: string) => {
+    return followedMods.some((x) => x.projectId === projectId);
+  }, [followedMods]);
 
   useEffect(() => {
     const findTarget = () => {
@@ -146,6 +237,45 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const incompatibleDeps = allDependencies.filter(d => d.dependencyType === "incompatible");
   const embeddedDeps = allDependencies.filter(d => d.dependencyType === "embedded");
 
+  // Filter dependencies by search query
+  const filteredRequiredDeps = requiredDeps.filter(d => 
+    (d.title || d.projectId).toLowerCase().includes(depSearchQuery.toLowerCase()) || 
+    d.projectId.toLowerCase().includes(depSearchQuery.toLowerCase())
+  );
+  
+  const filteredOptionalDeps = optionalDeps.filter(d => 
+    (d.title || d.projectId).toLowerCase().includes(depSearchQuery.toLowerCase()) || 
+    d.projectId.toLowerCase().includes(depSearchQuery.toLowerCase())
+  );
+  
+  const filteredEmbeddedDeps = embeddedDeps.filter(d => 
+    (d.title || d.projectId).toLowerCase().includes(depSearchQuery.toLowerCase()) || 
+    d.projectId.toLowerCase().includes(depSearchQuery.toLowerCase())
+  );
+
+  const ITEMS_PER_PAGE = 20;
+
+  // Calculate total pages for each category
+  const totalRequiredPages = Math.ceil(filteredRequiredDeps.length / ITEMS_PER_PAGE);
+  const totalOptionalPages = Math.ceil(filteredOptionalDeps.length / ITEMS_PER_PAGE);
+  const totalEmbeddedPages = Math.ceil(filteredEmbeddedDeps.length / ITEMS_PER_PAGE);
+
+  // Slice arrays to display only the current page's elements
+  const displayedRequiredDeps = filteredRequiredDeps.slice(
+    (requiredPage - 1) * ITEMS_PER_PAGE,
+    requiredPage * ITEMS_PER_PAGE
+  );
+  
+  const displayedOptionalDeps = filteredOptionalDeps.slice(
+    (optionalPage - 1) * ITEMS_PER_PAGE,
+    optionalPage * ITEMS_PER_PAGE
+  );
+  
+  const displayedEmbeddedDeps = filteredEmbeddedDeps.slice(
+    (embeddedPage - 1) * ITEMS_PER_PAGE,
+    embeddedPage * ITEMS_PER_PAGE
+  );
+
   const handleTranslate = async () => {
     if (!mod.body || isTranslating) return;
     
@@ -223,9 +353,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   };
 
   const rawDescriptionHtml = mod.body?.trim()
-    ? markdownToHtml(mod.body)
+    ? (mod._source === "curseforge" ? formatCurseForgeHtml(mod.body) : markdownToHtml(mod.body))
     : mod.description?.trim()
-    ? markdownToHtml(mod.description)
+    ? (mod._source === "curseforge" ? formatCurseForgeHtml(mod.description) : markdownToHtml(mod.description))
     : "El autor no ha proporcionado una descripción detallada.";
 
   const descriptionHtml = translatedBody 
@@ -237,6 +367,35 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
        </div>
        <div class="opacity-40 pointer-events-none grayscale scale-95 origin-top transition-all">${rawDescriptionHtml}</div>`
     : rawDescriptionHtml;
+
+  const sortedMembers = React.useMemo(() => {
+    if (!mod.members || mod.members.length === 0) return [];
+    
+    return [...mod.members].sort((a, b) => {
+      const roleA = (a.role || "").toLowerCase();
+      const roleB = (b.role || "").toLowerCase();
+      
+      const isOrgA = roleA === "organization";
+      const isOrgB = roleB === "organization";
+      
+      const isLeadA = roleA === "project lead" || roleA === "owner" || roleA === "maintainer" || roleA === "creator";
+      const isLeadB = roleB === "project lead" || roleB === "owner" || roleB === "maintainer" || roleB === "creator";
+      
+      if (isOrgA && !isOrgB) return -1;
+      if (!isOrgA && isOrgB) return 1;
+      if (isLeadA && !isLeadB) return -1;
+      if (!isLeadA && isLeadB) return 1;
+      return 0;
+    });
+  }, [mod.members]);
+
+  const displayedAuthor = React.useMemo(() => {
+    if (mod.members && mod.members.length > 0) {
+      const org = mod.members.find(m => (m.role || "").toLowerCase() === "organization");
+      if (org) return org.name || org.username;
+    }
+    return mod.author;
+  }, [mod.members, mod.author]);
 
   const handleDescriptionClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
@@ -254,36 +413,78 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       className="flex-1 flex flex-col min-h-0 animate-fade-in text-foreground"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b shrink-0" style={{ borderColor: COLORS.border }}>
+      <div className="flex items-center justify-between px-5 py-4 border-b shrink-0" style={{ borderColor: "var(--fomo-border, var(--color-border))" }}>
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="p-2 -ml-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: COLORS.foreground }}>
+          <button onClick={onClose} className="p-2 -ml-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: "var(--fomo-text-primary, var(--color-foreground))" }}>
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h3 className="font-headline text-lg" style={{ color: COLORS.foreground }}>Detalles del Proyecto</h3>
+          <h3 className="font-headline text-lg" style={{ color: "var(--fomo-text-primary, var(--color-foreground))" }}>Detalles del Proyecto</h3>
         </div>
-        <button onClick={onClose} className="p-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: COLORS.foreground }}>
+        <button onClick={onClose} className="p-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: "var(--fomo-text-primary, var(--color-foreground))" }}>
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Mod summary */}
-      <div className="px-5 py-5 flex flex-col gap-5 border-b" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
+      <div className="px-5 py-5 flex flex-col gap-5 border-b" style={{ background: "var(--fomo-secondary-bg, var(--color-secondary-bg))", borderColor: "var(--fomo-border, var(--color-border))" }}>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border shadow-sm" style={{ background: "var(--color-hover)", borderColor: COLORS.borderStrong }}>
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border shadow-sm" style={{ background: "var(--fomo-card-bg, var(--color-hover))", borderColor: "var(--fomo-card-border, var(--color-border-strong))" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {mod.iconUrl && <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-headline text-lg truncate" style={{ color: COLORS.foreground }}>{mod.title}</p>
-            <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>
-              por <span className="text-primary/80 font-bold">{mod.author}</span>
-            </p>
+          <div className="min-w-0 flex-1 flex flex-col gap-1">
+            <p className="font-headline text-lg truncate" style={{ color: "var(--fomo-text-primary, var(--color-foreground))" }}>{mod.title}</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="font-caption text-xs" style={{ color: "var(--fomo-text-subtle, var(--color-muted))" }}>
+                por <span className="text-primary/80 font-bold">{displayedAuthor}</span>
+              </p>
+              
+              {/* Follow and Profile Action Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => toggleFollowAuthor(displayedAuthor)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 hover:scale-105 active:scale-95 ${
+                    isFollowingAuthor(displayedAuthor)
+                      ? "bg-pink-500/15 text-pink-400 border-pink-500/30 font-bold shadow-sm"
+                      : "bg-white/5 border-white/10 hover:bg-white/10 text-white/80"
+                  }`}
+                  title={isFollowingAuthor(displayedAuthor) ? "Dejar de seguir creador" : "Seguir creador"}
+                >
+                  <Heart className={`w-2.5 h-2.5 ${isFollowingAuthor(displayedAuthor) ? "fill-pink-400 text-pink-400" : ""}`} />
+                  {isFollowingAuthor(displayedAuthor) ? "Siguiendo Creador" : "Seguir Creador"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleFollowMod(mod)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 hover:scale-105 active:scale-95 ${
+                    isFollowingMod(mod.projectId)
+                      ? "bg-rose-500/15 text-rose-400 border-rose-500/30 font-bold shadow-sm"
+                      : "bg-white/5 border-white/10 hover:bg-white/10 text-white/80"
+                  }`}
+                  title={isFollowingMod(mod.projectId) ? "Dejar de seguir mod" : "Seguir mod"}
+                >
+                  <Heart className={`w-2.5 h-2.5 ${isFollowingMod(mod.projectId) ? "fill-rose-400 text-rose-400" : ""}`} />
+                  {isFollowingMod(mod.projectId) ? "Mod Seguido" : "Seguir Mod"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openExternal(mod._source === "curseforge" ? `https://www.curseforge.com/members/${displayedAuthor}/projects` : `https://modrinth.com/user/${displayedAuthor}`)}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/5 border border-white/10 hover:bg-white/10 hover:scale-105 active:scale-95 text-white/70 hover:text-white flex items-center gap-1"
+                >
+                  <span>Perfil</span>
+                  <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                </button>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => openExternal(mod.url)}
             className="p-3 rounded-xl border transition-all hover:bg-white/10 hover:scale-105 active:scale-95"
-            style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border, color: COLORS.foreground }}
+            style={{ background: "var(--fomo-card-bg, var(--color-secondary-bg))", borderColor: "var(--fomo-border, var(--color-border))", color: "var(--fomo-text-primary, var(--color-foreground))" }}
           >
             <ExternalLink className="w-5 h-5 opacity-60" />
           </button>
@@ -291,16 +492,49 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
         {/* New: Quick Metadata Grid */}
         <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-35 p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
-            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Entorno</p>
-            <div className="flex flex-wrap gap-1.5">
-              <EnvironmentBadge type={mod.client_side || "unknown"} label="Cliente" icon={<Laptop className="w-3 h-3" />} />
-              <EnvironmentBadge type={mod.server_side || "unknown"} label="Servidor" icon={<Server className="w-3 h-3" />} />
-            </div>
+          <div className="flex-1 min-w-35 p-2.5 rounded-xl border flex flex-col gap-1.5" style={{ background: "var(--fomo-input-bg, rgba(255,255,255,0.03))", borderColor: "var(--fomo-input-border, rgba(255,255,255,0.05))" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest opacity-40" style={{ color: "var(--fomo-text-subtle, var(--color-foreground))" }}>Soporte de Entorno</p>
+            {(() => {
+              let clientSide = mod.client_side;
+              let serverSide = mod.server_side;
+
+              if (mod._source === "curseforge" && versions && versions.length > 0) {
+                // Analizamos los archivos disponibles en CurseForge para identificar el entorno.
+                // CurseForge etiqueta los entornos agregando "Client" o "Server" al array gameVersions de los archivos.
+                const hasClientTag = versions.some(v => v.gameVersions?.includes("Client"));
+                const hasServerTag = versions.some(v => v.gameVersions?.includes("Server"));
+                
+                if (hasClientTag && hasServerTag) {
+                  clientSide = "required";
+                  serverSide = "required";
+                } else if (hasClientTag) {
+                  clientSide = "required";
+                  serverSide = "unsupported";
+                } else if (hasServerTag) {
+                  clientSide = "unsupported";
+                  serverSide = "required";
+                } else {
+                  // Por defecto, si no se especifica ninguna restricción de entorno, el mod es universal (ambos)
+                  clientSide = "required";
+                  serverSide = "required";
+                }
+              }
+
+              const env = getEnvironmentDetails(clientSide, serverSide);
+              return (
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ background: env.color }} />
+                    <span className="text-xs font-bold" style={{ color: env.color }}>{env.text}</span>
+                  </div>
+                  <p className="text-[10px] opacity-70 leading-relaxed mt-0.5" style={{ color: "var(--fomo-text-subtle, var(--color-muted))" }}>{env.desc}</p>
+                </div>
+              );
+            })()}
           </div>
 
-          <div className="flex-1 min-w-27.5 p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
-            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Plataformas</p>
+          <div className="flex-1 min-w-27.5 p-2.5 rounded-xl border" style={{ background: "var(--fomo-input-bg, rgba(255,255,255,0.03))", borderColor: "var(--fomo-input-border, rgba(255,255,255,0.05))" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40" style={{ color: "var(--fomo-text-subtle, var(--color-foreground))" }}>Plataformas</p>
             <div className="flex flex-wrap gap-1">
               {Array.from(new Set(versions.flatMap(v => v.loaders))).map(l => (
                 <span key={l} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[0.65rem] font-bold border border-primary/20 uppercase">{l}</span>
@@ -308,8 +542,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             </div>
           </div>
 
-          <div className="w-full p-2.5 rounded-xl border" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.05)" }}>
-            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40">Versiones Disponibles (Filtrar abajo)</p>
+          <div className="w-full p-2.5 rounded-xl border" style={{ background: "var(--fomo-input-bg, rgba(255,255,255,0.03))", borderColor: "var(--fomo-input-border, rgba(255,255,255,0.05))" }}>
+            <p className="text-[0.6rem] font-bold uppercase tracking-widest mb-1.5 opacity-40" style={{ color: "var(--fomo-text-subtle, var(--color-foreground))" }}>Versiones Disponibles (Filtrar abajo)</p>
             <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1" role="group" aria-label="Filtro de versiones de Minecraft">
               {/* "Todas" Reset Button */}
               <button
@@ -318,7 +552,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 className={`px-2 py-0.5 rounded text-[0.6rem] font-bold border transition-all hover:scale-105 active:scale-95 ${
                   selectedVersionFilter === null
                     ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10"
+                    : "bg-white/5 text-foreground/40 border-black/10 hover:bg-black/5 dark:bg-white/5 dark:text-white/40 dark:border-white/5 dark:hover:bg-white/10"
                 }`}
               >
                 Todas
@@ -338,7 +572,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         ? "bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-sm shadow-orange-500/10 font-bold"
                         : isProjectVersion
                         ? "bg-primary/20 text-primary border-primary/30 font-medium hover:bg-primary/30"
-                        : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10"
+                        : "bg-white/5 text-foreground/40 border-black/10 hover:bg-black/5 dark:bg-white/5 dark:text-white/40 dark:border-white/5 dark:hover:bg-white/10"
                     }`}
                     title={isSelected ? `Filtrando por ${gv} (haz clic para limpiar)` : `Filtrar versiones por ${gv}`}
                   >
@@ -378,6 +612,90 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {activeTab === "description" ? (
           <div className="space-y-4">
+            {/* Creators / Team Members Section */}
+            {mod.members && mod.members.length > 0 && (
+              <div className="p-4 rounded-2xl border" style={{ background: "var(--fomo-secondary-bg, rgba(255,255,255,0.02))", borderColor: "var(--fomo-border, rgba(255,255,255,0.05))" }}>
+                <p className="text-xs font-bold uppercase tracking-widest mb-3 opacity-60" style={{ color: "var(--fomo-text-primary)" }}>Creadores del Proyecto</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {sortedMembers.map((member: any) => {
+                    const isOrg = (member.role || "").toLowerCase() === "organization";
+                    const isFollowing = isFollowingAuthor(member.username);
+                    
+                    return (
+                      <div 
+                        key={member.id} 
+                        className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
+                          isOrg 
+                            ? "bg-pink-500/10 border-pink-500/20" 
+                            : "bg-white/2 border-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {member.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img 
+                              src={member.avatarUrl} 
+                              alt="" 
+                              className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0" 
+                            />
+                          ) : (
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold uppercase shrink-0 bg-gradient-to-br ${
+                              isOrg ? "from-pink-500 to-rose-600" : "from-gray-700 to-slate-800"
+                            }`}>
+                              {member.name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold truncate" style={{ color: "var(--fomo-text-primary)" }}>
+                              {member.name}
+                            </p>
+                            <p className="text-[9px] opacity-60 mt-0.5 flex items-center gap-1 text-white/50">
+                              {isOrg && <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0" />}
+                              {member.role || "Miembro"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onSearchProject && (
+                            <button
+                              type="button"
+                              onClick={() => onSearchProject(`author:${member.username}`)}
+                              className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                              title={`Buscar mods de ${member.name}`}
+                            >
+                              <Search className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleFollowAuthor(member.username)}
+                            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${
+                              isFollowing 
+                                ? "text-pink-400" 
+                                : "text-white/30 hover:text-white"
+                            }`}
+                            title={isFollowing ? `Dejar de seguir a ${member.name}` : `Seguir a ${member.name}`}
+                          >
+                            <Heart className={`w-3.5 h-3.5 ${isFollowing ? "fill-pink-400" : ""}`} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openExternal(mod._source === "curseforge" ? `https://www.curseforge.com/members/${member.username}/projects` : `https://modrinth.com/user/${member.username}`)}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white transition-all"
+                            title={`Ver perfil de ${member.name}`}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {!loading && mod.body && (
               <button
                 onClick={handleTranslate}
@@ -413,18 +731,44 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           </div>
         ) : activeTab === "dependencies" ? (
           <div className="space-y-6">
-            {allDependencies.length === 0 ? (
+            {allDependencies.length > 0 && (
+              <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 bg-black/20 border border-white/5 focus-within:border-primary/50 transition-all min-h-[46px]">
+                <Search className="w-5 h-5 text-white/40 shrink-0" />
+                <input
+                  type="text"
+                  value={depSearchQuery}
+                  onChange={(e) => setDepSearchQuery(e.target.value)}
+                  placeholder="Buscar dependencias o mods incluidos..."
+                  className="flex-1 bg-transparent border-none outline-none! focus:outline-none! focus-visible:outline-none! ring-0! text-xs font-medium text-white placeholder:text-white/30"
+                  style={{ outline: "none", boxShadow: "none" }}
+                />
+                {depSearchQuery && (
+                  <button 
+                    onClick={() => setDepSearchQuery("")} 
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {filteredRequiredDeps.length === 0 && filteredEmbeddedDeps.length === 0 && filteredOptionalDeps.length === 0 ? (
               <div className="text-center py-20">
                 <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <p className="font-subhead text-sm text-white/60">No se encontraron dependencias</p>
+                <p className="font-subhead text-sm text-white/60">
+                  {depSearchQuery ? "No se encontraron coincidencias" : "No se encontraron dependencias"}
+                </p>
               </div>
             ) : (
               <>
-                {requiredDeps.length > 0 && (
+                {displayedRequiredDeps.length > 0 && (
                   <div>
-                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-red-400 mb-3 px-1">Requeridas</h4>
+                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-red-400 mb-3 px-1 flex items-center justify-between">
+                      <span>Requeridas ({filteredRequiredDeps.length})</span>
+                    </h4>
                     <div className="grid gap-2">
-                      {requiredDeps.map(dep => {
+                      {displayedRequiredDeps.map(dep => {
                         const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
                         return (
                           <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
@@ -466,16 +810,41 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         );
                       })}
                     </div>
+                    {totalRequiredPages > 1 && (
+                      <div className="flex items-center justify-between mt-3 p-2 rounded-xl bg-white/3 border border-white/5">
+                        <button
+                          type="button"
+                          disabled={requiredPage === 1}
+                          onClick={() => setRequiredPage(p => Math.max(1, p - 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          <ChevronLeft className="w-3 h-3" /> Anterior
+                        </button>
+                        <span className="text-[10px] text-white/40">
+                          Pág. {requiredPage} de {totalRequiredPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={requiredPage === totalRequiredPages}
+                          onClick={() => setRequiredPage(p => Math.min(totalRequiredPages, p + 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          Siguiente <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-                {embeddedDeps.length > 0 && (
+                {displayedEmbeddedDeps.length > 0 && (
                   <div>
-                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-emerald-400 mb-3 px-1 flex items-center gap-2">
-                      <ListTree className="w-3.5 h-3.5" />
-                      Incluidos en el Modpack
+                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-emerald-400 mb-3 px-1 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <ListTree className="w-3.5 h-3.5" />
+                        Incluidos en el Modpack ({filteredEmbeddedDeps.length})
+                      </span>
                     </h4>
                     <div className="grid gap-2">
-                      {embeddedDeps.map(dep => {
+                      {displayedEmbeddedDeps.map(dep => {
                         const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
                         return (
                           <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
@@ -517,13 +886,38 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         );
                       })}
                     </div>
+                    {totalEmbeddedPages > 1 && (
+                      <div className="flex items-center justify-between mt-3 p-2 rounded-xl bg-white/3 border border-white/5">
+                        <button
+                          type="button"
+                          disabled={embeddedPage === 1}
+                          onClick={() => setEmbeddedPage(p => Math.max(1, p - 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          <ChevronLeft className="w-3 h-3" /> Anterior
+                        </button>
+                        <span className="text-[10px] text-white/40">
+                          Pág. {embeddedPage} de {totalEmbeddedPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={embeddedPage === totalEmbeddedPages}
+                          onClick={() => setEmbeddedPage(p => Math.min(totalEmbeddedPages, p + 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          Siguiente <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-                {optionalDeps.length > 0 && (
+                {displayedOptionalDeps.length > 0 && (
                   <div>
-                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-primary mb-3 px-1">Opcionales</h4>
+                    <h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-primary mb-3 px-1 flex items-center justify-between">
+                      <span>Opcionales ({filteredOptionalDeps.length})</span>
+                    </h4>
                     <div className="grid gap-2">
-                      {optionalDeps.map(dep => {
+                      {displayedOptionalDeps.map(dep => {
                         const depUrl = dep.url || (mod._source === "modrinth" ? `https://modrinth.com/project/${dep.projectId}` : `https://www.curseforge.com/projects/${dep.projectId}`);
                         return (
                           <div key={dep.projectId} className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
@@ -565,6 +959,29 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         );
                       })}
                     </div>
+                    {totalOptionalPages > 1 && (
+                      <div className="flex items-center justify-between mt-3 p-2 rounded-xl bg-white/3 border border-white/5">
+                        <button
+                          type="button"
+                          disabled={optionalPage === 1}
+                          onClick={() => setOptionalPage(p => Math.max(1, p - 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          <ChevronLeft className="w-3 h-3" /> Anterior
+                        </button>
+                        <span className="text-[10px] text-white/40">
+                          Pág. {optionalPage} de {totalOptionalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={optionalPage === totalOptionalPages}
+                          onClick={() => setOptionalPage(p => Math.min(totalOptionalPages, p + 1))}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all flex items-center gap-1 text-white"
+                        >
+                          Siguiente <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {incompatibleDeps.length > 0 && (
@@ -653,8 +1070,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     key={v.id}
                     className={`rounded-2xl border transition-all ${!isCompatible ? "opacity-60" : ""} ${isMainVersion ? "ring-1 ring-primary/30" : ""}`}
                     style={{ 
-                      background: isMainVersion ? "rgba(187,150,228,0.05)" : (expandedVersion === v.id ? "var(--color-hover)" : "var(--color-secondary-bg)"),
-                      borderColor: isMainVersion ? COLORS.primary : (expandedVersion === v.id ? COLORS.borderStrong : COLORS.border)
+                      background: isMainVersion ? "var(--fomo-secondary-bg, rgba(187,150,228,0.05))" : (expandedVersion === v.id ? "var(--fomo-pill-inactive-bg, var(--color-hover))" : "var(--fomo-card-bg, var(--color-secondary-bg))"),
+                      borderColor: isMainVersion ? "var(--color-primary)" : (expandedVersion === v.id ? "var(--fomo-card-hover-border, var(--color-border-strong))" : "var(--fomo-border, var(--color-border))")
                     }}
                   >
                     <div 
@@ -811,9 +1228,9 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
       onClick={onClick}
       className={`px-2.5 py-2 text-xs font-bold rounded-t-lg transition-all flex items-center gap-1.5 shrink-0 ${active ? "border-b-2" : "opacity-40 hover:opacity-100"}`}
       style={{ 
-        background: active ? "var(--color-secondary-bg)" : "transparent",
+        background: active ? "var(--fomo-card-bg, var(--color-secondary-bg))" : "transparent",
         borderColor: COLORS.primary,
-        color: active ? COLORS.primary : COLORS.muted
+        color: active ? COLORS.primary : "var(--fomo-text-subtle, var(--color-muted))"
       }}
     >
       {icon}
@@ -824,17 +1241,17 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
 
 function EnvironmentBadge({ type, label, icon }: { type: string, label: string, icon: React.ReactNode }) {
   const colorMap: Record<string, string> = {
-    required: COLORS.emerald,
-    optional: COLORS.gold,
-    unsupported: COLORS.red,
-    unknown: COLORS.muted
+    required: "#10b981",
+    optional: "#d97706",
+    unsupported: "#ef4444",
+    unknown: "var(--fomo-text-subtle, var(--color-muted))"
   };
   
   const bgMap: Record<string, string> = {
-    required: "rgba(102,200,160,0.15)",
-    optional: "rgba(255,184,0,0.1)",
-    unsupported: "rgba(239,68,68,0.1)",
-    unknown: "rgba(255,255,255,0.05)"
+    required: "rgba(16,185,129,0.15)",
+    optional: "rgba(245,158,11,0.15)",
+    unsupported: "rgba(239,68,68,0.15)",
+    unknown: "var(--fomo-pill-inactive-bg, rgba(255,255,255,0.05))"
   };
 
   return (
@@ -847,4 +1264,73 @@ function EnvironmentBadge({ type, label, icon }: { type: string, label: string, 
       <span>{label}</span>
     </div>
   );
+}
+
+// ── Helper: Detailed Environment Explanations ────────────────────────────────
+function getEnvironmentDetails(clientSide?: string, serverSide?: string) {
+  const c = clientSide || "unknown";
+  const s = serverSide || "unknown";
+
+  if (c === "required" && s === "unsupported") {
+    return {
+      text: "Sólo Cliente (Obligatorio)",
+      desc: "Debe estar instalado exclusivamente en tu juego local. No lo agregues al servidor.",
+      color: "#10b981",
+    };
+  }
+  if (c === "optional" && s === "unsupported") {
+    return {
+      text: "Sólo Cliente (Opcional)",
+      desc: "Mod cosmético o utilitario. Es opcional y no se requiere en el servidor.",
+      color: "#34d399",
+    };
+  }
+  if (c === "unsupported" && s === "required") {
+    return {
+      text: "Sólo Servidor (Obligatorio)",
+      desc: "Se ejecuta únicamente en el servidor. Los clientes no necesitan tenerlo instalado.",
+      color: "#ef4444",
+    };
+  }
+  if (c === "unsupported" && s === "optional") {
+    return {
+      text: "Sólo Servidor (Opcional)",
+      desc: "Optimización o herramienta del servidor opcional. No la instales en tu juego local.",
+      color: "#f87171",
+    };
+  }
+  if (c === "required" && s === "required") {
+    return {
+      text: "Cliente y Servidor (Obligatorio)",
+      desc: "Debe estar instalado obligatoriamente tanto en el juego local como en el servidor.",
+      color: "#3b82f6",
+    };
+  }
+  if (c === "optional" && s === "optional") {
+    return {
+      text: "Cliente y Servidor (Opcional)",
+      desc: "Añade ventajas si está en ambos lados, pero no es estrictamente requerido en ninguno.",
+      color: "#6366f1",
+    };
+  }
+  if (c === "required" && s === "optional") {
+    return {
+      text: "Cliente Obligatorio • Servidor Opcional",
+      desc: "Es fundamental tenerlo en el juego local. En el servidor es opcional.",
+      color: "#a855f7",
+    };
+  }
+  if (c === "optional" && s === "required") {
+    return {
+      text: "Servidor Obligatorio • Cliente Opcional",
+      desc: "El servidor lo exige obligatoriamente. Para el juego local es opcional.",
+      color: "#ec4899",
+    };
+  }
+
+  return {
+    text: `Cliente: ${c.toUpperCase()} • Servidor: ${s.toUpperCase()}`,
+    desc: "Revisar las especificaciones y manual de instalación oficial del creador.",
+    color: "var(--fomo-text-muted, var(--color-muted))",
+  };
 }

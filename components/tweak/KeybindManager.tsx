@@ -439,22 +439,22 @@ function KeybindRow({ keybind, editing, onEdit, onSave, onCancel, formatKeyDispl
   return (
     <div 
       onClick={onEdit}
-      className={`flex items-center justify-between p-3 hover:bg-white/5 cursor-pointer transition-all group ${
+      className={`flex items-center justify-between p-3 hover:bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] cursor-pointer transition-all group ${
         isOrphaned ? "text-amber-400/70" : ""
       }`}
     >
       <div className="flex items-center gap-3">
-        <span className="text-sm">{keybind.name}</span>
+        <span className="text-sm text-[var(--color-foreground)] font-medium">{keybind.name}</span>
         {keybind.conflicts && keybind.conflicts.length > 0 && (
           <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
         )}
         {isOrphaned && <Ghost className="w-3.5 h-3.5 text-amber-400" />}
       </div>
       <div className="flex items-center gap-2">
-        <span className={`px-2 py-1 rounded-lg text-xs font-mono ${
+        <span className={`px-2 py-1 rounded-lg text-xs font-mono border transition-all ${
           keybind.conflicts && keybind.conflicts.length > 0
-            ? "bg-rose-500/20 text-rose-400"
-            : "bg-white/10 text-[var(--color-muted)]"
+            ? "bg-rose-500/20 text-rose-500 border-rose-500/30"
+            : "bg-[color-mix(in_srgb,var(--color-foreground)_5%,transparent)] text-[var(--color-foreground)] border-[var(--color-border)] opacity-85"
         }`}>
           {formatKeyDisplay(keybind.key)}
         </span>

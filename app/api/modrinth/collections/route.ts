@@ -89,9 +89,9 @@ async function tryFetchUserCollections(userId: string, headers: Record<string, s
   const collections: any[] = [];
   const seenIds = new Set<string>();
   
-  // 1. Fetch user's OWN collections from v2 API
+  // 1. Fetch user's OWN collections from v3 API
   try {
-    const res = await fetch(`${MODRINTH_API}/user/${userId}/collections`, { headers, cache: "no-store" });
+    const res = await fetch(`${MODRINTH_API_V3}/user/${userId}/collections`, { headers, cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -103,10 +103,10 @@ async function tryFetchUserCollections(userId: string, headers: Record<string, s
         }
       }
     } else {
-      console.error("[Modrinth API] Error fetching user collections from v2:", res.status, await res.text().catch(() => ""));
+      console.error("[Modrinth API] Error fetching user collections from v3:", res.status, await res.text().catch(() => ""));
     }
   } catch (err) {
-    console.error("[Modrinth API] Error fetching user collections from v2:", err);
+    console.error("[Modrinth API] Error fetching user collections from v3:", err);
   }
 
   // 2. Fetch FOLLOWED collections (as backup)
@@ -156,75 +156,37 @@ function mapCollection(coll: any): CollectionEntry {
 // ── GET — Listar colecciones del usuario autenticado ──────────────────────────
 
 export async function GET(_req: NextRequest) {
-  const headers = buildHeaders();
+  const { searchParams } = new URL(_req.url);
+  const collectionId = searchParams.get("collectionId");
+  const tokenHeaders = buildHeaders();
 
-  if (!headers) {
-    return NextResponse.json(
-      {
-        error:       "Token de Modrinth no configurado",
-        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Copialo y agregalo en los Ajustes del Sistema (Configuración) dentro de la sección Conectividad.",
-        url: "https://modrinth.com/settings/pats",
-      },
-      { status: 401 }
-    );
-  }
+  // Si se pide una colección específica, es pública por definición (a menos que sea 'followed-projects' que sí requiere login)
+  if (collectionId && collectionId !== "followed-projects") {
+    const headers: Record<string, string> = tokenHeaders ?? {
+      "User-Agent": "MIM-App/1.0 (contact@mim.local)",
+    };
 
-  try {
-    const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
-    if (!profileRes.ok) {
-      // Si es 401, el token es inválido o expiró
-      if (profileRes.status === 401) {
-        return NextResponse.json(
-          {
-            error: "Token de Modrinth inválido o expirado",
-            instrucciones: "1. Verificá que tu Personal Access Token sea válido en https://modrinth.com/settings/pats. 2. Si expiró, creá uno nuevo. 3. Actualizalo en los Ajustes de la aplicación (Configuración) dentro de Conectividad.",
-            url: "https://modrinth.com/settings/pats",
-          },
-          { status: 401 }
-        );
-      }
-      return NextResponse.json(
-        { error: `No se pudo obtener perfil de Modrinth: ${profileRes.status}` },
-        { status: 502 }
-      );
-    }
-    const profile = await profileRes.json();
-    const userId: string = profile.id;
-    const username: string = profile.username;
-
-    // Si se pide los mods de 'followed-projects'
-    const { searchParams } = new URL(_req.url);
-    const collectionId = searchParams.get("collectionId");
-
-    if (collectionId === "followed-projects") {
-      const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers });
-      if (!followsRes.ok) {
-        return NextResponse.json({ error: "Error al cargar proyectos seguidos" }, { status: 502 });
-      }
-      const follows = await followsRes.json();
-      
-      const mods = follows.map((m: any) => ({
-        projectId: m.id || m.project_id,
-        slug: m.slug,
-        title: m.title || m.name,
-        description: m.description,
-        iconUrl: m.icon_url || null,
-        author: "Modrinth", 
-        downloads: m.downloads || 0,
-        follows: m.followers || 0,
-        latestVersion: null,
-        categories: m.categories || [],
-        dateCreated: m.published || "",
-        url: `https://modrinth.com/project/${m.slug}`,
-        projectType: m.project_type || "mod",
-      }));
-      return NextResponse.json({ mods });
-    }
-
-    if (collectionId) {
+    try {
       const collectionRes = await fetch(`${MODRINTH_API_V3}/collection/${encodeURIComponent(collectionId)}`, { headers, cache: "no-store" });
       if (!collectionRes.ok) {
-        return NextResponse.json({ error: "No se pudo cargar la colección" }, { status: 502 });
+        const errorText = await collectionRes.text().catch(() => "");
+        console.error(`[Modrinth API] Error fetching collection "${collectionId}":`, collectionRes.status, errorText);
+        
+        let status = 502;
+        let errorMsg = "No se pudo cargar la colección";
+        
+        if (collectionRes.status === 404) {
+          status = 404;
+          errorMsg = `Colección no encontrada: "${collectionId}"`;
+        } else if (collectionRes.status === 401 || collectionRes.status === 403) {
+          status = collectionRes.status;
+          errorMsg = "No autorizado para acceder a esta colección (es privada)";
+        } else if (collectionRes.status === 429) {
+          status = 429;
+          errorMsg = "Límite de peticiones de Modrinth excedido";
+        }
+        
+        return NextResponse.json({ error: errorMsg, details: errorText }, { status });
       }
 
       const collection = await collectionRes.json();
@@ -235,26 +197,150 @@ export async function GET(_req: NextRequest) {
 
       const projectsRes = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(projectIds)}`, { headers, cache: "no-store" });
       if (!projectsRes.ok) {
-        return NextResponse.json({ error: "No se pudieron cargar los proyectos de la colección" }, { status: 502 });
+        const errorText = await projectsRes.text().catch(() => "");
+        console.error(`[Modrinth API] Error fetching projects for collection "${collectionId}":`, projectsRes.status, errorText);
+        
+        let status = 502;
+        let errorMsg = "No se pudieron cargar los proyectos de la colección";
+        
+        if (projectsRes.status === 429) {
+          status = 429;
+          errorMsg = "Límite de peticiones de Modrinth excedido";
+        }
+        
+        return NextResponse.json({ error: errorMsg, details: errorText }, { status });
       }
 
       const projects = await projectsRes.json();
-      const mods = projects.map((m: any) => ({
-        projectId: m.id,
-        slug: m.slug,
-        title: m.title,
-        description: m.description,
-        iconUrl: m.icon_url ?? null,
-        author: username,
-        downloads: m.downloads || 0,
-        follows: m.followers || 0,
-        latestVersion: null,
-        categories: m.categories || [],
-        dateCreated: m.published || "",
-        url: `https://modrinth.com/project/${m.slug}`,
-        projectType: m.project_type || "mod",
+      const mods = await Promise.all(projects.map(async (m: any) => {
+        let authorName = "Desconocido"; // Fallback para colecciones públicas
+        try {
+          const membersRes = await fetch(`${MODRINTH_API}/project/${m.id}/members`, { headers, cache: "force-cache" });
+          if (membersRes.ok) {
+            const members = await membersRes.json();
+            const owner = members.find((member: any) => 
+              member.role?.toLowerCase() === "owner" || member.is_owner === true
+            );
+            const primaryMember = owner || members[0];
+            if (primaryMember?.user?.username) {
+              authorName = primaryMember.user.username;
+            }
+          }
+        } catch (err) {
+          console.error(`[Modrinth API] Error resolving author for project ${m.id}:`, err);
+        }
+
+        return {
+          projectId: m.id,
+          slug: m.slug,
+          title: m.title,
+          description: m.description,
+          iconUrl: m.icon_url ?? null,
+          author: authorName,
+          downloads: m.downloads || 0,
+          follows: m.followers || 0,
+          latestVersion: null,
+          categories: m.categories || [],
+          dateCreated: m.published || "",
+          url: `https://modrinth.com/project/${m.slug}`,
+          projectType: m.project_type || "mod",
+        };
       }));
 
+      return NextResponse.json({ mods });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Error desconocido";
+      console.error("[/api/modrinth/collections] GET Specific Collection — Error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  // A partir de aquí sí se requiere autenticación para interactuar con las colecciones del usuario logueado
+  if (!tokenHeaders) {
+    return NextResponse.json(
+      {
+        error:       "Token de Modrinth no configurado",
+        instrucciones: "1. Andá a https://modrinth.com/settings/pats y creá un Personal Access Token. 2. Copialo y agregalo en los Ajustes del Sistema (Configuración) dentro de la sección Conectividad.",
+        url: "https://modrinth.com/settings/pats",
+      },
+      { status: 401 }
+    );
+  }
+
+  const headers = tokenHeaders;
+
+  try {
+    const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
+    if (!profileRes.ok) {
+      const errorText = await profileRes.text().catch(() => "");
+      console.error("[Modrinth API] Error fetching user profile:", profileRes.status, errorText);
+      
+      // Si es 401, el token es inválido o expiró
+      if (profileRes.status === 401) {
+        return NextResponse.json(
+          {
+            error: "Token de Modrinth inválido o expirado",
+            instrucciones: "1. Verificá que tu Personal Access Token sea válido en https://modrinth.com/settings/pats. 2. Si expiró, creá uno nuevo. 3. Actualizalo en los Ajustes de la aplicación (Configuración) dentro de Conectividad.",
+            url: "https://modrinth.com/settings/pats",
+            details: errorText
+          },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json(
+        { error: `No se pudo obtener perfil de Modrinth: ${profileRes.status}`, details: errorText },
+        { status: 502 }
+      );
+    }
+    const profile = await profileRes.json();
+    const userId: string = profile.id;
+    const username: string = profile.username;
+
+    // Si se pide los mods de 'followed-projects'
+    if (collectionId === "followed-projects") {
+      const followsRes = await fetch(`${MODRINTH_API}/user/${userId}/follows`, { headers });
+      if (!followsRes.ok) {
+        const errorText = await followsRes.text().catch(() => "");
+        console.error(`[Modrinth API] Error fetching followed projects for user ${userId}:`, followsRes.status, errorText);
+        return NextResponse.json({ error: "Error al cargar proyectos seguidos", details: errorText }, { status: 502 });
+      }
+      const follows = await followsRes.json();
+      
+      const mods = await Promise.all(follows.map(async (m: any) => {
+        const pId = m.project_id || m.id;
+        let authorName = "Desconocido";
+        try {
+          const membersRes = await fetch(`${MODRINTH_API}/project/${pId}/members`, { headers, cache: "force-cache" });
+          if (membersRes.ok) {
+            const members = await membersRes.json();
+            const owner = members.find((member: any) => 
+              member.role?.toLowerCase() === "owner" || member.is_owner === true
+            );
+            const primaryMember = owner || members[0];
+            if (primaryMember?.user?.username) {
+              authorName = primaryMember.user.username;
+            }
+          }
+        } catch (err) {
+          console.error(`[Modrinth API] Error resolving author for followed project ${pId}:`, err);
+        }
+
+        return {
+          projectId: pId,
+          slug: m.slug,
+          title: m.title || m.name,
+          description: m.description,
+          iconUrl: m.icon_url || null,
+          author: authorName, 
+          downloads: m.downloads || 0,
+          follows: m.followers || 0,
+          latestVersion: null,
+          categories: m.categories || [],
+          dateCreated: m.published || "",
+          url: `https://modrinth.com/project/${m.slug}`,
+          projectType: m.project_type || "mod",
+        };
+      }));
       return NextResponse.json({ mods });
     }
 

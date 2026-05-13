@@ -20,7 +20,8 @@ import {
   ShieldX,
   History,
   Activity,
-  Search
+  Search,
+  Sparkles
 } from "lucide-react";
 import { eventBus } from "@/lib/eventBus";
 import { incidentManager, Incident } from "@/lib/incidentManager";
@@ -93,6 +94,88 @@ export function AlertSidebar({
   }>>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
 
+  // Followed mods and authors state tracking
+  const [followedMods, setFollowedMods] = useState<any[]>([]);
+  const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
+  const [newAuthorMods, setNewAuthorMods] = useState<any[]>([]);
+  const [scanningAuthors, setScanningAuthors] = useState(false);
+
+  useEffect(() => {
+    const loadFollowed = () => {
+      try {
+        const storedMods = localStorage.getItem("mim_followed_mods");
+        if (storedMods) setFollowedMods(JSON.parse(storedMods));
+        else setFollowedMods([]);
+
+        const storedAuthors = localStorage.getItem("mim_followed_authors");
+        if (storedAuthors) setFollowedAuthors(JSON.parse(storedAuthors));
+        else setFollowedAuthors([]);
+      } catch (e) {
+        console.error("Error loading followed items in AlertSidebar:", e);
+      }
+    };
+
+    loadFollowed();
+
+    window.addEventListener("mim-followed-mods-changed", loadFollowed);
+    window.addEventListener("mim-followed-authors-changed", loadFollowed);
+
+    return () => {
+      window.removeEventListener("mim-followed-mods-changed", loadFollowed);
+      window.removeEventListener("mim-followed-authors-changed", loadFollowed);
+    };
+  }, []);
+
+  // Scan followed creators for newly published mod projects (within 30 days)
+  useEffect(() => {
+    if (!sidebarOpen || followedAuthors.length === 0) {
+      setNewAuthorMods([]);
+      return;
+    }
+
+    const checkNewAuthorMods = async () => {
+      setScanningAuthors(true);
+      const newMods: any[] = [];
+      const installedProjectIds = new Set(library.map(l => l.meta?.modId).filter(Boolean));
+      const installedNames = new Set(library.map(l => l.meta?.modName?.toLowerCase()).filter(Boolean));
+
+      for (const author of followedAuthors) {
+        try {
+          const res = await fetch(`https://api.modrinth.com/v2/user/${author}/projects`);
+          if (res.ok) {
+            const projects = await res.json();
+            for (const proj of projects) {
+              const publishedDate = new Date(proj.published);
+              const isRecent = (Date.now() - publishedDate.getTime()) < 30 * 24 * 60 * 60 * 1000;
+              const isInstalled = installedProjectIds.has(proj.id) || installedNames.has(proj.title?.toLowerCase());
+
+              if (isRecent && !isInstalled) {
+                newMods.push({
+                  path: `author-new-mod:${proj.id}`,
+                  title: proj.title,
+                  slug: proj.slug,
+                  author: author,
+                  latestVersion: proj.latest_version || "Nuevo",
+                  published: proj.published,
+                  description: proj.description,
+                  iconUrl: proj.icon_url,
+                  _source: "modrinth",
+                  isNewAuthorMod: true
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to check new projects for author ${author}:`, e);
+        }
+      }
+      setNewAuthorMods(newMods);
+      setScanningAuthors(false);
+    };
+
+    checkNewAuthorMods();
+  }, [sidebarOpen, followedAuthors, library]);
+
   const [seenVersions, setSeenVersions] = useState<Record<string, string>>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -141,11 +224,16 @@ export function AlertSidebar({
     const shadersList: [string, any][] = [];
     const rpsList: [string, any][] = [];
 
+    const followedModIds = new Set(followedMods.map(m => m.projectId));
+
     Object.entries(modrinthStatus).forEach(([path, s]) => {
       if (s.status !== "update_available" || !s.latestVersion) return;
 
       if (path.startsWith("collection:")) {
         const projectId = path.replace("collection:", "");
+        // Strict Filter: Only alert on general collection items if they are specifically followed by the user
+        if (!followedModIds.has(projectId)) return;
+
         const lastSeen = seenVersions[projectId];
         if (lastSeen && lastSeen !== s.latestVersion) {
           collsList.push([path, s]);
@@ -172,13 +260,24 @@ export function AlertSidebar({
       shaderUpdates: shadersList, 
       resourcePackUpdates: rpsList 
     };
-  }, [modrinthStatus, library, seenVersions, ignoredUpdates]);
+  }, [modrinthStatus, library, seenVersions, ignoredUpdates, followedMods]);
 
   const updates = [
     ...modUpdates,
     ...collectionUpdates,
     ...shaderUpdates,
     ...resourcePackUpdates,
+    ...newAuthorMods.map(m => [m.path, {
+      status: "update_available",
+      title: m.title,
+      slug: m.slug,
+      latestVersion: m.latestVersion,
+      downloadUrl: `https://modrinth.com/mod/${m.slug}`,
+      isNewAuthorMod: true,
+      author: m.author,
+      iconUrl: m.iconUrl,
+      description: m.description
+    }])
   ];
 
   // Unified real-time fetch of configuration errors and SAGE crash logs/security warnings
@@ -458,7 +557,7 @@ export function AlertSidebar({
     const rawFilename = path.substring(path.lastIndexOf("\\") + 1).replace(/\.(zip|jar)$/i, "");
     const displayName = s.title || s.slug ||
       (isCollection
-        ? "Mod Seguido"
+        ? (s.isNewAuthorMod ? s.title : "Mod Seguido")
         : type === "shader" || type === "resourcepack"
           ? rawFilename
           : (mod?.meta?.modName || mod?.fileName));
@@ -480,13 +579,15 @@ export function AlertSidebar({
             <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-subhead text-sm truncate max-w-[70%]" style={{ color: "var(--color-foreground)" }}>
                 {displayName}
               </p>
-              {isCollection && (
+              {s.isNewAuthorMod ? (
+                <span className="px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-500 text-[9px] font-bold border border-pink-500/20 uppercase shrink-0 animate-pulse">Lanzamiento</span>
+              ) : isCollection ? (
                 <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 uppercase shrink-0">Seguido</span>
-              )}
+              ) : null}
               {type === "shader" && (
                 <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold border border-yellow-500/20 uppercase shrink-0">Shader</span>
               )}
@@ -495,7 +596,9 @@ export function AlertSidebar({
               )}
             </div>
             <div className="flex items-center gap-2 mt-1 text-xs">
-              {!isCollection && hasCurrentVersion ? (
+              {s.isNewAuthorMod ? (
+                <span style={{ color: "var(--color-muted)" }}>de <span className="text-pink-400 font-bold">{s.author}</span> • v{s.latestVersion}</span>
+              ) : !isCollection && hasCurrentVersion ? (
                 <>
                   <span style={{ color: "var(--color-muted)" }}>v{currentVersion}</span>
                   <span style={{ color: "var(--color-accent)" }}>→</span>
@@ -508,7 +611,33 @@ export function AlertSidebar({
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
-          {isCollection ? (
+          {s.isNewAuthorMod ? (
+            <>
+              <ActionButton
+                primary
+                onClick={() => {
+                  const modHit = {
+                    projectId: path.replace("author-new-mod:", ""),
+                    title: s.title,
+                    slug: s.slug || "",
+                    author: s.author,
+                    description: s.description || "",
+                    iconUrl: s.iconUrl,
+                    url: `https://modrinth.com/mod/${s.slug}`,
+                    downloads: 0,
+                    follows: 0,
+                    _source: "modrinth",
+                    projectType: "mod"
+                  };
+                  window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                  window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                  setSidebarOpen(false);
+                }}
+                icon={<Search className="w-3.5 h-3.5" />}
+                label="Explorar (FOMO)"
+              />
+            </>
+          ) : isCollection ? (
             <>
               <ActionButton
                 primary
@@ -553,17 +682,19 @@ export function AlertSidebar({
           
           <div className="w-full flex gap-2 mt-1">
             <ActionButton
-              onClick={() => window.open(`https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
+              onClick={() => window.open(s.isNewAuthorMod ? `https://modrinth.com/mod/${s.slug}` : `https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")}
               icon={<Globe className="w-3.5 h-3.5" />}
               label="Web"
               small
             />
-            <ActionButton
-              onClick={() => setExpandedChangelog(expandedChangelog === path ? null : path)}
-              icon={expandedChangelog === path ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              label="Más Info"
-              small
-            />
+            {!s.isNewAuthorMod && (
+              <ActionButton
+                onClick={() => setExpandedChangelog(expandedChangelog === path ? null : path)}
+                icon={expandedChangelog === path ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                label="Más Info"
+                small
+              />
+            )}
           </div>
         </div>
 
@@ -898,6 +1029,32 @@ export function AlertSidebar({
           >
             <div className="flex flex-col gap-2">
               {collectionUpdates.map(([path, s]) => renderUpdateCard(path, s, "collection"))}
+            </div>
+          </AlertSection>
+        )}
+
+        {/* ──────── 2.5 NEW CREATOR RELEASES SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "updates") && newAuthorMods.length > 0 && (
+          <AlertSection
+            icon={<Sparkles className="w-4 h-4" />}
+            title="Novedades de Creadores Seguidos"
+            count={newAuthorMods.length}
+            color="var(--color-primary)"
+          >
+            <div className="flex flex-col gap-2">
+              {newAuthorMods.map((m) => {
+                const s = {
+                  title: m.title,
+                  slug: m.slug,
+                  latestVersion: m.latestVersion,
+                  downloadUrl: `https://modrinth.com/mod/${m.slug}`,
+                  isNewAuthorMod: true,
+                  author: m.author,
+                  iconUrl: m.iconUrl,
+                  description: m.description
+                };
+                return renderUpdateCard(m.path, s, "collection");
+              })}
             </div>
           </AlertSection>
         )}

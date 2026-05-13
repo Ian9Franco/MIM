@@ -34,6 +34,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const [query, setQuery] = useState("");
   const [sinytraActive, setSinytraActive] = useState(false);
   const [page, setPage] = useState(1);
+  const [onlyExclusives, setOnlyExclusives] = useState(false);
 
   // Persistence for filters and search
   useEffect(() => {
@@ -51,6 +52,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         if (state.query) setQuery(state.query);
         if (state.sinytraActive !== undefined) setSinytraActive(state.sinytraActive);
         if (state.page) setPage(state.page);
+        if (state.onlyExclusives !== undefined) setOnlyExclusives(state.onlyExclusives);
       } catch (e) {
         console.warn("Error loading FOMO state from localStorage", e);
       }
@@ -58,9 +60,9 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   }, []);
 
   useEffect(() => {
-    const state = { source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page };
+    const state = { source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page, onlyExclusives };
     localStorage.setItem("fomo_discover_state", JSON.stringify(state));
-  }, [source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page]);
+  }, [source, loader, gameVersions, projectType, categories, environments, sortOrder, query, sinytraActive, page, onlyExclusives]);
 
   // Resetear a página 1 al cambiar cualquier filtro o búsqueda (EXCEPTO al cargar el estado inicial)
   const isInitialMount = useRef(true);
@@ -72,7 +74,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     setPage(1);
     setMods([]);
     setTotal(0);
-  }, [loader, gameVersions, projectType, categories, environments, sortOrder, query, source]);
+  }, [loader, gameVersions, projectType, categories, environments, sortOrder, query, source, onlyExclusives]);
 
   // Limpiar categorías y entornos al cambiar de projectType (el reset de página ya lo hace el efecto de arriba)
   useEffect(() => {
@@ -256,7 +258,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     }
 
     setLoading(false);
-  }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page, sinytraActive]);
+  }, [source, loader, gameVersions, categories, environments, projectType, sortOrder, query, page, sinytraActive, onlyExclusives]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -488,7 +490,8 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           ...prev, 
           body: pData.body,
           client_side: pData.client_side,
-          server_side: pData.server_side
+          server_side: pData.server_side,
+          members: pData.members || []
         } : null);
       }
     } catch (err) {
@@ -558,7 +561,8 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           _source: activeSource,
           body: pData.body || "",
           client_side: pData.client_side,
-          server_side: pData.server_side
+          server_side: pData.server_side,
+          members: pData.members || []
         };
       } else {
         const logoUrl = pData.logo?.thumbnailUrl || pData.logo?.url || null;
@@ -588,7 +592,14 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
           _source: activeSource as "modrinth" | "curseforge",
           body: pData.body || "",
           client_side: pData.client_side || "required",
-          server_side: pData.server_side || "required"
+          server_side: pData.server_side || "required",
+          members: (pData.authors || []).map((aut: any) => ({
+            id: String(aut.id || aut.name),
+            username: aut.name,
+            name: aut.name,
+            avatarUrl: null,
+            role: "Creator"
+          }))
         };
       }
 
@@ -619,6 +630,15 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     }
   }, [source, loader, projectType, sinytraActive, showStatus]);
 
+  const isCheckingExclusives = mods.length > 0 && mods.some(m => !m.availability || m.availability.checking);
+
+  const displayedMods = onlyExclusives 
+    ? mods.filter(m => m.availability && !m.availability.checking && (m.availability.modrinth !== m.availability.curseforge))
+    : mods;
+
+  const displayedTotal = onlyExclusives ? displayedMods.length : total;
+  const displayedTotalPages = onlyExclusives ? 1 : totalPages;
+
   return {
     source, setSource, sourceError,
     loader, setLoader,
@@ -628,8 +648,8 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     projectType, setProjectType,
     sortOrder, setSortOrder,
     query, setQuery,
-    loading, refetch,
-    mods, total, page, setPage, totalPages,
+    loading: loading || (onlyExclusives && isCheckingExclusives), refetch,
+    mods: displayedMods, total: displayedTotal, page, setPage, totalPages: displayedTotalPages,
     downloading, handleDownload,
     handleDownloadDependency,
     selectingVersionFor, setSelectingVersionFor,
@@ -640,6 +660,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     confirmDownloadWithDeps,
     selectedMods, toggleModSelection, clearSelection,
     sinytraActive, setSinytraActive,
+    onlyExclusives, setOnlyExclusives,
     sortOptions: SORT_OPTIONS
   };
 }

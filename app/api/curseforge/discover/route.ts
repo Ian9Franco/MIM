@@ -181,6 +181,7 @@ interface CurseForgeEntry {
 /** Shape crudo de la API de CurseForge para tipado interno. */
 interface RawCFMod {
   id: number;
+  classId: number;
   name: string;
   summary: string;
   logo?: { url: string };
@@ -240,6 +241,16 @@ export async function GET(req: NextRequest) {
   const q           = searchParams.get("q")?.trim()   ?? "";
   const categories  = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
 
+  let searchFilter = q;
+  let filterByAuthor: string | null = null;
+  if (q.startsWith("author:")) {
+    const authorName = q.replace(/^author:/i, "").trim();
+    if (authorName) {
+      searchFilter = authorName;
+      filterByAuthor = authorName.toLowerCase();
+    }
+  }
+
   const classId    = PROJECT_TYPE_TO_CLASS_ID[projectType] ?? PROJECT_TYPE_TO_CLASS_ID.mod;
   const sortField  = SORT_TO_CF_FIELD[sortParam] ?? 1; // Default to 1 (Featured)
 
@@ -251,40 +262,42 @@ export async function GET(req: NextRequest) {
 
     const params = new URLSearchParams({
       gameId:    MINECRAFT_GAME_ID.toString(),
-      classId:   classId.toString(),
       sortField: sortField.toString(),
       sortOrder: "desc",
       index:     ((page - 1) * pageSize).toString(),
       pageSize:  pageSize.toString(),
     });
 
-    // Filtros de Versión y Loader
-    // En CurseForge API v1, para múltiples versiones se usa gameVersions (plural) y es un array JSON stringificado
-    if (gameVersions.length > 0) {
-      params.set("gameVersions", JSON.stringify(gameVersions));
-    }
-    
-    // Solo aplicar modLoaderType si es un MOD (classId 6)
-    if (classId === 6) {
-      const loaderId = LOADER_TO_CF_ID[loader.toLowerCase()];
-      if (loaderId) params.set("modLoaderType", loaderId.toString());
-    }
+    if (!filterByAuthor) {
+      params.set("classId", classId.toString());
+      
+      // Filtros de Versión y Loader
+      if (gameVersions.length > 0) {
+        params.set("gameVersions", JSON.stringify(gameVersions));
+      }
+      
+      // Solo aplicar modLoaderType si es un MOD (classId 6)
+      if (classId === 6) {
+        const loaderId = LOADER_TO_CF_ID[loader.toLowerCase()];
+        if (loaderId) params.set("modLoaderType", loaderId.toString());
+      }
 
-    // Soporte para múltiples categorías en CurseForge
-    if (categories.length > 0) {
-      const categoryMap = CF_CATEGORY_MAPS[projectType] ?? {};
-      const catIds = (categories as string[])
-        .map((cat: string) => categoryMap[cat] || (isNaN(Number(cat)) ? null : Number(cat)))
-        .filter((id): id is number => id !== null);
+      // Soporte para múltiples categorías en CurseForge
+      if (categories.length > 0) {
+        const categoryMap = CF_CATEGORY_MAPS[projectType] ?? {};
+        const catIds = (categories as string[])
+          .map((cat: string) => categoryMap[cat] || (isNaN(Number(cat)) ? null : Number(cat)))
+          .filter((id): id is number => id !== null);
 
-      if (catIds.length > 0) {
-        params.set("categoryIds", catIds.join(","));
+        if (catIds.length > 0) {
+          params.set("categoryIds", catIds.join(","));
+        }
       }
     }
 
     // Búsqueda por texto (searchFilter)
-    if (q) {
-      params.set("searchFilter", q);
+    if (searchFilter) {
+      params.set("searchFilter", searchFilter);
     }
 
     const res = await fetch(`${CURSEFORGE_API}/mods/search?${params.toString()}`, { headers });
@@ -312,7 +325,7 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
 
     // Mapear al shape unificado con Modrinth para intercambio transparente
-    const mods: CurseForgeEntry[] = (data.data ?? []).map((m: RawCFMod) => {
+    let mods: CurseForgeEntry[] = (data.data ?? []).map((m: RawCFMod) => {
       // Buscar la mejor versión que coincida con los filtros del usuario
       let matchedVersion = null;
       if (gameVersions.length > 0 && m.latestFilesIndexes) {
@@ -323,8 +336,15 @@ export async function GET(req: NextRequest) {
         matchedVersion = m.latestFilesIndexes?.[0]?.gameVersion ?? null;
       }
 
+      let mappedType = projectType;
+      if (m.classId === 12) mappedType = "resourcepack";
+      else if (m.classId === 6) mappedType = "mod";
+      else if (m.classId === 6552) mappedType = "shader";
+      else if (m.classId === 4471) mappedType = "modpack";
+
       return {
         projectId:     m.id.toString(),
+        slug:          m.slug,
         title:         m.name,
         description:   m.summary ?? "",
         iconUrl:       m.logo?.url ?? null,
@@ -332,15 +352,22 @@ export async function GET(req: NextRequest) {
         downloads:     m.downloadCount ?? 0,
         dateCreated:   m.dateCreated ?? "",
         dateUpdated:   m.dateModified ?? "",
-        url:           m.links?.websiteUrl ?? `https://www.curseforge.com/minecraft/${projectType === "mod" ? "mc-mods" : projectType}/${m.slug}`,
+        url:           m.links?.websiteUrl ?? `https://www.curseforge.com/minecraft/${mappedType === "mod" ? "mc-mods" : mappedType}/${m.slug}`,
         categories:    (m.categories ?? []).map((c: { name: string }) => c.name),
         latestVersion: matchedVersion,
-        projectType,
+        projectType:   mappedType,
         allowModDistribution: m.allowModDistribution ?? true,
       };
     });
 
-    const total = data.pagination?.totalCount ?? 0;
+    if (filterByAuthor) {
+      mods = mods.filter(m => m.author.toLowerCase() === filterByAuthor);
+    }
+
+    let total = data.pagination?.totalCount ?? 0;
+    if (filterByAuthor) {
+      total = mods.length;
+    }
 
     return NextResponse.json({
       mods,

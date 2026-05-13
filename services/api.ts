@@ -106,9 +106,21 @@ export async function downloadCollection(collId: string, loader: string, gameVer
 
 export async function fetchOfficialCollections(): Promise<{ collections: CollectionEntry[], error: string | null }> {
   try {
-    const res = await fetch("https://api.modrinth.com/v3/user/modrinth/collections");
-    if (!res.ok) throw new Error("Network error");
-    const data = await res.json();
+    const res = await fetch("/api/modrinth/official");
+    if (!res.ok) throw new Error(`Server proxy error: ${res.status}`);
+    
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid JSON returned from server proxy");
+    }
+
+    if (!Array.isArray(data)) {
+      throw new Error("Expected array of collections");
+    }
+
     const mapped = data.map((c: any) => ({
       id: c.id,
       name: c.name,
@@ -116,7 +128,7 @@ export async function fetchOfficialCollections(): Promise<{ collections: Collect
       projectCount: Array.isArray(c.projects) ? c.projects.length : (c.project_count ?? 0),
       iconUrl: c.icon_url,
       isLocal: false,
-      source: "modrinth",
+      source: "modrinth" as const,
       webUrl: `https://modrinth.com/collection/${c.slug || c.id}`,
       visibility: c.status,
       created: c.created
@@ -127,6 +139,7 @@ export async function fetchOfficialCollections(): Promise<{ collections: Collect
     
     return { collections: mapped, error: null };
   } catch (err) {
+    console.error("fetchOfficialCollections failed:", err);
     return { collections: [], error: "No se pudieron cargar las colecciones oficiales" };
   }
 }

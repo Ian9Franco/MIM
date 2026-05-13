@@ -95,11 +95,32 @@ export function useLibrary(
         console.warn("[useLibrary] Failed to fetch collection mods for updates", e);
       }
 
+      // 2.5 Fetch followed projects from localStorage to check their updates as well
+      let followedModsList: any[] = [];
+      try {
+        const stored = localStorage.getItem("mim_followed_mods");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          followedModsList = parsed.map((m: any) => ({
+            path: `collection:${m.projectId}`,
+            fileName: m.title,
+            meta: {
+              modId: m.projectId,
+              modName: m.title,
+              modVersion: "0.0.0",
+              projectType: m.projectType || "mod"
+            }
+          }));
+        }
+      } catch (e) {
+        console.warn("[useLibrary] Failed to load followed mods for updates check:", e);
+      }
+
       const res = await fetch("/api/modrinth/check-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          mods: [...localMods, ...collectionMods], 
+          mods: [...localMods, ...collectionMods, ...followedModsList], 
           loader: activeProject.loader, 
           gameVersion: activeProject.version,
           forceRefresh: force
@@ -107,7 +128,12 @@ export function useLibrary(
       });
       if (res.ok) {
         const data = await res.json();
-        setModrinthStatus(data.updates || {});
+        const updates = data.updates || {};
+        setModrinthStatus(updates);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mim_modrinth_status", JSON.stringify(updates));
+          window.dispatchEvent(new CustomEvent("mim-modrinth-status-changed", { detail: updates }));
+        }
       }
     } catch (_) {}
     setCheckingUpdates(false);

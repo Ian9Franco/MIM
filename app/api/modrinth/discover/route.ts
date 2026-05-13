@@ -32,9 +32,65 @@ export async function GET(req: NextRequest) {
   const q            = searchParams.get("q")?.trim() ?? "";
   const offset       = (page - 1) * pageSize;
 
+  const headers: Record<string, string> = {
+    "User-Agent": "MIM-App/1.0 (contact@mim.local)",
+  };
+  const apiKey = getApiKey("modrinth");
+  if (apiKey) {
+    headers["Authorization"] = apiKey;
+  }
+
+  let queryText = q;
   const facetsArray: string[][] = [
     [`project_type:${projectType}`],
   ];
+
+  // If search query is an author query (author:username)
+  if (q.startsWith("author:")) {
+    const authorName = q.replace(/^author:/i, "").trim();
+    if (authorName) {
+      try {
+        const userProjectsRes = await fetch(`${MODRINTH_API}/user/${authorName}/projects`, { headers });
+        if (userProjectsRes.ok) {
+          const projects = await userProjectsRes.json();
+          
+          // Show the complete catalog of the creator without any restriction
+          let filtered = [...(projects ?? [])];
+          
+          // 5. Paginate
+          const totalHits = filtered.length;
+          const paginated = filtered.slice(offset, offset + pageSize);
+          
+          // 6. Map to same ModHit structure as Search Hits
+          const mods = paginated.map((p: any) => ({
+            projectId:   p.id,
+            slug:        p.slug,
+            title:       p.title,
+            description: p.description || "",
+            iconUrl:     p.icon_url ?? null,
+            author:      authorName, // We are searching for this author so set it!
+            downloads:   p.downloads || 0,
+            follows:     p.followers || 0,
+            latestVersion: null,
+            categories:  p.categories ?? [],
+            dateCreated: p.published || "",
+            url:         `https://modrinth.com/${p.project_type ?? "mod"}/${p.slug}`,
+            projectType: p.project_type ?? "mod",
+          }));
+          
+          return NextResponse.json({
+            mods,
+            total: totalHits,
+            page,
+            pageSize,
+            totalPages: Math.ceil(totalHits / pageSize),
+          });
+        }
+      } catch (err) {
+        console.warn("[/api/modrinth/discover] Error fetching direct user projects, falling back:", err);
+      }
+    }
+  }
 
   // Game Versions (OR)
   if (projectType !== "datapack" && gameVersions.length > 0) {
@@ -72,20 +128,12 @@ export async function GET(req: NextRequest) {
 
   const facets = JSON.stringify(facetsArray);
 
-  const headers: Record<string, string> = {
-    "User-Agent": "MIM-App/1.0 (contact@mim.local)",
-  };
-  const apiKey = getApiKey("modrinth");
-  if (apiKey) {
-    headers["Authorization"] = apiKey;
-  }
-
   try {
     const res = await fetch(
       `${MODRINTH_API}/search` +
         `?facets=${encodeURIComponent(facets)}` +
         `&index=${sort}` +
-        (q ? `&query=${encodeURIComponent(q)}` : "") +
+        (queryText ? `&query=${encodeURIComponent(queryText)}` : "") +
         `&limit=${pageSize}` +
         `&offset=${offset}`,
       { headers }

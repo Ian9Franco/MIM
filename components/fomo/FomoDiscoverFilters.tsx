@@ -69,6 +69,8 @@ interface FomoDiscoverFiltersProps {
   onSort:         (v: SortOrder) => void;
   onQuery:        (v: string) => void;
   onRefresh:      () => void;
+  onlyExclusives: boolean;
+  onOnlyExclusives: (v: boolean) => void;
 }
 
 // Icon mapping for categories
@@ -204,8 +206,9 @@ const SORT_ICONS: Record<string, React.ReactNode> = {
 };
 
 export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
-  loader, gameVersions, projectType, categories, environments, sortOrder, loading, source,
+  loader, gameVersions, projectType, categories, environments, sortOrder, loading, source, query,
   onLoader, onVersions, onProjectType, onCategories, onEnvironments, onSort, onQuery, onRefresh,
+  onlyExclusives, onOnlyExclusives,
 }: FomoDiscoverFiltersProps) {
   const isCurseForge = source === "curseforge";
   const [expandedCats, setExpandedCats] = useState<string[]>([]);
@@ -238,6 +241,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
     onEnvironments([]);
     onVersions(["1.20.1"]); 
     onQuery("");
+    onOnlyExclusives(false);
   };
 
   const currentFilters = useMemo(() => {
@@ -267,32 +271,48 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
     return [];
   }, [projectType, isCurseForge]);
 
+  const isAuthorSearch = query.startsWith("author:");
+
   return (
     <div className="flex flex-col gap-6 h-full overflow-hidden">
       {/* Basic Controls */}
       <div className="flex flex-col gap-3 shrink-0">
         <div className="relative w-full">
           <select
-            value={projectType}
+            value={isAuthorSearch ? "" : projectType}
             onChange={(e) => onProjectType(e.target.value)}
-            className="w-full text-xs font-bold fomo-select-element border rounded-xl pl-3.5 pr-10 py-2.5 outline-none appearance-none cursor-pointer transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            disabled={isAuthorSearch}
+            className={`w-full text-xs font-bold fomo-select-element border rounded-xl pl-3.5 pr-10 py-2.5 outline-none appearance-none cursor-pointer transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/20 ${
+              isAuthorSearch ? "opacity-60 bg-white/5 cursor-not-allowed border-white/10 text-white/40" : ""
+            }`}
           >
-            {PROJECT_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>{pt.label}</option>)}
+            {isAuthorSearch ? (
+              <option value="">Cualquier Tipo (Mods, Texturas, Shaders...)</option>
+            ) : (
+              PROJECT_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>{pt.label}</option>)
+            )}
           </select>
         </div>
 
-        {projectType === "mod" && (
-          <div className="relative w-full">
-            <select
-              value={loader}
-              onChange={(e) => onLoader(e.target.value)}
-              className="w-full text-xs font-bold fomo-select-element border rounded-xl pl-3.5 pr-10 py-2.5 outline-none appearance-none cursor-pointer transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-            >
-              <option value="unknown" style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>Cualquier Loader</option>
-              {LOADERS.map(l => <option key={l} value={l} style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
-            </select>
-          </div>
-        )}
+        <div className="relative w-full">
+          <select
+            value={isAuthorSearch ? "" : loader}
+            onChange={(e) => onLoader(e.target.value)}
+            disabled={isAuthorSearch}
+            className={`w-full text-xs font-bold fomo-select-element border rounded-xl pl-3.5 pr-10 py-2.5 outline-none appearance-none cursor-pointer transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/20 ${
+              isAuthorSearch ? "opacity-60 bg-white/5 cursor-not-allowed border-white/10 text-white/40" : ""
+            }`}
+          >
+            {isAuthorSearch ? (
+              <option value="">Cualquier Modloader (Forge, Fabric, Quilt...)</option>
+            ) : (
+              <>
+                <option value="unknown" style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>Cualquier Loader</option>
+                {LOADERS.map(l => <option key={l} value={l} style={{ background: "var(--fomo-card-bg)", color: "var(--fomo-text-primary)" }}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
+              </>
+            )}
+          </select>
+        </div>
       </div>
 
       {/* Dynamic Filters Section */}
@@ -303,126 +323,171 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters({
           maskImage: "linear-gradient(to bottom, black 92%, transparent 100%)",
         }}
       >
+        {/* Exclusivity Toggle */}
+        <div className="flex flex-col gap-3">
+          <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
+            <Sparkles className="w-3 h-3 text-orange-400" /> Exclusividad
+          </p>
+          <button
+            type="button"
+            onClick={() => onOnlyExclusives(!onlyExclusives)}
+            className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-[0.65rem] font-bold transition-all ${
+              onlyExclusives 
+                ? "bg-orange-500/10 text-orange-400 border-orange-500/30" 
+                : "fomo-pill-inactive"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${onlyExclusives ? "bg-orange-400 animate-pulse" : "bg-white/20"}`} />
+              <span>Solo Exclusivos</span>
+            </div>
+            <div className={`w-6.5 h-4 rounded-full p-0.5 transition-colors ${onlyExclusives ? "bg-orange-500" : "bg-white/10"}`}>
+              <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${onlyExclusives ? "translate-x-2.5" : "translate-x-0"}`} />
+            </div>
+          </button>
+        </div>
+
         {/* Game Versions */}
         <div className="flex flex-col gap-3">
           <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
             <Globe className="w-3 h-3" /> Versión
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {GAME_VERSIONS.map(v => {
-              const active = gameVersions.includes(v);
-              const main = v === "1.20.1" || v === "1.21.1";
-              return (
-                <button
-                  key={v}
-                  onClick={() => toggleFilter(gameVersions, onVersions, v)}
-                  className={`px-2 py-1 rounded-lg text-[0.65rem] font-bold border transition-all ${
-                    active 
-                      ? "bg-primary text-white border-primary" 
-                      : main ? "bg-primary/10 text-primary border-primary/30" : "fomo-pill-inactive"
-                  }`}
-                >
-                  {v}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Environments (Modrinth only) */}
-        {!isCurseForge && projectType === "mod" && (
-          <div className="flex flex-col gap-3">
-            <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
-              <Laptop className="w-3 h-3" /> Entorno
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {ENVIRONMENTS.map(env => {
-                const active = environments.includes(env.value);
+          {isAuthorSearch ? (
+            <div className="flex items-center gap-2.5 p-3 rounded-xl border border-pink-500/15 bg-pink-500/5 text-pink-400 font-bold text-xs animate-in fade-in zoom-in-95 duration-200">
+              <Globe className="w-4 h-4 text-pink-400 shrink-0" />
+              <span>Cualquier Versión de Minecraft</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {GAME_VERSIONS.map(v => {
+                const active = gameVersions.includes(v);
+                const main = v === "1.20.1" || v === "1.21.1";
                 return (
                   <button
-                    key={env.value}
-                    onClick={() => toggleFilter(environments, onEnvironments, env.value)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
-                      active ? "bg-(--color-emerald)/15 text-(--color-emerald) border-(--color-emerald)/30" : "fomo-pill-inactive"
+                    key={v}
+                    onClick={() => toggleFilter(gameVersions, onVersions, v)}
+                    className={`px-2 py-1 rounded-lg text-[0.65rem] font-bold border transition-all ${
+                      active 
+                        ? "bg-primary text-white border-primary" 
+                        : main ? "bg-primary/10 text-primary border-primary/30" : "fomo-pill-inactive"
                     }`}
                   >
-                    {env.value === 'client' ? <Laptop className="w-3 h-3" /> : env.value === 'server' ? <Server className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                    {env.label}
+                    {v}
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Project Specific Filters */}
-        {currentFilters.map(group => (
-          <div key={group.title} className="flex flex-col gap-3">
-            <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
-              <Tags className="w-3 h-3" /> {group.title}
+        {isAuthorSearch ? (
+          <div className="p-4 rounded-2xl border border-white/5 bg-white/2 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Modo Creador Activo
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {group.items.map((cat: any) => {
-                const isString = typeof cat === 'string';
-                const val = isString ? cat : cat.value;
-                const active = categories.includes(val);
-                const hasSub = !isString && Array.isArray(cat.sub) && cat.sub.length > 0;
-                const isExpanded = expandedCats.includes(val);
-                const label = val.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-                return (
-                  <div key={val} className="flex flex-col gap-1.5 w-full">
-                    <div className="flex items-center gap-1.5 w-full">
+            <p className="text-xs text-white/50 leading-relaxed font-medium">
+              Estás explorando el catálogo completo del autor. Se muestran todos sus mods, texturas, shaders y datapacks para cualquier loader y versión de Minecraft.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Environments (Modrinth only) */}
+            {!isCurseForge && projectType === "mod" && (
+              <div className="flex flex-col gap-3">
+                <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
+                  <Laptop className="w-3 h-3" /> Entorno
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {ENVIRONMENTS.map(env => {
+                    const active = environments.includes(env.value);
+                    return (
                       <button
-                        onClick={() => toggleFilter(categories, onCategories, val)}
-                        className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[0.65rem] font-bold border transition-all ${
-                          active 
-                            ? "bg-primary/15 text-primary border-primary/30" 
-                            : "fomo-pill-inactive"
+                        key={env.value}
+                        onClick={() => toggleFilter(environments, onEnvironments, env.value)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
+                          active ? "bg-(--color-emerald)/15 text-(--color-emerald) border-(--color-emerald)/30" : "fomo-pill-inactive"
                         }`}
                       >
-                        {CATEGORY_ICONS[val] || <BoxIcon className="w-3 h-3" />}
-                        {label}
+                        {env.value === 'client' ? <Laptop className="w-3 h-3" /> : env.value === 'server' ? <Server className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                        {env.label}
                       </button>
-                      
-                      {hasSub && (
-                        <button 
-                          onClick={() => toggleExpanded(val)}
-                          className={`p-1.5 rounded-lg border transition-all ${isExpanded ? "bg-primary/10 border-primary/20 text-primary" : "fomo-pill-inactive"}`}
-                        >
-                          {isExpanded ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                        </button>
-                      )}
-                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                    {hasSub && isExpanded && (
-                      <div className="flex flex-wrap gap-1.5 pl-4 py-1 border-l border-white/5 ml-4">
-                        {cat.sub.map((s: string) => {
-                          const sActive = categories.includes(s);
-                          const sLabel = s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                          return (
-                            <button
-                              key={s}
-                              onClick={() => toggleFilter(categories, onCategories, s)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[0.6rem] font-bold border transition-all ${
-                                sActive 
-                                  ? "bg-primary/20 text-primary border-primary/40" 
-                                  : "fomo-pill-inactive opacity-70 hover:opacity-100"
-                              }`}
+            {/* Project Specific Filters */}
+            {currentFilters.map(group => (
+              <div key={group.title} className="flex flex-col gap-3">
+                <p className="text-[0.65rem] uppercase tracking-widest flex items-center gap-2 fomo-section-header">
+                  <Tags className="w-3 h-3" /> {group.title}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.items.map((cat: any) => {
+                    const isString = typeof cat === 'string';
+                    const val = isString ? cat : cat.value;
+                    const active = categories.includes(val);
+                    const hasSub = !isString && Array.isArray(cat.sub) && cat.sub.length > 0;
+                    const isExpanded = expandedCats.includes(val);
+                    const label = val.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+                    return (
+                      <div key={val} className="flex flex-col gap-1.5 w-full">
+                        <div className="flex items-center gap-1.5 w-full">
+                          <button
+                            onClick={() => toggleFilter(categories, onCategories, val)}
+                            className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[0.65rem] font-bold border transition-all ${
+                              active 
+                                ? "bg-primary/15 text-primary border-primary/30" 
+                                : "fomo-pill-inactive"
+                            }`}
+                          >
+                            {CATEGORY_ICONS[val] || <BoxIcon className="w-3 h-3" />}
+                            {label}
+                          </button>
+                          
+                          {hasSub && (
+                            <button 
+                              onClick={() => toggleExpanded(val)}
+                              className={`p-1.5 rounded-lg border transition-all ${isExpanded ? "bg-primary/10 border-primary/20 text-primary" : "fomo-pill-inactive"}`}
                             >
-                              {CATEGORY_ICONS[s] || <BoxIcon className="w-2.5 h-2.5" />}
-                              {sLabel}
+                              {isExpanded ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                             </button>
-                          );
-                        })}
+                          )}
+                        </div>
+
+                        {hasSub && isExpanded && (
+                          <div className="flex flex-wrap gap-1.5 pl-4 py-1 border-l border-white/5 ml-4">
+                            {cat.sub.map((s: string) => {
+                              const sActive = categories.includes(s);
+                              const sLabel = s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                              return (
+                                <button
+                                  key={s}
+                                  onClick={() => toggleFilter(categories, onCategories, s)}
+                                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[0.6rem] font-bold border transition-all ${
+                                    sActive 
+                                      ? "bg-primary/20 text-primary border-primary/40" 
+                                      : "fomo-pill-inactive opacity-70 hover:opacity-100"
+                                  }`}
+                                >
+                                  {CATEGORY_ICONS[s] || <BoxIcon className="w-2.5 h-2.5" />}
+                                  {sLabel}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Sorting & Refresh */}

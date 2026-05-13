@@ -15,6 +15,10 @@
   --color-border:     rgba(255, 255, 255, 0.06);
   --color-border-strong: rgba(255, 255, 255, 0.12);
 
+  --color-theme-error:   #fca5a5;
+  --color-theme-warning: #fdba74;
+  --color-theme-info:    #fef08a;
+
   /* Liquid Glass & Neomorphism Effects */
   --glass-bg: rgba(28, 28, 33, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
@@ -37,6 +41,10 @@
   --color-foreground: #DEDEDE; /* Gris claro de la paleta */
   --color-muted:      #777777;
   --color-border:     rgba(187, 150, 228, 0.12);
+
+  --color-theme-error:   #fca5a5;
+  --color-theme-warning: #fdba74;
+  --color-theme-info:    #fef08a;
   
   --glass-bg: rgba(30, 30, 30, 0.8);
   --glass-border: rgba(187, 150, 228, 0.15);
@@ -58,6 +66,10 @@
   --color-foreground: #0D2750; /* Color oscuro de la paleta */
   --color-muted:      #777777;
   --color-border:     rgba(13, 39, 80, 0.05);
+
+  --color-theme-error:   #DC2626; /* High-contrast red-600 */
+  --color-theme-warning: #D97706; /* High-contrast amber-600 */
+  --color-theme-info:    #059669; /* High-contrast emerald-600 */
   
   /* Neomorphic Shadows from palette - Reduced for better clipping */
   --shadow-drop: 12px 12px 25px rgba(13, 39, 80, 0.12), -10px -10px 20px #FFFFFF;
@@ -86,8 +98,13 @@
 [data-theme="modern"] .opacity-30 { opacity: 0.65 !important; }
 [data-theme="modern"] .opacity-40 { opacity: 0.75 !important; }
 [data-theme="modern"] .opacity-35 { opacity: 0.70 !important; }
+[data-theme="modern"] .text-white\/30 { color: var(--color-muted) !important; opacity: 0.6; }
 [data-theme="modern"] .text-white\/40 { color: var(--color-muted) !important; }
+[data-theme="modern"] .text-white\/50 { color: var(--color-foreground) !important; opacity: 0.65; }
 [data-theme="modern"] .text-white\/60 { color: var(--color-foreground) !important; opacity: 0.8; }
+[data-theme="modern"] .text-white\/70 { color: var(--color-foreground) !important; opacity: 0.85; }
+[data-theme="modern"] .text-white\/80 { color: var(--color-foreground) !important; opacity: 0.95; }
+[data-theme="modern"] .text-white\/90 { color: var(--color-foreground) !important; }
 
 /* Map white transparent styles to dark transparent in Modern Theme for visibility */
 [data-theme="modern"] .bg-white\/1 { background-color: rgba(0, 0, 0, 0.01) !important; }

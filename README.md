@@ -57,6 +57,10 @@ Más tiempo jugando. Como debería ser.
 | Feature | Qué hace | Impacto real |
 |:---|:---|:---|
 | **🚀 FOMO 3.0** | Descubrimiento ultra-denso con Modrinth + CurseForge en una sola vista | Navegación hasta 50% más rápida |
+| **✨ Spotlight** | Sistema de destacados premium con picks recomendados de Modrinth y CurseForge | Descubre mods de calidad al instante |
+| **👥 Project Followers** | Seguimiento de proyectos y autores con actualizaciones en tiempo real | Nunca te pierdas una actualización de tus creadores favoritos |
+| **📚 Collections Update** | Sincronización de colecciones de Modrinth con plantillas pre-armadas | Organiza tus mods en colecciones compartibles |
+| **🔍 Modpack Search** | Búsqueda de modpacks con visualización de mods incluidos y dependencias | Analiza modpacks completos antes de descargar |
 | **🤖 Modo Auto** | Clasificación automática según tags y contexto del modpack | 90% menos clicks y menos neuronas sacrificadas |
 | **🛡️ Security Scanner** | Bytecode analysis + VirusTotal + alertas centralizadas | Seguridad real, no “trust me bro” |
 | **🧠 SAGE Engine** | Diagnóstico de crashes, soporte `.mcmeta` y rescate de jugadores (`UUID.dat`) | Detecta y corrige fallos antes del rage quit |
@@ -64,7 +68,7 @@ Más tiempo jugando. Como debería ser.
 | **⚡ Bulk Actions** | Selección masiva y acciones en lote | 10x más rápido, 100x menos sufrimiento |
 | **🔌 Sinytra Support** | Compatibilidad Fabric ➔ Forge | Tu biblioteca deja de tener fronteras |
 | **🎹 Keybind Editor** | Edita controles de mods sin abrir Minecraft | Control total, cero menús infernales |
-| **🧩 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
+| **🔧 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
 
 ---
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar } from "lucide-react";
+import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar, Heart } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { FomoSkeleton } from "./FomoSkeleton";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
@@ -71,7 +71,7 @@ function AnimatedHeadline() {
   const lines = currentText.split('\n');
 
   return (
-    <h1 className="font-headline text-5xl xl:text-7xl leading-[1.1] tracking-tight text-white mb-6 min-h-[160px] xl:min-h-[230px]">
+    <h1 className="font-headline text-4xl xl:text-5xl 2xl:text-6xl leading-[1.1] tracking-tight text-white mb-2 min-h-[110px] xl:min-h-[150px]">
       {lines.map((line, i, arr) => {
         if (i === 1) {
           return (
@@ -96,9 +96,20 @@ function AnimatedHeadline() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Custom Spotlight Skeleton
+// Custom Spotlight Skeleton (improved)
 // ─────────────────────────────────────────────────────────────────────────────
-function SpotlightSkeleton() {
+function SpotlightSkeleton({ theme = "official" }: { theme?: string }) {
+  const isModern = theme === "modern";
+  const rightPaneBg = isModern 
+    ? "linear-gradient(135deg, rgba(238, 241, 245, 0.95) 0%, rgba(224, 228, 234, 0.8) 100%)" 
+    : "var(--glass-bg)";
+  const rightPaneBorder = isModern 
+    ? "1px solid rgba(255, 255, 255, 0.9)" 
+    : "1px solid rgba(255, 255, 255, 0.05)";
+  const rightPaneShadow = isModern 
+    ? "0 20px 40px -10px rgba(13, 39, 80, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 30px rgba(255, 255, 255, 0.8)" 
+    : "0 32px 64px -16px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.3)";
+
   return (
     <div className="flex-1 flex flex-col xl:flex-row h-full overflow-hidden p-6 gap-8">
       <style>{`
@@ -108,33 +119,54 @@ function SpotlightSkeleton() {
           100% { width: 20%; }
         }
         @keyframes skel-pulse-scale {
-          0%, 100% { transform: scale(1); opacity: 0.4; }
-          50% { transform: scale(0.97); opacity: 0.1; }
+          0%, 100% { transform: scale(1); opacity: 0.3; }
+          50% { transform: scale(0.98); opacity: 0.6; }
         }
         @keyframes shimmer-bg {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
+        @keyframes float-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
         .skel-line {
-          animation: skel-typewriter 4s ease-in-out infinite, shimmer-bg 2s linear infinite;
-          background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 75%);
+          animation: skel-typewriter 5s ease-in-out infinite, shimmer-bg 3s linear infinite;
+          background: ${isModern 
+            ? "linear-gradient(90deg, rgba(13,39,80,0.03) 25%, rgba(13,39,80,0.09) 50%, rgba(13,39,80,0.03) 75%)" 
+            : "linear-gradient(90deg, rgba(255,255,255,0.01) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.01) 75%)"};
           background-size: 200% 100%;
         }
         .skel-card {
-          animation: skel-pulse-scale 3s ease-in-out infinite, shimmer-bg 2s linear infinite;
-          background: linear-gradient(135deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+          animation: skel-pulse-scale 2.5s ease-in-out infinite, float-slow 4s ease-in-out infinite;
+          background: ${isModern 
+            ? "linear-gradient(135deg, rgba(13,39,80,0.04) 25%, rgba(13,39,80,0.1) 50%, rgba(13,39,80,0.04) 75%)" 
+            : "linear-gradient(135deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 75%)"};
           background-size: 200% 100%;
+          position: relative;
+          overflow: hidden;
+          border: ${isModern ? "1px solid rgba(13,39,80,0.05)" : "none"};
+        }
+        .skel-card::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: ${isModern 
+            ? "linear-gradient(90deg, transparent, rgba(13,39,80,0.06), transparent)" 
+            : "linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)"};
+          transform: translateX(-100%);
+          animation: shimmer-bg 2s linear infinite;
         }
       `}</style>
 
       {/* Left Pane Skeleton */}
-      <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-md 2xl:max-w-lg">
-        <div className="mt-8 xl:mt-16 space-y-6">
-          <div className="h-4 rounded-full mb-8 skel-line" style={{ animationDelay: "0s", animationDuration: "3s" }}></div>
-          <div className="h-16 rounded-2xl skel-line" style={{ animationDelay: "0.2s", animationDuration: "5s" }}></div>
-          <div className="h-16 rounded-2xl skel-line" style={{ animationDelay: "0.4s", animationDuration: "4s" }}></div>
-          <div className="h-4 rounded-full mt-12 skel-line" style={{ animationDelay: "0.6s", animationDuration: "3.5s" }}></div>
-          <div className="h-4 rounded-full mt-3 skel-line" style={{ animationDelay: "0.8s", animationDuration: "4.5s" }}></div>
+      <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-[400px] 2xl:max-w-[440px]">
+        <div className="mt-2 xl:mt-4 space-y-4">
+          <div className="h-4 w-24 rounded-full mb-4 skel-line" style={{ animationDelay: "0s" }}></div>
+          <div className="h-14 rounded-2xl skel-line" style={{ animationDelay: "0.15s" }}></div>
+          <div className="h-14 rounded-2xl skel-line" style={{ animationDelay: "0.3s" }}></div>
+          <div className="h-3 w-48 rounded-full mt-10 skel-line" style={{ animationDelay: "0.45s" }}></div>
+          <div className="h-3 w-36 rounded-full mt-2 skel-line" style={{ animationDelay: "0.6s" }}></div>
         </div>
         <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-[280px] gap-4 pb-2">
           <div className="flex-1 rounded-[2rem] skel-card" style={{ animationDelay: "0s" }}></div>
@@ -143,7 +175,11 @@ function SpotlightSkeleton() {
       </div>
       
       {/* Right Pane Skeleton */}
-      <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] flex flex-col gap-6 py-6 p-4" style={{ background: "var(--glass-bg)", boxShadow: "var(--shadow-neomorphic-inner)" }}>
+      <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] flex flex-col gap-6 py-6 p-4" style={{ 
+        background: rightPaneBg, 
+        border: rightPaneBorder,
+        boxShadow: rightPaneShadow 
+      }}>
         <div className="flex-1 w-full flex items-center gap-6 overflow-hidden">
            <div className="w-[240px] xl:w-[260px] h-full max-h-[300px] rounded-[2rem] shrink-0 skel-card" style={{ animationDelay: "0s" }}></div>
            <div className="w-[240px] xl:w-[260px] h-full max-h-[300px] rounded-[2rem] shrink-0 skel-card" style={{ animationDelay: "0.2s" }}></div>
@@ -248,9 +284,123 @@ function useSmoothMarquee(speed: number, reverse: boolean, isVertical: boolean) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Small Card for Vertical Ticker (Actualizados/Recién Creados) - uses similar style to big cards
+// ─────────────────────────────────────────────────────────────────────────────
+function SmallSpotlightCard({ 
+  mod, 
+  onOpenVersions, 
+  accentColor, 
+  globalLoader,
+  theme = "official"
+}: { 
+  mod: ModHit, 
+  onOpenVersions: (m: ModHit) => void, 
+  accentColor: string, 
+  globalLoader?: string,
+  theme?: string
+}) {
+  const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
+  const loaderTag = mod.categories?.find(c => knownLoaders.includes(c.toLowerCase())) || globalLoader;
+  const pType = mod.projectType === "mod" 
+    ? "Mod" 
+    : mod.projectType === "resourcepack" || mod.projectType === "texture"
+    ? "Textura" 
+    : mod.projectType === "shader" 
+    ? "Shader" 
+    : mod.projectType;
+
+  const isModern = theme === "modern";
+  const bgStyle = isModern 
+    ? "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.75) 100%)" 
+    : "var(--glass-bg)";
+  const borderStyle = isModern 
+    ? "1px solid rgba(255, 255, 255, 0.9)" 
+    : "1px solid rgba(255, 255, 255, 0.05)";
+  const shadowStyle = isModern 
+    ? "0 8px 24px -6px rgba(13, 39, 80, 0.06), inset 0 1px 0 #ffffff, inset 0 0 12px #ffffff" 
+    : "var(--shadow-drop), var(--shadow-neomorphic-inner, inset 0 1px 0 rgba(255,255,255,0.05))";
+
+  return (
+    <div 
+      className="w-full shrink-0 rounded-2xl relative group cursor-pointer overflow-hidden backdrop-blur-xl transition-all duration-500"
+      style={{ 
+        background: bgStyle,
+        border: borderStyle,
+        boxShadow: shadowStyle
+      }}
+      onClick={() => onOpenVersions(mod)}
+    >
+      {/* Dynamic Top Glow */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      {/* Background Soft Glow */}
+      <div 
+        className="absolute -inset-20 opacity-0 group-hover:opacity-15 transition-opacity duration-700 blur-3xl pointer-events-none rounded-full"
+        style={{ background: accentColor }}
+      />
+
+      <div className="p-3 flex items-center gap-3 relative z-10">
+        {/* Mod Icon */}
+        <div className="w-10 h-10 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center shrink-0 shadow-lg relative group-hover:scale-110 transition-transform duration-500">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {mod.iconUrl ? (
+            <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div 
+              className="w-full h-full flex items-center justify-center font-headline text-sm font-black text-white/40"
+              style={{ background: `linear-gradient(135deg, ${accentColor}20 0%, rgba(0,0,0,0.8) 100%)`, boxShadow: `inset 0 0 20px ${accentColor}10` }}
+            >
+              {mod.title.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="font-headline text-sm leading-tight text-white group-hover:opacity-80 transition-opacity duration-300 truncate">
+            {mod.title}
+          </h3>
+          
+          {/* Badges for Type and Loader */}
+          <div className="flex flex-wrap items-center gap-1 mt-1">
+            {pType && (
+              <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white/10 text-white opacity-80 border border-white/5 shadow-sm">
+                {pType}
+              </span>
+            )}
+            {loaderTag && (
+              <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md text-white/80 border border-white/5 shadow-sm" style={{ background: loaderTag.toLowerCase() === "fabric" ? "rgba(234,179,8,0.15)" : loaderTag.toLowerCase() === "forge" ? "rgba(239,68,68,0.15)" : "rgba(14,165,233,0.15)" }}>
+                {loaderTag}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Vertical Scrolling Ticker (Marquee Y) - Used for small items
 // ─────────────────────────────────────────────────────────────────────────────
-function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = false, globalLoader }: { mods: ModHit[], onOpenVersions: (m: ModHit) => void, speed?: number, color?: string, reverse?: boolean, globalLoader?: string }) {
+function VerticalTicker({ 
+  mods, 
+  onOpenVersions, 
+  speed = 1, 
+  color, 
+  reverse = false, 
+  globalLoader, 
+  accentColor,
+  theme = "official"
+}: { 
+  mods: ModHit[], 
+  onOpenVersions: (m: ModHit) => void, 
+  speed?: number, 
+  color?: string, 
+  reverse?: boolean, 
+  globalLoader?: string, 
+  accentColor: string,
+  theme?: string
+}) {
   const duplicatedMods = [...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods];
   const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, true);
 
@@ -261,40 +411,16 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
       {...handlers}
     >
       <div ref={innerRef} className="flex flex-col gap-3 w-full pb-2">
-        {duplicatedMods.map((mod, i) => {
-          const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
-          const loaderTag = mod.categories?.find(c => knownLoaders.includes(c.toLowerCase())) || globalLoader;
-          const pType = mod.projectType === "mod" ? "Mod" : mod.projectType === "resourcepack" ? "Texture" : mod.projectType === "shader" ? "Shader" : mod.projectType;
-
-          return (
-            <div 
-              key={`${mod.projectId}-${i}`} 
-              className="flex items-center gap-3 cursor-pointer group bg-black/20 hover:bg-white/10 transition-colors border border-white/5 hover:border-white/20 rounded-2xl p-2.5 shrink-0 relative" 
-              onClick={() => onOpenVersions(mod)}
-            >
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 shrink-0 shadow-lg relative group-hover:scale-105 transition-transform flex items-center justify-center pointer-events-none">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {mod.iconUrl ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <span className="font-headline text-[10px] font-black text-white/30 uppercase">{mod.title.substring(0, 2)}</span>}
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-center pointer-events-none">
-                <p className={`font-subhead text-xs text-white truncate transition-colors group-hover:${color}`}>{mod.title}</p>
-                <div className="flex items-center gap-1.5 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                  {pType && (
-                    <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white/10 text-white opacity-80">
-                      {pType}
-                    </span>
-                  )}
-                  {loaderTag && (
-                    <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md text-white opacity-80" style={{ background: loaderTag.toLowerCase() === "fabric" ? "rgba(234,179,8,0.2)" : loaderTag.toLowerCase() === "forge" ? "rgba(239,68,68,0.2)" : "rgba(14,165,233,0.2)" }}>
-                      {loaderTag}
-                    </span>
-                  )}
-                  {(!pType && !loaderTag) && <span className="font-caption text-[9px] truncate">{mod.author}</span>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {duplicatedMods.map((mod, i) => (
+          <SmallSpotlightCard 
+            key={`${mod.projectId}-${i}`} 
+            mod={mod} 
+            onOpenVersions={onOpenVersions} 
+            accentColor={accentColor}
+            globalLoader={globalLoader}
+            theme={theme}
+          />
+        ))}
       </div>
     </div>
   );
@@ -303,7 +429,18 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
 // ─────────────────────────────────────────────────────────────────────────────
 // Horizontal Scrolling Marquee - Used for big cards
 // ─────────────────────────────────────────────────────────────────────────────
-function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, downloading, speed = 1, reverse = false, accentColor, globalLoader }: any) {
+function HorizontalEditorialMarquee({ 
+  title, 
+  mods, 
+  onOpenVersions, 
+  onDownload, 
+  downloading, 
+  speed = 1, 
+  reverse = false, 
+  accentColor, 
+  globalLoader,
+  theme = "official"
+}: any) {
   const duplicatedMods = [...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods];
   const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false);
 
@@ -311,17 +448,32 @@ function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, d
     <div className="relative w-full h-full flex flex-col group/marquee">
       {/* Title */}
       <div className="px-8 mb-3 flex items-center gap-3">
-        <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
+        <span 
+          className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase shadow-sm backdrop-blur-md animate-fade-in"
+          style={{
+            background: theme === "modern" 
+              ? `color-mix(in srgb, ${accentColor} 12%, transparent)` 
+              : `color-mix(in srgb, ${accentColor} 18%, transparent)`,
+            color: theme === "modern" 
+              ? `color-mix(in srgb, ${accentColor} 85%, black)` 
+              : accentColor,
+            borderColor: theme === "modern" 
+              ? `color-mix(in srgb, ${accentColor} 30%, transparent)` 
+              : `color-mix(in srgb, ${accentColor} 35%, transparent)`,
+            borderWidth: "1px",
+            borderStyle: "solid"
+          }}
+        >
           {title}
         </span>
       </div>
 
       <div 
         ref={containerRef}
-        className="relative w-full flex-1 overflow-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing"
+        className="relative w-full flex-1 overflow-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing py-4"
         {...handlers}
       >
-        <div ref={innerRef} className="flex gap-6 w-max px-4 py-2 h-full">
+        <div ref={innerRef} className="flex gap-6 w-max px-4 py-4 h-full">
           {duplicatedMods.map((mod: any, i: number) => (
             <SpotlightEditorialCard
               key={`${mod.projectId}-${i}`}
@@ -331,6 +483,7 @@ function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, d
               isDownloading={!!downloading[mod.projectId]}
               accentColor={mod.color || accentColor}
               globalLoader={globalLoader}
+              theme={theme}
             />
           ))}
         </div>
@@ -340,7 +493,7 @@ function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, d
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Square Editorial Card
+// Square Editorial Card (improved)
 // ─────────────────────────────────────────────────────────────────────────────
 function SpotlightEditorialCard({ 
   mod, 
@@ -348,7 +501,8 @@ function SpotlightEditorialCard({
   onDownload, 
   isDownloading,
   accentColor = COLORS.primary,
-  globalLoader
+  globalLoader,
+  theme = "official"
 }: { 
   mod: ModHit & { versions?: string[] }; 
   onOpenVersions: (m: ModHit) => void;
@@ -356,6 +510,7 @@ function SpotlightEditorialCard({
   isDownloading: boolean;
   accentColor?: string;
   globalLoader?: string;
+  theme?: string;
 }) {
   
   const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
@@ -385,12 +540,24 @@ function SpotlightEditorialCard({
     }
   }
 
+  const isModern = theme === "modern";
+  const bgStyle = isModern 
+    ? "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.75) 100%)" 
+    : "var(--glass-bg)";
+  const borderStyle = isModern 
+    ? "1px solid rgba(255, 255, 255, 0.9)" 
+    : "1px solid rgba(255, 255, 255, 0.05)";
+  const shadowStyle = isModern 
+    ? "0 12px 32px -8px rgba(13, 39, 80, 0.08), inset 0 1px 0 #ffffff, inset 0 0 20px #ffffff" 
+    : "var(--shadow-drop), var(--shadow-neomorphic-inner, inset 0 1px 0 rgba(255,255,255,0.05))";
+
   return (
     <div 
-      className="w-[180px] sm:w-[220px] h-[240px] sm:h-[300px] shrink-0 rounded-[2rem] sm:rounded-[2.5rem] relative group cursor-pointer overflow-hidden backdrop-blur-xl border border-white/5 hover:border-white/10 transition-all duration-500 hover:z-10"
+      className="w-[220px] xl:w-[260px] h-[240px] sm:h-[300px] shrink-0 rounded-[2rem] sm:rounded-[2.5rem] relative group cursor-pointer overflow-hidden backdrop-blur-xl hover:border-white/10 transition-all duration-500 hover:z-10 spotlight-animate-float"
       style={{ 
-        background: `var(--glass-bg)`,
-        boxShadow: `var(--shadow-drop), var(--shadow-neomorphic-inner, inset 0 1px 0 rgba(255,255,255,0.05))`,
+        background: bgStyle,
+        border: borderStyle,
+        boxShadow: shadowStyle,
         whiteSpace: "normal" // Fix for whitespace-nowrap parent
       }}
       onClick={() => onOpenVersions(mod)}
@@ -400,7 +567,7 @@ function SpotlightEditorialCard({
       
       {/* Background Soft Glow */}
       <div 
-        className="absolute -inset-20 opacity-0 group-hover:opacity-10 transition-opacity duration-700 blur-3xl pointer-events-none rounded-full"
+        className="absolute -inset-20 opacity-0 group-hover:opacity-15 transition-opacity duration-700 blur-3xl pointer-events-none rounded-full"
         style={{ background: accentColor }}
       />
 
@@ -480,6 +647,40 @@ export function FomoSpotlight({
   const [newestMods, setNewestMods] = useState<ModHit[]>([]);
   const [latestCollection, setLatestCollection] = useState<CollectionEntry | null>(null);
   const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>([]);
+  const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
+  const [followedUpdates, setFollowedUpdates] = useState<ModHit[]>([]);
+
+  useEffect(() => {
+    const checkFollowedUpdates = () => {
+      try {
+        const storedMods = localStorage.getItem("mim_followed_mods");
+        const status = localStorage.getItem("mim_modrinth_status");
+        if (storedMods && status) {
+          const mods: ModHit[] = JSON.parse(storedMods);
+          const updates = JSON.parse(status);
+          const withUpdates = mods.filter(m => {
+            const updateInfo = updates[`collection:${m.projectId}`];
+            return updateInfo && updateInfo.status === "update_available";
+          });
+          setFollowedUpdates(withUpdates);
+        } else {
+          setFollowedUpdates([]);
+        }
+      } catch (e) {
+        console.warn("[FomoSpotlight] Failed to check followed updates", e);
+      }
+    };
+
+    checkFollowedUpdates();
+    
+    window.addEventListener("mim-followed-mods-changed", checkFollowedUpdates);
+    window.addEventListener("mim-modrinth-status-changed", checkFollowedUpdates);
+    
+    return () => {
+      window.removeEventListener("mim-followed-mods-changed", checkFollowedUpdates);
+      window.removeEventListener("mim-modrinth-status-changed", checkFollowedUpdates);
+    };
+  }, []);
 
   const loadSpotlight = useCallback(async () => {
     setLoading(true);
@@ -488,17 +689,47 @@ export function FomoSpotlight({
       const cfData = await fetchCurseForgeFeatured();
       if (cfData.featured) setCfFeatured(cfData.featured.map((m: any) => ({ ...m, _source: "curseforge" })));
 
-      // 2. We fetch contextual popular and recent from CurseForge
       const cLoader = loader === "fabric" ? "Fabric" : loader === "neoforge" ? "NeoForge" : "Forge";
-      
-      const cfPopPromise = fetch(`/api/curseforge/discover?sortField=6&sortOrder=desc&gameVersion=${gameVersion}&modLoaderType=${cLoader}`).then(r => r.json());
-      const cfRecPromise = fetch(`/api/curseforge/discover?sortField=2&sortOrder=desc&gameVersion=${gameVersion}&modLoaderType=${cLoader}`).then(r => r.json());
+
+      const cfPopPromise = fetch(`/api/curseforge/discover?sortField=6&sortOrder=desc&gameVersion=${gameVersion}&modLoaderType=${cLoader}`)
+        .then(async (r) => {
+          if (!r.ok) return { mods: [] };
+          const text = await r.text();
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { mods: [] };
+          }
+        })
+        .catch(() => ({ mods: [] }));
+
+      const cfRecPromise = fetch(`/api/curseforge/discover?sortField=2&sortOrder=desc&gameVersion=${gameVersion}&modLoaderType=${cLoader}`)
+        .then(async (r) => {
+          if (!r.ok) return { mods: [] };
+          const text = await r.text();
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { mods: [] };
+          }
+        })
+        .catch(() => ({ mods: [] }));
       
       // 3. We fetch contextual newest from Modrinth
       // Modrinth uses lower case loaders and strict versioning
       const mdLoader = (sinytraActive && (loader === "forge" || loader === "neoforge")) ? "[\"categories:forge\",\"categories:fabric\"]" : `["categories:${loader}"]`;
       const facets = `[${mdLoader},["versions:${gameVersion}"]]`;
-      const mdNewPromise = fetch(`https://api.modrinth.com/v2/search?index=newest&limit=10&facets=${encodeURIComponent(facets)}`).then(r => r.json());
+      const mdNewPromise = fetch(`https://api.modrinth.com/v2/search?index=newest&limit=10&facets=${encodeURIComponent(facets)}`)
+        .then(async (r) => {
+          if (!r.ok) return { hits: [] };
+          const text = await r.text();
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { hits: [] };
+          }
+        })
+        .catch(() => ({ hits: [] }));
 
       // 4. We fetch the Modrinth official collections (global)
       const collPromise = fetchOfficialCollections();
@@ -545,37 +776,205 @@ export function FomoSpotlight({
 
   useEffect(() => { loadSpotlight(); }, [loadSpotlight]);
 
+  // Detect and track current theme
+  useEffect(() => {
+    const updateTheme = () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme") as "official" | "vampire" | "modern";
+      if (currentTheme) setTheme(currentTheme);
+    };
+    
+    updateTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "data-theme") {
+          updateTheme();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
   if (loading) {
-    return <SpotlightSkeleton />;
+    return <SpotlightSkeleton theme={theme} />;
   }
 
   const modrinthMods = latestCollectionMods.map(m => ({ ...m, color: "#1ED760" }));
   const curseForgeMods = cfFeatured.map(m => ({ ...m, color: COLORS.primary }));
 
+  // Theme-specific styles
+  const getThemeStyles = () => {
+    switch (theme) {
+      case "vampire":
+        return {
+          rightPaneBg: "linear-gradient(180deg, rgba(185,28,28,0.08) 0%, rgba(0,0,0,0.4) 100%)",
+          leftGlow: "#DC2626",
+          rightGlow: "#991B1B",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          boxShadow: "0 32px 64px -16px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.3)"
+        };
+      case "modern":
+        return {
+          leftPaneBg: "rgba(255, 255, 255, 0.4)",
+          rightPaneBg: "linear-gradient(135deg, rgba(238, 241, 245, 0.95) 0%, rgba(224, 228, 234, 0.8) 100%)",
+          border: "1px solid rgba(255, 255, 255, 0.9)",
+          boxShadow: "0 20px 40px -10px rgba(13, 39, 80, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 30px rgba(255, 255, 255, 0.8)"
+        };
+      default:
+        return {
+          rightPaneBg: "var(--glass-bg)",
+          leftGlow: "#1ED760",
+          rightGlow: "#FF6C3E",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          boxShadow: "0 32px 64px -16px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.3)"
+        };
+    }
+  };
+
+  const themeStyles = getThemeStyles();
+
+  const getBannerStyles = () => {
+    switch (theme) {
+      case "vampire":
+        return {
+          bg: "rgba(244, 63, 94, 0.04)", // Rose glow on dark background
+          border: "1px solid rgba(244, 63, 94, 0.15)",
+          shadow: "0 8px 32px rgba(244, 63, 94, 0.03)",
+          iconBg: "rgba(244, 63, 94, 0.15)",
+          iconColor: "text-rose-400",
+          titleColor: "text-rose-300",
+          descColor: "text-rose-200/50",
+          pillBg: "bg-black/60 hover:bg-black/85",
+          pillBorder: "border-rose-950/40 hover:border-rose-900/60",
+          pillTextColor: "text-rose-100"
+        };
+      case "modern":
+        return {
+          bg: "rgba(219, 39, 119, 0.07)", // Vibrant pink translucent for high contrast light mode
+          border: "1px solid rgba(219, 39, 119, 0.22)",
+          shadow: "0 4px 16px rgba(219, 39, 119, 0.04)",
+          iconBg: "rgba(219, 39, 119, 0.12)",
+          iconColor: "text-pink-600",
+          titleColor: "text-pink-800",
+          descColor: "text-pink-700/70",
+          pillBg: "bg-white/90 hover:bg-pink-50/90",
+          pillBorder: "border-pink-200 hover:border-pink-300",
+          pillTextColor: "text-pink-950"
+        };
+      default: // "official"
+        return {
+          bg: "rgba(236, 72, 153, 0.05)", // Pure glass rose
+          border: "1px solid rgba(236, 72, 153, 0.15)",
+          shadow: "0 8px 32px rgba(236, 72, 153, 0.03)",
+          iconBg: "rgba(236, 72, 153, 0.15)",
+          iconColor: "text-pink-400",
+          titleColor: "text-pink-300",
+          descColor: "text-pink-300/60",
+          pillBg: "bg-black/40 hover:bg-black/60",
+          pillBorder: "border-pink-500/20 hover:border-pink-500/40",
+          pillTextColor: "text-white"
+        };
+    }
+  };
+
+  const bannerStyles = getBannerStyles();
+
   return (
-    <div className="flex-1 flex flex-col xl:flex-row h-full overflow-hidden p-6 gap-8 animate-fade-in">
+    <div className="flex-1 flex flex-col xl:flex-row h-full overflow-hidden p-6 gap-8">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* LEFT PANE: Typography & Trending (Vertical Tickers) */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-md 2xl:max-w-lg">
+      <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-[400px] 2xl:max-w-[440px] spotlight-animate-fade-in" style={{ animationDelay: "0s" }}>
+        
+        {/* Row 0: Followed Mods Updates (Rose Themed) */}
+        {followedUpdates.length > 0 && (
+          <div className="w-full shrink-0 relative z-20 animate-fade-in mb-4">
+            <div className="p-3.5 px-4 rounded-2xl relative overflow-hidden flex items-center justify-between gap-5" style={{
+              background: bannerStyles.bg,
+              border: bannerStyles.border,
+              boxShadow: bannerStyles.shadow
+            }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 via-purple-500/5 to-transparent pointer-events-none" />
+              
+              {/* Left: Compact Icon & Text */}
+              <div className="flex items-center gap-3 relative z-10 shrink-0 min-w-0">
+                <div className={`w-9 h-9 rounded-xl ${bannerStyles.iconBg} flex items-center justify-center animate-pulse shrink-0`}>
+                  <Heart className={`w-4.5 h-4.5 fill-current ${bannerStyles.iconColor}`} />
+                </div>
+                <div className="flex flex-col shrink-0 min-w-0">
+                  <h4 className={`font-headline text-[12px] font-black uppercase tracking-widest leading-tight ${bannerStyles.titleColor}`}>Seguidos</h4>
+                  <p className={`text-[10px] font-medium leading-none opacity-80 mt-0.5 ${bannerStyles.descColor}`}>{followedUpdates.length} {followedUpdates.length === 1 ? "update" : "updates"}</p>
+                </div>
+              </div>
+              
+              {/* Right: Stock Market Style Marquee Ticker */}
+              <div className="flex-1 max-w-[210px] xl:max-w-[290px] overflow-hidden relative z-10 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+                {followedUpdates.length === 1 ? (
+                  <div className="flex justify-end">
+                    <div
+                      onClick={() => onOpenVersions(followedUpdates[0])}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer scale-95 hover:scale-100 ${bannerStyles.pillBg} ${bannerStyles.pillBorder}`}
+                    >
+                      {followedUpdates[0].iconUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={followedUpdates[0].iconUrl} alt="" className="w-4.5 h-4.5 rounded-md object-cover" />
+                      ) : (
+                        <div className="w-4.5 h-4.5 rounded-md bg-pink-500/20 text-pink-300 flex items-center justify-center text-[8px] font-bold shrink-0">
+                          {followedUpdates[0].title.charAt(0)}
+                        </div>
+                      )}
+                      <span className={`text-[11px] font-bold truncate max-w-[140px] ${bannerStyles.pillTextColor}`}>{followedUpdates[0].title}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="fomo-ticker-container">
+                    <div className="fomo-ticker-track" style={{ gap: "10px" }}>
+                      {[...followedUpdates, ...followedUpdates, ...followedUpdates].map((mod, idx) => (
+                        <div
+                          key={`${mod.projectId}-${idx}`}
+                          onClick={() => onOpenVersions(mod)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer scale-95 hover:scale-100 shrink-0 ${bannerStyles.pillBg} ${bannerStyles.pillBorder}`}
+                        >
+                          {mod.iconUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={mod.iconUrl} alt="" className="w-4.5 h-4.5 rounded-md object-cover" />
+                          ) : (
+                            <div className="w-4.5 h-4.5 rounded-md bg-pink-500/20 text-pink-300 flex items-center justify-center text-[8px] font-bold shrink-0">
+                              {mod.title.charAt(0)}
+                            </div>
+                          )}
+                          <span className={`text-[11px] font-bold truncate max-w-[120px] ${bannerStyles.pillTextColor}`}>{mod.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Editorial Header */}
-        <div className="mt-8 xl:mt-16 shrink-0">
-          <p className="font-mono text-xs uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2">
-            <Spotlight className="w-4 h-4" /> Editorial
+        <div className="mt-1 xl:mt-2 shrink-0">
+          <p className="font-mono text-[10px] xl:text-xs uppercase tracking-widest opacity-60 mb-2 flex items-center gap-2 spotlight-animate-glow">
+            <Spotlight className="w-3.5 h-3.5" /> Editorial
           </p>
           <AnimatedHeadline />
-          <p className="font-caption text-sm xl:text-base opacity-60 leading-relaxed">
+          <p className="font-caption text-xs xl:text-sm opacity-60 leading-relaxed mt-1">
             Te traemos los picks mensuales de Modrinth y las selecciones de la comunidad de CurseForge.
           </p>
         </div>
 
         {/* Bottom Area: Vertical Tickers side-by-side */}
-        <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-[280px] gap-4 pb-2">
+        <div className="mt-4 xl:mt-auto flex h-[50vh] xl:h-[380px] gap-4 pb-2">
           
           {/* Recently Updated Ticker (Y) */}
           {cfRecent.length > 0 && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden spotlight-animate-fade-in" style={{ animationDelay: "0.2s" }}>
               <h3 className="font-subhead text-xs text-white/80 tracking-wide mb-3 flex items-center gap-2 shrink-0">
                 <Clock className="w-3.5 h-3.5 text-blue-400" /> Actualizados
               </h3>
@@ -586,6 +985,9 @@ export function FomoSpotlight({
                   speed={0.5} 
                   color="text-blue-400" 
                   reverse={true}
+                  globalLoader={loader}
+                  accentColor={theme === "vampire" ? "#DC2626" : "#3B82F6"}
+                  theme={theme}
                 />
               </div>
             </div>
@@ -593,7 +995,7 @@ export function FomoSpotlight({
 
           {/* Newest Created Ticker (Y) */}
           {newestMods.length > 0 && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden spotlight-animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <h3 className="font-subhead text-xs text-white/80 tracking-wide mb-3 flex items-center gap-2 shrink-0">
                 <Calendar className="w-3.5 h-3.5 text-purple-400" /> Recién Creados
               </h3>
@@ -603,6 +1005,9 @@ export function FomoSpotlight({
                   onOpenVersions={onOpenVersions} 
                   speed={0.6} 
                   color="text-purple-400" 
+                  globalLoader={loader}
+                  accentColor={theme === "vampire" ? "#991B1B" : "#A855F7"}
+                  theme={theme}
                 />
               </div>
             </div>
@@ -613,10 +1018,21 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* RIGHT PANE: Horizontal Editorial Marquees (Stacked) */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" style={{ background: "var(--glass-bg)", boxShadow: "var(--shadow-neomorphic-inner, inset 0 0 20px rgba(0,0,0,0.05))" }}>
+      <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6 spotlight-animate-fade-in" style={{ 
+        animationDelay: "0.3s",
+        background: themeStyles.rightPaneBg, 
+        border: themeStyles.border,
+        boxShadow: themeStyles.boxShadow 
+      }}>
+
+        {/* Ambient glow effect */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-20 blur-3xl spotlight-animate-glow" style={{ background: themeStyles.leftGlow }} />
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-20 blur-3xl spotlight-animate-glow" style={{ background: themeStyles.rightGlow, animationDelay: "1.5s" }} />
+        </div>
 
         {/* Row 1: Modrinth (Scrolls Right to Left) */}
-        <div className="flex-1 w-full min-h-0 pt-4">
+        <div className="flex-1 w-full min-h-[270px] sm:min-h-[345px] relative z-10">
           <HorizontalEditorialMarquee 
             title="Modrinth Picks"
             mods={modrinthMods} 
@@ -625,12 +1041,14 @@ export function FomoSpotlight({
             downloading={downloading} 
             speed={0.8}
             reverse={false} 
+            accentColor={theme === "vampire" ? "#DC2626" : "#1ED760"}
             globalLoader={loader}
+            theme={theme}
           />
         </div>
 
         {/* Row 2: CurseForge (Scrolls Left to Right) */}
-        <div className="flex-1 w-full min-h-0 pb-4">
+        <div className="flex-1 w-full min-h-[270px] sm:min-h-[345px] relative z-10">
           <HorizontalEditorialMarquee 
             title="CurseForge Picks"
             mods={curseForgeMods} 
@@ -639,7 +1057,9 @@ export function FomoSpotlight({
             downloading={downloading} 
             speed={0.9}
             reverse={true} 
+            accentColor={theme === "vampire" ? "#991B1B" : COLORS.primary}
             globalLoader={loader}
+            theme={theme}
           />
         </div>
       </div>

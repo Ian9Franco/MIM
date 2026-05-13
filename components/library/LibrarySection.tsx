@@ -307,8 +307,8 @@ export function LibrarySection({
       ) : library.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed transition-all shadow-inner" style={{ background: "var(--color-secondary-bg)", borderColor: "var(--color-border)" }}>
           <Layers className="w-12 h-12 mb-4 opacity-20" style={{ color: "var(--color-accent)" }} />
-          <p className="font-subhead text-sm text-white/70 mb-2">No hay mods instalados en este proyecto aún</p>
-          <p className="text-xs text-white/40 max-w-sm mb-5">
+          <p className="font-subhead text-sm text-[var(--color-foreground)] opacity-85 mb-2">No hay mods instalados en este proyecto aún</p>
+          <p className="text-xs text-[var(--color-muted)] max-w-sm mb-5">
             Puedes buscar y descargar mods desde el menú FOMO, o importar de forma instantánea tu colección desde la librería global o desde otro proyecto compatible.
           </p>
           {activeProject && (

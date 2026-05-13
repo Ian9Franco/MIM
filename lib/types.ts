@@ -18,6 +18,7 @@ export interface ModHit {
   client_side?:  string;
   server_side?:  string;
   allowModDistribution?: boolean;
+  members?:      any[];
   _source?:      "modrinth" | "curseforge";
   availability?: {
     modrinth: boolean;

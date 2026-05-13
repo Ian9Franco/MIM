@@ -210,7 +210,12 @@ export function PendingFilesSection({
             onClick={handleOpenDownloadsFolder}
             disabled={openingFolder}
             className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-xl font-label text-sm transition-all animate-fade-in disabled:opacity-50 shrink-0"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)", fontSize: "0.65rem" }}
+            style={{ 
+              background: "var(--fomo-pill-inactive-bg, rgba(255,255,255,0.05))", 
+              border: "1px solid var(--fomo-pill-inactive-border, rgba(255,255,255,0.1))", 
+              color: "var(--color-foreground)", 
+              fontSize: "0.65rem" 
+            }}
             title="Abrir carpeta de origen (Descargas)"
           >
             {openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />}
@@ -247,7 +252,10 @@ export function PendingFilesSection({
             {compatibleFiles.length === 0 && incompatibleFiles.length > 0 ? (
               <div 
                 className="flex flex-col items-center justify-center p-6 text-center border rounded-2xl animate-fade-in"
-                style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.05)" }}
+                style={{ 
+                  background: "var(--fomo-input-bg, rgba(255,255,255,0.02))", 
+                  borderColor: "var(--fomo-input-border, rgba(255,255,255,0.05))" 
+                }}
               >
                 <Info className="w-5 h-5 mb-2" style={{ color: "var(--color-foreground-muted)" }} />
                 <p className="text-xs font-semibold" style={{ color: "var(--color-foreground)" }}>No hay descargas compatibles</p>
@@ -286,13 +294,13 @@ export function PendingFilesSection({
 
             {/* 2. INCOMPATIBLE / OTHER PROJECTS FILES SECTION */}
             {incompatibleFiles.length > 0 && (
-              <div className="mt-4 pt-3" style={{ borderTop: "1px dashed rgba(255,255,255,0.1)" }}>
+              <div className="mt-4 pt-3" style={{ borderTop: "1px dashed var(--fomo-border, rgba(255,255,255,0.1))" }}>
                 <button
                   onClick={() => setShowIncompatible(!showIncompatible)}
                   className="flex items-center justify-between w-full px-3 py-2 rounded-xl text-foreground transition-all duration-200 text-xs font-semibold"
                   style={{ 
-                    background: "rgba(255,255,255,0.03)", 
-                    border: "1px solid rgba(255,255,255,0.06)" 
+                    background: "var(--fomo-pill-inactive-bg, rgba(255,255,255,0.03))", 
+                    border: "1px solid var(--fomo-pill-inactive-border, rgba(255,255,255,0.06))" 
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -300,7 +308,10 @@ export function PendingFilesSection({
                     <span>Incompatibles / Otros proyectos</span>
                     <span 
                       className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-                      style={{ background: "rgba(255,255,255,0.08)", color: "var(--color-foreground-muted)" }}
+                      style={{ 
+                        background: "var(--fomo-pill-inactive-bg, rgba(255,255,255,0.08))", 
+                        color: "var(--color-muted, rgba(255,255,255,0.6))" 
+                      }}
                     >
                       {incompatibleFiles.length}
                     </span>

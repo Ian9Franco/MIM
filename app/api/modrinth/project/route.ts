@@ -32,17 +32,37 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}`, { headers });
-    if (!res.ok) {
+    const [projectRes, membersRes] = await Promise.all([
+      fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}`, { headers }),
+      fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/members`, { headers })
+    ]);
+
+    if (!projectRes.ok) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-    const data = await res.json();
+
+    const data = await projectRes.json();
+    
+    let members: any[] = [];
+    if (membersRes.ok) {
+      const membersData = await membersRes.json();
+      members = (membersData ?? []).map((m: any) => ({
+        id: m.user.id,
+        username: m.user.username,
+        name: m.user.name || m.user.username,
+        avatarUrl: m.user.avatar_url ?? null,
+        role: m.role || "Member"
+      }));
+    }
+
     return NextResponse.json({ 
       body: data.body,
       client_side: data.client_side,
-      server_side: data.server_side
+      server_side: data.server_side,
+      members
     });
   } catch (e) {
+    console.error("[/api/modrinth/project] Error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

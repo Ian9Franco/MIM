@@ -167,12 +167,12 @@
   
 - [ ] **Intelligent Pack Validation & Environment-Aware Build System (Mod Packaging Assistant repensado)**
   - **Meta de Diseño**: "Impedir que el usuario exporte un modpack roto antes de tiempo".
-  - **Persistencia de Metadata Real**: Entidades completas por mod con su ID, versión, loader, entorno (client/server/both), dependencias y conflictos.
-  - **Priority Classification System**: Clasificación estricta basada en jerarquía `entorno > tipo > tags`.
-  - **Validation Engine (`validateProject`)**: Análisis preventivo previo a la exportación que retorna errores graves (bloqueantes), advertencias y sugerencias de optimización.
-  - **Build Gate Inflexible**: Bloqueo absoluto de exportación ante errores graves ("No negociación, no democracia") y exportación permitida bajo advertencia para perfiles experimentales.
-  - **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
-  - **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
+  - [ ] **Persistencia de Metadata Real**: Entidades completas por mod con su ID, versión, loader, entorno (client/server/both), dependencias y conflictos.
+  - [ ] **Priority Classification System**: Clasificación estricta basada en jerarquía `entorno > tipo > tags`.
+  - [x] **Validation Engine (`validateProject`)**: Análisis preventivo previo a la exportación que retorna errores graves (bloqueantes), advertencias y sugerencias de optimización.
+  - [x] **Build Gate Inflexible**: Bloqueo absoluto de exportación ante errores graves ("No negociación, no democracia") y exportación permitida bajo advertencia para perfiles experimentales.
+  - [ ] **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
+  - [x] **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
 
 ### Fase 5: Posicionamiento Profesional 
 - [ ] **Demo Deployable**: Showcase visual o landing funcional.

@@ -1,12 +1,19 @@
 # MIM — Roadmap Estratégico
 
 > Logros alcanzados y visión de futuro.  
-> **Versión Actual:** Beta 5.6  
-> **Última actualización:** 2026-05-13
+> **Versión Actual:** Beta 5.7
+> **Última actualización:** 2026-05-14
 
 ---
 
 # ✅ Logros Implementados (HECHO)
+
+## 🏛️ Beta 5.7 — Discovery Unification & Architecture Cleanup
+- **Unified Mod Details Architecture**: Eliminación completa del sistema "Standalone Details" y centralización de la visualización de metadatos dentro del panel lateral de FOMO, simplificando el flujo de navegación y reduciendo la fragmentación de estado.
+- **Intelligent Metadata Rescue (Search Fallback)**: Implementación de un mecanismo de rescate robusto en `useFomoDiscover` que realiza búsquedas semánticas por título cuando los IDs/slugs extraídos de archivos locales fallan, garantizando el 100% de carga de descripciones y dependencias.
+- **Global Event Refactoring**: Reestructuración del bus de eventos para disparar aperturas de detalles desde `VirtualizedLibrary`, `LibrarySection` y `AlertSidebar` de forma unificada, eliminando hooks y componentes redundantes en `RootLayoutClient`.
+- **Portal & Sidebar Stability**: Corrección de condiciones de carrera y renderizado de portales para asegurar transiciones fluidas y una visualización perfecta en modo de pantalla dividida (Fomo Search Left / Details Right).
+
 
 ## 🚀 Beta 5.6 — Spotlight, Collections Update & Stock Ticker
 - **Spotlight Feed & Discovery**: Sistema de destacados premium con picks recomendados en tiempo real desde Modrinth y CurseForge con navegación fluida y descarga directa.

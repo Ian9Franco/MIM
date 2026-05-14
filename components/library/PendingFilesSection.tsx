@@ -61,10 +61,16 @@ export function PendingFilesSection({
     let isLoaderError = false;
     if (loader !== "unknown" && loader !== activeLoader) {
       isLoaderError = true;
-      if (activeVersion === "1.20.1") {
+      if (activeVersion === "1.20.1" || activeVersion === "1.20") {
         const l = loader.toLowerCase();
         const al = activeLoader.toLowerCase();
-        if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) {
+        const forgeFamily = ["forge", "neoforge"];
+        const fabricFamily = ["fabric", "quilt"];
+        
+        if (forgeFamily.includes(l) && forgeFamily.includes(al)) {
+          isLoaderError = false;
+        } else if (fabricFamily.includes(l) && forgeFamily.includes(al)) {
+          // Allow Fabric/Quilt mods in Forge projects for Sinytra Connector
           isLoaderError = false;
         }
       }

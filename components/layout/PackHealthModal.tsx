@@ -21,7 +21,7 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import {
   XCircle, CheckCircle, AlertTriangle, Info, ChevronDown,
-  Loader2, Search, FolderInput, ShieldOff, Zap, ShieldCheck,
+  Loader2, Search, FolderInput, ShieldOff, Zap, ShieldCheck, Settings
 } from "lucide-react";
 import type { PackHealthReport, ValidationIssue, ValidationSeverity } from "@/lib/types";
 
@@ -29,10 +29,12 @@ import type { PackHealthReport, ValidationIssue, ValidationSeverity } from "@/li
 
 interface PackHealthPanelProps {
   report:       PackHealthReport;
+  isOpen:       boolean;
   onClose:      () => void;
   onForceBuild?: () => void;
   onFomoSearch: (query: string) => void;
   isBuilding:   boolean;
+  activeProject?: { name: string; version: string; loader: string } | null;
 }
 
 // ── Grade config ──────────────────────────────────────────────────────────────
@@ -97,29 +99,69 @@ function ScoreRing({ score, grade }: { score: number; grade: keyof typeof GRADE_
 
 // ── Issue Row ─────────────────────────────────────────────────────────────────
 
-function IssueRow({ issue, onFomoSearch }: { issue: ValidationIssue; onFomoSearch: (q: string) => void }) {
+function IssueRow({ issue, onFomoSearch, activeProject }: { issue: ValidationIssue; onFomoSearch: (q: string) => void, activeProject?: any }) {
   const cfg = SEVERITY_CONFIG[issue.severity];
   const [expanded, setExpanded] = useState(false);
 
   const getAction = () => {
     if (!issue.fixAction) return null;
+    const handleFix = async (action: string, payload?: any) => {
+      if (!activeProject) return;
+      try {
+        await fetch("/api/project/fix-issue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectName: activeProject.name,
+            version: activeProject.version,
+            loader: activeProject.loader,
+            fileName: issue.modFile,
+            action,
+            payload
+          })
+        });
+        window.dispatchEvent(new Event("refresh-system"));
+        window.dispatchEvent(new CustomEvent("pack-health-toggle", { detail: false }));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     const map: Record<string, { label: string; icon: React.ReactNode; fn: () => void }> = {
       fomo_search:    { label: "Buscar en FOMO", icon: <Search      className="w-3 h-3" />, fn: () => onFomoSearch(issue.fixPayload?.query ?? issue.affectedMod ?? "") },
-      move_to_local:  { label: "→ .local",        icon: <FolderInput className="w-3 h-3" />, fn: () => {} },
-      move_to_server: { label: "→ .server",        icon: <FolderInput className="w-3 h-3" />, fn: () => {} },
-      disable:        { label: "Deshabilitar",     icon: <ShieldOff   className="w-3 h-3" />, fn: () => {} },
+      move_to_local:  { label: "→ .local",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_local", issue.fixPayload) },
+      move_to_server: { label: "→ .server",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_server", issue.fixPayload) },
+      disable:        { label: "Deshabilitar",     icon: <ShieldOff   className="w-3 h-3" />, fn: () => handleFix("disable") },
+      override:       { label: "Corregir Meta",    icon: <Settings    className="w-3 h-3" />, fn: () => handleFix("override", issue.fixPayload) },
     };
     const a = map[issue.fixAction];
-    if (!a) return null;
+    const b = issue.secondaryAction ? map[issue.secondaryAction] : null;
+
+    if (!a && !b) return null;
+
     return (
-      <button
-        onClick={(e) => { e.stopPropagation(); a.fn(); }}
-        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider transition-all duration-200 hover:scale-105 hover:brightness-125 active:scale-95 shrink-0"
-        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, boxShadow: `0 2px 8px ${cfg.bg}` }}
-      >
-        {a.icon}
-        {a.label}
-      </button>
+      <div className="flex items-center gap-1.5">
+        {a && (
+          <button
+            onClick={(e) => { e.stopPropagation(); a.fn(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider transition-all duration-200 hover:scale-105 hover:brightness-125 active:scale-95 shrink-0"
+            style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, boxShadow: `0 2px 8px ${cfg.bg}` }}
+          >
+            {a.icon}
+            {a.label}
+          </button>
+        )}
+        {b && (
+          <button
+            onClick={(e) => { e.stopPropagation(); b.fn(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider transition-all duration-200 hover:scale-105 hover:opacity-100 active:scale-95 shrink-0 opacity-60"
+            style={{ background: "transparent", color: "var(--color-foreground)", border: `1px solid var(--color-border)` }}
+          >
+            {b.icon}
+            {b.label}
+          </button>
+        )}
+      </div>
     );
   };
 
@@ -135,9 +177,15 @@ function IssueRow({ issue, onFomoSearch }: { issue: ValidationIssue; onFomoSearc
           <p className="text-[10px] font-bold leading-tight transition-colors duration-200 uppercase tracking-tight" style={{ color: cfg.color }}>
             {issue.message}
           </p>
-          <p className="text-[10px] mt-1 font-medium transition-colors duration-200" style={{ color: "var(--color-foreground)", opacity: 0.5 }}>
-            En mod: <span className="opacity-100">{issue.modName}</span>
-          </p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <p className="text-[10px] font-medium transition-colors duration-200" style={{ color: "var(--color-foreground)", opacity: 0.5 }}>
+              En mod: <span className="opacity-100">{issue.modName}</span>
+            </p>
+            <span className="w-1 h-1 rounded-full bg-white/10" />
+            <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">{issue.modType || "mod"}</span>
+            <span className="text-[9px] font-bold uppercase tracking-tighter opacity-20">•</span>
+            <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">{issue.modSub || "general"}</span>
+          </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
           {getAction()}
@@ -164,7 +212,7 @@ function IssueRow({ issue, onFomoSearch }: { issue: ValidationIssue; onFomoSearc
 // ── Collapsible section ───────────────────────────────────────────────────────
 
 function IssueSectionRaw({
-  title, count, issues, defaultOpen, onFomoSearch, dotColor, forceOpen,
+  title, count, issues, defaultOpen, onFomoSearch, dotColor, forceOpen, activeProject,
 }: {
   title: string;
   count: number;
@@ -173,6 +221,7 @@ function IssueSectionRaw({
   onFomoSearch: (q: string) => void;
   dotColor: string;
   forceOpen?: boolean;
+  activeProject?: any;
 }, ref: React.ForwardedRef<HTMLDivElement>) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -200,7 +249,7 @@ function IssueSectionRaw({
       {open && (
         <div className="space-y-1.5 mt-1">
           {issues.map((issue, i) => (
-            <IssueRow key={i} issue={issue} onFomoSearch={onFomoSearch} />
+            <IssueRow key={i} issue={issue} onFomoSearch={onFomoSearch} activeProject={activeProject} />
           ))}
         </div>
       )}
@@ -214,10 +263,8 @@ const IssueSection = React.forwardRef(IssueSectionRaw);
 const PANEL_WIDTH = 400;
 
 export function PackHealthPanel({
-  report, onClose, onForceBuild, onFomoSearch, isBuilding,
+  report, isOpen, onClose, onForceBuild, onFomoSearch, isBuilding, activeProject
 }: PackHealthPanelProps) {
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
   const grade = report.grade;
   const cfg = GRADE_CONFIG[grade];
 
@@ -227,39 +274,39 @@ export function PackHealthPanel({
   const suggestionsRef = React.useRef<HTMLDivElement>(null);
 
   const [forceExpand, setForceExpand] = useState<{ errors?: boolean, warnings?: boolean, suggestions?: boolean }>({});
+  const [visible, setVisible] = useState(false);
 
-  // Mount + slide-in animation
+  // Sync visible state with isOpen prop for smooth entrance even on first mount
   useEffect(() => {
-    setMounted(true);
-    const t = requestAnimationFrame(() => setVisible(true));
-    // Notify RootLayoutClient to add paddingRight
-    window.dispatchEvent(new CustomEvent("pack-health-toggle", { detail: true }));
-    return () => {
-      cancelAnimationFrame(t);
-      window.dispatchEvent(new CustomEvent("pack-health-toggle", { detail: false }));
-    };
-  }, []);
+    if (isOpen) {
+      const t = requestAnimationFrame(() => {
+        setVisible(true);
+      });
+      return () => cancelAnimationFrame(t);
+    } else {
+      setVisible(false);
+    }
+  }, [isOpen]);
 
   // Escape key
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, []);
+  }, [onClose]);
 
   // Click outside to close
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (visible && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         const target = event.target as HTMLElement;
-        // Ignore clicks on buttons that toggle panels (they have their own handlers)
         if (target.closest('[data-header-toggle="true"]')) return;
-        handleClose();
+        onClose();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [visible]);
+  }, [isOpen, onClose]);
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>, type: 'errors' | 'warnings' | 'suggestions') => {
     setForceExpand({ [type]: true });
@@ -269,13 +316,6 @@ export function PackHealthPanel({
       setTimeout(() => setForceExpand({}), 500);
     }, 50);
   };
-
-  const handleClose = () => {
-    setVisible(false);
-    setTimeout(onClose, 420);
-  };
-
-  if (!mounted) return null;
 
   const panel = (
     <div
@@ -290,13 +330,15 @@ export function PackHealthPanel({
         display:    "flex",
         flexDirection: "column",
         transform:  visible ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+        opacity:    visible ? 1 : 0,
+        transition: "transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.6s ease-out",
         // Glass — matches otros paneles, usando tokens del theme
         background:       "var(--glass-bg)",
         backdropFilter:   "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
         borderLeft:       `1px solid color-mix(in srgb, ${cfg.color} 22%, transparent)`,
         boxShadow:        `-24px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 color-mix(in srgb, ${cfg.color} 10%, transparent)`,
+        borderRadius:     "2rem 0 0 2rem",
       }}
     >
       {/* Accent glow strip at top */}
@@ -324,7 +366,7 @@ export function PackHealthPanel({
           </span>
         </div>
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-200 hover:rotate-90 hover:scale-110 active:scale-95"
           style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}
         >
@@ -409,6 +451,7 @@ export function PackHealthPanel({
           issues={report.errors} defaultOpen={true}
           onFomoSearch={onFomoSearch} dotColor="#ef4444"
           forceOpen={forceExpand.errors}
+          activeProject={activeProject}
         />
         <IssueSection 
           ref={warningsRef}
@@ -416,6 +459,7 @@ export function PackHealthPanel({
           issues={report.warnings} defaultOpen={report.errors.length === 0}
           onFomoSearch={onFomoSearch} dotColor="#f59e0b"
           forceOpen={forceExpand.warnings}
+          activeProject={activeProject}
         />
         <IssueSection 
           ref={suggestionsRef}
@@ -423,6 +467,7 @@ export function PackHealthPanel({
           issues={report.suggestions} defaultOpen={false}
           onFomoSearch={onFomoSearch} dotColor="#06b6d4"
           forceOpen={forceExpand.suggestions}
+          activeProject={activeProject}
         />
       </div>
 
@@ -445,7 +490,7 @@ export function PackHealthPanel({
         {/* Force export with warnings only */}
         {onForceBuild && !report.blocksExport && report.warnings.length > 0 && (
           <button
-            onClick={() => { onForceBuild(); handleClose(); }}
+            onClick={() => { onForceBuild(); onClose(); }}
             disabled={isBuilding}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all duration-300 hover:opacity-100 hover:-translate-y-1 hover:shadow-lg active:scale-95 disabled:opacity-40"
             style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)", color: "#fbbf24", boxShadow: "0 8px 24px rgba(245,158,11,0.1)" }}
@@ -458,7 +503,7 @@ export function PackHealthPanel({
         {/* Clean export */}
         {onForceBuild && !report.blocksExport && report.warnings.length === 0 && (
           <button
-            onClick={() => { onForceBuild(); handleClose(); }}
+            onClick={() => { onForceBuild(); onClose(); }}
             disabled={isBuilding}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all duration-300 hover:-translate-y-1 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:translate-y-0"
             style={{ background: "var(--color-primary)", color: "#fff", boxShadow: "0 8px 25px color-mix(in srgb, var(--color-primary) 40%, transparent)" }}
@@ -469,7 +514,7 @@ export function PackHealthPanel({
         )}
 
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="w-full py-2 text-[10px] font-medium transition-all duration-200 hover:scale-105 active:scale-95"
           style={{ color: "var(--color-foreground)", opacity: 0.4 }}
         >

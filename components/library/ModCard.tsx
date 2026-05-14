@@ -87,10 +87,13 @@ export const ModCard = memo(function ModCard({
   
   const isLoaderError = useMemo(() => {
     if (loader === "unknown" || activeLoader === "" || loader === activeLoader) return false;
-    if (activeVersion === "1.20.1") {
+    if (activeVersion === "1.20.1" || activeVersion === "1.20") {
       const l = loader.toLowerCase();
       const al = activeLoader.toLowerCase();
-      if ((l === "forge" && al === "neoforge") || (l === "neoforge" && al === "forge")) return false;
+      const forgeFamily = ["forge", "neoforge"];
+      const fabricFamily = ["fabric", "quilt"];
+      if (forgeFamily.includes(l) && forgeFamily.includes(al)) return false;
+      if (fabricFamily.includes(l) && forgeFamily.includes(al)) return false;
     }
     return true;
   }, [loader, activeLoader, activeVersion]);

@@ -201,7 +201,7 @@ export function FomoSidebar({
   };
 
   const { status, showStatus, clearStatus } = useStatusBanner();
-  const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
+  const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus, activeProject);
   const {
     setLoader,
     setGameVersions,

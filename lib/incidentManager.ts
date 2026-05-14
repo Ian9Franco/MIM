@@ -39,7 +39,7 @@ class IncidentManager {
     // 1. Escuchar crashes de SAGE
     eventBus.subscribe("sage:crash-detected", (data) => {
       this.createIncident({
-        id: `sage-crash-${data.sessionId}`,
+        id: "sage-active-crash",
         title: `Caída de juego detectada (${data.crashType})`,
         detail: `Se detectaron reportes críticos de la sesión actual (${data.sessionId}). Revisa SAGE para el diagnóstico. Archivo log: ${data.logFile}`,
         severity: data.severity === "critical" ? "danger" : "warning",
@@ -52,7 +52,7 @@ class IncidentManager {
     eventBus.subscribe("sage:security-risk", (data) => {
       if (data.severity === "critical" || data.severity === "suspicious") {
         this.createIncident({
-          id: `sage-security-${Date.now()}`,
+          id: "sage-security-report",
           title: `Riesgo de seguridad: ${data.severity.toUpperCase()}`,
           detail: `Se ha detectado una amenaza tipo ${data.riskType} en el archivo ${data.fileName} con una puntuación de riesgo de ${data.riskScore}/100.`,
           severity: data.severity === "critical" ? "danger" : "warning",

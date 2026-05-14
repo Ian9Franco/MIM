@@ -80,18 +80,6 @@ export function AlertSidebar({
 
   // Unified notifications states
   const [activeProject, setActiveProject] = useState<any>(null);
-  const [configAlerts, setConfigAlerts] = useState<Array<{
-    id: string;
-    title: string;
-    detail: string;
-    type: "danger" | "warning";
-  }>>([]);
-  const [sageAlerts, setSageAlerts] = useState<Array<{
-    id: string;
-    title: string;
-    detail: string;
-    type: "danger" | "warning";
-  }>>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
 
   // Followed mods and authors state tracking
@@ -353,7 +341,6 @@ export function AlertSidebar({
           }
         }
       }
-      setConfigAlerts(alerts);
       
       // Emit config alerts as incidents
       alerts.forEach(a => {
@@ -404,6 +391,8 @@ export function AlertSidebar({
               suspectedMods: [], // Podría analizarse el stack trace
               sessionId: sessionDate
             });
+          } else {
+            await incidentManager.resolveIncident("sage-active-crash");
           }
         }
 
@@ -432,10 +421,13 @@ export function AlertSidebar({
                     riskId: `security-${Date.now()}`,
                     riskType: criticalCount > 0 ? "malware" : "file-system",
                     severity: criticalCount > 0 ? "critical" : "suspicious",
-                    fileName: riskFiles[0]?.fileName || "unknown",
+                    fileName: riskFiles[0]?.fileName || riskFiles[0]?.filePath?.split(/[\\/]/).pop() || "unknown",
                     riskScore: criticalCount > 0 ? 90 : 60,
                     findings: riskFiles.map((r: any) => r.summary || r.riskLevel)
                   });
+                } else {
+                  // Resolve existing security report if no critical/suspicious files found
+                  await incidentManager.resolveIncident("sage-security-report");
                 }
               }
             }
@@ -629,8 +621,10 @@ export function AlertSidebar({
                     _source: "modrinth",
                     projectType: "mod"
                   };
-                  window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
                   window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                  }, 400);
                   setSidebarOpen(false);
                 }}
                 icon={<Search className="w-3.5 h-3.5" />}
@@ -719,15 +713,16 @@ export function AlertSidebar({
         borderLeft: "1px solid var(--glass-border)",
         backdropFilter: "var(--liquid-blur)",
         boxShadow: "var(--shadow-drop)",
+        borderRadius: "2rem 0 0 2rem",
       }}
     >
       <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border)" }}>
         <h2 className="text-lg font-headline flex items-center gap-2" style={{ color: "var(--color-foreground)" }}>
           <Bell className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
           Centro de Alertas
-          {(conflicts.length + updates.length + incidents.filter(i => i.status === "active").length) > 0 && (
+          {(conflicts.length + updates.length + incidents.length) > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--color-danger-bg)", color: "var(--color-danger)" }}>
-              {conflicts.length + updates.length + incidents.filter(i => i.status === "active").length}
+              {conflicts.length + updates.length + incidents.length}
             </span>
           )}
         </h2>
@@ -760,7 +755,7 @@ export function AlertSidebar({
           onClick={() => setActiveTab("all")}
           icon={<Info className="w-3.5 h-3.5" />}
           label="Todas"
-          count={conflicts.length + updates.length + sageAlerts.length + configAlerts.length}
+          count={conflicts.length + updates.length + incidents.length}
         />
         <TabButton
           active={activeTab === "sage"}
@@ -794,7 +789,7 @@ export function AlertSidebar({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-40 min-h-0">
         {/* Empty State - Global */}
         {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && incidents.filter(i => i.status === "active").length === 0 && (
           <div className="text-center py-12">
@@ -1131,6 +1126,9 @@ export function AlertSidebar({
             </div>
           </div>
         )}
+        
+        {/* Final spacer for smooth scroll */}
+        <div className="h-48 shrink-0 pointer-events-none" />
       </div>
     </div>
   );

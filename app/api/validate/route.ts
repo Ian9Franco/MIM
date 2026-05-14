@@ -23,6 +23,7 @@ import { SOURCE_BASE, isValidLoader, SUBCATEGORIES } from "@/lib/constants";
 import type { Loader } from "@/lib/constants";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/packValidator";
+import { getProjectOverrides } from "@/lib/overrides";
 
 const BUILD_TARGETS = ["alluser", "allhost", "both"] as const;
 type BuildTarget = (typeof BUILD_TARGETS)[number];
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       : path.join(SOURCE_BASE, version, loader as Loader);
 
     const validatorMods: ValidatorMod[] = [];
+    const overrides = getProjectOverrides(projectName);
 
     if (!fs.existsSync(loaderPath)) {
       // No mods found — return a perfect report (nothing to validate)
@@ -98,21 +100,25 @@ export async function POST(req: NextRequest) {
 
           try {
             const meta = scanMod(filePath);
+            const override = overrides.mods[file];
+            const appliedMeta = override ? { ...meta, ...override } : meta;
+
             validatorMods.push({
               fileName:    file,
-              modName:     meta.modName !== "unknown" ? meta.modName : file,
-              modId:       meta.modId ?? "unknown",
-              loader:      meta.loader ?? "unknown",
-              gameVersion: meta.gameVersion ?? "unknown",
+              modName:     appliedMeta.modName !== "unknown" ? appliedMeta.modName : file,
+              modId:       appliedMeta.modId ?? "unknown",
+              loader:      appliedMeta.loader ?? "unknown",
+              gameVersion: appliedMeta.gameVersion ?? "unknown",
+              projectType: appliedMeta.projectType ?? "mod",
               category,
               sub,
-              dependencies:             meta.dependencies,
-              conflicts:                meta.conflicts,
-              providedIds:              meta.providedIds,
-              breaks:                   meta.breaks,
-              clientSide:               meta.clientSide,
-              serverSide:               meta.serverSide,
-              isCompatibleWithConnector: (meta as any).isCompatibleWithConnector,
+              dependencies:             appliedMeta.dependencies,
+              conflicts:                appliedMeta.conflicts,
+              providedIds:              (appliedMeta as any).providedIds,
+              breaks:                   (appliedMeta as any).breaks,
+              clientSide:               appliedMeta.clientSide,
+              serverSide:               appliedMeta.serverSide,
+              isCompatibleWithConnector: (appliedMeta as any).isCompatibleWithConnector,
             });
           } catch (err) {
             // If a JAR can't be scanned, add it as an unknown mod — don't fail the whole report
@@ -123,6 +129,7 @@ export async function POST(req: NextRequest) {
               modId:       "unknown",
               loader:      "unknown",
               gameVersion: "unknown",
+              projectType: "unknown",
               category,
               sub,
             });

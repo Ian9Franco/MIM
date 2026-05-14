@@ -123,6 +123,8 @@ function copyIfExists(src: string, dest: string, label: string): void {
 
 // ── Internal: Leak Verification ───────────────────────────────────────────────
 
+import { scanMod } from "./scanner";
+
 /**
  * Sanity-checks that no .server-only mod accidentally ended up in the
  * alluser build.  Logs a warning for each offending file.
@@ -163,6 +165,73 @@ function verifyNoServerLeak(
       );
     }
   }
+}
+
+// ── Auto-Fix / Auto-Promotion ─────────────────────────────────────────────────
+
+export function autoPromoteDependencies(loaderPath: string) {
+  const essentialPath = path.join(loaderPath, ".essential");
+  const localPath = path.join(loaderPath, ".local");
+  const serverPath = path.join(loaderPath, ".server");
+
+  if (!fs.existsSync(essentialPath)) return;
+
+  const essentialDependencies = new Set<string>();
+
+  // 1. Scan all .essential mods to find what they need
+  const walkEssential = (dir: string) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (fs.statSync(full).isDirectory()) {
+        walkEssential(full);
+      } else if (entry.endsWith(".jar")) {
+        try {
+          const meta = scanMod(full);
+          if (meta.dependencies) {
+            for (const dep of meta.dependencies) {
+              essentialDependencies.add(dep);
+            }
+          }
+        } catch (e) {
+          // ignore scan errors
+        }
+      }
+    }
+  };
+  walkEssential(essentialPath);
+
+  if (essentialDependencies.size === 0) return;
+
+  // 2. Scan .local and .server to find any of these dependencies
+  const promoteFrom = (dir: string) => {
+    if (!fs.existsSync(dir)) return;
+    for (const sub of fs.readdirSync(dir)) {
+      const subPath = path.join(dir, sub);
+      if (!fs.statSync(subPath).isDirectory()) continue;
+      for (const entry of fs.readdirSync(subPath)) {
+        if (!entry.endsWith(".jar")) continue;
+        const full = path.join(subPath, entry);
+        try {
+          const meta = scanMod(full);
+          // If this mod's ID or provided IDs match an essential dependency, move it!
+          const provides = [meta.modId, ...(meta.providedIds || [])];
+          if (provides.some(p => essentialDependencies.has(p))) {
+            const targetSub = path.join(essentialPath, sub);
+            if (!fs.existsSync(targetSub)) fs.mkdirSync(targetSub, { recursive: true });
+            const targetFile = path.join(targetSub, entry);
+            fs.renameSync(full, targetFile);
+            console.log(`[builder] Auto-promoted dependency: ${entry} -> .essential/${sub}`);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  };
+
+  promoteFrom(localPath);
+  promoteFrom(serverPath);
 }
 
 // ── Public: alluser Build ─────────────────────────────────────────────────────

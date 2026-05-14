@@ -22,7 +22,7 @@ export interface DependencyPrompt {
   hashes?: Record<string, string>;
 }
 
-export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any) {
+export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any, activeProject: any = null) {
   const [source, setSource] = useState<"modrinth" | "curseforge" | "all">("modrinth");
   const [sourceError, setSourceError] = useState("");
   const [loader, setLoader] = useState(defaultLoader);
@@ -450,6 +450,28 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       const dlData = await dlRes.json().catch(() => ({}));
 
       if (dlRes.ok) {
+        // Save environment metadata to project config for future auto-categorization
+        try {
+          let env: "client" | "server" | "both" = "both";
+          const clientSide = mod.client_side;
+          const serverSide = mod.server_side;
+
+          if (clientSide === "none") env = "server";
+          else if (serverSide === "none") env = "client";
+
+          await fetch("/api/project-config/metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project: activeProject?.name || "",
+              modId: mod.projectId,
+              override: { environment: env }
+            })
+          });
+        } catch (e) {
+          console.warn("[useFomoDiscover] Could not save environment metadata:", e);
+        }
+
         if (dlData?.skipped) {
           showStatus(`${mod.title} ya existe en tu librería o en Descargas`, "info");
         } else {
@@ -535,30 +557,79 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       const modNativeLoader = (sinytraActive && isFabricOnly && modSource === "modrinth") ? "fabric" : loader;
 
       const actualProjectType = mod.projectType || projectType;
+      const identifier = mod.projectId || mod.slug || "";
+
       const params = new URLSearchParams({ 
-        projectId: mod.projectId, 
-        // Eliminamos gameVersion para obtener TODAS las versiones del mod en la vista de detalles
+        projectId: identifier, 
         loader: (actualProjectType === "mod" || actualProjectType === "modpack") ? modNativeLoader : "", 
         projectType: actualProjectType 
       });
+      const paramsNoFilter = new URLSearchParams({ 
+        projectId: identifier,
+        projectType: actualProjectType 
+      });
       
-      // Fetch versions and project details in parallel
       const vEndpoint = modSource === "modrinth" ? "/api/modrinth/versions" : "/api/curseforge/versions";
       const pEndpoint = modSource === "modrinth" ? "/api/modrinth/project" : "/api/curseforge/project";
 
       const [vRes, pRes] = await Promise.all([
         fetch(`${vEndpoint}?${params}`),
-        fetch(`${pEndpoint}?projectId=${mod.projectId}`)
+        fetch(`${pEndpoint}?projectId=${identifier}`)
       ]);
 
+      let fetchedVersions: any[] = [];
       if (vRes.ok) {
         const data = await vRes.json();
-        setProjectVersions(data.versions ?? []);
+        fetchedVersions = data.versions ?? [];
+        if (fetchedVersions.length === 0 && modSource === "modrinth") {
+          try {
+            const fallbackRes = await fetch(`${vEndpoint}?${paramsNoFilter}`);
+            if (fallbackRes.ok) {
+              const fallbackData = await fallbackRes.json();
+              fetchedVersions = fallbackData.versions ?? [];
+            }
+          } catch {}
+        }
       }
+
+      let finalProjectData = null;
+      let finalVersions = fetchedVersions;
+
       if (pRes.ok) {
-        const pData = await pRes.json();
+        finalProjectData = await pRes.json();
+      } else if (modSource === "modrinth" && mod.title) {
+        try {
+          const searchRes = await fetch(`/api/modrinth/search?query=${encodeURIComponent(mod.title)}&limit=1`);
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            if (searchData.hits && searchData.hits.length > 0) {
+              const realId = searchData.hits[0].project_id;
+              const realPRes = await fetch(`${pEndpoint}?projectId=${realId}`);
+              if (realPRes.ok) {
+                finalProjectData = await realPRes.json();
+              }
+              if (finalVersions.length === 0) {
+                const realVRes = await fetch(`${vEndpoint}?projectId=${realId}&projectType=${actualProjectType}`);
+                if (realVRes.ok) {
+                  const realVData = await realVRes.json();
+                  finalVersions = realVData.versions ?? [];
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[useFomoDiscover] Fallback search failed:", e);
+        }
+      }
+
+      setProjectVersions(finalVersions);
+
+      if (finalProjectData) {
+        const pData = finalProjectData;
         setSelectingVersionFor(prev => prev ? { 
           ...prev, 
+          projectId: pData.id || prev.projectId,
+          slug: pData.slug || prev.slug,
           body: pData.body,
           client_side: pData.client_side,
           server_side: pData.server_side,

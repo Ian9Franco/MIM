@@ -18,12 +18,15 @@ interface FomoVersionOverlayProps {
   onDownload:  (mod: ModHit, version: VersionEntry) => void;
   onSearchProject?: (title: string) => void;
   onSearchAuthor?: (author: string) => void;
+  disablePortal?: boolean;
+  hideVersions?: boolean;
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject, onSearchAuthor,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject, onSearchAuthor, disablePortal = false,
+  hideVersions = false,
 }: FomoVersionOverlayProps) {
-  const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">("versions");
+  const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">(hideVersions ? "description" : "versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -139,6 +142,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   }, [followedMods]);
 
   useEffect(() => {
+    if (disablePortal) {
+      setPortalTarget(null);
+      return;
+    }
+
     const findTarget = () => {
       const el = document.getElementById("fomo-details-sidebar-portal");
       if (el) {
@@ -599,12 +607,14 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
       {/* Tabs */}
       <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto custom-scrollbar" style={{ borderColor: COLORS.border }}>
-        <TabButton 
-          active={activeTab === "versions"} 
-          onClick={() => setActiveTab("versions")} 
-          icon={<ListTree className="w-3.5 h-3.5" />}
-          label="Versiones"
-        />
+        {!hideVersions && (
+          <TabButton 
+            active={activeTab === "versions"} 
+            onClick={() => setActiveTab("versions")} 
+            icon={<ListTree className="w-3.5 h-3.5" />}
+            label="Versiones"
+          />
+        )}
         <TabButton 
           active={activeTab === "dependencies"} 
           onClick={() => setActiveTab("dependencies")} 

@@ -17,10 +17,11 @@ import { Package, FolderOpen, Inbox } from "lucide-react";
 import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
 import { CATEGORY_HOTKEYS }   from "../constants/app";
-import { SectionHeading }     from "@/components/ui/primitives";
+import { SectionHeading, StatusBanner }     from "@/components/ui/primitives";
 import { ProjectsSection }    from "@/components/projects/ProjectsSection";
 import { LibrarySection }     from "@/components/library/LibrarySection";
 import { PendingFilesSection } from "@/components/library/PendingFilesSection";
+import { useStatusBanner }   from "../hooks/useStatusBanner";
 import { QuickCategorizeSection } from "@/components/library/QuickCategorizeSection";
 import { AlertSidebar }       from "@/components/layout/AlertSidebar";
 import { DescriptionModal }   from "@/components/ui/DescriptionModal";
@@ -53,6 +54,7 @@ function getPendingFingerprint(file: PendingFile): string {
 
 export default function Page() {
   const projects = useProjects();
+  const { status, showStatus, clearStatus } = useStatusBanner();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -369,6 +371,29 @@ export default function Page() {
     setSelectedLibFiles([]);
   }, [selectedLibFiles, lib]);
 
+  const handleAutoCategorize = useCallback(async () => {
+    if (!projects.activeProject) return;
+    try {
+      showStatus("Analizando y organizando mods...", "info");
+      const res = await fetch("/api/project-config/auto-categorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project: projects.activeProject.name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.moves?.length > 0) {
+          showStatus(`Reorganizados ${data.moves.length} mods automáticamente`, "success");
+        } else {
+          showStatus("El proyecto ya está perfectamente organizado", "success");
+        }
+        window.dispatchEvent(new CustomEvent("refresh-system"));
+      }
+    } catch (err) {
+      showStatus("Error en la auto-categorización", "error");
+    }
+  }, [projects.activeProject, showStatus]);
+
   return (
     <div className="transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <div className="space-y-8 pb-16">
@@ -446,6 +471,15 @@ export default function Page() {
 
         <Divider />
 
+        {/* Global Status Banner for Page level actions */}
+        {status && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 pointer-events-none">
+            <div className="pointer-events-auto">
+              <StatusBanner text={status.text} type={status.type} onClose={clearStatus} />
+            </div>
+          </div>
+        )}
+
         {/* ── Row 2: Stable Column Grid (Downloads | Categorization | Library) ── */}
         <div 
           className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up"
@@ -477,6 +511,7 @@ export default function Page() {
               setSelectedLibFiles={setSelectedLibFiles}
               onDeleteSelected={handleBulkDelete}
               onUnclassifySelected={handleBulkUnclassify}
+              onAutoCategorize={handleAutoCategorize}
             />
           </div>
 

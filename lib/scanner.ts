@@ -74,17 +74,13 @@ function extractMcVersionFromRange(range: string): string | null {
 function gameVersionFromFilename(filePath: string): string | null {
   const base = path.basename(filePath, ".jar");
   const patterns = [
-    /mc?1\.(1[6-9]|2\d)(?:\.\d+)?/g,
-    /[_\-\+](1\.(1[6-9]|2\d)(?:\.\d+)?)[_\-\+\.]/g,
-    /(?:^|[_\-\+])(1\.(1[6-9]|2\d)(?:\.\d+)?)(?:[_\-\+]|$)/g,
-    /1\.(1[6-9]|2\d)(?:\.\d+)?/g,
+    /(?:^|[_\-\+])(?:mc)?(1\.(1[6-9]|2\d)(?:\.\d+)?)(?=[_\-\+]|$)/g,
+    /(?:mc)?(1\.(1[6-9]|2\d)(?:\.\d+)?)/g,
   ];
   for (const pattern of patterns) {
     const matches = [...base.matchAll(pattern)];
     if (matches.length > 0) {
-      let version = matches[matches.length - 1][0];
-      version = version.replace(/^mc?/, '').replace(/[_\-\+]/g, '');
-      return version;
+      return matches[matches.length - 1][1];
     }
   }
   return null;
@@ -197,7 +193,7 @@ function parseForgeToml(content: string): Partial<ModMeta> {
 // ── Cache Layer ───────────────────────────────────────────────────────────────
 
 const CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "mod-cache.json");
-const CURRENT_CACHE_VERSION = 4;
+const CURRENT_CACHE_VERSION = 5;
 let modCache: { version: number; entries: Record<string, { mtimeMs: number; size: number; meta: ModMeta }> } | null = null;
 let saveTimeout: NodeJS.Timeout | null = null;
 
@@ -333,28 +329,27 @@ function scanModRaw(filePath: string): ModMeta {
     } catch { return { ...DEFAULT_META, loader: "quilt", projectType: "mod", sha1 }; }
   }
 
-  // 5. Shader / Pack Heuristic
+  // 5. Shader / Pack / Library Heuristic
   const isShader = entries.some(e => e.entryName.startsWith("shaders/"));
-  const baseName = path.basename(filePath);
-  const versionFromFilename = extractVersionFromFilename(baseName) || UNKNOWN;
-
-  if (isShader) {
-    return { 
-      ...DEFAULT_META, 
-      projectType: "shader", 
-      modId: path.basename(filePath, path.extname(filePath)), 
-      modName: path.basename(filePath, path.extname(filePath)), 
-      modVersion: versionFromFilename,
-      gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, 
-      sha1 
-    };
-  }
-
   const packMcmetaEntry = findEntry("pack.mcmeta");
   const isResourcePack = entries.some(e => e.entryName.startsWith("assets/"));
   const isDataPack = entries.some(e => e.entryName.startsWith("data/"));
+  const baseName = path.basename(filePath);
+  const versionFromFilename = extractVersionFromFilename(baseName) || UNKNOWN;
 
-  if (packMcmetaEntry || isResourcePack || isDataPack) {
+  let projectType: string = DEFAULT_META.projectType;
+  if (isShader) projectType = "shader";
+  else if (isResourcePack) projectType = "resourcepack";
+  else if (isDataPack) projectType = "datapack";
+  else {
+    const lowerName = baseName.toLowerCase();
+    const keywords = ["library", "api", "lib-", "-lib", "core", "support", "framework"];
+    if (keywords.some(k => lowerName.includes(k))) {
+      projectType = "library";
+    }
+  }
+
+  if (packMcmetaEntry || isResourcePack || isDataPack || isShader) {
     let description = path.basename(filePath, path.extname(filePath));
     let iconBase64: string | undefined;
     if (packMcmetaEntry) {
@@ -368,7 +363,7 @@ function scanModRaw(filePath: string): ModMeta {
     
     return { 
       ...DEFAULT_META, 
-      projectType: isResourcePack ? "resourcepack" : isDataPack ? "datapack" : UNKNOWN, 
+      projectType, 
       modId: path.basename(filePath, path.extname(filePath)), 
       modName: description, 
       modVersion: versionFromFilename,
@@ -378,5 +373,5 @@ function scanModRaw(filePath: string): ModMeta {
     };
   }
 
-  return { ...DEFAULT_META, projectType: UNKNOWN, gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, sha1 };
+  return { ...DEFAULT_META, projectType, gameVersion: gameVersionFromFilename(filePath) ?? UNKNOWN, sha1 };
 }

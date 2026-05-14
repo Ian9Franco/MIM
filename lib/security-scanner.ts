@@ -24,6 +24,7 @@ import fs from "fs";
 import crypto from "crypto";
 import path from "path";
 import { getApiKey } from "./settings";
+import { scanMod } from "./scanner";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ const KNOWN_MALWARE_HASHES: Set<string> = new Set([
 /** Popular and trusted mods - Whitelist to reduce false positives */
 const TRUSTED_MODS: Set<string> = new Set([
   // Essential utility mods
-  "fabric-api", "fabricloader", "forge", "neoforge",
+  "fabric-api", "fabricloader", "forge", "neoforge", "connector", "sinytra-connector",
   // Performance mods
   "sodium", "lithium", "phosphor", "starlight", "rubidium", "krypton", "hydrogen",
   "optifine", "iris", "oculus", "embeddium", "continuity",
@@ -332,7 +333,7 @@ function getCacheFilePath(): string {
 function loadSecurityCache(): SecurityCache {
   if (securityCache) return securityCache;
   
-  securityCache = { version: 1, entries: {} };
+  securityCache = { version: 2, entries: {} };
   try {
     const cacheFile = getCacheFilePath();
     if (fs.existsSync(cacheFile)) {
@@ -403,7 +404,6 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   let isTrusted = false;
   
   try {
-    const { scanMod } = require("./scanner"); // Dynamic require to avoid circular imports
     const meta = scanMod(filePath);
     modId = meta.modId;
     isTrusted = isTrustedMod(meta.modId, path.basename(filePath));
@@ -580,23 +580,31 @@ export async function scanSecurity(filePath: string): Promise<SecurityScanResult
   let totalScore = findings.reduce((sum, f) => sum + f.scoreImpact, 0);
 
   // Apply scoring optimizations for common false positives
-  if (totalScore > 0 && totalScore < 40) {
-    // Para scores bajos, reducir aún más si hay VirusTotal limpio
-    if (vtResult && vtResult.maliciousCount === 0 && vtResult.totalEngineCount > 0) {
-      totalScore = Math.max(0, totalScore - 10); // Reducir score si VT confirma que es limpio
+    if (totalScore > 0 && totalScore < 40) {
+      // Para scores bajos, reducir aún más si hay VirusTotal limpio
+      if (vtResult && vtResult.maliciousCount === 0 && vtResult.totalEngineCount > 0) {
+        totalScore = Math.max(0, totalScore - 10); // Reducir score si VT confirma que es limpio
+      }
+      
+      // Si solo hay findings de bajo riesgo, marcar como limpio
+      const hasOnlyLowRiskFindings = findings.every(f => 
+        f.category === "network_call" || 
+        f.category === "reflection_abuse" || 
+        f.category === "manifest_anomaly"
+      );
+      
+      if (hasOnlyLowRiskFindings && totalScore < 25) {
+        totalScore = 0; // Marcar como completamente limpio
+      }
     }
-    
-    // Si solo hay findings de bajo riesgo, marcar como limpio
-    const hasOnlyLowRiskFindings = findings.every(f => 
-      f.category === "network_call" || 
-      f.category === "reflection_abuse" || 
-      f.category === "manifest_anomaly"
-    );
-    
-    if (hasOnlyLowRiskFindings && totalScore < 25) {
-      totalScore = 0; // Marcar como completamente limpio
+
+    // Whitelist for Sinytra Connector (False positives due to bridge logic & bytecode manipulation)
+    const fileName = path.basename(filePath).toLowerCase();
+    const isSinytra = fileName.includes("connector") && (fileName.includes("sinytra") || fileName.includes("forgified"));
+    if (isSinytra && totalScore < 95) {
+      totalScore = Math.min(totalScore, 10); // Downgrade to "Clean" (Score < 31)
     }
-  }
+
 
   const finalResult = buildResult(totalScore, findings, sha1, scannedAt, sha256, vtResult);
 

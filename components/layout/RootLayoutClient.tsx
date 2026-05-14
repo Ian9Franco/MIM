@@ -15,7 +15,12 @@ import { incidentManager } from "@/lib/incidentManager";
 import { correlationEngine } from "@/lib/correlationEngine";
 import type { Incident } from "@/lib/incidentManager";
 import { PackHealthPanel } from "@/components/layout/PackHealthModal";
-import type { PackHealthReport } from "@/lib/types";
+import type { PackHealthReport, ModHit, VersionEntry } from "@/lib/types";
+import { useStatusBanner } from "@/hooks/useStatusBanner";
+import { FomoVersionOverlay } from "@/components/fomo/FomoVersionOverlay";
+import { StatusBanner } from "@/components/ui/primitives";
+import { Layers, X } from "lucide-react";
+import { COLORS } from "@/theme/tokens";
 
 /**
  * Cliente de Layout Principal (Client Component).
@@ -41,6 +46,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [pendingBuildType, setPendingBuildType] = useState<"alluser" | "allhost" | null>(null);
   const [onForceBuildCallback, setOnForceBuildCallback] = useState<(() => void) | null>(null);
   const staging = useStaging();
+  const { status, showStatus, clearStatus } = useStatusBanner();
+
 
   // Marcar alertas como vistas si se abre el panel lateral de alertas
   React.useEffect(() => {
@@ -93,7 +100,11 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const handleAlertToggle = (e: Event) => {
       const customEvent = e as CustomEvent<boolean>;
-      setAlertSidebarOpen(customEvent.detail);
+      const isOpen = customEvent.detail;
+      setAlertSidebarOpen(isOpen);
+      if (isOpen) {
+        setPackHealthOpen(false);
+      }
     };
 
     const handleFomoToggleEvent = (e: Event) => {
@@ -155,8 +166,10 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       
       if (typeof detail === "boolean") {
         setPackHealthOpen(detail);
+        if (detail) setAlertSidebarOpen(false);
       } else if (detail && typeof detail === "object") {
         setPackHealthOpen(detail.open);
+        if (detail.open) setAlertSidebarOpen(false);
         if (detail.report) setPackHealthReport(detail.report);
         if (detail.onForceBuild) {
           const fn = detail.onForceBuild;
@@ -192,21 +205,6 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  React.useEffect(() => {
-    fetch("/api/settings")
-      .then(r => {
-        if (!r.ok) throw new Error("Settings fetch failed");
-        return r.json();
-      })
-      .then(d => {
-        // Abrir si es la primera vez (no validado) o si alguna ruta es actualmente inválida
-        if (!d.validated || !d.isValid) {
-          setSettingsOpen(true);
-        }
-      })
-      .catch(err => console.error("Error al comprobar rutas iniciales:", err));
-  }, []);
-
   const handleToggleFomo = (isOpen: boolean) => {
     setFomoOpen(isOpen);
     if (typeof window !== "undefined") {
@@ -223,6 +221,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         setSageOpen(false);
         setTweakOpen(false);
         setAlertSidebarOpen(false);
+        setPackHealthOpen(false);
       }
     }
   };
@@ -243,6 +242,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         setFomoOpen(false);
         setTweakOpen(false);
         setAlertSidebarOpen(false);
+        setPackHealthOpen(false);
       }
     }
   };
@@ -263,6 +263,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         setFomoOpen(false);
         setSageOpen(false);
         setAlertSidebarOpen(false);
+        setPackHealthOpen(false);
       }
     }
   };
@@ -283,6 +284,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         setFomoOpen(false);
         setSageOpen(false);
         setTweakOpen(false);
+        setPackHealthOpen(false);
       }
     }
   };
@@ -357,10 +359,10 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
 
       {/* ── Main app shell ──────────────────────────────────────────────────── */}
       <div
-          className="relative z-10 min-h-screen flex flex-col transition-all duration-600 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-x-hidden"
+          className="relative z-10 min-h-screen flex flex-col transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-x-hidden"
         style={{ 
-          transform: `translateX(${fomoOpen || sageOpen ? 500 : 0}px)`,
-          paddingRight: (alertSidebarOpen || tweakOpen || packHealthOpen) ? "400px" : "0px",
+          transform: `translateX(${(fomoOpen || sageOpen) ? 500 : 0}px)`,
+          paddingRight: tweakOpen ? "935px" : (alertSidebarOpen || packHealthOpen) ? "400px" : "0px",
           width: "100%",
         }}
       >
@@ -634,13 +636,15 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
       {stagingOpen && <StagingModal onClose={() => setStagingOpen(false)} />}
       
       {/* ── Global Pack Health Panel ────────────────────────────────────────── */}
-      {packHealthOpen && packHealthReport && (
+      {packHealthReport && (
         <PackHealthPanel
           report={packHealthReport}
+          isOpen={packHealthOpen}
+          activeProject={activeProject}
           onClose={() => {
             setPackHealthOpen(false);
-            // Pequeño delay para limpiar el reporte después de la animación de cierre
-            setTimeout(() => setPackHealthReport(null), 500);
+            // Pequeño delay para limpiar el reporte después de la animación de cierre (0.8s)
+            setTimeout(() => setPackHealthReport(null), 1000);
           }}
           onForceBuild={() => {
             if (onForceBuildCallback) onForceBuildCallback();

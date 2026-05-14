@@ -14,6 +14,7 @@ interface QuickCategorizeSectionProps {
   setSelectedLibFiles: (p: any) => void;
   onDeleteSelected?: () => void;
   onUnclassifySelected?: () => void;
+  onAutoCategorize?: () => void;
 }
 
 export function QuickCategorizeSection({
@@ -25,7 +26,8 @@ export function QuickCategorizeSection({
   setSelectedFiles,
   setSelectedLibFiles,
   onDeleteSelected,
-  onUnclassifySelected
+  onUnclassifySelected,
+  onAutoCategorize
 }: QuickCategorizeSectionProps) {
   return (
     <section className="animate-fade-up stagger-3">
@@ -40,6 +42,17 @@ export function QuickCategorizeSection({
         <h2 className="font-headline text-base leading-none" style={{ color: "var(--color-foreground)" }}>
           Categorización Rápida
         </h2>
+        
+        {activeProject && onAutoCategorize && (
+          <button
+            onClick={onAutoCategorize}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-wider shadow-lg shadow-primary/5"
+            title="Organizar automáticamente todos los mods según su entorno (Cliente/Servidor/Ambos)"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Auto-Asignar Entornos
+          </button>
+        )}
       </div>
       {/* Selected Mods Workbench */}
       {allSelected.length > 0 && (

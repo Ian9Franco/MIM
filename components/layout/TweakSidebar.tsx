@@ -418,7 +418,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
           isOpen ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-0 pointer-events-none"
         }`}
         style={{ 
-          width: "1100px",
+          width: "935px",
           maxWidth: "92vw",
           background: "var(--glass-bg)",
           borderColor: "var(--glass-border)",

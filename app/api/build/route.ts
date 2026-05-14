@@ -13,10 +13,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { buildAllUser, buildAllHost } from "@/lib/builder";
+import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/builder";
 import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/constants";
 import type { Loader } from "@/lib/constants";
 import path from "path";
+import fs from "fs";
 
 const BUILD_TYPES = ["alluser", "allhost"] as const;
 type BuildType = (typeof BUILD_TYPES)[number];
@@ -62,6 +63,15 @@ export async function POST(req: NextRequest) {
     }
 
     const buildPath = path.join(BUILDS_BASE, safeName);
+
+    // ── Pre-Build: Auto-Promote Dependencies ──────────────────────────────────
+    const projectModsPath = path.join(SOURCE_BASE, "_projects", safeName, "mods");
+    const loaderPath = fs.existsSync(projectModsPath)
+      ? projectModsPath
+      : path.join(SOURCE_BASE, version, loader);
+    
+    // Auto-promote libraries required by .essential from .local/.server to .essential
+    autoPromoteDependencies(loaderPath);
 
     // ── Dispatch to the appropriate builder ────────────────────────────────────
     const result =

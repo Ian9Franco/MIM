@@ -43,6 +43,8 @@ export interface ValidatorMod {
   loader:     string;
   /** Minecraft game version string (may be "unknown") */
   gameVersion: string;
+  /** projectType: "mod" | "library" | "shader" etc */
+  projectType: string;
   /** Category in the source tree: ".essential" | ".local" | ".server" */
   category:   string;
   /** Sub-category folder (e.g. "tecnologia", "rendimiento") */
@@ -88,6 +90,8 @@ function issue(
     category,
     modFile:  mod.fileName,
     modName:  mod.modName !== "unknown" ? mod.modName : mod.fileName,
+    modType:  mod.projectType,
+    modSub:   mod.sub,
     message,
     ...extras,
   };
@@ -169,10 +173,12 @@ function ruleEnvMismatchServerInLocal(mod: ValidatorMod): ValidationIssue | null
       "warning", "environment_mismatch", mod,
       `Mod server-side ubicado en categoría client (.local)`,
       {
-        details: `"${mod.modName}" se declara como server-only pero está en .local. Muévelo a .server.`,
+        details: `"${mod.modName}" se declara como server-only pero está en .local. Muévelo a .server o marca como compatible con cliente.`,
         autoFixable: true,
         fixAction:   "move_to_server",
         fixPayload:  { targetCategory: ".server", targetSub: mod.sub },
+        secondaryAction: "override",
+        secondaryPayload: { clientSide: "optional", serverSide: "required" }
       }
     );
   }
@@ -190,10 +196,12 @@ function ruleEnvMismatchClientInServer(mod: ValidatorMod): ValidationIssue | nul
       "warning", "environment_mismatch", mod,
       `Mod client-only ubicado en categoría servidor (.server)`,
       {
-        details: `"${mod.modName}" es client-only pero está en .server. Los servidores lo ignorarán o crashearán.`,
+        details: `"${mod.modName}" es client-only pero está en .server. Muévelo a .local o marca como compatible con servidor.`,
         autoFixable: true,
         fixAction:   "move_to_local",
         fixPayload:  { targetCategory: ".local", targetSub: mod.sub },
+        secondaryAction: "override",
+        secondaryPayload: { clientSide: "required", serverSide: "optional" }
       }
     );
   }
@@ -294,10 +302,12 @@ function ruleServerLeak(mod: ValidatorMod, buildTarget: "alluser" | "allhost" | 
       "error", "server_leak", mod,
       `Mod client-only en .essential causará crash en el servidor`,
       {
-        details: `"${mod.modName}" se declara como client-only pero .essential se incluye en builds de servidor.`,
+        details: `"${mod.modName}" se declara como client-only pero .essential se incluye en builds de servidor. Muévelo a .local o marca como compatible.`,
         autoFixable: true,
         fixAction:   "move_to_local",
         fixPayload:  { targetCategory: ".local", targetSub: mod.sub },
+        secondaryAction: "override",
+        secondaryPayload: { clientSide: "required", serverSide: "optional" }
       }
     );
   }

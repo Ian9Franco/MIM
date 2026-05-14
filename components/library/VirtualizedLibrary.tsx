@@ -216,9 +216,12 @@ export function VirtualizedLibrary({
     getBadge,
     conflicts,
     onOpenDetails: (f: LibraryFile) => {
+      const rawModId = f.meta?.modId || "";
+      const fileSlug = f.fileName.replace(/\.jar$/i, "").replace(/-[\d.]+.*/i, "").toLowerCase();
+      const isCurseforge = /^[0-9]+$/.test(rawModId);
       const modHit: any = {
-        projectId: f.meta?.modId || "",
-        slug: f.meta?.modId || f.fileName,
+        projectId: rawModId,
+        slug: rawModId || fileSlug,
         title: f.meta?.modName || f.fileName,
         description: "",
         iconUrl: f.meta?.iconBase64 || null,
@@ -228,15 +231,18 @@ export function VirtualizedLibrary({
         latestVersion: null,
         categories: f.meta?.categories || [],
         dateCreated: "",
-        url: `https://modrinth.com/mod/${f.meta?.modId || ""}`,
-        _source: f.meta?.modId?.match(/^[0-9]+$/) ? "curseforge" : "modrinth"
+        projectType: f.meta?.projectType || "mod",
+        url: isCurseforge
+          ? `https://www.curseforge.com/minecraft/mc-mods/${rawModId}`
+          : `https://modrinth.com/mod/${rawModId || fileSlug}`,
+        _source: isCurseforge ? "curseforge" : "modrinth"
       };
       
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
-        }, 300);
+        }, 400);
       }
     }
   }), [library, selectedLibFiles, setSelectedLibFiles, activeProject, downloadingMods, modrinthStatus, ignoredUpdates, handleDownloadUpdate, getBadge]);
@@ -361,7 +367,7 @@ export function VirtualizedLibrary({
                                 window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
                                 setTimeout(() => {
                                   window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
-                                }, 300);
+                                }, 400);
                               }
                             }}
                           />

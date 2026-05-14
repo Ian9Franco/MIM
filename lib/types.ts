@@ -231,20 +231,26 @@ export type ValidationFixAction =
   | "move_to_local"
   | "move_to_server"
   | "disable"
-  | "fomo_search";
+  | "fomo_search"
+  | "override";
 
 export interface ValidationIssue {
   severity:     ValidationSeverity;
   category:     ValidationCategory;
   modFile:      string;          // filename del mod afectado
   modName:      string;
+  modType?:     string;          // "mod" | "library" | "shader" etc.
+  modSub?:      string;          // sub-categoría (tecnologia, rendimiento)
   message:      string;          // descripción human-readable
   details?:     string;          // contexto adicional
   affectedMod?: string;          // el otro mod involucrado
   autoFixable?: boolean;
   fixAction?:   ValidationFixAction;
   /** Payload para la acción de fix (ej. categoría destino, query de FOMO) */
-  fixPayload?:  Record<string, string>;
+  fixPayload?:  Record<string, any>;
+  /** Segunda acción sugerida */
+  secondaryAction?: ValidationFixAction;
+  secondaryPayload?: Record<string, any>;
 }
 
 export type PackGrade = "S" | "A" | "B" | "C" | "D" | "F";

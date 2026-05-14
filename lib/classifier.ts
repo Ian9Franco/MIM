@@ -15,6 +15,7 @@ export interface ClassificationInput {
   categories?: string[]; // Etiquetas de Modrinth/CurseForge (ej: ["optimization", "utility"])
   clientSide?: "required" | "optional" | "unsupported" | boolean | string;
   serverSide?: "required" | "optional" | "unsupported" | boolean | string;
+  environment?: "client" | "server" | "both" | "unknown"; // Metadata persistente de MIM
 }
 
 export interface ClassificationResult {
@@ -276,41 +277,67 @@ export class MimClassifier {
     }
 
     // ───────────────────────────────────────────────────────────────────────────
-    // LAYER 1 — SCOPE & ENVIRONMENT MATCHING (Establece el sesgo inicial)
+    // LAYER 1 — PRIORITY 1: ENVIRONMENT (STRICT HIERARCHY)
     // ───────────────────────────────────────────────────────────────────────────
-    let scopeBonusCategory: ".local" | ".essential" | ".server" | null = null;
+    let strictCategory: ".local" | ".essential" | ".server" | null = null;
     
-    const clientSide = String(input.clientSide || "").toLowerCase();
-    const serverSide = String(input.serverSide || "").toLowerCase();
+    // Si tenemos metadata persistente de MIM, esa es la ley absoluta
+    if (input.environment === "client") {
+      strictCategory = ".local";
+      matchedRules.push("Hierarchy: Entorno Persistente -> CLIENT (.local)");
+    } else if (input.environment === "server") {
+      strictCategory = ".server";
+      matchedRules.push("Hierarchy: Entorno Persistente -> SERVER (.server)");
+    } else if (input.environment === "both") {
+      strictCategory = ".essential";
+      matchedRules.push("Hierarchy: Entorno Persistente -> BOTH (.essential)");
+    }
 
-    if (
-      clientSide === "required" || clientSide === "optional" || clientSide === "true" ||
-      searchName.includes("client") || searchName.includes("cosmetic") || searchName.includes("hud") || searchName.includes("tooltip")
-    ) {
-      if (serverSide === "unsupported" || serverSide === "false" || searchName.includes("client-only")) {
-        scopeBonusCategory = ".local";
-        matchedRules.push("Scope: Exclusivo de Cliente (.local)");
-      } else {
-        scopeBonusCategory = ".essential";
-        matchedRules.push("Scope: Compartido / Requerido en Ambos (.essential)");
-      }
-    } else if (
-      serverSide === "required" || serverSide === "optional" || serverSide === "true" ||
-      searchName.includes("server-only") || searchName.includes("dedicated")
-    ) {
-      if (clientSide === "unsupported" || clientSide === "false") {
-        scopeBonusCategory = ".server";
-        matchedRules.push("Scope: Exclusivo de Servidor (.server)");
-      } else {
-        scopeBonusCategory = ".essential";
-        matchedRules.push("Scope: Compartido / Ambos (.essential)");
+    // Si no hay metadata persistente, intentamos deducir el entorno (Fuzzy Scope)
+    if (!strictCategory) {
+      const clientSide = String(input.clientSide || "").toLowerCase();
+      const serverSide = String(input.serverSide || "").toLowerCase();
+
+      if (
+        clientSide === "required" || clientSide === "true" ||
+        searchName.includes("client-only") || searchName.includes("-client.jar")
+      ) {
+        strictCategory = ".local";
+        matchedRules.push("Scope: Detección heurística de Cliente (.local)");
+      } else if (
+        serverSide === "required" || serverSide === "true" ||
+        searchName.includes("server-only") || searchName.includes("-server.jar")
+      ) {
+        strictCategory = ".server";
+        matchedRules.push("Scope: Detección heurística de Servidor (.server)");
       }
     }
 
-    // Aplicar bonus inicial de scope
-    if (scopeBonusCategory) {
-      Object.keys(scores[scopeBonusCategory]).forEach((sub) => {
-        scores[scopeBonusCategory!][sub] += 25;
+    // ───────────────────────────────────────────────────────────────────────────
+    // LAYER 2 — PRIORITY 2: TYPE (STRICT HIERARCHY)
+    // ───────────────────────────────────────────────────────────────────────────
+    // Si es una librería, forzamos la subcategoría "librerias"
+    const isLibrary = searchName.includes("lib") || 
+                     searchName.includes("api") || 
+                     (input.categories || []).some(c => c.toLowerCase().includes("library"));
+    
+    if (isLibrary) {
+      matchedRules.push("Hierarchy: Tipo Detectado -> LIBRERIA");
+      return {
+        category: strictCategory || ".essential",
+        sub: "librerias",
+        confidence: 0.95,
+        matchedRules: Array.from(new Set(matchedRules))
+      };
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
+    // LAYER 3 — PRIORITY 3: TAGS & SEMANTIC SCORING (FOR SUB-CATEGORIZATION)
+    // ───────────────────────────────────────────────────────────────────────────
+    // Aplicar bonus inicial si ya tenemos una categoría estricta
+    if (strictCategory) {
+      Object.keys(scores[strictCategory]).forEach((sub) => {
+        scores[strictCategory!][sub] += 30;
       });
     }
 

@@ -1,12 +1,18 @@
 # MIM — Roadmap Estratégico
 
 > Logros alcanzados y visión de futuro.  
-> **Versión Actual:** Beta 5.7
+> **Versión Actual:** Beta 5.8
 > **Última actualización:** 2026-05-14
 
 ---
 
 # ✅ Logros Implementados (HECHO)
+
+## 🏛️ Beta 5.8 — Bytecode Conflict Engine
+- **Bytecode Conflict Engine**: Análisis profundo de archivos JAR para detectar colisiones de Mixin.
+- **Mixin Scanner**: Extracción automática de `mixin.json` y mapeo de clases objetivo (`targetClass`).
+- **Risk Assessment System**: Puntuación de riesgo dinámica basada en la criticidad de la clase afectada.
+- **Bytecode Alert Tab**: Nueva sección en el Sidebar de Alertas para visualizar conflictos de bytecode en tiempo real.
 
 ## 🏛️ Beta 5.7 — Discovery Unification & Architecture Cleanup
 - **Unified Mod Details Architecture**: Eliminación completa del sistema "Standalone Details" y centralización de la visualización de metadatos dentro del panel lateral de FOMO, simplificando el flujo de navegación y reduciendo la fragmentación de estado.
@@ -144,11 +150,11 @@
   - Integración con TWEAK para aplicar configuraciones optimizadas
   - Conexión con SAGE/ALRT para detección de problemas de rendimiento (orientado con más precisión a low/mid profiles)
   
-- [ ] **Conflict Detection Engine**: Motor de detección de conflictos de bytecode.
+- [x] **Conflict Detection Engine**: Motor de detección de conflictos de bytecode.
   - Detección previa al lanzamiento: mixin collisions, access transformer conflicts
   - Análisis de inyecciones duplicadas y dependencias circulares
   - Risk scoring basado en tipo de conflicto (0-100%)
-  - Sugerencias automáticas: downgrade mods, instalar compatibilidad, desactivar módulos
+  - Sugerencias automáticas: identificación de colisiones críticas
   - Integración con SAGE para debugging profundo de incompatibilidades
   
 - [x] **SAGE Recovery Engine**: Flujos interactivos de recuperación automatizada.
@@ -165,13 +171,15 @@
   - Escalación inteligente de alertas con recomendaciones contextuales
   **Capa de inteligencia operacional con correlación temporal y lifecycle management de incidentes.**
   
-- [ ] **Intelligent Pack Validation & Environment-Aware Build System (Mod Packaging Assistant repensado)**
+- [x] **Intelligent Pack Validation & Environment-Aware Build System (Mod Packaging Assistant repensado)**
   - **Meta de Diseño**: "Impedir que el usuario exporte un modpack roto antes de tiempo".
-  - [ ] **Persistencia de Metadata Real**: Entidades completas por mod con su ID, versión, loader, entorno (client/server/both), dependencias y conflictos.
-  - [ ] **Priority Classification System**: Clasificación estricta basada en jerarquía `entorno > tipo > tags`.
+  - [x] **Persistencia de Metadata Real**: Entidades completas por mod con su ID, versión, loader, entorno (client/server/both), dependencias y conflictos.
+  - [x] **Conflict Detection Engine (Bytecode Analysis)**: Nueva pestaña en el Centro de Alertas que detecta colisiones de Mixin antes de que el juego explote. Analiza los JARs para encontrar inyecciones duplicadas en las mismas clases de Minecraft.
+  - [x] **Risk Scoring Engine**: Algoritmo de evaluación de riesgo (0-100%) para conflictos de bytecode y seguridad.
+  - [x] **Priority Classification System**: Clasificación estricta basada en jerarquía `entorno > tipo > tags`.
   - [x] **Validation Engine (`validateProject`)**: Análisis preventivo previo a la exportación que retorna errores graves (bloqueantes), advertencias y sugerencias de optimización.
   - [x] **Build Gate Inflexible**: Bloqueo absoluto de exportación ante errores graves ("No negociación, no democracia") y exportación permitida bajo advertencia para perfiles experimentales.
-  - [ ] **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
+  - [x] **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
   - [x] **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
 
 ### Fase 5: Posicionamiento Profesional 

@@ -31,7 +31,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -135,7 +135,8 @@ export async function POST(req: NextRequest) {
               modName: meta.modName !== "unknown" ? meta.modName : undefined,
               categories: meta.categories,
               clientSide: meta.clientSide,
-              serverSide: meta.serverSide
+              serverSide: meta.serverSide,
+              environment: (environment as any) || meta.environment // Use environment from body
             });
             finalCategory = forceParentCategory || clRes.category;
             finalSub = clRes.sub;

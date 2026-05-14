@@ -13,6 +13,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { SOURCE_BASE } from "./constants";
+import { extractMixinTargets } from "./mixin-scanner";
 
 // Interfaces mejoradas
 export interface EnhancedModMeta {
@@ -40,6 +41,8 @@ export interface EnhancedModMeta {
   // Metadata de calidad
   extractionQuality: "high" | "medium" | "low";
   extractionWarnings: string[];
+  // Conflict Detection
+  mixinTargets?: string[];
 }
 
 const UNKNOWN = "unknown";
@@ -150,6 +153,13 @@ async function extractMetadataEnhanced(zip: AdmZip, filePath: string, warnings: 
 
   // Estrategia 5: Detectar compatibilidad con connector
   result.isCompatibleWithConnector = detectConnectorCompatibility(result);
+
+  // Estrategia 6: Extraer targets de Mixin para detección de conflictos
+  try {
+    result.mixinTargets = await extractMixinTargets(zip);
+  } catch (error) {
+    warnings.push(`Error extrayendo Mixin targets: ${error instanceof Error ? error.message : 'Unknown'}`);
+  }
 
   return result as EnhancedModMeta;
 }

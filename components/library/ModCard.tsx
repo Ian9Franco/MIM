@@ -45,6 +45,7 @@ interface ModCardProps {
   onSecurityDetails?: () => void;
   conflict?:     string;
   hasUpdate?:    boolean;
+  environment?:  "client" | "server" | "both" | "unknown";
 }
 
 function getProjectTypeLabel(type: string): string {
@@ -61,7 +62,7 @@ export const ModCard = memo(function ModCard({
   activeVersion, activeLoader, badgeText, badgeColor,
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, riskLevel, virusTotal, author, categories,
-  onOpenDetails, onSecurityDetails, conflict, hasUpdate,
+  onOpenDetails, onSecurityDetails, conflict, hasUpdate, environment,
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -264,6 +265,18 @@ export const ModCard = memo(function ModCard({
               {projectType && projectType !== "mod" && projectType !== "unknown" && (
                 <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: "rgba(102,200,160,0.15)", color: "#66C8A0", border: "1px solid rgba(102,200,160,0.3)", fontSize: "0.55rem" }}>
                   {getProjectTypeLabel(projectType).toUpperCase()}
+                </span>
+              )}
+
+              {environment && environment !== "unknown" && (
+                <span className="font-label rounded-full px-2 py-0.5 shrink-0 uppercase flex items-center gap-1" 
+                  style={{ 
+                    fontSize: "0.55rem",
+                    background: environment === "client" ? "rgba(187,150,228,0.12)" : environment === "server" ? "rgba(102,200,160,0.12)" : "rgba(242,86,43,0.12)",
+                    color: environment === "client" ? "#BB96E4" : environment === "server" ? "#66C8A0" : "#F2562B",
+                    border: `1px solid ${environment === "client" ? "rgba(187,150,228,0.3)" : environment === "server" ? "rgba(102,200,160,0.3)" : "rgba(242,86,43,0.3)"}`
+                  }}>
+                  {environment === "client" ? "🖥️ CLIENT" : environment === "server" ? "☁️ SERVER" : "🌐 BOTH"}
                 </span>
               )}
             </div>

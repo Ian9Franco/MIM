@@ -556,6 +556,7 @@ export default function Page() {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           conflicts={lib.conflicts}
+          bytecodeConflicts={lib.bytecodeConflicts}
           modrinthStatus={lib.modrinthStatus}
           ignoredUpdates={lib.ignoredUpdates}
           library={lib.library}

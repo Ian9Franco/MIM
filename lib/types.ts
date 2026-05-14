@@ -100,6 +100,8 @@ export interface ModMeta {
   dependencies?: string[];
   clientSide?:  string;
   serverSide?:  string;
+  environment?: "client" | "server" | "both" | "unknown";
+  mixinTargets?: string[];
 }
 
 export interface PendingFile {

@@ -111,14 +111,48 @@ function zipFolder(sourceDir: string, outputZipPath: string): void {
 /**
  * Copies `src` → `dest` recursively if `src` exists.
  * Logs a notice if the source is missing so the build log is informative.
+ *
+ * Supports Smart Config splitting:
+ * If buildType is provided, it will skip entries starting with "." (like .user or .host)
+ * and then merge the content of the subdirectory matching the buildType.
  */
-function copyIfExists(src: string, dest: string, label: string): void {
-  if (fs.existsSync(src)) {
-    fs.cpSync(src, dest, { recursive: true });
-    console.log(`[builder] Copied ${label}: ${path.basename(src)}`);
-  } else {
-    console.log(`[builder] Skipped ${label} (not found): ${src}`);
+function copyConfig(
+  src: string,
+  dest: string,
+  buildType?: "alluser" | "allhost"
+): void {
+  if (!fs.existsSync(src)) {
+    console.log(`[builder] Skipped config (not found): ${src}`);
+    return;
   }
+
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+
+  // 1. Copy common files (root files and non-special folders)
+  for (const entry of fs.readdirSync(src)) {
+    if (entry.startsWith(".")) continue;
+    const fullPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+
+    if (fs.statSync(fullPath).isDirectory()) {
+      fs.cpSync(fullPath, destPath, { recursive: true });
+    } else {
+      fs.copyFileSync(fullPath, destPath);
+    }
+  }
+
+  // 2. Merge build-specific overrides if applicable
+  if (buildType) {
+    const specificFolder = buildType === "alluser" ? ".user" : ".host";
+    const specificPath = path.join(src, specificFolder);
+
+    if (fs.existsSync(specificPath)) {
+      fs.cpSync(specificPath, dest, { recursive: true });
+      console.log(`[builder] Merged ${buildType}-specific config overrides.`);
+    }
+  }
+
+  console.log(`[builder] Config assembled for ${buildType || "both"}`);
 }
 
 // ── Internal: Leak Verification ───────────────────────────────────────────────
@@ -296,15 +330,19 @@ export function buildAllUser(
 
   // ── 3. ResourcePacks ────────────────────────────────────────────────────────
   const srcResources = path.join(sourceBase, "_projects", projectName, "resourcepacks");
-  copyIfExists(srcResources, resourcesDir, "resourcepacks");
+  if (fs.existsSync(srcResources)) {
+    fs.cpSync(srcResources, resourcesDir, { recursive: true });
+  }
 
   // ── 4. ShaderPacks ──────────────────────────────────────────────────────────
   const srcShaders = path.join(sourceBase, "_projects", projectName, "shaderpacks");
-  copyIfExists(srcShaders, shadersDir, "shaderpacks");
+  if (fs.existsSync(srcShaders)) {
+    fs.cpSync(srcShaders, shadersDir, { recursive: true });
+  }
 
-  // ── 5. Config Presets ────────────────────────────────────────────────────────
+  // ── 5. Config Presets (Smart Merge) ──────────────────────────────────────────
   const srcConfig = path.join(sourceBase, "_projects", projectName, "config");
-  copyIfExists(srcConfig, path.join(stagingDir, "config"), "config presets");
+  copyConfig(srcConfig, path.join(stagingDir, "config"), "alluser");
 
   // ── 5b. Options.txt (Game Settings) ───────────────────────────────────────────
   const srcOptions = path.join(sourceBase, "_projects", projectName, "options.txt");
@@ -395,20 +433,29 @@ export function buildAllHost(
 
   // ── 3. Datapacks ────────────────────────────────────────────────────────────
   const srcDatapacks = path.join(sourceBase, "_projects", projectName, "datapacks");
-  copyIfExists(srcDatapacks, datapacksDir, "datapacks");
+  if (fs.existsSync(srcDatapacks)) {
+    fs.cpSync(srcDatapacks, datapacksDir, { recursive: true });
+  }
 
-  // ── 4. Config Presets ────────────────────────────────────────────────────────
+  // ── 4. Config Presets (Smart Merge) ──────────────────────────────────────────
   const srcConfig = path.join(sourceBase, "_projects", projectName, "config");
-  copyIfExists(srcConfig, path.join(outputDir, "config"), "config presets");
+  copyConfig(srcConfig, path.join(outputDir, "config"), "allhost");
+
+  // ── 5. Compress staging → ZIP and clean up ───────────────────────────────────
+  const outputZip = `${buildPath}_allhost.zip`;
+  if (fs.existsSync(outputZip)) fs.rmSync(outputZip);
+
+  zipFolder(outputDir, outputZip);
+  fs.rmSync(outputDir, { recursive: true, force: true });
 
   const message =
-    `allhost build complete — ${jars.size} mods → ${path.basename(outputDir)}/`;
+    `allhost build complete — ${jars.size} mods → ${path.basename(outputZip)}`;
   console.log(`[builder] ✅ ${message}`);
 
   return {
     success: true,
     message,
     modsCount: jars.size,
-    outputPath: outputDir,
+    outputPath: outputZip,
   };
 }

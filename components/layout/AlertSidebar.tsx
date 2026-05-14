@@ -21,7 +21,8 @@ import {
   History,
   Activity,
   Search,
-  Sparkles
+  Sparkles,
+  Binary
 } from "lucide-react";
 import { eventBus } from "@/lib/eventBus";
 import { incidentManager, Incident } from "@/lib/incidentManager";
@@ -46,12 +47,14 @@ interface AlertSidebarProps {
     riskScore: number;
     summary: string;
   }>;
+  bytecodeConflicts?: any;
 }
 
 export function AlertSidebar({
   sidebarOpen,
   setSidebarOpen,
   conflicts,
+  bytecodeConflicts,
   modrinthStatus,
   library,
   downloadingMods,
@@ -63,7 +66,7 @@ export function AlertSidebar({
   handleCheckUpdates,
   securityAlerts = [],
 }: AlertSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config" | "bytecode">("all");
 
   // Persistence for activeTab
   useEffect(() => {
@@ -787,6 +790,14 @@ export function AlertSidebar({
           count={incidents.filter(i => i.status === "active" && i.module === "CONFIG").length}
           alert={incidents.some(i => i.status === "active" && i.module === "CONFIG" && i.severity === "danger")}
         />
+        <TabButton
+          active={activeTab === "bytecode"}
+          onClick={() => setActiveTab("bytecode")}
+          icon={<Binary className="w-3.5 h-3.5" />}
+          label="Bytecode"
+          count={bytecodeConflicts?.totalConflicts || 0}
+          alert={(bytecodeConflicts?.highRiskConflicts || 0) > 0}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-40 min-h-0">
@@ -1104,6 +1115,61 @@ export function AlertSidebar({
                   </div>
                 </div>
               ))}
+            </div>
+          </AlertSection>
+        )}
+
+        {/* ──────── BYTECODE CONFLICTS (MIXIN) SECTION ──────── */}
+        {(activeTab === "all" || activeTab === "bytecode") && bytecodeConflicts && bytecodeConflicts.conflicts.length > 0 && (
+          <AlertSection
+            icon={<Binary className="w-4 h-4" />}
+            title="Conflictos de Mixin (Bytecode)"
+            count={bytecodeConflicts.conflicts.length}
+            color="#fbbf24"
+            defaultOpen={true}
+          >
+            <div className="flex flex-col gap-3">
+              <p className="text-[10px] text-amber-200/50 italic leading-tight px-1">
+                Múltiples mods están intentando inyectar código en las mismas clases de Minecraft. Esto puede causar crashes o comportamientos erráticos.
+              </p>
+              {bytecodeConflicts.conflicts.map((conflict: any, idx: number) => {
+                const isHighRisk = conflict.riskScore > 70;
+                return (
+                  <div 
+                    key={idx} 
+                    className="p-3.5 rounded-2xl border animate-fade-in relative overflow-hidden"
+                    style={{ 
+                      borderColor: isHighRisk ? "rgba(251, 191, 36, 0.3)" : "rgba(255, 255, 255, 0.08)", 
+                      background: isHighRisk ? "rgba(251, 191, 36, 0.04)" : "rgba(255, 255, 255, 0.02)" 
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="text-[10px] font-mono font-bold text-amber-400 truncate flex-1">
+                            {conflict.targetClass.split('.').pop()}
+                          </p>
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isHighRisk ? 'bg-amber-500 text-black' : 'bg-white/10 text-white/50'}`}>
+                            Riesgo: {conflict.riskScore}%
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-white/40 truncate mb-3" title={conflict.targetClass}>
+                          {conflict.targetClass}
+                        </p>
+                        
+                        <div className="flex flex-col gap-1.5">
+                          {conflict.mods.map((m: any, midx: number) => (
+                            <div key={midx} className="flex items-center gap-2 text-[10px] text-white/70">
+                              <Package className="w-3 h-3 opacity-40" />
+                              <span className="font-bold truncate">{m.modName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </AlertSection>
         )}

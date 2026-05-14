@@ -57,6 +57,24 @@ interface CrashReport {
   mods: string[]; // Mod list at time of crash
 }
 
+export interface ModEntity {
+  hash: string;        // SHA1 as primary key (most robust across filenames)
+  modId: string;
+  modName: string;
+  version: string;
+  loader: string;
+  gameVersion: string;
+  environment: "client" | "server" | "both" | "unknown";
+  dependencies: string[];
+  conflicts: string[];
+  providedIds: string[];
+  categories: string[];
+  mixinTargets?: string[]; // Classes targeted by Mixins
+  lastSeen: number;
+  source: "local" | "modrinth" | "curseforge";
+  overrides?: Partial<Omit<ModEntity, "hash" | "overrides">>; // For manual user corrections
+}
+
 // Database schema
 interface MIMDatabase extends DBSchema {
   descriptions: {
@@ -97,6 +115,15 @@ interface MIMDatabase extends DBSchema {
     indexes: {
       'by-project': string;
       'by-timestamp': number;
+    };
+  };
+  mods: {
+    key: string;
+    value: ModEntity;
+    indexes: {
+      'by-modId': string;
+      'by-environment': string;
+      'by-lastSeen': number;
     };
   };
 }
@@ -144,6 +171,14 @@ class MIMIndexedDB {
           const crashStore = db.createObjectStore('crashReports', { keyPath: 'id' });
           crashStore.createIndex('by-project', 'projectId');
           crashStore.createIndex('by-timestamp', 'timestamp');
+        }
+
+        // Create mods store (Real Metadata Persistence)
+        if (!db.objectStoreNames.contains('mods')) {
+          const modsStore = db.createObjectStore('mods', { keyPath: 'hash' });
+          modsStore.createIndex('by-modId', 'modId');
+          modsStore.createIndex('by-environment', 'environment');
+          modsStore.createIndex('by-lastSeen', 'lastSeen');
         }
       },
     });
@@ -310,6 +345,34 @@ class MIMIndexedDB {
     await this.db!.delete('crashReports', id);
   }
 
+  // === Mods Store (Real Metadata Persistence) ===
+  
+  async getMod(hash: string): Promise<ModEntity | undefined> {
+    await this.init();
+    return this.db!.get('mods', hash);
+  }
+
+  async setMod(mod: ModEntity): Promise<void> {
+    await this.init();
+    const updated = { ...mod, lastSeen: Date.now() };
+    await this.db!.put('mods', updated);
+  }
+
+  async getModsByModId(modId: string): Promise<ModEntity[]> {
+    await this.init();
+    return this.db!.getAllFromIndex('mods', 'by-modId', modId);
+  }
+
+  async getAllMods(): Promise<ModEntity[]> {
+    await this.init();
+    return this.db!.getAll('mods');
+  }
+
+  async deleteMod(hash: string): Promise<void> {
+    await this.init();
+    await this.db!.delete('mods', hash);
+  }
+
   // === Migration Utilities ===
   
   async migrateFromJSON(): Promise<void> {
@@ -328,16 +391,18 @@ class MIMIndexedDB {
     projects: number;
     worlds: number;
     crashReports: number;
+    mods: number;
     total: number;
   }> {
     await this.init();
     
-    const [descriptions, cache, projects, worlds, crashReports] = await Promise.all([
+    const [descriptions, cache, projects, worlds, crashReports, mods] = await Promise.all([
       this.db!.count('descriptions'),
       this.db!.count('cache'),
       this.db!.count('projects'),
       this.db!.count('worlds'),
-      this.db!.count('crashReports')
+      this.db!.count('crashReports'),
+      this.db!.count('mods')
     ]);
 
     return {
@@ -346,21 +411,23 @@ class MIMIndexedDB {
       projects,
       worlds,
       crashReports,
-      total: descriptions + cache + projects + worlds + crashReports
+      mods,
+      total: descriptions + cache + projects + worlds + crashReports + mods
     };
   }
 
   async clearAll(): Promise<void> {
     await this.init();
     
-    const tx = this.db!.transaction(['descriptions', 'cache', 'projects', 'worlds', 'crashReports'], 'readwrite');
+    const tx = this.db!.transaction(['descriptions', 'cache', 'projects', 'worlds', 'crashReports', 'mods'], 'readwrite');
     
     await Promise.all([
       tx.objectStore('descriptions').clear(),
       tx.objectStore('cache').clear(),
       tx.objectStore('projects').clear(),
       tx.objectStore('worlds').clear(),
-      tx.objectStore('crashReports').clear()
+      tx.objectStore('crashReports').clear(),
+      tx.objectStore('mods').clear()
     ]);
     
     await tx.done;

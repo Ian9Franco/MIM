@@ -83,6 +83,7 @@ const ModItem = ({ index, style, data }: { index: number; style: React.CSSProper
         onOpenDetails={() => data.onOpenDetails(mod)}
         conflict={data.conflicts[mod.path]}
         hasUpdate={modrinthStatus[mod.path]?.status === "update_available" && !ignoredUpdates.has(mod.path)}
+        environment={mod.meta?.environment}
       />
     </div>
   );
@@ -346,6 +347,7 @@ export function VirtualizedLibrary({
                             categories={modrinthStatus[f.path]?.categories || f.meta?.categories}
                             conflict={conflicts[f.path]}
                             hasUpdate={modrinthStatus[f.path]?.status === "update_available" && !ignoredUpdates.has(f.path)}
+                            environment={f.meta?.environment}
                             onOpenDetails={() => {
                               const modHit: any = {
                                 projectId: f.meta?.modId || "",

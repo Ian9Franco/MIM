@@ -1,6 +1,8 @@
-"use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import type { Project, LibraryFile, PendingFile } from "@/lib/types";
+import { Project, LibraryFile, PendingFile } from "@/lib/types";
+import { mimDB } from "@/lib/indexeddb";
+import { modPersistence } from "@/services/modPersistenceService";
+import { detectBytecodeConflicts, ConflictSummary } from "@/lib/conflict-engine";
 
 export function useLibrary(
   activeProject: Project | null,
@@ -24,6 +26,7 @@ export function useLibrary(
   }[]>([]);
   const [ignoredConflicts, setIgnoredConflicts] = useState<Set<string>>(new Set());
   const [ignoredUpdates, setIgnoredUpdates] = useState<Set<string>>(new Set());
+  const [bytecodeConflicts, setBytecodeConflicts] = useState<ConflictSummary | null>(null);
   const autoCheckedProjects = useRef<Set<string>>(new Set());
 
   // Memoización agresiva para optimizar rendimiento con grandes librerías
@@ -52,9 +55,67 @@ export function useLibrary(
     setLoadingLibrary(true);
     fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
       .then((r) => r.json())
-      .then((d) => { setLibrary(d.library || []); setLoadingLibrary(false); })
+      .then(async (d) => { 
+        const rawLibrary: LibraryFile[] = d.library || [];
+        
+        // Enriquecer metadata desde IndexedDB
+        const enrichedLibrary = await Promise.all(rawLibrary.map(async (mod) => {
+          if (mod.meta?.sha1) {
+            const persistent = await mimDB.getMod(mod.meta.sha1);
+            if (persistent) {
+              return {
+                ...mod,
+                meta: {
+                  ...mod.meta,
+                  environment: persistent.environment,
+                  mixinTargets: persistent.mixinTargets
+                }
+              };
+            }
+          }
+          return mod;
+        }));
+
+        setLibrary(enrichedLibrary); 
+        setLoadingLibrary(false); 
+
+        // === Background Sync for Missing Metadata ===
+        const missingMetadata = enrichedLibrary.filter(mod => !mod.meta?.environment || mod.meta.environment === "unknown");
+        if (missingMetadata.length > 0) {
+          console.log(`[useLibrary] Syncing metadata for ${missingMetadata.length} mods...`);
+          
+          // Procesar en background de forma secuencial para no saturar
+          (async () => {
+            for (const mod of missingMetadata) {
+              try {
+                const entity = await modPersistence.getSmartMetadata(mod.path);
+                // Actualizar la UI inmediatamente para este mod
+                setLibrary(prev => prev.map(m => 
+                  m.path === mod.path 
+                    ? { ...m, meta: { ...m.meta, environment: entity.environment, mixinTargets: entity.mixinTargets } } 
+                    : m
+                ));
+              } catch (e) {
+                console.warn(`[useLibrary] Failed to sync metadata for ${mod.fileName}`, e);
+              }
+              // Pequeño respiro entre escaneos
+              await new Promise(r => setTimeout(r, 500));
+            }
+          })();
+        }
+      })
       .catch(() => setLoadingLibrary(false));
   }, [projectHash]);
+
+  // === Bytecode Conflict Detection ===
+  useEffect(() => {
+    if (library.length > 0) {
+      const summary = detectBytecodeConflicts(library);
+      setBytecodeConflicts(summary);
+    } else {
+      setBytecodeConflicts(null);
+    }
+  }, [libraryHash]);
 
   const checkUpdates = useCallback(async (force = false) => {
     if (!activeProject) return;
@@ -179,6 +240,7 @@ export function useLibrary(
           version: activeProject.version,
           projectName: activeProject.name,
           projectType: allSelected[0]?.meta?.projectType, // Hint for specific routing (shader, etc.)
+          environment: allSelected[0]?.meta?.environment, // PASS PERSISTENT METADATA
         }),
       });
       if (!res.ok) return;
@@ -397,6 +459,7 @@ export function useLibrary(
     handleResolveConflict,
     handleDismissUpdate,
     handleClassify,
-    refreshLibrary
+    refreshLibrary,
+    bytecodeConflicts
   };
 }

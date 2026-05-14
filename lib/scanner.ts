@@ -41,6 +41,7 @@ export interface ModMeta {
   categories?: string[];
   clientSide?: string;
   serverSide?: string;
+  environment?: "client" | "server" | "both" | "unknown";
 }
 
 // ── Internal Defaults ─────────────────────────────────────────────────────────

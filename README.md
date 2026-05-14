@@ -12,7 +12,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de JARs | 🚀 Beta 5.6**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de- **Version**: Beta 5.8
+**
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -61,7 +62,8 @@ Más tiempo jugando. Como debería ser.
 | **👥 Seguidos (Following)** | Seguimiento dedicado de creadores y proyectos con lupa de búsqueda híbrida (`author:` y `project:`) para comparar al instante versiones y plataformas en un catálogo combinado ("Ambos") | Detecta discrepancias de versión entre plataformas y unifica lanzamientos en un solo display |
 | **📚 Collections Update** | Sincronización de colecciones de Modrinth con plantillas pre-armadas | Organiza tus mods en colecciones compartibles |
 | **🔍 Modpack Search** | Búsqueda de modpacks con visualización de mods incluidos y dependencias | Analiza modpacks completos antes de descargar |
-| **🤖 Modo Auto** | Clasificación automática según tags y contexto del modpack | 90% menos clicks y menos neuronas sacrificadas |
+| **🤖 Modo Auto v2** | Clasificación jerárquica estricta: `Entorno > Tipo > Tags` | 95% menos clicks y organización impecable garantizada |
+| **💾 Persistent Metadata** | Almacenamiento IndexedDB para identificar mods por hash (SHA1) | Evita re-escaneos y mantiene el contexto del entorno (Client/Server) |
 | **🛡️ Security Scanner** | Bytecode analysis + VirusTotal + alertas centralizadas | Seguridad real, no “trust me bro” |
 | **🧠 SAGE Engine** | Diagnóstico de crashes, soporte `.mcmeta` y rescate de jugadores (`UUID.dat`) | Detecta y corrige fallos antes del rage quit |
 | **🔔 ALRT Center** | Centro unificado de alertas de seguridad, crashes y config | Todo lo importante en un solo lugar |
@@ -199,6 +201,11 @@ MIM implementa **3 capas de seguridad**:
 ---
 
 ## 🗺️ Roadmap
+
+### ✅ Completado (Beta 5.7)
+- **Real Metadata Persistence**: Almacenamiento en IndexedDB de entidades completas por mod (ID, versión, entorno) usando el hash SHA1 como clave única.
+- **Priority Classification System**: Motor de clasificación jerárquica estricta que prioriza el entorno (Client/Server) y el tipo (Library/Mod) sobre los tags semánticos.
+- **Environment-Aware UI**: Badges distintivos (🖥️ CLIENT, ☁️ SERVER, 🌐 BOTH) en cada ModCard con hidratación asíncrona desde la base de datos local.
 
 ### ✅ Completado (Beta 5.6)
 - **Spotlight Feed & Project Followers**: Exhibición curada de novedades y seguimiento de creadores con búsqueda híbrida entre plataformas.

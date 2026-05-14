@@ -1,10 +1,27 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** Beta 5.6 (Spotlight, Collections Update & Stock Ticker)  
-> **Última actualización:** 2026-05-13
+> **Versión Actual:** Beta 5.7 (Persistent Metadata & Priority Hierarchy)  
+> **Última actualización:** 2026-05-14
 
 ---
+
+## 🚀 Beta 5.7 — Persistent Metadata & Priority Hierarchy (2026-05-14)
+
+### Persistencia de Metadata Real
+- **Arquitectura IndexedDB**: Implementación de una base de datos local robusta para almacenar entidades `ModEntity` utilizando el hash SHA1 como clave primaria, permitiendo la identificación única de mods independientemente de su nombre de archivo.
+- **Deduplicación Inteligente**: Sistema de limpieza automática que reemplaza versiones antiguas basadas en ModID y versión técnica.
+- **Enriquecimiento de Metadata**: Integración de un servicio de persistencia que orquesta el escaneo técnico profundo y el almacenamiento persistente de metadatos de entorno y loader.
+
+### Priority Classification System (Modo Auto v2)
+- **Clasificación Jerárquica Estricta**: Refactorización del motor de clasificación para seguir una jerarquía `Entorno > Tipo > Tags`. 
+- **Conciencia de Entorno**: El sistema ahora prioriza la metadata técnica (`client`, `server`, `both`) sobre las heurísticas semánticas, garantizando que los mods se ubiquen en las carpetas físicas correctas (`.local`, `.server`, `.essential`).
+- **Detección de Tipo Mandataria**: Las librerías y APIs ahora se detectan y clasifican con prioridad absoluta en la subcarpeta `librerias`.
+
+### Interfaz y Experiencia de Usuario (UX)
+- **Badges de Entorno Dinámicos**: Incorporación de etiquetas visuales (🖥️ CLIENT, ☁️ SERVER, 🌐 BOTH) en `ModCard` con colores temáticos para una identificación rápida de la compatibilidad del entorno.
+- **Background Metadata Sync**: Proceso en segundo plano que hidrata la librería en tiempo real, escaneando mods faltantes sin interrumpir la navegación del usuario.
+- **Sincronización Frontend-Backend**: Actualización del pipeline de clasificación para pasar metadatos persistentes entre el cliente y el servidor.
 
 ## 🚀 Beta 5.6 — Spotlight, Collections Update & Stock Ticker (2026-05-13)
 

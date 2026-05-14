@@ -269,3 +269,36 @@ export interface PackHealthReport {
   buildTarget:  "alluser" | "allhost" | "both";
   validatedAt:  string;
 }
+// ── SAGE Recovery Types ──────────────────────────────────────────────────────
+
+export interface CrashAnalysis {
+  crashType: "dependency_missing" | "mod_incompatible" | "loader_incorrect" | "mixin_conflict" | "version_invalid" | "unknown";
+  severity: "low" | "medium" | "high" | "critical";
+  responsibleMod?: string;
+  missingDependencies?: string[];
+  incompatibleMods?: string[];
+  suggestedActions: RecoveryAction[];
+  confidence: number; // 0-100
+  stackTrace?: string;
+  logFile: string;
+}
+
+export interface RecoveryAction {
+  id: string;
+  type: "install_dependency" | "disable_mod" | "update_loader" | "change_version" | "repair_config" | "reorder_pack";
+  description: string;
+  automated: boolean;
+  priority: number;
+  risk: "low" | "medium" | "high";
+  params?: Record<string, any>;
+}
+
+export interface RecoverySession {
+  id: string;
+  crashAnalysis: CrashAnalysis;
+  actions: RecoveryAction[];
+  appliedActions: string[];
+  status: "analyzing" | "ready" | "applying" | "completed" | "failed";
+  timestamp: string;
+  projectPath: string;
+}

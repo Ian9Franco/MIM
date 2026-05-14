@@ -1,5 +1,5 @@
-import React from "react";
-import { Zap, ChevronRight, Package, Server, Trash2, X } from "lucide-react";
+import React, { useState } from "react";
+import { Zap, ChevronRight, Package, Server, Trash2, X, Cpu, ChevronDown } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
 import { HotkeyCard } from "../ui/HotkeyCard";
 import type { PendingFile, LibraryFile, Project } from "@/lib/types";
@@ -15,6 +15,8 @@ interface QuickCategorizeSectionProps {
   onDeleteSelected?: () => void;
   onUnclassifySelected?: () => void;
   onAutoCategorize?: () => void;
+  autoClassify?: boolean;
+  setAutoClassify?: (v: boolean) => void;
 }
 
 export function QuickCategorizeSection({
@@ -27,8 +29,12 @@ export function QuickCategorizeSection({
   setSelectedLibFiles,
   onDeleteSelected,
   onUnclassifySelected,
-  onAutoCategorize
+  onAutoCategorize,
+  autoClassify = false,
+  setAutoClassify
 }: QuickCategorizeSectionProps) {
+  const [showAutoMenu, setShowAutoMenu] = useState(false);
+
   return (
     <section className="animate-fade-up stagger-3">
       {/* Header */}
@@ -45,12 +51,12 @@ export function QuickCategorizeSection({
         
         {activeProject && onAutoCategorize && (
           <button
-            onClick={onAutoCategorize}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-wider shadow-lg shadow-primary/5"
-            title="Organizar automáticamente todos los mods según su entorno (Cliente/Servidor/Ambos)"
+            onClick={() => { setAutoClassify?.(!autoClassify); onAutoCategorize(); }}
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider shadow-lg ${autoClassify ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 ring-2 ring-emerald-500/20' : 'bg-primary/10 border-primary/20 text-primary shadow-primary/5'}`}
+            title="Activar clasificación automática de descargas y organizar mods instalados por entorno"
           >
-            <Zap className="w-3.5 h-3.5" />
-            Auto-Asignar Entornos
+            <Cpu className={`w-3.5 h-3.5 ${autoClassify ? 'animate-pulse' : ''}`} />
+            <span>{autoClassify ? "Auto: Activo" : "Auto-Clasificar"}</span>
           </button>
         )}
       </div>

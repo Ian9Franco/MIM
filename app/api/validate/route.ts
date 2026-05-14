@@ -23,7 +23,7 @@ import { SOURCE_BASE, isValidLoader, SUBCATEGORIES } from "@/lib/constants";
 import type { Loader } from "@/lib/constants";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/packValidator";
-import { getProjectOverrides } from "@/lib/overrides";
+import { loadProjectConfig } from "@/lib/projectConfig";
 
 const BUILD_TARGETS = ["alluser", "allhost", "both"] as const;
 type BuildTarget = (typeof BUILD_TARGETS)[number];
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       : path.join(SOURCE_BASE, version, loader as Loader);
 
     const validatorMods: ValidatorMod[] = [];
-    const overrides = getProjectOverrides(projectName);
+    const overrides = loadProjectConfig(projectName);
 
     if (!fs.existsSync(loaderPath)) {
       // No mods found — return a perfect report (nothing to validate)

@@ -1,0 +1,113 @@
+import React from "react";
+import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2 } from "lucide-react";
+
+/**
+ * @fileoverview Barra de Herramientas de Gestión Masiva (Librería).
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Panel de acciones dinámicas que responde al estado de selección de la librería.
+ * Permite ejecutar acciones por lote (como des-clasificar) o acciones de un solo
+ * archivo (como ver detalles en FOMO o duplicar entre entornos).
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export function LibraryToolbar({ 
+  selectedLibFiles, loadingDescription, showDupOptions, setShowDupOptions, 
+  handleDuplicateTo, handleUnclassify, autoClassify, setAutoClassify, 
+  setTransferOpen, handleOpenFolder, openingFolder, libraryCount 
+}: any) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Acción 1: Apertura de Detalles en la Ventana Modal de FOMO (Solo 1 archivo) */}
+      {selectedLibFiles.length === 1 && (
+        <ActionButton
+          onClick={() => {
+            const f = selectedLibFiles[0];
+            const modHit = { projectId: f.meta?.modId || "", title: f.meta?.modName || f.fileName, _source: "modrinth" };
+            window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+            setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+          }}
+          disabled={loadingDescription}
+          icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
+          label="Detalles" color="success"
+        />
+      )}
+
+      {/* Acción 2: Menú Desplegable para Duplicar a otra Capa (.local, .essential, .server) */}
+      {selectedLibFiles.length === 1 && (
+        <div className="relative">
+          <ActionButton 
+            onClick={() => setShowDupOptions(!showDupOptions)} 
+            icon={<Copy className="w-3.5 h-3.5" />} 
+            label="Duplicar" 
+            color="primary" 
+            highlighted={showDupOptions} 
+          />
+          {showDupOptions && (
+            <div className="absolute top-full right-0 mt-2 p-2 rounded-2xl glass border border-white/10 z-50 min-w-[160px] flex flex-col gap-1 shadow-2xl">
+              <p className="text-[9px] opacity-40 px-2 font-bold uppercase">Copia a:</p>
+              {[".local", ".essential", ".server"].filter(c => c !== selectedLibFiles[0].category).map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => handleDuplicateTo(cat)} 
+                  className="text-left text-[11px] px-3 py-2 rounded-lg hover:bg-white/5 font-bold transition-all"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Acción 3: Des-clasificar (Mover archivos a la sección de pendientes) */}
+      {selectedLibFiles.length > 0 && (
+        <ActionButton 
+          onClick={handleUnclassify} 
+          icon={<FolderOpen className="w-3.5 h-3.5" />} 
+          label="Des-clasificar" 
+          color="danger" 
+        />
+      )}
+
+      {/* Grupo de Herramientas del Sistema Local */}
+      <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/5">
+        <ActionButton 
+          onClick={() => setTransferOpen(true)} 
+          icon={<ArrowLeftRight className="w-3.5 h-3.5" />} 
+          label="Transferir" 
+          color="primary" 
+        />
+      </div>
+
+      {/* Acción Directa: Abrir carpeta física en el Explorador de Windows */}
+      <ActionButton 
+        onClick={handleOpenFolder} 
+        disabled={openingFolder || libraryCount === 0} 
+        icon={openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />} 
+        label="Carpeta" 
+        color="neutral" 
+      />
+    </div>
+  );
+}
+
+/**
+ * ActionButton: Botón de interfaz estandarizado para la barra de herramientas.
+ */
+function ActionButton({ onClick, disabled, icon, label, color, highlighted }: any) {
+  const styles: any = {
+    primary: "bg-primary/10 text-primary border-primary/20",
+    success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    danger: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    neutral: "bg-white/5 text-white/70 border-white/10",
+  };
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={disabled} 
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-xs border transition-all ${styles[color] || styles.neutral} ${highlighted ? 'ring-2 ring-primary/30 shadow-lg scale-105' : 'hover:scale-[1.02]'}`}
+    >
+      {icon} <span>{label}</span>
+    </button>
+  );
+}

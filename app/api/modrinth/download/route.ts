@@ -25,6 +25,7 @@ import fs from "fs";
 import os from "os";
 import crypto from "crypto";
 import { enrichUpdatesCache } from "@/lib/cache-enricher";
+import { watcherEmitter } from "@/lib/watcher";
 
 function collectJarFiles(dir: string, bucket: string[]) {
   if (!fs.existsSync(dir)) return;
@@ -68,7 +69,7 @@ function findExistingByHash(downloadsDir: string, hashes?: Record<string, string
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion } = await req.json();
+    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json(
@@ -96,7 +97,12 @@ export async function POST(req: NextRequest) {
     // ── Sanitize filename ──────────────────────────────────────────────────────
     // path.basename strips any directory components, preventing traversal like
     // "../../evil.jar" escaping the Downloads folder.
-    const safeFilename = path.basename(filename as string);
+    let safeFilename = path.basename(filename as string);
+    if (!/\.(jar|zip|mrpack)$/i.test(safeFilename)) {
+      const pType = projectType || "mod";
+      const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
+      safeFilename = `${safeFilename}${ext}`;
+    }
     if (!safeFilename || safeFilename === ".") {
       return NextResponse.json(
         { error: "Invalid filename after sanitization" },
@@ -152,6 +158,8 @@ export async function POST(req: NextRequest) {
           gameVersion,
           sha1: hashes?.sha1
         });
+
+        watcherEmitter.emit("new_file", existingPath);
 
         return NextResponse.json({
           success: true,

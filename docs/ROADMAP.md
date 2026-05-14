@@ -1,12 +1,19 @@
 # MIM — Roadmap Estratégico
 
 > Logros alcanzados y visión de futuro.  
-> **Versión Actual:** Beta 5.8
+> **Versión Actual:** Beta 5.9 (Architecture & Code Consolidation)  
 > **Última actualización:** 2026-05-14
 
 ---
 
 # ✅ Logros Implementados (HECHO)
+
+## 🏛️ Beta 5.9 — Architecture & Code Consolidation
+- **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios (`useFileWatcher`, `FomoSidebarPortal`, heurísticas centralizadas).
+- **Modrinth Rescue Fallback**: Búsqueda inteligente de rescate en Modrinth al detectar que un autor de CurseForge bloquea descargas de terceros, garantizando descargas exitosas.
+- **Interactive Dependency Modal**: Modal overlay premium para previsualizar dependencias requeridas antes de ejecutar descargas por lotes.
+- **Flujo de Detalles Sincronizado**: Carga y despliegue instantáneo del panel de detalles en cualquier mod de la librería sin cierres automáticos ni temporizadores.
+- **Version Range Compatibility**: Análisis inteligente de rangos de versiones multi-loader en descargas pendientes.
 
 ## 🏛️ Beta 5.8 — Bytecode Conflict Engine
 - **Bytecode Conflict Engine**: Análisis profundo de archivos JAR para detectar colisiones de Mixin.

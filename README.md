@@ -12,10 +12,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de- **Version**: Beta 5.8
-**
+**⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de Seguridad | 🧠 Diagnóstico de Crashes**
 
-[📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
+[![Version](https://img.shields.io/badge/Version-Beta_5.9-6366f1.svg)](./CHANGELOG.md)
+
+[📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
 </div>
 
@@ -201,6 +202,13 @@ MIM implementa **3 capas de seguridad**:
 ---
 
 ## 🗺️ Roadmap
+
+### ✅ Completado (Beta 5.9)
+- **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios (`useFileWatcher`, `FomoSidebarPortal`, heurísticas centralizadas).
+- **Modrinth Rescue Fallback**: Búsqueda inteligente de rescate en Modrinth al detectar que un autor de CurseForge bloquea descargas de terceros, garantizando descargas exitosas.
+- **Interactive Dependency Modal**: Modal overlay premium para previsualizar dependencias requeridas antes de ejecutar descargas por lotes.
+- **Flujo de Detalles Sincronizado**: Carga y despliegue instantáneo del panel de detalles en cualquier mod de la librería sin cierres automáticos ni temporizadores.
+- **Version Range Compatibility**: Análisis inteligente de rangos de versiones multi-loader en descargas pendientes.
 
 ### ✅ Completado (Beta 5.7)
 - **Real Metadata Persistence**: Almacenamiento en IndexedDB de entidades completas por mod (ID, versión, entorno) usando el hash SHA1 como clave única.

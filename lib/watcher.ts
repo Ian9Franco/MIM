@@ -45,7 +45,7 @@ let watchedPath: string | null = null;
 /** Returns true for file extensions MIM cares about. */
 function isRelevantFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
-  return ext === ".jar" || ext === ".zip";
+  return ext === ".jar" || ext === ".zip" || ext === ".mrpack";
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

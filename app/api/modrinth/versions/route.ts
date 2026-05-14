@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
   const loader      = searchParams.get("loader");
   const projectType = searchParams.get("projectType") ?? "mod";
 
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+  if (!projectId || projectId === "unknown") {
+    return NextResponse.json({ versions: [] });
   }
 
   const headers: Record<string, string> = { "User-Agent": "MIM-App/1.0 (contact@mim.local)" };

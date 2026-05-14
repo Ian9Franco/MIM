@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/constants";
+import { updateModOverride } from "@/lib/projectConfig";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
-    const projectModsPath = path.join(SOURCE_BASE, "_projects", safeName, "mods");
+    const projectModsPath = path.join(SOURCE_BASE, "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
     const loaderPath = fs.existsSync(projectModsPath)
       ? projectModsPath
       : path.join(SOURCE_BASE, version, loader);
@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
       const catPath = path.join(loaderPath, category);
       if (!fs.existsSync(catPath)) continue;
 
-      for (const sub of fs.readdirSync(catPath)) {
+      const subs = fs.readdirSync(catPath);
+      for (const sub of subs) {
         const subPath = path.join(catPath, sub);
         if (!fs.statSync(subPath).isDirectory()) continue;
 
@@ -52,26 +53,26 @@ export async function POST(req: NextRequest) {
 
     if (action.startsWith("move_to_")) {
       const targetCategory = payload?.targetCategory;
-      const targetSub = payload?.targetSub || sourceSub; // keep sub if not provided
+      const targetSub = payload?.targetSub || sourceSub;
 
       if (!targetCategory || !targetSub) {
-        return NextResponse.json({ error: "Missing targetCategory/targetSub payload" }, { status: 400 });
+        return NextResponse.json({ error: "Missing targetCategory/targetSub" }, { status: 400 });
       }
 
       const targetPath = path.join(loaderPath, targetCategory, targetSub);
-      fs.mkdirSync(targetPath, { recursive: true });
+      if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath, { recursive: true });
 
-      const destFilePath = path.join(targetPath, fileName);
-      fs.renameSync(sourceFilePath, destFilePath);
-
+      fs.renameSync(sourceFilePath, path.join(targetPath, fileName));
       return NextResponse.json({ success: true, message: `Moved ${fileName} to ${targetCategory}/${targetSub}` });
-    } else if (action === "disable") {
-      const destFilePath = sourceFilePath + ".disabled";
-      fs.renameSync(sourceFilePath, destFilePath);
+    } 
+    
+    if (action === "disable") {
+      fs.renameSync(sourceFilePath, sourceFilePath + ".disabled");
       return NextResponse.json({ success: true, message: `Disabled ${fileName}` });
-    } else if (action === "override") {
-      const { saveProjectOverride } = require("@/lib/overrides");
-      saveProjectOverride(projectName, fileName, payload);
+    } 
+    
+    if (action === "override") {
+      updateModOverride(projectName, fileName, payload);
       return NextResponse.json({ success: true, message: `Applied overrides to ${fileName}` });
     }
 

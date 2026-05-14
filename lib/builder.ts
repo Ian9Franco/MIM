@@ -439,7 +439,20 @@ export function buildAllHost(
 
   // ── 4. Config Presets (Smart Merge) ──────────────────────────────────────────
   const srcConfig = path.join(sourceBase, "_projects", projectName, "config");
-  copyConfig(srcConfig, path.join(outputDir, "config"), "allhost");
+  const destConfig = path.join(outputDir, "config");
+  copyConfig(srcConfig, destConfig, "allhost");
+
+  // Move server root files (e.g. server.properties, whitelist.json) from config/ to the server root
+  if (fs.existsSync(destConfig)) {
+    const rootFiles = ["server.properties", "whitelist.json", "ops.json", "banned-ips.json", "banned-players.json", "eula.txt"];
+    for (const rf of rootFiles) {
+      const rfConfigPath = path.join(destConfig, rf);
+      if (fs.existsSync(rfConfigPath)) {
+        fs.renameSync(rfConfigPath, path.join(outputDir, rf));
+        console.log(`[builder] Moved server root file to archive root: ${rf}`);
+      }
+    }
+  }
 
   // ── 5. Compress staging → ZIP and clean up ───────────────────────────────────
   const outputZip = `${buildPath}_allhost.zip`;

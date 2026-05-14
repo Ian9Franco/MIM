@@ -20,6 +20,13 @@ export interface ModOverride {
   customName?: string;
   /** Manually marked as a dependency of another mod */
   isDependencyOf?: string[];
+  
+  // From old overrides.ts
+  clientSide?: "required" | "optional" | "unsupported";
+  serverSide?: "required" | "optional" | "unsupported";
+  gameVersion?: string;
+  loader?: string;
+  ignoreDependencies?: string[]; // IDs to ignore if missing
 }
 
 export interface ProjectConfig {
@@ -35,7 +42,8 @@ export interface ProjectConfig {
 }
 
 export function getProjectConfigPath(projectName: string): string {
-  return path.join(SOURCE_BASE, "_projects", projectName, "mim-project.json");
+  const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
+  return path.join(SOURCE_BASE, "_projects", safeName, "mim-project.json");
 }
 
 export function loadProjectConfig(projectName: string): ProjectConfig {
@@ -73,13 +81,13 @@ export function saveProjectConfig(projectName: string, config: ProjectConfig): v
 /**
  * Updates or creates an override for a specific mod in a project.
  */
-export function updateModOverride(projectName: string, modId: string, override: ModOverride): void {
+export function updateModOverride(projectName: string, modIdOrFileName: string, override: Partial<ModOverride>): void {
   const config = loadProjectConfig(projectName);
   
   if (!config.mods) config.mods = {};
   
-  config.mods[modId] = {
-    ...(config.mods[modId] || {}),
+  config.mods[modIdOrFileName] = {
+    ...(config.mods[modIdOrFileName] || {}),
     ...override
   };
   

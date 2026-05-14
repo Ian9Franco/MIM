@@ -19,14 +19,19 @@ import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion } = await req.json();
+    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json({ error: "Missing url or filename" }, { status: 400 });
     }
 
     // path.basename previene path traversal ("../../evil.jar" → "evil.jar")
-    const safeFilename = path.basename(filename as string);
+    let safeFilename = path.basename(filename as string);
+    if (!/\.(jar|zip|mrpack)$/i.test(safeFilename)) {
+      const pType = projectType || "mod";
+      const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
+      safeFilename = `${safeFilename}${ext}`;
+    }
     const settings = getSettings();
     const downloadsDir = settings.downloadsPath;
 
@@ -43,9 +48,14 @@ export async function POST(req: NextRequest) {
       destPath   = path.join(downloadsDir, `${name}_${Date.now()}${ext}`);
     }
 
-    const res = await fetch(url as string);
+    const res = await fetch(url as string, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.curseforge.com/"
+      }
+    });
     if (!res.ok) {
-      throw new Error(`Failed to fetch from CurseForge: ${res.statusText}`);
+      throw new Error(`Failed to fetch from CurseForge: ${res.statusText} (${res.status})`);
     }
 
     const buffer = Buffer.from(await res.arrayBuffer());

@@ -1,10 +1,26 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** Beta 5.7 (Persistent Metadata & Priority Hierarchy)  
+> **Versión Actual:** Beta 5.9 (Architecture & Code Consolidation)  
 > **Última actualización:** 2026-05-14
 
 ---
+
+## 🚀 Beta 5.9 — Architecture & Code Consolidation (2026-05-14)
+
+### Consolidación y Limpieza Técnica
+- **Fusión de Servicios**: Eliminación de `overrides.ts` y consolidación de toda la lógica de configuración y metadatos manuales en `projectConfig.ts`.
+- **Heurísticas Centralizadas**: Creación de `lib/classification-data.ts`, `lib/security-data.ts` y `lib/sage-data.ts` para centralizar patrones de detección, keywords y reglas heurísticas, eliminando el hardcodeo disperso.
+- **Utilidades de Versión**: Extracción de lógica compleja de comparación de versiones a `lib/version-utils.ts`.
+
+### Optimización de Legibilidad (Clean Code)
+- **Refactorización Masiva**: Reducción drástica de líneas de código en archivos críticos (>500 líneas):
+  - `app/page.tsx`: Reducción del 80% mediante extracción de hooks (`useFileWatcher`) y componentes (`FomoSidebarPortal`).
+  - `security-scanner.ts`: Reducción del 85% mediante modularización de reglas.
+  - `sageRecoveryEngine.ts`: Reducción del 78% mediante extracción de patrones.
+  - `PackHealthModal.tsx`: Reducción del 72% mediante extracción de sub-componentes.
+  - `incidentStorage.ts`: Reducción del 78% mediante extracción de fallbacks de almacenamiento.
+- **Desacoplamiento de UI**: Extracción de componentes DOM complejos y portales a archivos dedicados para mejorar el mantenimiento visual.
 
 ## 🚀 Beta 5.7 — Persistent Metadata & Priority Hierarchy (2026-05-14)
 

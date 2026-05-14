@@ -48,7 +48,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     if (!find()) { const i = setInterval(() => { if (find()) clearInterval(i); }, 50); return () => clearInterval(i); }
   }, [disablePortal]);
 
-  const rawDesc = mod.body?.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(mod.body) : markdownToHtml(mod.body)) : "Sin descripción.";
+  const descText = mod.body || mod.description || "";
+  const rawDesc = descText.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(descText) : markdownToHtml(descText)) : "Sin descripción.";
   const descHtml = translatedBody ? `<div class="p-4 rounded-2xl bg-primary/5 border border-primary/20 mb-4">🌐 <b>Traducción:</b> ${translatedBody}</div><div class="opacity-40 grayscale scale-95">${rawDesc}</div>` : rawDesc;
 
   const content = (

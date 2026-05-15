@@ -72,11 +72,19 @@ export function PendingFilesSection({
             ) : (
               compatibleFiles.filter(f => !selectedFiles.some((s: any) => s.path === f.path)).map((f, i) => (
                 <ModCard
-                  key={f.path} index={i} name={f.meta?.modName || f.fileName}
+                  key={f.path} index={i}
+                  name={(() => {
+                    const raw = f.meta?.modName;
+                    if (raw && raw !== "unknown") return raw;
+                    return f.fileName.replace(/\.(jar|zip|mrpack)$/i, "").replace(/[-_]/g, " ").replace(/\s+v?\d[\d.]*[\w.-]*$/i, "").replace(/\s+/g, " ").trim() || f.fileName;
+                  })()}
                   version={f.meta?.gameVersion && f.meta.gameVersion !== "unknown" ? f.meta.gameVersion : modrinthStatus[f.path]?.gameVersions?.[0] || "unknown"}
+                  modVersion={f.meta?.modVersion}
                   iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
                   loader={f.meta?.loader && f.meta.loader !== "unknown" ? f.meta.loader : modrinthStatus[f.path]?.loaders?.[0] || "unknown"}
-                  isSelected={false} onClick={() => setSelectedFiles((prev: any) => [...prev, f])}
+                  projectType={f.meta?.projectType}
+                  isSelected={selectedFiles.some((p: any) => p.path === f.path)} 
+                  onClick={() => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
                   activeVersion={activeProject?.version} activeLoader={activeProject?.loader} isPending={true}
                   onDelete={() => setFilesToDelete([f])} isDeleting={deletingFiles[f.path]} conflict={conflicts[f.path]}
                 />
@@ -85,7 +93,8 @@ export function PendingFilesSection({
             <PendingIncompatibleGroup 
               files={incompatibleFiles} activeProject={activeProject} modrinthStatus={modrinthStatus}
               conflicts={conflicts} onDeleteRequest={(f: any) => setFilesToDelete([f])} deletingFiles={deletingFiles}
-              onSelect={(f: any) => setSelectedFiles((prev: any) => [...prev, f])}
+              onSelect={(f: any) => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
+              selectedFiles={selectedFiles}
             />
           </>
         )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Save, X, AlertTriangle, Ghost } from "lucide-react";
+import { Save, X, AlertTriangle, Ghost, Lock, Unlock } from "lucide-react";
 
 /**
  * @fileoverview Fila de Edición y Asignación de Atajos de Teclado (Keybinds).
@@ -10,7 +10,7 @@ import { Save, X, AlertTriangle, Ghost } from "lucide-react";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function KeybindRow({ keybind, editing, onEdit, onSave, onCancel, formatKeyDisplay, isOrphaned }: any) {
+export function KeybindRow({ keybind, editing, isLocked, onToggleLock, onEdit, onSave, onCancel, formatKeyDisplay, isOrphaned }: any) {
   const [tempKey, setTempKey] = useState(keybind.key);
 
   // MODO EDICIÓN: Input de captura
@@ -50,7 +50,13 @@ export function KeybindRow({ keybind, editing, onEdit, onSave, onCancel, formatK
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <span className="text-sm font-medium truncate">{keybind.name}</span>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
+          className={`p-1 rounded hover:bg-white/10 transition-colors ${isLocked ? "text-primary" : "text-zinc-600 opacity-0 group-hover:opacity-100"}`}
+        >
+          {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+        </button>
+        <span className={`text-sm font-medium truncate ${isLocked ? "opacity-50" : ""}`}>{keybind.name}</span>
         
         {/* Indicador de Colisión (Tecla asignada a múltiples acciones) */}
         {keybind.conflicts?.length > 0 && (

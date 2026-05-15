@@ -11,7 +11,7 @@ export function useFomoDetails(source: string, loader: string, projectType: stri
     setVersLoading(true);
     try {
       const apiSource = mod._source === "curseforge" ? "curseforge" : "modrinth";
-      const res = await fetch(`/api/${apiSource}/versions?projectId=${mod.projectId}&loader=${loader}&projectType=${mod.projectType || projectType}`);
+      const res = await fetch(`/api/${apiSource}/versions?projectId=${mod.projectId}&loader=all&projectType=${mod.projectType || projectType}`);
       if (res.ok) {
         const data = await res.json();
         setProjectVersions(data.versions ?? []);

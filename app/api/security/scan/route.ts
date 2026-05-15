@@ -282,7 +282,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
 
       const batchResult = await scanSecurityBatch(body.filePaths);
-      return NextResponse.json({ success: true, batch: true, ...batchResult });
+      return NextResponse.json({ success: true, batch: true, results: batchResult });
     }
 
     // Handle single file scan

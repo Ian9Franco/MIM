@@ -69,6 +69,7 @@ export function AlertSidebar({
             target.closest('.lightbox-overlay')) return;
             
         setSidebarOpen(false);
+        window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -86,7 +87,7 @@ export function AlertSidebar({
   return (
     <aside 
       ref={sidebarRef} 
-      className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0 ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`} 
+      className={`fixed inset-y-0 right-0 w-[450px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0 ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`} 
       style={{ 
         background: "var(--glass-bg)", 
         borderColor: "var(--color-border)", 
@@ -105,11 +106,11 @@ export function AlertSidebar({
         </h2>
         <div className="flex items-center gap-2">
           {handleCheckUpdates && <button onClick={handleCheckUpdates} disabled={checkingUpdates} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}><RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} /> <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span></button>}
-          <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl transition-colors hover:bg-white/5" style={{ color: "var(--color-muted)" }}><X className="w-5 h-5" /></button>
+          <button onClick={() => { setSidebarOpen(false); window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false })); }} className="p-2 rounded-xl transition-colors hover:bg-white/5" style={{ color: "var(--color-muted)" }}><X className="w-5 h-5" /></button>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 p-2 border-b" style={{ borderColor: "var(--color-border)" }}>
+      <div className="flex items-center gap-1 p-2 border-b overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: "var(--color-border)" }}>
         <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")} icon={<Info className="w-3.5 h-3.5" />} label="Todas" count={conflicts.length + updates.length + incidents.length} />
         <TabButton active={activeTab === "sage"} onClick={() => setActiveTab("sage")} icon={<Activity className="w-3.5 h-3.5" />} label="SAGE" count={incidents.filter(i => i.status === "active" && i.module === "SAGE").length} alert={incidents.some(i => i.status === "active" && i.module === "SAGE" && i.severity === "danger")} />
         <TabButton active={activeTab === "updates"} onClick={() => setActiveTab("updates")} icon={<RefreshCw className="w-3.5 h-3.5" />} label="Updates" count={updates.length} />
@@ -148,6 +149,83 @@ export function AlertSidebar({
             {collectionUpdates.length > 0 && <AlertSection icon={<RefreshCw className="w-4 h-4" />} title="Seguidos" count={collectionUpdates.length} color="var(--color-primary)">{renderUpdates(collectionUpdates, "collection")}</AlertSection>}
           </>
         )}
+
+        {(activeTab === "all" || activeTab === "bytecode") && bytecodeConflicts && bytecodeConflicts.conflicts.length > 0 && (() => {
+          // Contar combinaciones de mods para el resumen
+          const pairCounts = new Map<string, { mods: string[], count: number }>();
+          bytecodeConflicts.conflicts.forEach((c: any) => {
+            const modNames = c.mods.map((m: any) => m.modName).sort();
+            const key = modNames.join(' & ');
+            if (!pairCounts.has(key)) {
+              pairCounts.set(key, { mods: modNames, count: 0 });
+            }
+            pairCounts.get(key)!.count++;
+          });
+          
+          const sortedPairs = Array.from(pairCounts.values()).sort((a, b) => b.count - a.count);
+
+          return (
+            <>
+              {sortedPairs.length > 0 && (
+                <div className="p-3.5 mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200/80 animate-fade-in">
+                  <p className="font-bold mb-2 text-amber-400 flex items-center gap-1.5">
+                    <span className="text-sm">🛡️</span> Portero de Bytecode
+                  </p>
+                  <div className="space-y-2">
+                    {sortedPairs.map((pair, idx) => (
+                      <div key={idx} className="flex flex-col gap-0.5">
+                        <div className="flex items-start gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${pair.count > 10 ? 'bg-red-500' : 'bg-amber-500'}`} />
+                          <p className="leading-normal">
+                            {pair.mods.map((mod: string, i: number) => (
+                              <React.Fragment key={i}>
+                                <span className="text-white font-bold">{mod}</span>
+                                {i < pair.mods.length - 1 && (i === pair.mods.length - 2 ? " y " : ", ")}
+                              </React.Fragment>
+                            ))}{" "}
+                            {pair.count > 10 ? "tienen un conflicto masivo" : "chocan"} en{" "}
+                            <span className="text-white font-bold">{pair.count}</span> {pair.count === 1 ? "clase" : "clases"}.
+                          </p>
+                        </div>
+                        <p className="text-[10px] opacity-70 ml-3">
+                          {pair.count > 10 
+                            ? "❌ Son incompatibles o duplicados (ej: mismos mods en distintos loaders). Se recomienda dejar solo uno."
+                            : "⚠️ Modifican la misma lógica. Podría haber inestabilidad o mal funcionamiento según cuál cargue primero."}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <AlertSection icon={<Binary className="w-4 h-4" />} title="Conflictos de Bytecode" count={bytecodeConflicts.conflicts.length} color="#818cf8" defaultOpen={false}>
+                {bytecodeConflicts.conflicts.map((c: any, i: number) => (
+                  <div key={i} className="p-3 rounded-xl border animate-fade-in" style={{ borderColor: c.riskScore > 70 ? "var(--color-danger-border)" : "var(--color-border)", background: c.riskScore > 70 ? "var(--color-danger-bg)" : "rgba(129,138,248,0.05)" }}>
+                    <div className="flex items-start gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: c.riskScore > 70 ? "var(--color-danger-hover)" : "rgba(129,138,248,0.1)" }}>
+                        <Binary className="w-4 h-4" style={{ color: c.riskScore > 70 ? "var(--color-danger)" : "#818cf8" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-subhead text-xs truncate text-white/90" title={c.targetClass}>{c.targetClass.split('.').pop()}</p>
+                        <p className="text-[10px] text-white/40 truncate">{c.targetClass}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {c.mods.map((m: any, j: number) => (
+                            <span key={j} className="px-1.5 py-0.5 rounded text-[9px] bg-white/5 text-white/60">
+                              {m.modName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className={`text-xs font-bold ${c.riskScore > 70 ? "text-red-400" : "text-amber-400"}`}>
+                        {c.riskScore}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </AlertSection>
+            </>
+          );
+        })()}
 
         {(activeTab === "all" || activeTab === "conflicts") && conflicts.length > 0 && (
           <AlertSection icon={<FileWarning className="w-4 h-4" />} title="Conflictos" count={conflicts.length} color="var(--color-danger)">

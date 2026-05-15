@@ -40,7 +40,7 @@ export function TabButton({ active, onClick, icon, label, count, alert }: TabBut
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium transition-all min-w-0 ${alert ? "relative" : ""}`}
+      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium transition-all min-w-[64px] ${alert ? "relative" : ""}`}
       style={{
         background: active ? "var(--color-hover)" : "transparent",
         color: active ? "var(--color-foreground)" : "var(--color-muted)",

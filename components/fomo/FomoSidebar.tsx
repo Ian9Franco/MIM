@@ -211,7 +211,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                 <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {discover.loading ? <FomoSkeleton count={9} variant="card" isCurseForge={discover.source === "curseforge"} /> : discover.mods.map(mod => <FomoModCard key={mod.projectId} mod={mod} isDownloading={!!discover.downloading[mod.projectId]} onDownload={discover.handleDownload} onOpenVersions={discover.handleOpenVersionSelector} isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} onToggleSelect={discover.toggleModSelection} onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} />)}
                 </div>
-                {discover.selectedMods.length > 0 && <BulkActionsBar mods={discover.selectedMods} onCancel={discover.clearSelection} onAdd={() => { m.setBulkAdding(true); m.loadCollections(); }} onDownload={() => discover.selectedMods.forEach(m => discover.handleDownload(m))} />}
+                {discover.selectedMods.length > 0 && <BulkActionsBar mods={discover.selectedMods} isModern={isModern} onCancel={discover.clearSelection} onAdd={() => { m.setBulkAdding(true); m.loadCollections(); }} onDownload={() => discover.selectedMods.forEach(m => discover.handleDownload(m))} />}
                 <FomoPagination page={discover.page} totalPages={discover.totalPages} onPage={discover.setPage} loading={discover.loading} />
               </div>
             </div>
@@ -253,13 +253,11 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                 m.setMode("discover");
                 discover.setSource("all");
                 discover.setQuery(`author:${a}`);
-                discover.setSelectingVersionFor(null);
               }}
               onSearchMod={(title: string) => {
                 m.setMode("discover");
                 discover.setSource("all");
                 discover.setQuery(title);
-                discover.setSelectingVersionFor(null);
               }}
               pendingFilesCount={pendingFiles.length}
               onOpenDownloads={onOpenDownloads}

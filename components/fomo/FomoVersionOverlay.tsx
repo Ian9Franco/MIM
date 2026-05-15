@@ -10,7 +10,7 @@ import { openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
-import { TabButton, DependencyCard, VersionCard, ModHeader, StatsGrid } from "./FomoOverlayComponents";
+import { TabButton, DependencyCard, VersionCard, ModHeader, StatsGrid, CompatibilitySection } from "./FomoOverlayComponents";
 import { FomoSkeleton } from "./FomoSkeleton";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
@@ -49,12 +49,14 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isFullView, setIsFullView] = useState(false);
   const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(gameVersions[0] || null);
+  const [selectedLoaderFilter, setSelectedLoaderFilter] = useState<string | null>(loader || null);
 
   // Sincronizar con cambios en el sidebar (Filtros externos)
   useEffect(() => {
     if (gameVersions.length > 0) {
       setSelectedVersionFilter(gameVersions[0]);
     }
+    setSelectedLoaderFilter(loader || null);
   }, [gameVersions, loader]);
 
   const [pendingCount, setPendingCount] = useState(0);
@@ -72,6 +74,19 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: false } }));
     // 2. Abrir el panel de descargas
     window.dispatchEvent(new CustomEvent("toggle-downloads", { detail: { collapsed: false } }));
+  };
+
+  const handleDownloadWrapper = (v?: any) => {
+    // 1. Ocultar temporalmente
+    window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: false } }));
+    
+    // 2. Ejecutar descarga
+    onDownload(mod, v);
+
+    // 3. Volver después de 2 segundos
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: true } }));
+    }, 2000);
   };
 
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -174,8 +189,13 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             toggleFollowAuthor={toggleFollowAuthor} 
             toggleFollowMod={toggleFollowMod}
           />
-          <div className="px-6 py-2 fomo-scroll shrink-0">
+          <div className="px-6 py-2 fomo-scroll shrink-0 overflow-y-auto max-h-[400px]">
             <StatsGrid mod={mod} />
+            <CompatibilitySection 
+              mod={mod} 
+              selectedLoader={selectedLoaderFilter}
+              onSelectLoader={(l) => setSelectedLoaderFilter(prev => prev === l ? null : l)}
+            />
           </div>
 
           <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto" style={{ borderColor: "var(--fomo-border)" }}>
@@ -241,7 +261,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             {activeTab === "versions" && (
               <div className="space-y-4">
                 {/* Barra de Toggles de Versión de Minecraft - Basada en DATOS REALES del mod */}
-                <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-none sticky top-0 z-10 bg-[var(--fomo-bg)] -mx-4 px-4 pt-1">
+                <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-none sticky top-[-16px] z-20 bg-[var(--fomo-bg)] -mx-4 px-4 pt-4 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.5)]">
                   <button 
                     onClick={() => setSelectedVersionFilter(null)}
                     className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${!selectedVersionFilter ? "bg-primary text-white border-primary shadow-[0_0_15px_rgba(187,150,228,0.3)]" : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10"}`}
@@ -285,7 +305,13 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         <div className="h-[1px] flex-1 bg-white/10" />
                       </div>
                       <div className="space-y-2">
-                        {versions.slice(0, 2).map((v, idx) => (
+                        {versions
+                          .filter(v => {
+                            if (!selectedLoaderFilter || selectedLoaderFilter === "all") return true;
+                            const modLoaders = v.loaders || (v as any).loader || [];
+                            return modLoaders.some((l: string) => l.toLowerCase().includes(selectedLoaderFilter.toLowerCase()));
+                          })
+                          .slice(0, 2).map((v, idx) => (
                           <VersionCard 
                             key={`latest-${v.id || idx}`} 
                             v={v} 
@@ -294,10 +320,10 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                             isMainVersion={true} // Usamos esto para el badge LATEST
                             expanded={expandedVersion === v.id} 
                             onToggle={() => setExpandedVersion(expandedVersion === v.id ? null : v.id)} 
-                            onDownload={onDownload} 
+                            onDownload={handleDownloadWrapper} 
                             downloading={downloading} 
                             gameVersions={gameVersions} 
-                            activeLoader={loader}
+                            activeLoader={selectedLoaderFilter || "all"}
                           />
                         ))}
                       </div>
@@ -314,9 +340,14 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     </div>
                     <div className="space-y-2">
                       {versions
-                        .filter(v => !selectedVersionFilter || v.gameVersions.includes(selectedVersionFilter))
+                        .filter(v => {
+                          const matchesVersion = !selectedVersionFilter || v.gameVersions.includes(selectedVersionFilter);
+                          const matchesLoader = !selectedLoaderFilter || selectedLoaderFilter === "all" || 
+                            (v.loaders || (v as any).loader || []).some((l: string) => l.toLowerCase().includes(selectedLoaderFilter.toLowerCase()));
+                          return matchesVersion && matchesLoader;
+                        })
                         // Si no hay filtro, ocultamos los 2 de arriba para no repetir
-                        .slice(!selectedVersionFilter ? 2 : 0)
+                        .slice(!selectedVersionFilter && !selectedLoaderFilter ? 2 : 0)
                         .map((v, idx) => (
                           <VersionCard 
                             key={v.id || idx} 
@@ -326,10 +357,10 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                             isMainVersion={false} 
                             expanded={expandedVersion === v.id} 
                             onToggle={() => setExpandedVersion(expandedVersion === v.id ? null : v.id)} 
-                            onDownload={onDownload} 
+                            onDownload={handleDownloadWrapper} 
                             downloading={downloading} 
                             gameVersions={gameVersions} 
-                            activeLoader={loader}
+                            activeLoader={selectedLoaderFilter || "all"}
                           />
                         ))}
                     </div>

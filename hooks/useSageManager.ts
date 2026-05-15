@@ -104,28 +104,61 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
     setSecLoading(false);
   }, [activeProject]);
 
-  const runSecurityScan = useCallback(async () => {
-    if (!activeProject || secScannable.length === 0) return;
+  const runSecurityScan = useCallback(async (extraPaths?: string[]) => {
+    const allPaths = [
+      ...secScannable.map((s: any) => s.filePath),
+      ...(Array.isArray(extraPaths) ? extraPaths : [])
+    ];
+    if (!activeProject && allPaths.length === 0) return;
+    if (allPaths.length === 0) return;
     setSecScanning(true);
     setSecError(null);
     try {
       const res = await fetch("/api/security/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filePaths: secScannable.map(s => s.filePath) }),
+        body: JSON.stringify({ filePaths: allPaths }),
       });
       const data = await res.json();
-      if (data.success && data.results) {
-        const merged = (data.results as any[]).map(r => {
-          const entry = secScannable.find(s => s.filePath === r.filePath);
-          return entry ? { ...entry, result: { ...r, riskScore: r.riskScore ?? 0, riskLevel: r.riskLevel ?? "clean" } } : null;
-        }).filter(x => x != null);
-        setSecResults(merged);
+      // scanSecurityBatch returns Record<filePath, SecurityScanResult> — convert to array
+      if (data.success && data.results && typeof data.results === "object") {
+        const merged = Object.entries(data.results as Record<string, any>).map(([filePath, result]) => {
+          const entry = secScannable.find((s: any) => s.filePath === filePath) || {
+            filePath,
+            fileName: filePath.split(/[\\/]/).pop() || filePath,
+            assetType: filePath.endsWith(".jar") ? "mod" : "zip",
+          };
+          return { ...entry, result: { ...result, riskScore: result.riskScore ?? 0, riskLevel: result.riskLevel ?? "clean" } };
+        });
+        setSecResults(prev => {
+          // Merge new results with existing, de-duplicating by filePath
+          const map = new Map(prev.map((r: any) => [r.filePath, r]));
+          merged.forEach(r => map.set(r.filePath, r));
+          return Array.from(map.values());
+        });
         setSecScanned(true);
       } else { setSecError(data.error || "Error durante el scan"); }
     } catch (e) { setSecError("Error de conexión al ejecutar el scan"); }
     setSecScanning(false);
   }, [activeProject, secScannable]);
+
+  // ── Real-time scan: auto-scan new downloads ──
+  useEffect(() => {
+    const handler = (payload: any) => {
+      const fileName = payload?.fileName;
+      if (!fileName) return;
+      fetch(`/api/security/scan?project=${activeProject?.name || ""}&version=${activeProject?.version || ""}&loader=${activeProject?.loader || ""}`)
+        .then(r => r.json())
+        .then(data => {
+          const match = (data.scannable || []).find((s: any) =>
+            s.fileName.includes(fileName) || fileName.includes(s.fileName.replace(" (Descargas)", ""))
+          );
+          if (match) runSecurityScan([match.filePath]);
+        })
+        .catch(() => {});
+    };
+    return eventBus.subscribe("fomo:mod-downloaded", handler);
+  }, [activeProject, runSecurityScan]);
 
   // ── Log Analysis logic ──
   const [localFiles, setLocalFiles] = useState<LocalLogFile[]>([]);

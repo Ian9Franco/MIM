@@ -55,10 +55,13 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
           const pData = await pRes.json();
           if (sData.sourceBase && !pData.results[sData.sourceBase]) alerts.push({ id: "cfg-source", title: "Source inválida", detail: "La ruta de origen no existe.", type: "danger" });
           if (sData.buildsBase && !pData.results[sData.buildsBase]) alerts.push({ id: "cfg-builds", title: "Builds inválida", detail: "La ruta de builds no existe.", type: "danger" });
+          if (sData.minecraftPath && !pData.results[sData.minecraftPath]) alerts.push({ id: "cfg-minecraft", title: "Ruta .minecraft inválida", detail: "La carpeta del juego no existe.", type: "danger" });
+          if (sData.downloadsPath && !pData.results[sData.downloadsPath]) alerts.push({ id: "cfg-downloads", title: "Carpeta Descargas inválida", detail: "La ruta de descargas no existe.", type: "warning" });
+          if (sData.stagingPath && !pData.results[sData.stagingPath]) alerts.push({ id: "cfg-staging", title: "Carpeta Staging inválida", detail: "La ruta staging no existe.", type: "warning" });
         }
       }
       alerts.forEach(a => incidentManager.createIncident({ id: a.id, title: a.title, detail: a.detail, severity: a.type === "danger" ? "danger" : "warning", module: "CONFIG" }));
-      ["cfg-virustotal", "cfg-modrinth", "cfg-source", "cfg-builds", "cfg-minecraft"].forEach(id => { if (!alerts.find(a => a.id === id)) incidentManager.resolveIncident(id); });
+      ["cfg-virustotal", "cfg-modrinth", "cfg-source", "cfg-builds", "cfg-minecraft", "cfg-downloads", "cfg-staging"].forEach(id => { if (!alerts.find(a => a.id === id)) incidentManager.resolveIncident(id); });
 
       if (proj) {
         const logsRes = await fetch(`/api/project/logs?project=${proj.name}&version=${proj.version}`);

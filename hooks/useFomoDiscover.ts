@@ -19,15 +19,19 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     let filename = version?.primaryFile?.filename || mod.title;
     let targetVer = version;
 
-    // Si la URL es una página web o si el autor bloqueó la distribución en CurseForge
-    if (mod.allowModDistribution === false || !url || url.includes("curseforge.com") || url.includes("modrinth.com/mod/")) {
-      showStatus("Obteniendo archivo de la versión...", "info");
+    // Si la URL es una página web, si el autor bloqueó la distribución o si no tenemos metadatos de versión (para dependencias)
+    // También capturamos cualquier URL de página de proyecto de Modrinth (no solo /mod/, sino /resourcepack/, /shader/, etc.)
+    const isMrProjectPage = url ? /modrinth\.com\/(mod|resourcepack|shader|datapack|modpack)\//.test(url) : false;
+    if (mod.allowModDistribution === false || !url || !targetVer || isMrProjectPage || url.includes("curseforge.com")) {
+      showStatus("Obteniendo metadatos de la versión...", "info");
+      let allFetchedVersions: any[] = [];
       try {
         const apiSource = mod._source === "curseforge" ? "curseforge" : "modrinth";
         const res = await fetch(`/api/${apiSource}/versions?projectId=${mod.projectId}&loader=${filters.loader}&projectType=${mod.projectType || filters.projectType}&gameVersion=${filters.gameVersions?.[0] || ""}`);
         if (res.ok) {
           const data = await res.json();
-          const firstVer = data.versions?.[0];
+          allFetchedVersions = data.versions || [];
+          const firstVer = allFetchedVersions[0];
           if (firstVer?.primaryFile?.url) {
             targetVer = firstVer;
             url = firstVer.primaryFile.url;
@@ -36,6 +40,18 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         }
       } catch (e) {
         console.error(e);
+      }
+      // Agregar todas las deps requeridas de TODAS las versiones al targetVer si éste no las tiene
+      if (targetVer && allFetchedVersions.length > 0) {
+        const allDepsMap = new Map<string, any>();
+        allFetchedVersions.forEach(v => {
+          (v.dependencies || []).forEach((d: any) => {
+            if (!allDepsMap.has(d.projectId)) allDepsMap.set(d.projectId, d);
+          });
+        });
+        if (allDepsMap.size > 0 && (!targetVer.dependencies || targetVer.dependencies.length === 0)) {
+          (targetVer as any).dependencies = Array.from(allDepsMap.values());
+        }
       }
     }
 
@@ -72,8 +88,8 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       filename = `${filename}${ext}`;
     }
 
-    if (url && !url.includes("curseforge.com/minecraft") && !url.includes("modrinth.com/mod/")) {
-      // Verificar si hay dependencias requeridas
+    if (url && !url.includes("curseforge.com/minecraft") && !/modrinth\.com\/(mod|resourcepack|shader|datapack|modpack)\//.test(url)) {
+      // Verificar si hay dependencias requeridas en este o cualquier versión del proyecto
       const requiredDeps = targetVer?.dependencies?.filter(d => d.dependencyType === "required") || [];
       if (requiredDeps.length > 0) {
         download.setDependencyPrompt({
@@ -108,7 +124,13 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       const apiSource = mod._source === "curseforge" ? "curseforge" : "modrinth";
       for (const dep of dependencies) {
         try {
-          const res = await fetch(`/api/${apiSource}/versions?projectId=${dep.projectId}&loader=${filters.loader}&projectType=${dep.projectType || "mod"}&gameVersion=${filters.gameVersions?.[0] || ""}`);
+          // Si el loader actual es universal/all pero la dependencia es un mod, 
+          // usamos un loader vacío o el predeterminado para que la API nos devuelva versiones válidas.
+          const targetLoader = (dep.projectType === "mod" || !dep.projectType) && (filters.loader === "universal" || filters.loader === "all") 
+            ? "" 
+            : filters.loader;
+
+          const res = await fetch(`/api/${apiSource}/versions?projectId=${dep.projectId}&loader=${targetLoader}&projectType=${dep.projectType || "mod"}&gameVersion=${filters.gameVersions?.[0] || ""}`);
           if (res.ok) {
             const data = await res.json();
             const firstVer = data.versions?.[0];

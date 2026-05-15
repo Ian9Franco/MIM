@@ -69,7 +69,7 @@ function findExistingByHash(downloadsDir: string, hashes?: Record<string, string
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType } = await req.json();
+    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType, title } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json(
@@ -141,6 +141,8 @@ export async function POST(req: NextRequest) {
             iconUrl,
             loader,
             gameVersion,
+            projectType,
+            title,
             sha1: hashes?.sha1
           });
 
@@ -156,6 +158,8 @@ export async function POST(req: NextRequest) {
           iconUrl,
           loader,
           gameVersion,
+          projectType,
+          title,
           sha1: hashes?.sha1
         });
 
@@ -211,6 +215,8 @@ export async function POST(req: NextRequest) {
       iconUrl,
       loader,
       gameVersion,
+      projectType,
+      title,
       sha1: hashes?.sha1
     });
 

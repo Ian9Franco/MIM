@@ -14,7 +14,7 @@ import { ModCard } from "../ModCard";
 
 export function PendingIncompatibleGroup({ 
   files, activeProject, modrinthStatus, conflicts, 
-  onDeleteRequest, deletingFiles, onSelect 
+  onDeleteRequest, deletingFiles, onSelect, selectedFiles 
 }: any) {
   const [isOpen, setIsOpen] = useState(false);
   
@@ -44,11 +44,11 @@ export function PendingIncompatibleGroup({
             <div key={f.path} className="opacity-70 hover:opacity-100 transition-opacity">
               <ModCard
                 index={i} 
-                name={f.meta?.modName || f.fileName} 
+                name={(() => { const raw = f.meta?.modName; if (raw && raw !== "unknown") return raw; return f.fileName.replace(/\.(jar|zip|mrpack)$/i, "").replace(/[-_]/g, " ").replace(/\s+v?\d[\d.]*[\w.-]*$/i, "").replace(/\s+/g, " ").trim() || f.fileName; })()}
                 version={f.meta?.gameVersion || "unknown"}
                 iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
                 loader={f.meta?.loader || "unknown"} 
-                isSelected={false}
+                isSelected={selectedFiles?.some((p: any) => p.path === f.path)}
                 onClick={() => onSelect(f)} 
                 activeVersion={activeProject?.version} 
                 activeLoader={activeProject?.loader}

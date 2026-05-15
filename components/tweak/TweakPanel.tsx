@@ -20,7 +20,7 @@ interface TweakPanelProps {
  * Permite sincronizar los ajustes locales con la instalación real de Minecraft.
  */
 export function TweakPanel({ projectName, version, loader }: TweakPanelProps) {
-  const { data, loading, saving, message, fetchData, handleAction } = useTweakPanel(projectName, version, loader);
+  const { data, loading, saving, message, externalChange, setExternalChange, fetchData, handleAction } = useTweakPanel(projectName, version, loader);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const resourcePacksWithDraft = data?.resourcePacks ? {
@@ -45,7 +45,30 @@ export function TweakPanel({ projectName, version, loader }: TweakPanelProps) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-sans">
+      {/* External Change Alert */}
+      {externalChange && (
+        <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-bold">Cambios externos detectados</p>
+              <p className="text-[10px] opacity-70">Has modificado los ajustes dentro del juego. ¿Quieres sincronizarlos con MIM?</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => fetchData()} className="px-3 py-1.5 rounded-lg bg-amber-500 text-black text-[10px] font-bold uppercase hover:bg-amber-400 transition-all">
+              Sincronizar ahora
+            </button>
+            <button onClick={() => setExternalChange(false)} className="px-3 py-1.5 rounded-lg bg-white/5 text-amber-400 text-[10px] font-bold uppercase hover:bg-white/10 transition-all">
+              Ignorar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header & Tabs */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
@@ -84,7 +107,7 @@ export function TweakPanel({ projectName, version, loader }: TweakPanelProps) {
       {/* Content Area */}
       <div className="min-h-[400px]">
         {activeTab === "overview" && data && <OverviewTab data={data} onAction={fetchData} projectName={projectName} version={version} />}
-        {activeTab === "keybinds" && data && <KeybindManager keybinds={data.keybinds} grouped={data.keybindsGrouped} conflicts={data.keybindConflicts} projectName={projectName} version={version} onUpdate={fetchData} />}
+        {activeTab === "keybinds" && data && <KeybindManager keybinds={data.keybinds} grouped={data.keybindsGrouped} conflicts={data.keybindConflicts} suggestions={data.keybindSuggestions} projectName={projectName} version={version} data={data} onUpdate={fetchData} />}
         {activeTab === "packs" && data && <ResourcePackManager resourcePacks={resourcePacksWithDraft} projectName={projectName} version={version} onUpdate={fetchData} />}
         {activeTab === "snapshots" && data && <SnapshotManager snapshots={data.snapshots} projectName={projectName} version={version} loader={loader} onUpdate={fetchData} />}
       </div>

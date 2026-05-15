@@ -77,6 +77,17 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
         body:    JSON.stringify({ projectName, version, loader, buildTarget: buildType }),
       });
       const report: PackHealthReport = await res.json();
+      
+      // Emit event for ALRT/GATE integration
+      import("@/lib/eventBus").then(({ eventBus }) => {
+        eventBus.emit("builder:validation-completed", {
+          buildId: report.validatedAt || Date.now().toString(),
+          validationType: "compatibility",
+          passed: report.score === 100 || !report.issues.some(i => i.severity === "error"),
+          issues: report.issues.filter(i => i.severity === "error").map(i => i.message),
+          warnings: report.issues.filter(i => i.severity === "warning").map(i => i.message)
+        });
+      });
 
       if (!res.ok) {
         // API error — proceed without gate (fail-open: don't block on validator crash)

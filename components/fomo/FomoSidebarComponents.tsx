@@ -4,12 +4,17 @@ import { COLORS } from "@/theme/tokens";
 
 // ── BulkActionsBar ──────────────────────────────────────────────────────────
 
-export function BulkActionsBar({ mods, onCancel, onAdd, onDownload }: { mods: any[], onCancel: () => void, onAdd: () => void, onDownload: () => void }) {
+export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, isModern }: { mods: any[], onCancel: () => void, onAdd: () => void, onDownload: () => void, isModern?: boolean }) {
   const displayMods = mods.slice(0, 5);
   const remaining = mods.length - 5;
 
   return (
-    <div className="mx-4 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up" style={{ background: "rgba(22, 22, 26, 0.95)", border: "1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)", boxShadow: "0 12px 40px rgba(0,0,0,0.5)", backdropFilter: "blur(20px)" }}>
+    <div className="mx-4 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up" style={{ 
+      background: "rgba(22, 22, 26, 0.95)", 
+      border: `1px solid ${isModern ? 'rgba(124, 58, 237, 0.4)' : 'color-mix(in srgb, var(--color-primary) 30%, transparent)'}`, 
+      boxShadow: "0 12px 40px rgba(0,0,0,0.5)", 
+      backdropFilter: "blur(20px)" 
+    }}>
       <div className="flex items-center gap-4 pl-2">
         <div className="flex -space-x-3 overflow-hidden">
           {displayMods.map((mod, i) => (
@@ -28,13 +33,13 @@ export function BulkActionsBar({ mods, onCancel, onAdd, onDownload }: { mods: an
           )}
         </div>
         <div>
-          <span className="text-sm font-bold text-white block leading-none">{mods.length}</span>
-          <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold mt-1 block">Seleccionados</span>
+          <span className="text-sm font-black text-white block leading-none" style={{ color: '#FFFFFF' }}>{mods.length}</span>
+          <span className="text-[10px] uppercase tracking-wider font-bold mt-1 block" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Seleccionados</span>
         </div>
       </div>
       <div className="flex gap-2">
         <button onClick={onCancel} className="px-4 py-2 rounded-xl text-xs font-bold text-white/40 hover:bg-white/10 transition-colors">Cancelar</button>
-        <button onClick={onAdd} className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all"><Plus className="w-3.5 h-3.5" />Añadir a...</button>
+        <button onClick={onAdd} className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border border-white/10 text-white/80 hover:bg-white/20 transition-all"><Plus className="w-3.5 h-3.5" />Añadir a...</button>
         <button onClick={onDownload} className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all"><Download className="w-3.5 h-3.5" />Descargar Todo</button>
       </div>
     </div>

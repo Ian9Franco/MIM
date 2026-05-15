@@ -2,7 +2,7 @@
 
 .fomo-sidebar {
   /* Default: Official Dark Theme */
-  --fomo-bg: rgba(20, 20, 22, 0.95);
+  --fomo-bg: rgba(20, 20, 22, 0.98);
   --fomo-card-bg: #1c1c1f;
   --fomo-card-border: rgba(255, 255, 255, 0.08);
   --fomo-card-hover-border: rgba(255, 255, 255, 0.16);
@@ -21,7 +21,7 @@
   --fomo-pill-inactive-border: rgba(255, 255, 255, 0.08);
   --fomo-icon-color: rgba(255, 255, 255, 0.4);
   --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.2), transparent, var(--fomo-secondary-bg));
-  --fomo-banner-filter: blur(12px) brightness(0.4) saturate(1.4);
+  --fomo-banner-filter: blur(2px) brightness(0.65) saturate(1.2);
 
   /* Sinytra Switch Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(255, 255, 255, 0.04);
@@ -47,7 +47,7 @@
 
 /* Vampire Theme Overrides */
 [data-theme="vampire"] .fomo-sidebar {
-  --fomo-bg: rgba(32, 13, 45, 0.96);
+  --fomo-bg: rgba(32, 13, 45, 0.98);
   --fomo-card-bg: #1e0d29;
   --fomo-card-border: rgba(187, 150, 228, 0.16);
   --fomo-card-hover-border: rgba(187, 150, 228, 0.32);
@@ -66,7 +66,7 @@
   --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
   --fomo-icon-color: rgba(187, 150, 228, 0.4);
   --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.25), transparent, var(--fomo-secondary-bg));
-  --fomo-banner-filter: blur(15px) brightness(0.35) saturate(1.6);
+  --fomo-banner-filter: blur(3px) brightness(0.6) saturate(1.4);
 
   /* Sinytra Switch Vampire Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(187, 150, 228, 0.04);
@@ -92,7 +92,7 @@
 
 /* Modern Theme Overrides (LIGHT THEME) */
 [data-theme="modern"] .fomo-sidebar {
-  --fomo-bg: rgba(243, 240, 254, 0.98);
+  --fomo-bg: rgba(243, 240, 254, 1);
   --fomo-card-bg: #FFFFFF;
   --fomo-card-border: rgba(124, 58, 237, 0.12);
   --fomo-card-hover-border: rgba(124, 58, 237, 0.28);

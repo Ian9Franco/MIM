@@ -74,7 +74,21 @@ class IncidentManager {
       });
     });
 
-    // 4. Correlación: Si se descarga un mod y SAGE detecta algo inmediatamente
+    // 4. Escuchar validaciones de GATE
+    eventBus.subscribe("builder:validation-completed", (data) => {
+      if (!data.passed || data.warnings.length > 0) {
+        this.createIncident({
+          id: `gate-validation-${data.buildId}`,
+          title: data.passed ? "GATE: Advertencias en el pack" : "GATE: Fallo de validación",
+          detail: `Se detectaron ${data.issues.length} errores y ${data.warnings.length} advertencias en la validación del pack.`,
+          severity: data.passed ? "warning" : "danger",
+          module: "SYSTEM",
+          meta: data
+        });
+      }
+    });
+
+    // 5. Correlación: Si se descarga un mod y SAGE detecta algo inmediatamente
     // Esto se expandirá con el Reactive Rule System
   }
 

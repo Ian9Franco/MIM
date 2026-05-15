@@ -9,6 +9,8 @@ export function useTweakPanel(projectName: string, version: string, loader: stri
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [externalChange, setExternalChange] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const showMessage = useCallback((type: "success" | "error", text: string) => {
     setMessage({ type, text });
@@ -20,7 +22,14 @@ export function useTweakPanel(projectName: string, version: string, loader: stri
     try {
       const res = await fetch(`/api/tweak?projectName=${encodeURIComponent(projectName)}&version=${version}&loader=${loader}`);
       const json = await res.json();
-      if (res.ok) setData(json);
+      if (res.ok) {
+        setData(json);
+        // Detect external changes (If file in disk is newer than our last sync)
+        if (lastSyncTime && json.lastModified && json.lastModified !== lastSyncTime) {
+          setExternalChange(true);
+        }
+        if (!lastSyncTime) setLastSyncTime(json.lastModified);
+      }
       else showMessage("error", json.error || "Error cargando datos");
     } catch {
       showMessage("error", "Error de conexión");
@@ -42,6 +51,8 @@ export function useTweakPanel(projectName: string, version: string, loader: stri
       const json = await res.json();
       if (res.ok) {
         showMessage("success", json.message);
+        setLastSyncTime(new Date().toISOString());
+        setExternalChange(false);
         if (action === "initialize") fetchData();
       } else showMessage("error", json.error);
     } finally {
@@ -49,5 +60,5 @@ export function useTweakPanel(projectName: string, version: string, loader: stri
     }
   }, [projectName, version, fetchData, showMessage]);
 
-  return { data, loading, saving, message, fetchData, handleAction };
+  return { data, loading, saving, message, externalChange, setExternalChange, fetchData, handleAction };
 }

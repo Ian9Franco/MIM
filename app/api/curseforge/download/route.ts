@@ -19,7 +19,7 @@ import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType } = await req.json();
+    const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType, title } = await req.json();
 
     if (!url || !filename) {
       return NextResponse.json({ error: "Missing url or filename" }, { status: 400 });
@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
       iconUrl,
       loader,
       gameVersion,
+      projectType,
+      title,
       sha1
     });
 

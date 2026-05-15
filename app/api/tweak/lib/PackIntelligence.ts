@@ -1,16 +1,20 @@
 import { PackRule, PackAnalysis } from "./types";
 
 export const PACK_RULES: PackRule[] = [
-  { id: "fresh-animations-order", type: "priority", source: "FreshAnimations", target: "Fresh Moves", severity: "warning", message: "Fresh Animations debe estar arriba de Fresh Moves", autoFixable: true },
+  { id: "fresh-animations-order", type: "priority", source: "Fresh Animations", target: "Fresh Moves", severity: "warning", message: "Fresh Animations debe estar arriba de Fresh Moves para evitar fallos visuales", autoFixable: true },
+  { id: "fresh-player-extension-order", type: "priority", source: "Player Extension", target: "Fresh Animations", severity: "warning", message: "Player Extension debe estar ARRIBA del pack base de Fresh Animations", autoFixable: true },
   { id: "better-leaves-overlay", type: "overlay", source: "Better Leaves", target: "Faithful", severity: "info", message: "Better Leaves debería estar arriba de Faithful", autoFixable: true },
   { id: "visible-ores-overlay", type: "overlay", source: "Visible Ores", target: "Faithful", severity: "info", message: "Visible Ores debe estar arriba del pack base", autoFixable: true },
-  { id: "fresh-moves-dep", type: "dependency", source: "Fresh Moves", target: "FreshAnimations", severity: "critical", message: "Fresh Moves requiere Fresh Animations", autoFixable: false },
+  { id: "fresh-moves-dep", type: "dependency", source: "Fresh Moves", target: "Fresh Animations", severity: "critical", message: "Fresh Moves requiere Fresh Animations", autoFixable: false },
+  { id: "fresh-moves-mod-emf", type: "mod_dependency", source: "Fresh Moves", target: "entity_model_features", severity: "critical", message: "Fresh Moves requiere el mod Entity Model Features (EMF)", autoFixable: false },
+  { id: "fresh-moves-mod-etf", type: "mod_dependency", source: "Fresh Moves", target: "entity_texture_features", severity: "critical", message: "Fresh Moves requiere el mod Entity Texture Features (ETF)", autoFixable: false },
+  { id: "redone-enderman-order", type: "priority", source: "Redone Endermans", target: "Fresh Animations", severity: "info", message: "Redone Endermans funciona mejor arriba de Fresh Animations", autoFixable: true },
   { id: "complementary-shaders-dep", type: "shader_conflict", source: "Complementary Shaders", target: "Patrix", severity: "warning", message: "Complementary puede tener problemas con Patrix", autoFixable: false },
   { id: "patrix-bare-bones", type: "incompatibility", source: "Patrix", target: "Bare Bones", severity: "critical", message: "Patrix y Bare Bones incompatibles", autoFixable: false },
-  { id: "fresh-animations-low-res", type: "incompatibility", source: "FreshAnimations", target: "Low Resolution Mobs", severity: "warning", message: "FreshAnimations en conflicto con Low Res Mobs", autoFixable: false },
+  { id: "fresh-animations-low-res", type: "incompatibility", source: "Fresh Animations", target: "Low Resolution Mobs", severity: "warning", message: "Fresh Animations en conflicto con Low Res Mobs", autoFixable: false },
 ];
 
-export function analyzePackOrder(activePacks: string[]) {
+export function analyzePackOrder(activePacks: string[], installedMods: Set<string> = new Set()) {
   const visualStack: PackAnalysis[] = [];
   const issues: PackRule[] = [];
   const autoFixable: PackRule[] = [];
@@ -34,6 +38,11 @@ export function analyzePackOrder(activePacks: string[]) {
           }
         } else if (rule.type === "dependency") {
           analysis.dependencies.push(rule); issues.push(rule);
+        } else if (rule.type === "mod_dependency") {
+          if (!installedMods.has(rule.target.toLowerCase())) {
+            analysis.warnings.push(rule);
+            issues.push(rule);
+          }
         }
       }
     }

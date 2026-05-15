@@ -36,7 +36,8 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
           filename: safeFilename, 
           hashes, 
           iconUrl: mod.iconUrl, 
-          projectId: mod.projectId, 
+          projectId: mod.projectId,
+          title: mod.title,
           loader, 
           gameVersion: gameVersions[0],
           projectType: mod.projectType || (mod as any).project_type || "mod"

@@ -18,7 +18,7 @@ export function SageHeader({ onClose }: { onClose: () => void }) {
           <h2 className="font-headline text-lg font-bold tracking-tight bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent leading-none">
             SAGE
           </h2>
-          <p className="font-label text-[8px] opacity-40 mt-1 tracking-[0.12em] uppercase font-bold text-indigo-200">
+          <p className="font-label text-[10px] opacity-50 mt-1 tracking-[0.10em] uppercase font-bold text-indigo-200">
             Systematic Analyzer for Glitches & Exceptions
           </p>
         </div>
@@ -36,7 +36,7 @@ export function SageNavigation({ mode, setMode, activeProject, fetchScannable, s
   if (!activeProject) {
     return (
       <div className="px-6 pt-4 shrink-0">
-        <div className="p-3 rounded-xl border border-white/5 bg-white/2 text-[10px] text-foreground/40 text-center leading-relaxed">
+        <div className="p-4 rounded-xl border border-white/5 bg-white/2 text-xs text-foreground/50 text-center leading-relaxed">
           Selecciona un proyecto de MIM para poder leer sus logs de forma automática.
         </div>
       </div>
@@ -60,14 +60,14 @@ export function SageNavigation({ mode, setMode, activeProject, fetchScannable, s
             setMode(tab.id as SageMode);
             if (tab.id === "security" && secScannable.length === 0 && !secLoading) fetchScannable();
           }}
-          className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-xl font-label text-[10px] font-bold transition-all border ${
+          className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-xl font-label text-[11px] font-bold transition-all border ${
             mode === tab.id
               ? `bg-${tab.color}-500/10 border-${tab.color}-500/30 text-${tab.color}-400 shadow-sm`
               : "bg-white/2 border-white/5 text-foreground/40 hover:bg-white/5 hover:text-foreground/70"
           }`}
         >
           {tab.icon}
-          {tab.label}
+          <span>{tab.label}</span>
         </button>
       ))}
     </div>

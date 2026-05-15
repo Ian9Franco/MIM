@@ -12,8 +12,10 @@ export function enrichUpdatesCache(options: {
   loader?: string;
   gameVersion?: string;
   sha1?: string;
+  projectType?: string;
+  title?: string;
 }) {
-  const { filePath, projectId, iconUrl, loader, gameVersion, sha1: providedSha1 } = options;
+  const { filePath, projectId, iconUrl, loader, gameVersion, sha1: providedSha1, projectType, title } = options;
 
   if (!filePath || !fs.existsSync(filePath)) return;
   if (!iconUrl && !projectId) return;
@@ -51,6 +53,8 @@ export function enrichUpdatesCache(options: {
       projectId: projectId || undefined,
       slug: path.basename(filePath, ".jar"),
       iconUrl: iconUrl || undefined,
+      projectType: projectType || undefined,
+      title: title || undefined,
     };
 
     const cachedAt = Date.now();

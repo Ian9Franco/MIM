@@ -12,6 +12,8 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [hasPackChanges, setHasPackChanges] = useState(false);
   const [draggedPackIdx, setDraggedPackIdx] = useState<number | null>(null);
+  const [externalChange, setExternalChange] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -23,10 +25,13 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
   useEffect(() => { localStorage.setItem("tweak_active_tab", activeTab); }, [activeTab]);
 
   const fetchData = useCallback(async () => {
-    if (!activeProject) return;
     setLoading(true);
+    const query = activeProject 
+      ? `?projectName=${activeProject.name}&version=${activeProject.version}&loader=${activeProject.loader || "forge"}`
+      : "";
+    
     try {
-      const res = await fetch(`/api/tweak?projectName=${activeProject.name}&version=${activeProject.version}&loader=${activeProject.loader || "forge"}`);
+      const res = await fetch(`/api/tweak${query}`);
       const json = await res.json();
       if (res.ok) {
         // Apply draft if it exists
@@ -41,6 +46,13 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
         }
 
         setData(json);
+        
+        // Detect external changes (Compare with last sync time)
+        if (lastSyncTime && json.lastModified && json.lastModified !== lastSyncTime) {
+          setExternalChange(true);
+        }
+        if (!lastSyncTime) setLastSyncTime(json.lastModified);
+
         if (keybindHistory.length === 0 && json.keybinds?.length > 0) {
           setKeybindHistory([JSON.parse(JSON.stringify(json.keybinds))]);
           setHistoryIndex(0);
@@ -49,18 +61,17 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
     } catch {} finally { setLoading(false); }
   }, [activeProject, keybindHistory.length]);
 
-  useEffect(() => { if (isOpen && activeProject) fetchData(); }, [isOpen, activeProject, fetchData]);
+  useEffect(() => { if (isOpen) fetchData(); }, [isOpen, fetchData]);
 
   // Debounced Auto-save Draft
   const saveDraft = useCallback(async (currentData: TweakData) => {
-    if (!activeProject) return;
     try {
       await fetch("/api/tweak", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          projectName: activeProject.name, 
-          version: activeProject.version, 
+          projectName: activeProject?.name || null, 
+          version: activeProject?.version || null, 
           action: "save-draft", 
           resourcePacks: currentData.resourcePacks.active,
           keybinds: currentData.keybinds 
@@ -81,18 +92,26 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
   }, [data, hasPackChanges, saveDraft]);
 
   const handleAction = async (action: string, extra: any = {}) => {
-    if (!activeProject) return;
     setSaving(true); setMessage(null);
     try {
       const res = await fetch("/api/tweak", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version, action, ...extra })
+        body: JSON.stringify({ 
+          projectName: activeProject?.name || null, 
+          version: activeProject?.version || null, 
+          action, 
+          ...extra 
+        })
       });
       const json = await res.json();
       if (res.ok) {
         setMessage({ text: json.message || "Éxito", type: "success" });
-        if (action === "save") setHasPackChanges(false);
+        if (action === "save") {
+          setHasPackChanges(false);
+          setLastSyncTime(new Date().toISOString()); // Update sync time after save
+          setExternalChange(false);
+        }
         
         // For sync-resourcepacks: inject returned packs directly into state
         if (action === "sync-resourcepacks" && data) {

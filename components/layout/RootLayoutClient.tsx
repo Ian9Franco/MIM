@@ -84,6 +84,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           activeProject={activeProject}
           onClose={() => {
             setPackHealthOpen(false);
+            window.dispatchEvent(new CustomEvent("pack-health-toggle", { detail: false }));
             setTimeout(() => setPackHealthReport(null), 1000);
           }}
           onForceBuild={() => {

@@ -25,7 +25,47 @@ import { watcherEmitter, startWatcher, scanExistingFiles } from "@/lib/watcher";
 import { scanMod, ModMeta } from "@/lib/scanner";
 import path from "path";
 import os from "os";
+import fs from "fs";
+import crypto from "crypto";
 import { getSettings } from "@/lib/settings";
+import { SOURCE_BASE } from "@/lib/constants";
+
+const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+
+function readCachedMeta(filePath: string): { projectType?: string; title?: string } {
+  try {
+    if (!fs.existsSync(REMOTE_CACHE_FILE)) return {};
+    const cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+    // Try matching by filePath first
+    for (const entry of Object.values(cache.entries || {}) as any[]) {
+      if (entry?.result?.path === filePath) {
+        return { projectType: entry.result.projectType, title: entry.result.title };
+      }
+    }
+    // Try matching by sha1
+    try {
+      const buffer = fs.readFileSync(filePath);
+      const sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
+      for (const [key, entry] of Object.entries(cache.entries || {}) as any[]) {
+        if (key.startsWith(sha1) && (entry as any)?.result) {
+          const r = (entry as any).result;
+          return { projectType: r.projectType, title: r.title };
+        }
+      }
+    } catch { /* ignore hash errors */ }
+  } catch { /* ignore cache read errors */ }
+  return {};
+}
+
+// Cleanup raw filename for display when modName is unknown (removes version suffixes, dashes, extensions)
+function cleanFilenameForDisplay(fileName: string): string {
+  return fileName
+    .replace(/\.(jar|zip|mrpack)$/i, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\s+v?\d[\d.]*[\w.-]*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /** Interval between SSE keepalive pings (ms). */
 const KEEPALIVE_INTERVAL_MS = 30_000;
@@ -68,6 +108,19 @@ export async function GET(req: NextRequest) {
           meta = scanMod(filePath);
         } catch {
           console.warn(`[/api/watcher] scanMod failed for: ${fileName}`);
+        }
+        // If scanMod couldn't determine projectType or modName (e.g. ZIPs for textures/datapacks),
+        // read both from the remote cache that was set during download.
+        const cached = readCachedMeta(filePath);
+        if (cached.projectType && cached.projectType !== "mod" && (!meta.projectType || meta.projectType === "mod")) {
+          meta.projectType = cached.projectType;
+        }
+        if (cached.title && (!meta.modName || meta.modName === "unknown")) {
+          meta.modName = cached.title;
+        }
+        // Last resort: clean up filename for display
+        if (!meta.modName || meta.modName === "unknown") {
+          meta.modName = cleanFilenameForDisplay(fileName);
         }
         send({ path: filePath, fileName, meta });
       };

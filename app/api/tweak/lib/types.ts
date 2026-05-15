@@ -10,7 +10,7 @@ export interface Keybind {
 
 export interface PackRule {
   id: string;
-  type: "priority" | "incompatibility" | "dependency" | "overlay" | "shader_conflict";
+  type: "priority" | "incompatibility" | "dependency" | "overlay" | "shader_conflict" | "mod_dependency";
   source: string;
   target: string;
   severity: "info" | "warning" | "critical";

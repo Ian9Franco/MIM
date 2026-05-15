@@ -1,0 +1,126 @@
+{
+  "summary": {
+    "totalLargeFiles": 0,
+    "totalRefactored": 29,
+    "threshold": 300
+  },
+  "largeFiles": [],
+  "refactoredFiles": [
+    {
+      "path": "app\\api\\curseforge\\discover\\route.ts",
+      "lines": 31
+    },
+    {
+      "path": "components\\fomo\\parts\\FomoCompatibilityBadge.tsx",
+      "lines": 36
+    },
+    {
+      "path": "components\\fomo\\parts\\FomoPlatformIcons.tsx",
+      "lines": 12
+    },
+    {
+      "path": "components\\library\\parts\\LibraryToolbar.tsx",
+      "lines": 95
+    },
+    {
+      "path": "components\\library\\parts\\ModCardHeader.tsx",
+      "lines": 51
+    },
+    {
+      "path": "components\\library\\parts\\ModItem.tsx",
+      "lines": 40
+    },
+    {
+      "path": "components\\library\\parts\\PendingIncompatibleGroup.tsx",
+      "lines": 52
+    },
+    {
+      "path": "components\\library\\VirtualizedLibrary.tsx",
+      "lines": 123
+    },
+    {
+      "path": "components\\sage\\parts\\DiagnosisCard.tsx",
+      "lines": 69
+    },
+    {
+      "path": "components\\sage\\parts\\SageActionableFixes.tsx",
+      "lines": 54
+    },
+    {
+      "path": "components\\security\\parts\\SecurityHeader.tsx",
+      "lines": 62
+    },
+    {
+      "path": "components\\security\\parts\\SecurityOverview.tsx",
+      "lines": 54
+    },
+    {
+      "path": "components\\tweak\\parts\\KeybindRow.tsx",
+      "lines": 59
+    },
+    {
+      "path": "components\\tweak\\parts\\OverviewTab.tsx",
+      "lines": 106
+    },
+    {
+      "path": "components\\tweak\\parts\\PackItem.tsx",
+      "lines": 49
+    },
+    {
+      "path": "lib\\classifier\\index.ts",
+      "lines": 66
+    },
+    {
+      "path": "lib\\classifier\\rules.ts",
+      "lines": 37
+    },
+    {
+      "path": "lib\\db\\schema.ts",
+      "lines": 92
+    },
+    {
+      "path": "lib\\db\\stores\\ModStore.ts",
+      "lines": 24
+    },
+    {
+      "path": "lib\\indexeddb.ts",
+      "lines": 44
+    },
+    {
+      "path": "lib\\scanner\\parsers.ts",
+      "lines": 34
+    },
+    {
+      "path": "lib\\scanner\\utils.ts",
+      "lines": 24
+    },
+    {
+      "path": "lib\\scanner.ts",
+      "lines": 79
+    },
+    {
+      "path": "services\\api.ts",
+      "lines": 145
+    },
+    {
+      "path": "services\\curseforge\\CurseForgeMapper.ts",
+      "lines": 41
+    },
+    {
+      "path": "services\\curseforge\\CurseForgeService.ts",
+      "lines": 49
+    },
+    {
+      "path": "services\\modPersistenceService.ts",
+      "lines": 51
+    },
+    {
+      "path": "services\\modrinth\\CollectionService.ts",
+      "lines": 44
+    },
+    {
+      "path": "services\\modrinth\\UpdateService.ts",
+      "lines": 101
+    }
+  ]
+}

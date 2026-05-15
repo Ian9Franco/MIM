@@ -1,6 +1,6 @@
 {
   "name": "temp_next",
-  "version": "0.1.0",
+  "version": "5.9.3",
   "private": true,
   "main": "standalone/main.js",
   "scripts": {
@@ -10,12 +10,16 @@
     "lint": "eslint",
     "build:standalone": "next build && node standalone/prepare.js",
     "start:standalone": "electron standalone/main.js",
-    "package:win": "npm run build:standalone && electron-builder build --win"
+    "package:win": "npm run build:standalone && electron-builder build --win",
+    "release": "node scripts/release.js",
+    "version:sync": "node scripts/release.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.17",
+    "chalk": "^4.1.2",
     "chokidar": "^4.0.3",
     "idb": "^8.0.3",
+    "inquirer": "^8.2.5",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "react": "19.2.4",

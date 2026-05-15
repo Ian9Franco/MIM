@@ -22,29 +22,34 @@ export function useFomoSidebarManager(open: boolean, discover: any, showStatus: 
 
   const handleBulkAddToCollection = async (coll: any) => {
     setAddingToCollId(coll.id);
-    const mods = discover.selectedMods;
+    const mods = addingToCollectionFor ? [addingToCollectionFor] : discover.selectedMods;
     let success = 0;
     for (const mod of mods) {
       const { error } = await addModToCollection(coll.id, mod, coll.isLocal ? "local" : "modrinth");
       if (!error) success++;
     }
     showStatus(`${success}/${mods.length} ítems añadidos a "${coll.name}"`, success === mods.length ? "success" : "info");
-    setBulkAdding(false); setAddingToCollId(null); discover.clearSelection();
+    setBulkAdding(false); setAddingToCollectionFor(null); setAddingToCollId(null); discover.clearSelection();
   };
 
   const handleBulkCreateCollection = async () => {
-    if (!newCollName.trim() || discover.selectedMods.length === 0) return;
+    const mods = addingToCollectionFor ? [addingToCollectionFor] : discover.selectedMods;
+    if (!newCollName.trim() || mods.length === 0) return;
     setLoadingColls(true);
-    const { collection, error } = await createCollection(newCollName, discover.selectedMods[0], newCollTarget);
+    const { collection, error } = await createCollection(newCollName, mods[0], newCollTarget);
     if (error) { showStatus(error, "error"); setLoadingColls(false); return; }
     let success = 1;
-    for (let i = 1; i < discover.selectedMods.length; i++) {
-      const { error: addErr } = await addModToCollection(collection!.id, discover.selectedMods[i], newCollTarget);
+    for (let i = 1; i < mods.length; i++) {
+      const { error: addErr } = await addModToCollection(collection!.id, mods[i], newCollTarget);
       if (!addErr) success++;
     }
     showStatus(`Colección "${newCollName}" creada con ${success} ítems.`, "success");
-    setBulkAdding(false); setLoadingColls(false); discover.clearSelection();
+    setBulkAdding(false); setAddingToCollectionFor(null); setLoadingColls(false); discover.clearSelection();
   };
+
+  const isCurseSelected = addingToCollectionFor 
+    ? addingToCollectionFor._source === "curseforge"
+    : discover.selectedMods.some((m: ModHit) => m._source === "curseforge");
 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isDetailsOpen = !!discover.selectingVersionFor;
@@ -59,7 +64,5 @@ export function useFomoSidebarManager(open: boolean, discover: any, showStatus: 
     }
   }, [isDetailsOpen]);
 
-
-
-  return { mode, setMode, addingToCollectionFor, setAddingToCollectionFor, bulkAdding, setBulkAdding, collectionsList, loadingColls, isCreatingColl, setIsCreatingColl, newCollName, setNewCollName, newCollTarget, setNewCollTarget, addingToCollId, loadCollections, handleBulkAddToCollection, handleBulkCreateCollection, isTransitioning, isDetailsOpen };
+  return { mode, setMode, addingToCollectionFor, setAddingToCollectionFor, bulkAdding, setBulkAdding, collectionsList, loadingColls, isCreatingColl, setIsCreatingColl, newCollName, setNewName: setNewCollName, newCollTarget, setNewCollTarget, addingToCollId, loadCollections, handleBulkAddToCollection, handleBulkCreateCollection, isTransitioning, isDetailsOpen, isCurseSelected };
 }

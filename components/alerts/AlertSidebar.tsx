@@ -60,8 +60,14 @@ export function AlertSidebar({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        if ((e.target as HTMLElement).closest('[data-sidebar-toggle="true"]') || (e.target as HTMLElement).closest('[data-header-toggle="true"]')) return;
+      const target = e.target as HTMLElement;
+      if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(target)) {
+        // Prevent closing if we clicked a toggle button or another sidebar/overlay
+        if (target.closest('[data-sidebar-toggle="true"]') || 
+            target.closest('[data-header-toggle="true"]') ||
+            target.closest('.fomo-sidebar') ||
+            target.closest('.lightbox-overlay')) return;
+            
         setSidebarOpen(false);
       }
     };
@@ -78,7 +84,20 @@ export function AlertSidebar({
   );
 
   return (
-    <div ref={sidebarRef} className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`} style={{ background: "var(--glass-bg)", borderLeft: "1px solid var(--glass-border)", backdropFilter: "var(--liquid-blur)", boxShadow: "var(--shadow-drop)", borderRadius: "2rem 0 0 2rem" }}>
+    <aside 
+      ref={sidebarRef} 
+      className={`fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0 ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`} 
+      style={{ 
+        background: "var(--glass-bg)", 
+        borderColor: "var(--color-border)", 
+        borderLeftColor: "color-mix(in srgb, var(--color-primary) 22%, transparent)",
+        backdropFilter: "blur(40px)", 
+        boxShadow: `-24px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 color-mix(in srgb, var(--color-primary) 10%, transparent)`, 
+        borderRadius: "2.5rem 0 0 2.5rem" 
+      }}
+    >
+      {/* Accent Top Line */}
+      <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
       <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border)" }}>
         <h2 className="text-lg font-headline flex items-center gap-2" style={{ color: "var(--color-foreground)" }}>
           <Bell className="w-5 h-5" style={{ color: "var(--color-primary)" }} /> Centro de Alertas
@@ -144,6 +163,6 @@ export function AlertSidebar({
           </AlertSection>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

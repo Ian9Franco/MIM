@@ -20,7 +20,15 @@ export function useRootLayoutManager() {
   const [isValidatingHealth, setIsValidatingHealth] = useState(false);
   const [onForceBuildCallback, setOnForceBuildCallback] = useState<(() => void) | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<any[]>([]);
   const staging = useStaging();
+
+  // Listen for pending files updates
+  useEffect(() => {
+    const handleUpdate = (e: any) => setPendingFiles(e.detail.files || []);
+    window.addEventListener("fomo-pending-files-update", handleUpdate);
+    return () => window.removeEventListener("fomo-pending-files-update", handleUpdate);
+  }, []);
 
   // Mark alerts as seen
   useEffect(() => {
@@ -133,7 +141,15 @@ export function useRootLayoutManager() {
   };
 
   const handleCheckHealth = async () => {
+    if (packHealthOpen) {
+      setPackHealthOpen(false);
+      return;
+    }
     if (!activeProject || isValidatingHealth) return;
+
+    setAlertSidebarOpen(false);
+    window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
+    
     setIsValidatingHealth(true);
     try {
       const res = await fetch("/api/validate", {
@@ -161,6 +177,11 @@ export function useRootLayoutManager() {
     alertSidebarOpen, hasAlerts, alertCount, alertsSeen, stagingOpen, setStagingOpen,
     hasStagingFiles, packHealthOpen, setPackHealthOpen, packHealthReport, setPackHealthReport,
     isValidatingHealth, onForceBuildCallback, isRefreshing, handleToggleUI, handleRefresh,
-    handleCheckHealth, handleFomoSearch
+    handleCheckHealth, handleFomoSearch,
+    pendingFiles,
+    handleOpenDownloads: () => {
+      window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: false } }));
+      window.dispatchEvent(new CustomEvent("toggle-downloads", { detail: { collapsed: false } }));
+    }
   };
 }

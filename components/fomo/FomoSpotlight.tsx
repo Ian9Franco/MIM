@@ -65,7 +65,7 @@ function MarqueeRow({ title, mods, onOpenVersions, onDownload, downloading, spee
       <div className="px-8 mb-3"><span className="px-3 py-1 rounded-full text-[9px] font-black uppercase bg-white/5 border border-white/10">{title}</span></div>
       <div ref={containerRef} className="relative flex-1 overflow-hidden mask-horizontal-edges cursor-grab py-4" {...handlers}>
         <div ref={innerRef} className="flex gap-6 w-max px-4 h-full">
-          {[...mods, ...mods, ...mods].map((m: any, i: number) => <SpotlightEditorialCard key={`${m.projectId}-${i}`} mod={m} onOpenVersions={onOpenVersions} onDownload={onDownload} isDownloading={!!downloading[m.projectId]} theme={theme} />)}
+          {[...mods, ...mods, ...mods].map((m: any, i: number) => <SpotlightEditorialCard key={`${m.projectId}-${i}`} mod={m} index={i} onOpenVersions={onOpenVersions} onDownload={onDownload} isDownloading={!!downloading[m.projectId]} theme={theme} />)}
         </div>
       </div>
     </div>

@@ -8,7 +8,7 @@ import { PackItem } from "./parts/PackItem";
 export function ResourcePackManager({ resourcePacks, projectName, version, onUpdate }: any) {
   const { 
     localOrder, hasChanges, saving, fixing, handleMove, saveOrder, fixOrder 
-  } = useResourcePackManager(resourcePacks.active, projectName, version, onUpdate);
+  } = useResourcePackManager(resourcePacks.active, resourcePacks.draft, projectName, version, onUpdate);
 
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
@@ -31,37 +31,48 @@ export function ResourcePackManager({ resourcePacks, projectName, version, onUpd
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {resourcePacks.issues.length > 0 && (
-        <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-rose-400" /> Problemas ({resourcePacks.issues.length})</h3>
-            <button onClick={fixOrder} disabled={fixing} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium">
-              <Wand2 className="w-3 h-3 inline mr-1" /> {fixing ? "Corrigiendo..." : "Auto-corregir"}
+        <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[10px] font-black uppercase tracking-wider flex items-center gap-2 text-rose-400">
+              <AlertTriangle className="w-3 h-3" /> Problemas ({resourcePacks.issues.length})
+            </h3>
+            <button onClick={fixOrder} disabled={fixing} className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-400 text-[10px] font-black uppercase hover:bg-rose-500/20 transition-colors">
+              {fixing ? "Corrigiendo..." : "Auto-corregir"}
             </button>
           </div>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-1 max-h-24 overflow-y-auto custom-scrollbar">
             {resourcePacks.issues.map((issue: any, i: number) => (
-              <p key={i} className="text-xs p-2 rounded-lg bg-white/5 border border-[var(--color-border)]">{issue.message}</p>
+              <p key={i} className="text-[10px] p-2 rounded-lg bg-black/20 border border-white/5 opacity-70 italic">{issue.message}</p>
             ))}
           </div>
         </div>
       )}
 
-      {hasChanges && (
-        <div className="flex items-center justify-between p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-          <span className="text-sm text-amber-400">Cambios pendientes</span>
-          <button onClick={saveOrder} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm">
-            <Save className="w-4 h-4" /> {saving ? "Guardando..." : "Guardar Orden"}
-          </button>
+      <div className="p-4 rounded-2xl border border-white/5 bg-white/[0.01]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-muted/50">
+            <Layers className="w-3 h-3 text-primary" /> Orden de Prioridad
+          </h3>
+          
+          {hasChanges && (
+            <button 
+              onClick={saveOrder} 
+              disabled={saving} 
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <Save className="w-3 h-3" /> {saving ? "..." : "Guardar Cambios"}
+            </button>
+          )}
         </div>
-      )}
 
-      <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Layers className="w-4 h-4 text-primary" /> Orden de Aplicación</h3>
         <div className="space-y-1">
           {displayStack.length === 0 ? (
-            <div className="text-center py-8 opacity-50"><Package className="w-8 h-8 mx-auto mb-2" /><p>No hay paquetes activos</p></div>
+            <div className="text-center py-6 opacity-30 italic text-[11px]">
+              <Package className="w-6 h-6 mx-auto mb-2 opacity-20" />
+              <p>No hay paquetes activos</p>
+            </div>
           ) : (
             displayStack.map((pack, i) => (
               <PackItem
@@ -70,12 +81,18 @@ export function ResourcePackManager({ resourcePacks, projectName, version, onUpd
                 onMove={handleManualMove}
                 onDragStart={() => setDraggedIdx(i)}
                 onDragOver={(e: any) => { e.preventDefault(); setOverIdx(i); }}
-                onDrop={() => { handleManualMove(draggedIdx!, i); setDraggedIdx(null); setOverIdx(null); }}
+                onDrop={() => { if (draggedIdx !== null) handleManualMove(draggedIdx, i); setDraggedIdx(null); setOverIdx(null); }}
                 onDragEnd={() => { setDraggedIdx(null); setOverIdx(null); }}
               />
             ))
           )}
         </div>
+        
+        {hasChanges && (
+          <p className="text-[9px] text-amber-500/50 mt-3 italic text-center font-bold uppercase tracking-tighter">
+            * Cambios guardados en cache local
+          </p>
+        )}
       </div>
     </div>
   );

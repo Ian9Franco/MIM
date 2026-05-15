@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPortableDir } from "@/lib/settings";
+import { getPortableDir, getSettings } from "@/lib/settings";
 import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/nbt";
 import path from "path";
 import fs from "fs";
@@ -42,8 +42,9 @@ export async function GET(req: NextRequest) {
     }
 
     const playersList: any[] = [];
-
-    // Read all files inside portable player-rescue folder
+    const { minecraftPath } = getSettings();
+ 
+    // 1. Scan portable player-rescue folder
     if (fs.existsSync(playerRescueDir)) {
       try {
         const files = fs.readdirSync(playerRescueDir);
@@ -59,6 +60,43 @@ export async function GET(req: NextRequest) {
           }
         }
       } catch (_) {}
+    }
+
+    // 2. Scan global minecraftPath/saves folder
+    if (fs.existsSync(path.join(minecraftPath, "saves"))) {
+      try {
+        const worlds = fs.readdirSync(path.join(minecraftPath, "saves"));
+        for (const world of worlds) {
+          const worldPath = path.join(minecraftPath, "saves", world);
+          if (fs.statSync(worldPath).isDirectory()) {
+            // Check level.dat (Host)
+            const levelDat = path.join(worldPath, "level.dat");
+            if (fs.existsSync(levelDat)) {
+              playersList.push({
+                fileName: "level.dat",
+                filePath: levelDat,
+                isHost: true,
+                worldName: world
+              });
+            }
+            // Check playerdata folder (UUIDs)
+            const playerDataDir = path.join(worldPath, "playerdata");
+            if (fs.existsSync(playerDataDir)) {
+              const dataFiles = fs.readdirSync(playerDataDir);
+              for (const df of dataFiles) {
+                if (df.endsWith(".dat")) {
+                  playersList.push({
+                    fileName: df,
+                    filePath: path.join(playerDataDir, df),
+                    isHost: false,
+                    worldName: world
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (e) { console.error("Error scanning global saves:", e); }
     }
 
     // Process details for each player file

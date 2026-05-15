@@ -25,6 +25,21 @@ export function useFomoCollectionsManager(loader: string, gameVersion: string, o
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (viewing) {
+      const fetchMods = async () => {
+        setViewLoading(true);
+        const { mods, error } = await fetchCollectionMods(viewing.id);
+        if (error) onStatus(error, "error");
+        setViewMods(mods || []);
+        setViewLoading(false);
+      };
+      fetchMods();
+    } else {
+      setViewMods([]);
+    }
+  }, [viewing, onStatus]);
+
   const handleDownloadColl = async (coll: CollectionEntry) => {
     setCollDl(coll.id);
     const { count, error } = await downloadCollection(coll.id, loader, gameVersion);

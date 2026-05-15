@@ -123,17 +123,20 @@ export function PackHealthPanel({
   };
 
   const panel = (
-    <div
-      ref={sidebarRef}
-      className="fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] backdrop-blur-3xl rounded-l-[2rem] overflow-hidden"
-      style={{
-        transform:  visible ? "translateX(0)" : "translateX(100%)",
-        opacity:    visible ? 1 : 0,
-        background: "var(--glass-bg)",
-        borderLeft: `1px solid color-mix(in srgb, ${cfg.color} 22%, transparent)`,
-        boxShadow:  `-24px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 color-mix(in srgb, ${cfg.color} 10%, transparent)`,
-      }}
-    >
+      <aside
+        ref={sidebarRef}
+        className="fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0"
+        style={{
+          transform:  visible ? "translateX(0)" : "translateX(100%)",
+          opacity:    visible ? 1 : 0,
+          background: "var(--glass-bg)",
+          borderColor: "var(--color-border)",
+          borderLeftColor: `color-mix(in srgb, ${cfg.color} 30%, transparent)`,
+          backdropFilter: "blur(40px)",
+          borderRadius: "2.5rem 0 0 2.5rem",
+          boxShadow:  `-24px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 color-mix(in srgb, ${cfg.color} 12%, transparent)`,
+        }}
+      >
       <div className="absolute top-0 inset-x-0 h-[2px] opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)` }} />
 
       {/* Header */}
@@ -199,7 +202,7 @@ export function PackHealthPanel({
         )}
         <button onClick={onClose} className="w-full py-2 text-[10px] font-medium opacity-40 hover:opacity-100 transition-all">← Cerrar y corregir</button>
       </div>
-    </div>
+    </aside>
   );
 
   return ReactDOM.createPortal(panel, document.body);

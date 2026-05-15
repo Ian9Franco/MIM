@@ -145,7 +145,25 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       const res = await fetch(`/api/project/logs?project=${activeProject.name}&version=${activeProject.version}`);
       if (res.ok) {
         const data = await res.json();
-        setLocalFiles(data.files || []);
+        const files: LocalLogFile[] = data.files || [];
+        setLocalFiles(files);
+
+        // Auto-selection logic
+        if (files.length > 0) {
+          if (mode === "crash") {
+            const newestCrash = files.find(f => f.type === "crash");
+            if (newestCrash) {
+              setSelectedCrashFile(newestCrash);
+              handleLoadAndAnalyze(newestCrash);
+            }
+          } else if (mode === "latest-log") {
+            const latestLog = files.find(f => f.name.toLowerCase().includes("latest.log"));
+            if (latestLog) {
+              setLatestLogFile(latestLog);
+              handleLoadAndAnalyze(latestLog);
+            }
+          }
+        }
       }
     } catch (e) { console.error("[SAGE] Error fetching local files:", e); }
     setLoadingFiles(false);
@@ -186,6 +204,14 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       setAnalyzing(false);
     }, 600);
   };
+
+  useEffect(() => {
+    if (isOpen && activeProject) {
+      fetchLocalFiles();
+      fetchPlayersList();
+      fetchScannable();
+    }
+  }, [isOpen, activeProject, fetchLocalFiles, fetchPlayersList, fetchScannable]);
 
   return {
     mode, setMode, 

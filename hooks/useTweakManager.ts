@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, TweakData, Keybind } from "@/lib/types";
 
 export function useTweakManager(isOpen: boolean, activeProject: Project | null) {
@@ -12,6 +12,8 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [hasPackChanges, setHasPackChanges] = useState(false);
   const [draggedPackIdx, setDraggedPackIdx] = useState<number | null>(null);
+  
+  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("tweak_active_tab");
@@ -27,6 +29,17 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
       const res = await fetch(`/api/tweak?projectName=${activeProject.name}&version=${activeProject.version}&loader=${activeProject.loader || "forge"}`);
       const json = await res.json();
       if (res.ok) {
+        // Apply draft if it exists
+        if (json.draft) {
+          if (json.draft.resourcePacks) {
+            json.resourcePacks.active = json.draft.resourcePacks;
+            setHasPackChanges(true);
+          }
+          if (json.draft.keybinds) {
+            json.keybinds = json.draft.keybinds;
+          }
+        }
+
         setData(json);
         if (keybindHistory.length === 0 && json.keybinds?.length > 0) {
           setKeybindHistory([JSON.parse(JSON.stringify(json.keybinds))]);
@@ -38,15 +51,72 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
 
   useEffect(() => { if (isOpen && activeProject) fetchData(); }, [isOpen, activeProject, fetchData]);
 
+  // Debounced Auto-save Draft
+  const saveDraft = useCallback(async (currentData: TweakData) => {
+    if (!activeProject) return;
+    try {
+      await fetch("/api/tweak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          projectName: activeProject.name, 
+          version: activeProject.version, 
+          action: "save-draft", 
+          resourcePacks: currentData.resourcePacks.active,
+          keybinds: currentData.keybinds 
+        })
+      });
+    } catch (e) {
+      console.error("Draft save failed:", e);
+    }
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!data || !hasPackChanges) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      saveDraft(data);
+    }, 1500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [data, hasPackChanges, saveDraft]);
+
   const handleAction = async (action: string, extra: any = {}) => {
     if (!activeProject) return;
     setSaving(true); setMessage(null);
     try {
-      const res = await fetch("/api/tweak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version, action, ...extra }) });
+      const res = await fetch("/api/tweak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version, action, ...extra })
+      });
       const json = await res.json();
-      if (res.ok) { setMessage({ text: json.message || "Éxito", type: "success" }); if (action !== "save") fetchData(); }
-      else setMessage({ text: json.error || "Error", type: "error" });
-    } catch { setMessage({ text: "Error de conexión", type: "error" }); } finally { setSaving(false); }
+      if (res.ok) {
+        setMessage({ text: json.message || "Éxito", type: "success" });
+        if (action === "save") setHasPackChanges(false);
+        
+        // For sync-resourcepacks: inject returned packs directly into state
+        if (action === "sync-resourcepacks" && data) {
+          setData({
+            ...data,
+            resourcePacks: {
+              ...data.resourcePacks,
+              active: json.active ?? data.resourcePacks.active,
+              available: json.available ?? data.resourcePacks.available ?? [],
+              issues: json.issues ?? [],
+              autoFixable: json.autoFixable ?? [],
+            }
+          });
+        } else if (action !== "save") {
+          fetchData();
+        }
+      } else {
+        setMessage({ text: json.error || "Error", type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Error de conexión", type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addToHistory = (newKbs: Keybind[]) => {

@@ -54,86 +54,83 @@ export function FomoSkeleton({
 
   if (variant === "card") {
     return (
-      <div className="flex-1 flex flex-col p-0 space-y-0 animate-fade-in overflow-hidden relative">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 ${count > 6 ? "xl:grid-cols-3" : ""} gap-4 content-start`}>
-          {Array.from({ length: count }).map((_, i) => (
-            <div 
-              key={i} 
-              className={`relative p-4 flex flex-col h-[380px] transition-all fomo-skeleton-glass ${
-                isCurseForge ? "rounded-none!" : ""
-              }`}
-              style={{ 
-                animationDelay: `${i * 0.08}s`,
-                opacity: 1 - (i * 0.08),
-                borderWidth: isCurseForge ? "2px" : "1px",
+      <>
+        {Array.from({ length: count }).map((_, i) => (
+          <div 
+            key={i} 
+            className={`relative p-4 flex flex-col h-[320px] transition-all overflow-hidden border border-white/5 ${
+              isCurseForge ? "rounded-none" : "rounded-3xl"
+            }`}
+            style={{ 
+              background: isCurseForge ? "rgba(255, 128, 0, 0.05)" : "var(--glass-bg)",
+              animationDelay: `${i * 0.05}s`,
+              backdropFilter: "blur(12px)"
+            }}
+          >
+            {/* Shimmer sweep */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                animation: "shimmer 2s ease-in-out infinite",
+                backgroundImage: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%)",
+                animationDelay: `${i * 0.1}s`
               }}
-            >
+            />
 
-              <div className="flex items-start gap-4 mb-4 relative z-10">
-                {/* Icon Mockup */}
-                <div 
-                  className={`w-16 h-16 shrink-0 animate-pulse ${isCurseForge ? "rounded-none" : "rounded-2xl"}`}
-                  style={{ background: "var(--color-secondary-bg)", border: "1px solid var(--color-border)" }}
-                />
+            <div className="flex items-start gap-4 mb-4 relative z-10">
+              {/* Icon Mockup */}
+              <div 
+                className={`w-16 h-16 shrink-0 animate-pulse bg-white/5 border border-white/10 ${isCurseForge ? "rounded-none" : "rounded-2xl"}`}
+              />
+              
+              <div className="flex-1 space-y-2.5 mt-1">
+                {/* Title */}
+                <div className="h-3.5 rounded-full bg-white/10 w-4/5 animate-pulse" />
+                {/* Author */}
+                <div className="h-2 rounded-full bg-white/5 w-2/5 opacity-50" />
                 
-                <div className="flex-1 space-y-2 mt-1">
-                  {/* Title */}
-                  <div className="h-4 rounded-full bg-white/10 w-4/5 animate-grow" style={{ animationDelay: `${i * 0.1}s` }} />
-                  {/* Author */}
-                  <div className="h-2 rounded-full bg-white/5 w-2/5 animate-grow" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
+                {/* Chips row */}
+                <div className="flex gap-2 pt-2">
+                  <div className="w-12 h-5 rounded-full bg-white/10 animate-pulse" />
+                  <div className="w-16 h-5 rounded-full bg-white/5" />
                 </div>
-              </div>
-
-              {/* Chips row */}
-              <div className="flex gap-2 mb-6 relative z-10">
-                <div className="w-12 h-5 rounded-full bg-primary/10 animate-pulse" />
-                <div className="w-16 h-5 rounded-full bg-white/5 animate-pulse" />
-                <div className="w-14 h-5 rounded-full bg-emerald-500/10 animate-pulse ml-auto" />
-              </div>
-
-              {/* Description lines */}
-              <div className="space-y-2 mb-6 relative z-10">
-                <div className="h-2 rounded-full bg-white/5 w-full animate-grow" style={{ animationDelay: `${i * 0.1 + 0.2}s` }} />
-                <div className="h-2 rounded-full bg-white/5 w-[90%] animate-grow" style={{ animationDelay: `${i * 0.1 + 0.25}s` }} />
-              </div>
-
-              {/* Tags Mockup */}
-              <div className="mb-6 relative z-10">
-                <div className="h-1.5 w-10 bg-white/10 rounded-full mb-3 opacity-30" />
-                <div className="flex flex-wrap gap-2">
-                  <div className="w-12 h-5 rounded-full bg-white/5 border border-white/5 animate-pulse" />
-                  <div className="w-14 h-5 rounded-full bg-white/5 border border-white/5 animate-pulse" />
-                  <div className="w-10 h-5 rounded-full bg-white/5 border border-white/5 animate-pulse" />
-                </div>
-              </div>
-
-              {/* Buttons grid at the bottom */}
-              <div className="mt-auto grid grid-cols-3 gap-2 relative z-10">
-                <div className={`h-9 bg-white/5 border border-white/10 animate-pulse ${isCurseForge ? "" : "rounded-xl"}`} />
-                <div className={`h-9 bg-emerald-500/5 border border-emerald-500/10 animate-pulse ${isCurseForge ? "" : "rounded-xl"}`} />
-                <div className={`h-9 bg-white/5 border border-white/10 animate-pulse ${isCurseForge ? "" : "rounded-xl"}`} />
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Description lines */}
+            <div className="space-y-2.5 mt-4 relative z-10">
+              <div className="h-2 rounded-full bg-white/5 w-full" />
+              <div className="h-2 rounded-full bg-white/5 w-[92%]" />
+              <div className="h-2 rounded-full bg-white/5 w-[85%]" />
+            </div>
+
+            {/* Buttons grid at the bottom */}
+            <div className="mt-auto grid grid-cols-3 gap-2 relative z-10">
+              <div className={`h-9 bg-white/5 border border-white/10 ${isCurseForge ? "" : "rounded-xl"}`} />
+              <div className={`h-9 bg-emerald-500/10 border border-emerald-500/20 ${isCurseForge ? "" : "rounded-xl"}`} />
+              <div className={`h-9 bg-white/5 border border-white/10 ${isCurseForge ? "" : "rounded-xl"}`} />
+            </div>
+          </div>
+        ))}
 
         {/* Floating Indicator */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 animate-float pointer-events-none z-50">
           <div 
             className="px-5 py-2.5 rounded-2xl flex items-center gap-3 shadow-2xl border"
             style={{ 
-              background: "color-mix(in srgb, var(--color-background) 80%, transparent)", 
-              borderColor: "var(--color-accent-border)",
+              background: "rgba(12, 12, 14, 0.85)", 
+              borderColor: "rgba(255, 255, 255, 0.1)",
               backdropFilter: "blur(12px)"
             }}
           >
-            <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "color-mix(in srgb, var(--color-primary) 30%, transparent)", borderTopColor: "var(--color-primary)" }} />
-            <span className="text-[10px] font-headline tracking-[0.2em] uppercase" style={{ color: "var(--color-muted)" }}>
+            <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "rgba(187, 150, 228, 0.3)", borderTopColor: "var(--color-primary)" }} />
+            <span className="text-[10px] font-headline tracking-[0.2em] uppercase text-white/50">
               {message}
             </span>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 

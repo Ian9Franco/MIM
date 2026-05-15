@@ -69,20 +69,45 @@ export default function Page() {
     return () => Object.entries(events).forEach(([n, h]) => window.removeEventListener(n, h as any));
   }, [lib, sidebarOpen, setPendingFiles]);
 
+  // ── Sync Details State with Global Events ──────────────────────────────────
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: detailsOpen } }));
+  }, [detailsOpen]);
+
+  // ── Sync Pending Count with Global Events ──────────────────────────────────
+  useEffect(() => {
+    const dispatchCount = () => {
+      window.dispatchEvent(new CustomEvent("fomo-pending-count", { detail: { count: pendingFiles.length } }));
+      window.dispatchEvent(new CustomEvent("fomo-pending-files-update", { detail: { files: pendingFiles } }));
+    };
+    dispatchCount();
+    
+    window.addEventListener("fomo-request-pending-count", dispatchCount);
+    return () => window.removeEventListener("fomo-request-pending-count", dispatchCount);
+  }, [pendingFiles.length]);
+
   // ── FOMO Auto-Collapse Logic ──────────────────────────────────────────────
   useEffect(() => {
-    if (fomoOpen) setDownloadsSidebarCollapsed(false);
     const prevCount = prevPendingCountRef.current;
     prevPendingCountRef.current = pendingFiles.length;
 
+    // Detect new downloads while FOMO is open
     if (fomoOpen && pendingFiles.length > prevCount) {
-      const hadDetailsOpen = detailsOpen;
-      if (hadDetailsOpen) setDetailsOpen(false);
+      const wasOpen = detailsOpen;
+      
+      // 1. Hide details and show downloads
+      if (wasOpen) setDetailsOpen(false);
       setDownloadsSidebarCollapsed(false);
-      const timer = setTimeout(() => { setDownloadsSidebarCollapsed(true); if (hadDetailsOpen) setDetailsOpen(true); }, 2000);
+
+      // 2. After 2 seconds, collapse downloads and restore details
+      const timer = setTimeout(() => {
+        setDownloadsSidebarCollapsed(true);
+        if (wasOpen) setDetailsOpen(true);
+      }, 2000);
+
       return () => clearTimeout(timer);
     }
-  }, [pendingFiles.length, fomoOpen, detailsOpen]);
+  }, [pendingFiles.length, fomoOpen]);
 
   // ── Auto-Classification ────────────────────────────────────────────────────
   useEffect(() => {

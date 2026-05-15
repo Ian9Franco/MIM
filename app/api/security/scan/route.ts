@@ -69,9 +69,9 @@ function isAllowedPath(filePath: string): boolean {
     path.join(process.cwd(), "public"),
   ];
 
-  const normalizedPath = path.normalize(filePath);
+  const normalizedPath = path.normalize(filePath).toLowerCase();
   return allowedRoots.some(root => {
-    const normalizedRoot = path.normalize(root);
+    const normalizedRoot = path.normalize(root).toLowerCase();
     return normalizedPath.startsWith(normalizedRoot);
   });
 }
@@ -107,7 +107,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const scannable: { fileName: string; filePath: string; type: "jar" | "zip"; assetType: string }[] = [];
 
   // ── 1. Project mods (JARs from _projects/<name>/mods) ──────────────────────
-  const projectModsPath = path.join(SOURCE_BASE, "_projects", project, "mods");
+  const projectModsPath = path.join(settings.sourceBase, "_projects", project, "mods");
   if (fs.existsSync(projectModsPath)) {
     for (const cat of CATEGORIES) {
       const catPath = path.join(projectModsPath, cat);
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // ── 2. Version+loader shared mods (JARs) ───────────────────────────────────
   if (loader) {
-    const loaderPath = path.join(SOURCE_BASE, version, loader);
+    const loaderPath = path.join(settings.sourceBase, version, loader);
     if (fs.existsSync(loaderPath)) {
       for (const cat of CATEGORIES) {
         const catPath = path.join(loaderPath, cat);
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // ── 3. Resource Packs — SOURCE_BASE/_projects/<name>/resourcepacks ──────────
   // Mirrors /api/classify: resourcepacks are stored in the project, not in .minecraft.
   // They are pushed to .minecraft on demand via "Sync with Game" in Tweak.
-  const rpDir = path.join(SOURCE_BASE, "_projects", project, "resourcepacks");
+  const rpDir = path.join(settings.sourceBase, "_projects", project, "resourcepacks");
 
   if (fs.existsSync(rpDir)) {
     for (const file of fs.readdirSync(rpDir)) {
@@ -176,7 +176,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   // ── 5. Datapacks — SOURCE_BASE/_projects/<name>/datapacks/ ─────────────────
-  const datapackDir = path.join(SOURCE_BASE, "_projects", project, "datapacks");
+  const datapackDir = path.join(settings.sourceBase, "_projects", project, "datapacks");
   if (fs.existsSync(datapackDir)) {
     for (const file of fs.readdirSync(datapackDir)) {
       if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;

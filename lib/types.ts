@@ -2,6 +2,11 @@ import type { Loader } from "./constants";
 
 export interface ModHit {
   projectId:     string;
+  /** IDs explícitos para evitar colisiones entre plataformas */
+  externalProjectId?: string; 
+  sourceProjectId?:   string;
+  platformId?:       string;
+  
   slug:          string;
   title:         string;
   description:   string;
@@ -25,6 +30,15 @@ export interface ModHit {
     curseforge: boolean;
     checking?: boolean;
   };
+  gallery?: ModGalleryImage[];
+}
+
+export interface ModGalleryImage {
+  url: string;           // URL full para lightbox
+  thumbnailUrl?: string; // URL pequeña para grid
+  title?: string;
+  description?: string;
+  featured?: boolean;
 }
 
 export interface CollectionEntry {
@@ -167,6 +181,7 @@ export interface Keybind {
   name: string;
   key: string;
   category: string;
+  modSource?: string;
 }
 
 export interface TweakSnapshot {
@@ -178,7 +193,7 @@ export interface TweakSnapshot {
 export interface TweakRecommendation {
   title: string;
   desc: string;
-  impact: "low" | "medium" | "high";
+  impact: "low" | "medium" | "high" | "High";
   action?: string;
   fomoQuery?: string;
   settingKey?: string;
@@ -211,6 +226,7 @@ export interface TweakData {
   hardwareProfile?: string;
   totalRamGB?: number;
   cpuCores?: number;
+  gpu?: string;
   jvmArgs?: string;
 }
 

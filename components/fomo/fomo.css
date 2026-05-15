@@ -20,6 +20,8 @@
   --fomo-pill-inactive-text: rgba(255, 255, 255, 0.6);
   --fomo-pill-inactive-border: rgba(255, 255, 255, 0.08);
   --fomo-icon-color: rgba(255, 255, 255, 0.4);
+  --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.2), transparent, var(--fomo-secondary-bg));
+  --fomo-banner-filter: blur(12px) brightness(0.4) saturate(1.4);
 
   /* Sinytra Switch Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(255, 255, 255, 0.04);
@@ -63,6 +65,8 @@
   --fomo-pill-inactive-text: rgba(242, 236, 249, 0.6);
   --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
   --fomo-icon-color: rgba(187, 150, 228, 0.4);
+  --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.25), transparent, var(--fomo-secondary-bg));
+  --fomo-banner-filter: blur(15px) brightness(0.35) saturate(1.6);
 
   /* Sinytra Switch Vampire Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(187, 150, 228, 0.04);
@@ -106,6 +110,9 @@
   --fomo-pill-inactive-text: #4F46E5;
   --fomo-pill-inactive-border: rgba(124, 58, 237, 0.15);
   --fomo-icon-color: rgba(30, 27, 75, 0.4);
+  /* Warm Cream Tint for Modern Theme Hero */
+  --fomo-banner-overlay: linear-gradient(to bottom, rgba(255, 252, 240, 0.8) 0%, rgba(255, 252, 240, 0.4) 50%, var(--fomo-secondary-bg) 100%);
+  --fomo-banner-filter: blur(0px) brightness(1.1) saturate(1.1);
 
   /* Sinytra Switch Modern Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(124, 58, 237, 0.04);

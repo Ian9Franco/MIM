@@ -17,7 +17,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     alertSidebarOpen, hasAlerts, alertCount, alertsSeen, stagingOpen, setStagingOpen,
     hasStagingFiles, packHealthOpen, setPackHealthOpen, packHealthReport, setPackHealthReport,
     isValidatingHealth, onForceBuildCallback, isRefreshing, handleToggleUI, handleRefresh,
-    handleCheckHealth, handleFomoSearch
+    handleCheckHealth, handleFomoSearch, pendingFiles, handleOpenDownloads
   } = useRootLayoutManager();
 
   return (
@@ -34,14 +34,21 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         }}
       />
 
-      <FomoSidebar open={fomoOpen} onClose={() => handleToggleUI('fomo', false)} activeProject={activeProject} />
+      <FomoSidebar 
+        open={fomoOpen} 
+        onClose={() => handleToggleUI('fomo', false)} 
+        activeProject={activeProject} 
+        pendingFiles={pendingFiles}
+        onOpenDownloads={handleOpenDownloads}
+      />
       <SageSidebar open={sageOpen} onClose={() => handleToggleUI('sage', false)} activeProject={activeProject} />
       <TweakSidebar isOpen={tweakOpen} onClose={() => handleToggleUI('tweak', false)} activeProject={activeProject} />
 
       <div
         className="relative z-10 min-h-screen flex flex-col transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-x-hidden"
         style={{ 
-          transform: `translateX(${(fomoOpen || sageOpen) ? 500 : 0}px)`,
+          transform: `translateX(${(fomoOpen || sageOpen) ? 550 : 0}px) scale(${(fomoOpen || sageOpen) ? 0.98 : 1})`,
+          filter: (fomoOpen || sageOpen) ? "blur(10px) brightness(0.8)" : "none",
           paddingRight: tweakOpen ? "935px" : (alertSidebarOpen || packHealthOpen) ? "400px" : "0px",
           width: "100%",
         }}

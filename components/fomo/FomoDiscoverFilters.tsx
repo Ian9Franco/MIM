@@ -29,9 +29,12 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         <select value={isAuthorSearch ? "" : props.projectType} onChange={e => props.onProjectType(e.target.value)} disabled={isAuthorSearch} className="w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 outline-none">
           {isAuthorSearch ? <option value="">Cualquier Tipo</option> : PROJECT_TYPES.map(pt => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
         </select>
-        <select value={isAuthorSearch ? "" : props.loader} onChange={e => props.onLoader(e.target.value)} disabled={isAuthorSearch} className="w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 outline-none">
-          {isAuthorSearch ? <option value="">Cualquier Loader</option> : <><option value="unknown">Cualquier Loader</option>{LOADERS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}</>}
-        </select>
+        
+        {(props.projectType === "mod" || props.projectType === "modpack" || isAuthorSearch) && (
+          <select value={isAuthorSearch ? "" : props.loader} onChange={e => props.onLoader(e.target.value)} disabled={isAuthorSearch} className="w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 outline-none">
+            {isAuthorSearch ? <option value="">Cualquier Loader</option> : <><option value="unknown">Cualquier Loader</option>{LOADERS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}</>}
+          </select>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1 custom-scrollbar">

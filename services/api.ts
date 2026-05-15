@@ -26,14 +26,40 @@ export async function fetchCollections(): Promise<{ collections: CollectionEntry
 
 export async function fetchCollectionMods(id: string): Promise<{ mods: ModHit[], error: string | null }> {
   try {
-    // If it's a local collection, it might need to be handled differently, 
-    // but the API handles both usually via query param.
+    // If it's a local collection, we need to fetch projects by IDs
+    if (id.startsWith("local_")) {
+      const resLocal = await fetch("/api/local-collections");
+      if (resLocal.ok) {
+        const data = await resLocal.json();
+        const coll = data.collections.find((c: any) => c.id === id);
+        if (coll && coll.projects && coll.projects.length > 0) {
+          const pIds = coll.projects.map((p: any) => p.projectId);
+          return await fetchModsByIds(pIds);
+        }
+      }
+      return { mods: [], error: null };
+    }
+
     const res = await fetch(`/api/modrinth/collections?collectionId=${id}`);
     if (res.ok) {
       const data = await res.json();
       return { mods: data.mods || [], error: null };
     }
     return { mods: [], error: "No se pudieron cargar los mods" };
+  } catch (err) {
+    return { mods: [], error: "Error de red" };
+  }
+}
+
+export async function fetchModsByIds(ids: string[]): Promise<{ mods: ModHit[], error: string | null }> {
+  if (!ids || ids.length === 0) return { mods: [], error: null };
+  try {
+    const res = await fetch(`/api/modrinth/projects?ids=${JSON.stringify(ids)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return { mods: data.mods || [], error: null };
+    }
+    return { mods: [], error: "No se pudieron cargar los proyectos" };
   } catch (err) {
     return { mods: [], error: "Error de red" };
   }

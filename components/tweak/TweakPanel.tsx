@@ -23,6 +23,11 @@ export function TweakPanel({ projectName, version, loader }: TweakPanelProps) {
   const { data, loading, saving, message, fetchData, handleAction } = useTweakPanel(projectName, version, loader);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
+  const resourcePacksWithDraft = data?.resourcePacks ? {
+    ...data.resourcePacks,
+    draft: data.draft?.resourcePacks || null
+  } : null;
+
   if (loading && !data) {
     return (
       <div className="p-12 text-center opacity-50">
@@ -80,7 +85,7 @@ export function TweakPanel({ projectName, version, loader }: TweakPanelProps) {
       <div className="min-h-[400px]">
         {activeTab === "overview" && data && <OverviewTab data={data} onAction={fetchData} projectName={projectName} version={version} />}
         {activeTab === "keybinds" && data && <KeybindManager keybinds={data.keybinds} grouped={data.keybindsGrouped} conflicts={data.keybindConflicts} projectName={projectName} version={version} onUpdate={fetchData} />}
-        {activeTab === "packs" && data && <ResourcePackManager resourcePacks={data.resourcePacks} projectName={projectName} version={version} onUpdate={fetchData} />}
+        {activeTab === "packs" && data && <ResourcePackManager resourcePacks={resourcePacksWithDraft} projectName={projectName} version={version} onUpdate={fetchData} />}
         {activeTab === "snapshots" && data && <SnapshotManager snapshots={data.snapshots} projectName={projectName} version={version} loader={loader} onUpdate={fetchData} />}
       </div>
     </div>

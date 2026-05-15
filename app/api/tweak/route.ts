@@ -14,6 +14,7 @@ import {
 import { analyzePackOrder, autoFixPackOrder } from "./lib/PackIntelligence";
 import { calculateModpackHash, getModCount } from "./lib/SnapshotSystem";
 import { getRecommendations } from "./lib/RecommendationEngine";
+import { readProjectConfig, saveProjectConfig } from "@/lib/projectSubcategories";
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,59 +29,161 @@ export async function GET(req: NextRequest) {
 
     const { sourceBase, minecraftPath } = getSettings();
     const projectDir = path.join(sourceBase, "_projects", projectName);
-    const optionsPath = path.join(projectDir, "options.txt");
-
-    // Installed mods detection
+    
+    // Determine the real paths to use (Prefer global minecraftPath if projectDir doesn't have its own standalone instance)
+    // For many users, the manager tweaks the MAIN game installation
+    const realMinecraftPath = fs.existsSync(path.join(projectDir, "options.txt")) ? projectDir : minecraftPath;
+    const optionsPath = path.join(realMinecraftPath, "options.txt");
+    const resourcePacksDir = path.join(realMinecraftPath, "resourcepacks");
+ 
+    // Installed mods detection (Scan both project-specific and global if needed)
     const installedMods = new Set<string>();
-    const modsDir = path.join(projectDir, "mods");
-    if (fs.existsSync(modsDir)) {
-      const subs = fs.readdirSync(modsDir);
-      for (const sub of subs) {
-        const subPath = path.join(modsDir, sub);
-        if (fs.statSync(subPath).isDirectory()) {
-          fs.readdirSync(subPath).forEach(f => installedMods.add(f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase()));
-        } else if (sub.endsWith(".jar")) {
-          installedMods.add(sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase());
+    const modsDirs = [path.join(projectDir, "mods"), path.join(minecraftPath, "mods")];
+    
+    for (const modsDir of modsDirs) {
+      if (fs.existsSync(modsDir)) {
+        const subs = fs.readdirSync(modsDir);
+        for (const sub of subs) {
+          const subPath = path.join(modsDir, sub);
+          if (fs.statSync(subPath).isDirectory()) {
+            fs.readdirSync(subPath).forEach(f => installedMods.add(f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase()));
+          } else if (sub.endsWith(".jar")) {
+            installedMods.add(sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase());
+          }
         }
       }
     }
 
-    const resData: any = { optionsExists: false, keybinds: [], resourcePacks: { active: [], available: [] }, snapshots: [], recommendations: [] };
+    const resData: any = { optionsExists: false, keybinds: [], resourcePacks: { active: [], available: [] }, snapshots: [], recommendations: [], minecraftPathUsed: realMinecraftPath, settings: {} };
 
     if (fs.existsSync(optionsPath)) {
       resData.optionsExists = true;
       const lines = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
       const kbs: Keybind[] = [];
       let activePacks: string[] = [];
+      const settingsMap: Record<string, string> = {};
+
+      // Settings keys we want to surface to the UI
+      const TRACKED_SETTINGS = new Set([
+        "renderDistance", "fov", "gamma", "enableVsync", "entityShadows",
+        "mipmapLevels", "guiScale", "particles", "fullscreen", "lang",
+        "soundCategory_master", "maxFps", "graphicsMode",
+      ]);
 
       for (const line of lines) {
-        const [k, v] = line.trim().split(":");
-        if (!k || !v) continue;
+        const colonIdx = line.indexOf(":");
+        if (colonIdx === -1) continue;
+        const k = line.slice(0, colonIdx).trim();
+        const v = line.slice(colonIdx + 1).trim();
+        if (!k) continue;
         if (k.startsWith("key_")) {
           kbs.push({ id: k, name: k.replace("key_", ""), key: v, category: parseCategoryFromId(k), modSource: extractModSource(k) });
         } else if (k === "resourcePacks") {
           try { activePacks = JSON.parse(v); } catch {}
+        } else if (TRACKED_SETTINGS.has(k)) {
+          settingsMap[k] = v;
         }
       }
 
       resData.keybinds = kbs;
       resData.keybindConflicts = detectKeybindConflicts(kbs);
       resData.keybindsGrouped = groupKeybindsForUI(kbs);
+      resData.settings = settingsMap;
+      
+      // Scan for available resource packs
+      const availablePacksSet = new Set<string>();
+      if (fs.existsSync(resourcePacksDir)) {
+        try {
+          const files = fs.readdirSync(resourcePacksDir);
+          for (const file of files) {
+            if (file.endsWith(".zip") || fs.statSync(path.join(resourcePacksDir, file)).isDirectory()) {
+              availablePacksSet.add(`file/${file}`);
+            }
+          }
+        } catch (e) { console.error("Error scanning resourcepacks:", e); }
+      }
+      
+      const availablePacks = Array.from(availablePacksSet);
+      
       const packAnalysis = analyzePackOrder(activePacks);
-      resData.resourcePacks = { active: activePacks, ...packAnalysis };
+      resData.resourcePacks = { 
+        active: activePacks, 
+        available: availablePacks.filter(p => !activePacks.includes(p)),
+        ...packAnalysis 
+      };
     }
 
     // Hardware & Recommendations
     const totalRamGB = Math.round(os.totalmem() / 1073741824);
-    const hardware = { totalRamGB, cpuCores: os.cpus().length, hardwareProfile: totalRamGB > 8 ? "high" : "low" };
-    resData.recommendations = getRecommendations(loader, version, installedMods, hardware, getModCount(projectDir), ramParam ? parseInt(ramParam) : 8);
+    const cpuCores = os.cpus().length;
+    const hardware = { 
+      totalRamGB, cpuCores, gpu: "Auto-detected",
+      hardwareProfile: totalRamGB >= 16 ? "high" : totalRamGB >= 8 ? "mid" : "low"
+    };
     
-    // Snapshots
-    if (fs.existsSync(projectDir)) {
-      resData.snapshots = fs.readdirSync(projectDir)
-        .filter(f => f.startsWith("mim_snapshot_") && f.endsWith(".json"))
-        .map(f => JSON.parse(fs.readFileSync(path.join(projectDir, f), "utf-8")));
+    // Count mods in the REAL .minecraft/mods folder
+    const globalModsDir = path.join(minecraftPath, "mods");
+    let globalModCount = 0;
+    if (fs.existsSync(globalModsDir)) {
+      globalModCount = fs.readdirSync(globalModsDir).filter(f => f.endsWith(".jar")).length;
     }
+    
+    // JVM Args recommendation based on real hardware + real mod count
+    const recommendedRamGB = Math.min(
+      Math.floor(totalRamGB * 0.6),  // 60% of total RAM
+      totalRamGB >= 32 ? 12 : totalRamGB >= 16 ? 8 : totalRamGB >= 8 ? 6 : 4
+    );
+    const gcThreads = Math.max(2, Math.min(Math.floor(cpuCores / 2), 8));
+    const heavyMods = globalModCount > 200;
+    
+    const jvmArgs = [
+      `-Xmx${recommendedRamGB}G`,
+      `-Xms${Math.max(2, Math.floor(recommendedRamGB / 2))}G`,
+      `-XX:+UseG1GC`,
+      `-XX:+ParallelRefProcEnabled`,
+      `-XX:MaxGCPauseMillis=200`,
+      `-XX:+UnlockExperimentalVMOptions`,
+      `-XX:+DisableExplicitGC`,
+      `-XX:+AlwaysPreTouch`,
+      `-XX:G1NewSizePercent=${heavyMods ? 30 : 40}`,
+      `-XX:G1MaxNewSizePercent=${heavyMods ? 50 : 60}`,
+      `-XX:G1HeapRegionSize=16M`,
+      `-XX:G1ReservePercent=15`,
+      `-XX:G1HeapWastePercent=5`,
+      `-XX:G1MixedGCCountTarget=4`,
+      `-XX:InitiatingHeapOccupancyPercent=20`,
+      `-XX:G1MixedGCLiveThresholdPercent=90`,
+      `-XX:G1RSetUpdatingPauseTimePercent=5`,
+      `-XX:SurvivorRatio=32`,
+      `-XX:+PerfDisableSharedMem`,
+      `-XX:MaxTenuringThreshold=1`,
+      `-XX:ParallelGCThreads=${gcThreads}`,
+    ].join(" ");
+    
+    resData.totalRamGB = totalRamGB;
+    resData.cpuCores = cpuCores;
+    resData.hardwareProfile = hardware.hardwareProfile;
+    resData.jvmArgs = jvmArgs;
+    resData.globalModCount = globalModCount;
+    resData.modCount = globalModCount; // alias used by OverviewTab
+    resData.recommendations = getRecommendations(loader, version, installedMods, hardware, getModCount(projectDir), ramParam ? parseInt(ramParam) : 4);
+    
+    // Snapshots — read from _snapshots subfolder
+    const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
+    if (fs.existsSync(snapshotDir)) {
+      resData.snapshots = fs.readdirSync(snapshotDir)
+        .filter(f => f.endsWith(".json"))
+        .map(f => {
+          try { return JSON.parse(fs.readFileSync(path.join(snapshotDir, f), "utf-8")); }
+          catch { return null; }
+        })
+        .filter(Boolean)
+        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+
+    // Load Draft if exists
+    const config = readProjectConfig(projectName);
+    resData.draft = (config as any).tweakDraft || null;
 
     return NextResponse.json(resData);
   } catch (e) {
@@ -91,31 +194,226 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, projectName } = body;
-    const { sourceBase } = getSettings();
+    const { action, projectName, keybinds, resourcePacks, settings } = body;
+    const { sourceBase, minecraftPath } = getSettings();
     const projectDir = path.join(sourceBase, "_projects", projectName);
+    
+    const realMinecraftPath = fs.existsSync(path.join(projectDir, "options.txt")) ? projectDir : minecraftPath;
+    const optionsPath = path.join(realMinecraftPath, "options.txt");
+    const resourcePacksDir = path.join(realMinecraftPath, "resourcepacks");
+
+    if (action === "save") {
+      const backupPath = `${optionsPath}.mim_bak`;
+      if (fs.existsSync(optionsPath) && !fs.existsSync(backupPath)) {
+        fs.copyFileSync(optionsPath, backupPath); // Backup original before first tweak
+      }
+      
+      if (!fs.existsSync(optionsPath)) {
+        fs.writeFileSync(optionsPath, ""); // Create if missing
+      }
+      
+      let content = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
+      
+      // Update keybinds
+      if (keybinds) {
+        keybinds.forEach((kb: any) => {
+          const index = content.findIndex(line => line.startsWith(`${kb.id}:`));
+          if (index !== -1) content[index] = `${kb.id}:${kb.key}`;
+          else content.push(`${kb.id}:${kb.key}`);
+        });
+      }
+
+      // Update Resource Packs
+      if (resourcePacks) {
+        const index = content.findIndex(line => line.startsWith("resourcePacks:"));
+        const packsJson = JSON.stringify(resourcePacks);
+        if (index !== -1) content[index] = `resourcePacks:${packsJson}`;
+        else content.push(`resourcePacks:${packsJson}`);
+      }
+
+      // Update specific settings from recommendations
+      if (settings) {
+        Object.entries(settings).forEach(([k, v]) => {
+          const index = content.findIndex(line => line.startsWith(`${k}:`));
+          if (index !== -1) content[index] = `${k}:${v}`;
+          else content.push(`${k}:${v}`);
+        });
+      }
+
+      fs.writeFileSync(optionsPath, content.filter(l => l.trim()).join("\n"));
+      
+      // Clear draft once saved to game
+      const config = readProjectConfig(projectName);
+      saveProjectConfig(projectName, { ...config, tweakDraft: null } as any);
+
+      return NextResponse.json({ success: true, message: "Ajustes guardados correctamente" });
+    }
+
+    if (action === "save-draft") {
+      const config = readProjectConfig(projectName);
+      const draft = {
+        resourcePacks: body.resourcePacks,
+        keybinds: body.keybinds,
+        updatedAt: new Date().toISOString()
+      };
+      saveProjectConfig(projectName, { ...config, tweakDraft: draft } as any);
+      return NextResponse.json({ success: true, message: "Borrador guardado localmente" });
+    }
+
+    if (action === "initialize") {
+      if (!fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
+      fs.writeFileSync(optionsPath, "lang:en_us\nguiScale:0\nresourcePacks:[]\n");
+      return NextResponse.json({ success: true, message: "Perfil inicializado" });
+    }
+
+    if (action === "restore-backup") {
+      const backupPath = `${optionsPath}.mim_bak`;
+      if (fs.existsSync(backupPath)) {
+        fs.copyFileSync(backupPath, optionsPath);
+        return NextResponse.json({ success: true, message: "Backup original restaurado" });
+      }
+      return NextResponse.json({ error: "No se encontró el backup original" }, { status: 404 });
+    }
+
+    if (action === "sync-resourcepacks") {
+      // Scan real .minecraft/resourcepacks and return the full list
+      const available: string[] = [];
+      if (!fs.existsSync(resourcePacksDir)) {
+        fs.mkdirSync(resourcePacksDir, { recursive: true });
+      } else {
+        for (const file of fs.readdirSync(resourcePacksDir)) {
+          const fullPath = path.join(resourcePacksDir, file);
+          if (file.endsWith(".zip") || fs.statSync(fullPath).isDirectory()) {
+            available.push(`file/${file}`);
+          }
+        }
+      }
+
+      // Also read active packs from options.txt so the UI knows which are on/off
+      let activePacks: string[] = [];
+      if (fs.existsSync(optionsPath)) {
+        for (const line of fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/)) {
+          if (line.startsWith("resourcePacks:")) {
+            try { activePacks = JSON.parse(line.slice("resourcePacks:".length)); } catch {}
+          }
+        }
+      }
+      const packAnalysis = analyzePackOrder(activePacks);
+      return NextResponse.json({
+        success: true,
+        available,
+        active: activePacks,
+        ...packAnalysis,
+        message: `${available.length} packs encontrados en .minecraft/resourcepacks`
+      });
+    }
 
     if (action === "create-snapshot") {
-      const id = `snap-${Date.now()}`;
-      const meta: SnapshotMetadata = { id, timestamp: new Date().toISOString(), profileName: body.profileName || "Manual", minecraftVersion: body.version, loader: body.loader, modpackHash: calculateModpackHash(projectDir), modsInstalled: getModCount(projectDir), keybindCount: 0, resourcePackStack: [] };
-      fs.writeFileSync(path.join(projectDir, `mim_snapshot_${id}.json`), JSON.stringify(meta, null, 2));
-      return NextResponse.json({ success: true, id });
+      // Read CURRENT options.txt to capture real state
+      let currentKeybinds: Array<{id: string; key: string}> = [];
+      let currentPacks: string[] = [];
+
+      if (fs.existsSync(optionsPath)) {
+        for (const line of fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/)) {
+          const [k, ...rest] = line.trim().split(":");
+          const v = rest.join(":");
+          if (!k || !v) continue;
+          if (k.startsWith("key_")) currentKeybinds.push({ id: k, key: v });
+          if (k === "resourcePacks") {
+            try { currentPacks = JSON.parse(v); } catch {}
+          }
+        }
+      }
+
+      const snapshotId = `snap-${Date.now()}`;
+      const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
+      if (!fs.existsSync(snapshotDir)) fs.mkdirSync(snapshotDir, { recursive: true });
+
+      const snapshot = {
+        id: snapshotId,
+        timestamp: new Date().toISOString(),
+        profileName: body.profileName || `Snapshot ${new Date().toLocaleDateString()}`,
+        minecraftVersion: body.version,
+        loader: body.loader,
+        keybinds: currentKeybinds,
+        resourcePackStack: currentPacks,
+        modsInstalled: getModCount(projectDir),
+        modpackHash: calculateModpackHash(projectDir),
+        keybindCount: currentKeybinds.length,
+      };
+
+      fs.writeFileSync(
+        path.join(snapshotDir, `${snapshotId}.json`),
+        JSON.stringify(snapshot, null, 2)
+      );
+      return NextResponse.json({ success: true, id: snapshotId, snapshot });
+    }
+
+    if (action === "apply-snapshot") {
+      const { snapshotId } = body;
+      const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
+      const snapshotFile = path.join(snapshotDir, `${snapshotId}.json`);
+
+      if (!fs.existsSync(snapshotFile)) {
+        return NextResponse.json({ error: "Snapshot no encontrado" }, { status: 404 });
+      }
+
+      const snap = JSON.parse(fs.readFileSync(snapshotFile, "utf-8"));
+
+      // Backup original options.txt before first modification
+      const backupPath = `${optionsPath}.mim_bak`;
+      if (fs.existsSync(optionsPath) && !fs.existsSync(backupPath)) {
+        fs.copyFileSync(optionsPath, backupPath);
+      }
+
+      // Build merged options.txt: read existing → apply snapshot keybinds + packs
+      let lines: string[] = fs.existsSync(optionsPath)
+        ? fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/).filter(l => l.trim())
+        : ["lang:en_us", "guiScale:0"];
+
+      // Apply keybinds from snapshot
+      for (const kb of (snap.keybinds || [])) {
+        const idx = lines.findIndex(l => l.startsWith(`${kb.id}:`));
+        if (idx !== -1) lines[idx] = `${kb.id}:${kb.key}`;
+        else lines.push(`${kb.id}:${kb.key}`);
+      }
+
+      // Apply resource pack order from snapshot
+      if (snap.resourcePackStack?.length) {
+        const rpIdx = lines.findIndex(l => l.startsWith("resourcePacks:"));
+        const packsLine = `resourcePacks:${JSON.stringify(snap.resourcePackStack)}`;
+        if (rpIdx !== -1) lines[rpIdx] = packsLine;
+        else lines.push(packsLine);
+      }
+
+      fs.writeFileSync(optionsPath, lines.join("\n") + "\n");
+      return NextResponse.json({ success: true, message: `Snapshot "${snap.profileName}" aplicado al juego. Backup guardado.` });
+    }
+
+    if (action === "restore-backup") {
+      const backupPath = `${optionsPath}.mim_bak`;
+      if (fs.existsSync(backupPath)) {
+        fs.copyFileSync(backupPath, optionsPath);
+        return NextResponse.json({ success: true, message: "Configuración original restaurada desde backup" });
+      }
+      return NextResponse.json({ error: "No se encontró el backup original" }, { status: 404 });
     }
 
     if (action === "autofix-packs") {
-      const optionsPath = path.join(projectDir, "options.txt");
-      const content = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
+      const content = fs.existsSync(optionsPath)
+        ? fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/)
+        : [];
       const newContent = content.map(line => {
         if (line.startsWith("resourcePacks:")) {
           try {
-            const current = JSON.parse(line.split(":")[1]);
+            const current = JSON.parse(line.slice("resourcePacks:".length));
             return `resourcePacks:${JSON.stringify(autoFixPackOrder(current))}`;
           } catch { return line; }
         }
         return line;
       });
-      fs.writeFileSync(optionsPath, newContent.join("\n"));
-      return NextResponse.json({ success: true });
+      fs.writeFileSync(optionsPath, newContent.filter(l => l.trim()).join("\n"));
+      return NextResponse.json({ success: true, message: "Orden de packs corregido automáticamente" });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

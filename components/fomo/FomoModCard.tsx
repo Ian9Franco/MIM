@@ -33,28 +33,20 @@ export const FomoModCard = memo(function FomoModCard({
   return (
     <article 
       onClick={() => onToggleSelect?.(mod)}
-      className={`flex flex-col transition-all relative group cursor-pointer h-full border border-white/5 ${
-        isSelected ? 'ring-2 ring-primary' : ''
+      className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-full border border-white/5 ${
+        isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
       } ${isCF ? 'rounded-none' : 'rounded-3xl'}`}
       style={{ 
-        background: isCF ? "var(--color-cf-bg)" : "var(--glass-bg)", 
-        backdropFilter: "blur(12px)" 
+        background: isCF ? "var(--color-cf-bg)" : "rgba(255, 255, 255, 0.03)", 
+        backdropFilter: "blur(24px)",
+        boxShadow: "inset 0 1px 1px 0 rgba(255,255,255,0.05)",
+        borderColor: "rgba(255,255,255,0.08)"
       }}
     >
-      {/* Botón de Selección Rápida (Esquina Superior) */}
-      <button 
-        onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
-        className={`absolute top-4 right-4 p-1.5 z-20 rounded-full ${
-          isSelected ? 'bg-primary' : 'bg-black/40 opacity-0 group-hover:opacity-100'
-        }`}
-      >
-        {isSelected ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Circle className="w-4 h-4 text-white/40" />}
-      </button>
-
       <div className="p-4 flex flex-col flex-1">
         {/* Cabecera: Icono + Título + Metadatos */}
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0 border border-white/10 shadow-lg group-hover:scale-105 transition-transform duration-500">
             {mod.iconUrl ? (
               <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -62,11 +54,11 @@ export const FomoModCard = memo(function FomoModCard({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold truncate text-sm">{mod.title}</h3>
-            <div className="flex items-center gap-1.5 mt-1 opacity-50 text-[10px]">
-              <span>por {mod.author}</span>
+            <h3 className="font-bold truncate text-sm text-white/90 group-hover:text-white transition-colors">{mod.title}</h3>
+            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-white/40">
+              <span className="truncate">por {mod.author}</span>
               <ExternalLink 
-                className="w-3 h-3 cursor-pointer hover:text-primary" 
+                className="w-3 h-3 cursor-pointer hover:text-primary transition-colors" 
                 onClick={(e) => { e.stopPropagation(); openExternal(mod.url); }} 
               />
             </div>
@@ -76,9 +68,10 @@ export const FomoModCard = memo(function FomoModCard({
               {riskScore !== undefined && riskLevel && (
                 <SecurityBadgeCompact riskScore={riskScore} riskLevel={riskLevel} onClick={onSecurityDetails} />
               )}
-              <Chip color={isCF ? COLORS.curseforgeOrange : COLORS.primary}>{typeLabel}</Chip>
-              <Chip>↓ {formatNumber(mod.downloads)}</Chip>
-              <div className="ml-auto flex items-center gap-1">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/60">
+                <Download className="w-2.5 h-2.5" /> {formatNumber(mod.downloads)}
+              </div>
+              <div className="ml-auto opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
                 {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
               </div>
             </div>
@@ -86,7 +79,7 @@ export const FomoModCard = memo(function FomoModCard({
         </div>
 
         {/* Descripción corta */}
-        <p className="text-xs opacity-60 mt-4 line-clamp-2 h-8">{mod.description}</p>
+        <p className="text-xs text-white/50 mt-4 line-clamp-2 h-8 group-hover:text-white/70 transition-colors">{mod.description}</p>
         
         {/* Predicción de Compatibilidad Asistida (Sinytra) */}
         {sinytraActive && isFabricOnly && (
@@ -97,8 +90,8 @@ export const FomoModCard = memo(function FomoModCard({
         <div className="grid grid-cols-3 gap-2 mt-auto pt-6">
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
-            className={`flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold border border-white/10 ${
-              isSelected ? 'bg-primary text-white' : 'bg-white/5'
+            className={`flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold border transition-all ${
+              isSelected ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
             }`}
           >
             <ListTree className="w-3.5 h-3.5" /> {isSelected ? "Listo" : "Añadir"}
@@ -106,13 +99,13 @@ export const FomoModCard = memo(function FomoModCard({
           <button 
             onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
             disabled={isDownloading} 
-            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
           >
             {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Descargar
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }} 
-            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-white/5 border border-white/10"
+            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
           >
             <Info className="w-3.5 h-3.5" /> Detalles
           </button>

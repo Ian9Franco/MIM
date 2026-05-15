@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
 export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hideVersions: boolean) {
-  const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies">(hideVersions ? "description" : "versions");
+  const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies" | "gallery">(hideVersions ? "description" : "versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -10,6 +10,43 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [depSearchQuery, setDepSearchQuery] = useState("");
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [followedMods, setFollowedMods] = useState<any[]>([]);
+
+  // Gallery Logic
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(false);
+  const [lastFetchedId, setLastFetchedId] = useState<string | null>(null);
+
+  // Reset states when switching mods
+  useEffect(() => {
+    setGallery([]);
+    setLoadingGallery(false);
+    setLastFetchedId(null);
+    setTranslatedBody(null);
+    setDepSearchQuery("");
+  }, [mod.projectId]);
+
+  useEffect(() => {
+    if (lastFetchedId !== mod.projectId && !loadingGallery) {
+      setLoadingGallery(true);
+      setLastFetchedId(mod.projectId);
+      
+      fetch(`/api/mod-gallery?projectId=${mod.projectId}&source=${mod._source || "modrinth"}`)
+        .then(r => r.json())
+        .then(d => {
+          const items = d.gallery || [];
+          setGallery(items);
+          if (items.length > 0) {
+            // Pre-fetch first image for the banner cache
+            const img = new Image();
+            img.src = items[0].url;
+          }
+        })
+        .catch(e => {
+          console.error("[Gallery] Fetch failed:", e);
+        })
+        .finally(() => setLoadingGallery(false));
+    }
+  }, [mod.projectId, mod._source, lastFetchedId, loadingGallery]);
 
   useEffect(() => {
     const load = () => {
@@ -59,5 +96,5 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     } catch {} finally { setIsTranslating(false); }
   };
 
-  return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate };
+  return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery };
 }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Keyboard, Package, History, Layers, Zap, Wand2, AlertTriangle } from "lucide-react";
+import { Keyboard, Package, History, Layers, Zap, Wand2, AlertTriangle, CheckCircle2, FolderOpen, XCircle, RefreshCw } from "lucide-react";
 
 /**
  * @fileoverview Pestaña de Resumen de Ajustes del Juego (Tweak Overview).
@@ -33,28 +33,36 @@ export function OverviewTab({ data, onAction, projectName, version }: any) {
 
   return (
     <div className="space-y-4">
+
+      {/* ── Connection Banner ──────────────────────────────────────────────── */}
+      <ConnectionBanner
+        connected={data.optionsExists}
+        path={data.minecraftPathUsed}
+        onRefresh={onAction}
+      />
+
       {/* Grid de Métricas Clave */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard 
           icon={<Keyboard />} 
           label="Keybinds" 
           value={data.keybinds.length} 
-          warning={data.keybindConflicts.length > 0} 
-          warningText={`${data.keybindConflicts.length} conflictos`} 
+          warning={data.keybindConflicts?.length > 0} 
+          warningText={`${data.keybindConflicts?.length} conflictos`} 
         />
         <StatCard 
           icon={<Package />} 
           label="Packs" 
           value={data.resourcePacks.active.length} 
-          warning={data.resourcePacks.issues.length > 0} 
-          warningText={`${data.resourcePacks.issues.length} problemas`} 
+          warning={data.resourcePacks.issues?.length > 0} 
+          warningText={`${data.resourcePacks.issues?.length} problemas`} 
         />
         <StatCard icon={<History />} label="Snapshots" value={data.snapshots.length} />
-        <StatCard icon={<Layers />} label="Mods" value={data.modCount} />
+        <StatCard icon={<Layers />} label="Mods" value={data.modCount ?? data.globalModCount ?? 0} />
       </div>
 
       {/* Panel Dinámico de Recomendaciones de Optimización */}
-      {data.recommendations.length > 0 && (
+      {data.recommendations?.length > 0 && (
         <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400 animate-bounce" /> Recomendaciones SAGE
@@ -85,17 +93,19 @@ export function OverviewTab({ data, onAction, projectName, version }: any) {
       )}
 
       {/* Resumen de Configuración de Video (options.txt) */}
-      <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
-        <h3 className="text-sm font-semibold mb-3">Configuración de Video (options.txt)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-          <SettingItem label="Render Distance" value={`${data.settings.renderDistance || "?"} chunks`} />
-          <SettingItem label="FOV" value={data.settings.fov || "?"} />
-          <SettingItem label="Gamma" value={data.settings.gamma || "?"} />
-          <SettingItem label="VSync" value={data.settings.enableVsync === "true" ? "ON" : "OFF"} />
-          <SettingItem label="Sombras" value={data.settings.entityShadows === "true" ? "ON" : "OFF"} />
-          <SettingItem label="Mipmaps" value={data.settings.mipmapLevels || "?"} />
+      {data.optionsExists && data.settings && (
+        <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
+          <h3 className="text-sm font-semibold mb-3">Configuración de Video (options.txt)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+            <SettingItem label="Render Distance" value={data.settings.renderDistance ? `${data.settings.renderDistance} chunks` : "?"} />
+            <SettingItem label="FOV" value={data.settings.fov || "?"} />
+            <SettingItem label="Gamma" value={data.settings.gamma || "?"} />
+            <SettingItem label="VSync" value={data.settings.enableVsync === "true" ? "ON" : data.settings.enableVsync === "false" ? "OFF" : "?"} />
+            <SettingItem label="Sombras" value={data.settings.entityShadows === "true" ? "ON" : data.settings.entityShadows === "false" ? "OFF" : "?"} />
+            <SettingItem label="Mipmaps" value={data.settings.mipmapLevels || "?"} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -128,6 +138,59 @@ function SettingItem({ label, value }: any) {
     <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5">
       <span className="opacity-60">{label}</span>
       <span className="font-bold font-mono text-primary">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * ConnectionBanner: Muestra el estado de la conexión con el directorio de Minecraft.
+ */
+function ConnectionBanner({ connected, path, onRefresh }: { connected: boolean; path: string; onRefresh: () => void }) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
+  return (
+    <div className={`relative overflow-hidden p-4 rounded-2xl border transition-all duration-500 ${
+      connected 
+        ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400/90" 
+        : "bg-amber-500/5 border-amber-500/20 text-amber-400/90"
+    }`}>
+      <div className="flex items-center justify-between gap-4 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl ${connected ? "bg-emerald-500/20" : "bg-amber-500/20"}`}>
+            {connected ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-black uppercase tracking-widest">
+                {connected ? "Conectado a Minecraft" : "Configuración no detectada"}
+              </h4>
+              <span className="text-[10px] opacity-40 font-bold px-1.5 py-0.5 rounded border border-current/20">
+                OPTIONS.TXT
+              </span>
+            </div>
+            <p className="text-[10px] opacity-60 font-mono mt-1 flex items-center gap-1 truncate max-w-[300px]">
+              <FolderOpen className="w-3 h-3 shrink-0" /> {path || "Ruta no definida"}
+            </p>
+          </div>
+        </div>
+
+        <button 
+          onClick={handleRefresh}
+          className={`p-2 rounded-xl hover:bg-white/10 transition-all active:scale-90 ${isRefreshing ? "animate-spin" : ""}`}
+          title="Refrescar conexión"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Decorative background element */}
+      <div className={`absolute -right-4 -bottom-4 w-24 h-24 blur-3xl opacity-10 rounded-full ${connected ? "bg-emerald-500" : "bg-amber-500"}`} />
     </div>
   );
 }

@@ -19,10 +19,10 @@ export function SageLogViewer({
         
         <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
           {filteredFiles.map((file: any) => (
-            <button
+            <div
               key={file.path}
               onClick={() => onSelect(file)}
-              className={`shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all relative group ${
+              className={`shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all relative group cursor-pointer ${
                 selectedFile?.path === file.path 
                   ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-300" 
                   : "bg-white/2 border-white/5 text-foreground/40 hover:bg-white/5 hover:text-foreground/60"
@@ -39,7 +39,7 @@ export function SageLogViewer({
               >
                 <Trash2 className="w-3 h-3" />
               </button>
-            </button>
+            </div>
           ))}
           {filteredFiles.length === 0 && !loadingFiles && (
             <div className="text-[10px] text-foreground/30 italic py-2">No se encontraron archivos de este tipo.</div>

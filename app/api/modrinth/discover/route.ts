@@ -64,11 +64,14 @@ export async function GET(req: NextRequest) {
           // 6. Map to same ModHit structure as Search Hits
           const mods = paginated.map((p: any) => ({
             projectId:   p.id,
+            externalProjectId: p.id,
+            sourceProjectId: p.id,
+            platformId: p.id,
             slug:        p.slug,
             title:       p.title,
             description: p.description || "",
             iconUrl:     p.icon_url ?? null,
-            author:      authorName, // We are searching for this author so set it!
+            author:      authorName,
             downloads:   p.downloads || 0,
             follows:     p.followers || 0,
             latestVersion: null,
@@ -76,6 +79,8 @@ export async function GET(req: NextRequest) {
             dateCreated: p.published || "",
             url:         `https://modrinth.com/${p.project_type ?? "mod"}/${p.slug}`,
             projectType: p.project_type ?? "mod",
+            client_side: p.client_side,
+            server_side: p.server_side,
           }));
           
           return NextResponse.json({
@@ -150,6 +155,9 @@ export async function GET(req: NextRequest) {
     const mods = (data.hits ?? [])
       .map((h: any) => ({
         projectId:   h.project_id,
+        externalProjectId: h.project_id,
+        sourceProjectId: h.project_id,
+        platformId: h.project_id,
         slug:        h.slug,
         title:       h.title,
         description: h.description,
@@ -162,6 +170,8 @@ export async function GET(req: NextRequest) {
         dateCreated: h.date_created,
         url:         `https://modrinth.com/${h.project_type ?? "mod"}/${h.slug}`,
         projectType: h.project_type ?? "mod",
+        client_side: h.client_side,
+        server_side: h.server_side,
       }));
 
     return NextResponse.json({

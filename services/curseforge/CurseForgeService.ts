@@ -66,6 +66,9 @@ export class CurseForgeService {
        */
       mods: (data.data || []).map((m: any) => ({
         projectId: m.id.toString(),
+        externalProjectId: m.id.toString(),
+        sourceProjectId: m.id.toString(),
+        platformId: m.id.toString(),
         title: m.name,
         description: m.summary || "",
         iconUrl: m.logo?.url || null,
@@ -75,7 +78,19 @@ export class CurseForgeService {
         categories: (m.categories || []).map((c: any) => c.name),
         latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
         projectType: projectType,
-        allowModDistribution: m.allowModDistribution !== false
+        allowModDistribution: m.allowModDistribution !== false,
+        // Inferencia de entorno para CurseForge basada en categorías
+        ...(() => {
+          const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());
+          const isWorld = cats.some((c: any) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
+          const isClient = cats.some((c: any) => ["optimization", "performance", "visuals", "cosmetic", "map and information", "chat"].includes(c));
+          const isServer = cats.some((c: any) => ["server utility", "management"].includes(c));
+          
+          if (isWorld) return { client_side: "required", server_side: "required" };
+          if (isServer) return { client_side: "optional", server_side: "required" };
+          if (isClient) return { client_side: "required", server_side: "unsupported" };
+          return {}; // Fallback a Desconocido
+        })()
       })),
       total: data.pagination.totalCount || 0
     };

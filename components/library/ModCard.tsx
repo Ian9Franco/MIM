@@ -46,6 +46,8 @@ interface ModCardProps {
   conflict?:     string;
   hasUpdate?:    boolean;
   environment?:  "client" | "server" | "both" | "unknown";
+  confidence?:   "high" | "medium" | "low";
+  warnings?:     string[];
 }
 
 function getProjectTypeLabel(type: string): string {
@@ -63,6 +65,7 @@ export const ModCard = memo(function ModCard({
   onDownload, isDownloading, index = 0, projectType, iconBase64,
   isPending, onDelete, isDeleting, riskScore, riskLevel, virusTotal, author, categories,
   onOpenDetails, onSecurityDetails, conflict, hasUpdate, environment,
+  confidence, warnings
 }: ModCardProps) {
   const useStaggeredAnimation = index < 50;
   
@@ -153,26 +156,43 @@ export const ModCard = memo(function ModCard({
           minHeight: isPending ? "100px" : "130px", 
           borderWidth: isPending ? "1px" : "0px",
           borderColor: cardBorder, 
-          background: isPending ? cardBg : "var(--glass-bg)", 
+          background: isPending 
+            ? cardBg 
+            : `linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%), 
+               radial-gradient(circle at 2px 2px, rgba(255,255,255,0.04) 1px, transparent 0)`,
+          backgroundSize: isPending ? "auto" : "100% 100%, 8px 8px",
           backdropFilter: isPending ? "none" : "var(--liquid-blur)",
           boxShadow: isPending ? "none" : "var(--shadow-drop)",
-          margin: "8px", // AÑADIDO MARGEN PARA QUE LA SOMBRA NO SE CORTE
+          margin: "8px",
           transform: "translateZ(0)",
           WebkitTransform: "translateZ(0)",
         }}
       >
+        {/* Technical Accents (Corners) */}
+        {!isPending && (
+          <>
+            <div className="absolute top-4 left-4 w-2 h-2 border-t border-l border-white/10 rounded-tl-sm pointer-events-none transition-all group-hover:border-primary/40" />
+            <div className="absolute top-4 right-4 w-2 h-2 border-t border-r border-white/10 rounded-tr-sm pointer-events-none transition-all group-hover:border-primary/40" />
+            <div className="absolute bottom-4 left-4 w-2 h-2 border-b border-l border-white/10 rounded-bl-sm pointer-events-none transition-all group-hover:border-primary/40" />
+            <div className="absolute bottom-4 right-4 w-2 h-2 border-b border-r border-white/10 rounded-br-sm pointer-events-none transition-all group-hover:border-primary/40" />
+            
+            {/* Scanline effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.01] to-transparent h-[200%] -translate-y-full group-hover:animate-scanline pointer-events-none" />
+          </>
+        )}
+
         {/* Liquid Glass Highlight */}
         {!isPending && (
-          <div className="absolute inset-0 pointer-events-none opacity-50" 
+          <div className="absolute inset-0 pointer-events-none opacity-40" 
                style={{ 
-                 background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)",
+                 background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(0,0,0,0.05) 100%)",
                  boxShadow: "var(--shadow-inner)"
                }} 
           />
         )}
         <div
           aria-hidden="true"
-          className="absolute left-2 top-4 bottom-4 w-[4px] rounded-full transition-all duration-300 z-10"
+          className="absolute left-2 top-6 bottom-6 w-[3px] rounded-full transition-all duration-500 z-10"
           style={{
             background: isPending ? "var(--fomo-icon-color, rgba(255,255,255,0.2))" : (isSelected ? COLORS.accent : isError ? "#ef4444" : hasUpdate ? "#facc15" : COLORS.primary),
             opacity:    isPending ? 0.4 : (isSelected ? 1 : isError ? 0.9 : hasUpdate ? 0.9 : 0.6),
@@ -203,6 +223,14 @@ export const ModCard = memo(function ModCard({
                 </p>
               
               <div className="flex items-center gap-1.5 shrink-0">
+                {/* Confidence Warning */}
+                {(confidence === "low" || (warnings && warnings.length > 0)) && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400" title={warnings?.join("\n")}>
+                    <AlertTriangle className="w-3 h-3" />
+                    <span className="text-[9px] font-bold uppercase">{confidence}</span>
+                  </div>
+                )}
+                
                 {/* Security Badge */}
                 {!isPending && riskScore !== undefined && riskLevel && (
                   <SecurityBadgeCompact

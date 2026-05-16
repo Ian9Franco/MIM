@@ -151,29 +151,57 @@ export function PackHealthPanel({
       </div>
 
       {/* Score */}
-      <div className="px-5 py-4 flex items-center gap-5 border-b border-white/5">
-        <ScoreRing score={report.score} grade={grade} />
-        <div className="flex-1 space-y-3">
-          <div className="flex items-center gap-2 animate-fade-in">
-            <span className="w-7 h-7 rounded-xl flex items-center justify-center text-sm font-black shadow-lg" style={{ background: `color-mix(in srgb, ${cfg.color} 18%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 30%, transparent)` }}>{grade}</span>
-            <div>
-              <p className="text-sm font-semibold opacity-90">{cfg.label}</p>
-              <p className="text-[9px] tracking-wider uppercase opacity-45">{report.totalMods} mods · {report.buildTarget}</p>
+      <div className="px-5 py-4 flex flex-col gap-4 border-b border-white/5">
+        <div className="flex items-center gap-5">
+          <ScoreRing score={report.score} grade={grade} />
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center gap-2 animate-fade-in">
+              <span className="w-7 h-7 rounded-xl flex items-center justify-center text-sm font-black shadow-lg" style={{ background: `color-mix(in srgb, ${cfg.color} 18%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 30%, transparent)` }}>{grade}</span>
+              <div>
+                <p className="text-sm font-semibold opacity-90">{cfg.label}</p>
+                <p className="text-[9px] tracking-wider uppercase opacity-45">{report.totalMods} mods globales · {report.buildTarget}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {[
+                { label: 'Errores', count: report.errors.length, color: 'var(--color-theme-error)', ref: errorsRef, key: 'errors' },
+                { label: 'Warnings', count: report.warnings.length, color: 'var(--color-theme-warning)', ref: warningsRef, key: 'warnings' },
+                { label: 'Tips', count: report.suggestions.length, color: 'var(--color-theme-info)', ref: suggestionsRef, key: 'suggestions' }
+              ].map(b => (
+                <button key={b.key} onClick={() => scrollToSection(b.ref as any, b.key as any)} className="flex-1 rounded-lg p-2 text-center hover:scale-105 active:scale-95 transition-all" style={{ background: `color-mix(in srgb, ${b.color} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${b.color} 15%, transparent)` }}>
+                  <p className="text-base font-bold" style={{ color: b.color }}>{b.count}</p>
+                  <p className="text-[8px] uppercase tracking-wider opacity-60" style={{ color: b.color }}>{b.label}</p>
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex gap-2">
-            {[
-              { label: 'Errores', count: report.errors.length, color: 'var(--color-theme-error)', ref: errorsRef, key: 'errors' },
-              { label: 'Warnings', count: report.warnings.length, color: 'var(--color-theme-warning)', ref: warningsRef, key: 'warnings' },
-              { label: 'Tips', count: report.suggestions.length, color: 'var(--color-theme-info)', ref: suggestionsRef, key: 'suggestions' }
-            ].map(b => (
-              <button key={b.key} onClick={() => scrollToSection(b.ref as any, b.key as any)} className="flex-1 rounded-lg p-2 text-center hover:scale-105 active:scale-95 transition-all" style={{ background: `color-mix(in srgb, ${b.color} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${b.color} 15%, transparent)` }}>
-                <p className="text-base font-bold" style={{ color: b.color }}>{b.count}</p>
-                <p className="text-[8px] uppercase tracking-wider opacity-60" style={{ color: b.color }}>{b.label}</p>
-              </button>
-            ))}
-          </div>
         </div>
+
+        {/* Environmental Predictions (AllUser & AllHost) */}
+        {report.buildTarget === "both" && report.clientStats && report.serverStats && (
+          <div className="grid grid-cols-2 gap-3 animate-fade-up">
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+               <div className="flex items-center justify-between">
+                 <span className="text-[9px] font-bold uppercase tracking-widest text-primary">AllUser (Jugador)</span>
+                 <span className="text-xs font-black" style={{ color: (GRADE_CONFIG as any)[report.clientStats.grade].color }}>{report.clientStats.score}</span>
+               </div>
+               <p className="text-[10px] opacity-40">{report.clientStats.totalMods} mods · {report.clientStats.errors} err · {report.clientStats.warnings} warn</p>
+               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full transition-all duration-1000" style={{ width: `${report.clientStats.score}%`, background: (GRADE_CONFIG as any)[report.clientStats.grade].color }} />
+               </div>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+               <div className="flex items-center justify-between">
+                 <span className="text-[9px] font-bold uppercase tracking-widest text-amber-400">AllHost (Servidor)</span>
+                 <span className="text-xs font-black" style={{ color: (GRADE_CONFIG as any)[report.serverStats.grade].color }}>{report.serverStats.score}</span>
+               </div>
+               <p className="text-[10px] opacity-40">{report.serverStats.totalMods} mods · {report.serverStats.errors} err · {report.serverStats.warnings} warn</p>
+               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full transition-all duration-1000" style={{ width: `${report.serverStats.score}%`, background: (GRADE_CONFIG as any)[report.serverStats.grade].color }} />
+               </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Issues */}

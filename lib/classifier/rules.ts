@@ -58,6 +58,10 @@ export const ANCHOR_RULES = [
     category: ".essential", sub: "librerias", name: "Anchor: API/Lib" 
   },
   { 
+    test: (n: string) => /\b(jei|rei|emi|inventorysorter|apple_skin|appleskin|mousetweaks|controlling|journeymap|xaero|tombstone)\b/i.test(n), 
+    category: ".essential", sub: "vanilla + & qol", name: "Anchor: Utility/QoL" 
+  },
+  { 
     test: (n: string) => /\b(ambientsounds|soundphysics|presencefootsteps)\b/i.test(n), 
     category: ".local", sub: "sonidos", name: "Anchor: Sonidos" 
   }

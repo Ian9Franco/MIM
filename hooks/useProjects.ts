@@ -24,6 +24,13 @@ export function useProjects() {
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
+  // Emit global event when active project changes to keep other managers (like GATE) in sync
+  useEffect(() => {
+    if (activeProject && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("active-project-changed", { detail: activeProject }));
+    }
+  }, [activeProject]);
+
   const handleSaveProject = useCallback((p: Project) => {
     setProjects((prev) => {
       const exists = prev.find((x) => x.id === p.id);

@@ -29,31 +29,25 @@ export async function GET(req: NextRequest) {
     // projectName is now optional for standalone Tweak mode
 
     const { sourceBase, minecraftPath } = getSettings();
-    
-    // If no project is specified, we operate in STANDALONE mode on the global minecraftPath
     const projectDir = projectName ? path.join(sourceBase, "_projects", projectName) : null;
-    const realMinecraftPath = (projectDir && fs.existsSync(path.join(projectDir, "options.txt"))) ? projectDir : minecraftPath;
-    
+
+    // Tweak is now INDEPENDENT of the project. It always operates on the global minecraftPath.
+    const realMinecraftPath = minecraftPath;
     const optionsPath = path.join(realMinecraftPath, "options.txt");
     const resourcePacksDir = path.join(realMinecraftPath, "resourcepacks");
  
-    // Installed mods detection (Scan both project-specific and global if needed)
+    // Installed mods detection (Scan ONLY global minecraftPath)
     const installedMods = new Set<string>();
-    const modsDirs = [
-      projectDir ? path.join(projectDir, "mods") : null, 
-      path.join(minecraftPath, "mods")
-    ].filter((d): d is string => d !== null);
+    const modsDir = path.join(minecraftPath, "mods");
     
-    for (const modsDir of modsDirs) {
-      if (fs.existsSync(modsDir)) {
-        const subs = fs.readdirSync(modsDir);
-        for (const sub of subs) {
-          const subPath = path.join(modsDir, sub);
-          if (fs.statSync(subPath).isDirectory()) {
-            fs.readdirSync(subPath).forEach(f => installedMods.add(f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase()));
-          } else if (sub.endsWith(".jar")) {
-            installedMods.add(sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase());
-          }
+    if (fs.existsSync(modsDir)) {
+      const subs = fs.readdirSync(modsDir);
+      for (const sub of subs) {
+        const subPath = path.join(modsDir, sub);
+        if (fs.statSync(subPath).isDirectory()) {
+          fs.readdirSync(subPath).forEach(f => installedMods.add(f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase()));
+        } else if (sub.endsWith(".jar")) {
+          installedMods.add(sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase());
         }
       }
     }
@@ -173,32 +167,25 @@ export async function GET(req: NextRequest) {
     resData.jvmArgs = jvmArgs;
     resData.globalModCount = globalModCount;
     resData.modCount = globalModCount; // alias used by OverviewTab
-    resData.recommendations = getRecommendations(loader, version, installedMods, hardware, projectDir ? getModCount(projectDir) : 0, ramParam ? parseInt(ramParam) : 4);
+    resData.recommendations = getRecommendations(loader, version, installedMods, hardware, globalModCount, ramParam ? parseInt(ramParam) : 4);
     
-    // Snapshots — read from _projects/{name}/_snapshots if project is active
-    if (projectName) {
-      const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
-      if (fs.existsSync(snapshotDir)) {
-        resData.snapshots = fs.readdirSync(snapshotDir)
+    // Snapshots — read from global .mim-index/tweak/snapshots
+    const globalSnapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+    if (fs.existsSync(globalSnapshotDir)) {
+      resData.snapshots = fs.readdirSync(globalSnapshotDir)
           .filter(f => f.endsWith(".json"))
           .map(f => {
-            try { return JSON.parse(fs.readFileSync(path.join(snapshotDir, f), "utf-8")); }
+            try { return JSON.parse(fs.readFileSync(path.join(globalSnapshotDir, f), "utf-8")); }
             catch { return null; }
           })
           .filter(Boolean)
           .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      }
     }
 
-    // Load Draft if exists (From project config or global cache)
-    if (projectName) {
-      const config = readProjectConfig(projectName);
-      resData.draft = (config as any).tweakDraft || null;
-    } else {
-      const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
-      if (fs.existsSync(globalDraftPath)) {
-        try { resData.draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8")); } catch {}
-      }
+    // Load Draft (Always global now)
+    const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+    if (fs.existsSync(globalDraftPath)) {
+      try { resData.draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8")); } catch {}
     }
 
     return NextResponse.json(resData);
@@ -214,7 +201,8 @@ export async function POST(req: NextRequest) {
     const { sourceBase, minecraftPath } = getSettings();
     const projectDir = projectName ? path.join(sourceBase, "_projects", projectName) : null;
     
-    const realMinecraftPath = (projectDir && fs.existsSync(path.join(projectDir, "options.txt"))) ? projectDir : minecraftPath;
+    // Tweak is now INDEPENDENT of the project.
+    const realMinecraftPath = minecraftPath;
     const optionsPath = path.join(realMinecraftPath, "options.txt");
     const resourcePacksDir = path.join(realMinecraftPath, "resourcepacks");
     
@@ -232,19 +220,17 @@ export async function POST(req: NextRequest) {
         }
         
         // AUTO-SNAPSHOT (Rescue): Save current state before overwriting
-        if (projectName) {
-          const rescueDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
-          if (!fs.existsSync(rescueDir)) fs.mkdirSync(rescueDir, { recursive: true });
-          const rescueId = `rescue-${Date.now()}`;
-          const currentContent = fs.readFileSync(optionsPath, "utf-8");
-          fs.writeFileSync(path.join(rescueDir, `${rescueId}.json`), JSON.stringify({
-            id: rescueId,
-            timestamp: new Date().toISOString(),
-            profileName: "Rescate Automático (Pre-Save)",
-            isRescue: true,
-            rawOptions: currentContent
-          }, null, 2));
-        }
+        const rescueDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+        if (!fs.existsSync(rescueDir)) fs.mkdirSync(rescueDir, { recursive: true });
+        const rescueId = `rescue-${Date.now()}`;
+        const currentContent = fs.readFileSync(optionsPath, "utf-8");
+        fs.writeFileSync(path.join(rescueDir, `${rescueId}.json`), JSON.stringify({
+          id: rescueId,
+          timestamp: new Date().toISOString(),
+          profileName: "Rescate Automático (Pre-Save)",
+          isRescue: true,
+          rawOptions: currentContent
+        }, null, 2));
       }
       
       if (!fs.existsSync(optionsPath)) {
@@ -253,10 +239,16 @@ export async function POST(req: NextRequest) {
       
       let content = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
       
-      // Update keybinds (Respecting locked keys)
       if (keybinds) {
-        const config = readProjectConfig(projectName);
-        const lockedKeys = new Set((config as any)?.tweakDraft?.lockedKeys || []);
+        // Use global draft for locked keys if available, otherwise no locks
+        const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+        let lockedKeys = new Set<string>();
+        if (fs.existsSync(globalDraftPath)) {
+          try { 
+            const draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8"));
+            lockedKeys = new Set(draft.lockedKeys || []);
+          } catch {}
+        }
         
         keybinds.forEach((kb: any) => {
           if (lockedKeys.has(kb.id)) return; // Skip if locked
@@ -287,13 +279,8 @@ export async function POST(req: NextRequest) {
       fs.writeFileSync(optionsPath, content.filter(l => l.trim()).join("\n"));
       
       // Clear draft once saved to game
-      if (projectName) {
-        const config = readProjectConfig(projectName);
-        saveProjectConfig(projectName, { ...config, tweakDraft: null } as any);
-      } else {
-        const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
-        if (fs.existsSync(globalDraftPath)) fs.unlinkSync(globalDraftPath);
-      }
+      const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+      if (fs.existsSync(globalDraftPath)) fs.unlinkSync(globalDraftPath);
 
       return NextResponse.json({ success: true, message: "Ajustes guardados correctamente" });
     }
@@ -305,18 +292,13 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date().toISOString()
       };
 
-      if (projectName) {
-        const config = readProjectConfig(projectName);
-        saveProjectConfig(projectName, { ...config, tweakDraft: draft } as any);
-      } else {
-        const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
-        fs.writeFileSync(globalDraftPath, JSON.stringify(draft, null, 2));
-      }
+      const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+      fs.writeFileSync(globalDraftPath, JSON.stringify(draft, null, 2));
       return NextResponse.json({ success: true, message: "Borrador guardado localmente" });
     }
 
     if (action === "initialize") {
-      if (projectDir && !fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
+      // Initialize always points to global minecraftPath now
       fs.writeFileSync(optionsPath, "lang:en_us\nguiScale:0\nresourcePacks:[]\n");
       return NextResponse.json({ success: true, message: "Perfil inicializado" });
     }
@@ -387,9 +369,13 @@ export async function POST(req: NextRequest) {
       }
 
       const snapshotId = `snap-${Date.now()}`;
-      if (!projectName) return NextResponse.json({ error: "Snapshots requieren un proyecto activo" }, { status: 400 });
-      const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
+      const snapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
       if (!fs.existsSync(snapshotDir)) fs.mkdirSync(snapshotDir, { recursive: true });
+
+      const globalModsDir = path.join(minecraftPath, "mods");
+      const globalModCount = fs.existsSync(globalModsDir) 
+        ? fs.readdirSync(globalModsDir).filter(f => f.endsWith(".jar")).length
+        : 0;
 
       const snapshot = {
         id: snapshotId,
@@ -400,8 +386,8 @@ export async function POST(req: NextRequest) {
         keybinds: currentKeybinds,
         resourcePackStack: currentPacks,
         serversData: currentServers,
-        modsInstalled: projectDir ? getModCount(projectDir) : 0,
-        modpackHash: projectDir ? calculateModpackHash(projectDir) : "",
+        modsInstalled: globalModCount,
+        modpackHash: "", // Global hash is not tracked currently
         keybindCount: currentKeybinds.length,
       };
 
@@ -414,8 +400,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "apply-snapshot") {
       const { snapshotId } = body;
-      if (!projectName) return NextResponse.json({ error: "Snapshots requieren un proyecto activo" }, { status: 400 });
-      const snapshotDir = path.join(sourceBase, "_projects", projectName, "_snapshots");
+      const snapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
       const snapshotFile = path.join(snapshotDir, `${snapshotId}.json`);
 
       if (!fs.existsSync(snapshotFile)) {

@@ -26,6 +26,7 @@ import type {
   ValidationCategory,
   PackHealthReport,
   PackGrade,
+  EnvironmentStats,
 } from "./types";
 import type { Loader } from "./constants";
 import { predictConnectorCompatibility } from "./sinytraUtils";
@@ -377,6 +378,42 @@ export function validatePack(input: ValidatorInput): PackHealthReport {
     if (r8) issues.push(r8);
   }
 
+  // ── Environment Predictions ───────────────────────────────────────────────
+  let clientStats: EnvironmentStats | undefined;
+  let serverStats: EnvironmentStats | undefined;
+
+  if (buildTarget === "both") {
+    // Predict Client (.essential + .local)
+    const clientMods = mods.filter(m => m.category === ".essential" || m.category === ".local");
+    const clientIssues = issues.filter(i => i.modSub !== ".server"); // Simplification
+    const clientScore = calcScore(clientIssues);
+    clientStats = {
+      totalMods: clientMods.length,
+      errors: clientIssues.filter(i => i.severity === "error").length,
+      warnings: clientIssues.filter(i => i.severity === "warning").length,
+      suggestions: clientIssues.filter(i => i.severity === "suggestion").length,
+      score: clientScore,
+      grade: scoreToGrade(clientScore)
+    };
+
+    // Predict Server (.essential + .server)
+    const serverMods = mods.filter(m => m.category === ".essential" || m.category === ".server");
+    const serverIssues = issues.filter(i => {
+      // Excluir issues de mods que no van al servidor
+      const isClientMod = mods.find(m => m.fileName === i.modFile && m.category === ".local");
+      return !isClientMod;
+    });
+    const serverScore = calcScore(serverIssues);
+    serverStats = {
+      totalMods: serverMods.length,
+      errors: serverIssues.filter(i => i.severity === "error").length,
+      warnings: serverIssues.filter(i => i.severity === "warning").length,
+      suggestions: serverIssues.filter(i => i.severity === "suggestion").length,
+      score: serverScore,
+      grade: scoreToGrade(serverScore)
+    };
+  }
+
   const errors      = issues.filter(i => i.severity === "error");
   const warnings    = issues.filter(i => i.severity === "warning");
   const suggestions = issues.filter(i => i.severity === "suggestion");
@@ -395,5 +432,7 @@ export function validatePack(input: ValidatorInput): PackHealthReport {
     blocksExport: errors.length > 0,
     buildTarget,
     validatedAt:  new Date().toISOString(),
+    clientStats,
+    serverStats
   };
 }

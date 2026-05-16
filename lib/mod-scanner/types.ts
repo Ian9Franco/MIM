@@ -22,6 +22,8 @@ export interface EnhancedModMeta {
   extractionQuality: "high" | "medium" | "low";
   extractionWarnings: string[];
   mixinTargets?: string[];
+  confidence?: "high" | "medium" | "low";
+  warnings?: string[];
 }
 
 export const UNKNOWN = "unknown";

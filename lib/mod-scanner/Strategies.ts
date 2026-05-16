@@ -30,6 +30,22 @@ export function parseForgeToml(content: string, isNeo: boolean): Partial<Enhance
     if (ver) result.modVersion = normalizeVersion(ver[1]);
     const auth = content.match(/authors?\s*=\s*"([^"]+)"/i);
     if (auth) result.author = auth[1];
+
+    // Extraction of gameVersion from dependencies
+    const sections = content.split(/\[\[dependencies/i);
+    for (const section of sections) {
+      const isMc = section.match(/modId\s*=\s*"minecraft"/i);
+      const rangeMatch = section.match(/versionRange\s*=\s*"([^"]+)"/);
+      if (rangeMatch) {
+        // Simple extraction for 1.x.x versions
+        const gvMatch = rangeMatch[1].match(/1\.(1[6-9]|2\d)(?:\.\d+)?/);
+        if (gvMatch) {
+          result.gameVersion = gvMatch[0];
+          if (isMc) break; // Priority to minecraft modId
+        }
+      }
+    }
+
     return result;
   } catch { return result; }
 }

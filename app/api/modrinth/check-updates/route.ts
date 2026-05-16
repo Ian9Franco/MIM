@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ hashes, algorithm: "sha1" }) 
         });
         if (hRes.ok) {
-          const hData = await hRes.json();
-          Object.entries(hData).forEach(([h, v]: any) => { hashToProject[h] = v.project_id; });
+          const hData = await hRes.ok ? await hRes.json() : {};
+          Object.entries(hData).forEach(([h, v]: any) => { hashToProject[h] = v; });
         }
       } catch (e) { console.warn("Error resolving hashes", e); }
     }

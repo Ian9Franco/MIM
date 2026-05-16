@@ -54,18 +54,27 @@ export function parseForgeToml(content: string): Partial<ModMeta> {
 
   // Búsqueda de la versión de Minecraft requerida en las dependencias
   const sections = content.split(/\[\[dependencies/i);
+  let fallbackGv: string | null = null;
+  
   for (const section of sections) {
+    const isMc = section.match(/modId\s*=\s*"minecraft"/i);
     const rangeMatch = section.match(/versionRange\s*=\s*"([^"]+)"/);
+    
     if (rangeMatch) {
       const gv = extractMcVersionFromRange(rangeMatch[1]);
       if (gv) { 
-        result.gameVersion = gv; 
-        break; // Detenemos la búsqueda al encontrar la primera versión válida
+        if (isMc) {
+          result.gameVersion = gv;
+          return result; // Encontrado Minecraft explícitamente, terminamos
+        }
+        if (!fallbackGv) fallbackGv = gv;
       }
     }
   }
+  
+  if (fallbackGv) result.gameVersion = fallbackGv;
 
-  // Extracción del icono opcional
+  // Extracción del icono opcional (logoFile)
   const logoMatch = content.match(/logoFile\s*=\s*"([^"]+)"/);
   if (logoMatch) (result as any)._logoFile = logoMatch[1];
 

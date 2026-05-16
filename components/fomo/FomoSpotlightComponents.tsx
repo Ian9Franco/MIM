@@ -60,12 +60,12 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
 
   return (
     <div
-      className="w-[220px] xl:w-[252px] shrink-0 rounded-none relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[220px] xl:w-[252px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: isModern ? "#f0ede3" : "hsl(220 14% 10%)",
         border: isModern ? "1.5px solid #d4cfc0" : "1.5px solid hsl(220 14% 18%)",
         boxShadow: isModern ? "0 4px 24px rgba(0,0,0,0.10)" : "0 4px 32px rgba(0,0,0,0.5)",
-        borderRadius: "4px",
+        borderRadius: "24px",
       }}
       onClick={() => onOpenVersions(mod)}
     >

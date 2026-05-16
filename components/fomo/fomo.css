@@ -2,7 +2,7 @@
 
 .fomo-sidebar {
   /* Default: Official Dark Theme */
-  --fomo-bg: rgba(20, 20, 22, 0.98);
+  --fomo-bg: rgba(20, 20, 22, 0.95);
   --fomo-card-bg: #1c1c1f;
   --fomo-card-border: rgba(255, 255, 255, 0.08);
   --fomo-card-hover-border: rgba(255, 255, 255, 0.16);
@@ -20,8 +20,6 @@
   --fomo-pill-inactive-text: rgba(255, 255, 255, 0.6);
   --fomo-pill-inactive-border: rgba(255, 255, 255, 0.08);
   --fomo-icon-color: rgba(255, 255, 255, 0.4);
-  --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.2), transparent, var(--fomo-secondary-bg));
-  --fomo-banner-filter: blur(2px) brightness(0.65) saturate(1.2);
 
   /* Sinytra Switch Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(255, 255, 255, 0.04);
@@ -47,7 +45,7 @@
 
 /* Vampire Theme Overrides */
 [data-theme="vampire"] .fomo-sidebar {
-  --fomo-bg: rgba(32, 13, 45, 0.98);
+  --fomo-bg: rgba(32, 13, 45, 0.96);
   --fomo-card-bg: #1e0d29;
   --fomo-card-border: rgba(187, 150, 228, 0.16);
   --fomo-card-hover-border: rgba(187, 150, 228, 0.32);
@@ -65,8 +63,6 @@
   --fomo-pill-inactive-text: rgba(242, 236, 249, 0.6);
   --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
   --fomo-icon-color: rgba(187, 150, 228, 0.4);
-  --fomo-banner-overlay: linear-gradient(to bottom, rgba(0,0,0,0.25), transparent, var(--fomo-secondary-bg));
-  --fomo-banner-filter: blur(3px) brightness(0.6) saturate(1.4);
 
   /* Sinytra Switch Vampire Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(187, 150, 228, 0.04);
@@ -92,7 +88,7 @@
 
 /* Modern Theme Overrides (LIGHT THEME) */
 [data-theme="modern"] .fomo-sidebar {
-  --fomo-bg: rgba(243, 240, 254, 1);
+  --fomo-bg: rgba(243, 240, 254, 0.98);
   --fomo-card-bg: #FFFFFF;
   --fomo-card-border: rgba(124, 58, 237, 0.12);
   --fomo-card-hover-border: rgba(124, 58, 237, 0.28);
@@ -110,9 +106,6 @@
   --fomo-pill-inactive-text: #4F46E5;
   --fomo-pill-inactive-border: rgba(124, 58, 237, 0.15);
   --fomo-icon-color: rgba(30, 27, 75, 0.4);
-  /* Warm Cream Tint for Modern Theme Hero */
-  --fomo-banner-overlay: linear-gradient(to bottom, rgba(255, 252, 240, 0.8) 0%, rgba(255, 252, 240, 0.4) 50%, var(--fomo-secondary-bg) 100%);
-  --fomo-banner-filter: blur(0px) brightness(1.1) saturate(1.1);
 
   /* Sinytra Switch Modern Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(124, 58, 237, 0.04);
@@ -487,59 +480,4 @@
   100% {
     transform: translate3d(100%, 0, 0);
   }
-}
-
-/* Spotlight animations */
-@keyframes spotlight-fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spotlight-glow-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
-}
-
-@keyframes spotlight-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
-}
-
-.spotlight-animate-fade-in {
-  animation: spotlight-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.spotlight-animate-glow {
-  animation: spotlight-glow-pulse 3s ease-in-out infinite;
-}
-
-.spotlight-animate-float {
-  animation: spotlight-float 6s ease-in-out infinite;
-}
-
-/* Stock Market Ticker Animation */
-@keyframes fomo-ticker-scroll {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-33.3333%, 0, 0);
-  }
-}
-
-.fomo-ticker-container {
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
-
-.fomo-ticker-track {
-  display: flex;
-  gap: 8px;
-  width: max-content;
-  animation: fomo-ticker-scroll 22s linear infinite;
-}
-
-.fomo-ticker-track:hover {
-  animation-play-state: paused;
 }

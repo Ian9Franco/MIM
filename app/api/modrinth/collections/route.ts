@@ -74,8 +74,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ collection: mapCollection(await res.json()) });
     }
 
+    if (action === "add_project") {
+      const { projectId } = body;
+      const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
+        method: "PATCH", 
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ add_projects: [projectId] })
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("[Modrinth API] Error adding project:", errorData);
+        return NextResponse.json({ error: errorData.error || "No se pudo añadir el proyecto" }, { status: res.status });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "remove_project") {
+      const { projectId } = body;
+      const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
+        method: "PATCH", 
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ remove_projects: [projectId] })
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("[Modrinth API] Error removing project:", errorData);
+        return NextResponse.json({ error: errorData.error || "No se pudo eliminar el proyecto" }, { status: res.status });
+      }
+      return NextResponse.json({ success: true });
+    }
+
     if (!collectionId) return NextResponse.json({ error: "Falta ID" }, { status: 400 });
+    
+    // Default action: Download collection (existing logic)
     const collRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { headers });
+    if (!collRes.ok) return NextResponse.json({ error: "No se pudo cargar la colección para descargar" }, { status: collRes.status });
+    
     const collection = await collRes.json();
     const projectIds = collection.projects || [];
 
@@ -102,6 +136,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const headers = buildHeaders();
+  if (!headers) return NextResponse.json({ error: "Sin token" }, { status: 401 });
   const { collectionId } = await req.json();
   const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { method: "DELETE", headers });
   return NextResponse.json({ success: res.ok });

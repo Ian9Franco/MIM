@@ -72,9 +72,10 @@ export const updateCache = {
  * Realiza la búsqueda y consulta de un mod individual en Modrinth.
  * Obtiene icono, categorías y verifica si hay una versión superior disponible.
  */
-export async function checkModUpdate(mod: any, loader: string, gameVersion: string, headers: any, hashToProject: Record<string, string>) {
+export async function checkModUpdate(mod: any, loader: string, gameVersion: string, headers: any, hashToProject: Record<string, any>) {
   const sha1 = mod.meta?.sha1;
-  let projectId = sha1 ? hashToProject[sha1] : null;
+  const hashData = sha1 ? hashToProject[sha1] : null;
+  let projectId = (hashData && typeof hashData === 'object') ? hashData.project_id : hashData;
 
   if (!projectId && mod.meta?.modId && mod.meta.modId !== "unknown") {
     projectId = mod.meta.modId;
@@ -122,6 +123,14 @@ export async function checkModUpdate(mod: any, loader: string, gameVersion: stri
       gameVersions: pData.game_versions || [],
       loaders: pData.loaders || []
     };
+
+    // Si tenemos la información específica de la versión resuelta por hash, la usamos con prioridad
+    // para evitar que mods de otras versiones parezcan compatibles/incompatibles erróneamente
+    if (sha1 && hashToProject[sha1] && typeof hashToProject[sha1] === 'object') {
+      const vInfo: any = hashToProject[sha1];
+      result.gameVersions = vInfo.game_versions || result.gameVersions;
+      result.loaders = vInfo.loaders || result.loaders;
+    }
 
     // Guardar en caché bajo SHA1, FilePath y FileName para asegurar hits tras clasificar
     const cache = updateCache.get();

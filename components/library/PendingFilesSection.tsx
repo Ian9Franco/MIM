@@ -87,6 +87,7 @@ export function PendingFilesSection({
                   onClick={() => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
                   activeVersion={activeProject?.version} activeLoader={activeProject?.loader} isPending={true}
                   onDelete={() => setFilesToDelete([f])} isDeleting={deletingFiles[f.path]} conflict={conflicts[f.path]}
+                  confidence={f.meta?.confidence} warnings={f.meta?.warnings}
                 />
               ))
             )}

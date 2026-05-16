@@ -164,25 +164,34 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(finalTargetDir, { recursive: true });
       }
 
-      // ── Replace previous versions of the same modId ──────────────────────────
+      // ── Replace previous versions of the same modId (Global Project Scan) ────────────────
       try {
         const currentMeta = scanMod(p);
-        if (currentMeta && currentMeta.modId && currentMeta.modId !== "unknown" && fs.existsSync(finalTargetDir)) {
-          const destFiles = fs.readdirSync(finalTargetDir);
-          for (const df of destFiles) {
-            if (!df.endsWith(".jar")) continue;
-            const dfPath = path.join(finalTargetDir, df);
-            if (path.resolve(dfPath) === path.resolve(p)) continue;
+        if (currentMeta && currentMeta.modId && currentMeta.modId !== "unknown") {
+          const projectRoot = projectName 
+            ? path.join(SOURCE_BASE, "_projects", projectName, "mods")
+            : path.join(SOURCE_BASE, version, modloader);
 
-            try {
-              const dfMeta = scanMod(dfPath);
-              if (dfMeta && dfMeta.modId && dfMeta.modId.toLowerCase() === currentMeta.modId.toLowerCase()) {
-                console.log(`[/api/classify] Replacing older version of modId "${currentMeta.modId}": deleting ${dfPath}`);
-                fs.unlinkSync(dfPath);
+          if (fs.existsSync(projectRoot)) {
+            const scanAndDelete = (dir: string) => {
+              const entries = fs.readdirSync(dir, { withFileTypes: true });
+              for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  scanAndDelete(fullPath);
+                } else if (entry.isFile() && entry.name.endsWith(".jar")) {
+                  if (path.resolve(fullPath) === path.resolve(p)) continue;
+                  try {
+                    const dfMeta = scanMod(fullPath);
+                    if (dfMeta && dfMeta.modId && dfMeta.modId.toLowerCase() === currentMeta.modId.toLowerCase()) {
+                      console.log(`[/api/classify] Replacing modId "${currentMeta.modId}" found at: ${fullPath}`);
+                      fs.unlinkSync(fullPath);
+                    }
+                  } catch {}
+                }
               }
-            } catch (e) {
-              // Ignore scan issues on individual files
-            }
+            };
+            scanAndDelete(projectRoot);
           }
         }
       } catch (e) {

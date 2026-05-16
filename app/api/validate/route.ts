@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
       sinytraActive = false,
     } = body;
 
+    console.log(`[/api/validate] Request received for project: "${projectName}" (Target: ${buildTarget})`);
+
     // ── Validation of request params ─────────────────────────────────────────
     if (!version || !loader || !projectName || !buildTarget) {
       return NextResponse.json(
@@ -86,18 +88,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Walk categories and sub-categories
+    console.log(`[/api/validate] Collecting mods from: ${loaderPath}`);
     for (const category of Object.keys(SUBCATEGORIES)) {
       const catPath = path.join(loaderPath, category);
-      if (!fs.existsSync(catPath)) continue;
+      if (!fs.existsSync(catPath)) {
+        console.log(`[/api/validate] Skip category (missing): ${category}`);
+        continue;
+      }
 
       for (const sub of fs.readdirSync(catPath)) {
         const subPath = path.join(catPath, sub);
         if (!fs.statSync(subPath).isDirectory()) continue;
 
-        for (const file of fs.readdirSync(subPath)) {
-          if (!file.endsWith(".jar")) continue;
+        const files = fs.readdirSync(subPath).filter(f => f.endsWith(".jar"));
+        console.log(`[/api/validate] Checking ${category}/${sub}: ${files.length} JARs`);
+        
+        for (const file of files) {
           const filePath = path.join(subPath, file);
-
           try {
             const meta = scanMod(filePath);
             const override = overrides.mods[file];
@@ -121,22 +128,17 @@ export async function POST(req: NextRequest) {
               isCompatibleWithConnector: (appliedMeta as any).isCompatibleWithConnector,
             });
           } catch (err) {
-            // If a JAR can't be scanned, add it as an unknown mod — don't fail the whole report
-            console.warn(`[/api/validate] Could not scan ${file}:`, err);
+            console.warn(`[/api/validate] Error scanning ${file}:`, err);
             validatorMods.push({
-              fileName:    file,
-              modName:     file,
-              modId:       "unknown",
-              loader:      "unknown",
-              gameVersion: "unknown",
-              projectType: "unknown",
-              category,
-              sub,
+              fileName:    file, modName: file, modId: "unknown", loader: "unknown",
+              gameVersion: "unknown", projectType: "unknown", category, sub,
             });
           }
         }
       }
     }
+    console.log(`[/api/validate] Total collected: ${validatorMods.length}`);
+
 
     // ── Run the validation engine ─────────────────────────────────────────────
     const isSinytraInstalled = validatorMods.some(m => m.modId === "connector" || m.fileName.toLowerCase().includes("connector-1."));

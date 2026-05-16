@@ -1,10 +1,10 @@
 import React from "react";
-import { Library, Trash2, X, Loader2 } from "lucide-react";
+import { Library, Trash2, X, Loader2, CloudUpload } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 
 // ── CollectionCard ──────────────────────────────────────────────────────────
 
-export function CollectionCard({ coll, onOpen, onDelete, confirmDelete, onConfirmDelete, onCancelDelete, deleting, isOfficial, isLocal, isFollowed }: any) {
+export function CollectionCard({ coll, onOpen, onDelete, confirmDelete, onConfirmDelete, onCancelDelete, deleting, isOfficial, isLocal, isFollowed, onPublish, publishing }: any) {
   return (
     <div onClick={() => onOpen(coll)} className="w-full p-4 rounded-2xl transition-all group hover:bg-white/5 cursor-pointer border border-white/5 bg-white/3">
       <div className="flex items-start gap-4 mb-4">
@@ -20,14 +20,26 @@ export function CollectionCard({ coll, onOpen, onDelete, confirmDelete, onConfir
           </p>
           <p className="text-xs opacity-60">{coll.projectCount} proyectos</p>
         </div>
-        {onDelete && (
-          confirmDelete ? (
-            <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-              <button onClick={e => { e.stopPropagation(); onConfirmDelete(); }} className="p-2 rounded-lg bg-red-500/20 text-red-400">{deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}</button>
-              <button onClick={e => { e.stopPropagation(); onCancelDelete(); }} className="p-2 rounded-lg bg-white/10 text-white/60"><X className="w-4 h-4" /></button>
-            </div>
-          ) : <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-red-400/50"><Trash2 className="w-4 h-4" /></button>
-        )}
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          {onPublish && (
+            <button 
+              onClick={e => { e.stopPropagation(); onPublish(); }} 
+              disabled={publishing}
+              className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary/50 hover:text-primary transition-all"
+              title="Publicar en Modrinth"
+            >
+              {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
+            </button>
+          )}
+          {onDelete && (
+            confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <button onClick={e => { e.stopPropagation(); onConfirmDelete(); }} className="p-2 rounded-lg bg-red-500/20 text-red-400">{deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}</button>
+                <button onClick={e => { e.stopPropagation(); onCancelDelete(); }} className="p-2 rounded-lg bg-white/10 text-white/60"><X className="w-4 h-4" /></button>
+              </div>
+            ) : <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-red-400/50"><Trash2 className="w-4 h-4" /></button>
+          )}
+        </div>
       </div>
       <div className="flex gap-2">
         {coll.mods?.slice(0, 3).map((mod: any) => (

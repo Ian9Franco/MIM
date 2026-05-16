@@ -602,6 +602,18 @@ select:focus {
 .animate-ender-eye  { animation: ender-eye-pulse 3s ease-in-out infinite; }
 .animate-ender-particle { animation: ender-particle 2s ease-out infinite; }
 
+@keyframes scanline {
+  0% { transform: translateY(-100%); opacity: 0; }
+  15% { opacity: 0.8; }
+  35% { opacity: 0.8; }
+  50% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+.animate-scanline {
+  animation: scanline 4s linear infinite;
+}
+
 /* Stagger helpers */
 .stagger-1 { animation-delay: 0.06s; }
 .stagger-2 { animation-delay: 0.12s; }

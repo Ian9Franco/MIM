@@ -83,7 +83,7 @@ export class MimClassifier {
 
     // Evaluación Final de Resultados
     let bestCat: any = strictCategory || ".essential";
-    let bestSub = "librerias"; // Fallback por defecto
+    let bestSub = "vanilla + & qol"; // Fallback más genérico (mods de contenido/utilidad)
     let maxScore = 0;
 
     Object.entries(scores).forEach(([cat, subs]: any) => {
@@ -95,6 +95,12 @@ export class MimClassifier {
         }
       });
     });
+
+    // Si detectamos que es una librería pero tiene un score bajo,
+    // es mejor dejarlo en vanilla + si no estamos seguros.
+    if (bestSub === "librerias" && maxScore < 25 && !matchedRules.includes("Anchor: API/Lib")) {
+        bestSub = "vanilla + & qol";
+    }
 
     return { 
       category: bestCat, 

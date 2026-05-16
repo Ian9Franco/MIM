@@ -49,14 +49,31 @@ export function QuickCategorizeSection({
           Categorización Rápida
         </h2>
         
-        {activeProject && onAutoCategorize && (
+        {activeProject && (
           <button
-            onClick={() => { setAutoClassify?.(!autoClassify); onAutoCategorize(); }}
-            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider shadow-lg ${autoClassify ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 ring-2 ring-emerald-500/20' : 'bg-primary/10 border-primary/20 text-primary shadow-primary/5'}`}
-            title="Activar clasificación automática de descargas y organizar mods instalados por entorno"
+            onClick={() => {
+              if (allSelected.length > 0) {
+                handleClassify("auto", "");
+              } else {
+                setAutoClassify?.(!autoClassify);
+                if (onAutoCategorize && !autoClassify) onAutoCategorize();
+              }
+            }}
+            className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-2xl transition-all hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider shadow-lg border-2 ${
+              allSelected.length > 0
+                ? "bg-primary border-primary/40 text-white shadow-primary/20"
+                : autoClassify 
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-4 ring-emerald-500/10' 
+                  : 'bg-white/5 border-white/10 text-muted'
+            }`}
+            title={allSelected.length > 0 ? "Clasificar automáticamente todos los mods seleccionados" : "Activar modo automático: organiza las descargas nuevas al instante"}
           >
-            <Cpu className={`w-3.5 h-3.5 ${autoClassify ? 'animate-pulse' : ''}`} />
-            <span>{autoClassify ? "Auto: Activo" : "Auto-Clasificar"}</span>
+            <Cpu className={`w-4 h-4 ${autoClassify ? 'animate-pulse' : ''}`} />
+            <span>
+              {allSelected.length > 0 
+                ? `Clasificar ${allSelected.length} ahora` 
+                : autoClassify ? "MODO AUTO: ON" : "ACTIVAR AUTO"}
+            </span>
           </button>
         )}
       </div>

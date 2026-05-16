@@ -28,6 +28,12 @@ export function extractVersionFromFileName(fileName: string): { name: string; ve
   return { name: fileName, version: UNKNOWN };
 }
 
+export function extractMcVersionFromFileName(fileName: string): string | null {
+  const pattern = /(?:mc)?(1\.(1[6-9]|2\d)(?:\.\d+)?)/g;
+  const matches = [...fileName.matchAll(pattern)];
+  return matches.length > 0 ? matches[matches.length - 1][1] : null;
+}
+
 export function isValidImage(buffer: Buffer): boolean {
   const png = Buffer.from([0x89, 0x50, 0x4E, 0x47]);
   const jpeg = Buffer.from([0xFF, 0xD8, 0xFF]);

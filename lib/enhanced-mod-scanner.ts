@@ -7,9 +7,11 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { EnhancedModMeta, UNKNOWN } from "./mod-scanner/types";
-import { normalizeVersion, extractVersionFromFileName, isValidImage } from "./mod-scanner/Utils";
+import { normalizeVersion, extractVersionFromFileName, extractMcVersionFromFileName, isValidImage } from "./mod-scanner/Utils";
 import { parseFabricModJson, parseForgeToml, parseMcModInfo } from "./mod-scanner/Strategies";
 import { extractMixinTargets } from "./mixin-scanner";
+import { evaluateCandidates, ScanCandidate } from "./scanner/scoring";
+import { ModMeta } from "./scanner";
 
 export async function scanModEnhanced(filePath: string): Promise<EnhancedModMeta> {
   const warnings: string[] = [];
@@ -27,24 +29,46 @@ export async function scanModEnhanced(filePath: string): Promise<EnhancedModMeta
 }
 
 async function extractMetadata(zip: AdmZip, filePath: string, warnings: string[]): Promise<Partial<EnhancedModMeta>> {
-  const result: Partial<EnhancedModMeta> = { modId: UNKNOWN, modName: UNKNOWN, modVersion: UNKNOWN, loader: UNKNOWN, projectType: "mod", isCompatibleWithConnector: false };
+  const candidates: ScanCandidate[] = [];
 
   const configs = [
     { file: "fabric.mod.json", parser: (c: string) => parseFabricModJson(c, "fabric") },
     { file: "quilt.mod.json", parser: (c: string) => parseFabricModJson(c, "quilt") },
     { file: "META-INF/neoforge.mods.toml", parser: (c: string) => parseForgeToml(c, true) },
     { file: "META-INF/mods.toml", parser: (c: string) => parseForgeToml(c, false) },
-    { file: "mcmod.info", parser: parseMcModInfo }
+    { file: "mcmod.info", parser: (c: string) => parseMcModInfo(c) }
   ];
 
   for (const config of configs) {
     const entry = zip.getEntry(config.file);
     if (entry) {
-      const parsed = config.parser(zip.readAsText(entry));
-      Object.assign(result, parsed);
-      break;
+      try {
+        const parsed = config.parser(zip.readAsText(entry));
+        candidates.push({ ...parsed, source: config.file } as ScanCandidate);
+      } catch {}
     }
   }
+
+  // Candidato de nombre de archivo
+  const fileName = path.basename(filePath);
+  candidates.push({
+    modId: UNKNOWN,
+    modName: extractVersionFromFileName(fileName).name,
+    modVersion: extractVersionFromFileName(fileName).version,
+    gameVersion: extractMcVersionFromFileName(fileName) || UNKNOWN,
+    loader: UNKNOWN,
+    source: "filename"
+  } as ScanCandidate);
+
+  // Evaluar con el motor de scoring
+  const { bestMatch, confidence, warnings: scoreWarnings } = evaluateCandidates(candidates, filePath);
+  warnings.push(...scoreWarnings);
+
+  const result: Partial<EnhancedModMeta> = { 
+    ...bestMatch,
+    confidence,
+    warnings: scoreWarnings
+  };
 
   // Icon extraction
   const iconEntry = zip.getEntry("icon.png") || zip.getEntry("logo.png");
@@ -63,9 +87,12 @@ async function extractMetadata(zip: AdmZip, filePath: string, warnings: string[]
 }
 
 function createFallback(filePath: string, warnings: string[]): EnhancedModMeta {
-  const data = extractVersionFromFileName(path.basename(filePath));
+  const fileName = path.basename(filePath);
+  const data = extractVersionFromFileName(fileName);
   return {
-    modId: UNKNOWN, modName: data.name, modVersion: data.version, gameVersion: UNKNOWN, loader: UNKNOWN,
+    modId: UNKNOWN, modName: data.name, modVersion: data.version, 
+    gameVersion: extractMcVersionFromFileName(fileName) || UNKNOWN, 
+    loader: UNKNOWN,
     projectType: "mod", isCompatibleWithConnector: false, extractionQuality: "low", extractionWarnings: [...warnings, "Fallback"]
   };
 }

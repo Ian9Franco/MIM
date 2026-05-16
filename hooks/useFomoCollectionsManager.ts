@@ -15,6 +15,7 @@ export function useFomoCollectionsManager(loader: string, gameVersion: string, o
   const [newName, setNewName] = useState("MIM");
   const [deletingColl, setDeletingColl] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,5 +59,24 @@ export function useFomoCollectionsManager(loader: string, gameVersion: string, o
     finally { setDeletingColl(null); setConfirmDelete(null); }
   };
 
-  return { collections, officialCollections, loading, viewing, setViewing, viewMods, setViewMods, viewLoading, setViewLoading, collDl, creating, setCreating, targetType, setTargetType, newName, setNewName, deletingColl, confirmDelete, setConfirmDelete, load, handleDownloadColl, handleDelete };
+  const publishLocalCollection = async (coll: any) => {
+    if (!coll.isLocal) return;
+    setPublishing(coll.id);
+    try {
+      onStatus(`Iniciando publicación de "${coll.name}" en Modrinth...`, "info");
+      const { collection: remote, error } = await createCollection(coll.name, coll.projects[0], "modrinth");
+      if (error) { onStatus(error, "error"); return; }
+      
+      let success = 1;
+      for (let i = 1; i < coll.projects.length; i++) {
+        const { error: addErr } = await addModToCollection(remote!.id, coll.projects[i], "modrinth");
+        if (!addErr) success++;
+      }
+      onStatus(`Colección "${coll.name}" publicada en Modrinth con ${success} mods`, "success");
+      load();
+    } catch { onStatus("Error al publicar en Modrinth", "error"); }
+    finally { setPublishing(null); }
+  };
+
+  return { collections, officialCollections, loading, viewing, setViewing, viewMods, setViewMods, viewLoading, setViewLoading, collDl, creating, setCreating, targetType, setTargetType, newName, setNewName, deletingColl, confirmDelete, setConfirmDelete, publishing, load, handleDownloadColl, handleDelete, publishLocalCollection };
 }

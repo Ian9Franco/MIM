@@ -273,8 +273,17 @@ export interface ValidationIssue {
 
 export type PackGrade = "S" | "A" | "B" | "C" | "D" | "F";
 
+export interface EnvironmentStats {
+  totalMods:    number;
+  errors:       number;
+  warnings:     number;
+  suggestions:  number;
+  score:        number;
+  grade:        PackGrade;
+}
+
 export interface PackHealthReport {
-  score:        number;          // 0–100
+  score:        number;          // 0–100 (Global)
   grade:        PackGrade;
   totalMods:    number;
   issues:       ValidationIssue[];
@@ -284,6 +293,10 @@ export interface PackHealthReport {
   blocksExport: boolean;
   buildTarget:  "alluser" | "allhost" | "both";
   validatedAt:  string;
+
+  // Environmental Predictions
+  clientStats?: EnvironmentStats;
+  serverStats?: EnvironmentStats;
 }
 // ── SAGE Recovery Types ──────────────────────────────────────────────────────
 

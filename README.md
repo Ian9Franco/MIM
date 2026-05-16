@@ -14,7 +14,7 @@
 
 **⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de Seguridad | 🧠 Diagnóstico de Crashes**
 
-[![Version](https://img.shields.io/badge/Version-Beta_5.9-6366f1.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-6.0.0-6366f1.svg)](./CHANGELOG.md)
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -73,6 +73,7 @@ Más tiempo jugando. Como debería ser.
 | **🎹 Keybind Editor** | Edita controles de mods sin abrir Minecraft | Control total, cero menús infernales |
 | **🔧 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
 | **⚙️ TWEAK Optimizer** | Perfiles automáticos de rendimiento y tuning heurístico de JVM args según hardware detectado | Maximiza FPS y estabilidad sin tocar configuraciones manuales complejas |
+| **👤 Modo MIMU** | Vista sin proyectos para usuarios que solo buscan jugar | Interfaz simplificada con envíos directos al juego y gestor de mundos |
 
 ---
 
@@ -202,6 +203,12 @@ MIM implementa **3 capas de seguridad**:
 ---
 
 ## 🗺️ Roadmap
+
+### ✅ Completado (Versión 6.0.0)
+- **Modo MIMU (User Mode)**: Implementación de una vista simplificada sin proyectos ni categorización compleja. Ideal para usuarios finales que solo quieren descargar mods y jugar.
+- **Gestor de Mundos**: Visualización de mundos guardados con iconos y nombres reales leídos desde `level.dat`.
+- **Gestor de Mods Instalados**: Columna lateral para visualizar y eliminar mods directamente de la carpeta `.minecraft/mods`.
+- **Envíos Directos al Juego**: Flag `toGame` en la clasificación para enrutar archivos directamente a la carpeta activa de Minecraft.
 
 ### ✅ Completado (Beta 5.9)
 - **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios (`useFileWatcher`, `FomoSidebarPortal`, heurísticas centralizadas).

@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** Beta 5.6 | **Última actualización:** 2026-05-13
+> **Versión:** 6.0.0 | **Última actualización:** 2026-05-16
 
 ---
 
@@ -25,6 +25,13 @@
 ## 1. Visión General
 
 **Minecraft Intelligent Manager (MIM)** es una aplicación de gestión de modpacks que transforma el caos de crear modpacks en un flujo de trabajo de **3 clics**. Combina un scanner inteligente de JARs, integración dual con Modrinth/CurseForge, y un sistema de diagnóstico de crashes (SAGE) en una interfaz glassmórfica moderna.
+
+### Modos de Aplicación
+
+A partir de la versión 6.0.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+
+* **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
+* **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
 
 ### Stack Tecnológico
 

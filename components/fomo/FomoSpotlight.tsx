@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar } from "lucide-react";
+import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar, Library } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { FomoSkeleton } from "./FomoSkeleton";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
@@ -9,6 +9,7 @@ import type { ModHit, CollectionEntry } from "@/lib/types";
 
 interface FomoSpotlightProps {
   onOpenVersions: (mod: ModHit) => void;
+  onOpenCollection?: (collection: CollectionEntry) => void;
   onDownloadMod: (mod: ModHit) => Promise<void>;
   downloading: Record<string, boolean>;
   selectedMods?: ModHit[];
@@ -124,6 +125,14 @@ function SpotlightSkeleton() {
           animation: skel-pulse-scale 3s ease-in-out infinite, shimmer-bg 2s linear infinite;
           background: linear-gradient(135deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
           background-size: 200% 100%;
+        }
+        
+        /* Overrides para tema claro (Modern) */
+        [data-theme="modern"] .skel-line {
+          background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.05) 75%);
+        }
+        [data-theme="modern"] .skel-card {
+          background: linear-gradient(135deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 75%);
         }
       `}</style>
 
@@ -260,7 +269,7 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
       className="relative h-full w-full overflow-hidden mask-vertical-edges cursor-grab active:cursor-grabbing"
       {...handlers}
     >
-      <div ref={innerRef} className="flex flex-col gap-3 w-full pb-2">
+      <div ref={innerRef} className="flex flex-col gap-3 w-full px-2 pb-2">
         {duplicatedMods.map((mod, i) => {
           const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
           const loaderTag = mod.categories?.find(c => knownLoaders.includes(c.toLowerCase())) || globalLoader;
@@ -269,29 +278,50 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
           return (
             <div 
               key={`${mod.projectId}-${i}`} 
-              className="flex items-center gap-3 cursor-pointer group bg-black/20 hover:bg-white/10 transition-colors border border-white/5 hover:border-white/20 rounded-2xl p-2.5 shrink-0 relative" 
+              className="spotlight-ec-mini-card group" 
               onClick={() => onOpenVersions(mod)}
             >
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 shrink-0 shadow-lg relative group-hover:scale-105 transition-transform flex items-center justify-center pointer-events-none">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {mod.iconUrl ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <span className="font-headline text-[10px] font-black text-white/30 uppercase">{mod.title.substring(0, 2)}</span>}
+              {/* Corner brackets at the card level */}
+              <span className="spotlight-ec-mini-bracket spotlight-ec-mini-bracket--tl" />
+              <span className="spotlight-ec-mini-bracket spotlight-ec-mini-bracket--bl" />
+
+              <div className="spotlight-ec-mini-image-zone">
+                <span className="spotlight-ec-mini-number">{String((i % 99) + 1).padStart(2, "0")}</span>
+                
+                {mod.iconUrl ? (
+                  <img src={mod.iconUrl} alt="" className="w-full h-full object-cover rounded-md" />
+                ) : (
+                  <span className="font-headline text-[10px] font-black text-white/30 uppercase">
+                    {mod.title.substring(0, 2)}
+                  </span>
+                )}
               </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-center pointer-events-none">
-                <p className={`font-subhead text-xs text-white truncate transition-colors group-hover:${color}`}>{mod.title}</p>
-                <div className="flex items-center gap-1.5 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                  {pType && (
-                    <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white/10 text-white opacity-80">
-                      {pType}
-                    </span>
-                  )}
+              
+              <div className="spotlight-ec-mini-text-zone">
+                <p className={`spotlight-ec-mini-title transition-colors group-hover:${color}`}>
+                  {mod.title}
+                </p>
+                <div className="spotlight-ec-mini-meta">
+                  {pType && <span className="spotlight-ec-mini-badge">{pType}</span>}
                   {loaderTag && (
-                    <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md text-white opacity-80" style={{ background: loaderTag.toLowerCase() === "fabric" ? "rgba(234,179,8,0.2)" : loaderTag.toLowerCase() === "forge" ? "rgba(239,68,68,0.2)" : "rgba(14,165,233,0.2)" }}>
+                    <span 
+                      className="spotlight-ec-mini-badge" 
+                      style={{ 
+                        color: loaderTag.toLowerCase() === "fabric" ? "#fbbf24" : 
+                               loaderTag.toLowerCase() === "forge" ? "#f87171" : "#38bdf8" 
+                      }}
+                    >
                       {loaderTag}
                     </span>
                   )}
-                  {(!pType && !loaderTag) && <span className="font-caption text-[9px] truncate">{mod.author}</span>}
+                  {!pType && !loaderTag && (
+                    <span className="font-caption text-[8px] truncate opacity-50">
+                      {mod.author}
+                    </span>
+                  )}
                 </div>
               </div>
+              <div className="spotlight-ec-mini-dots" />
             </div>
           );
         })}
@@ -303,8 +333,23 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
 // ─────────────────────────────────────────────────────────────────────────────
 // Horizontal Scrolling Marquee - Used for big cards
 // ─────────────────────────────────────────────────────────────────────────────
-function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, downloading, speed = 1, reverse = false, accentColor, globalLoader }: any) {
-  const duplicatedMods = [...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods];
+function HorizontalEditorialMarquee({ 
+  title, 
+  items, 
+  type = "mod",
+  onOpenVersions, 
+  onOpenCollection,
+  onDownload, 
+  downloading, 
+  speed = 1, 
+  reverse = false, 
+  accentColor, 
+  globalLoader 
+}: any) {
+  // Para un loop infinito seamless: exactamente 2 copias.
+  // El hook resetea al llegar a halfSize (mitad del contenido = 1 copia).
+  // Como copia1 = copia2, el salte es invisible.
+  const duplicatedItems = [...items, ...items];
   const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false);
 
   return (
@@ -322,18 +367,87 @@ function HorizontalEditorialMarquee({ title, mods, onOpenVersions, onDownload, d
         {...handlers}
       >
         <div ref={innerRef} className="flex gap-6 w-max px-4 py-2 h-full">
-          {duplicatedMods.map((mod: any, i: number) => (
-            <SpotlightEditorialCard
-              key={`${mod.projectId}-${i}`}
-              mod={mod}
-              onOpenVersions={onOpenVersions}
-              onDownload={onDownload}
-              isDownloading={!!downloading[mod.projectId]}
-              accentColor={mod.color || accentColor}
-              globalLoader={globalLoader}
-            />
+          {duplicatedItems.map((item: any, i: number) => (
+            type === "collection" ? (
+              <SpotlightCollectionCard
+                key={`${item.id}-${i}`}
+                collection={item}
+                onClick={() => onOpenCollection?.(item)}
+                accentColor={accentColor}
+                index={i % items.length}
+              />
+            ) : (
+              <SpotlightEditorialCard
+                key={`${item.projectId}-${i}`}
+                mod={item}
+                onOpenVersions={onOpenVersions}
+                onDownload={onDownload}
+                isDownloading={!!downloading[item.projectId]}
+                accentColor={item.color || accentColor}
+                globalLoader={globalLoader}
+                index={i % items.length}
+              />
+            )
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Square Editorial Card for Collections
+// ─────────────────────────────────────────────────────────────────────────────
+function SpotlightCollectionCard({
+  collection,
+  onClick,
+  accentColor = COLORS.primary,
+  index = 0
+}: {
+  collection: CollectionEntry;
+  onClick: () => void;
+  accentColor?: string;
+  index?: number;
+}) {
+  const [imgError, setImgError] = React.useState(false);
+  const cardNum = String((index % 999) + 1).padStart(3, "0");
+
+  return (
+    <div 
+      className="spotlight-ec-card shrink-0 relative group cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="spotlight-ec-image-zone">
+        <span className="spotlight-ec-number">{cardNum}</span>
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--tl" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--tr" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--bl" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--br" />
+        <div className="spotlight-ec-icon-wrap">
+          {!imgError && collection.iconUrl ? (
+            <img 
+              src={collection.iconUrl} 
+              alt="" 
+              className="w-full h-full object-cover rounded-xl" 
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-full h-full bg-white/5 rounded-xl flex items-center justify-center">
+               <Library className="w-8 h-8 opacity-20" />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="spotlight-ec-text-zone">
+        <div className="spotlight-ec-text-main">
+          <h3 className="spotlight-ec-title">{collection.name}</h3>
+          <p className="spotlight-ec-author">{collection.projectCount || 0} PROYECTOS</p>
+          <div className="spotlight-ec-badges">
+            <span className="spotlight-ec-badge">Colección</span>
+            <span className="spotlight-ec-badge" style={{ color: accentColor }}>{collection.source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
+          </div>
+        </div>
+        <div className="spotlight-ec-dots" aria-hidden="true" />
       </div>
     </div>
   );
@@ -348,7 +462,8 @@ function SpotlightEditorialCard({
   onDownload, 
   isDownloading,
   accentColor = COLORS.primary,
-  globalLoader
+  globalLoader,
+  index = 0,
 }: { 
   mod: ModHit & { versions?: string[] }; 
   onOpenVersions: (m: ModHit) => void;
@@ -356,6 +471,7 @@ function SpotlightEditorialCard({
   isDownloading: boolean;
   accentColor?: string;
   globalLoader?: string;
+  index?: number;
 }) {
   
   const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
@@ -372,91 +488,59 @@ function SpotlightEditorialCard({
     ? "Modpack"
     : mod.projectType;
 
-  let versionsString = null;
-  let versionRange = null;
-  if (mod.versions && mod.versions.length > 0) {
-    const sorted = [...mod.versions].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    if (sorted.length > 1) {
-      versionsString = `${sorted[0]} - ${sorted[sorted.length - 1]}`;
-      versionRange = versionsString;
-    } else {
-      versionsString = sorted[0];
-      versionRange = sorted[0];
-    }
-  }
+  const cardNum = String((index % 999) + 1).padStart(3, "0");
 
   return (
     <div 
-      className="w-[180px] sm:w-[220px] h-[240px] sm:h-[300px] shrink-0 rounded-[2rem] sm:rounded-[2.5rem] relative group cursor-pointer overflow-hidden backdrop-blur-xl border border-white/5 hover:border-white/10 transition-all duration-500 hover:z-10"
-      style={{ 
-        background: `var(--glass-bg)`,
-        boxShadow: `var(--shadow-drop), var(--shadow-neomorphic-inner, inset 0 1px 0 rgba(255,255,255,0.05))`,
-        whiteSpace: "normal" // Fix for whitespace-nowrap parent
-      }}
+      className="spotlight-ec-card shrink-0 relative group cursor-pointer"
       onClick={() => onOpenVersions(mod)}
     >
-      {/* Dynamic Top Glow */}
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      {/* Background Soft Glow */}
-      <div 
-        className="absolute -inset-20 opacity-0 group-hover:opacity-10 transition-opacity duration-700 blur-3xl pointer-events-none rounded-full"
-        style={{ background: accentColor }}
-      />
-
-      <div className="p-6 flex flex-col h-full relative z-10 items-center text-center">
-        {/* Mod Icon */}
-        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center mb-4 shrink-0 shadow-2xl relative group-hover:-translate-y-2 transition-transform duration-500">
+      {/* TOP: Image Zone */}
+      <div className="spotlight-ec-image-zone">
+        <span className="spotlight-ec-number">{cardNum}</span>
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--tl" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--tr" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--bl" />
+        <span className="spotlight-ec-bracket spotlight-ec-bracket--br" />
+        <div className="spotlight-ec-icon-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {mod.iconUrl ? (
-            <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
+            <img src={mod.iconUrl} alt="" className="w-full h-full object-cover rounded-xl" />
           ) : (
-            <div 
-              className="w-full h-full flex items-center justify-center font-headline text-2xl font-black text-white/40"
-              style={{ background: `linear-gradient(135deg, ${accentColor}20 0%, rgba(0,0,0,0.8) 100%)`, boxShadow: `inset 0 0 20px ${accentColor}10` }}
-            >
+            <span className="font-headline text-3xl font-black opacity-20">
               {mod.title.substring(0, 2).toUpperCase()}
-            </div>
+            </span>
           )}
-          
-          {/* Hover Download Button */}
-          <button 
+        </div>
+        <div className="spotlight-ec-dl-overlay">
+          <button
             onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
             disabled={isDownloading}
-            className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-black/60 hover:bg-white hover:text-black backdrop-blur-md"
-            style={{ border: "1px solid rgba(255,255,255,0.2)" }}
+            className="spotlight-ec-dl-btn"
           >
-            {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           </button>
         </div>
+      </div>
 
-        <h3 className="font-headline text-base sm:text-lg leading-tight text-white group-hover:opacity-80 transition-opacity duration-300 line-clamp-2">
-          {mod.title}
-        </h3>
-        
-        {/* Badges for Type, Loader, and Version */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
-          {pType && (
-            <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white/10 text-white opacity-80 border border-white/5 shadow-sm">
-              {pType}
-            </span>
-          )}
-          {loaderTag && (
-            <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md text-white/80 border border-white/5 shadow-sm" style={{ background: loaderTag.toLowerCase() === "fabric" ? "rgba(234,179,8,0.15)" : loaderTag.toLowerCase() === "forge" ? "rgba(239,68,68,0.15)" : "rgba(14,165,233,0.15)" }}>
-              {loaderTag}
-            </span>
-          )}
-          {versionRange && (
-            <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white/5 text-white opacity-60 border border-white/5 shadow-sm">
-              {versionRange}
-            </span>
-          )}
+      {/* BOTTOM: Text Zone */}
+      <div className="spotlight-ec-text-zone">
+        <div className="spotlight-ec-text-main">
+          <h3 className="spotlight-ec-title">{mod.title}</h3>
+          <p className="spotlight-ec-author">{mod.author}</p>
+          <div className="spotlight-ec-badges">
+            {pType && <span className="spotlight-ec-badge">{pType}</span>}
+            {loaderTag && (
+              <span 
+                className="spotlight-ec-badge spotlight-ec-badge--loader"
+                data-loader={loaderTag.toLowerCase()}
+              >
+                {loaderTag}
+              </span>
+            )}
+          </div>
         </div>
-
-        {/* Author / Metadata */}
-        <div className="mt-auto pt-4 w-full flex items-center justify-between text-[9px] font-subhead uppercase tracking-widest text-white opacity-40 border-t border-white/5">
-          <span className="font-bold">{mod.author}</span>
-        </div>
+        <div className="spotlight-ec-dots" aria-hidden="true" />
       </div>
     </div>
   );
@@ -467,6 +551,7 @@ function SpotlightEditorialCard({
 // ─────────────────────────────────────────────────────────────────────────────
 export function FomoSpotlight({
   onOpenVersions,
+  onOpenCollection,
   onDownloadMod,
   downloading,
   loader = "forge",
@@ -474,19 +559,36 @@ export function FomoSpotlight({
   sinytraActive = false,
 }: FomoSpotlightProps) {
   const [loading, setLoading] = useState(true);
-  const [cfFeatured, setCfFeatured] = useState<ModHit[]>([]);
+  const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
   const [cfRecent, setCfRecent] = useState<ModHit[]>([]);
   const [newestMods, setNewestMods] = useState<ModHit[]>([]);
   const [latestCollection, setLatestCollection] = useState<CollectionEntry | null>(null);
   const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>([]);
+  const [latestCfCollection, setLatestCfCollection] = useState<CollectionEntry | null>(null);
+  const [latestCfMods, setLatestCfMods] = useState<ModHit[]>([]);
 
   const loadSpotlight = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. We fetch the global Featured Mods from CurseForge
-      const cfData = await fetchCurseForgeFeatured();
-      if (cfData.featured) setCfFeatured(cfData.featured.map((m: any) => ({ ...m, _source: "curseforge" })));
+      // 1. Fetch CurseForge Community Picks (Collections)
+      const picksRes = await fetch("/api/curseforge/picks");
+      if (picksRes.ok) {
+        const d = await picksRes.json();
+        const picks = d.picks || [];
+        setCfPicks(picks);
+        
+        // Pick the latest CurseForge collection to feature its mods
+        if (picks.length > 0) {
+          const latest = picks[0];
+          setLatestCfCollection(latest);
+          const cfModsRes = await fetch(`/api/curseforge/picks/${latest.slug}`);
+          if (cfModsRes.ok) {
+            const md = await cfModsRes.json();
+            setLatestCfMods(md.mods || []);
+          }
+        }
+      }
 
       // 2. We fetch contextual popular and recent from CurseForge
       const cLoader = loader === "fabric" ? "Fabric" : loader === "neoforge" ? "NeoForge" : "Forge";
@@ -495,7 +597,6 @@ export function FomoSpotlight({
       const cfRecPromise = fetch(`/api/curseforge/discover?sortField=2&sortOrder=desc&gameVersion=${gameVersion}&modLoaderType=${cLoader}`).then(r => r.json());
       
       // 3. We fetch contextual newest from Modrinth
-      // Modrinth uses lower case loaders and strict versioning
       const mdLoader = (sinytraActive && (loader === "forge" || loader === "neoforge")) ? "[\"categories:forge\",\"categories:fabric\"]" : `["categories:${loader}"]`;
       const facets = `[${mdLoader},["versions:${gameVersion}"]]`;
       const mdNewPromise = fetch(`https://api.modrinth.com/v2/search?index=newest&limit=10&facets=${encodeURIComponent(facets)}`).then(r => r.json());
@@ -507,7 +608,6 @@ export function FomoSpotlight({
 
       if (popData?.mods) setCfPopular(popData.mods.map((m: any) => ({ ...m, _source: "curseforge" })));
       if (recData?.mods) {
-        // Asegurar que CurseForge devuelva 'mod' como tipo por defecto en estos resultados si no lo trae
         setCfRecent(recData.mods.map((m: any) => ({ ...m, projectType: m.projectType || "mod", _source: "curseforge" })));
       }
       
@@ -530,10 +630,27 @@ export function FomoSpotlight({
       }
 
       if (collsData?.collections && collsData.collections.length > 0) {
-        const latest = collsData.collections[0];
-        setLatestCollection(latest);
-        const modsData = await fetchCollectionMods(latest.id);
-        if (modsData.mods) setLatestCollectionMods(modsData.mods.map((m: any) => ({ ...m, _source: "modrinth" })));
+        // Tomamos siempre la última colección (la más reciente)
+        const latestColl = collsData.collections[0];
+        setLatestCollection(latestColl);
+        
+        const modsData = await fetchCollectionMods(latestColl.id);
+        let allMods = modsData.mods ? [...modsData.mods] : [];
+
+        // Añadimos otras 3 colecciones aleatorias para que el carrusel sea muy largo
+        const otherColls = collsData.collections.slice(1);
+        if (otherColls.length > 0) {
+          // Mezclamos y tomamos 3
+          const shuffledColls = [...otherColls].sort(() => Math.random() - 0.5).slice(0, 3);
+          for (const coll of shuffledColls) {
+            const moreModsData = await fetchCollectionMods(coll.id);
+            if (moreModsData.mods) {
+              allMods.push(...moreModsData.mods);
+            }
+          }
+        }
+        
+        setLatestCollectionMods(allMods.map((m: any) => ({ ...m, _source: "modrinth" })));
       }
 
     } catch (e) {
@@ -550,7 +667,7 @@ export function FomoSpotlight({
   }
 
   const modrinthMods = latestCollectionMods.map(m => ({ ...m, color: "#1ED760" }));
-  const curseForgeMods = cfFeatured.map(m => ({ ...m, color: COLORS.primary }));
+  const curseForgeFeaturedMods = latestCfMods.map(m => ({ ...m, color: "#f87171" }));
 
   return (
     <div className="flex-1 flex flex-col xl:flex-row h-full overflow-hidden p-6 gap-8 animate-fade-in">
@@ -566,7 +683,7 @@ export function FomoSpotlight({
           </p>
           <AnimatedHeadline />
           <p className="font-caption text-sm xl:text-base opacity-60 leading-relaxed">
-            Te traemos los picks mensuales de Modrinth y las selecciones de la comunidad de CurseForge.
+            Explora las colecciones dinámicas de CurseForge y Modrinth. Te traemos los mejores mods curados mes a mes.
           </p>
         </div>
 
@@ -616,30 +733,30 @@ export function FomoSpotlight({
       <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" style={{ background: "var(--glass-bg)", boxShadow: "var(--shadow-neomorphic-inner, inset 0 0 20px rgba(0,0,0,0.05))" }}>
 
         {/* Row 1: Modrinth (Scrolls Right to Left) */}
-        <div className="flex-1 w-full min-h-0 pt-4">
+        <div className="flex-1 w-full min-h-0">
           <HorizontalEditorialMarquee 
-            title="Modrinth Picks"
-            mods={modrinthMods} 
+            title={latestCollection?.name || "Modrinth Picks"}
+            items={modrinthMods} 
+            type="mod"
             onOpenVersions={onOpenVersions} 
             onDownload={onDownloadMod} 
             downloading={downloading} 
-            speed={0.8}
+            speed={0.7}
             reverse={false} 
             globalLoader={loader}
           />
         </div>
 
-        {/* Row 2: CurseForge (Scrolls Left to Right) */}
-        <div className="flex-1 w-full min-h-0 pb-4">
+        {/* Row 2: All CurseForge Community Picks (Collections) */}
+        <div className="flex-1 w-full min-h-0">
           <HorizontalEditorialMarquee 
-            title="CurseForge Picks"
-            mods={curseForgeMods} 
-            onOpenVersions={onOpenVersions} 
-            onDownload={onDownloadMod} 
-            downloading={downloading} 
-            speed={0.9}
+            title="CurseForge Community Picks"
+            items={cfPicks} 
+            type="collection"
+            onOpenCollection={onOpenCollection}
+            speed={0.6}
             reverse={true} 
-            globalLoader={loader}
+            accentColor={COLORS.primary}
           />
         </div>
       </div>

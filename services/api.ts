@@ -40,7 +40,14 @@ export async function fetchCollectionMods(id: string): Promise<{ mods: ModHit[],
       return { mods: [], error: null };
     }
 
-    const res = await fetch(`/api/modrinth/collections?collectionId=${id}`);
+    let res = await fetch(`/api/modrinth/collections?collectionId=${id}`);
+    
+    // Retry once if 404 (common in dev with Turbopack/slow FS)
+    if (res.status === 404) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      res = await fetch(`/api/modrinth/collections?collectionId=${id}`);
+    }
+
     if (res.ok) {
       const data = await res.json();
       return { mods: data.mods || [], error: null };
@@ -132,7 +139,14 @@ export async function downloadCollection(collId: string, loader: string, gameVer
 
 export async function fetchOfficialCollections(): Promise<{ collections: CollectionEntry[], error: string | null }> {
   try {
-    const res = await fetch("/api/modrinth/official");
+    let res = await fetch("/api/modrinth/official");
+    
+    // Retry once if 404 (common in dev with Turbopack/slow FS)
+    if (res.status === 404) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      res = await fetch("/api/modrinth/official");
+    }
+
     if (!res.ok) throw new Error(`Server proxy error: ${res.status}`);
     
     const text = await res.text();
@@ -184,6 +198,28 @@ export async function fetchCurseForgeFeatured(): Promise<{ featured: ModHit[], p
     };
   } catch (err: any) {
     return { featured: [], popular: [], recentlyUpdated: [], error: err.message || "Error al cargar destacados de CurseForge" };
+  }
+}
+
+export async function fetchCurseForgePicks(): Promise<{ picks: CollectionEntry[], error: string | null }> {
+  try {
+    const res = await fetch("/api/curseforge/picks");
+    if (!res.ok) throw new Error("Error fetching picks");
+    const data = await res.json();
+    return { picks: data.picks || [], error: null };
+  } catch (err: any) {
+    return { picks: [], error: err.message || "Error al cargar CurseForge Picks" };
+  }
+}
+
+export async function fetchCurseForgePickMods(slug: string): Promise<{ mods: ModHit[], error: string | null }> {
+  try {
+    const res = await fetch(`/api/curseforge/picks/${slug}`);
+    if (!res.ok) throw new Error("Error fetching pick mods");
+    const data = await res.json();
+    return { mods: data.mods || [], error: null };
+  } catch (err: any) {
+    return { mods: [], error: err.message || "Error al cargar mods del pick" };
   }
 }
 

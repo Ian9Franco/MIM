@@ -26,6 +26,12 @@ export const FomoModCard = memo(function FomoModCard({
   // Identificación del proveedor y exclusividad de loader
   const isCF = mod._source === "curseforge";
   const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
+
+  // Disponibilidad en ambas plataformas
+  const onModrinth = mod.availability?.modrinth ?? !isCF;
+  const onCurseForge = mod.availability?.curseforge ?? isCF;
+  const isOnBoth = onModrinth && onCurseForge;
+  const isExclusive = !isOnBoth;
   
   // Normalización del tipo de proyecto para la etiqueta superior
   const typeLabel = mod.projectType === "resourcepack" ? "Textura" : mod.projectType === "shader" ? "Shader" : "Mod";
@@ -71,8 +77,29 @@ export const FomoModCard = memo(function FomoModCard({
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/60">
                 <Download className="w-2.5 h-2.5" /> {formatNumber(mod.downloads)}
               </div>
-              <div className="ml-auto opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
-                {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
+              {/* Iconos de plataforma: ambos si está en los dos, uno solo si es exclusivo */}
+              <div className="ml-auto flex items-center gap-1">
+                {isOnBoth ? (
+                  // Disponible en ambas plataformas
+                  <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all duration-500">
+                    <ModrinthIcon />
+                    <CurseForgeIcon />
+                  </div>
+                ) : (
+                  // Exclusivo de una sola plataforma
+                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md border transition-all duration-500 opacity-50 group-hover:opacity-100"
+                    style={{ 
+                      background: isCF ? "rgba(244,115,22,0.08)" : "rgba(27,214,114,0.08)",
+                      borderColor: isCF ? "rgba(244,115,22,0.2)" : "rgba(27,214,114,0.2)"
+                    }}
+                    title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}
+                  >
+                    {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
+                    <span className="text-[8px] font-black uppercase tracking-tight"
+                      style={{ color: isCF ? "rgba(251,146,60,0.8)" : "rgba(27,214,114,0.8)" }}
+                    >Excl.</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

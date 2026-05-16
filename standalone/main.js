@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron');
 const { fork } = require('child_process');
 const path = require('path');
 const http = require('http');
+const { runCurseForgeScraper } = require('./scraper');
 
 let mainWindow = null;
 let serverProcess = null;
@@ -24,6 +25,16 @@ function startNextServer() {
       NODE_ENV: 'production'
     },
     silent: false // Lets us see server logs in the terminal
+  });
+
+  // Escuchar peticiones del proceso Next.js (Scraping On-Demand)
+  serverProcess.on('message', async (msg) => {
+    if (msg.type === 'scrape_mods') {
+      const { slug } = msg;
+      const { scrapeCollectionMods } = require('./scraper');
+      const mods = await scrapeCollectionMods(slug);
+      serverProcess.send({ type: 'scrape_mods_response', slug, mods });
+    }
   });
 
   serverProcess.on('error', (err) => {
@@ -83,6 +94,12 @@ app.whenReady().then(() => {
   waitForServer(() => {
     console.log('✅ Server is ready! Launching window.');
     createWindow();
+    
+    // Lanzar scraper en segundo plano después de que la app esté lista
+    // para no retrasar el inicio pero asegurar que la data esté fresca
+    setTimeout(() => {
+      runCurseForgeScraper().catch(console.error);
+    }, 5000);
   });
 
   app.on('activate', () => {

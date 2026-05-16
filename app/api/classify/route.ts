@@ -31,7 +31,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment, toGame } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -113,8 +113,12 @@ export async function POST(req: NextRequest) {
         const effectiveProjectType = projectType || meta.projectType;
 
         if (effectiveProjectType === "resourcepack") {
-          if (!projectName) throw new Error("projectName required for resourcepack classification");
-          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+          if (toGame && settings.minecraftPath) {
+            finalTargetDir = path.join(settings.minecraftPath, "resourcepacks");
+          } else {
+            if (!projectName) throw new Error("projectName required for resourcepack classification");
+            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+          }
         } else if (effectiveProjectType === "shader") {
           const shaderpacksDir = path.join(settings.minecraftPath, "shaderpacks");
           if (settings.minecraftPath && fs.existsSync(settings.minecraftPath)) {
@@ -127,27 +131,31 @@ export async function POST(req: NextRequest) {
           if (!projectName) throw new Error("projectName required for datapack classification");
           finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
         } else {
-          // Automatic or Explicit Mod Classification
-          if (isAuto) {
-            // Run semantic classification engine
-            const clRes = MimClassifier.classify({
-              fileName: path.basename(p),
-              modName: meta.modName !== "unknown" ? meta.modName : undefined,
-              categories: meta.categories,
-              clientSide: meta.clientSide,
-              serverSide: meta.serverSide,
-              environment: (environment as any) || meta.environment // Use environment from body
-            });
-            finalCategory = forceParentCategory || clRes.category;
-            finalSub = clRes.sub;
-            confidence = clRes.confidence;
-            matchedRules = clRes.matchedRules;
-            console.log(`[/api/classify] Auto-classified ${path.basename(p)} to ${finalCategory}\\${finalSub} (Confidence: ${confidence * 100}%, Rules: ${matchedRules.join(', ') || 'none'})`);
-          }
+          // Explicit or Automatic Mod Classification
+          if (toGame && settings.minecraftPath) {
+            finalTargetDir = path.join(settings.minecraftPath, "mods");
+          } else {
+            if (isAuto) {
+              // Run semantic classification engine
+              const clRes = MimClassifier.classify({
+                fileName: path.basename(p),
+                modName: meta.modName !== "unknown" ? meta.modName : undefined,
+                categories: meta.categories,
+                clientSide: meta.clientSide,
+                serverSide: meta.serverSide,
+                environment: (environment as any) || meta.environment // Use environment from body
+              });
+              finalCategory = forceParentCategory || clRes.category;
+              finalSub = clRes.sub;
+              confidence = clRes.confidence;
+              matchedRules = clRes.matchedRules;
+              console.log(`[/api/classify] Auto-classified ${path.basename(p)} to ${finalCategory}\\${finalSub} (Confidence: ${confidence * 100}%, Rules: ${matchedRules.join(', ') || 'none'})`);
+            }
 
-          finalTargetDir = projectName
-            ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
-            : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
+            finalTargetDir = projectName
+              ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
+              : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
+          }
         }
       } catch (e) {
         console.warn(`[/api/classify] Scan failed, falling back to default/explicit path: ${p}`, e);

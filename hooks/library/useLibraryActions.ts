@@ -22,9 +22,11 @@ export function useLibraryActions(
     sub: string,
     files: any[],
     setPendingFiles: any,
-    onSuccess: () => void
+    onSuccess: () => void,
+    toGame: boolean = false
   ) => {
-    if (!files || files.length === 0 || !activeProject) return;
+    if (!files || files.length === 0) return;
+    if (!toGame && !activeProject) return;
 
     const res = await fetch("/api/classify", {
       method: "POST",
@@ -33,9 +35,10 @@ export function useLibraryActions(
         sourcePaths: files.map(f => f.path),
         targetCategory: cat === "auto" ? "auto" : `${cat}\\${sub}`,
         targetSub: sub,
-        modloader: activeProject.loader,
-        version: activeProject.version,
-        projectName: activeProject.name
+        modloader: activeProject?.loader || "forge",
+        version: activeProject?.version || "1.20.1",
+        projectName: activeProject?.name,
+        toGame
       })
     });
 

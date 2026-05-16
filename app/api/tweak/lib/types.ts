@@ -15,7 +15,10 @@ export interface PackRule {
   target: string;
   severity: "info" | "warning" | "critical";
   message: string;
+  explanation?: string;
   autoFixable?: boolean;
+  confidence?: "high" | "medium" | "low";
+  detectionMethod?: "hardcoded_rule" | "dynamic_addon_guess" | "name_similarity";
 }
 
 export interface PackAnalysis {
@@ -25,6 +28,7 @@ export interface PackAnalysis {
   warnings: PackRule[];
   dependencies: PackRule[];
   overlays: PackRule[];
+  needsPriority?: boolean;
 }
 
 export interface SnapshotMetadata {

@@ -16,6 +16,8 @@ import { CATEGORY_HOTKEYS }   from "../constants/app";
 import { SectionHeading, StatusBanner }     from "@/components/ui/primitives";
 import { ProjectsSection }    from "@/components/projects/ProjectsSection";
 import { LibrarySection }     from "@/components/library/LibrarySection";
+import { WorldsSection }      from "@/components/projects/WorldsSection";
+import { InstalledModsSection } from "@/components/projects/InstalledModsSection";
 import { PendingFilesSection } from "@/components/library/PendingFilesSection";
 import { QuickCategorizeSection } from "@/components/library/QuickCategorizeSection";
 import { AlertSidebar }       from "@/components/alerts/AlertSidebar";
@@ -47,6 +49,16 @@ export default function Page() {
   const [autoClassify,     setAutoClassify]     = useState(false);
   const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
   const [projectToDelete,  setProjectToDelete]  = useState<string | null>(null);
+  const [appMode,          setAppMode]          = useState<"MIM" | "MIMU">("MIMU");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mim_app_mode") as "MIM" | "MIMU";
+    if (saved) setAppMode(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("mim_app_mode", appMode);
+  }, [appMode]);
   
   const autoProcessing = useRef<Set<string>>(new Set());
   const prevPendingCountRef = useRef(pendingFiles.length);
@@ -124,7 +136,7 @@ export default function Page() {
   }, [autoClassify, pendingFiles, projects.activeProject, lib, setPendingFiles]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleClassify = useCallback((cat: string, sub: string) => lib.handleClassify(cat, sub, [...selectedFiles, ...selectedLibFiles], setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }), [lib, selectedFiles, selectedLibFiles, setPendingFiles]);
+  const handleClassify = useCallback((cat: string, sub: string) => lib.handleClassify(cat, sub, [...selectedFiles, ...selectedLibFiles], setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }, appMode === "MIMU"), [lib, selectedFiles, selectedLibFiles, setPendingFiles, appMode]);
   
   const handleDeleteFile = useCallback(async (file: PendingFile) => {
     const res = await fetch("/api/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: file.path }) });
@@ -163,8 +175,8 @@ export default function Page() {
     <div className="transition-all duration-500 ease-out">
       <div className="space-y-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-5 items-start">
-          <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} />
-          {projects.activeProject && (
+          <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} appMode={appMode} setAppMode={setAppMode} />
+          {appMode === "MIM" && projects.activeProject && (
             <section className="animate-fade-up lg:min-w-[420px]">
               <SectionHeading icon={<Package className="w-4 h-4" />} title="Build" sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`} accentColor="var(--color-accent)" className="mb-4" actions={<button onClick={() => fetch("/api/project/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: projects.activeProject?.name, version: projects.activeProject?.version }) })} className="flex items-center gap-3 px-12 py-3.5 rounded-2xl bg-white/5 border border-dashed border-white/10 hover:border-primary transition-all active:scale-95 text-[10px] font-bold uppercase text-muted group hover:text-primary"><FolderOpen className="w-4 h-4" /> Abrir Carpeta</button>} />
               <BuildPanel projectName={projects.activeProject.name} version={projects.activeProject.version} loader={projects.activeProject.loader} />
@@ -183,11 +195,46 @@ export default function Page() {
           </div>
         )}
 
-        <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
-          <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} /></div>
-          <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
-          <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} />
-        </div>
+        {appMode === "MIMU" ? (
+          <div className="max-w-7xl mx-auto mt-6 animate-fade-up">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="font-headline text-2xl text-foreground">Modo Usuario (MIMU)</h2>
+                <p className="text-sm text-muted mt-1">Las descargas se envían directamente a tu juego.</p>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
+                    <FolderOpen className="w-3.5 h-3.5" /> Descargas
+                  </button>
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "minecraft" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
+                    <FolderOpen className="w-3.5 h-3.5" /> Carpeta Juego
+                  </button>
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "mods" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
+                    <FolderOpen className="w-3.5 h-3.5" /> Mods
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => handleClassify("auto", "")}
+                className="flex items-center gap-3 px-8 py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25 transition-all active:scale-95 hover:shadow-emerald-500/40 border border-emerald-400/20"
+              >
+                <Package className="w-5 h-5" /> Enviar Todo al Juego
+              </button>
+            </div>
+            <div className="grid grid-cols-[1.5fr_1fr] gap-6 items-start mt-6">
+              <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}>
+                <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} />
+              </div>
+              <InstalledModsSection />
+            </div>
+            <WorldsSection />
+          </div>
+        ) : (
+          <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
+            <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} /></div>
+            <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
+            <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} />
+          </div>
+        )}
 
         {lib.modDescription && <DescriptionModal modDescription={lib.modDescription} onClose={() => lib.setModDescription(null)} />}
         <AlertSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} conflicts={lib.conflicts} bytecodeConflicts={lib.bytecodeConflicts} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} library={lib.library} downloadingMods={lib.downloadingMods} handleResolveConflict={lib.handleResolveConflict} handleDownloadUpdate={lib.handleDownloadUpdate} handleDismissUpdate={lib.handleDismissUpdate} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} />

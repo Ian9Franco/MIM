@@ -6,7 +6,7 @@
 "use client";
 
 import React, { memo, useMemo } from "react";
-import { RefreshCw, Globe, Laptop, Server, Tags, Sparkles, SlidersHorizontal, ChevronRight, ChevronDown } from "lucide-react";
+import { RefreshCw, Globe, Laptop, Server, Tags, Sparkles, SlidersHorizontal, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, SORT_OPTIONS, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
 import { useFomoFiltersManager } from "@/hooks/useFomoFiltersManager";
 import { CATEGORY_ICONS, SORT_ICONS } from "./FomoFilterConfig";
@@ -41,9 +41,38 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         <div className="flex flex-col gap-3">
           <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Sparkles className="w-3 h-3" /> Exclusividad</p>
           <button onClick={() => props.onOnlyExclusives(!props.onlyExclusives)} className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-[10px] font-bold ${props.onlyExclusives ? "bg-orange-500/10 text-orange-400 border-orange-500/30" : "bg-white/5 border-white/5 text-white/40"}`}>
-            <span>Solo Exclusivos</span><div className={`w-6 h-3.5 rounded-full p-0.5 ${props.onlyExclusives ? "bg-orange-500" : "bg-white/10"}`}><div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${props.onlyExclusives ? "translate-x-2.5" : "translate-x-0"}`} /></div>
+            <div className="flex flex-col items-start gap-0.5">
+              <span>Solo Exclusivos</span>
+              <span className="text-[8px] opacity-60 normal-case font-normal">
+                {props.source === "curseforge" ? "Solo en CurseForge, no en Modrinth" : props.source === "modrinth" ? "Solo en Modrinth, no en CurseForge" : "Solo en una plataforma"}
+              </span>
+            </div>
+            <div className={`w-6 h-3.5 rounded-full p-0.5 ${props.onlyExclusives ? "bg-orange-500" : "bg-white/10"}`}><div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${props.onlyExclusives ? "translate-x-2.5" : "translate-x-0"}`} /></div>
           </button>
         </div>
+
+        {/* Sinytra Connector toggle: visible solo para Forge/NeoForge buscando en Modrinth */}
+        {(props.loader === "forge" || props.loader === "neoforge") && props.source === "modrinth" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Zap className="w-3 h-3" /> Compatibilidad</p>
+            <button
+              onClick={() => props.setSinytraActive(!props.sinytraActive)}
+              className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+                props.sinytraActive
+                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
+                  : "bg-white/5 border-white/5 text-white/40"
+              }`}
+            >
+              <div className="flex flex-col items-start gap-0.5">
+                <span>Sinytra Connector</span>
+                <span className="text-[8px] opacity-60 normal-case font-normal">Muestra mods Fabric + % compatibilidad</span>
+              </div>
+              <div className={`w-6 h-3.5 rounded-full p-0.5 ${props.sinytraActive ? "bg-cyan-500" : "bg-white/10"}`}>
+                <div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${props.sinytraActive ? "translate-x-2.5" : "translate-x-0"}`} />
+              </div>
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Globe className="w-3 h-3" /> Versión</p>

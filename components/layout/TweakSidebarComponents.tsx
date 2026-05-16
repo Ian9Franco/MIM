@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { PackRule } from "../../app/api/tweak/lib/types";
 import { 
   Zap, Keyboard, Package, History, Cpu, Copy, Check, Monitor, 
   GripVertical, Layers, Trash2, Info, FolderOpen, ExternalLink,
@@ -86,7 +87,7 @@ export function HardwareStats({ data }: { data: any }) {
           <Monitor className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors" /> Gráficos
         </p>
         <p className="text-[10px] font-black text-white/80 leading-tight uppercase truncate" title={data.gpu}>
-          {data.gpu ? data.gpu.split(" ").slice(0, 2).join(" ") : "DETECT..."}
+          {data.gpu || "DETECT..."}
         </p>
       </div>
     </div>
@@ -138,6 +139,50 @@ export function JvmArgBox({ jvmArgs, modCount }: { jvmArgs?: string; modCount?: 
         <code className="block text-[11px] font-mono text-indigo-200/50 bg-black/40 border border-white/5 rounded-2xl p-4 leading-relaxed break-all transition-all group-hover/code:text-indigo-200/80">
           {jvmArgs}
         </code>
+      </div>
+
+      <div className="mt-4 text-xs text-muted/60 space-y-3 bg-black/20 p-5 rounded-2xl border border-white/5">
+        <p>
+          <span className="font-bold text-white/80">¿Qué es esto?</span> Son argumentos para la Máquina Virtual de Java (JVM). Sirven para decirle a Minecraft cuánta memoria RAM usar (`-Xmx`) y cómo limpiar la memoria basura (`-XX:+UseG1GC`) para evitar tirones (lag spikes) y mejorar los FPS.
+        </p>
+        <p>
+          <span className="font-bold text-white/80">¿Cómo usarlo en el Launcher Oficial?</span>
+        </p>
+        <ol className="list-decimal list-inside space-y-1.5 ml-1 text-muted/70">
+          <li>Ve a la pestaña <span className="text-white/70 font-bold">Instalaciones</span> en el launcher.</li>
+          <li>Pasa el ratón sobre tu versión (ej: Forge) y dale a los <span className="text-white/70 font-bold">tres puntos (...)</span> -&gt; <span className="text-white/70 font-bold">Editar</span>.</li>
+          <li>Haz clic en <span className="text-white/70 font-bold">Más Opciones</span> abajo del todo.</li>
+          <li>Borra lo que haya en <span className="text-white/70 font-bold">Argumentos JVM</span> y pega este código generado por MIM.</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+// ── DetectedInstallations ──────────────────────────────────────────────────
+
+export function DetectedInstallations({ installations }: { installations?: any[] }) {
+  if (!installations || installations.length === 0) return null;
+  return (
+    <div className="p-5 rounded-3xl bg-white/[0.01] border border-white/5 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-primary/50" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/60">Instalaciones Detectadas (Launcher Oficial)</p>
+      </div>
+      <div className="space-y-2">
+        {installations.map(inst => (
+          <div key={inst.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5 hover:bg-white/[0.02] transition-colors group">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white group-hover:text-primary transition-colors">{inst.name}</p>
+              <p className="text-[9px] text-muted/40 font-mono truncate">{inst.lastVersionId}</p>
+            </div>
+            <div className="text-right ml-2">
+              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${inst.jvmArgs ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-muted/30'}`}>
+                {inst.jvmArgs ? "Con Args" : "Default"}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -214,12 +259,13 @@ export function KeybindItem({ kb, listeningKey, setListeningKey }: { kb: any; li
 // ── ResourcePackItem ────────────────────────────────────────────────────────
 
 export function ResourcePackItem({ 
-  pack, uiIdx, isTop, isDragged, onDragStart, onDrop, onToggle 
+  pack, uiIdx, isPriority, isDragged, warnings = [], onDragStart, onDrop, onToggle 
 }: { 
   pack: string; 
   uiIdx: number; 
-  isTop: boolean; 
+  isPriority: boolean; 
   isDragged: boolean;
+  warnings?: PackRule[];
   onDragStart: () => void;
   onDrop: () => void;
   onToggle: (p: string) => void;
@@ -235,7 +281,7 @@ export function ResourcePackItem({
       className={`group relative flex items-center gap-3 p-3 rounded-2xl border-2 transition-all duration-500 cursor-grab active:cursor-grabbing animate-in fade-in slide-in-from-left-4 ${
         isDragged 
           ? "opacity-20 scale-95 grayscale border-primary/20" 
-          : isTop
+          : isPriority
           ? "bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent border-emerald-500/40 shadow-[0_15px_30px_-10px_rgba(16,185,129,0.25)]"
           : "bg-white/[0.02] border-white/5 hover:border-primary/20 hover:bg-white/[0.04] hover:shadow-xl hover:shadow-black/20"
       }`}
@@ -243,32 +289,66 @@ export function ResourcePackItem({
       {/* 1. LEFT: Priority Index */}
       <div className="flex flex-col items-center gap-1 shrink-0 relative">
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black border-2 transition-all duration-500 ${
-          isTop 
+          isPriority 
             ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)]" 
             : "bg-black/40 text-muted/30 border-white/5 group-hover:border-primary/40 group-hover:text-primary/60"
         }`}>
-          {isTop ? "★" : uiIdx + 1}
+          {isPriority ? "★" : uiIdx + 1}
         </div>
-        {!isTop && <GripVertical className="w-3 h-3 text-muted/10 group-hover:text-primary/40 transition-colors" />}
-        {isTop && <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full -z-10 animate-pulse" />}
+        {!isPriority && <GripVertical className="w-3 h-3 text-muted/10 group-hover:text-primary/40 transition-colors" />}
+        {isPriority && <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full -z-10 animate-pulse" />}
       </div>
 
       {/* 2. CENTER: Info Content */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg transition-colors ${
-            isTop ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/10 text-muted/30 border border-white/5 group-hover:text-primary/40 group-hover:border-primary/10"
+            isPriority ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/10 text-muted/30 border border-white/5 group-hover:text-primary/40 group-hover:border-primary/10"
           }`}>
-            {isTop ? "Master Priority" : `Capa ${uiIdx + 1}`}
+            {isPriority ? "Prioridad Alta" : `Capa ${uiIdx + 1}`}
           </span>
-          <div className={`h-px flex-1 transition-all duration-500 ${isTop ? "bg-emerald-500/10" : "bg-white/[0.02] group-hover:bg-primary/5"}`} />
+          <div className={`h-px flex-1 transition-all duration-500 ${isPriority ? "bg-emerald-500/10" : "bg-white/[0.02] group-hover:bg-primary/5"}`} />
         </div>
         
         <p className={`text-xs font-black tracking-tight truncate transition-all duration-300 uppercase italic ${
-          isTop ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "text-white/80 group-hover:text-white"
+          isPriority ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "text-white/80 group-hover:text-white"
         }`}>
           {name}
         </p>
+
+        {/* Warnings & Explanations */}
+        {warnings.length > 0 && (
+          <div className="mt-1 space-y-1">
+            {warnings.map((w, idx) => (
+              <div key={idx} className={`text-[9px] flex flex-col gap-0.5 p-1.5 rounded-lg border ${
+                w.severity === "critical" 
+                  ? "bg-rose-500/10 border-rose-500/20 text-rose-400" 
+                  : w.severity === "warning"
+                  ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                  : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+              }`}>
+                <div className="flex items-center gap-1.5 font-bold">
+                  {w.severity === "critical" ? "⚠️" : "ℹ️"} {w.message}
+                </div>
+                {w.explanation && (
+                  <p className="text-[8px] opacity-70 font-medium ml-4">
+                    {w.explanation}
+                  </p>
+                )}
+                {w.confidence && (
+                  <div className="flex items-center gap-1 mt-0.5 ml-4">
+                    <span className="text-[7px] uppercase font-black opacity-40">Confianza:</span>
+                    <span className={`text-[7px] uppercase font-black ${
+                      w.confidence === "high" ? "text-emerald-400" : w.confidence === "medium" ? "text-amber-400" : "text-rose-400"
+                    }`}>
+                      {w.confidence}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 3. RIGHT: Actions */}
@@ -283,7 +363,7 @@ export function ResourcePackItem({
       </div>
 
       {/* Side Indicator */}
-      {isTop && (
+      {isPriority && (
         <div className="absolute -left-1 top-3 bottom-3 w-1 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,1)]" />
       )}
     </div>

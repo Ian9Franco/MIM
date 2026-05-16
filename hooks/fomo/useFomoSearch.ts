@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ModHit } from "@/lib/types";
 import { eventBus } from "@/lib/eventBus";
 
@@ -17,10 +17,11 @@ export function useFomoSearch(filters: any) {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [sourceError, setSourceError] = useState("");
+  const skipNextRefetch = useRef(false);
 
   const { 
     source, loader, gameVersions, categories, environments, 
-    projectType, sortOrder, query, page 
+    projectType, sortOrder, query, page, sinytraActive, collectionId
   } = filters;
 
   const refetch = useCallback(async (overrideQuery?: string) => {
@@ -29,8 +30,14 @@ export function useFomoSearch(filters: any) {
     const qClean = (overrideQuery !== undefined ? overrideQuery : query)?.trim() || "";
 
     try {
+      // Si Sinytra está activo y estamos en Forge/NeoForge buscando en Modrinth,
+      // forzamos la búsqueda de mods de Fabric.
+      const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge") && source === "modrinth") 
+        ? "fabric" 
+        : loader;
+
       const params = new URLSearchParams({ 
-        loader, 
+        loader: effectiveLoader, 
         projectType, 
         page: String(page), 
         q: qClean,
@@ -41,7 +48,22 @@ export function useFomoSearch(filters: any) {
       });
 
       let fetchedMods: ModHit[] = [];
-      if (source === "all") {
+      
+      if (collectionId) {
+        const fetchUrl = source === "curseforge" 
+          ? `/api/curseforge/picks/${collectionId}`
+          : `/api/modrinth/collections?collectionId=${collectionId}`;
+        const res = await fetch(fetchUrl);
+        const data = await res.json();
+        const allMods = data.mods || [];
+        
+        const pageSize = 20;
+        const start = (page - 1) * pageSize;
+        fetchedMods = allMods.slice(start, start + pageSize).map((m: any) => ({ ...m, _source: source }));
+        
+        setTotal(allMods.length);
+        setTotalPages(Math.ceil(allMods.length / pageSize));
+      } else if (source === "all") {
         const [mRes, cRes] = await Promise.allSettled([
           fetch(`/api/modrinth/discover?${params}`),
           fetch(`/api/curseforge/discover?${params}`)
@@ -128,16 +150,27 @@ export function useFomoSearch(filters: any) {
     projectType, 
     sortOrder, 
     query, 
-    page
+    page,
+    sinytraActive,
+    collectionId
   ]);
 
   // Auto-búsqueda con debounce ante cambios de filtros o texto
   useEffect(() => {
+    if (skipNextRefetch.current) {
+      console.log("[useFomoSearch] Bypassing auto-refetch as requested.");
+      skipNextRefetch.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       refetch();
     }, 300);
     return () => clearTimeout(timer);
   }, [refetch]);
 
-  return { loading, mods, total, totalPages, sourceError, refetch, setMods, setTotal };
+  const setSkipNextRefetch = useCallback((val: boolean) => {
+    skipNextRefetch.current = val;
+  }, []);
+
+  return { loading, mods, total, totalPages, sourceError, refetch, setMods, setTotal, setSkipNextRefetch };
 }

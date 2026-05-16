@@ -15,6 +15,7 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
+import { getSettings } from "@/lib/settings";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,12 @@ export async function POST(req: NextRequest) {
     let resolvedPath = path.resolve(folderPath);
 
     if (folderPath === "downloads") {
-      resolvedPath = path.join(os.homedir(), "Downloads");
+      resolvedPath = getSettings().downloadsPath || path.join(os.homedir(), "Downloads");
+    } else if (folderPath === "minecraft") {
+      resolvedPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+    } else if (folderPath === "mods") {
+      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+      resolvedPath = path.join(mcPath, "mods");
     }
 
     if (!fs.existsSync(resolvedPath)) {

@@ -86,14 +86,68 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     if (translatedBody) { setTranslatedBody(null); return; }
     setIsTranslating(true);
     try {
+      // Limpieza básica de Markdown/HTML para extraer el texto puro
       const text = mod.body.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
       const temp = document.createElement("div"); temp.innerHTML = text;
       temp.querySelectorAll("a, img, script, style, code").forEach(el => el.remove());
       const full = temp.innerText.trim();
-      if (!full) throw new Error();
-      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(full.substring(0, 450))}&langpair=en|es`);
-      if (res.ok) { const d = await res.json(); setTranslatedBody(d.responseData?.translatedText || null); }
-    } catch {} finally { setIsTranslating(false); }
+      if (!full) throw new Error("Texto vacío");
+
+      // Dividir por párrafos (doble salto de línea)
+      const paragraphs = full.split(/\n\s*\n/);
+      let interleavedHTML = "";
+
+      for (const para of paragraphs) {
+        const cleanPara = para.trim();
+        if (!cleanPara) continue;
+
+        // Si el párrafo pasa los 250 caracteres, lo dividimos en bloques más pequeños
+        const chunks: string[] = [];
+        let remaining = cleanPara;
+        while (remaining.length > 250) {
+          // Buscamos un espacio para no cortar palabras
+          let splitIdx = remaining.lastIndexOf(" ", 250);
+          if (splitIdx === -1) splitIdx = 250; // Si no hay espacios, corte duro
+          chunks.push(remaining.substring(0, splitIdx));
+          remaining = remaining.substring(splitIdx).trim();
+        }
+        if (remaining) chunks.push(remaining);
+
+        // Traducir cada bloque
+        let translatedPara = "";
+        for (const chunk of chunks) {
+          try {
+            // El límite es de unos 500 chars en MyMemory gratis, pero usamos 250 para estar seguros
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|es`);
+            if (res.ok) {
+              const d = await res.json();
+              translatedPara += (d.responseData?.translatedText || chunk) + " ";
+            } else {
+              translatedPara += chunk + " "; // Fallback si falla
+            }
+          } catch (e) {
+            console.error("[Translate] Chunk failed:", e);
+            translatedPara += chunk + " ";
+          }
+        }
+
+        // Construir el bloque HTML intercalado
+        interleavedHTML += `
+          <div class="mb-5 bg-white/[0.02] p-3 rounded-lg border border-white/5">
+            <p class="text-white/60 text-xs leading-relaxed">${cleanPara}</p>
+            <div class="mt-2 pt-2 border-t border-white/5">
+              <p class="text-primary/90 text-sm leading-relaxed">🌐 ${translatedPara.trim()}</p>
+            </div>
+          </div>
+        `;
+      }
+
+      setTranslatedBody(interleavedHTML);
+    } catch (e) {
+      console.error("[Translate] Failed:", e);
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery };

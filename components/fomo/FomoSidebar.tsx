@@ -22,6 +22,7 @@ import { FomoSpotlight }       from "./FomoSpotlight";
 import { FomoCollections }     from "./FomoCollections";
 import { FomoFollowedAuthors } from "./FomoFollowedAuthors";
 import { FomoSkeleton }        from "./FomoSkeleton";
+import { fetchCurseForgePickMods, fetchCollectionMods } from "@/services/api";
 import { BulkActionsBar, BulkCollectionModal } from "./FomoSidebarComponents";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
 import type { ModHit, Project } from "@/lib/types";
@@ -179,16 +180,52 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
 
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {m.mode === "spotlight" && <FomoSpotlight onOpenVersions={discover.handleOpenVersionSelector} onDownloadMod={discover.handleDownload} downloading={discover.downloading} loader={discover.loader} gameVersion={discover.gameVersions[0]} />}
+          {m.mode === "spotlight" && (
+            <FomoSpotlight 
+              onOpenVersions={discover.handleOpenVersionSelector} 
+              onOpenCollection={async (coll) => {
+                const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as "modrinth" | "curseforge";
+                discover.setSource(sourceKey);
+                discover.setCollectionId(coll.id);
+                discover.setPage(1); // Resetear a la primera página
+                m.setMode("discover");
+                showStatus(`Mostrando mods de "${coll.name}"`, "success");
+              }}
+              onDownloadMod={discover.handleDownload} 
+              downloading={discover.downloading} 
+              loader={discover.loader} 
+              gameVersion={discover.gameVersions[0]} 
+            />
+          )}
           {m.mode === "discover" && (
             <div className="flex-1 flex overflow-hidden">
               <div className="w-65 p-4 border-r border-white/5 overflow-y-auto"><FomoDiscoverFilters {...discover} onLoader={discover.setLoader} onVersions={discover.setGameVersions} onProjectType={discover.setProjectType} onSort={discover.setSortOrder} onCategories={discover.setCategories} onEnvironments={discover.setEnvironments} onOnlyExclusives={discover.setOnlyExclusives} onQuery={discover.setQuery} onRefresh={discover.refetch} /></div>
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="px-6 py-4 flex items-center gap-4 border-b border-white/5">
                   <Search className="w-5 h-5 opacity-40" />
+                  
+                  {/* Chips para filtros activos */}
+                  {discover.collectionId && (
+                    <div className="flex items-center gap-1.5 bg-primary/20 text-primary text-[11px] font-bold px-2 py-1 rounded-lg border border-primary/30 animate-fade-in shrink-0">
+                      <span>Colección</span>
+                      <button onClick={() => discover.setCollectionId(null)} className="hover:text-white transition-colors" title="Quitar filtro de colección">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {discover.query.startsWith("author:") && (
+                    <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-500 text-[11px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 animate-fade-in shrink-0">
+                      <span>Autor: {discover.query.replace("author:", "")}</span>
+                      <button onClick={() => discover.setQuery("")} className="hover:text-white transition-colors" title="Quitar filtro de autor">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   <input 
                     type="search" 
-                    value={discover.query} 
+                    value={discover.query.startsWith("author:") ? "" : discover.query} 
                     onChange={e => {
                       const val = e.target.value;
                       discover.setQuery(val);
@@ -209,14 +246,40 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                   />
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {discover.loading ? <FomoSkeleton count={9} variant="card" isCurseForge={discover.source === "curseforge"} /> : discover.mods.map(mod => <FomoModCard key={mod.projectId} mod={mod} isDownloading={!!discover.downloading[mod.projectId]} onDownload={discover.handleDownload} onOpenVersions={discover.handleOpenVersionSelector} isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} onToggleSelect={discover.toggleModSelection} onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} />)}
+                  {discover.loading ? (
+                    <FomoSkeleton count={9} variant="card" isCurseForge={discover.source === "curseforge"} />
+                  ) : (
+                    discover.mods.map(mod => (
+                      <FomoModCard 
+                        key={mod.projectId} 
+                        mod={mod} 
+                        isDownloading={!!discover.downloading[mod.projectId]} 
+                        onDownload={discover.handleDownload} 
+                        onOpenVersions={discover.handleOpenVersionSelector} 
+                        isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} 
+                        onToggleSelect={discover.toggleModSelection} 
+                        sinytraActive={discover.sinytraActive}
+                        onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} 
+                      />
+                    ))
+                  )}
                 </div>
                 {discover.selectedMods.length > 0 && <BulkActionsBar mods={discover.selectedMods} isModern={isModern} onCancel={discover.clearSelection} onAdd={() => { m.setBulkAdding(true); m.loadCollections(); }} onDownload={() => discover.selectedMods.forEach(m => discover.handleDownload(m))} />}
                 <FomoPagination page={discover.page} totalPages={discover.totalPages} onPage={discover.setPage} loading={discover.loading} />
               </div>
             </div>
           )}
-          {m.mode === "collections" && <FomoCollections {...discover} onStatus={showStatus} onDownloadMod={discover.handleDownload} onOpenVersions={discover.handleOpenVersionSelector} />}
+          {m.mode === "collections" && (
+            <FomoCollections 
+              {...discover} 
+              onStatus={showStatus} 
+              gameVersion={discover.gameVersions[0]}
+              addingForMod={m.addingToCollectionFor}
+              onClearAddingFor={() => m.setAddingToCollectionFor(null)}
+              onDownloadMod={discover.handleDownload} 
+              onOpenVersions={discover.handleOpenVersionSelector} 
+            />
+          )}
           {m.mode === "followed" && <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenVersionSelector} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />}
         </div>
         {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} />}
@@ -266,75 +329,80 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
         </aside>
       )}
 
-      {discover.dependencyPrompt && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div 
-            className="w-full max-w-md p-7 rounded-[2.5rem] border shadow-2xl flex flex-col gap-6 animate-scale-in" 
-            style={{ 
-              background: isModern ? "#f0ede3" : "var(--fomo-secondary-bg)", 
-              borderColor: isModern ? "#d4cfc0" : "var(--fomo-border)" 
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-2xl ${isModern ? 'bg-amber-500/20 text-amber-600' : 'bg-amber-500/10 text-amber-400'}`}>
-                <Workflow className="w-6 h-6" />
+      {discover.dependencyPrompt && (() => {
+        const t = discover.dependencyPrompt.mod.projectType || (discover.dependencyPrompt.mod as any).project_type || "mod";
+        const typeLabel = t === "resourcepack" ? "la textura" : t === "shader" ? "el shader" : "el mod";
+        
+        return (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <div 
+              className="w-full max-w-md p-7 rounded-[2.5rem] border shadow-2xl flex flex-col gap-6 animate-scale-in" 
+              style={{ 
+                background: isModern ? "#f0ede3" : "var(--fomo-secondary-bg)", 
+                borderColor: isModern ? "#d4cfc0" : "var(--fomo-border)" 
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl ${isModern ? 'bg-amber-500/20 text-amber-600' : 'bg-amber-500/10 text-amber-400'}`}>
+                  <Workflow className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className={`font-headline text-xl ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>Dependencias Requeridas</h3>
+                  <p className={`text-xs ${isModern ? 'text-slate-600' : 'text-white/60'}`}>{discover.dependencyPrompt.mod.title} necesita otros mods para funcionar.</p>
+                </div>
               </div>
-              <div>
-                <h3 className={`font-headline text-xl ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>Dependencias Requeridas</h3>
-                <p className={`text-xs ${isModern ? 'text-slate-600' : 'text-white/60'}`}>{discover.dependencyPrompt.mod.title} necesita otros mods para funcionar.</p>
-              </div>
-            </div>
 
-            <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-              {discover.dependencyPrompt.dependencies.map((dep: any) => (
-                <div 
-                  key={dep.projectId} 
-                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
-                    isModern ? 'bg-white border-slate-200 shadow-sm' : 'bg-white/5 border-white/5'
+              <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                {discover.dependencyPrompt.dependencies.map((dep: any) => (
+                  <div 
+                    key={dep.projectId} 
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                      isModern ? 'bg-white border-slate-200 shadow-sm' : 'bg-white/5 border-white/5'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/5">
+                      {dep.iconUrl ? (
+                        <img src={dep.iconUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-white/40">MOD</div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-bold truncate ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>{dep.title || dep.projectId}</span>
+                    <span className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                      isModern ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-red-500/20 text-red-300'
+                    }`}>Requerido</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`flex items-center justify-end gap-3 pt-4 border-t ${isModern ? 'border-slate-200' : 'border-white/5'}`}>
+                <button
+                  onClick={() => discover.setDependencyPrompt(null)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    isModern ? 'text-slate-500 hover:text-[#1e1b4b]' : 'text-white/60 hover:text-white'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/5">
-                    {dep.iconUrl ? (
-                      <img src={dep.iconUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-white/40">MOD</div>
-                    )}
-                  </div>
-                  <span className={`text-sm font-bold truncate ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>{dep.title || dep.projectId}</span>
-                  <span className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
-                    isModern ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-red-500/20 text-red-300'
-                  }`}>Requerido</span>
-                </div>
-              ))}
-            </div>
-
-            <div className={`flex items-center justify-end gap-3 pt-4 border-t ${isModern ? 'border-slate-200' : 'border-white/5'}`}>
-              <button
-                onClick={() => discover.setDependencyPrompt(null)}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                  isModern ? 'text-slate-500 hover:text-[#1e1b4b]' : 'text-white/60 hover:text-white'
-                }`}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => discover.confirmDownloadWithDeps(false)}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                  isModern ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-              >
-                Solo el mod
-              </button>
-              <button
-                onClick={() => discover.confirmDownloadWithDeps(true)}
-                className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
-              >
-                Descargar todo ({discover.dependencyPrompt.dependencies.length + 1})
-              </button>
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => discover.confirmDownloadWithDeps(false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    isModern ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  Solo {typeLabel}
+                </button>
+                <button
+                  onClick={() => discover.confirmDownloadWithDeps(true)}
+                  className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+                >
+                  Descargar todo ({discover.dependencyPrompt.dependencies.length + 1})
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

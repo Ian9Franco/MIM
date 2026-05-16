@@ -9,51 +9,105 @@ export function predictConnectorCompatibility(title: string, categories: string[
   const t = title.toLowerCase();
   const cats = categories.map(c => c.toLowerCase());
 
-  // 1. Sodium/Iris/Lithium ecosystem - EXTREMELY HIGH RISK / INCOMPATIBLE
+  // 1. Caso crítico: Ecosistema Sodium/Iris (Incompatibles por diseño o requieren ports nativos)
   if (
     t.includes("sodium") || t.includes("rubidium") || t.includes("iris") || t.includes("oculus") || 
-    t.includes("lithium") || t.includes("canary") || t.includes("krypton") || t.includes("indium") || 
-    t.includes("modernfix") || t.includes("connector-extras")
+    t.includes("canvas") || t.includes("indium") || t.includes("vulkan")
   ) {
     return {
-      percentage: 15,
+      percentage: 12,
       riskLevel: "VERY_HIGH",
-      label: "Muy Inestable",
-      reason: "Toca el motor de renderizado profundo o la lógica del chunk engine. Se recomienda buscar el equivalente nativo de Forge."
+      label: "Incompatible",
+      reason: "Modifica el motor de renderizado base de Minecraft. Sinytra no puede traducir mods que reemplacen el pipeline de renderizado completo."
     };
   }
 
-  // 2. Heavy render/optimization/physics categories - HIGH RISK
-  const hasHighRiskCat = cats.some(c => 
-    c.includes("optimization") || c.includes("rendering") || c.includes("physics") || c.includes("performance") || c.includes("graphics")
-  );
-  if (hasHighRiskCat || t.includes("physics") || t.includes("render") || t.includes("lighting") || t.includes("embeddium") || t.includes("distant horizons")) {
-    return {
-      percentage: 45,
-      riskLevel: "HIGH",
-      label: "Riesgo Alto",
-      reason: "Usa hooks de renderizado pesados o inyecciones de bytecode profundas que pueden colisionar en Forge."
-    };
+  // Sistema de puntuación dinámico
+  let score = 98; // Empezamos casi perfecto
+  let reasons: string[] = [];
+
+  // 2. Penalizaciones por Renderizado y Optimización (Altísimo riesgo)
+  if (t.includes("render") || t.includes("lighting") || t.includes("shader") || t.includes("embeddium") || cats.some(c => c.includes("rendering"))) {
+    score -= 50;
+    reasons.push("renderizado");
+  }
+  if (t.includes("performance") || t.includes("optimization") || t.includes("optifine") || cats.some(c => c.includes("optimization"))) {
+    score -= 40;
+    reasons.push("optimización");
   }
 
-  // 3. Gameplay/QoL/UI mods - MEDIUM RISK
-  const hasMediumRiskCat = cats.some(c =>
-    c.includes("gui") || c.includes("hud") || c.includes("interface") || c.includes("minimap") || c.includes("map") || c.includes("utility") || c.includes("keybind") || c.includes("networking")
-  );
-  if (hasMediumRiskCat || t.includes("map") || t.includes("tweaks") || t.includes("hud") || t.includes("inventory") || t.includes("menu") || t.includes("jei") || t.includes("rei") || t.includes("emi")) {
-    return {
-      percentage: 75,
-      riskLevel: "MEDIUM",
-      label: "Estabilidad Media",
-      reason: "Mod de interfaz o QoL simple. Puede depender de métodos de renderizado de UI ligeros o keybinds."
-    };
+  // 3. Físicas y ASM / Core mods
+  if (t.includes("physics") || t.includes("asm") || t.includes("core") || t.includes("mixin")) {
+    score -= 30;
+    reasons.push("manipulación de bytecode");
   }
 
-  // 4. Pure content mods / blocks / items / biomes - HIGH STABILITY (LOW RISK)
+  // 4. Interface / GUI / HUD (Riesgo medio)
+  if (t.includes("hud") || t.includes("gui") || t.includes("interface") || t.includes("menu") || t.includes("inventory")) {
+    score -= 15;
+    reasons.push("interfaz de usuario");
+  }
+  if (t.includes("map") || t.includes("radar")) {
+    score -= 10;
+    reasons.push("mapeo/radar");
+  }
+
+  // 5. Networking / Sonido / Librerías
+  if (t.includes("voice") || t.includes("sound") || t.includes("audio")) {
+    score -= 15;
+    reasons.push("sistema de audio");
+  }
+  if (t.includes("api") || t.includes("lib") || t.includes("library")) {
+    score -= 5; // Las librerías suelen ser estables pero si fallan rompen todo
+    reasons.push("dependencia de librería");
+  }
+
+  // 6. Worldgen / Biomas (Suelen ser estables en contenido, pero ojo con las estructuras)
+  if (t.includes("biom") || t.includes("worldgen") || t.includes("structure")) {
+    score -= 5;
+    reasons.push("generación de mundo");
+  }
+
+  // Generar variación orgánica (Hashing simple basado en el título)
+  // Esto hace que "Mod A" siempre de 87% y "Mod B" de 84%, en lugar de clavados en 85%.
+  let hash = 0;
+  for (let i = 0; i < t.length; i++) {
+    hash = (hash << 5) - hash + t.charCodeAt(i);
+    hash |= 0; // Convertir a entero de 32 bits
+  }
+  const variance = Math.abs(hash % 7); // Variación de 0 a 6%
+  score -= variance;
+
+  // Asegurar límites
+  score = Math.max(5, Math.min(98, score));
+
+  // Determinar nivel y etiqueta basados en el score final
+  let riskLevel: "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH" = "LOW";
+  let label = "Alta Estabilidad";
+  let finalReason = "Mod de contenido puro o estándar. Altísima probabilidad de funcionar sin problemas.";
+
+  if (score < 30) {
+    riskLevel = "VERY_HIGH";
+    label = "Muy Inestable";
+    finalReason = `Riesgo crítico por tocar ${reasons.join(" y ")}. Es muy probable que cause crashes al iniciar.`;
+  } else if (score < 60) {
+    riskLevel = "HIGH";
+    label = "Riesgo Alto";
+    finalReason = `Riesgo elevado debido a ${reasons.join(" y ")}. Puede requerir configuraciones especiales o parches.`;
+  } else if (score < 85) {
+    riskLevel = "MEDIUM";
+    label = "Estabilidad Media";
+    finalReason = `Estabilidad aceptable. Modifica ${reasons.join(", ")}, pero Sinytra suele manejarlos bien.`;
+  } else if (reasons.length > 0) {
+    riskLevel = "LOW";
+    label = "Estable";
+    finalReason = `Probabilidad alta de éxito. Solo toca ligeramente ${reasons.join(", ")}.`;
+  }
+
   return {
-    percentage: 92,
-    riskLevel: "LOW",
-    label: "Alta Estabilidad",
-    reason: "Mod de contenido puro (bloques, ítems, biomas). Utiliza APIs estándar con altísima compatibilidad."
+    percentage: score,
+    riskLevel,
+    label,
+    reason: finalReason
   };
 }

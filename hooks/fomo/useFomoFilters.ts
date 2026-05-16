@@ -13,6 +13,7 @@ export function useFomoFilters(defaultLoader: string, defaultGameVersion: string
   const [sinytraActive, setSinytraActive] = useState(false);
   const [page, setPage] = useState(1);
   const [onlyExclusives, setOnlyExclusives] = useState(false);
+  const [collectionId, setCollectionId] = useState<string | null>(null);
 
   // Persistence
   useEffect(() => {
@@ -40,6 +41,6 @@ export function useFomoFilters(defaultLoader: string, defaultGameVersion: string
     source, setSource, loader, setLoader, gameVersions, setGameVersions,
     projectType, setProjectType, categories, setCategories, environments, setEnvironments,
     sortOrder, setSortOrder, query, setQuery, sinytraActive, setSinytraActive,
-    page, setPage, onlyExclusives, setOnlyExclusives
+    page, setPage, onlyExclusives, setOnlyExclusives, collectionId, setCollectionId
   };
 }

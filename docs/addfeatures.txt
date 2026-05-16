@@ -1,173 +1,402 @@
-Feature: Intelligent Pack Validation & Environment-Aware Build System
+Dependiendo del contexto del proyecto en el que estés trabajando, "Course Forge" podría referirse a tres entornos de desarrollo diferentes (siendo los relacionados con videojuegos y mods los más habituales debido a errores comunes de escritura o autocorrección).
 
-Traducción al español:
+Aquí tienes la documentación oficial para cada una de las opciones:
 
-“Voy a impedir que el usuario haga boludeces antes de exportar un modpack roto.”
+### 1. API de CurseForge (Por Overwolf)
 
-Porque claramente confiar en users es como dejarle una Ferrari a un mapache.
+Si te referías a **CurseForge** (la plataforma de mods y modpacks), su API REST oficial te permite buscar mods, gestionar dependencias, obtener archivos y trabajar con *fingerprints*.
 
-Qué hace
+* **Documentación de la API REST:** [CurseForge REST API Documentation](https://docs.curseforge.com/rest-api/)
+* **Endpoints principales:** Manejo de juegos, categorías, búsqueda de mods, descarga de archivos y versiones específicas de Minecraft.
 
-Antes de generar alluser.zip y allhost.zip, MIM valida:
+### 2. Documentación de Minecraft Forge
 
-dependencias faltantes
-conflictos entre mods
-mods mal ubicados por entorno (client/server/both)
-librerías huérfanas
-configs inválidas
-datapacks incompatibles
-shaders/resourcepacks mal asociados
+Si estás desarrollando un mod en Java y buscas la API de desarrollo propia del *loader* de Forge para integrarlo en Minecraft:
 
-Y recién después permite exportar.
+* **Documentación oficial:** [Minecraft Forge Documentation](https://docs.minecraftforge.net/)
+* **Contenido:** Guías detalladas sobre conceptos de desarrollo en Forge, manejo de eventos, bloques, entidades y datos del servidor.
 
-No más:
+### 3. API de CourseForge (Caring CourseForge)
 
-“pasé el pack y explotó todo”
+Si te refieres estrictamente a **CourseForge**, la plataforma SaaS impulsada por IA lanzada recientemente para la creación automatizada de cursos académicos y profesionales:
 
-Ahora explota antes, con dignidad.
+* **Sitio principal y planes:** [Caring CourseForge](https://caringcourseforge.com/)
+* **Detalles de la API:** Este servicio ofrece una **API REST y herramientas MCP** (Model Context Protocol) en sus planes avanzados (*Team* y *Enterprise*) para conectar su generador de contenido a pipelines externos. La referencia detallada de sus endpoints se encuentra disponible dentro del panel de desarrollador una vez inicias sesión con una cuenta activa.
 
-Cómo implementarlo (sin hacer un ritual satánico)
-STEP 1 — Persistir metadata real
+¿Cuál de estas opciones es la que necesitas para tu flujo de trabajo? Si requieres asistencia técnica con alguna integración o endpoint específico de estas APIs, dime y lo revisamos.
 
-Ahora no alcanza con guardar .jar.
 
-Necesitás una entidad por mod:
 
+
+
+Sí, esa, la de los mods de para Minecraft específicamente. Quiero saber si tiene algunas facilidades para traer eh colecciones actualizadas mensuales, digamos los los 10 mejores mods del mes de abril, del mes de mayo para Minecraft y porque yo veo que en la web suelen tener colecciones que van variando varias veces al mes y en mi aplicación yo quería traer esas colecciones para ver esos mods cada vez que entro a la aplicación. Entonces que no sé cómo, no sé si Moder, si CurseForge facilita eso o cómo lo hace Moder, que Moder sí puedo traer las colecciones oficiales eh que van haciendo todos los meses y y puedo mostrarlas en mi aplicación, pero CurseForge no sé. Podrías investigar en la documentación de la API si eso es posible o algo parecido.
+
+
+
+
+Hola, Ian. Qué buen enfoque tiene tu aplicación; la idea de mantener la pantalla de inicio fresca con colecciones dinámicas o resúmenes mensuales es excelente para mantener el interés de los usuarios.
+
+He revisado a fondo la documentación oficial de la API de CurseForge (gestionada por Overwolf) para ver si ofrece la misma facilidad que Modrinth, y lamentablemente hay algunas limitaciones técnicas importantes en comparación con "Moder". Aquí tienes el diagnóstico de cómo maneja esto CurseForge y las alternativas que puedes implementar:
+
+### El problema: CurseForge no tiene un endpoint de "Colecciones"
+
+A diferencia de Modrinth, que cuenta con una arquitectura nativa y endpoints públicos específicos para colecciones y listas curadas por la comunidad o el staff, **la API REST pública de CurseForge (`v1`) no expone un endpoint para sus colecciones web**.
+
+Aunque en la web de CurseForge veas la sección de *Collections* dividida por meses (como las joyas del mes de abril, mayo, etc.), estas listas se manejan de manera interna o mediante las herramientas de curación exclusivas para desarrolladores de videojuegos que integran su SDK (CurseForge for Studios), pero no están abiertas en la API estándar de mods para terceros.
+
+Los únicos endpoints disponibles bajo el espacio de mods son:
+
+1. **`Search Mods`** (`/v1/mods/search`)
+2. **`Get Featured Mods`** (`/v1/mods/featured`)
+3. **`Get Mod` / `Get Mods**` (individual o en bloque por ID)
+
+### ¿Qué herramientas nos da la API oficial y qué limitaciones tienen?
+
+* **`Get Featured Mods`**: Este endpoint te devuelve listas automáticas divididas en tres categorías: `featured` (destacados), `popular` (populares) y `recentlyUpdated` (actualizados recientemente). El problema es que **son listas algorítmicas en tiempo real**, calculadas por CurseForge. No están archivadas por meses ni son las colecciones editoriales "humanas" que ves en la web.
+* **`Search Mods`**: Te permite buscar y ordenar usando el parámetro `sortBy` (por ejemplo, ordenar por `Popularity`, `TotalDownloads` o `LatestUpdate`). Sin embargo, **no permite filtrar por rangos de fechas específicos** (como "solo mods creados entre el 1 y el 30 de abril"). Por lo tanto, no puedes replicar de forma puramente algorítmica un "Top del mes pasado".
+
+---
+
+### ¿Cómo podés solucionarlo en tu aplicación? (Alternativas y Workarounds)
+
+Si querés mantener la consistencia y mostrar esas listas de CurseForge sí o sí, te sugiero dos caminos técnicos muy viables:
+
+#### Opción 1: Un "Híbrido" con Web Scraping e inyección por ID (La más fiel a la web)
+
+Dado que CurseForge publica sus colecciones mensuales de Minecraft en una URL limpia (`https://www.curseforge.com/collections/minecraft/`), podés diseñar un pequeño script o backend intermedio que haga lo siguiente:
+
+1. Extraer (scrapear) los IDs de los proyectos o los *slugs* directamente desde esa sección de la web una vez al mes o a la semana.
+2. Guardar esa lista de IDs en tu propia base de datos o memoria interna.
+3. En tu aplicación, cuando el usuario ingrese, llamás al endpoint oficial **`Get Mods`** enviando en el cuerpo de la petición (`POST /v1/mods`) el arreglo de los IDs que obtuviste. Este endpoint te devolverá toda la metadata actualizada del mod (nombre, autor, descargas, versión, etc.) de forma 100% legal y oficial.
+
+#### Opción 2: Usar `Get Featured Mods` para el dinamismo diario
+
+Si no querés depender de scrapear la web, podés usar el endpoint `/v1/mods/featured` cada vez que el usuario abra la aplicación. Aunque no diga "Top de Mayo", te garantizará mostrar una estantería de mods populares y destacados que CurseForge actualiza constantemente, logrando un efecto de frescura muy similar en la interfaz.
+
+Si te interesa armar la estructura para la primera opción o necesitás que revisemos cómo estructurar la petición en bloque para traer los datos una vez que tengas los IDs, avisame y lo armamos juntos. ¡Mucho éxito con el desarrollo de la app!
+
+
+
+
+
+
+Y si optamos por el scraping como decíamos en la primera opción, eh, qué tan agresivo es Course Force con este tema de de scraping automático. Entiendo que son bastante jodidos con todas esas cosas. ¿Es posible eh hacer esto?
+
+
+
+
+
+
+Sí, tenés toda la razón, Ian. CurseForge es históricamente uno de los sitios más agresivos y restrictivos del ecosistema con el tema del scraping. Desde que Overwolf tomó el control, implementaron medidas muy estrictas para obligar a los desarrolladores a pasar por su API oficial (especialmente para proteger la monetización de los autores de mods y controlar el tráfico de los launchers de terceros).
+
+### ¿Cómo te frena CurseForge?
+
+El principal obstáculo que vas a encontrar es que todo su frontend está protegido por **Cloudflare Bot Management** (y en ocasiones DataDome). Si intentás hacer un `fetch` clásico en TypeScript o un `requests.get()` en Python, te vas a chocar con un error **403 Forbidden** o un desafío invisible de JavaScript inmediatamente.
+
+Cloudflare no solo mira el `User-Agent`; analiza:
+
+1. **La huella digital TLS (TLS Fingerprinting/JA3):** Detecta si la estructura de la conexión de red viene de una librería de código (como Axios o Python Requests) o de un navegador real (Chrome, Safari).
+2. **Desafíos de JS integrados:** Ejecuta scripts en segundo plano para verificar si el entorno renderiza gráficos, fuentes y eventos de mouse como un humano.
+
+---
+
+### La buena noticia: Tu caso de uso es de "Bajo Volumen"
+
+La ventaja gigante que tenés en tu proyecto es que **no necesitás scrapear miles de páginas en tiempo real** ni descargar archivos pesados. Solo necesitás leer *una* o *dos* URLs de colecciones **una vez al mes (o una vez por semana)** para extraer un puñado de IDs de mods.
+
+Al ser un volumen tan ridículamente bajo, no necesitás una infraestructura costosa de proxies residenciales ni servicios pagos de bypass. Podés resolverlo de forma elegante en tu backend con herramientas específicas de evasión:
+
+#### 1. Si tu backend es en Python: `curl_cffi` o `Undetected Chromedriver`
+
+* **`curl_cffi`:** Es una librería excelente que reemplaza a `requests`. Su gran fuerte es que imita a la perfección la huella digital TLS/JA3 de navegadores reales como Chrome o Firefox. Para páginas de texto o HTML puro protegidas por Cloudflare, suele pasar de largo sin activar las alarmas.
+* **Scrapy + Playwright con Stealth:** Si necesitás renderizar la página sí o sí, podés usar Playwright configurando los argumentos de "Stealth" para que Cloudflare no detecte el navegador en modo *headless* (sin interfaz gráfica).
+
+#### 2. Si tu backend es en TypeScript / Node.js: Playwright + Stealth
+
+* Podés usar **Playwright** o **Puppeteer** junto con el plugin `puppeteer-extra-plugin-stealth` (o su equivalente para Playwright). Este plugin parchea variables internas del navegador (como `navigator.webdriver`) que delatan a los bots.
+
+---
+
+### La estrategia de arquitectura ideal para tu App
+
+Bajo ninguna circunstancia hagas este scraping en tiempo real cuando tu usuario abra la aplicación. Si Cloudflare se pone pesado o tarda 5 segundos en resolver el desafío de acceso, la experiencia de usuario de tu app se va a arruinar.
+
+Lo ideal para tu flujo (ya sea que uses FastAPI, Next.js, etc.) es armar un **Cron Job o una tarea programada asíncrona**:
+
+1. Tu backend ejecuta el script de scraping una vez a la semana de forma aislada.
+2. Extrae los IDs de la colección mensual de CurseForge.
+3. Guarda esos IDs limpios en tu base de datos.
+4. Cuando un usuario entra a tu app, el endpoint de tu backend le sirve los IDs directamente desde tu base de datos al instante (y luego tu app los consulta de forma 100% legal mediante el endpoint oficial `Get Mods` de la API de CurseForge).
+
+Si llega a fallar el scraping una semana porque Cloudflare cambió algo, tu app seguirá funcionando perfectamente mostrando la última colección guardada en tu base de datos hasta que revises el script.
+
+Es un enfoque totalmente viable y muy seguro de implementar para el volumen que manejás. ¿Te sirve que tiremos unas líneas de estructura para ese script en el lenguaje que estés usando para el backend?
+
+
+
+
+
+
+
+----------
+
+
+Perfecto, nos plantamos entonces en una solución 100% local y autocontenida. Todo el ciclo de vida ocurre dentro del código de tu aplicación, sin depender de servidores, GitHub Actions ni bases de datos en la nube.
+
+Para lograr esto sin romper la experiencia de usuario (UX) y esquivar los bloqueos de CurseForge, el diseño tiene que ser muy inteligente en cómo y cuándo hace las peticiones.
+
+Aquí tenés la arquitectura exacta para implementarlo de forma nativa en tu app standalone:
+
+El Flujo de Ejecución Local (Paso a Paso)
+Para que el usuario no sufra tiempos de carga, el secreto está en mostrar la data vieja inmediatamente y actualizar en segundo plano.
+
+[Inicio de la App] 
+       │
+       ▼
+1. Leer archivo local 'cache_colecciones.json'
+       │
+       ▼
+2. Pintar la interfaz AL INSTANTE con esa data (0 milisegundos de espera)
+       │
+       ▼
+3. ¿Pasaron más de 7 días desde la última actualización?
+       ├── NO ──► Fin del flujo. El usuario navega feliz.
+       └── SÍ ──► 4. Desparramar un hilo secundario (Background Thread / Async)
+                       │
+                       ▼
+                  5. El hilo secundario scrapea el HUB y las colecciones
+                       │
+                       ▼
+                  6. ¿Éxito? ──► Guardar nueva data y timestamp en 'cache_colecciones.json'
+La "Ventaja Táctica" de ser una App Standalone
+Aunque CurseForge es estricto, correr el scraper directamente desde la computadora del usuario te da una ventaja enorme frente a Cloudflare: la dirección IP.
+Cloudflare odia las IPs de servidores cloud (AWS, DigitalOcean, GitHub), pero es mucho más permisivo con las IPs residenciales (las conexiones de hogar de tus usuarios).
+
+Para asegurar que funcione sin levantar sospechas desde la app, necesitás configurar el módulo de scraping con estas pautas:
+
+1. Si tu App está hecha en Python
+No uses requests básico. Implementá curl_cffi. Al estar embebido en tu ejecutable, este módulo imita perfectamente el comportamiento de los navegadores comerciales a nivel de red (TLS/JA3 fingerpint), haciendo que la petición local pase de largo por los filtros de seguridad.
+
+2. Si tu App está hecha en TypeScript (Electron / Tauri)
+Tenés una ventaja nativa: podés usar un WebView o un BrowserWindow oculto (en modo headless o invisible). Al ser literalmente un motor de Chromium corriendo en la máquina del usuario, renderiza el JavaScript de CurseForge de forma 100% real, resolviendo cualquier desafío de Cloudflare en segundo plano sin que el usuario se entere.
+
+Estructura del Archivo de Caché Local
+Al lado de tu ejecutable (o en la carpeta correspondiente de almacenamiento local de la app, como AppData), vas a manejar un archivo plano cache_colecciones.json con esta estructura:
+
+JSON
 {
-  "id": "sodium",
-  "name": "Sodium",
-  "version": "mc1.20.1-0.5.3",
-  "loader": "Fabric",
-  "environment": "client",
-  "category": "performance",
-  "dependencies": ["fabric-api"],
-  "conflicts": ["optifine"],
-  "requiredFor": [],
-  "projectId": "my-pack"
+  "ultima_actualizacion": "2026-05-16T13:22:00Z",
+  "colecciones": [
+    {
+      "id": "top-minecraft-star-wars",
+      "titulo": "Top Minecraft Star Wars",
+      "fecha": "10 de Mayo de 2026",
+      "thumbnail": "https://media.forgecdn.net/...",
+      "mod_ids": [453210, 312455, 895623]
+    },
+    {
+      "id": "10-cool-new-minecraft-mods",
+      "titulo": "10 Cool New Minecraft Mods on CurseForge",
+      "fecha": "16 de Abril de 2026",
+      "thumbnail": "https://media.forgecdn.net/...",
+      "mod_ids": [112233, 445566]
+    }
+  ]
+}
+¿Qué pasa si CurseForge cambia algo y el scraping falla?
+Absolutamente nada grave. Como tu app está blindada por el paso 2, si el script falla en segundo plano (por un cambio de diseño en la web o falta de internet), la app simplemente atrapa el error en un try/except o try/catch, no rompe nada, y el usuario sigue viendo las colecciones que ya estaban guardadas en el JSON local.
+
+
+
+Elegir **Electron + Next.js + TypeScript** para este proyecto es la mejor decisión técnica que podías tomar. Esta combinación te da un "superpoder" absoluto contra los bloqueos de CurseForge y Cloudflare: **el proceso Main de Electron maneja instancias reales de Chromium.**
+
+Al tener un navegador real corriendo localmente en la máquina del usuario, no necesitás librerías raras de evasión. Simplemente abrís un `BrowserWindow` **oculto (`show: false`)**, dejás que cargue la web legítimamente pasándole el trapo a Cloudflare, e inyectás JavaScript para extraer la data.
+
+Acá tenés la arquitectura y la estructura de código para implementar este flujo local de caché y scraping en segundo plano.
+
+---
+
+### 1. El Proceso Main (`main.ts` / `index.ts`)
+
+Este es el cerebro de tu app standalone. Se encarga de leer/escribir el JSON local y de orquestar la ventana invisible que va a scrapear CurseForge cuando la caché expire.
+
+```typescript
+import { app, BrowserWindow, ipcMain } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
+
+const CACHE_PATH = path.join(app.getPath('userData'), 'cache_colecciones.json');
+const CACHE_EXPIRATION_DAYS = 7;
+
+// 1. Función para leer la caché local
+ipcMain.handle('get-cached-collections', async () => {
+  if (!fs.existsSync(CACHE_PATH)) return null;
+  try {
+    const data = fs.readFileSync(CACHE_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error leyendo la caché:", error);
+    return null;
+  }
+});
+
+// 2. Orquestador del Scraping en segundo plano
+ipcMain.handle('trigger-background-scraping', async () => {
+  return new Promise((resolve) => {
+    // Creamos una ventana COMPLETAMENTE INVISIBLE
+    const scraperWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        images: false, // Desactivamos imágenes para que cargue volando
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    // Cargamos la URL del HUB de colecciones
+    scraperWindow.loadURL('https://www.curseforge.com/community-picks/minecraft');
+
+    scraperWindow.webContents.on('did-finish-load', async () => {
+      try {
+        // Inyectamos JS en la página para extraer los nombres y slugs de las tarjetas
+        const colecciones = await scraperWindow.webContents.executeJavaScript(`
+          (() => {
+            // Buscamos todos los links que dicen "View Community Picks"
+            const links = Array.from(document.querySelectorAll('a')).filter(a => a.innerText.includes('View Community Picks'));
+            
+            return links.map(link => {
+              // Subimos al contenedor de la tarjeta para buscar el título y la imagen
+              const card = link.closest('.flex') || link.parentElement; // Ajustar según DOM real
+              const titulo = card?.querySelector('h3')?.innerText || 'Colección sin título';
+              const imgUrl = card?.querySelector('img')?.src || '';
+              
+              return {
+                id: link.getAttribute('href').split('/').pop(), // Extrae el slug final
+                titulo,
+                slug: link.getAttribute('href'),
+                thumbnail: imgUrl
+              };
+            });
+          })();
+        `);
+
+        // TODO: Acá podrías iterar por cada slug si necesitás entrar a sacar los IDs de los mods.
+        // Por ahora, guardamos la lista del HUB con el timestamp actual.
+        const cacheData = {
+          ultima_actualizacion: new Date().toISOString(),
+          colecciones
+        };
+
+        fs.writeFileSync(CACHE_PATH, JSON.stringify(cacheData, null, 2), 'utf-8');
+        
+        scraperWindow.close();
+        resolve({ success: true, data: cacheData });
+      } catch (err) {
+        console.error("Falló el scraping local:", err);
+        scraperWindow.close();
+        resolve({ success: false, error: err });
+      }
+    });
+  });
+});
+
+```
+
+---
+
+### 2. El Preload Script (`preload.ts`)
+
+El puente seguro para que tu interfaz en Next.js pueda hablar con las funciones del sistema operativo que definimos arriba.
+
+```typescript
+import { contextBridge, ipcRenderer } from 'electron';
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  getCachedCollections: () => ipcRenderer.invoke('get-cached-collections'),
+  triggerBackgroundScraping: () => ipcRenderer.invoke('trigger-background-scraping'),
+});
+
+```
+
+*(No te olvides de declarar los tipos de `window.electronAPI` en un archivo `.d.ts` para que TypeScript no te tire alertas).*
+
+---
+
+### 3. La Interfaz en Next.js (`page.tsx`)
+
+En tu frontend (que corre dentro del Renderer de Electron), la lógica es asíncrona y ultra fluida. Al abrir la pantalla, se monta el componente, levanta el JSON local al instante y evalúa si hace falta actualizar de fondo.
+
+```tsx
+'use client';
+import { useEffect, useState } from 'react';
+
+export default function ColeccionesPage() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function cargarApp() {
+      // 1. Traer la caché de inmediato (0ms de bloqueo de UI)
+      const cache = await (window as any).electronAPI.getCachedCollections();
+      
+      if (cache) {
+        setData(cache.colecciones);
+        setLoading(false);
+        
+        // 2. Verificar si pasaron más de 7 días
+        const ultimaVez = new Date(cache.ultima_actualizacion).getTime();
+        const ahora = new Date().getTime();
+        const diasPasados = (ahora - ultimaVez) / (1000 * 60 * 60 * 24);
+        
+        if (diasPasados > 7) {
+          console.log("La caché expiró. Actualizando de fondo...");
+          ejecutarScrapingSilencioso();
+        }
+      } else {
+        // Si no hay caché (primera vez que abren la app), sí tenemos que mostrar un loader real
+        console.log("Primera ejecución, scrapeando por primera vez...");
+        await ejecutarScrapingSilencioso();
+      }
+    }
+
+    async function ejecutarScrapingSilencioso() {
+      const res = await (window as any).electronAPI.triggerBackgroundScraping();
+      if (res?.success) {
+        setData(res.data.colecciones);
+      }
+      setLoading(false);
+    }
+
+    cargarApp();
+  }, []);
+
+  if (loading && !data) return <div>Cargando colecciones del mes...</div>;
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Colecciones del Mes (Minecraft)</h1>
+      <div className="grid grid-cols-3 gap-4">
+        {data?.map((col: any) => (
+          <div key={col.id} className="border p-4 rounded shadow bg-zinc-8xl">
+            {col.thumbnail && <img src={col.thumbnail} alt={col.titulo} className="w-full h-32 object-cover mb-2 rounded" />}
+            <h2 className="font-semibold text-lg">{col.titulo}</h2>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-No importa el archivo.
+```
 
-Importa saber qué carajo es.
+---
 
-Ese metadata viene de:
+### ¿Por qué este enfoque es indestructible para tu App?
 
-FOMO
-Modrinth
-CurseForge
-metadata inspection local
+1. **Cero fricción con Cloudflare:** Como la ventana invisible ejecuta un Chromium real de escritorio con la IP residencial del usuario, pasa los retos de Cloudflare sin despeinarse.
+2. **UI Instantánea:** Al usuario nunca le importa si el scraping tarda 3 u 8 segundos, porque la interfaz ya le renderizó las colecciones guardadas la semana pasada en el momento exacto en que hizo doble clic al icono de la app.
+3. **Control total de errores:** Si el usuario abre la app sin internet, el proceso falla silenciosamente en el `try/catch` del Main, y la app sigue mostrando la última data guardada de forma limpia.
 
-Tu app necesita memoria, no amnesia.
+¿Querés que profundicemos en el script inyectado (`executeJavaScript`) para ver cómo mapear el DOM interno de una colección específica y así extraer los IDs numéricos de cada mod?
 
-STEP 2 — Priority Classification System
 
-No clasificar así:
-
-performance = essential
-
-Eso es criminal.
-
-Clasificar así:
-
-environment metadata → source of truth
-type → second layer
-tags → visual classification only
-
-Orden:
-
-environment > type > tags
-
-Siempre.
-
-Sodium no decide su destino por vibes.
-
-STEP 3 — Validation Engine
-
-Antes de build:
-
-validateProject(project)
-
-y devuelve:
-
-{
-  errors: [],
-  warnings: [],
-  suggestions: []
-}
-
-Ejemplo:
-
-errors = [
-  "Fresh Animations requires EMF"
-]
-
-warnings = [
-  "Sodium detected in server pack"
-]
-
-suggestions = [
-  "Remove unused library: Architectury API"
-]
-
-Eso es el cerebro.
-
-STEP 4 — Build Gate
-
-Si hay errores graves:
-
-Build blocked
-
-No export.
-
-No negociación.
-
-No democracia.
-
-Si hay warnings:
-
-Build allowed with warnings
-
-porque a veces la gente quiere vivir peligrosamente.
-
-STEP 5 — Smart Split Export
-
-Generar:
-
-alluser.zip
-local + essential
-resourcepacks
-shaderpacks
-config
-allhost.zip
-server + essential
-datapacks
-config
-
-Pero ahora validado.
-
-No a ciegas.
-
-STEP 6 — Pack Health Score (opcional pero sexy)
-Pack Health: 91/100
-
-Eso vende humo premium y encima sirve.
-
-Perfecto.
-
-Resultado final
-
-MIM pasa de:
-
-smart downloader
-
-a
-
-modpack integrity system
-
-Y eso cambia todo.
-
-Porque ya no ayudás a descargar.
-
-Ayudás a no romper.
-
-Y eso vale muchísimo más.

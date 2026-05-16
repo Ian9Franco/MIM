@@ -148,7 +148,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
   const descText = mod.body || mod.description || "";
   const rawDesc = descText.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(descText) : markdownToHtml(descText)) : "Sin descripción.";
-  const descHtml = translatedBody ? `<div class="p-4 rounded-2xl bg-primary/5 border border-primary/20 mb-4">🌐 <b>Traducción:</b> ${translatedBody}</div><div class="opacity-40 grayscale scale-95">${rawDesc}</div>` : rawDesc;
+  const descHtml = translatedBody ? translatedBody : rawDesc;
 
   const mainContent = (
     <div className="flex-1 flex flex-col min-h-0 animate-fade-in text-foreground relative">

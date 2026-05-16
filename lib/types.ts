@@ -48,7 +48,7 @@ export interface CollectionEntry {
   projectCount: number;
   iconUrl:      string | null;
   isLocal?:     boolean;
-  source?:      "local" | "modrinth";
+  source?:      "local" | "modrinth" | "curseforge";
   webUrl?:      string | null;
   visibility?:  "private" | "unlisted" | "public" | "unknown";
   projects?:    ModHit[];

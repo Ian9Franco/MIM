@@ -50,9 +50,11 @@ export function PendingFilesSection({
       <div className="flex items-start justify-between gap-4 mb-4">
         <SectionHeading icon={<Inbox className="w-4 h-4" />} title="Descargas" sub="Detectados en Descargas" badge={pendingFiles.length} accentColor="var(--color-primary)" />
         <div className="flex items-center gap-1.5 mt-1">
-          <button onClick={handleOpenDownloadsFolder} disabled={openingFolder} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-[10px] uppercase font-bold border border-white/10 bg-white/5 hover:bg-white/10 transition-all">
-            {openingFolder ? <Loader2 className="w-3 h-3 animate-spin" /> : <FolderOpen className="w-3 h-3" />} Carpeta
-          </button>
+          {layout !== "main" && (
+            <button onClick={handleOpenDownloadsFolder} disabled={openingFolder} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-[10px] uppercase font-bold border border-white/10 bg-white/5 hover:bg-white/10 transition-all">
+              {openingFolder ? <Loader2 className="w-3 h-3 animate-spin" /> : <FolderOpen className="w-3 h-3" />} Carpeta
+            </button>
+          )}
           {onCloseSidebar && <button onClick={onCloseSidebar} className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-foreground/50 hover:text-white"><X className="w-3.5 h-3.5" /></button>}
         </div>
       </div>

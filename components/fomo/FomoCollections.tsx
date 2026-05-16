@@ -16,6 +16,8 @@ import {
   addModToCollection,
   downloadCollection,
   fetchOfficialCollections,
+  fetchCurseForgePicks,
+  fetchCurseForgePickMods,
 } from "@/services/api";
 import { COLORS } from "@/theme/tokens";
 import { EmptyState, PillToggleGroup } from "../ui/primitives";
@@ -54,7 +56,8 @@ export const FomoCollections = memo(function FomoCollections({
 }: FomoCollectionsProps) {
   const [collections,    setCollections]    = useState<CollectionEntry[]>([]);
   const [officialCollections, setOfficialCollections] = useState<CollectionEntry[]>([]);
-  const [activeTab,      setActiveTab]      = useState<"official" | "mim" | "followed">("official");
+  const [cfCollections, setCfCollections] = useState<CollectionEntry[]>([]);
+  const [activeTab,      setActiveTab]      = useState<"official" | "curseforge" | "mim" | "followed">("official");
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState<string | null>(null);
   const [viewing,        setViewing]        = useState<CollectionEntry | null>(null);
@@ -94,8 +97,11 @@ export const FomoCollections = memo(function FomoCollections({
     
     const { collections: official, error: offErr } = await fetchOfficialCollections();
     setOfficialCollections(official);
+
+    const { picks: cfPicks, error: cfErr } = await fetchCurseForgePicks();
+    setCfCollections(cfPicks);
     
-    setError(err || offErr);
+    setError(err || offErr || cfErr);
     setLoading(false);
   }, []);
 
@@ -123,6 +129,9 @@ export const FomoCollections = memo(function FomoCollections({
     setViewLoading(true);
     if (coll.isLocal) {
       setViewMods(coll.projects ?? []);
+    } else if (coll.source === "curseforge") {
+      const { mods } = await fetchCurseForgePickMods(coll.id);
+      setViewMods(mods);
     } else {
       const { mods } = await fetchCollectionMods(coll.id);
       setViewMods(mods);
@@ -407,6 +416,8 @@ export const FomoCollections = memo(function FomoCollections({
   let displayedCollections: CollectionEntry[] = [];
   if (activeTab === "official") {
     displayedCollections = officialCollections;
+  } else if (activeTab === "curseforge") {
+    displayedCollections = cfCollections;
   } else if (activeTab === "mim") {
     displayedCollections = collections.filter(c => c.id !== "followed-projects");
   } else if (activeTab === "followed") {
@@ -415,6 +426,7 @@ export const FomoCollections = memo(function FomoCollections({
 
   const TABS = [
     { value: "official", label: "Modrinth Official", activeColor: "#1ED760", activeBg: "rgba(30,215,96,0.15)", activeBorder: "rgba(30,215,96,0.3)" },
+    { value: "curseforge", label: "CurseForge Picks", activeColor: "#f87171", activeBg: "rgba(248,113,113,0.15)", activeBorder: "rgba(248,113,113,0.3)" },
     { value: "mim", label: "Colecciones MIM", activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
     { value: "followed", label: "Proyectos Seguidos", activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
   ];

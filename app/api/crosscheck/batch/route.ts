@@ -77,9 +77,7 @@ export async function POST(req: NextRequest) {
                 const exists = data.hits?.some((h: any) => {
                   const hTitle = h.title.toLowerCase().replace(/[^a-z0-9]/g, "");
                   return hTitle === normalizedTitle || 
-                         h.slug.toLowerCase() === currentMod.slug?.toLowerCase() ||
-                         hTitle.includes(normalizedTitle) ||
-                         normalizedTitle.includes(hTitle);
+                         h.slug.toLowerCase() === currentMod.slug?.toLowerCase();
                 });
                 return { key: currentMod.title + (currentMod.slug || ""), exists };
               }
@@ -140,9 +138,7 @@ export async function POST(req: NextRequest) {
                 const exists = data.data?.some((m: any) => {
                   const mName = m.name.toLowerCase().replace(/[^a-z0-9]/g, "");
                   return mName === normalizedTitle || 
-                         m.slug.toLowerCase() === mod.slug?.toLowerCase() ||
-                         mName.includes(normalizedTitle) ||
-                         normalizedTitle.includes(mName);
+                         m.slug.toLowerCase() === mod.slug?.toLowerCase();
                 });
                 return { key: mod.title + (mod.slug || ""), exists };
               }

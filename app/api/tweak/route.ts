@@ -114,11 +114,91 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    // Detect installations from official launcher (Scanning versions folder)
+    const versionsDir = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "versions");
+    const launcherProfilesPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "launcher_profiles.json");
+    let installations: any[] = [];
+    
+    let profilesMap: Record<string, any> = {};
+    if (fs.existsSync(launcherProfilesPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(launcherProfilesPath, "utf-8"));
+        profilesMap = data.profiles || {};
+      } catch {}
+    }
+
+    if (fs.existsSync(versionsDir)) {
+      try {
+        const folders = fs.readdirSync(versionsDir);
+        const grouped: Record<string, string[]> = {};
+        
+        for (const folder of folders) {
+          const stats = fs.statSync(path.join(versionsDir, folder));
+          if (!stats.isDirectory()) continue;
+          
+          const match = folder.match(/^(\d+\.\d+(?:\.\d+)?)/);
+          const baseVersion = match ? match[1] : folder;
+          
+          if (!grouped[baseVersion]) grouped[baseVersion] = [];
+          grouped[baseVersion].push(folder);
+        }
+        
+        for (const [baseVersion, variants] of Object.entries(grouped)) {
+          const modded = variants.filter(v => 
+            v.toLowerCase().includes("forge") || 
+            v.toLowerCase().includes("fabric") || 
+            v.toLowerCase().includes("quilt") || 
+            v.toLowerCase().includes("neoforge")
+          );
+          
+          // If there are modded variants, we hide the clean base version
+          const selectedVariants = modded.length > 0 ? modded : variants;
+          
+          for (const variant of selectedVariants) {
+            let jvmArgs: string | null = null;
+            let profileName = variant;
+            
+            // Try to match with a profile to get its custom name and JVM args
+            for (const profile of Object.values(profilesMap)) {
+              if (profile.lastVersionId === variant) {
+                jvmArgs = profile.javaArgs || null;
+                profileName = profile.name || variant;
+                break;
+              }
+            }
+            
+            installations.push({
+              id: variant,
+              name: profileName,
+              lastVersionId: variant,
+              jvmArgs: jvmArgs
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Error reading versions:", e);
+      }
+    }
+    resData.installations = installations;
+
     // Hardware & Recommendations
     const totalRamGB = Math.round(os.totalmem() / 1073741824);
     const cpuCores = os.cpus().length;
+    
+    let detectedGpu = "Auto-detected";
+    try {
+      const { execSync } = require("child_process");
+      const gpuInfo = execSync("wmic path win32_VideoController get name", { encoding: "utf-8" });
+      const lines = gpuInfo.split("\n").map((l: string) => l.trim()).filter((l: string) => l && l !== "Name");
+      if (lines.length > 0) {
+        detectedGpu = lines[0];
+      }
+    } catch (e) {
+      console.error("Failed to detect GPU:", e);
+    }
+
     const hardware = { 
-      totalRamGB, cpuCores, gpu: "Auto-detected",
+      totalRamGB, cpuCores, gpu: detectedGpu,
       hardwareProfile: totalRamGB >= 16 ? "high" : totalRamGB >= 8 ? "mid" : "low"
     };
     
@@ -165,6 +245,7 @@ export async function GET(req: NextRequest) {
     resData.cpuCores = cpuCores;
     resData.hardwareProfile = hardware.hardwareProfile;
     resData.jvmArgs = jvmArgs;
+    resData.gpu = hardware.gpu;
     resData.globalModCount = globalModCount;
     resData.modCount = globalModCount; // alias used by OverviewTab
     resData.recommendations = getRecommendations(loader, version, installedMods, hardware, globalModCount, ramParam ? parseInt(ramParam) : 4);
@@ -197,8 +278,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, projectName, keybinds, resourcePacks, settings } = body;
+    const { action, projectName, keybinds, resourcePacks, settings, activePacks } = body;
     const { sourceBase, minecraftPath } = getSettings();
+    
+    if (action === "analyze-packs") {
+      const installedMods = new Set<string>();
+      const modsDir = path.join(minecraftPath, "mods");
+      if (fs.existsSync(modsDir)) {
+        const subs = fs.readdirSync(modsDir);
+        for (const sub of subs) {
+          const subPath = path.join(modsDir, sub);
+          if (fs.statSync(subPath).isDirectory()) {
+            fs.readdirSync(subPath).forEach(f => installedMods.add(f.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase()));
+          } else if (sub.endsWith(".jar")) {
+            installedMods.add(sub.replace(/-[\d\.]+.*\.jar$/, "").toLowerCase());
+          }
+        }
+      }
+      
+      const analysis = analyzePackOrder(activePacks, installedMods);
+      return NextResponse.json(analysis);
+    }
     const projectDir = projectName ? path.join(sourceBase, "_projects", projectName) : null;
     
     // Tweak is now INDEPENDENT of the project.
@@ -227,10 +327,26 @@ export async function POST(req: NextRequest) {
         fs.writeFileSync(path.join(rescueDir, `${rescueId}.json`), JSON.stringify({
           id: rescueId,
           timestamp: new Date().toISOString(),
-          profileName: "Rescate Automático (Pre-Save)",
-          isRescue: true,
+          profileName: `Perfil Guardado ${new Date().toLocaleTimeString()}`,
           rawOptions: currentContent
         }, null, 2));
+
+        // Cleanup old rescue snapshots (Keep only the last 10)
+        try {
+          const files = fs.readdirSync(rescueDir);
+          const rescueFiles = files.filter(f => f.startsWith("rescue-") && f.endsWith(".json"));
+          if (rescueFiles.length > 10) {
+            rescueFiles.sort((a, b) => {
+              const timeA = parseInt(a.replace("rescue-", "").replace(".json", ""));
+              const timeB = parseInt(b.replace("rescue-", "").replace(".json", ""));
+              return timeA - timeB;
+            });
+            const toDelete = rescueFiles.slice(0, rescueFiles.length - 10);
+            toDelete.forEach(f => fs.unlinkSync(path.join(rescueDir, f)));
+          }
+        } catch (err) {
+          console.error("Failed to cleanup old rescue snapshots:", err);
+        }
       }
       
       if (!fs.existsSync(optionsPath)) {
@@ -476,3 +592,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+
+

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useTweakManager } from "@/hooks/useTweakManager";
 import { 
-  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, ResourcePackItem, AvailablePackItem 
+  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, ResourcePackItem, AvailablePackItem, DetectedInstallations 
 } from "./TweakSidebarComponents";
 import { FolderOpen } from "lucide-react";
 import type { Project } from "@/lib/types";
@@ -30,6 +30,8 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
     listeningKey, setListeningKey, handleAction, handleUndo, hasPackChanges,
     setHasPackChanges, draggedPackIdx, setDraggedPackIdx, addToHistory
   } = useTweakManager(isOpen, activeProject);
+  const [selectedSnapshot, setSelectedSnapshot] = React.useState<string>("");
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
   // Click-outside logic
   useEffect(() => {
@@ -65,16 +67,43 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   // ── Pack Helpers ──
   const uiPacks = data ? [...data.resourcePacks.active].reverse() : [];
 
-  const handlePackDrop = (dropUiIdx: number) => {
+  const handlePackDrop = async (dropUiIdx: number) => {
     if (draggedPackIdx === null || draggedPackIdx === dropUiIdx || !data) { setDraggedPackIdx(null); return; }
     const arr = [...data.resourcePacks.active];
     const fromActual = arr.length - 1 - draggedPackIdx;
     const toActual   = arr.length - 1 - dropUiIdx;
     const [moved] = arr.splice(fromActual, 1);
     arr.splice(toActual, 0, moved);
+    
     setData({ ...data, resourcePacks: { ...data.resourcePacks, active: arr } });
     setHasPackChanges(true);
     setDraggedPackIdx(null);
+
+    // Fetch new analysis from backend
+    try {
+      const res = await fetch("/api/tweak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: "analyze-packs",
+          activePacks: arr 
+        })
+      });
+      if (res.ok) {
+        const newAnalysis = await res.json();
+        setData((prev: any) => ({
+          ...prev,
+          resourcePacks: {
+            ...prev.resourcePacks,
+            visualStack: newAnalysis.visualStack,
+            issues: newAnalysis.issues,
+            autoFixable: newAnalysis.autoFixable
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to re-analyze packs:", error);
+    }
   };
 
   const handleTogglePack = (p: string) => {
@@ -205,6 +234,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
 
                   <HardwareStats data={data} />
                   <JvmArgBox jvmArgs={(data as any).jvmArgs} modCount={(data as any).globalModCount} />
+                  <DetectedInstallations installations={(data as any).installations} />
                   
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 px-2">
@@ -322,18 +352,22 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       </div>
                       
                       <div className="space-y-2 min-h-[400px] p-2 bg-white/[0.01] rounded-[2rem] border border-white/[0.03] min-w-0">
-                        {uiPacks.map((p, uiIdx) => (
-                          <ResourcePackItem 
-                            key={p} 
-                            pack={p} 
-                            uiIdx={uiIdx} 
-                            isTop={uiIdx === 0} 
-                            isDragged={draggedPackIdx === uiIdx}
-                            onDragStart={() => setDraggedPackIdx(uiIdx)}
-                            onDrop={() => handlePackDrop(uiIdx)}
-                            onToggle={() => handleTogglePack(p)}
-                          />
-                        ))}
+                        {uiPacks.map((p, uiIdx) => {
+                          const packAnalysis = (data as any)?.resourcePacks?.visualStack?.find((v: any) => v.packName === p);
+                          return (
+                            <ResourcePackItem 
+                              key={p} 
+                              pack={p} 
+                              uiIdx={uiIdx} 
+                              isPriority={packAnalysis?.needsPriority} 
+                              warnings={packAnalysis?.warnings}
+                              isDragged={draggedPackIdx === uiIdx}
+                              onDragStart={() => setDraggedPackIdx(uiIdx)}
+                              onDrop={() => handlePackDrop(uiIdx)}
+                              onToggle={() => handleTogglePack(p)}
+                            />
+                          );
+                        })}
                         {uiPacks.length === 0 && (
                           <div className="h-[300px] flex flex-col items-center justify-center text-center opacity-10">
                             <Layers className="w-16 h-16 mb-4" />
@@ -378,6 +412,30 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
               {/* ─── PERFILES ─── */}
               {activeTab === "profiles" && data && (
                 <div className="p-8 space-y-6 animate-fade-in">
+                  {/* Centralized Save Card */}
+                  <div className="p-6 rounded-[2.5rem] bg-emerald-500/[0.05] border-2 border-emerald-500/10 flex items-center gap-5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-3xl" />
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 relative z-10">
+                      <Save className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 relative z-10">
+                      <h4 className="text-base font-black text-white uppercase tracking-tighter italic leading-none">Aplicar Cambios</h4>
+                      <p className="text-[11px] text-emerald-300/40 font-bold uppercase tracking-widest mt-1.5">Sobreescribe el options.txt del juego</p>
+                    </div>
+                    <button
+                      disabled={saving}
+                      onClick={() => handleAction("save", { 
+                        resourcePacks: data?.resourcePacks.active,
+                        keybinds: data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }))
+                      })}
+                      className="shrink-0 px-6 py-4 bg-emerald-500 text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all relative z-10 flex items-center gap-2"
+                    >
+                      {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Guardar en el Juego
+                    </button>
+                  </div>
+
+                  {/* Cápsulas de Tiempo Card */}
                   <div className="p-6 rounded-[2.5rem] bg-indigo-500/[0.05] border-2 border-indigo-500/10 flex items-center gap-5 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-12 bg-indigo-500/10 rounded-full -mr-12 -mt-12 blur-3xl" />
                     <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 relative z-10">
@@ -388,7 +446,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                         <h4 className="text-base font-black text-white uppercase tracking-tighter italic leading-none">Cápsulas de Tiempo</h4>
                         <button 
                           onClick={() => {
-                            if (activeProject) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: `D:/.mine/source/${activeProject.name}/.mim-index/snapshots` }) });
+                            fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: "D:/.mine/source/.mim-index/tweak/snapshots" }) });
                           }}
                           className="flex items-center gap-1.5 text-[9px] text-indigo-400/40 hover:text-indigo-400 font-black uppercase tracking-widest transition-colors group"
                         >
@@ -397,69 +455,74 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       </div>
                       <p className="text-[11px] text-indigo-300/40 font-bold uppercase tracking-widest mt-1.5">Instantáneas de tu configuración maestra</p>
                     </div>
-                    <button
-                      onClick={() => handleAction("create-snapshot", { profileName: `Snapshot ${new Date().toLocaleDateString()}`, version: activeProject?.version, loader: activeProject?.loader })}
-                      className="shrink-0 px-6 py-4 bg-indigo-500 text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all relative z-10"
-                    >
-                      Capturar Ahora
-                    </button>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {data.snapshots.length === 0 ? (
                       <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.01]">
                         <HistoryIcon className="w-12 h-12 text-muted/10 mx-auto mb-4" />
                         <p className="text-[10px] text-muted/30 font-black uppercase tracking-[0.3em]">No se han detectado cápsulas</p>
                       </div>
-                    ) : data.snapshots.map((snap: any) => (
-                      <div key={snap.id} className="p-5 rounded-[1.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 hover:bg-white/[0.04] transition-all group">
-                        <div className="flex items-center justify-between gap-6">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                              <p className="text-sm font-black text-white uppercase italic tracking-tight">{snap.profileName}</p>
-                              <span className="text-[8px] font-black text-muted/20 uppercase tracking-widest">{new Date(snap.timestamp).toLocaleTimeString()}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[9px] text-muted/40 font-bold uppercase">{new Date(snap.timestamp).toLocaleDateString()}</span>
-                              <div className="flex gap-2">
-                                {snap.keybindCount > 0 && <span className="text-[8px] font-black px-2 py-0.5 bg-primary/10 text-primary rounded uppercase tracking-widest">{snap.keybindCount} Teclas</span>}
-                                {snap.resourcePackStack?.length > 0 && <span className="text-[8px] font-black px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded uppercase tracking-widest">{snap.resourcePackStack.length} Capas</span>}
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleAction("apply-snapshot", { snapshotId: snap.id })}
-                            className="shrink-0 px-5 py-2.5 bg-white/5 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:border-indigo-500 transition-all active:scale-90 shadow-lg shadow-black/20"
+                    ) : (
+                      <>
+                        <div className="relative">
+                          {/* Trigger Button */}
+                          <div 
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className="w-full p-5 bg-white/[0.02] border border-white/5 rounded-2xl text-xs font-black text-white uppercase italic tracking-tight hover:border-white/10 hover:bg-white/[0.04] transition-all cursor-pointer flex items-center justify-between group"
                           >
-                            Restaurar
-                          </button>
+                            <span className={selectedSnapshot ? "text-white" : "text-muted/40"}>
+                              {selectedSnapshot ? 
+                                data.snapshots.find((s: any) => s.id === selectedSnapshot)?.profileName : 
+                                "Seleccionar Cápsula..."}
+                            </span>
+                            <Layers className={`w-4 h-4 transition-colors ${dropdownOpen ? "text-indigo-400" : "text-muted/20 group-hover:text-muted/40"}`} />
+                          </div>
+
+                          {/* Dropdown Menu */}
+                          {dropdownOpen && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                              <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar animate-fade-in">
+                                {data.snapshots.map((snap: any) => (
+                                  <div 
+                                    key={snap.id}
+                                    onClick={() => {
+                                      setSelectedSnapshot(snap.id);
+                                      setDropdownOpen(false);
+                                    }}
+                                    className={`p-4 hover:bg-white/[0.05] cursor-pointer transition-colors border-b border-white/[0.02] last:border-0 flex flex-col gap-1 ${selectedSnapshot === snap.id ? "bg-white/[0.03]" : ""}`}
+                                  >
+                                    <span className={`text-xs font-black uppercase italic tracking-tight ${selectedSnapshot === snap.id ? "text-indigo-400" : "text-white"}`}>
+                                      {snap.profileName}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[9px] font-bold text-muted/30 uppercase">{new Date(snap.timestamp).toLocaleDateString()}</span>
+                                      <span className="text-[9px] font-bold text-muted/10 uppercase">•</span>
+                                      <span className="text-[9px] font-bold text-muted/30 uppercase">{new Date(snap.timestamp).toLocaleTimeString()}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    ))}
+
+                        <button
+                          disabled={!selectedSnapshot || saving}
+                          onClick={() => handleAction("apply-snapshot", { snapshotId: selectedSnapshot })}
+                          className="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-2 italic"
+                        >
+                          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <HistoryIcon className="w-4 h-4" />}
+                          Restaurar Cápsula Seleccionada
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Global Bottom Bar */}
-            {(activeTab !== "profiles" && (activeTab !== "resourcepacks" || hasPackChanges)) && (
-              <div className="px-8 py-6 border-t border-white/[0.04] bg-black/40 shrink-0 relative overflow-hidden">
-                <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none" />
-                <button
-                  disabled={saving}
-                  onClick={() => {
-                    const params: any = {};
-                    if (activeTab === "resourcepacks") params.resourcePacks = data?.resourcePacks.active;
-                    else params.keybinds = data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }));
-                    handleAction("save", params);
-                  }}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.4em] text-[11px] shadow-[0_15px_35px_rgba(var(--color-primary-rgb),0.3)] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 relative z-10 italic"
-                >
-                  {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                  {activeTab === "resourcepacks" ? "Confirmar Pilas" : "Sincronizar Universo"}
-                </button>
-              </div>
-            )}
           </>
         )}
       </aside>

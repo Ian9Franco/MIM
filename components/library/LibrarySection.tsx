@@ -30,11 +30,19 @@ export function LibrarySection({
   const handleOpenFolder = async () => {
     setOpeningFolder(true);
     try {
-      await fetch("/api/open-folder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folderPath: library.length > 0 ? library[0].path.substring(0, library[0].path.lastIndexOf('\\')) : "" }),
-      });
+      if (library.length > 0) {
+        await fetch("/api/open-folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folderPath: library[0].path.substring(0, library[0].path.lastIndexOf('\\')) }),
+        });
+      } else if (activeProject) {
+        await fetch("/api/project/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version }),
+        });
+      }
     } finally { setOpeningFolder(false); }
   };
 

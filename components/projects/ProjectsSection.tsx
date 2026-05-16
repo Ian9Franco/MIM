@@ -15,6 +15,8 @@ interface ProjectsSectionProps {
   handleDeleteProject: (id: string) => void;
   handleSaveProject: (p: Project) => void;
   loaderColors: Record<string, string>;
+  appMode: "MIM" | "MIMU";
+  setAppMode: (mode: "MIM" | "MIMU") => void;
 }
 
 /**
@@ -32,6 +34,8 @@ export function ProjectsSection({
   handleDeleteProject,
   handleSaveProject,
   loaderColors,
+  appMode,
+  setAppMode,
 }: ProjectsSectionProps) {
   return (
     <section className="animate-fade-up">
@@ -52,18 +56,35 @@ export function ProjectsSection({
       >
         {/* Project chips */}
         <div className="flex flex-wrap gap-2 items-center">
+          {/* MIMU Mode Toggle */}
+          <button
+            onClick={() => setAppMode("MIMU")}
+            className="group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all duration-200"
+            style={{
+              background: appMode === "MIMU" ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${appMode === "MIMU" ? "rgba(52,211,153,0.4)" : "var(--color-border)"}`,
+              boxShadow: appMode === "MIMU" ? "0 0 16px rgba(52,211,153,0.10)" : "none",
+            }}
+          >
+            {appMode === "MIMU" && (
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#34d399" }} />
+            )}
+            <span className="font-subhead text-sm" style={{ color: "var(--color-foreground)" }}>MIMU (Sin Proyecto)</span>
+          </button>
+
+          {/* Projects */}
           {projects.map((p) => editingId === p.id ? null : (
             <button
               key={p.id}
-              onClick={() => setActiveProjectId(p.id)}
+              onClick={() => { setActiveProjectId(p.id); setAppMode("MIM"); }}
               className="group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all duration-200"
               style={{
-                background: activeProjectId === p.id ? "rgba(187,150,228,0.12)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${activeProjectId === p.id ? "rgba(187,150,228,0.4)" : "var(--color-border)"}`,
-                boxShadow: activeProjectId === p.id ? "0 0 16px rgba(187,150,228,0.10)" : "none",
+                background: (appMode === "MIM" && activeProjectId === p.id) ? "rgba(187,150,228,0.12)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${(appMode === "MIM" && activeProjectId === p.id) ? "rgba(187,150,228,0.4)" : "var(--color-border)"}`,
+                boxShadow: (appMode === "MIM" && activeProjectId === p.id) ? "0 0 16px rgba(187,150,228,0.10)" : "none",
               }}
             >
-              {activeProjectId === p.id && (
+              {(appMode === "MIM" && activeProjectId === p.id) && (
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--color-primary)" }} />
               )}
               <span className="font-subhead text-sm" style={{ color: "var(--color-foreground)" }}>{p.name}</span>

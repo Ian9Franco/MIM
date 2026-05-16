@@ -3,7 +3,7 @@
 <!-- Logo principal de MIM -->
 <img src="public/icon.png" width="120" height="120" alt="MIM Logo" style="border-radius: 24px;">
 
-# 🎮 Minecraft Intelligent Manager
+#  Minecraft Intelligent Manager
 
 ### **El único gestor de modpacks que no pierde mods, no rompe mundos y te ahorra horas de debugging.**
 

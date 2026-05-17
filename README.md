@@ -4,7 +4,7 @@
 
 ### *El gestor de modpacks que convierte el caos en magia*
 
-> **No pierdes mods, no rompes mundos, no sufres debugging.**  
+> **No pierdas mods, no rompas mundos, no sufres debugging.**  
 > Solo descarga, clasifica y juega. Todo en **3 clics**.
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)](https://nextjs.org/)

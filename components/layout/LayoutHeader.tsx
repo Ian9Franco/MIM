@@ -34,6 +34,31 @@ export function LayoutHeader({
   sageOpen, onToggleSage, tweakOpen, onToggleTweak, packHealthOpen, onCheckHealth,
   activeProject, isValidatingHealth, watcherStatus
 }: LayoutHeaderProps) {
+  const [appMode, setAppMode] = React.useState<string>("MIMU");
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("mim_app_mode");
+    if (saved) setAppMode(saved);
+    
+    // Escuchar cambios por si el usuario cambia de modo sin recargar
+    const handleStorage = () => {
+      const updated = localStorage.getItem("mim_app_mode");
+      if (updated) setAppMode(updated);
+    };
+    
+    const handleModeChange = (e: any) => {
+      if (e.detail) setAppMode(e.detail);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("mim-mode-changed", handleModeChange as any);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("mim-mode-changed", handleModeChange as any);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
       <div className="max-w-400 mx-auto px-6 py-4 flex items-center justify-between gap-6">
@@ -58,7 +83,7 @@ export function LayoutHeader({
                   <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
                 </>
               )}
-              <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-ender-eye'}`} />
+              <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
               <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
             </div>
             <div className="flex flex-col items-start leading-tight">
@@ -72,9 +97,11 @@ export function LayoutHeader({
 
           <div className="flex flex-col relative group/title">
             <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
-              <span className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent flex items-center gap-3">
+              <span className="flex items-center gap-3">
                 <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
-                MIM
+                <span key={appMode} className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent animate-fade-in inline-block">
+                  {appMode === "MIMU" ? "MIMu" : "MIM"}
+                </span>
               </span>
               <div className="w-px h-4 bg-primary/30" />
               <span className="font-caption text-[10px] text-primary/80 uppercase tracking-[0.2em] font-medium hidden sm:inline-block translate-y-px">

@@ -144,18 +144,52 @@ function scanModRaw(filePath: string): ModMeta {
     console.warn("[Scanner] Error extrayendo icono:", e);
   }
 
-  // 6. Post-procesamiento de ProjectType (Strict JAR vs ZIP)
+  // 6. Detección de tipo por contenido del archivo (reglas simples y definitivas)
   const isJar = filePath.toLowerCase().endsWith(".jar");
-  const isShader = entries.some(e => e.entryName.startsWith("shaders/"));
-  const isPack = findEntry("pack.mcmeta");
+  const isZip = filePath.toLowerCase().endsWith(".zip");
+  const lowerEntryNames = entries.map(e => e.entryName.toLowerCase());
   
-  let projectType = "mod";
+  // Shader: tiene carpeta shader/ o shaders/ en la raíz del ZIP
+  const hasShaderFolder = lowerEntryNames.some(n => n.startsWith("shaders/") || n.startsWith("shader/") || n.endsWith(".vsh") || n.endsWith(".fsh"));
+  // Resourcepack: tiene carpeta assets/ en la raíz del ZIP
+  const hasAssetsAtRoot = lowerEntryNames.some(n => n.startsWith("assets/"));
+  // Datapack: tiene carpeta data/ en la raíz del ZIP
+  const hasDataAtRoot = lowerEntryNames.some(n => n.startsWith("data/"));
+
+  let projectType: string;
+
   if (isJar) {
+    // Los JARs siempre son mods
     projectType = "mod";
-  } else if (bestMatch.loader === "unknown") {
-    if (isShader) projectType = "shader";
-    else if (isPack) projectType = "resourcepack";
+  } else if (isZip) {
+    const hasShaders = lowerEntryNames.some(n => n.includes("shaders/") || n.includes("shader/") || n.endsWith(".vsh") || n.endsWith(".fsh"));
+    const hasShadersOutsideAssets = lowerEntryNames.some(n => (n.includes("shaders/") || n.includes("shader/")) && !n.includes("assets/"));
+    const hasPackMcmeta = lowerEntryNames.some(n => n.endsWith("pack.mcmeta"));
+    
+    const isShaderByContent = hasShadersOutsideAssets || (hasShaders && !hasPackMcmeta);
+
+    const hasMetaInfAtRoot = lowerEntryNames.some(n => n.startsWith("meta-inf/"));
+    const hasDevAtRoot     = lowerEntryNames.some(n => n.startsWith("dev/"));
+    const isDefinitelyDatapack = hasMetaInfAtRoot || hasDevAtRoot;
+
+    if (isShaderByContent) {
+      projectType = "shader";
+    } else if (isDefinitelyDatapack) {
+      projectType = "datapack";
+    } else if (hasDataAtRoot) {
+      projectType = "datapack";
+    } else if (hasAssetsAtRoot) {
+      projectType = "resourcepack";
+    } else if (hasPackMcmeta) {
+      projectType = "resourcepack";
+    } else {
+      projectType = "unknown";
+    }
+  } else {
+    projectType = "unknown";
   }
+
+  console.log(`[Scanner] File: ${filePath}, isJar: ${isJar}, hasShaderFolder: ${hasShaderFolder}, hasAssetsAtRoot: ${hasAssetsAtRoot}, hasDataAtRoot: ${hasDataAtRoot}, projectType: ${projectType}`);
 
   return { 
     ...bestMatch, 

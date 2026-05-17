@@ -1,5 +1,5 @@
 import React from "react";
-import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2 } from "lucide-react";
+import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2, Trash2 } from "lucide-react";
 
 /**
  * @fileoverview Barra de Herramientas de Gestión Masiva (Librería).
@@ -13,18 +13,63 @@ import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2 } from "lucide
 export function LibraryToolbar({ 
   selectedLibFiles, loadingDescription, showDupOptions, setShowDupOptions, 
   handleDuplicateTo, handleUnclassify, autoClassify, setAutoClassify, 
-  setTransferOpen, handleOpenFolder, openingFolder, libraryCount 
+  setTransferOpen, handleOpenFolder, openingFolder, libraryCount,
+  onDeleteSelected, filterType, setFilterType
 }: any) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {/* Acción 1: Apertura de Detalles en la Ventana Modal de FOMO (Solo 1 archivo) */}
-      {selectedLibFiles.length === 1 && (
+      {selectedLibFiles.length === 1 && selectedLibFiles[0].meta?.projectType !== "resourcepack" && (
         <ActionButton
           onClick={() => {
             const f = selectedLibFiles[0];
-            const modHit = { projectId: f.meta?.modId || "", title: f.meta?.modName || f.fileName, _source: "modrinth" };
-            window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-            setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+            const isResourcePack = f.meta?.projectType === "resourcepack" || f.fileName.endsWith(".zip");
+            const hasRealId = f.meta?.modId && f.meta.modId !== "unknown" && !f.meta.modId.endsWith(".zip");
+
+            if (!hasRealId || isResourcePack) {
+              const baseName = f.meta?.modName && f.meta.modName !== "unknown" ? f.meta.modName : f.fileName;
+              const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "");
+              
+              // Intentamos buscar el proyecto en Modrinth para abrirlo directamente
+              fetch(`/api/modrinth/discover?query=${encodeURIComponent(query)}&projectType=resourcepack&page=1`)
+                .then(r => r.json())
+                .then(data => {
+                  const hits = data.hits || [];
+                  if (hits.length > 0) {
+                    const hit = hits[0];
+                    const modHit = {
+                      projectId: hit.project_id || hit.projectId,
+                      slug: hit.slug,
+                      title: hit.title,
+                      iconUrl: hit.icon_url || hit.iconUrl,
+                      author: hit.author,
+                      categories: hit.categories,
+                      projectType: "resourcepack",
+                      _source: "modrinth",
+                    };
+                    window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                    setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+                  } else {
+                    // Si no encuentra nada, fallback al buscador con el nombre limpio
+                    window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                    window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                  }
+                })
+                .catch(() => {
+                  // Fallback al buscador
+                  window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                  window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                });
+            } else {
+              // Si tiene ID real, abrimos detalles directamente
+              const modHit = { 
+                projectId: f.meta.modId, 
+                title: f.meta?.modName || f.fileName, 
+                _source: (f.meta as any)?.source || "modrinth" 
+              };
+              window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+              setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+            }
           }}
           disabled={loadingDescription}
           icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
@@ -65,6 +110,16 @@ export function LibraryToolbar({
           onClick={handleUnclassify} 
           icon={<FolderOpen className="w-3.5 h-3.5" />} 
           label="Des-clasificar" 
+          color="neutral" 
+        />
+      )}
+
+      {/* Acción 4: Eliminar (Eliminar permanentemente de la librería) */}
+      {selectedLibFiles.length > 0 && onDeleteSelected && (
+        <ActionButton 
+          onClick={onDeleteSelected} 
+          icon={<Trash2 className="w-3.5 h-3.5" />} 
+          label="Eliminar" 
           color="danger" 
         />
       )}
@@ -87,6 +142,34 @@ export function LibraryToolbar({
         label="Carpeta" 
         color="neutral" 
       />
+
+      {/* Filtro: Mods / Texturas / Datapacks / Shaders */}
+      <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
+        <button
+          onClick={() => setFilterType("mod")}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "mod" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Mods
+        </button>
+        <button
+          onClick={() => setFilterType("resourcepack")}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "resourcepack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Texturas
+        </button>
+        <button
+          onClick={() => setFilterType("datapack")}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "datapack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Datapacks
+        </button>
+        <button
+          onClick={() => setFilterType("shader")}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "shader" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Shaders
+        </button>
+      </div>
     </div>
   );
 }

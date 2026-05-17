@@ -23,6 +23,7 @@ import { FomoCollections }     from "./FomoCollections";
 import { FomoFollowedAuthors } from "./FomoFollowedAuthors";
 import { FomoSkeleton }        from "./FomoSkeleton";
 import { fetchCurseForgePickMods, fetchCollectionMods } from "@/services/api";
+import { ModrinthIcon, CurseForgeIcon } from "./parts/FomoPlatformIcons";
 import { BulkActionsBar, BulkCollectionModal } from "./FomoSidebarComponents";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
 import type { ModHit, Project } from "@/lib/types";
@@ -37,8 +38,8 @@ const TAB_OPTIONS = [
 
 const SOURCE_OPTIONS = [
   { value: "all", label: "Ambos" },
-  { value: "modrinth", label: "Modrinth" }, 
-  { value: "curseforge", label: "CurseForge" }
+  { value: "modrinth", label: "Modrinth", icon: <ModrinthIcon /> }, 
+  { value: "curseforge", label: "CurseForge", icon: <CurseForgeIcon /> }
 ];
 
 export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1", activeProject, pendingFiles = [], onOpenDownloads }: any) {
@@ -158,7 +159,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
         <div className="flex items-center justify-between px-6 py-3 border-b shrink-0 relative z-10" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7" />
+              <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7 animate-fomo-blink" />
               <div><h2 className="font-headline text-base text-white">FOMO</h2><p className="text-[8px] opacity-40 uppercase">{m.mode}</p></div>
             </div>
             <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5" ariaLabel="Seleccionar pestaña" />

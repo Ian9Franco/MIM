@@ -171,7 +171,12 @@ export function useRootLayoutManager() {
       setPackHealthOpen(false);
       return;
     }
-    if (!activeProject || isValidatingHealth) return;
+    
+    const savedMode = typeof window !== "undefined" ? localStorage.getItem("mim_app_mode") : "MIMU";
+    const isMimu = savedMode === "MIMU";
+    
+    if (!isMimu && !activeProject) return;
+    if (isValidatingHealth) return;
 
     setAlertSidebarOpen(false);
     window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
@@ -181,7 +186,12 @@ export function useRootLayoutManager() {
       const res = await fetch("/api/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version, loader: activeProject.loader, buildTarget: "both" }),
+        body: JSON.stringify({ 
+          projectName: isMimu ? "MIMU" : activeProject?.name, 
+          version: isMimu ? "1.20.1" : activeProject?.version, // Idealmente detectar versión del juego
+          loader: isMimu ? "forge" : activeProject?.loader,   // Idealmente detectar loader del juego
+          buildTarget: "both" 
+        }),
       });
       if (res.ok) {
         setPackHealthReport(await res.json());

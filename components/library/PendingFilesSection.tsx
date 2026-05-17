@@ -21,6 +21,29 @@ export function PendingFilesSection({
   const [openingFolder, setOpeningFolder] = useState(false);
   const { compatibleFiles, incompatibleFiles, conflicts, deletingFiles, filesToDelete, setFilesToDelete, setDeletingFiles } = usePendingFiles(pendingFiles, activeProject, onDeleteFile, detectedVersion, modrinthStatus);
 
+  // Atajo de teclado: D para seleccionar todo
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (isInput) return;
+
+      if (e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        const allFiles = [...compatibleFiles, ...incompatibleFiles];
+        if (allFiles.length === 0) return;
+
+        // Si ya están todos seleccionados, deseleccionamos todo
+        if (selectedFiles.length === allFiles.length) {
+          setSelectedFiles([]);
+        } else {
+          setSelectedFiles(allFiles);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [compatibleFiles, incompatibleFiles, selectedFiles, setSelectedFiles]);
+
   const handleOpenDownloadsFolder = async () => {
     setOpeningFolder(true);
     try {

@@ -28,6 +28,7 @@ import { scanMod } from "@/lib/scanner";
 import { getSettings } from "@/lib/settings";
 import path from "path";
 import fs from "fs";
+import AdmZip from "adm-zip";
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,16 +102,107 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // ── Determine Target Path ───────────────────────────────────────────────
       let finalTargetDir = "";
-      let finalCategory = category;
-      let finalSub = sub;
-      let confidence = 1.0;
-      let matchedRules: string[] = [];
+      const isZip = p.toLowerCase().endsWith(".zip");
+      const isAuto = targetCategory === "auto";
+
+
       
-      try {
-        const meta = scanMod(p);
-        const effectiveProjectType = projectType || meta.projectType;
+      if (!finalTargetDir) {
+        let finalCategory = category;
+        let finalSub = sub;
+        let confidence = 1.0;
+        let matchedRules: string[] = [];
+        try {
+          let meta: any = {};
+        let retries = 3;
+        let delayMs = 500;
+        while (retries > 0) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            meta = scanMod(p);
+            break;
+          } catch (e) {
+            retries--;
+            if (retries === 0) throw e; // Propagar el error si fallan todos los reintentos
+            delayMs = 1000;
+          }
+        }
+        
+        const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+        let cachedProjectType: string | undefined = undefined;
+        if (fs.existsSync(REMOTE_CACHE_FILE)) {
+          try {
+            const cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+            const cacheEntries = cache.entries || {};
+            for (const entry of Object.values(cacheEntries) as any[]) {
+              if (entry?.result?.path === p && entry?.result?.projectType) {
+                cachedProjectType = entry.result.projectType;
+                break;
+              }
+            }
+          } catch (e) {
+            console.error("[/api/classify] Error reading remote cache", e);
+          }
+        }
+
+        // Detección de tipo por contenido (misma lógica que scanner.ts, fuente de verdad)
+        let effectiveProjectType: string = "unknown";
+        
+        const isJarFile = p.toLowerCase().endsWith(".jar");
+        const isZipFile = p.toLowerCase().endsWith(".zip");
+
+        if (isJarFile) {
+          // JARs siempre son mods
+          effectiveProjectType = "mod";
+        } else if (isZipFile && fs.existsSync(p)) {
+          try {
+            const zip = new AdmZip(p);
+            const lowerNames = zip.getEntries().map(e => e.entryName.toLowerCase());
+            console.log(`[/api/classify] First 10 entries of ${p}:`, lowerNames.slice(0, 10));
+            
+            const hasShaders = lowerNames.some(n => n.includes("shaders/") || n.includes("shader/") || n.endsWith(".vsh") || n.endsWith(".fsh"));
+            const hasShadersOutsideAssets = lowerNames.some(n => (n.includes("shaders/") || n.includes("shader/")) && !n.includes("assets/"));
+            const hasAssetsAtRoot = lowerNames.some(n => n.startsWith("assets/"));
+            const hasDataAtRoot   = lowerNames.some(n => n.startsWith("data/"));
+            const hasMetaInf      = lowerNames.some(n => n.includes("meta-inf/"));
+            const hasDev          = lowerNames.some(n => n.includes("dev/"));
+            const hasPackMcmeta   = lowerNames.some(n => n.endsWith("pack.mcmeta"));
+            
+            // Un shaderpack tiene shaders fuera de assets o no tiene pack.mcmeta pero tiene shaders
+            const isShaderByContent = hasShadersOutsideAssets || (hasShaders && !hasPackMcmeta);
+            
+            const hasMetaInfAtRoot = lowerNames.some(n => n.startsWith("meta-inf/"));
+            const hasDevAtRoot     = lowerNames.some(n => n.startsWith("dev/"));
+            const isDefinitelyDatapack = hasMetaInfAtRoot || hasDevAtRoot;
+            
+            if (isShaderByContent) {
+              effectiveProjectType = "shader";
+            } else if (isDefinitelyDatapack) {
+              effectiveProjectType = "datapack";
+            } else if (hasDataAtRoot) {
+              effectiveProjectType = "datapack";
+            } else if (hasAssetsAtRoot) {
+              effectiveProjectType = "resourcepack";
+            } else if (hasPackMcmeta) {
+              effectiveProjectType = "resourcepack";
+            } else {
+              effectiveProjectType = "unknown";
+            }
+            console.log(`[/api/classify] ZIP inspection ${p}: effectiveType=${effectiveProjectType}, hasShaders=${hasShaders}, hasAssets=${hasAssetsAtRoot}, hasData=${hasDataAtRoot}, META-INF=${hasMetaInf}, dev=${hasDev}`);
+          } catch (e) {
+            console.warn(`[/api/classify] Error inspecting zip ${p}:`, e);
+          }
+        }
+
+        console.log(`[/api/classify] File: ${p}, Effective Type: ${effectiveProjectType}, toGame: ${toGame}, worldName: ${worldName}`);
+
+        // Forzado por nombre como red de seguridad (los shaders suelen tener nombres muy claros)
+        const fileNameLower = path.basename(p).toLowerCase();
+        if (fileNameLower.includes("shader") || fileNameLower.includes("complementary") || fileNameLower.includes("photon")) {
+          effectiveProjectType = "shader";
+          console.log(`[/api/classify] Forced effectiveType to shader by name fallback for ${p}`);
+        }
 
         if (effectiveProjectType === "resourcepack") {
           if (toGame && settings.minecraftPath) {
@@ -120,12 +212,14 @@ export async function POST(req: NextRequest) {
             finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
           }
         } else if (effectiveProjectType === "shader") {
-          const shaderpacksDir = path.join(settings.minecraftPath, "shaderpacks");
-          if (settings.minecraftPath && fs.existsSync(settings.minecraftPath)) {
-            finalTargetDir = shaderpacksDir;
+          if (toGame) {
+            // MIMU: siempre a shaderpacks del juego
+            finalTargetDir = path.join(settings.minecraftPath, "shaderpacks");
+          } else if (projectName) {
+            // MIM: a shaderpacks del proyecto
+            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "shaderpacks");
           } else {
-            console.log(`[/api/classify] Minecraft path not found, routing shader to staging: ${settings.stagingPath}`);
-            finalTargetDir = path.join(settings.stagingPath, "shaderpacks");
+            finalTargetDir = path.join(settings.minecraftPath, "shaderpacks");
           }
         } else if (effectiveProjectType === "datapack") {
           if (toGame && settings.minecraftPath && worldName) {
@@ -170,6 +264,9 @@ export async function POST(req: NextRequest) {
           ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
           : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
       }
+      }
+      
+      console.log(`[/api/classify] Moving ${path.basename(p)} to ${finalTargetDir}`);
 
       if (!fs.existsSync(finalTargetDir)) {
         fs.mkdirSync(finalTargetDir, { recursive: true });

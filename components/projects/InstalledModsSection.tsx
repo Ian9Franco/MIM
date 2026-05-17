@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Package, Loader2, Search, Trash2, Image, Check } from "lucide-react";
+import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 
 interface ContentItem {
@@ -14,9 +14,11 @@ interface ContentItem {
 export function InstalledModsSection() {
   const [mods, setMods] = useState<ContentItem[]>([]);
   const [textures, setTextures] = useState<ContentItem[]>([]);
+  const [shaders, setShaders] = useState<ContentItem[]>([]);
+  const [datapacks, setDatapacks] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"mods" | "textures">("mods");
+  const [activeTab, setActiveTab] = useState<"mods" | "textures" | "shaders" | "datapacks">("mods");
   const [itemsToDelete, setItemsToDelete] = useState<ContentItem[]>([]);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
@@ -32,18 +34,21 @@ export function InstalledModsSection() {
     setSelectedPaths([]);
     setVisibleCount(10);
     
-    const label = activeTab === "mods" ? "Mods" : "Texturas";
+    const label = activeTab === "mods" ? "Mods" : activeTab === "textures" ? "Texturas" : activeTab === "shaders" ? "Shaders" : "Datapacks";
     window.dispatchEvent(new CustomEvent("watcher-status-change", { detail: label }));
     
-    const url = activeTab === "mods" ? "/api/minecraft/mods" : "/api/minecraft/resourcepacks";
+    let url = "/api/minecraft/mods";
+    if (activeTab === "textures") url = "/api/minecraft/resourcepacks";
+    if (activeTab === "shaders") url = "/api/minecraft/shaderpacks";
+    if (activeTab === "datapacks") url = "/api/minecraft/datapacks";
+
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        if (activeTab === "mods") {
-          setMods(data.mods || []);
-        } else {
-          setTextures(data.packs || []);
-        }
+        if (activeTab === "mods") setMods(data.mods || []);
+        else if (activeTab === "textures") setTextures(data.packs || []);
+        else if (activeTab === "shaders") setShaders(data.packs || []);
+        else if (activeTab === "datapacks") setDatapacks(data.packs || []);
         setLoading(false);
         window.dispatchEvent(new CustomEvent("watcher-status-change", { detail: "Watcher" }));
       })
@@ -62,7 +67,7 @@ export function InstalledModsSection() {
     return () => window.removeEventListener("refresh-system", handleRefresh);
   }, [fetchContent]);
 
-  const currentList = activeTab === "mods" ? mods : textures;
+  const currentList = activeTab === "mods" ? mods : activeTab === "textures" ? textures : activeTab === "shaders" ? shaders : datapacks;
 
   const filteredItems = currentList.filter((item) =>
     item.fileName.toLowerCase().includes(search.toLowerCase())
@@ -104,10 +109,10 @@ export function InstalledModsSection() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 mt-4 mb-3 p-1 bg-[var(--color-secondary-bg)] rounded-xl border border-[var(--color-border)]">
+      <div className="flex gap-2 mt-4 mb-3 p-1 bg-[var(--color-secondary-bg)] rounded-xl border border-[var(--color-border)] overflow-x-auto">
         <button
           onClick={() => setActiveTab("mods")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
             activeTab === "mods"
               ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] shadow-sm border border-[var(--color-accent-border)]"
               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -117,7 +122,7 @@ export function InstalledModsSection() {
         </button>
         <button
           onClick={() => setActiveTab("textures")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
             activeTab === "textures"
               ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] shadow-sm border border-[var(--color-accent-border)]"
               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -125,13 +130,33 @@ export function InstalledModsSection() {
         >
           <Image className="w-4 h-4" /> Texturas
         </button>
+        <button
+          onClick={() => setActiveTab("shaders")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+            activeTab === "shaders"
+              ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] shadow-sm border border-[var(--color-accent-border)]"
+              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+          }`}
+        >
+          <Sparkles className="w-4 h-4" /> Shaders
+        </button>
+        <button
+          onClick={() => setActiveTab("datapacks")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+            activeTab === "datapacks"
+              ? "bg-[var(--color-accent-bg)] text-[var(--color-accent)] shadow-sm border border-[var(--color-accent-border)]"
+              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+          }`}
+        >
+          <Database className="w-4 h-4" /> Datapacks
+        </button>
       </div>
 
       <div className="mb-3 relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
         <input
           type="text"
-          placeholder={`Buscar ${activeTab === "mods" ? "mods" : "texturas"}...`}
+          placeholder={`Buscar ${activeTab === "mods" ? "mods" : activeTab === "textures" ? "texturas" : activeTab === "shaders" ? "shaders" : "datapacks"}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--color-secondary-bg)] border border-[var(--color-border)] focus:border-primary focus:outline-none text-sm transition-colors text-[var(--color-foreground)]"
@@ -147,6 +172,24 @@ export function InstalledModsSection() {
               className="px-3 py-1.5 rounded-lg bg-[var(--color-secondary-bg)] text-[var(--color-foreground)] text-xs font-medium hover:bg-[var(--color-border)] transition-colors"
             >
               Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                const selectedItems = currentList.filter(item => selectedPaths.includes(item.path));
+                const res = await fetch("/api/unclassify", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ sourcePaths: selectedItems.map((item: any) => item.path) })
+                });
+                if (res.ok) {
+                  setSelectedPaths([]);
+                  window.dispatchEvent(new CustomEvent("refresh-system"));
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)" }}
+            >
+              Mover a Descargas
             </button>
             <button
               onClick={() => {
@@ -171,8 +214,12 @@ export function InstalledModsSection() {
           <div className="p-8 text-center border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-secondary-bg)]">
             {activeTab === "mods" ? (
               <Package className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
-            ) : (
+            ) : activeTab === "textures" ? (
               <Image className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
+            ) : activeTab === "shaders" ? (
+              <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
+            ) : (
+              <Database className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
             )}
             <p className="text-sm text-[var(--color-muted)]">No se encontraron elementos.</p>
           </div>
@@ -210,8 +257,12 @@ export function InstalledModsSection() {
                     <img src={icons[item.path]} alt={item.fileName} className="w-full h-full object-cover rounded-lg" />
                   ) : activeTab === "mods" ? (
                     <Package className="w-4 h-4 text-[var(--color-muted)]" />
-                  ) : (
+                  ) : activeTab === "textures" ? (
                     <Image className="w-4 h-4 text-[var(--color-muted)]" />
+                  ) : activeTab === "shaders" ? (
+                    <Sparkles className="w-4 h-4 text-[var(--color-muted)]" />
+                  ) : (
+                    <Database className="w-4 h-4 text-[var(--color-muted)]" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

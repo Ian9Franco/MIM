@@ -499,8 +499,22 @@ select:focus {
 }
 
 @keyframes ender-eye-pulse {
-  0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 5px rgba(187, 150, 228, 0.5)); }
-  50% { transform: scale(1.1); filter: brightness(1.3) drop-shadow(0 0 15px rgba(187, 150, 228, 0.8)); }
+  0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 3px rgba(187, 150, 228, 0.4)); }
+  50% { transform: scale(1.03); filter: brightness(1.1) drop-shadow(0 0 10px rgba(187, 150, 228, 0.6)); }
+}
+
+@keyframes fomo-eye-blink {
+  0%, 45%, 55%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.1);
+  }
+}
+
+.animate-fomo-blink {
+  animation: fomo-eye-blink 4s ease-in-out infinite;
+  transform-origin: center;
 }
 
 @keyframes bell-ring {

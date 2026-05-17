@@ -82,8 +82,10 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       }
     }
 
-    if (!/\.(jar|zip|mrpack)$/i.test(filename)) {
-      const pType = mod.projectType || (mod as any).project_type || filters.projectType || "mod";
+    if (filters.projectType === "datapack" && filename.toLowerCase().endsWith(".jar")) {
+      filename = filename.slice(0, -4) + ".zip";
+    } else if (!/\.(jar|zip|mrpack)$/i.test(filename)) {
+      const pType = filters.projectType || mod.projectType || (mod as any).project_type || "mod";
       const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
       filename = `${filename}${ext}`;
     }
@@ -102,7 +104,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         });
         return;
       }
-      await download.executeDownload(mod, url, filename);
+      await download.executeDownload(mod, url, filename, targetVer?.primaryFile?.hashes, undefined, filters.projectType);
     } else {
       showStatus("El autor no permite descargas de terceros. Haz clic en el icono externo para ir a su web.", "warning");
     }
@@ -117,7 +119,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       filename = `${filename}${ext}`;
     }
     download.setDependencyPrompt(null);
-    await download.executeDownload(mod, downloadUrl, filename);
+    await download.executeDownload(mod, downloadUrl, filename, undefined, undefined, filters.projectType);
 
     if (include && dependencies && dependencies.length > 0) {
       showStatus(`Descargando ${dependencies.length} dependencias requeridas...`, "info");

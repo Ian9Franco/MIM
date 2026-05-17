@@ -114,8 +114,8 @@ export function VirtualizedLibrary({
                           author={f.meta?.author} loader={f.meta?.loader ?? "unknown"} isSelected={selectedLibFiles.some(s => s.path === f.path)}
                           onClick={() => setSelectedLibFiles(prev => prev.find(s => s.path === f.path) ? prev.filter(s => s.path !== f.path) : [...prev, f])}
                           activeVersion={activeProject?.version ?? ""} activeLoader={activeProject?.loader ?? ""}
-                          badgeText={getBadge(f).badgeText} badgeColor={getBadge(f).badgeColor} onDownload={getBadge(f).onDownload}
-                          isDownloading={downloadingMods[f.path]} conflict={conflicts[f.path]} onOpenDetails={() => onOpenDetails(f)}
+                          isDownloading={downloadingMods[f.path]} conflict={conflicts[f.path]} 
+                          onOpenDetails={f.meta?.projectType === "resourcepack" ? undefined : () => onOpenDetails(f)}
                           environment={f.meta?.environment}
                         />
                       ))}

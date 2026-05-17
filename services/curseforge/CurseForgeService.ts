@@ -1,4 +1,4 @@
-import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD } from './CurseForgeMapper';
+import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD, CF_CATEGORY_MAPS } from './CurseForgeMapper';
 
 /**
  * CurseForgeService — Cliente de Integración con CurseForge (Eternal API).
@@ -21,7 +21,7 @@ export class CurseForgeService {
    * @returns Resultados normalizados y total de coincidencias.
    */
   static async search(params: any, apiKey: string) {
-    const { loader, gameVersions, page, pageSize, sort, projectType, q } = params;
+    const { loader, gameVersions, page, pageSize, sort, projectType, q, categories } = params;
     
     // Traducción de términos MIM a IDs de CurseForge
     const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6; // 6 = Mods
@@ -39,6 +39,19 @@ export class CurseForgeService {
     // Filtros dinámicos
     if (q) query.set("searchFilter", q);
     if (gameVersions?.length) query.set("gameVersions", JSON.stringify(gameVersions));
+    
+    // Mapeo de categorías (CurseForge solo admite una por consulta)
+    if (categories?.length) {
+      const map = CF_CATEGORY_MAPS[projectType] || {};
+      const categoryIds: number[] = [];
+      categories.forEach((cat: string) => {
+        const id = map[cat];
+        if (id) categoryIds.push(id);
+      });
+      if (categoryIds.length > 0) {
+        query.set("categoryId", categoryIds[0].toString());
+      }
+    }
     
     // modLoaderType solo es válido para la clase 'Mods' (6)
     if (classId === 6) {

@@ -27,12 +27,12 @@ export function useFomoSearch(filters: any) {
   const refetch = useCallback(async (overrideQuery?: string) => {
     setLoading(true);
     setSourceError("");
-    const qClean = (overrideQuery !== undefined ? overrideQuery : query)?.trim() || "";
+    const qClean = (typeof overrideQuery === "string" ? overrideQuery : typeof query === "string" ? query : "")?.trim() || "";
 
     try {
       // Si Sinytra está activo y estamos en Forge/NeoForge buscando en Modrinth,
       // forzamos la búsqueda de mods de Fabric.
-      const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge") && source === "modrinth") 
+      const effectiveLoader = (sinytraActive && (loader === "forge" || loader === "neoforge")) 
         ? "fabric" 
         : loader;
 

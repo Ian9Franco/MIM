@@ -13,24 +13,28 @@ import { modPersistence } from "@/services/modPersistenceService";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function useLibraryCore(activeProject: Project | null) {
+export function useLibraryCore(activeProject: Project | null, appMode: "MIM" | "MIMU" = "MIM") {
   const [library, setLibrary] = useState<LibraryFile[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
 
   // Clave de caché para re-evaluación al cambiar de modpack
   const projectHash = useMemo(() => 
-    activeProject ? `${activeProject.version}:${activeProject.loader}:${activeProject.name}` : '',
-    [activeProject?.version, activeProject?.loader, activeProject?.name]
+    activeProject ? `${activeProject.version}:${activeProject.loader}:${activeProject.name}:${appMode}` : `mimu:${appMode}`,
+    [activeProject?.version, activeProject?.loader, activeProject?.name, appMode]
   );
 
   useEffect(() => {
-    if (!activeProject) { 
+    if (!activeProject && appMode === "MIM") { 
       setLibrary([]); 
       return; 
     }
     
     setLoadingLibrary(true);
-    fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`)
+    const url = appMode === "MIMU"
+      ? `/api/library?version=${activeProject?.version || "1.20.1"}&loader=${activeProject?.loader || "fabric"}`
+      : `/api/library?version=${activeProject!.version}&loader=${activeProject!.loader}&project=${activeProject!.name}`;
+
+    fetch(url)
       .then(r => r.json())
       .then(async d => {
         const raw: LibraryFile[] = d.library || [];

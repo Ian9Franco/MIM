@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getApiKey } from "@/lib/settings";
+import { MODRINTH_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS } from "@/constants/app";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const DEFAULT_PAGE_SIZE = 20;
@@ -114,7 +115,20 @@ export async function GET(req: NextRequest) {
 
   // Categories (OR within categories group)
   if (categories.length > 0) {
-    facetsArray.push(categories.map((cat: string) => `categories:${cat}`));
+    let validCategories = categories;
+    if (projectType === "mod" || projectType === "datapack" || projectType === "modpack") {
+      validCategories = categories.filter((cat: string) => MODRINTH_CATEGORIES.includes(cat));
+    } else if (projectType === "resourcepack") {
+      const allRP = [...RESOURCEPACK_FILTERS.resolutions, ...RESOURCEPACK_FILTERS.categories, ...RESOURCEPACK_FILTERS.features];
+      validCategories = categories.filter((cat: string) => allRP.includes(cat));
+    } else if (projectType === "shader") {
+      const allShader = [...SHADER_FILTERS.categories, ...SHADER_FILTERS.features, ...SHADER_FILTERS.performance, ...SHADER_FILTERS.loaders];
+      validCategories = categories.filter((cat: string) => allShader.includes(cat));
+    }
+    
+    if (validCategories.length > 0) {
+      facetsArray.push(validCategories.map((cat: string) => `categories:${cat}`));
+    }
   }
 
   // Environments (OR within environments group)

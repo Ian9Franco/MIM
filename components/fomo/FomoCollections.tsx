@@ -86,6 +86,7 @@ export const FomoCollections = memo(function FomoCollections({
   const [newName,        setNewName]        = useState("MIM");
   const [deletingColl,   setDeletingColl]   = useState<string | null>(null);
   const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null);
+  const [isAddingSelection, setIsAddingSelection] = useState(false);
 
   const [isTransitioningColumns, setIsTransitioningColumns] = useState(false);
   const [transitionTarget, setTransitionTarget] = useState<"two" | "three">("three");
@@ -198,6 +199,7 @@ export const FomoCollections = memo(function FomoCollections({
     setCreating(false);
     onClearAddingFor();
     onClearSelection?.();
+    setIsAddingSelection(false);
     load();
   }, [addingForMod, selectedMods, targetType, onClearAddingFor, onClearSelection, onStatus, load]);
 
@@ -225,6 +227,7 @@ export const FomoCollections = memo(function FomoCollections({
 
     onClearAddingFor();
     onClearSelection?.();
+    setIsAddingSelection(false);
     load();
   }, [addingForMod, selectedMods, onClearAddingFor, onClearSelection, onStatus, load]);
 
@@ -293,7 +296,7 @@ export const FomoCollections = memo(function FomoCollections({
     }
   }, [viewing, onStatus]);
 
-  if (addingForMod || creating || (selectedMods.length > 0 && !viewing)) {
+  if (addingForMod || creating || isAddingSelection) {
     return (
       <div className="flex-1 flex flex-col p-4 space-y-3 overflow-y-auto custom-scrollbar">
         <div className="flex items-center justify-between">
@@ -305,7 +308,7 @@ export const FomoCollections = memo(function FomoCollections({
                 : (addingForMod ? `Para: "${addingForMod.title}"` : `Para: ${selectedMods.length} items seleccionados`)}
             </p>
           </div>
-          <button onClick={() => { onClearAddingFor(); setCreating(false); onClearSelection?.(); }} aria-label="Cancelar" className="p-2 rounded-xl hover:bg-white/10">
+          <button onClick={() => { onClearAddingFor(); setCreating(false); onClearSelection?.(); setIsAddingSelection(false); }} aria-label="Cancelar" className="p-2 rounded-xl hover:bg-white/10">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -519,40 +522,6 @@ export const FomoCollections = memo(function FomoCollections({
           )}
         </div>
 
-        {/* Bulk Actions Bar for Collections */}
-        {selectedMods.length > 0 && (
-          <div className="mx-6 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up relative z-10" style={{ background: COLORS.card, border: `1px solid ${COLORS.primary}`, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
-            <div className="flex items-center gap-3 pl-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20 text-primary font-bold">
-                {selectedMods.length}
-              </div>
-              <span className="text-sm font-bold" style={{ color: COLORS.foreground }}>Seleccionados</span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onClearSelection?.()}
-                className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/10"
-                style={{ color: COLORS.muted }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  onStatus(`Iniciando descarga de ${selectedMods.length} items...`, "info");
-                  for (const mod of selectedMods) {
-                    await onDownloadMod(mod);
-                    await new Promise(r => setTimeout(r, 500));
-                  }
-                  onClearSelection?.();
-                }}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Descargar Todo
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -663,6 +632,45 @@ export const FomoCollections = memo(function FomoCollections({
             </div>
           ))}
       </div>
+
+      {/* Bulk Actions Bar for Collections */}
+      {selectedMods.length > 0 && !isAddingSelection && (
+        <div className="mx-4 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up relative z-10" style={{ background: "var(--fomo-card-bg, var(--color-secondary-bg))", border: `1px solid var(--color-primary)`, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
+          <div className="flex items-center gap-3 pl-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20 text-primary font-bold">
+              {selectedMods.length}
+            </div>
+            <span className="text-sm font-bold" style={{ color: "white" }}>Seleccionados</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onClearSelection?.()}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/10"
+              style={{ color: "var(--color-muted)" }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                if (viewing) {
+                  onStatus(`Iniciando descarga de ${selectedMods.length} items...`, "info");
+                  for (const mod of selectedMods) {
+                    await onDownloadMod(mod);
+                    await new Promise(r => setTimeout(r, 500));
+                  }
+                  onClearSelection?.();
+                } else {
+                  setIsAddingSelection(true);
+                }
+              }}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            >
+              {viewing ? <Download className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+              {viewing ? "Descargar Todo" : "Añadir a Colección"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

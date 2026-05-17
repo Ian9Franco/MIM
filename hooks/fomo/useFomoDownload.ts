@@ -16,7 +16,7 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const [dependencyPrompt, setDependencyPrompt] = useState<DependencyPrompt | null>(null);
 
-  const executeDownload = useCallback(async (mod: ModHit, url: string, filename: string, hashes?: any, deps?: PendingDependency[]) => {
+  const executeDownload = useCallback(async (mod: ModHit, url: string, filename: string, hashes?: any, deps?: PendingDependency[], projectTypeOverride?: string) => {
     setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
     showStatus(`Descargando ${mod.title}...`, "info");
     
@@ -40,7 +40,7 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
           title: mod.title,
           loader, 
           gameVersion: gameVersions[0],
-          projectType: mod.projectType || (mod as any).project_type || "mod"
+          projectType: projectTypeOverride || mod.projectType || (mod as any).project_type || "mod"
         })
       });
 

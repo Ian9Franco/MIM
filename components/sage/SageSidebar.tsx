@@ -82,7 +82,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
               secLoading={sage.secLoading} secError={sage.secError} 
               secScanning={sage.secScanning} secScanned={sage.secScanned} 
               secScannable={sage.secScannable} secResults={sage.secResults} 
-              onScan={sage.runSecurityScan} onReset={() => { sage.fetchScannable(); }}
+              onScan={sage.runSecurityScan} onReset={sage.resetSecurityScan}
             />
           )}
 

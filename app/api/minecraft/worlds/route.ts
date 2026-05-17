@@ -64,12 +64,21 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      let lastPlayed = 0;
+      if (fs.existsSync(levelDatPath)) {
+        try {
+          const stats = fs.statSync(levelDatPath);
+          lastPlayed = stats.mtimeMs;
+        } catch {}
+      }
+
       worlds.push({
         folderName: entry.name,
         displayName: worldName,
         iconBase64,
         path: worldPath,
-        datapacks
+        datapacks,
+        lastPlayed
       });
     }
 

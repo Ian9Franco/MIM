@@ -19,9 +19,10 @@ export function useLibrary(
   pendingFiles: PendingFile[],
   setPendingFiles: React.Dispatch<React.SetStateAction<PendingFile[]>>,
   selectedLibFiles: LibraryFile[],
-  setSelectedLibFiles: React.Dispatch<React.SetStateAction<LibraryFile[]>>
+  setSelectedLibFiles: React.Dispatch<React.SetStateAction<LibraryFile[]>>,
+  appMode: "MIM" | "MIMU" = "MIM"
 ) {
-  const core = useLibraryCore(activeProject);
+  const core = useLibraryCore(activeProject, appMode);
   const updates = useLibraryUpdates(activeProject);
   const conflicts = useLibraryConflicts(core.library, pendingFiles);
   const actions = useLibraryActions(activeProject, core.setLibrary, selectedLibFiles, setSelectedLibFiles);

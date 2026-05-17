@@ -211,10 +211,22 @@ export const ModCard = memo(function ModCard({
               border: `1px solid ${isPending ? "var(--fomo-border, rgba(255,255,255,0.05))" : "rgba(255,255,255,0.1)"}`
             }}
           >
-            {isError    ? <AlertTriangle className="w-5 h-5 text-red-400" />
-            : conflict  ? <AlertTriangle className="w-5 h-5 text-orange-400" />
-            : iconBase64 ? <img src={iconBase64} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
-            : <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />}
+            {iconBase64 ? (
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img src={iconBase64} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+                {(isError || conflict) && (
+                  <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border border-white/20 ${isError ? "bg-red-500" : "bg-orange-500"}`}>
+                    <AlertTriangle className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
+              </div>
+            ) : isError ? (
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+            ) : conflict ? (
+              <AlertTriangle className="w-5 h-5 text-orange-400" />
+            ) : (
+              <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />
+            )}
           </div>
 
           <div className="flex-1 flex flex-col min-w-0 relative z-10">

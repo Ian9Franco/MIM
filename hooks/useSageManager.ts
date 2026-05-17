@@ -92,11 +92,18 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
   const [secScanned, setSecScanned] = useState(false);
 
   const fetchScannable = useCallback(async () => {
-    if (!activeProject) return;
+    const savedMode = typeof window !== "undefined" ? localStorage.getItem("mim_app_mode") : "MIMU";
+    const isMimu = savedMode === "MIMU";
+    
+    if (!isMimu && !activeProject) return;
     setSecLoading(true);
     setSecError(null);
     try {
-      const res = await fetch(`/api/security/scan?project=${activeProject.name}&version=${activeProject.version}&loader=${activeProject.loader}`);
+      const projectParam = isMimu ? "MIMU" : activeProject?.name;
+      const versionParam = isMimu ? "1.20.1" : activeProject?.version;
+      const loaderParam = isMimu ? "forge" : activeProject?.loader;
+      
+      const res = await fetch(`/api/security/scan?project=${projectParam}&version=${versionParam}&loader=${loaderParam}`);
       const data = await res.json();
       if (data.success) setSecScannable(data.scannable || []);
       else setSecError(data.error || "Error listando archivos");
@@ -109,20 +116,30 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       ...secScannable.map((s: any) => s.filePath),
       ...(Array.isArray(extraPaths) ? extraPaths : [])
     ];
-    if (!activeProject && allPaths.length === 0) return;
+    
+    const savedMode = typeof window !== "undefined" ? localStorage.getItem("mim_app_mode") : "MIMU";
+    const isMimu = savedMode === "MIMU";
+    
+    if (!isMimu && !activeProject && allPaths.length === 0) return;
     if (allPaths.length === 0) return;
+    
     setSecScanning(true);
     setSecError(null);
+    setSecScanned(true);
+
     try {
-      const res = await fetch("/api/security/scan", {
+      // ── PASO 1: Escaneo Local Rápido (Batch) ──────────────────────
+      console.log(`[/hooks/useSageManager] Paso 1: Escaneando localmente ${allPaths.length} archivos...`);
+      const resLocal = await fetch("/api/security/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filePaths: allPaths }),
+        body: JSON.stringify({ filePaths: allPaths, localOnly: true }),
       });
-      const data = await res.json();
-      // scanSecurityBatch returns Record<filePath, SecurityScanResult> — convert to array
-      if (data.success && data.results && typeof data.results === "object") {
-        const merged = Object.entries(data.results as Record<string, any>).map(([filePath, result]) => {
+      
+      const dataLocal = await resLocal.json();
+      
+      if (dataLocal.success && dataLocal.results) {
+        const merged = Object.entries(dataLocal.results as Record<string, any>).map(([filePath, result]) => {
           const entry = secScannable.find((s: any) => s.filePath === filePath) || {
             filePath,
             fileName: filePath.split(/[\\/]/).pop() || filePath,
@@ -130,29 +147,59 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
           };
           return { ...entry, result: { ...result, riskScore: result.riskScore ?? 0, riskLevel: result.riskLevel ?? "clean" } };
         });
-        setSecResults(prev => {
-          // Merge new results with existing, de-duplicating by filePath
-          const map = new Map(prev.map((r: any) => [r.filePath, r]));
-          merged.forEach(r => map.set(r.filePath, r));
-          return Array.from(map.values());
-        });
-        setSecScanned(true);
-
-        // Auto-resolve incidents for clean files
-        merged.forEach((r: any) => {
-          if (r.result?.riskLevel === "clean" || r.result?.riskLevel === "caution") {
-            import("@/lib/incidentManager").then(({ incidentManager }) => {
-              incidentManager.getIncidents("active", { module: "SAGE" }).then(incidents => {
-                const forThisFile = incidents.filter(i => i.meta?.fileName === r.fileName);
-                forThisFile.forEach(i => incidentManager.resolveIncident(i.id));
-              });
+        
+        setSecResults(merged);
+        
+        // ── PASO 2: Cola en segundo plano para VirusTotal ──────────────────────
+        console.log(`[/hooks/useSageManager] Paso 2: Iniciando cola de VirusTotal...`);
+        
+        for (let i = 0; i < merged.length; i++) {
+          const entry = merged[i];
+          const result = entry.result;
+          
+          // Solo consultamos si NO es Whitelist y NO tiene resultado de VirusTotal todavía
+          if (!result.whitelisted && (!result.virusTotal || result.virusTotal.fromCache === undefined)) {
+            const resVT = await fetch("/api/security/scan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filePath: entry.filePath }),
             });
+            
+            const dataVT = await resVT.json();
+            
+            if (dataVT.success && dataVT.result) {
+              const freshResult = dataVT.result;
+              const updatedEntry = { ...entry, result: { ...freshResult, riskScore: freshResult.riskScore ?? 0, riskLevel: freshResult.riskLevel ?? "clean" } };
+              
+              setSecResults(prev => {
+                const map = new Map(prev.map((r: any) => [r.filePath, r]));
+                map.set(entry.filePath, updatedEntry);
+                return Array.from(map.values());
+              });
+
+              // Si se usó la API (no vino de caché), esperamos 15 segundos!
+              if (freshResult.virusTotal && freshResult.virusTotal.fromCache === false) {
+                console.log(`[/hooks/useSageManager] VT used for ${entry.fileName}, waiting 15s...`);
+                await new Promise(resolve => setTimeout(resolve, 15000));
+              }
+            }
           }
-        });
-      } else { setSecError(data.error || "Error durante el scan"); }
-    } catch (e) { setSecError("Error de conexión al ejecutar el scan"); }
-    setSecScanning(false);
+        }
+      } else {
+        setSecError(dataLocal.error || "Error en el escaneo local");
+      }
+    } catch (e) { 
+      setSecError("Error de conexión al ejecutar el scan"); 
+    } finally {
+      setSecScanning(false);
+    }
   }, [activeProject, secScannable]);
+
+  const resetSecurityScan = useCallback(() => {
+    setSecResults([]);
+    setSecScanned(false);
+    fetchScannable();
+  }, [fetchScannable]);
 
   // ── Real-time scan: auto-scan new downloads ──
   useEffect(() => {
@@ -261,7 +308,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
   return {
     mode, setMode, 
     players, loadingPlayers, selectedPlayer, setSelectedPlayer, rescuingPlayer, rescueLogs, rescueSuccess, fetchPlayersList, handlePlayerRescue,
-    secScannable, secResults, secScanning, secLoading, secError, secScanned, fetchScannable, runSecurityScan,
+    secScannable, secResults, secScanning, secLoading, secError, secScanned, fetchScannable, runSecurityScan, resetSecurityScan,
     localFiles, loadingFiles, readingFile, crashAnalysis, logAnalysis, pasteAnalysis, selectedCrashFile, setSelectedCrashFile, latestLogFile, setLatestLogFile, 
     analyzing, fetchLocalFiles, handleLoadAndAnalyze, handleConfirmDelete, handleAnalyzeText
   };

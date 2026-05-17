@@ -23,26 +23,32 @@ export function useLibraryActions(
     files: any[],
     setPendingFiles: any,
     onSuccess: () => void,
-    toGame: boolean = false
+    toGame: boolean = false,
+    worldName?: string
   ) => {
     if (!files || files.length === 0) return;
     if (!toGame && !activeProject) return;
 
-    const res = await fetch("/api/classify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sourcePaths: files.map(f => f.path),
-        targetCategory: cat === "auto" ? "auto" : `${cat}\\${sub}`,
-        targetSub: sub,
-        modloader: activeProject?.loader || "forge",
-        version: activeProject?.version || "1.20.1",
-        projectName: activeProject?.name,
-        toGame
-      })
-    });
+    const results = await Promise.all(files.map(async f => {
+      return fetch("/api/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourcePaths: [f.path],
+          targetCategory: cat === "auto" ? "auto" : `${cat}\\${sub}`,
+          targetSub: sub,
+          modloader: activeProject?.loader || "forge",
+          version: activeProject?.version || "1.20.1",
+          projectName: activeProject?.name,
+          projectType: f.meta?.projectType,
+          toGame,
+          worldName
+        })
+      });
+    }));
 
-    if (res.ok) {
+    const allOk = results.every(res => res.ok);
+    if (allOk) {
       if (onSuccess) onSuccess();
       // Pequeña pausa para asegurar sincronización de I/O en NTFS antes de refrescar el estado
       setTimeout(async () => {
@@ -69,7 +75,7 @@ export function useLibraryActions(
   const handleUnclassify = useCallback(async (customFiles?: LibraryFile[], customSetSelected?: any) => {
     const filesToProcess = (customFiles && Array.isArray(customFiles)) ? customFiles : selectedLibFiles;
     const setSel = customSetSelected || setSelectedLibFiles;
-    if (!filesToProcess || !Array.isArray(filesToProcess) || filesToProcess.length === 0 || !activeProject) return;
+    if (!filesToProcess || !Array.isArray(filesToProcess) || filesToProcess.length === 0) return;
     
     const res = await fetch("/api/unclassify", {
       method: "POST",
@@ -79,12 +85,17 @@ export function useLibraryActions(
 
     if (res.ok) {
       if (setSel) setSel([]);
-      try {
-        const r = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`);
-        const d = await r.json();
-        setLibrary(d.library || []);
-      } catch (err) {
-        console.warn("Error refreshing library after unclassify", err);
+      if (activeProject) {
+        try {
+          const r = await fetch(`/api/library?version=${activeProject.version}&loader=${activeProject.loader}&project=${activeProject.name}`);
+          const d = await r.json();
+          setLibrary(d.library || []);
+        } catch (err) {
+          console.warn("Error refreshing library after unclassify", err);
+        }
+      } else {
+        // En MIMU mode, simplemente refrescamos todo el sistema
+        window.dispatchEvent(new CustomEvent("refresh-system"));
       }
     }
   }, [activeProject, setLibrary, selectedLibFiles, setSelectedLibFiles]);

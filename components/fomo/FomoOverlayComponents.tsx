@@ -85,22 +85,70 @@ interface VersionCardProps {
   downloading: boolean;
   gameVersions: string[];
   activeLoader: string;
+  selectedProjectType?: string;
 }
 
-export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions, activeLoader }: VersionCardProps) {
+export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions, activeLoader, selectedProjectType }: VersionCardProps) {
   const modLoaders = v.loaders || [v.loader];
   
   // Robust detection for non-mod projects
-  const projectType = (mod.projectType || "").toLowerCase();
-  const isNotMod = ["resourcepack", "shader", "datapack", "plugin"].includes(projectType);
-  const isMod = !isNotMod && (!projectType || projectType === "mod");
+  const pType = selectedProjectType || mod.projectType || "";
+  const isNotMod = ["resourcepack", "shader", "datapack", "plugin"].includes(pType.toLowerCase());
+  const isMod = !isNotMod && (!pType || pType.toLowerCase() === "mod");
   
   const isCompatibleLoader = !isMod || !activeLoader || activeLoader === "all" || activeLoader === "unknown" || modLoaders.some((l: string) => l.toLowerCase().includes(activeLoader.toLowerCase()));
   const canDownload = isCompatibleLoader;
 
+  const [translatedChangelog, setTranslatedChangelog] = React.useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = React.useState(false);
+
+  const handleTranslateChangelog = async () => {
+    if (!v.changelog || isTranslating) return;
+    if (translatedChangelog) { setTranslatedChangelog(null); return; }
+    setIsTranslating(true);
+    try {
+      const text = v.changelog.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
+      const temp = document.createElement("div"); temp.innerHTML = text;
+      const full = temp.innerText.trim();
+      if (!full) throw new Error("Texto vacío");
+
+      const lines = full.split(/\n/).filter(l => l.trim().length > 0);
+      let interleavedHTML = "";
+
+      for (const line of lines) {
+        const cleanLine = line.trim();
+        let translatedLine = "";
+        try {
+          const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanLine)}&langpair=en|es`);
+          if (res.ok) {
+            const d = await res.json();
+            translatedLine = d.responseData?.translatedText || cleanLine;
+          } else {
+            translatedLine = cleanLine;
+          }
+        } catch (e) {
+          translatedLine = cleanLine;
+        }
+
+        interleavedHTML += `
+          <div class="mb-2">
+            <p class="text-white/40 text-xs">${cleanLine}</p>
+            <p class="text-primary text-xs font-medium">🌐 ${translatedLine}</p>
+          </div>
+        `;
+      }
+
+      setTranslatedChangelog(interleavedHTML);
+    } catch (e) {
+      console.error("[Translate Changelog] Failed:", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   // Project type badge
-  const typeLabel = projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase();
-  const showTypeBadge = projectType && projectType !== "mod";
+  const typeLabel = pType === "resourcepack" ? "TEXTURA" : pType.toUpperCase();
+  const showTypeBadge = pType && pType !== "mod";
 
   return (
     <div className={`rounded-2xl border transition-all ${!isCompatible || !isCompatibleLoader ? "opacity-60" : ""} ${isMainVersion ? "ring-2 ring-primary/40" : ""}`} style={{ background: isMainVersion ? "rgba(var(--color-primary-rgb), 0.08)" : (expanded ? "var(--fomo-pill-inactive-bg, var(--color-hover))" : "var(--fomo-card-bg, var(--color-secondary-bg))"), borderColor: isMainVersion ? "var(--color-primary)" : (expanded ? "var(--fomo-card-hover-border, var(--color-border-strong))" : "var(--fomo-border, var(--color-border))") }}>
@@ -143,7 +191,27 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
       </div>
       {expanded && (
         <div className="px-4 pb-4 pt-1 border-t border-white/5 space-y-4 animate-in slide-in-from-top-2">
-          <div><p className="text-[0.65rem] font-bold uppercase tracking-wider mb-2" style={{ color: COLORS.muted }}>Changelog</p><div className="text-xs leading-relaxed p-3 rounded-lg border max-h-40 overflow-y-auto custom-scrollbar" style={{ background: "rgba(0,0,0,0.05)", borderColor: COLORS.border, color: COLORS.foreground }}>{v.changelog?.trim() || "Sin changelog."}</div></div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[0.65rem] font-bold uppercase tracking-wider" style={{ color: COLORS.muted }}>Changelog</p>
+              {v.changelog && (
+                <button 
+                  onClick={handleTranslateChangelog} 
+                  disabled={isTranslating} 
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md border text-[0.65rem] font-bold hover:bg-white/5 transition-colors"
+                >
+                  {isTranslating ? "..." : (translatedChangelog ? "Original" : "Traducir")}
+                </button>
+              )}
+            </div>
+            <div className="text-xs leading-relaxed p-3 rounded-lg border max-h-40 overflow-y-auto custom-scrollbar" style={{ background: "rgba(0,0,0,0.05)", borderColor: COLORS.border, color: COLORS.foreground }}>
+              {translatedChangelog ? (
+                <div dangerouslySetInnerHTML={{ __html: translatedChangelog }} />
+              ) : (
+                v.changelog?.trim() || "Sin changelog."
+              )}
+            </div>
+          </div>
           {v.dependencies?.length > 0 && (
             <div>
               <p className="text-[0.65rem] font-bold uppercase tracking-wider mb-2" style={{ color: COLORS.muted }}>Dependencias</p>
@@ -177,7 +245,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
 
 // ── ModHeader ───────────────────────────────────────────────────────────────
 
-export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod }: any) {
+export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType }: any) {
   const [currentTheme, setCurrentTheme] = React.useState("official");
   
   React.useEffect(() => {
@@ -227,19 +295,29 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <p className="font-headline text-lg truncate leading-tight text-white drop-shadow-md">{mod.title}</p>
             <div className="flex items-center gap-1">
-              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/20 text-primary text-[8px] font-black border border-primary/30 uppercase tracking-widest backdrop-blur-xl">
-                {getProjectTypeIcon(projectType, mod.categories)}
-                {typeLabel}
-              </span>
-              {projectType === "mod" && mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack") && (
-                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
-                  isModern 
-                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
-                    : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                }`}>
+              <button 
+                onClick={() => onSelectProjectType?.("mod")}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
+                  selectedProjectType === "mod" 
+                    ? "bg-primary text-white border-primary shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.3)]" 
+                    : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                }`}
+              >
+                {getProjectTypeIcon("mod", mod.categories)}
+                MOD
+              </button>
+              {mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack") && (
+                <button 
+                  onClick={() => onSelectProjectType?.("datapack")}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
+                    selectedProjectType === "datapack" 
+                      ? "bg-emerald-500 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" 
+                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                  }`}
+                >
                   <Database className="w-3 h-3" />
                   DATAPACK
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -249,16 +327,18 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
             <button onClick={() => onSearchAuthor(mod.author)} className={`font-extrabold hover:underline ${isModern ? "text-primary" : "text-primary"}`}>{mod.author}</button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button 
-              onClick={() => onSearchAuthor?.(mod.author)} 
+              onClick={() => toggleFollowAuthor(mod.author)} 
               className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                isModern 
-                  ? "bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20" 
-                  : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
+                followedAuthors.includes(mod.author) 
+                  ? "bg-amber-500/20 text-amber-500 border-amber-500/40" 
+                  : isModern
+                    ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700"
+                    : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
               }`}
             >
-              <Search className="w-3.5 h-3.5" /> Ver Autor
+              <Heart className={`w-3.5 h-3.5 ${followedAuthors.includes(mod.author) ? "fill-current" : ""}`} /> {followedAuthors.includes(mod.author) ? "Siguiendo" : "Seguir Autor"}
             </button>
             <button 
               onClick={() => onSearchMod?.(mod.title)} 
@@ -282,6 +362,37 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
             >
                <Heart className={`w-3.5 h-3.5 mr-1.5 ${followedMods.some((m: any) => m.projectId === mod.projectId) ? "fill-current" : ""}`} /> Favorito
             </button>
+            
+            {mod._source === "modrinth" && (
+              <button 
+                onClick={async () => {
+                  const isFollowed = false; // We can't know for sure easily
+                  try {
+                    await fetch("/api/modrinth/collections", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "add_project",
+                        collectionId: "followed-projects",
+                        projectId: mod.projectId
+                      })
+                    });
+                    // Visual feedback
+                    const btn = document.getElementById(`mr-btn-${mod.projectId}`);
+                    if (btn) {
+                      btn.style.background = "rgba(16,185,129,0.2)";
+                      btn.style.color = "#10b981";
+                      btn.style.borderColor = "rgba(16,185,129,0.4)";
+                      btn.innerText = "Agregado!";
+                    }
+                  } catch {}
+                }} 
+                id={`mr-btn-${mod.projectId}`}
+                className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black border transition-all bg-white/5 border-white/10 text-white/40 hover:text-white/60`}
+              >
+                 <Database className="w-3.5 h-3.5 mr-1.5" /> Modrinth
+              </button>
+            )}
           </div>
         </div>
         <button onClick={() => openExternal(mod.url)} className="p-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all active:scale-95 group shrink-0">

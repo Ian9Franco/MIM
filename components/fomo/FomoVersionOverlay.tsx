@@ -42,7 +42,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const { 
     activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, 
-    isTranslating, translatedBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, 
+    isTranslating, translatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, 
     toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery 
   } = useFomoOverlayManager(mod, versions, hideVersions);
 
@@ -50,6 +50,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [isFullView, setIsFullView] = useState(false);
   const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(gameVersions[0] || null);
   const [selectedLoaderFilter, setSelectedLoaderFilter] = useState<string | null>(loader || null);
+  const [selectedProjectType, setSelectedProjectType] = useState<string>(projectType);
 
   // Sincronizar con cambios en el sidebar (Filtros externos)
   useEffect(() => {
@@ -146,7 +147,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedImageIndex, gallery.length]);
 
-  const descText = mod.body || mod.description || "";
+  const descText = fullBody || mod.body || mod.description || "";
   const rawDesc = descText.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(descText) : markdownToHtml(descText)) : "Sin descripción.";
   const descHtml = translatedBody ? translatedBody : rawDesc;
 
@@ -208,7 +209,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {activeTab === "description" && (
               <div className="space-y-4">
-                <button onClick={handleTranslate} disabled={isTranslating} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold">{isTranslating ? "Traduciendo..." : "Traducir"}</button>
+                <button onClick={handleTranslate} disabled={isTranslating} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold">{isTranslating ? "Traduciendo..." : (translatedBody ? "Original" : "Traducir")}</button>
                 <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: descHtml }} />
               </div>
             )}
@@ -307,6 +308,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       <div className="space-y-2">
                         {versions
                           .filter(v => {
+                            const isNotMod = ["resourcepack", "shader", "datapack", "plugin"].includes(selectedProjectType);
+                            const isMod = !isNotMod && (!selectedProjectType || selectedProjectType === "mod");
+                            
+                            if (!isMod) return true; // Don't filter datapacks by loader
+                            
                             if (!selectedLoaderFilter || selectedLoaderFilter === "all") return true;
                             const modLoaders = v.loaders || (v as any).loader || [];
                             return modLoaders.some((l: string) => l.toLowerCase().includes(selectedLoaderFilter.toLowerCase()));
@@ -324,6 +330,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                             downloading={downloading} 
                             gameVersions={gameVersions} 
                             activeLoader={selectedLoaderFilter || "all"}
+                            selectedProjectType={selectedProjectType}
                           />
                         ))}
                       </div>
@@ -342,26 +349,54 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       {versions
                         .filter(v => {
                           const matchesVersion = !selectedVersionFilter || v.gameVersions.includes(selectedVersionFilter);
-                          const matchesLoader = !selectedLoaderFilter || selectedLoaderFilter === "all" || 
+                          const isNotMod = ["resourcepack", "shader", "datapack", "plugin"].includes(selectedProjectType);
+                          const isMod = !isNotMod && (!selectedProjectType || selectedProjectType === "mod");
+
+                          const matchesLoader = !isMod || !selectedLoaderFilter || selectedLoaderFilter === "all" || 
                             (v.loaders || (v as any).loader || []).some((l: string) => l.toLowerCase().includes(selectedLoaderFilter.toLowerCase()));
-                          return matchesVersion && matchesLoader;
+                          
+                          // Heurística Inteligente para Datapacks vs Mods
+                          const nameLower = (v.name || v.versionNumber || "").toLowerCase();
+                          
+                          // Verificamos si AL MENOS UNA versión del proyecto tiene la palabra "datapack"
+                          const hasSpecificDatapackVersions = versions.some(ver => 
+                            (ver.name || ver.versionNumber || "").toLowerCase().includes("datapack")
+                          );
+                          
+                          let matchesType = true;
+                          if (hasSpecificDatapackVersions) {
+                            // Si el proyecto separa las versiones, aplicamos el filtro estricto
+                            matchesType = selectedProjectType === "datapack" 
+                              ? nameLower.includes("datapack") 
+                              : (selectedProjectType === "mod" ? !nameLower.includes("datapack") : true);
+                          } else {
+                            // Si no hay versiones específicas con la palabra "datapack",
+                            // pero el mod tiene la categoría "datapack" (como Terralith), las mostramos todas.
+                            const isHybrid = mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack");
+                            if (isHybrid && selectedProjectType === "datapack") {
+                              matchesType = true; // Mostramos todas porque el archivo sirve para ambos
+                            }
+                          }
+                          
+                          return matchesVersion && matchesLoader && matchesType;
                         })
                         // Si no hay filtro, ocultamos los 2 de arriba para no repetir
                         .slice(!selectedVersionFilter && !selectedLoaderFilter ? 2 : 0)
                         .map((v, idx) => (
-                          <VersionCard 
-                            key={v.id || idx} 
-                            v={v} 
-                            mod={mod} 
-                            isCompatible={v.gameVersions.some(gv => gameVersions.includes(gv))} 
-                            isMainVersion={false} 
-                            expanded={expandedVersion === v.id} 
-                            onToggle={() => setExpandedVersion(expandedVersion === v.id ? null : v.id)} 
-                            onDownload={handleDownloadWrapper} 
-                            downloading={downloading} 
-                            gameVersions={gameVersions} 
-                            activeLoader={selectedLoaderFilter || "all"}
-                          />
+                           <VersionCard 
+                             key={v.id || idx} 
+                             v={v} 
+                             mod={mod} 
+                             isCompatible={v.gameVersions.some(gv => gameVersions.includes(gv))} 
+                             isMainVersion={false} 
+                             expanded={expandedVersion === v.id} 
+                             onToggle={() => setExpandedVersion(expandedVersion === v.id ? null : v.id)} 
+                             onDownload={handleDownloadWrapper} 
+                             downloading={downloading} 
+                             gameVersions={gameVersions} 
+                             activeLoader={selectedLoaderFilter || "all"}
+                             selectedProjectType={selectedProjectType}
+                           />
                         ))}
                     </div>
                   </div>

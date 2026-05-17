@@ -42,39 +42,42 @@ export const CURSEFORGE_CATEGORIES = {
       label: "Addons", 
       value: "addons",
       sub: [
-        "applied-energistics-2", "blood-magic", "buildcraft", "crafttweaker", "create", 
-        "farmers-delight", "forestry", "galacticraft", "industrial-craft", "integrated-dynamics", 
-        "kubejs", "refined-storage", "skyblock", "thaumcraft", "thermal-expansion", "tinkers-construct"
+        "applied energistics 2", "blood magic", "buildcraft", "crafttweaker", "create", 
+        "farmer's delight", "forestry", "galacticraft", "industrial craft", "integrated dynamics", 
+        "kubejs", "refined storage", "skyblock", "thaumcraft", "thermal expansion", "tinker's construct"
       ]
     },
-    "twilight-forest", "adventure-rpg", "api-and-library", "armor-tools-and-weapons", "bug-fixes", "cosmetic", 
-    "creativemode", "education", "food", "horror", "magic", "map-and-information", 
-    "mcreator", "miscellaneous", "modjam-2025", "performance", "redstone", "server-utility", "storage",
+    "twilight forest", "adventure and rpg", "api and library", "armor, tools, and weapons", "bug fixes", "cosmetic", 
+    "creativemode", "education", "food", "horror", "magic", "map and information", 
+    "mcreator", "miscellaneous", "modjam 2025", "performance", "redstone", "server utility", "storage",
     {
       label: "Technology",
       value: "technology",
-      sub: ["automation", "energy", "energy-fluid-and-item-transport", "farming", "genetics", "player-transport", "processing"]
+      sub: ["automation", "energy", "energy, fluid, and item transport", "farming", "genetics", "player transport", "processing"]
     },
-    "twitch-integration", "utility-qol",
+    "twitch integration", "utility & qol",
     {
       label: "World Gen",
       value: "world-gen",
-      sub: ["biomes", "dimensions", "mobs", "ores-and-resources", "structures"]
+      sub: ["biomes", "dimensions", "mobs", "ores and resources", "structures"]
     }
   ],
   datapack: [
-    "adventure", "fantasy", "library", "magic", "miscellaneous", "mod-support", "modjam-2025", "tech", "utility"
+    "mod support", "tech", "magic", "adventure", "library", "utility", "miscellaneous", "fantasy", "modjam 2025"
   ],
   resourcepack: [
-    "128x", "16x", "256x", "32x", "512x-and-higher", "64x", "animated", "data-packs", 
-    "font-packs", "medieval", "miscellaneous", "mod-support", "modern", "modjam-2025", "photo-realistic", 
-    "steampunk", "traditional"
+    "miscellaneous", "16x", "32x", "photo realistic", "512x and higher", "traditional", 
+    "128x", "256x", "font packs", "64x", "mod support", "medieval", "data packs", 
+    "animated", "modern", "steampunk", "modjam 2025"
   ],
   shader: [
     "fantasy", "realistic", "vanilla"
   ],
   modpack: [
-    "adventure-and-rpg", "combat-pvp", "exploration", "hardcore", "magic", "map-based", "mini-game", "multiplayer", "quests", "sci-fi", "skyblock", "small-light", "tech", "vanilla"
+    "extra large", "small / light", "combat / pvp", "sci-fi", "adventure and rpg", 
+    "ftb official pack", "quests", "tech", "skyblock", "map based", "horror", 
+    "multiplayer", "mini game", "magic", "vanilla+", "hardcore", "exploration", 
+    "expert", "rlcraft"
   ]
 };
 

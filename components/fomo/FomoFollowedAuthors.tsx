@@ -37,7 +37,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
       <div className="flex-1 overflow-y-auto p-6">
         {subTab === "projects" ? (
           followedMods.length === 0 ? (
-            <div className="py-20 text-center flex flex-col items-center opacity-40"><FolderHeart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">No sigues ningún mod</h3><p className="text-xs max-w-sm">Sigue tus proyectos favoritos para verlos aquí.</p></div>
+            <div className="py-20 text-center flex flex-col items-center opacity-40"><FolderHeart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">No seguís ningún mod</h3><p className="text-xs max-w-sm">Seguí tus proyectos favoritos para verlos acá.</p></div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredMods.map(mod => <FollowedProjectCard key={mod.projectId} mod={mod} updateInfo={getModUpdateInfo(mod.projectId)} isDownloading={!!downloading[`collection:${mod.projectId}`]} onOpenVersions={onOpenVersions} onDownloadMod={onDownloadMod} onSearchProject={onSearchProject} onUnfollow={handleUnfollowMod} />)}
@@ -45,7 +45,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           )
         ) : (
           followedAuthors.length === 0 ? (
-            <div className="py-20 text-center flex flex-col items-center opacity-40"><Heart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">Aún no sigues a ningún autor</h3><p className="text-xs max-w-sm">Sigue a creadores para descubrir sus novedades.</p></div>
+            <div className="py-20 text-center flex flex-col items-center opacity-40"><Heart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">Todavia no seguís a ningún autor</h3><p className="text-xs max-w-sm">Segui a creadores para ver sus novedades.</p></div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {followedAuthors.map(author => <FollowedAuthorCard key={author} author={author} onSearch={onSearchAuthor} onUnfollow={handleUnfollowAuthor} />)}

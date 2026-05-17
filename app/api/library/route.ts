@@ -17,8 +17,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, CATEGORIES, isValidLoader } from "@/lib/constants";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
+import { getSettings } from "@/lib/settings";
 import path from "path";
 import fs from "fs";
+import os from "os";
+import AdmZip from "adm-zip";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,6 +109,116 @@ export async function GET(req: NextRequest) {
 
         library.push({ path: filePath, fileName: file, category, sub, meta });
       }
+    }
+  }
+
+  // ── Read Resource Packs ──────────────────────────────────────────────────────
+  const resourcePacksPath = project
+    ? path.join(SOURCE_BASE, "_projects", project, "resourcepacks")
+    : null;
+
+  if (resourcePacksPath && fs.existsSync(resourcePacksPath)) {
+    for (const file of fs.readdirSync(resourcePacksPath)) {
+      if (!file.endsWith(".zip")) continue;
+
+      const filePath = path.join(resourcePacksPath, file);
+      let iconBase64 = undefined;
+
+      try {
+        const zip = new AdmZip(filePath);
+        const packPng = zip.getEntry("pack.png");
+        if (packPng) {
+          const buffer = packPng.getData();
+          iconBase64 = `data:image/png;base64,${buffer.toString("base64")}`;
+        }
+      } catch (e) {
+        console.warn(`[/api/library] Failed to read pack.png from ${file}`);
+      }
+
+      const meta: ModMeta = {
+        modId: file, // Default to file name, will fallback to search
+        modName: file.replace(".zip", ""),
+        modVersion: "unknown",
+        gameVersion: "unknown",
+        loader: "unknown",
+        projectType: "resourcepack",
+        isCompatibleWithConnector: false,
+        iconBase64,
+      };
+
+      library.push({ 
+        path: filePath, 
+        fileName: file, 
+        category: "resourcepacks", 
+        sub: "", 
+        meta 
+      });
+    }
+  }
+
+  // ── Read Datapacks ──────────────────────────────────────────────────────────
+  const datapacksPath = project
+    ? path.join(SOURCE_BASE, "_projects", project, "datapacks")
+    : null;
+
+  if (datapacksPath && fs.existsSync(datapacksPath)) {
+    for (const file of fs.readdirSync(datapacksPath)) {
+      if (!file.endsWith(".zip")) continue;
+
+      const filePath = path.join(datapacksPath, file);
+      let meta: ModMeta;
+      
+      try {
+        meta = scanMod(filePath);
+      } catch {
+        meta = {
+          modId: file,
+          modName: file.replace(".zip", ""),
+          modVersion: "unknown",
+          gameVersion: "unknown",
+          loader: "unknown",
+          projectType: "datapack",
+          isCompatibleWithConnector: false,
+        };
+      }
+
+      library.push({ 
+        path: filePath, 
+        fileName: file, 
+        category: "datapacks", 
+        sub: "", 
+        meta 
+      });
+    }
+  }
+
+  // ── Read Shaders ────────────────────────────────────────────────────────────
+  const shaderPacksPath = project
+    ? path.join(SOURCE_BASE, "_projects", project, "shaderpacks")
+    : path.join(getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft"), "shaderpacks");
+
+  if (fs.existsSync(shaderPacksPath)) {
+    for (const file of fs.readdirSync(shaderPacksPath)) {
+      if (!file.endsWith(".zip")) continue;
+
+      const filePath = path.join(shaderPacksPath, file);
+      const meta: ModMeta = {
+        modId: file,
+        modName: file.replace(".zip", ""),
+        modVersion: "unknown",
+        gameVersion: "unknown",
+        loader: "unknown",
+        projectType: "shader",
+        isCompatibleWithConnector: false,
+      };
+
+      library.push({ 
+        path: filePath, 
+        fileName: file, 
+        category: "shaders", 
+        sub: "", 
+        meta 
+      });
     }
   }
 

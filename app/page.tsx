@@ -61,7 +61,7 @@ export default function Page() {
   const [fomoOpen,         setFomoOpen]         = useState(false);
   const [sageOpen,         setSageOpen]         = useState(false);
   const [detailsOpen,      setDetailsOpen]      = useState(false);
-  const [downloadsSidebarCollapsed, setDownloadsSidebarCollapsed] = useState(false);
+  const [downloadsSidebarCollapsed, setDownloadsSidebarCollapsed] = useState(true);
   const [mounted,          setMounted]          = useState(false);
   const [autoClassify,     setAutoClassify]     = useState(false);
   const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
@@ -75,12 +75,18 @@ export default function Page() {
 
   useEffect(() => {
     localStorage.setItem("mim_app_mode", appMode);
+    window.dispatchEvent(new CustomEvent("mim-mode-changed", { detail: appMode }));
   }, [appMode]);
   
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth > 1400) {
+      setDownloadsSidebarCollapsed(false);
+    }
+  }, []);
   const autoProcessing = useRef<Set<string>>(new Set());
   const prevPendingCountRef = useRef(pendingFiles.length);
 
-  const lib = useLibrary(projects.activeProject, pendingFiles, setPendingFiles, selectedLibFiles, setSelectedLibFiles);
+  const lib = useLibrary(projects.activeProject, pendingFiles, setPendingFiles, selectedLibFiles, setSelectedLibFiles, appMode);
   const { status, showStatus, clearStatus } = useStatusBanner();
   
   const { compatibleFiles } = usePendingFiles(pendingFiles, projects.activeProject, () => {}, detectedVersion, lib.modrinthStatus);
@@ -143,23 +149,61 @@ export default function Page() {
   // ── Auto-Classification ────────────────────────────────────────────────────
   useEffect(() => {
     if (!projects.activeProject) return;
-    pendingFiles.forEach(f => {
-      if (autoProcessing.current.has(f.path)) return;
-      
-      const isMedia = ["resourcepack", "datapack", "shader"].includes(f.meta?.projectType || "");
-      if (autoClassify && (isMedia || (isVersionCompatible(f.meta?.gameVersion || "unknown", projects.activeProject!.version) && isLoaderCompatible(f.meta?.loader || "unknown", projects.activeProject!.loader, projects.activeProject!.version)))) {
-        autoProcessing.current.add(f.path);
-        lib.handleClassify(isMedia ? ".local" : "auto", isMedia ? "rendimiento" : "", [f], setPendingFiles, () => setSelectedFiles([]));
+    
+    const runAutoClassify = async () => {
+      let worldName = "";
+      if (appMode === "MIMU") {
+        try {
+          const res = await fetch("/api/minecraft/worlds");
+          const data = await res.json();
+          const worlds = data.worlds || [];
+          if (worlds.length > 0) {
+            worlds.sort((a: any, b: any) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+            worldName = worlds[0].folderName;
+          }
+        } catch (e) {
+          console.error("Failed to fetch worlds for auto-classification:", e);
+        }
       }
-    });
-  }, [autoClassify, pendingFiles, projects.activeProject, lib, setPendingFiles]);
+
+      pendingFiles.forEach(f => {
+        if (autoProcessing.current.has(f.path)) return;
+        
+        const isMedia = ["resourcepack", "datapack", "shader"].includes(f.meta?.projectType || "");
+        if (autoClassify && (isMedia || (isVersionCompatible(f.meta?.gameVersion || "unknown", projects.activeProject!.version) && isLoaderCompatible(f.meta?.loader || "unknown", projects.activeProject!.loader, projects.activeProject!.version)))) {
+          autoProcessing.current.add(f.path);
+          // Usamos "auto" para todo, el backend sabrá qué hacer según el tipo de proyecto real
+          lib.handleClassify("auto", "", [f], setPendingFiles, () => setSelectedFiles([]), appMode === "MIMU", worldName);
+        }
+      });
+    };
+
+    runAutoClassify();
+  }, [autoClassify, pendingFiles, projects.activeProject, lib, setPendingFiles, appMode]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleClassify = useCallback((cat: string, sub: string) => {
+  const handleClassify = useCallback(async (cat: string, sub: string) => {
     const filesToProcess = selectedFiles.length > 0 || selectedLibFiles.length > 0 
       ? [...selectedFiles, ...selectedLibFiles] 
       : compatibleFiles;
-    lib.handleClassify(cat, sub, filesToProcess, setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }, appMode === "MIMU");
+    
+    let worldName = "";
+    if (appMode === "MIMU") {
+      try {
+        const res = await fetch("/api/minecraft/worlds");
+        const data = await res.json();
+        const worlds = data.worlds || [];
+        if (worlds.length > 0) {
+          worlds.sort((a: any, b: any) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+          worldName = worlds[0].folderName;
+          console.log(`[MIMU] Auto-selected last played world: ${worldName}`);
+        }
+      } catch (e) {
+        console.error("Failed to fetch worlds for auto-classification:", e);
+      }
+    }
+
+    lib.handleClassify(cat, sub, filesToProcess, setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }, appMode === "MIMU", worldName);
   }, [lib, selectedFiles, selectedLibFiles, compatibleFiles, setPendingFiles, appMode]);
   
   const handleDeleteFile = useCallback(async (file: PendingFile) => {
@@ -276,7 +320,7 @@ export default function Page() {
           <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
             <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} /></div>
             <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
-            <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} />
+            <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} onDeleteFile={handleDeleteFile} />
           </div>
         )}
 

@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
+const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
+
 export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hideVersions: boolean) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies" | "gallery">(hideVersions ? "description" : "versions");
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [depDownloading, setDepDownloading] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
+  const [fullBody, setFullBody] = useState<string | null>(null);
   const [depSearchQuery, setDepSearchQuery] = useState("");
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [followedMods, setFollowedMods] = useState<any[]>([]);
@@ -22,6 +25,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     setLoadingGallery(false);
     setLastFetchedId(null);
     setTranslatedBody(null);
+    setFullBody(null);
     setDepSearchQuery("");
   }, [mod.projectId]);
 
@@ -47,6 +51,23 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
         .finally(() => setLoadingGallery(false));
     }
   }, [mod.projectId, mod._source, lastFetchedId, loadingGallery]);
+
+  useEffect(() => {
+    if (!mod.body) {
+      const endpoint = mod._source === "curseforge" 
+        ? `/api/curseforge/project?projectId=${mod.projectId}`
+        : `/api/modrinth/project?projectId=${mod.projectId}`;
+        
+      fetch(endpoint)
+        .then(r => r.json())
+        .then(data => {
+          if (data.body) {
+            setFullBody(data.body);
+          }
+        })
+        .catch(e => console.error("[FullBody] Fetch failed:", e));
+    }
+  }, [mod.projectId, mod.body, mod._source]);
 
   useEffect(() => {
     const load = () => {
@@ -82,66 +103,87 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, [versions]);
 
   const handleTranslate = async () => {
-    if (!mod.body || isTranslating) return;
+    const textToTranslate = fullBody || mod.body || mod.description;
+    if (!textToTranslate || isTranslating) return;
     if (translatedBody) { setTranslatedBody(null); return; }
+    
+    // Verificar cache
+    if (translationCache[mod.projectId]) {
+      setTranslatedBody(translationCache[mod.projectId]);
+      return;
+    }
+
     setIsTranslating(true);
     try {
-      // Limpieza básica de Markdown/HTML para extraer el texto puro
-      const text = mod.body.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
-      const temp = document.createElement("div"); temp.innerHTML = text;
-      temp.querySelectorAll("a, img, script, style, code").forEach(el => el.remove());
-      const full = temp.innerText.trim();
-      if (!full) throw new Error("Texto vacío");
-
-      // Dividir por párrafos (doble salto de línea)
-      const paragraphs = full.split(/\n\s*\n/);
+      // Split by double newlines to process paragraph by paragraph
+      const paragraphs = textToTranslate.split(/\n\s*\n/);
       let interleavedHTML = "";
 
       for (const para of paragraphs) {
         const cleanPara = para.trim();
         if (!cleanPara) continue;
 
-        // Si el párrafo pasa los 250 caracteres, lo dividimos en bloques más pequeños
-        const chunks: string[] = [];
-        let remaining = cleanPara;
-        while (remaining.length > 250) {
-          // Buscamos un espacio para no cortar palabras
-          let splitIdx = remaining.lastIndexOf(" ", 250);
-          if (splitIdx === -1) splitIdx = 250; // Si no hay espacios, corte duro
-          chunks.push(remaining.substring(0, splitIdx));
-          remaining = remaining.substring(splitIdx).trim();
+        // Extraer imágenes Markdown: ![alt](url)
+        const images: string[] = [];
+        const imageRegex = /!\[([^\]]*)\]\(([^)]*)\)/g;
+        let match;
+        while ((match = imageRegex.exec(cleanPara)) !== null) {
+          images.push(`<img src="${match[2]}" alt="${match[1]}" class="rounded-lg mt-2 max-w-full border border-white/10" loading="lazy" />`);
         }
-        if (remaining) chunks.push(remaining);
 
-        // Traducir cada bloque
+        // Limpiar el texto para traducir (quitar imágenes y links complejos para no romper la API)
+        const textToTrans = cleanPara
+          .replace(/!\[([^\]]*)\]\([^)]*\)/g, "") // Quitar imágenes
+          .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // Dejar solo el texto de los links
+          .trim();
+
         let translatedPara = "";
-        for (const chunk of chunks) {
-          try {
-            // El límite es de unos 500 chars en MyMemory gratis, pero usamos 250 para estar seguros
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|es`);
-            if (res.ok) {
-              const d = await res.json();
-              translatedPara += (d.responseData?.translatedText || chunk) + " ";
-            } else {
-              translatedPara += chunk + " "; // Fallback si falla
+        if (textToTrans) {
+          const chunks: string[] = [];
+          let remaining = textToTrans;
+          while (remaining.length > 250) {
+            let splitIdx = remaining.lastIndexOf(" ", 250);
+            if (splitIdx === -1) splitIdx = 250;
+            chunks.push(remaining.substring(0, splitIdx));
+            remaining = remaining.substring(splitIdx).trim();
+          }
+          if (remaining) chunks.push(remaining);
+
+          for (const chunk of chunks) {
+            try {
+              const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|es`);
+              if (res.ok) {
+                const d = await res.json();
+                translatedPara += (d.responseData?.translatedText || chunk) + " ";
+              } else {
+                translatedPara += chunk + " ";
+              }
+            } catch (e) {
+              console.error("[Translate] Chunk failed:", e);
+              translatedPara += chunk + " ";
             }
-          } catch (e) {
-            console.error("[Translate] Chunk failed:", e);
-            translatedPara += chunk + " ";
           }
         }
 
-        // Construir el bloque HTML intercalado
+        // Construir el bloque HTML intercalado manteniendo imágenes
         interleavedHTML += `
           <div class="mb-5 bg-white/[0.02] p-3 rounded-lg border border-white/5">
-            <p class="text-white/60 text-xs leading-relaxed">${cleanPara}</p>
-            <div class="mt-2 pt-2 border-t border-white/5">
-              <p class="text-primary/90 text-sm leading-relaxed">🌐 ${translatedPara.trim()}</p>
-            </div>
+            ${textToTrans ? `<p class="text-white/60 text-xs leading-relaxed">${textToTrans}</p>` : ""}
+            ${translatedPara ? `
+              <div class="mt-2 pt-2 border-t border-white/5">
+                <p class="text-primary/90 text-sm leading-relaxed">🌐 ${translatedPara.trim()}</p>
+              </div>
+            ` : ""}
+            ${images.length > 0 ? `
+              <div class="mt-3 space-y-2">
+                ${images.join("")}
+              </div>
+            ` : ""}
           </div>
         `;
       }
 
+      translationCache[mod.projectId] = interleavedHTML;
       setTranslatedBody(interleavedHTML);
     } catch (e) {
       console.error("[Translate] Failed:", e);
@@ -150,5 +192,5 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
   };
 
-  return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery };
+  return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery };
 }

@@ -19,7 +19,7 @@ export function WorldsSection({ pendingFiles }: WorldsSectionProps) {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const pendingDatapacks = pendingFiles.filter(f => f.meta?.projectType === "datapack");
+  const pendingDatapacks = pendingFiles.filter(f => f.meta?.projectType === "datapack" || f.path.toLowerCase().endsWith(".zip"));
 
   const fetchWorlds = () => {
     setLoading(true);
@@ -91,33 +91,6 @@ export function WorldsSection({ pendingFiles }: WorldsSectionProps) {
                 <span className="flex items-center gap-1">
                   <Package className="w-3.5 h-3.5" /> {world.datapacks?.length || 0} Datapacks
                 </span>
-                
-                {pendingDatapacks.length > 0 && (
-                  <button
-                    onClick={async () => {
-                      for (const dp of pendingDatapacks) {
-                        await fetch("/api/classify", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            sourcePaths: [dp.path],
-                            targetCategory: "auto",
-                            version: "1.20.1",
-                            modloader: "forge",
-                            toGame: true,
-                            worldName: world.folderName,
-                            projectType: "datapack"
-                          })
-                        });
-                      }
-                      fetchWorlds();
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
-                    style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}
-                  >
-                    <Package className="w-3.5 h-3.5" /> <span>Importar ({pendingDatapacks.length})</span>
-                  </button>
-                )}
               </div>
             </div>
           ))

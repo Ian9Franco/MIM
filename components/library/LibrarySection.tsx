@@ -15,12 +15,14 @@ import { useLibrarySection } from "@/hooks/library/useLibrarySection";
 export function LibrarySection({
   library, loadingLibrary, selectedLibFiles, setSelectedLibFiles, activeProject,
   projects = [], downloadingMods, modrinthStatus, ignoredUpdates, conflicts,
-  handleUnclassify, handleDownloadUpdate, autoClassify, setAutoClassify, pendingFiles
+  handleUnclassify, handleDownloadUpdate, autoClassify, setAutoClassify, pendingFiles,
+  onDeleteFile
 }: any) {
   
   const [transferOpen, setTransferOpen] = useState(false);
   const [showDupOptions, setShowDupOptions] = useState(false);
   const [openingFolder, setOpeningFolder] = useState(false);
+  const [filterType, setFilterType] = useState<"mod" | "resourcepack" | "datapack" | "shader">("mod");
 
   const { handleDuplicateTo } = useLibrarySection(
     activeProject, selectedLibFiles, setSelectedLibFiles, 
@@ -30,20 +32,61 @@ export function LibrarySection({
   const handleOpenFolder = async () => {
     setOpeningFolder(true);
     try {
-      if (library.length > 0) {
+      if (filterType === "resourcepack") {
         await fetch("/api/open-folder", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folderPath: library[0].path.substring(0, library[0].path.lastIndexOf('\\')) }),
+          body: JSON.stringify({ folderPath: "resourcepacks" }),
         });
-      } else if (activeProject) {
-        await fetch("/api/project/open", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version }),
+      } else {
+        // Buscamos un archivo del tipo actual para abrir su carpeta
+        const fileOfType = library.find((f: any) => {
+          if (filterType === "mod") return !f.meta?.projectType || f.meta?.projectType === "mod";
+          return f.meta?.projectType === filterType;
         });
+
+        if (fileOfType) {
+          await fetch("/api/open-folder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folderPath: fileOfType.path.substring(0, fileOfType.path.lastIndexOf('\\')) }),
+          });
+        } else if (activeProject) {
+          // Si no hay archivos de ese tipo, abrimos la carpeta del proyecto
+          await fetch("/api/project/open", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectName: activeProject.name, version: activeProject.version }),
+          });
+        }
       }
     } finally { setOpeningFolder(false); }
+  };
+
+  const filteredLibrary = library.filter((f: any) => {
+    if (filterType === "mod") {
+      return !f.meta?.projectType || f.meta?.projectType === "mod";
+    }
+    return f.meta?.projectType === filterType;
+  });
+
+  const handleDeleteSelected = async () => {
+    if (selectedLibFiles.length === 0 || !onDeleteFile) return;
+    if (confirm(`¿Estás seguro de que querés eliminar ${selectedLibFiles.length} archivos de la librería?`)) {
+      for (const file of selectedLibFiles) {
+        await onDeleteFile(file);
+      }
+      setSelectedLibFiles([]);
+      // Force refresh library
+      window.dispatchEvent(new CustomEvent("refresh-system"));
+    }
+  };
+
+  const typeLabels: Record<string, string> = {
+    mod: "mods",
+    resourcepack: "texturas",
+    datapack: "datapacks",
+    shader: "shaders",
   };
 
   return (
@@ -55,7 +98,9 @@ export function LibrarySection({
           </div>
           <div>
             <h2 className="font-headline text-base leading-none">Librería de Source</h2>
-            <p className="text-xs opacity-50 mt-1">{library.length} mods instalados</p>
+            <p className="text-xs opacity-50 mt-1">
+              {filteredLibrary.length} {typeLabels[filterType] || filterType} en lista
+            </p>
           </div>
         </div>
 
@@ -65,17 +110,18 @@ export function LibrarySection({
           autoClassify={autoClassify} setAutoClassify={setAutoClassify}
           setTransferOpen={setTransferOpen} handleOpenFolder={handleOpenFolder} 
           openingFolder={openingFolder} libraryCount={library.length}
+          onDeleteSelected={handleDeleteSelected} filterType={filterType} setFilterType={setFilterType}
         />
       </div>
 
       {loadingLibrary ? (
         <div className="space-y-3"><SkeletonLoader message="Escaneando librería..." /><SkeletonLoader message="Buscando actualizaciones..." /></div>
-      ) : library.length === 0 ? (
+      ) : filteredLibrary.length === 0 ? (
         (!pendingFiles || pendingFiles.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed border-white/10 bg-white/5">
             <Layers className="w-12 h-12 mb-4 opacity-10 text-emerald-400" />
-            <p className="text-sm font-bold opacity-80 mb-2">No hay mods instalados en este proyecto aún</p>
-            {activeProject && (
+            <p className="text-sm font-bold opacity-80 mb-2">No hay {typeLabels[filterType] || filterType} instalados en este proyecto aún</p>
+            {activeProject && filterType === "mod" && (
               <button onClick={() => setTransferOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white shadow-lg shadow-primary/20 hover:scale-105 transition-all">
                 <ArrowLeftRight className="w-5 h-5" /> Importar desde Librería Global
               </button>
@@ -84,12 +130,12 @@ export function LibrarySection({
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center rounded-[2.5rem] border border-dashed border-white/5 bg-white/5 animate-fade-in">
             <Layers className="w-8 h-8 mb-3 opacity-20 text-emerald-400" />
-            <p className="text-xs font-medium text-white/50 italic">Librería vacía. Clasificá los mods pendientes de la izquierda para llenar esta sección.</p>
+            <p className="text-xs font-medium text-white/50 italic">No hay {typeLabels[filterType] || filterType} en la librería. Clasificá archivos pendientes para llenar esta sección.</p>
           </div>
         )
       ) : (
         <VirtualizedLibrary
-          library={library} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles}
+          library={filteredLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles}
           activeProject={activeProject} downloadingMods={downloadingMods} modrinthStatus={modrinthStatus}
           ignoredUpdates={ignoredUpdates} handleDownloadUpdate={handleDownloadUpdate}
         />

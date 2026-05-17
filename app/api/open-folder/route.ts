@@ -37,6 +37,9 @@ export async function POST(req: NextRequest) {
     } else if (folderPath === "resourcepacks") {
       const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
       resolvedPath = path.join(mcPath, "resourcepacks");
+    } else if (folderPath === "shaderpacks") {
+      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+      resolvedPath = path.join(mcPath, "shaderpacks");
     }
 
     if (!fs.existsSync(resolvedPath)) {

@@ -14,7 +14,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck } from "lucide-react";
 import type { PackHealthReport } from "@/lib/types";
 
@@ -112,6 +112,25 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
       setValidating(null);
     }
   }, [projectName, version, loader, executeBuild]);
+
+  // Atajos de teclado: H y U
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (isInput) return;
+
+      if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        handleBuildClick("allhost");
+      }
+      if (e.key === "u" || e.key === "U") {
+        e.preventDefault();
+        handleBuildClick("alluser");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleBuildClick]);
 
   // ── Sync health report to global panel ──────────────────────────────────
   const [lastReportId, setLastReportId] = useState<string | null>(null);

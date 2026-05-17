@@ -100,14 +100,22 @@ export async function GET(req: NextRequest) {
       const processFile = async (filePath: string, delayMs = 500) => {
         const fileName = path.basename(filePath);
         let meta: Partial<ModMeta> = {};
-        try {
-          // Small delay to ensure the file has finished writing (only for newly added files)
-          if (delayMs > 0) {
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            if (delayMs > 0) {
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+            meta = scanMod(filePath);
+            break; // Éxito
+          } catch (e) {
+            retries--;
+            if (retries === 0) {
+              console.warn(`[/api/watcher] scanMod failed after retries for: ${fileName}`);
+            } else {
+              delayMs = 1000; // Esperar más en el siguiente intento
+            }
           }
-          meta = scanMod(filePath);
-        } catch {
-          console.warn(`[/api/watcher] scanMod failed for: ${fileName}`);
         }
         // If scanMod couldn't determine projectType or modName (e.g. ZIPs for textures/datapacks),
         // read both from the remote cache that was set during download.

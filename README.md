@@ -14,7 +14,7 @@
 
 **⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de Seguridad | 🧠 Diagnóstico de Crashes**
 
-[![Version](https://img.shields.io/badge/Version-6.2.0-6366f1.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-6.3.0-6366f1.svg)](./CHANGELOG.md)
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -204,7 +204,7 @@ MIM implementa **3 capas de seguridad**:
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Versión 6.2.0)
+### ✅ Completado (Versión 6.3.0)
 - **Modo MIMU (User Mode)**: Implementación de una vista simplificada sin proyectos ni categorización compleja. Ideal para usuarios finales que solo quieren descargar mods y jugar.
 - **Gestor de Mundos**: Visualización de mundos guardados con iconos y nombres reales leídos desde `level.dat`.
 - **Gestor de Mods Instalados**: Columna lateral para visualizar y eliminar mods directamente de la carpeta `.minecraft/mods`.

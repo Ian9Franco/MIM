@@ -35,6 +35,40 @@ export function QuickCategorizeSection({
 }: QuickCategorizeSectionProps) {
   const [showAutoMenu, setShowAutoMenu] = useState(false);
 
+  // Atajos de teclado: 1, 2, 3 y C
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (isInput) return;
+
+      if (allSelected.length === 0 || !activeProject) return;
+
+      if (e.key === "1") {
+        e.preventDefault();
+        setShowSubcategories(".essential");
+      }
+      if (e.key === "2") {
+        e.preventDefault();
+        setShowSubcategories(".local");
+      }
+      if (e.key === "3") {
+        e.preventDefault();
+        setShowSubcategories(".server");
+      }
+      if (e.key === "c" || e.key === "C") {
+        e.preventDefault();
+        if (allSelected.length > 0) {
+          handleClassify("auto", "");
+        } else {
+          setAutoClassify?.(!autoClassify);
+          if (onAutoCategorize && !autoClassify) onAutoCategorize();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [allSelected.length, activeProject, setShowSubcategories, handleClassify, autoClassify, setAutoClassify, onAutoCategorize]);
+
   return (
     <section className="animate-fade-up stagger-3">
       {/* Header */}
@@ -201,13 +235,13 @@ export function QuickCategorizeSection({
                  </p>
                  
                  <div className="flex items-center gap-2">
-                   {/* Unclassify Selected (only if there are library files) */}
-                   {allSelected.some(m => !('category' in m) === false) && onUnclassifySelected && (
+                   {/* Unclassify Selected (Mover a Descargas) */}
+                   {allSelected.length > 0 && onUnclassifySelected && (
                      <button
                        onClick={onUnclassifySelected}
                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] font-bold uppercase tracking-wider"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--color-foreground)" }}
-                       title="Mover archivos de la librería de vuelta a Descargas"
+                       title="Mover archivos seleccionados de vuelta a Descargas"
                      >
                        Mover a Descargas
                      </button>

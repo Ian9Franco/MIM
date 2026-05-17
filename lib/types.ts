@@ -169,10 +169,14 @@ export interface SecurityScanResult {
     maliciousCount: number;
     totalEngineCount: number;
     detailsUrl?: string;
+    fromCache?: boolean;
   } | null;
   findings: SecurityFinding[];
   summary: string;
   scannedAt: string;
+  scannedLocally?: boolean;
+  scannedVirusTotal?: boolean;
+  whitelisted?: boolean;
 }
 
 // ── Tweak (Tuning Workspace) Types ──────────────────────────────────────────

@@ -20,6 +20,31 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     handleCheckHealth, handleFomoSearch, pendingFiles, handleOpenDownloads, watcherStatus
   } = useRootLayoutManager();
 
+  // Atajos de teclado globales (Esc para cerrar sidebars)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+        if (isInput) return;
+
+        // Cerrar en orden de prioridad (modales primero, luego sidebars)
+        if (packHealthOpen) {
+          setPackHealthOpen(false);
+          window.dispatchEvent(new CustomEvent("pack-health-toggle", { detail: false }));
+          setTimeout(() => setPackHealthReport(null), 1000);
+          return;
+        }
+        if (settingsOpen) { setSettingsOpen(false); return; }
+        if (stagingOpen) { setStagingOpen(false); return; }
+        if (tweakOpen) { handleToggleUI('tweak', false); return; }
+        if (fomoOpen) { handleToggleUI('fomo', false); return; }
+        if (sageOpen) { handleToggleUI('sage', false); return; }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [packHealthOpen, settingsOpen, stagingOpen, tweakOpen, fomoOpen, sageOpen, setPackHealthOpen, setSettingsOpen, setStagingOpen, handleToggleUI, setPackHealthReport]);
+
   return (
     <div className="font-poppins">
       {/* Ambient Background Glows */}

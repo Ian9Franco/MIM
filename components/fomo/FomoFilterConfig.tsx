@@ -33,6 +33,15 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   "8x or lower": <Grid2x2 className="w-3.5 h-3.5" />, "16x": <Grid3x3 className="w-3.5 h-3.5" />, "32x": <LayoutGrid className="w-3.5 h-3.5" />,
   "48x": <Grip className="w-3.5 h-3.5" />, "64x": <ImageIcon className="w-3.5 h-3.5" />, "128x": <Monitor className="w-3.5 h-3.5" />,
   "256x": <Maximize className="w-3.5 h-3.5" />, "512x or higher": <Maximize2 className="w-3.5 h-3.5" />,
+  mod: <BoxIcon className="w-3.5 h-3.5" />,
+  datapack: <Database className="w-3.5 h-3.5" />,
+  resourcepack: <Palette className="w-3.5 h-3.5" />,
+  shader: <Sparkles className="w-3.5 h-3.5" />,
+  modpack: <Package className="w-3.5 h-3.5" />,
+  forge: <Hammer className="w-3.5 h-3.5" />,
+  fabric: <Feather className="w-3.5 h-3.5" />,
+  neoforge: <Zap className="w-3.5 h-3.5" />,
+  quilt: <Grid3x3 className="w-3.5 h-3.5" />,
 };
 
 export const SORT_ICONS: Record<string, React.ReactNode> = {

@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     sort: searchParams.get("sort") || "featured",
     projectType: searchParams.get("projectType") || "mod",
     q: searchParams.get("q")?.trim() || "",
-    gameVersions: searchParams.get("gameVersions") ? JSON.parse(searchParams.get("gameVersions")!) : []
+    gameVersions: searchParams.get("gameVersions") ? JSON.parse(searchParams.get("gameVersions")!) : [],
+    categories: searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : []
   };
 
   try {

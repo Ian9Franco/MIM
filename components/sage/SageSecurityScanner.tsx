@@ -36,8 +36,13 @@ export function SageSecurityScanner({
           disabled={secScanning || secLoading || secScannable.length === 0}
           className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98]"
         >
-          {secScanning ? <><RefreshCw className="w-4 h-4 animate-spin" /> Escaneando...</>
-           : secScanned ? <><RefreshCw className="w-4 h-4" /> Re-escanear</>
+          {secScanning ? (
+            secResults.length === secScannable.length ? (
+              <><RefreshCw className="w-4 h-4 animate-spin" /> Verificando VT ({secResults.filter((r: any) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length}/{secScannable.length})...</>
+            ) : (
+              <><RefreshCw className="w-4 h-4 animate-spin" /> Escaneo Local...</>
+            )
+          ) : secScanned ? <><RefreshCw className="w-4 h-4" /> Re-escanear</>
            : <><ScanSearch className="w-4 h-4" /> Escanear ({secScannable.length})</>}
         </button>
       </div>
@@ -56,7 +61,19 @@ export function SageSecurityScanner({
         </div>
       )}
 
-      {secScanning && <ScanningAnimation count={secScannable.length} />}
+      {secScanning && (
+        secResults.length === secScannable.length ? (
+          <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 text-sm text-blue-400 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>Verificando reputación en VirusTotal...</span>
+            </div>
+            <span className="font-bold">{secResults.filter((r: any) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length} / {secScannable.length}</span>
+          </div>
+        ) : (
+          <ScanningAnimation count={secScannable.length} />
+        )
+      )}
 
       {/* ── Pre-scan file listing ── */}
       {!secScanning && !secScanned && !secLoading && secScannable.length > 0 && (
@@ -64,7 +81,7 @@ export function SageSecurityScanner({
       )}
 
       {/* ── Results ── */}
-      {!secScanning && secScanned && secResults.length > 0 && (
+      {secScanned && secResults.length > 0 && (
         <ScanResults results={secResults} />
       )}
 
@@ -170,7 +187,7 @@ function SummaryCard({ label, count, level }: { label: string; count: number; le
 
 function ResultCard({ entry }: { entry: any }) {
   const [expanded, setExpanded] = useState(false);
-  const { riskLevel, riskScore, virusTotal, findings, sha256, summary } = entry.result;
+  const { riskLevel, riskScore, virusTotal, findings, sha256, summary, scannedLocally, scannedVirusTotal, whitelisted } = entry.result;
   const cfg = LEVEL_CONFIG[riskLevel as keyof typeof LEVEL_CONFIG] || LEVEL_CONFIG.clean;
   const Icon = cfg.icon;
   const hasFatal = findings?.some((f: any) => f.severity === "critical");
@@ -186,9 +203,33 @@ function ResultCard({ entry }: { entry: any }) {
           <p className="text-sm font-bold truncate text-white/90">{entry.fileName}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-xs text-white/40">{summary}</span>
+            
+            {/* Indicadores de Motor de Escaneo */}
+            <div className="flex items-center gap-1.5 ml-1">
+              {whitelisted && (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/10" title="Este archivo está en la lista de confianza de la comunidad">
+                  Whitelist
+                </span>
+              )}
+              {scannedLocally && (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/10" title="Analizado localmente por el motor SAGE">
+                  SAGE Local
+                </span>
+              )}
+              {scannedVirusTotal ? (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/10" title="Verificado en la nube de VirusTotal">
+                  VirusTotal
+                </span>
+              ) : (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-white/5 text-white/30 border border-white/5" title="No verificado en VirusTotal (API Key faltante o límite superado)">
+                  VT Omitido
+                </span>
+              )}
+            </div>
+
             {virusTotal && (
               <span className={`text-xs font-bold ${virusTotal.maliciousCount > 0 ? "text-red-400" : "text-emerald-400"}`}>
-                · VT: {virusTotal.maliciousCount}/{virusTotal.totalEngineCount}
+                · {virusTotal.maliciousCount}/{virusTotal.totalEngineCount} Motores
               </span>
             )}
           </div>

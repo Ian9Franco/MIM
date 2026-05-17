@@ -63,8 +63,13 @@ async function runCurseForgeScraper() {
             : 'https://www.curseforge.com/community-picks/assets/minecraft/' + slug + '/featured-thumbnail.webp';
 
           // Extraer el conteo de proyectos (ej: "6 Mods")
-          const textContent = card.textContent || '';
-          const modCountMatch = textContent.match(/(\d+)\s+Mods/i);
+          let container = link;
+          while (container && !container.querySelector('.mods-count') && container !== document.body) {
+            container = container.parentElement;
+          }
+          const countEl = container ? container.querySelector('.mods-count') : null;
+          const textContent = countEl ? countEl.textContent : '';
+          const modCountMatch = textContent.match(/(\d+)/);
           const projectCount = modCountMatch ? parseInt(modCountMatch[1], 10) : 0;
 
           results.push({

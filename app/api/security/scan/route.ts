@@ -42,10 +42,12 @@ function isScannableFile(filePath: string): boolean {
 
 interface SingleScanRequest {
   filePath: string;
+  localOnly?: boolean;
 }
 
 interface BatchScanRequest {
   filePaths: string[];
+  localOnly?: boolean;
 }
 
 function isValidRequest(body: unknown): body is SingleScanRequest | BatchScanRequest {
@@ -106,56 +108,122 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const settings = getSettings();
   const scannable: { fileName: string; filePath: string; type: "jar" | "zip"; assetType: string }[] = [];
 
-  // ── 1. Project mods (JARs from _projects/<name>/mods) ──────────────────────
-  const projectModsPath = path.join(settings.sourceBase, "_projects", project, "mods");
-  if (fs.existsSync(projectModsPath)) {
-    for (const cat of CATEGORIES) {
-      const catPath = path.join(projectModsPath, cat);
-      if (!fs.existsSync(catPath)) continue;
-      for (const sub of fs.readdirSync(catPath)) {
-        const subPath = path.join(catPath, sub);
-        if (!fs.statSync(subPath).isDirectory()) continue;
-        for (const file of fs.readdirSync(subPath)) {
-          if (!file.endsWith(".jar")) continue;
-          scannable.push({ fileName: file, filePath: path.join(subPath, file), type: "jar", assetType: "mod" });
+  const isMimu = project === "MIMU";
+
+  if (isMimu) {
+    console.log(`[/api/security/scan] MIMU mode: Collecting files from game folder`);
+    
+    // ── 1. Game mods (.minecraft/mods) ──────────────────────
+    const gameModsPath = settings.minecraftPath ? path.join(settings.minecraftPath, "mods") : "";
+    if (gameModsPath && fs.existsSync(gameModsPath)) {
+      for (const file of fs.readdirSync(gameModsPath)) {
+        if (!file.endsWith(".jar")) continue;
+        scannable.push({ fileName: file, filePath: path.join(gameModsPath, file), type: "jar", assetType: "mod" });
+      }
+    }
+
+    // ── 2. Game Resource Packs (.minecraft/resourcepacks) ──────────────────
+    const gameRpPath = settings.minecraftPath ? path.join(settings.minecraftPath, "resourcepacks") : "";
+    if (gameRpPath && fs.existsSync(gameRpPath)) {
+      for (const file of fs.readdirSync(gameRpPath)) {
+        if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
+        const fp = path.join(gameRpPath, file);
+        if (fs.statSync(fp).isFile()) {
+          scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "resourcepack" });
         }
       }
     }
-  }
 
-  // ── 2. Version+loader shared mods (JARs) ───────────────────────────────────
-  if (loader) {
-    const loaderPath = path.join(settings.sourceBase, version, loader);
-    if (fs.existsSync(loaderPath)) {
+    // ── 3. Game Datapacks (.minecraft/saves/*/datapacks) ──────────────────
+    const savesPath = settings.minecraftPath ? path.join(settings.minecraftPath, "saves") : "";
+    if (savesPath && fs.existsSync(savesPath)) {
+      try {
+        const worlds = fs.readdirSync(savesPath);
+        for (const world of worlds) {
+          const worldPath = path.join(savesPath, world);
+          if (!fs.statSync(worldPath).isDirectory()) continue;
+          
+          const dpPath = path.join(worldPath, "datapacks");
+          if (fs.existsSync(dpPath)) {
+            for (const file of fs.readdirSync(dpPath)) {
+              if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
+              const fp = path.join(dpPath, file);
+              if (fs.statSync(fp).isFile()) {
+                scannable.push({ 
+                  fileName: `${file} (Mundo: ${world})`, 
+                  filePath: fp, 
+                  type: "zip", 
+                  assetType: "datapack" 
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Could not read saves directory for datapacks:", e);
+      }
+    }
+  } else {
+    // ── 1. Project mods (JARs from _projects/<name>/mods) ──────────────────────
+    const projectModsPath = path.join(settings.sourceBase, "_projects", project, "mods");
+    if (fs.existsSync(projectModsPath)) {
       for (const cat of CATEGORIES) {
-        const catPath = path.join(loaderPath, cat);
+        const catPath = path.join(projectModsPath, cat);
         if (!fs.existsSync(catPath)) continue;
         for (const sub of fs.readdirSync(catPath)) {
           const subPath = path.join(catPath, sub);
           if (!fs.statSync(subPath).isDirectory()) continue;
           for (const file of fs.readdirSync(subPath)) {
             if (!file.endsWith(".jar")) continue;
-            const fp = path.join(subPath, file);
-            if (!scannable.some(s => s.filePath === fp)) {
-              scannable.push({ fileName: file, filePath: fp, type: "jar", assetType: "mod" });
+            scannable.push({ fileName: file, filePath: path.join(subPath, file), type: "jar", assetType: "mod" });
+          }
+        }
+      }
+    }
+
+    // ── 2. Version+loader shared mods (JARs) ───────────────────────────────────
+    if (loader) {
+      const loaderPath = path.join(settings.sourceBase, version, loader);
+      if (fs.existsSync(loaderPath)) {
+        for (const cat of CATEGORIES) {
+          const catPath = path.join(loaderPath, cat);
+          if (!fs.existsSync(catPath)) continue;
+          for (const sub of fs.readdirSync(catPath)) {
+            const subPath = path.join(catPath, sub);
+            if (!fs.statSync(subPath).isDirectory()) continue;
+            for (const file of fs.readdirSync(subPath)) {
+              if (!file.endsWith(".jar")) continue;
+              const fp = path.join(subPath, file);
+              if (!scannable.some(s => s.filePath === fp)) {
+                scannable.push({ fileName: file, filePath: fp, type: "jar", assetType: "mod" });
+              }
             }
           }
         }
       }
     }
-  }
 
-  // ── 3. Resource Packs — SOURCE_BASE/_projects/<name>/resourcepacks ──────────
-  // Mirrors /api/classify: resourcepacks are stored in the project, not in .minecraft.
-  // They are pushed to .minecraft on demand via "Sync with Game" in Tweak.
-  const rpDir = path.join(settings.sourceBase, "_projects", project, "resourcepacks");
+    // ── 3. Resource Packs — SOURCE_BASE/_projects/<name>/resourcepacks ──────────
+    const rpDir = path.join(settings.sourceBase, "_projects", project, "resourcepacks");
+    if (fs.existsSync(rpDir)) {
+      for (const file of fs.readdirSync(rpDir)) {
+        if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
+        const fp = path.join(rpDir, file);
+        if (fs.statSync(fp).isFile()) {
+          scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "resourcepack" });
+        }
+      }
+    }
 
-  if (fs.existsSync(rpDir)) {
-    for (const file of fs.readdirSync(rpDir)) {
-      if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
-      const fp = path.join(rpDir, file);
-      if (fs.statSync(fp).isFile()) {
-        scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "resourcepack" });
+    // ── 5. Datapacks — SOURCE_BASE/_projects/<name>/datapacks/ ─────────────────
+    const datapackDir = path.join(settings.sourceBase, "_projects", project, "datapacks");
+    if (fs.existsSync(datapackDir)) {
+      for (const file of fs.readdirSync(datapackDir)) {
+        if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
+        const fp = path.join(datapackDir, file);
+        if (fs.statSync(fp).isFile()) {
+          scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "datapack" });
+        }
       }
     }
   }
@@ -171,18 +239,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const fp = path.join(shaderDir, file);
       if (fs.statSync(fp).isFile()) {
         scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "shader" });
-      }
-    }
-  }
-
-  // ── 5. Datapacks — SOURCE_BASE/_projects/<name>/datapacks/ ─────────────────
-  const datapackDir = path.join(settings.sourceBase, "_projects", project, "datapacks");
-  if (fs.existsSync(datapackDir)) {
-    for (const file of fs.readdirSync(datapackDir)) {
-      if (!file.endsWith(".zip") && !file.endsWith(".jar")) continue;
-      const fp = path.join(datapackDir, file);
-      if (fs.statSync(fp).isFile()) {
-        scannable.push({ fileName: file, filePath: fp, type: "zip", assetType: "datapack" });
       }
     }
   }
@@ -281,7 +337,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
       }
 
-      const batchResult = await scanSecurityBatch(body.filePaths);
+      const batchResult = await scanSecurityBatch(body.filePaths, body.localOnly);
       return NextResponse.json({ success: true, batch: true, results: batchResult });
     }
 
@@ -309,8 +365,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    console.log(`[/api/security/scan] Scanning: ${path.basename(filePath)}`);
-    const result = await scanSecurity(filePath);
+    console.log(`[/api/security/scan] Scanning: ${path.basename(filePath)} (LocalOnly: ${!!body.localOnly})`);
+    const result = await scanSecurity(filePath, body.localOnly);
     console.log(`[/api/security/scan] Score: ${result.riskScore} (${result.riskLevel})`);
 
     return NextResponse.json({ success: true, batch: false, result });

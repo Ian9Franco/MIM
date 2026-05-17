@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useState } from "react";
 import { RefreshCw, Globe, Laptop, Server, Tags, Sparkles, SlidersHorizontal, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, SORT_OPTIONS, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
 import { useFomoFiltersManager } from "@/hooks/useFomoFiltersManager";
@@ -14,6 +14,8 @@ import { CATEGORY_ICONS, SORT_ICONS } from "./FomoFilterConfig";
 export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any) {
   const m = useFomoFiltersManager(props);
   const isAuthorSearch = props.query.startsWith("author:");
+  const [projectTypeOpen, setProjectTypeOpen] = useState(false);
+  const [loaderOpen, setLoaderOpen] = useState(false);
 
   const currentFilters = useMemo(() => {
     if (m.isCurseForge) return [{ title: "Categorías (CurseForge)", items: CURSEFORGE_CATEGORIES[props.projectType as keyof typeof CURSEFORGE_CATEGORIES] || [] }];
@@ -26,14 +28,64 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
   return (
     <div className="flex flex-col gap-6 h-full overflow-hidden">
       <div className="flex flex-col gap-3 shrink-0">
-        <select value={isAuthorSearch ? "" : props.projectType} onChange={e => props.onProjectType(e.target.value)} disabled={isAuthorSearch} className="w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 outline-none">
-          {isAuthorSearch ? <option value="">Cualquier Tipo</option> : PROJECT_TYPES.map(pt => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
-        </select>
+        {/* Project Type Dropdown */}
+        <div className="relative">
+          <button 
+            onClick={() => !isAuthorSearch && setProjectTypeOpen(!projectTypeOpen)} 
+            disabled={isAuthorSearch}
+            className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <span>{isAuthorSearch ? "Cualquier Tipo" : (PROJECT_TYPES.find(pt => pt.value === props.projectType)?.label || "Seleccionar Tipo")}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${projectTypeOpen ? "rotate-180" : ""}`} />
+          </button>
+          
+          {projectTypeOpen && !isAuthorSearch && (
+            <div className="absolute top-full left-0 w-full mt-1 bg-neutral-900/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+              {PROJECT_TYPES.map(pt => (
+                <div 
+                  key={pt.value} 
+                  onClick={() => { props.onProjectType(pt.value); setProjectTypeOpen(false); }} 
+                  className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.projectType === pt.value ? "bg-primary/20 text-primary" : ""}`}
+                >
+                  {pt.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         
+        {/* Loader Dropdown */}
         {(props.projectType === "mod" || props.projectType === "modpack" || isAuthorSearch) && (
-          <select value={isAuthorSearch ? "" : props.loader} onChange={e => props.onLoader(e.target.value)} disabled={isAuthorSearch} className="w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 outline-none">
-            {isAuthorSearch ? <option value="">Cualquier Loader</option> : <><option value="unknown">Cualquier Loader</option>{LOADERS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}</>}
-          </select>
+          <div className="relative">
+            <button 
+              onClick={() => !isAuthorSearch && setLoaderOpen(!loaderOpen)} 
+              disabled={isAuthorSearch}
+              className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <span>{isAuthorSearch ? "Cualquier Loader" : (props.loader === "unknown" ? "Cualquier Loader" : (props.loader.charAt(0).toUpperCase() + props.loader.slice(1)))}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${loaderOpen ? "rotate-180" : ""}`} />
+            </button>
+            
+            {loaderOpen && !isAuthorSearch && (
+              <div className="absolute top-full left-0 w-full mt-1 bg-neutral-900/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+                <div 
+                  onClick={() => { props.onLoader("unknown"); setLoaderOpen(false); }} 
+                  className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.loader === "unknown" ? "bg-primary/20 text-primary" : ""}`}
+                >
+                  Cualquier Loader
+                </div>
+                {LOADERS.map(l => (
+                  <div 
+                    key={l} 
+                    onClick={() => { props.onLoader(l); setLoaderOpen(false); }} 
+                    className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.loader === l ? "bg-primary/20 text-primary" : ""}`}
+                  >
+                    {l.charAt(0).toUpperCase() + l.slice(1)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -52,7 +104,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         </div>
 
         {/* Sinytra Connector toggle: visible solo para Forge/NeoForge buscando en Modrinth */}
-        {(props.loader === "forge" || props.loader === "neoforge") && props.source === "modrinth" && (
+        {(props.loader === "forge" || props.loader === "neoforge") && (
           <div className="flex flex-col gap-3">
             <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Zap className="w-3 h-3" /> Compatibilidad</p>
             <button
@@ -89,10 +141,43 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
               return (
                 <div key={val} className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
-                    <button onClick={() => m.toggleFilter(props.categories, props.onCategories, val)} className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${active ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 border-white/5 text-white/40"}`}>{CATEGORY_ICONS[val] || <Tags className="w-3 h-3" />}{val}</button>
+                    <button onClick={() => {
+                      if (hasSub) {
+                        m.setExpandedCats((p: string[]) => p.includes(val) ? p.filter(x => x !== val) : [...p, val]);
+                      } else {
+                        if (m.isCurseForge) {
+                          if (active) props.onCategories([]);
+                          else props.onCategories([val]);
+                        } else {
+                          m.toggleFilter(props.categories, props.onCategories, val);
+                        }
+                      }
+                    }} className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${active ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 border-white/5 text-white/40"}`}>{CATEGORY_ICONS[val] || <Tags className="w-3 h-3" />}{val}</button>
                     {hasSub && <button onClick={() => m.setExpandedCats(p => p.includes(val) ? p.filter(x => x !== val) : [...p, val])} className="p-1.5 rounded-lg border border-white/5">{m.expandedCats.includes(val) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}</button>}
                   </div>
-                  {hasSub && m.expandedCats.includes(val) && <div className="pl-4 flex flex-wrap gap-1">{cat.sub.map((s: string) => <button key={s} onClick={() => m.toggleFilter(props.categories, props.onCategories, s)} className={`px-2 py-1 rounded-md text-[9px] font-bold border ${props.categories.includes(s) ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 border-white/5 text-white/40"}`}>{s}</button>)}</div>}
+                  {hasSub && m.expandedCats.includes(val) && (
+                    <div className="pl-4 flex flex-wrap gap-1">
+                      {cat.sub.map((s: string) => {
+                        const subActive = props.categories.includes(s);
+                        return (
+                          <button 
+                            key={s} 
+                            onClick={() => {
+                              if (m.isCurseForge) {
+                                if (subActive) props.onCategories([]);
+                                else props.onCategories([s]);
+                              } else {
+                                m.toggleFilter(props.categories, props.onCategories, s);
+                              }
+                            }} 
+                            className={`px-2 py-1 rounded-md text-[9px] font-bold border ${subActive ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 border-white/5 text-white/40"}`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}</div>

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="public/icon.png" width="120" alt="MIM Logo" />
+
 #  Minecraft Intelligent Manager
 
 ### *El gestor de modpacks que convierte el caos en magia*

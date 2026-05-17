@@ -7,6 +7,7 @@ import { openExternal } from "@/utils/format";
 
 const getGradientByName = (name: string) => {
   const gradients = ["from-pink-500 to-red-500", "from-purple-500 to-blue-500", "from-blue-500 to-teal-500", "from-emerald-500 to-cyan-500", "from-amber-500 to-red-500"];
+  if (!name) return gradients[0];
   let sum = 0; for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
   return gradients[sum % gradients.length];
 };
@@ -46,17 +47,34 @@ export function FollowedProjectCard({ mod, updateInfo, isDownloading, onOpenVers
 
 // ── FollowedAuthorCard ───────────────────────────────────────────────────────
 
-export function FollowedAuthorCard({ author, onSearch, onUnfollow }: any) {
+export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow }: any) {
+  const authorName = typeof author === "string" ? author : author?.name || "Autor Desconocido";
+  const [currentIconIdx, setCurrentIconIdx] = React.useState(0);
+  
+  React.useEffect(() => {
+    if (icons.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIconIdx(prev => (prev + 1) % icons.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [icons.length]);
+
   return (
     <div className="group relative rounded-2xl border border-white/5 bg-white/3 p-4 flex items-center justify-between transition-all hover:bg-white/5">
       <div className="flex items-center gap-4 relative z-10 min-w-0 pr-3">
-        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${getGradientByName(author)} flex items-center justify-center text-white font-bold uppercase shadow-md shrink-0`}>{author.charAt(0)}</div>
-        <div className="min-w-0"><p className="font-headline text-sm font-bold truncate text-white">{author}</p><p className="text-[10px] text-white/40">Creador de Minecraft</p></div>
+        <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+          {icons.length > 0 ? (
+            <img src={icons[currentIconIdx]} alt="" className="w-full h-full object-cover transition-opacity duration-500" />
+          ) : (
+            <div className={`w-full h-full flex items-center justify-center text-white font-bold bg-gradient-to-br ${getGradientByName(authorName)}`}>{authorName.charAt(0)}</div>
+          )}
+        </div>
+        <div className="min-w-0"><p className="font-headline text-sm font-bold truncate text-white">{authorName}</p><p className="text-[10px] text-white/40">Creador de Minecraft</p></div>
       </div>
       <div className="flex items-center gap-1 relative z-10">
-        <button onClick={() => onSearch(author)} className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><Search className="w-4 h-4" /></button>
-        <button onClick={() => openExternal(`https://modrinth.com/user/${author}`)} className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><ExternalLink className="w-4 h-4" /></button>
-        <button onClick={() => onUnfollow(author)} className="p-2 rounded-lg hover:bg-rose-500/10 text-white/40 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+        <button onClick={() => onSearch(authorName)} className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><Search className="w-4 h-4" /></button>
+        <button onClick={() => openExternal(`https://modrinth.com/user/${authorName}`)} className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"><ExternalLink className="w-4 h-4" /></button>
+        <button onClick={() => onUnfollow(authorName)} className="p-2 rounded-lg hover:bg-rose-500/10 text-white/40 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
       </div>
     </div>
   );

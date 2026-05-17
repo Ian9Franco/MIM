@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo, useState, useEffect } from "react";
 import { RefreshCw, Globe, Laptop, Server, Tags, Sparkles, SlidersHorizontal, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, SORT_OPTIONS, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
 import { useFomoFiltersManager } from "@/hooks/useFomoFiltersManager";
@@ -16,6 +16,18 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
   const isAuthorSearch = props.query.startsWith("author:");
   const [projectTypeOpen, setProjectTypeOpen] = useState(false);
   const [loaderOpen, setLoaderOpen] = useState(false);
+  
+  const [currentTheme, setCurrentTheme] = useState("official");
+  
+  useEffect(() => {
+    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+
+  const isModern = currentTheme === "modern";
 
   const currentFilters = useMemo(() => {
     if (m.isCurseForge) return [{ title: "Categorías (CurseForge)", items: CURSEFORGE_CATEGORIES[props.projectType as keyof typeof CURSEFORGE_CATEGORIES] || [] }];
@@ -40,12 +52,12 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
           </button>
           
           {projectTypeOpen && !isAuthorSearch && (
-            <div className="absolute top-full left-0 w-full mt-1 bg-neutral-900/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+            <div className={`absolute top-full left-0 w-full mt-1 backdrop-blur-md border rounded-xl overflow-hidden z-50 shadow-xl ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`}>
               {PROJECT_TYPES.map(pt => (
                 <div 
                   key={pt.value} 
                   onClick={() => { props.onProjectType(pt.value); setProjectTypeOpen(false); }} 
-                  className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.projectType === pt.value ? "bg-primary/20 text-primary" : ""}`}
+                  className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.projectType === pt.value ? "bg-primary/20 text-primary" : ""}`}
                 >
                   {pt.label}
                 </div>
@@ -67,10 +79,10 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
             </button>
             
             {loaderOpen && !isAuthorSearch && (
-              <div className="absolute top-full left-0 w-full mt-1 bg-neutral-900/95 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+              <div className={`absolute top-full left-0 w-full mt-1 backdrop-blur-md border rounded-xl overflow-hidden z-50 shadow-xl ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`}>
                 <div 
                   onClick={() => { props.onLoader("unknown"); setLoaderOpen(false); }} 
-                  className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.loader === "unknown" ? "bg-primary/20 text-primary" : ""}`}
+                  className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.loader === "unknown" ? "bg-primary/20 text-primary" : ""}`}
                 >
                   Cualquier Loader
                 </div>
@@ -78,7 +90,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
                   <div 
                     key={l} 
                     onClick={() => { props.onLoader(l); setLoaderOpen(false); }} 
-                    className={`px-3.5 py-2.5 text-xs font-bold text-white hover:bg-white/5 cursor-pointer ${props.loader === l ? "bg-primary/20 text-primary" : ""}`}
+                    className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.loader === l ? "bg-primary/20 text-primary" : ""}`}
                   >
                     {l.charAt(0).toUpperCase() + l.slice(1)}
                   </div>

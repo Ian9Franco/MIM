@@ -78,7 +78,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   useEffect(() => {
     const handleOpenDetails = (e: Event) => {
       const modHit = (e as CustomEvent).detail;
-      if (modHit) discover.handleOpenVersionSelector(modHit);
+      if (modHit) discover.handleOpenLiveProject(modHit);
     };
 
     const handleSearchAndOpen = (e: Event) => {
@@ -256,7 +256,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                         mod={mod} 
                         isDownloading={!!discover.downloading[mod.projectId]} 
                         onDownload={discover.handleDownload} 
-                        onOpenVersions={discover.handleOpenVersionSelector} 
+                        onOpenVersions={discover.handleOpenLiveProject} 
                         isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} 
                         onToggleSelect={discover.toggleModSelection} 
                         sinytraActive={discover.sinytraActive}
@@ -278,10 +278,11 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               addingForMod={m.addingToCollectionFor}
               onClearAddingFor={() => m.setAddingToCollectionFor(null)}
               onDownloadMod={discover.handleDownload} 
-              onOpenVersions={discover.handleOpenVersionSelector} 
+              onOpenVersions={discover.handleOpenLiveProject} 
+              onClearSelection={discover.clearSelection}
             />
           )}
-          {m.mode === "followed" && <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenVersionSelector} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />}
+          {m.mode === "followed" && <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />}
         </div>
         {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} theme={currentTheme} />}
       </aside>

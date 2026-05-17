@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Layers, ArrowLeftRight } from "lucide-react";
 import { VirtualizedLibrary } from "@/components/library/VirtualizedLibrary";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
@@ -28,6 +28,14 @@ export function LibrarySection({
     activeProject, selectedLibFiles, setSelectedLibFiles, 
     modrinthStatus, ignoredUpdates, conflicts
   );
+
+  useEffect(() => {
+    const label = filterType === "mod" ? "Mods" : filterType === "resourcepack" ? "Texturas" : filterType === "shader" ? "Shaders" : "Datapacks";
+    window.dispatchEvent(new CustomEvent("watcher-status-change", { detail: `Librería: ${label}` }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("watcher-status-change", { detail: "Watcher" }));
+    };
+  }, [filterType]);
 
   const handleOpenFolder = async () => {
     setOpeningFolder(true);

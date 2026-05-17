@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Package, FolderOpen } from "lucide-react";
+import { Package, FolderOpen, FolderTree, Pickaxe, ArrowBigRight, ArrowBigRightDash } from "lucide-react";
 import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
 import { useFileWatcher }     from "../hooks/useFileWatcher";
@@ -38,6 +38,8 @@ export default function Page() {
   const projects = useProjects();
   const { pendingFiles, setPendingFiles, loading } = useFileWatcher();
   const [detectedVersion, setDetectedVersion] = useState("1.20.1");
+  const [isHoveredMimu, setIsHoveredMimu] = useState(false);
+  const [keepOpenMimu, setKeepOpenMimu] = useState(false);
 
   useEffect(() => {
     const fetchVersion = () => {
@@ -246,7 +248,7 @@ export default function Page() {
           <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} appMode={appMode} setAppMode={setAppMode} />
           {appMode === "MIM" && projects.activeProject && (
             <section className="animate-fade-up lg:min-w-[420px]">
-              <SectionHeading icon={<Package className="w-4 h-4" />} title="Build" sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`} accentColor="var(--color-accent)" className="mb-4" actions={<button onClick={() => fetch("/api/project/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: projects.activeProject?.name, version: projects.activeProject?.version }) })} className="flex items-center gap-3 px-12 py-3.5 rounded-2xl bg-white/5 border border-dashed border-white/10 hover:border-primary transition-all active:scale-95 text-[10px] font-bold uppercase text-muted group hover:text-primary"><FolderOpen className="w-4 h-4" /> Abrir Carpeta</button>} />
+              <SectionHeading icon={<Pickaxe className="w-4 h-4" />} title="Build" sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`} accentColor="var(--color-accent)" className="mb-4" actions={<button onClick={() => fetch("/api/project/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: projects.activeProject?.name, version: projects.activeProject?.version }) })} className="flex items-center gap-3 px-12 py-3.5 rounded-2xl bg-white/5 border border-dashed border-white/10 hover:border-primary transition-all active:scale-95 text-[10px] font-bold uppercase text-muted group hover:text-primary"><FolderOpen className="w-4 h-4" /> Abrir Carpeta</button>} />
               <BuildPanel projectName={projects.activeProject.name} version={projects.activeProject.version} loader={projects.activeProject.loader} />
             </section>
           )}
@@ -272,10 +274,16 @@ export default function Page() {
                 <p className="text-sm text-muted mt-1">Las descargas se envían directamente a tu juego.</p>
               </div>
               <button
-                onClick={() => handleClassify("auto", "")}
+                onClick={() => {
+                  handleClassify("auto", "");
+                  setKeepOpenMimu(true);
+                  setTimeout(() => setKeepOpenMimu(false), 5000);
+                }}
+                onMouseEnter={() => setIsHoveredMimu(true)}
+                onMouseLeave={() => setIsHoveredMimu(false)}
                 className="flex items-center gap-3 px-6 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25 transition-all active:scale-95 hover:shadow-emerald-500/40 border border-emerald-400/20"
               >
-                <Package className="w-5 h-5" /> Enviar Todo al Juego
+                {isHoveredMimu || keepOpenMimu ? <ArrowBigRightDash className="w-5 h-5" /> : <ArrowBigRight className="w-5 h-5" />} Enviar Todo al Juego
               </button>
             </div>
 
@@ -283,7 +291,7 @@ export default function Page() {
             <div className="grid grid-cols-[240px_1.5fr_1fr] gap-6 items-start">
               {/* Left Card - Quick Actions */}
               <div className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] backdrop-blur-xl space-y-4">
-                <h3 className="font-headline text-sm uppercase tracking-wider text-muted">Accesos Rápidos</h3>
+                <h3 className="font-headline text-sm uppercase tracking-wider text-muted flex items-center gap-2"><FolderTree className="w-4 h-4" />Accesos Rápidos</h3>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
                     <FolderOpen className="w-4 h-4 text-primary" /> Descargas

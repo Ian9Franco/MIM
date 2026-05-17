@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck } from "lucide-react";
+import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck, Pickaxe } from "lucide-react";
 import type { PackHealthReport } from "@/lib/types";
 
 type BuildType = "alluser" | "allhost";

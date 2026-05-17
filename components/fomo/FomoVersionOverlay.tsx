@@ -5,7 +5,7 @@
 
 import React, { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, X, Download, Info, FileText, ListTree, ExternalLink, Package, Heart, Image as ImageIcon, Maximize2, Search, Workflow } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Download, Info, FileText, ListTree, ExternalLink, Package, Heart, Images, Maximize2, Search, Workflow } from "lucide-react";
 import { openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
@@ -202,7 +202,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto" style={{ borderColor: "var(--fomo-border)" }}>
             {!hideVersions && <TabButton active={activeTab === "versions"} onClick={() => setActiveTab("versions")} icon={<ListTree className="w-3.5 h-3.5" />} label="Versiones" />}
             <TabButton active={activeTab === "dependencies"} onClick={() => setActiveTab("dependencies")} icon={<Package className="w-3.5 h-3.5" />} label="Dependencias" />
-            <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} icon={<ImageIcon className="w-3.5 h-3.5" />} label="Galería" count={gallery.length || undefined} />
+            <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} icon={<Images className="w-3.5 h-3.5" />} label="Galería" count={gallery.length || undefined} />
             <TabButton active={activeTab === "description"} onClick={() => setActiveTab("description")} icon={<FileText className="w-3.5 h-3.5" />} label="Descripción" />
           </div>
 
@@ -221,7 +221,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                   </div>
                 ) : !loadingGallery && gallery.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5"><ImageIcon className="w-8 h-8 opacity-20" /></div>
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5"><Images className="w-8 h-8 opacity-20" /></div>
                     <div>
                       <p className="text-sm font-headline opacity-60">Este proyecto aún no tiene capturas de pantalla públicas.</p>
                       <p className="text-[10px] opacity-30 mt-1 uppercase tracking-widest">Galería Vacía</p>

@@ -4,9 +4,9 @@ import { COLORS } from "@/theme/tokens";
 
 // ── BulkActionsBar ──────────────────────────────────────────────────────────
 
-export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, isModern }: { mods: any[], onCancel: () => void, onAdd: () => void, onDownload: () => void, isModern?: boolean }) {
-  const displayMods = mods.slice(0, 5);
-  const remaining = mods.length - 5;
+export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, isModern, hideAdd, actionLabel, actionIcon }: { mods: any[], onCancel: () => void, onAdd?: () => void, onDownload: () => void, isModern?: boolean, hideAdd?: boolean, actionLabel?: string, actionIcon?: React.ReactNode }) {
+  const displayMods = mods.slice(0, 10);
+  const remaining = mods.length - 10;
 
   return (
     <div className="mx-4 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up" style={{ 
@@ -39,8 +39,13 @@ export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, isModern }: 
       </div>
       <div className="flex gap-2">
         <button onClick={onCancel} className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${isModern ? 'text-black/40 hover:bg-black/5' : 'text-white/40 hover:bg-white/10'}`}>Cancelar</button>
-        <button onClick={onAdd} className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border transition-all ${isModern ? 'border-black/10 text-black/80 hover:bg-black/5' : 'border-white/10 text-white/80 hover:bg-white/20'}`}><Plus className="w-3.5 h-3.5" />Añadir a...</button>
-        <button onClick={onDownload} className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all"><Download className="w-3.5 h-3.5" />Descargar Todo</button>
+        {!hideAdd && onAdd && (
+          <button onClick={onAdd} className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border transition-all ${isModern ? 'border-black/10 text-black/80 hover:bg-black/5' : 'border-white/10 text-white/80 hover:bg-white/20'}`}><Plus className="w-3.5 h-3.5" />Añadir a...</button>
+        )}
+        <button onClick={onDownload} className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all">
+          {actionIcon || <Download className="w-3.5 h-3.5" />}
+          {actionLabel || "Descargar Todo"}
+        </button>
       </div>
     </div>
   );

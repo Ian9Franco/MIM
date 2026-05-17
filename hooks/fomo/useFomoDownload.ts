@@ -47,6 +47,29 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
       if (res.ok) {
         showStatus(`${mod.title} descargado`, "success");
         eventBus.emit("fomo:mod-downloaded", { modId: mod.projectId, fileName: filename, source: mod._source as any });
+        
+        // Guardar en el historial de descargas (archivo físico en disco)
+        try {
+          fetch("/api/fomo/download-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId: mod.projectId,
+              title: mod.title,
+              author: mod.author,
+              iconUrl: mod.iconUrl,
+              categories: mod.categories || [],
+              _source: mod._source,
+              url: mod.url,
+              projectType: projectTypeOverride || mod.projectType || (mod as any).project_type || "mod",
+              fileName: safeFilename,
+              loader: loader,
+              gameVersion: gameVersions[0]
+            })
+          }).catch(e => console.error("Error calling download history API", e));
+        } catch (e) {
+          console.error("Error in history fetch block", e);
+        }
       } else {
         showStatus("Error en descarga", "error");
       }

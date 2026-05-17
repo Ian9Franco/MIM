@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, memo, useRef } from "react";
-import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, Download } from "lucide-react";
+import { Library, Plus, ChevronRight, X, Loader2, ArrowLeft, Trash2, Download, Layers, Glasses, Database, Archive, Puzzle, LayoutGrid } from "lucide-react";
 import {
   fetchCollections,
   fetchCollectionMods,
@@ -23,6 +23,7 @@ import { COLORS } from "@/theme/tokens";
 import { EmptyState, PillToggleGroup } from "../ui/primitives";
 import { FomoSkeleton }               from "./FomoSkeleton";
 import { FomoModCard }               from "./FomoModCard";
+import { BulkActionsBar }            from "./FomoSidebarComponents";
 import type { CollectionEntry, ModHit } from "@/lib/types";
 import type { StatusType } from "@/hooks/useStatusBanner";
 
@@ -394,27 +395,30 @@ export const FomoCollections = memo(function FomoCollections({
           <div className="flex items-center gap-2 px-6 py-2 border-b shrink-0 overflow-x-auto custom-scrollbar" style={{ borderColor: COLORS.border }}>
             <button
               onClick={() => setActiveCategory("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeCategory === "all" ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${activeCategory === "all" ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
               style={{ color: activeCategory === "all" ? "white" : COLORS.muted }}
             >
-              Todos
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Todos</span>
             </button>
             {Array.from(new Set(viewMods.map(m => m.projectType || "mod"))).map((type) => {
-              const typeLabels: Record<string, string> = {
-                "resourcepack": "Texturas",
-                "shader": "Shaders",
-                "datapack": "Datapacks",
-                "modpack": "Modpacks",
-                "mod": "Mods"
+              const typeConfig: Record<string, { label: string, icon: React.ReactNode }> = {
+                "resourcepack": { label: "Texturas", icon: <Layers className="w-3.5 h-3.5" /> },
+                "shader": { label: "Shaders", icon: <Glasses className="w-3.5 h-3.5" /> },
+                "datapack": { label: "Datapacks", icon: <Database className="w-3.5 h-3.5" /> },
+                "modpack": { label: "Modpacks", icon: <Archive className="w-3.5 h-3.5" /> },
+                "mod": { label: "Mods", icon: <Puzzle className="w-3.5 h-3.5" /> }
               };
+              const config = typeConfig[type] || { label: type, icon: <Library className="w-3.5 h-3.5" /> };
               return (
                 <button
                   key={type}
                   onClick={() => setActiveCategory(type)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeCategory === type ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${activeCategory === type ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
                   style={{ color: activeCategory === type ? "white" : COLORS.muted }}
                 >
-                  {typeLabels[type] || "Otros"}
+                  {config.icon}
+                  <span>{config.label}</span>
                 </button>
               );
             })}
@@ -635,41 +639,25 @@ export const FomoCollections = memo(function FomoCollections({
 
       {/* Bulk Actions Bar for Collections */}
       {selectedMods.length > 0 && !isAddingSelection && (
-        <div className="mx-4 mb-4 p-3 rounded-2xl flex items-center justify-between animate-slide-up relative z-10" style={{ background: "var(--fomo-card-bg, var(--color-secondary-bg))", border: `1px solid var(--color-primary)`, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
-          <div className="flex items-center gap-3 pl-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20 text-primary font-bold">
-              {selectedMods.length}
-            </div>
-            <span className="text-sm font-bold" style={{ color: "white" }}>Seleccionados</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onClearSelection?.()}
-              className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/10"
-              style={{ color: "var(--color-muted)" }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={async () => {
-                if (viewing) {
-                  onStatus(`Iniciando descarga de ${selectedMods.length} items...`, "info");
-                  for (const mod of selectedMods) {
-                    await onDownloadMod(mod);
-                    await new Promise(r => setTimeout(r, 500));
-                  }
-                  onClearSelection?.();
-                } else {
-                  setIsAddingSelection(true);
-                }
-              }}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-            >
-              {viewing ? <Download className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-              {viewing ? "Descargar Todo" : "Añadir a Colección"}
-            </button>
-          </div>
-        </div>
+        <BulkActionsBar 
+          mods={selectedMods} 
+          onCancel={() => onClearSelection?.()} 
+          onDownload={async () => {
+            if (viewing) {
+              onStatus(`Iniciando descarga de ${selectedMods.length} items...`, "info");
+              for (const mod of selectedMods) {
+                await onDownloadMod(mod);
+                await new Promise(r => setTimeout(r, 500));
+              }
+              onClearSelection?.();
+            } else {
+              setIsAddingSelection(true);
+            }
+          }}
+          hideAdd={true}
+          actionLabel={viewing ? "Descargar Todo" : "Añadir a Colección"}
+          actionIcon={viewing ? <Download className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+        />
       )}
     </div>
   );

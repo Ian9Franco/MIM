@@ -2,7 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
-  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert 
+  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen 
 } from "lucide-react";
 
 interface LayoutHeaderProps {
@@ -13,6 +13,7 @@ interface LayoutHeaderProps {
   onOpenSettings: () => void;
   onOpenStaging: () => void;
   hasStagingFiles: boolean;
+  stagingOpen: boolean;
   alertSidebarOpen: boolean;
   onToggleAlerts: (v: boolean) => void;
   hasAlerts: boolean;
@@ -30,7 +31,7 @@ interface LayoutHeaderProps {
 
 export function LayoutHeader({
   fomoOpen, onToggleFomo, isRefreshing, onRefresh, onOpenSettings, onOpenStaging,
-  hasStagingFiles, alertSidebarOpen, onToggleAlerts, hasAlerts, alertsSeen,
+  hasStagingFiles, stagingOpen, alertSidebarOpen, onToggleAlerts, hasAlerts, alertsSeen,
   sageOpen, onToggleSage, tweakOpen, onToggleTweak, packHealthOpen, onCheckHealth,
   activeProject, isValidatingHealth, watcherStatus
 }: LayoutHeaderProps) {
@@ -111,7 +112,16 @@ export function LayoutHeader({
             <div className="flex items-center gap-2 mt-2.5 relative z-10">
               <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10">Beta</span>
               <span className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#66C8A0] shadow-[0_0_8px_#66C8A0]" /> {watcherStatus || "Watcher"}
+                {(() => {
+                  const status = watcherStatus || "Watcher";
+                  if (status.includes("Mods")) return <Puzzle className="w-3 h-3 text-[#66C8A0]" />;
+                  if (status.includes("Texturas")) return <Layers className="w-3 h-3 text-[#66C8A0]" />;
+                  if (status.includes("Shaders")) return <Glasses className="w-3 h-3 text-[#66C8A0]" />;
+                  if (status.includes("Datapacks")) return <Database className="w-3 h-3 text-[#66C8A0]" />;
+                  if (status.includes("Librería")) return <BookOpen className="w-3 h-3 text-[#66C8A0]" />;
+                  return <span className="w-1 h-1 rounded-full bg-[#66C8A0] shadow-[0_0_8px_#66C8A0]" />;
+                })()}
+                {watcherStatus || "Watcher"}
               </span>
             </div>
           </div>
@@ -129,9 +139,9 @@ export function LayoutHeader({
 
           <HeaderButton 
             onClick={onOpenStaging} title="Archivos en Staging (Pendientes)" 
-            active={hasStagingFiles} color="amber" badge={hasStagingFiles}
+            active={hasStagingFiles || stagingOpen} color="amber" badge={hasStagingFiles}
           >
-            <Package className={`w-4 h-4 ${hasStagingFiles ? 'animate-bounce-subtle' : ''}`} />
+            {hasStagingFiles || stagingOpen ? <PackageOpen className="w-4 h-4 animate-bounce-subtle" /> : <Package className="w-4 h-4" />}
           </HeaderButton>
 
           <HeaderButton 
@@ -140,7 +150,7 @@ export function LayoutHeader({
             badge={hasAlerts && !alertsSeen} badgeColor="red"
             iconClass={alertSidebarOpen || (hasAlerts && !alertsSeen) ? 'animate-bell-ring' : ''}
           >
-            <Bell className="w-3.5 h-3.5" />
+            {alertSidebarOpen || (hasAlerts && !alertsSeen) ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
           </HeaderButton>
 
           <HeaderButton 

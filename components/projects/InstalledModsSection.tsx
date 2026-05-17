@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database } from "lucide-react";
+import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database, Layers2, Puzzle, Glasses } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 
 interface ContentItem {
@@ -101,7 +101,7 @@ export function InstalledModsSection() {
   return (
     <section className="animate-fade-up relative h-full flex flex-col">
       <SectionHeading
-        icon={<Package className="w-4 h-4" />}
+        icon={<Layers2 className="w-4 h-4" />}
         title="Contenido Instalado"
         sub="Detectados en .minecraft"
         badge={currentList.length}
@@ -118,7 +118,7 @@ export function InstalledModsSection() {
               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
           }`}
         >
-          <Package className="w-4 h-4" /> Mods
+          <Puzzle className="w-4 h-4" /> Mods
         </button>
         <button
           onClick={() => setActiveTab("textures")}
@@ -138,7 +138,7 @@ export function InstalledModsSection() {
               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
           }`}
         >
-          <Sparkles className="w-4 h-4" /> Shaders
+          <Glasses className="w-4 h-4" /> Shaders
         </button>
         <button
           onClick={() => setActiveTab("datapacks")}
@@ -213,11 +213,11 @@ export function InstalledModsSection() {
         ) : filteredItems.length === 0 ? (
           <div className="p-8 text-center border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-secondary-bg)]">
             {activeTab === "mods" ? (
-              <Package className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
+              <Puzzle className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
             ) : activeTab === "textures" ? (
               <Image className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
             ) : activeTab === "shaders" ? (
-              <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
+              <Glasses className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
             ) : (
               <Database className="w-8 h-8 mx-auto mb-2 opacity-30 text-[var(--color-muted)]" />
             )}
@@ -256,11 +256,11 @@ export function InstalledModsSection() {
                   {icons[item.path] ? (
                     <img src={icons[item.path]} alt={item.fileName} className="w-full h-full object-cover rounded-lg" />
                   ) : activeTab === "mods" ? (
-                    <Package className="w-4 h-4 text-[var(--color-muted)]" />
+                    <Puzzle className="w-4 h-4 text-[var(--color-muted)]" />
                   ) : activeTab === "textures" ? (
                     <Image className="w-4 h-4 text-[var(--color-muted)]" />
                   ) : activeTab === "shaders" ? (
-                    <Sparkles className="w-4 h-4 text-[var(--color-muted)]" />
+                    <Glasses className="w-4 h-4 text-[var(--color-muted)]" />
                   ) : (
                     <Database className="w-4 h-4 text-[var(--color-muted)]" />
                   )}

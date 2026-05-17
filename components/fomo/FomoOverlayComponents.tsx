@@ -1,5 +1,5 @@
 import React from "react";
-import { ListTree, Download, ExternalLink, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow, Search, Heart, Layers, Sparkles, Database, Archive, LayoutGrid } from "lucide-react";
+import { ListTree, Download, ExternalLink, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow, Search, Heart, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { formatSize, openExternal } from "@/utils/format";
 
@@ -261,10 +261,10 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
     const cats = categories.map(c => c.toLowerCase());
     
     if (t === "resourcepack") return <Layers className="w-3.5 h-3.5" />;
-    if (t === "shader") return <Sparkles className="w-3.5 h-3.5" />;
+    if (t === "shader") return <Glasses className="w-3.5 h-3.5" />;
     if (t === "modpack") return <Archive className="w-3.5 h-3.5" />;
-    if (t === "datapack" || cats.includes("datapack")) return <Database className="w-3.5 h-3.5" />;
-    if (t === "mod") return <Package className="w-3.5 h-3.5" />;
+    if (t === "datapack") return <Database className="w-3.5 h-3.5" />;
+    if (t === "mod") return <Puzzle className="w-3.5 h-3.5" />;
     return <LayoutGrid className="w-3.5 h-3.5" />;
   };
 
@@ -296,15 +296,15 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
             <p className="font-headline text-lg truncate leading-tight text-white drop-shadow-md">{mod.title}</p>
             <div className="flex items-center gap-1">
               <button 
-                onClick={() => onSelectProjectType?.("mod")}
+                onClick={() => onSelectProjectType?.(projectType)}
                 className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
-                  selectedProjectType === "mod" 
+                  selectedProjectType === projectType 
                     ? "bg-primary text-white border-primary shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.3)]" 
-                    : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                    : "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
                 }`}
               >
-                {getProjectTypeIcon("mod", mod.categories)}
-                MOD
+                {getProjectTypeIcon(projectType, mod.categories)}
+                {projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase()}
               </button>
               {mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack") && (
                 <button 
@@ -312,7 +312,7 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
                   className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
                     selectedProjectType === "datapack" 
                       ? "bg-emerald-500 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" 
-                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                      : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30"
                   }`}
                 >
                   <Database className="w-3 h-3" />
@@ -324,21 +324,21 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
           
           <div className={`flex items-center gap-2 text-xs font-semibold mb-3 transition-opacity ${isModern ? "opacity-80" : "opacity-60"}`} style={{ color: "var(--fomo-text-muted)" }}>
             <span>por</span>
-            <button onClick={() => onSearchAuthor(mod.author)} className={`font-extrabold hover:underline ${isModern ? "text-primary" : "text-primary"}`}>{mod.author}</button>
+            <button onClick={() => onSearchAuthor(mod.author)} className={`font-extrabold hover:underline ${isModern ? "text-primary" : "text-primary"}`}>{mod.author || "Autor Desconocido"}</button>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button 
               onClick={() => toggleFollowAuthor(mod.author)} 
               className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                followedAuthors.includes(mod.author) 
+                followedAuthors.some((a: any) => a?.name === mod.author) 
                   ? "bg-amber-500/20 text-amber-500 border-amber-500/40" 
                   : isModern
                     ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700"
                     : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
               }`}
             >
-              <Heart className={`w-3.5 h-3.5 ${followedAuthors.includes(mod.author) ? "fill-current" : ""}`} /> {followedAuthors.includes(mod.author) ? "Siguiendo" : "Seguir Autor"}
+              <Heart className={`w-3.5 h-3.5 ${followedAuthors.some((a: any) => a?.name === mod.author) ? "fill-current" : ""}`} /> {followedAuthors.some((a: any) => a?.name === mod.author) ? "Siguiendo" : "Seguir Autor"}
             </button>
             <button 
               onClick={() => onSearchMod?.(mod.title)} 
@@ -456,7 +456,7 @@ export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { 
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-[var(--fomo-text-primary)] flex items-center gap-1">
             <Download className="w-3 h-3 opacity-40 text-primary" />
-            {mod.downloads >= 1000000 ? (mod.downloads / 1000000).toFixed(1) + "M" : (mod.downloads / 1000).toFixed(1) + "K"}
+            {Number(mod.downloads || 0) >= 1000000 ? (Number(mod.downloads || 0) / 1000000).toFixed(1) + "M" : (Number(mod.downloads || 0) / 1000).toFixed(1) + "K"}
           </span>
           <span className="text-[10px] font-bold text-[var(--fomo-text-primary)] opacity-60 flex items-center gap-1">
             <Heart className="w-3 h-3 opacity-40" />

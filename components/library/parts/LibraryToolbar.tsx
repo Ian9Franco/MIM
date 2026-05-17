@@ -1,5 +1,5 @@
 import React from "react";
-import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2, Trash2 } from "lucide-react";
+import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2, Trash2, Puzzle, Layers, Database, Glasses } from "lucide-react";
 
 /**
  * @fileoverview Barra de Herramientas de Gestión Masiva (Librería).
@@ -147,26 +147,30 @@ export function LibraryToolbar({
       <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
         <button
           onClick={() => setFilterType("mod")}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "mod" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "mod" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
         >
+          <Puzzle className="w-3.5 h-3.5" />
           Mods
         </button>
         <button
           onClick={() => setFilterType("resourcepack")}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "resourcepack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "resourcepack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
         >
+          <Layers className="w-3.5 h-3.5" />
           Texturas
         </button>
         <button
           onClick={() => setFilterType("datapack")}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "datapack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "datapack" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
         >
+          <Database className="w-3.5 h-3.5" />
           Datapacks
         </button>
         <button
           onClick={() => setFilterType("shader")}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "shader" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "shader" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}
         >
+          <Glasses className="w-3.5 h-3.5" />
           Shaders
         </button>
       </div>

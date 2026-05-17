@@ -84,6 +84,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenStaging={() => setStagingOpen(true)}
           hasStagingFiles={hasStagingFiles}
+          stagingOpen={stagingOpen}
           alertSidebarOpen={alertSidebarOpen} onToggleAlerts={(v) => handleToggleUI('alerts', v)}
           hasAlerts={hasAlerts} alertsSeen={alertsSeen}
           sageOpen={sageOpen} onToggleSage={(v) => handleToggleUI('sage', v)}

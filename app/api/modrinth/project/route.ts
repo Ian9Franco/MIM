@@ -56,9 +56,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ 
-      body: data.body,
-      client_side: data.client_side,
-      server_side: data.server_side,
+      ...data,
       members
     });
   } catch (e) {

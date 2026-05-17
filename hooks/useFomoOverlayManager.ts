@@ -11,7 +11,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
   const [fullBody, setFullBody] = useState<string | null>(null);
   const [depSearchQuery, setDepSearchQuery] = useState("");
-  const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
+  const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
   const [followedMods, setFollowedMods] = useState<any[]>([]);
 
   // Gallery Logic
@@ -72,7 +72,12 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   useEffect(() => {
     const load = () => {
       try {
-        setFollowedAuthors(JSON.parse(localStorage.getItem("mim_followed_authors") || "[]"));
+        const authors = JSON.parse(localStorage.getItem("mim_followed_authors") || "[]");
+        // Filtramos nulos y normalizamos a objetos si eran strings (datos heredados)
+        const normalizedAuthors = authors
+          .filter((a: any) => a !== null && a !== undefined)
+          .map((a: any) => typeof a === "string" ? { name: a, iconUrl: null } : a);
+        setFollowedAuthors(normalizedAuthors);
         setFollowedMods(JSON.parse(localStorage.getItem("mim_followed_mods") || "[]"));
       } catch {}
     };
@@ -83,11 +88,14 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, []);
 
   const toggleFollowAuthor = useCallback((author: string) => {
-    const next = followedAuthors.includes(author) ? followedAuthors.filter(a => a !== author) : [...followedAuthors, author];
+    const exists = followedAuthors.some((a: any) => a?.name === author);
+    const next = exists 
+      ? followedAuthors.filter((a: any) => a?.name !== author) 
+      : [...followedAuthors, { name: author, iconUrl: mod.iconUrl }];
     setFollowedAuthors(next);
     localStorage.setItem("mim_followed_authors", JSON.stringify(next));
     window.dispatchEvent(new CustomEvent("mim-followed-authors-changed", { detail: next }));
-  }, [followedAuthors]);
+  }, [followedAuthors, mod.iconUrl]);
 
   const toggleFollowMod = useCallback((m: ModHit) => {
     const exists = followedMods.some(x => x.projectId === m.projectId);

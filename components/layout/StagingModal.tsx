@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Check, Trash2, ExternalLink, Package, MoveRight, AlertCircle, Loader2 } from "lucide-react";
+import { X, Check, Trash2, ExternalLink, Package, MoveRight, AlertCircle, Loader2, PackageOpen, ArrowBigRight, ArrowBigRightDash } from "lucide-react";
 import { useStaging, StagingFile } from "@/hooks/useStaging";
 
 interface StagingModalProps {
@@ -12,6 +12,8 @@ export function StagingModal({ onClose }: StagingModalProps) {
   const { files, isLoading, resolve, clear, hasFiles } = useStaging();
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [keepOpen, setKeepOpen] = useState(false);
 
   const handleResolveAll = async () => {
     setError(null);
@@ -48,7 +50,7 @@ export function StagingModal({ onClose }: StagingModalProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Package className="w-5 h-5 text-primary" />
+              <PackageOpen className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-headline tracking-tight">Staging</h2>
@@ -143,11 +145,17 @@ export function StagingModal({ onClose }: StagingModalProps) {
                 Cerrar
               </button>
               <button
-                onClick={handleResolveAll}
+                onClick={() => {
+                  handleResolveAll();
+                  setKeepOpen(true);
+                  setTimeout(() => setKeepOpen(false), 5000);
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 disabled={!!processing}
                 className="px-6 py-2 bg-primary text-primary-foreground font-semibold rounded-xl hover:shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.3)] transition-all flex items-center gap-2"
               >
-                {processing === 'all' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+                {processing === 'all' ? <Loader2 className="w-4 h-4 animate-spin" /> : (isHovered || keepOpen ? <PackageOpen className="w-4 h-4" /> : <Package className="w-4 h-4" />)}
                 Mover Todo al Juego
               </button>
             </div>

@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 6.3.1 | **Última actualización:** 2026-05-17
+> **Versión:** 6.3.2 | **Última actualización:** 2026-05-17
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Modos de Aplicación
 
-A partir de la versión 6.3.1, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+A partir de la versión 6.3.2, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
@@ -350,6 +350,16 @@ type BuildMode = 'alluser' | 'allhost';
 // • Salida: Carpeta lista para hosting
 ```
 
+#### 🛠️ Smart Config Management
+MIM soporta una gestión inteligente de archivos de configuración separando lo que va al cliente y lo que va al servidor de forma automática durante la exportación.
+
+**Estructura de Carpetas en `config/`:**
+- `common_config.toml`: Se copia a AMBOS (User y Host).
+- `.user/`: Solo para `alluser` (Cliente). Ideal para configs de mods de optimización, keybinds visuales, etc.
+- `.host/`: Solo para `allhost` (Servidor). Ideal para `server.properties`, whitelists, configs de rendimiento de servidor.
+
+*El archivo específico en `.user/` o `.host/` sobreescribe al común si tienen el mismo nombre.*
+
 ### 5.6 Rule-Based Optimization Engine (TWEAK)
 
 Motor inteligente de tuning y optimización de perfiles de juego (`app/api/tweak/route.ts`):
@@ -368,6 +378,15 @@ interface HardwareProfile {
 - **Cálculo de JVM Arguments**: Sugerencias precisas de flags de optimización de recolección de basura (G1GC/ZGC) y memoria asignada.
 - **Tuning Heurístico Dinámico**: Monitorea el recuento de mods activos para ajustar distancias de simulación, mipmaps y sombras de entidades.
 - **Presets Rápidos**: Perfiles instantáneos orientados a FPS máximos, fluidez o fidelidad de shaders.
+
+### 5.7 Tweak System (Personalización)
+Tweak es el centro de personalización del juego para el usuario final. Desacopla la configuración personal del jugador del contenido del modpack.
+
+**Características Detalladas:**
+- **Resource Pack Manager**: Drag-and-drop para priorizar packs. Validación de capas (Fresh Animations).
+- **Keybind Manager**: Buscador y resolución inteligente de conflictos por categorías de mod.
+- **Sistema de Snapshots (Combos)**: Guarda configuraciones completas (`options.txt` + packs activos).
+- **Sincronización**: Detecta cambios externos en `options.txt` y genera backups de rescate antes de aplicar cambios.
 
 ---
 
@@ -474,6 +493,13 @@ Una sección especializada para monitorizar creadores de contenido y mods indivi
 - **Búsqueda Híbrida Inteligente**: Al hacer clic en el botón de búsqueda (lupa) de un autor o mod seguido, FOMO activa de forma autónoma la fuente combinada `"all"` (Ambos) y realiza una consulta exacta (`author:XYZ` o `project:XYZ`).
 - **Comparativa Cruzada**: Muestra las tarjetas del mismo mod de Modrinth y CurseForge lado a lado, permitiendo al usuario contrastar de un vistazo versiones, fechas de actualización y loaders soportados (Forge vs Fabric/NeoForge) para detectar posibles discrepancias entre catálogos.
 - **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado, permitiendo iniciar nuevas búsquedas de forma continua sin requerir la eliminación manual previa del filtro.
+
+### 6.5 Mod Gallery Integration
+Integración de galerías de imágenes en la superposición de detalles de mods (`FomoVersionOverlay`), unificando fuentes de Modrinth y CurseForge.
+
+- **Lazy Loading**: Las imágenes se cargan perezosamente al abrir la pestaña "Galería".
+- **Backend unificado**: Endpoint `/api/mod-gallery` que consulta y normaliza las respuestas de Modrinth (`gallery`) y CurseForge (`screenshots`).
+- **Optimización**: Uso de dominios permitidos en `next.config.ts` o etiquetas `<img>` nativas, y caché de imágenes (`Cache-Control`).
 
 ---
 
@@ -746,6 +772,46 @@ Para manejar el límite estricto de VirusTotal (4 peticiones por minuto) sin blo
 4. UI muestra badge "Update available" en mods desactualizados
 5. User puede ignorar o descargar actualización
 ```
+
+---
+
+## 13. Consolidación y Refactor (v5.9)
+
+En la versión 5.9 se realizó un refactor masivo para reducir la deuda técnica y optimizar la legibilidad, apuntando a archivos de más de 500 líneas.
+
+### 📊 Impacto del Refactor
+
+| Archivo | Líneas Antes | Líneas Después | Reducción | Cambios Clave |
+| :--- | :---: | :---: | :---: | :--- |
+| `app/page.tsx` | 654 | ~130 | **-80%** | Extracción de SSE watcher, Auto-Classify y Fomo Portal. |
+| `security-scanner.ts` | 857 | ~130 | **-85%** | Mudanza de patrones regex y listas de confianza a `security-data.ts`. |
+| `sageRecoveryEngine.ts` | 557 | ~120 | **-78%** | Extracción de patrones de crash y lógica a `sage-data.ts`. |
+| `PackHealthModal.tsx` | 529 | ~150 | **-72%** | Extracción de `IssueRow` e `IssueSection` a componentes separados. |
+| `incidentStorage.ts` | 512 | ~110 | **-78%** | Extracción de fallback de LocalStorage a `storage-fallback.ts`. |
+
+### 🏗️ Mejoras Arquitectónicas
+- **Heurísticas Centralizadas**: Se movieron arrays y lógica hardcodeada a archivos de datos dedicados (`classification-data.ts`, `security-data.ts`, `sage-data.ts`, `version-utils.ts`).
+- **Consolidación de Lógica**: Se eliminó `overrides.ts` y se fusionó en `projectConfig.ts`.
+- **Desacoplamiento de UI**: Se extrajeron estructuras complejas de `Page.tsx` a `FomoSidebarPortal.tsx` y hooks personalizados.
+
+---
+
+## 14. Arquitectura Standalone (Electron + Next.js)
+
+Para empaquetar MIM en un ejecutable de Windows (`.exe`), se utiliza la arquitectura de **Next.js Standalone + Electron**.
+
+### 🏗️ Flujo de Ejecución
+1. **Ventana de Electron**: Actúa como el navegador nativo.
+2. **Servidor Local Next.js**: Se levanta en segundo plano un micro-servidor Node.js (modo standalone) que procesa la lógica de negocio y las APIs.
+3. **FS Nativo**: El backend accede directamente al sistema de archivos sin restricciones de sandbox.
+4. **No CORS**: Las peticiones a Modrinth/CurseForge las hace el servidor local, evitando problemas de CORS.
+
+### 💎 Ventajas
+- **Protección**: El código se empaqueta en un archivo `.asar` comprimido.
+- **Privacidad**: Las API Keys se guardan localmente en el equipo del usuario (`.mim-index`).
+- **Instalación**: Se genera un instalador tradicional (NSIS) y una versión portable de un solo clic.
+
+*(Nota: La implementación detallada de los scripts de compilación se encuentra en la carpeta `standalone/` y el archivo `package.json`.)*
 
 ---
 

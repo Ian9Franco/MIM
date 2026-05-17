@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ModHit } from "@/lib/types";
 
 export function useFomoFollowedManager() {
-  const [subTab, setSubTab] = useState<"projects" | "authors">("projects");
-  const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
+  const [subTab, setSubTab] = useState<"projects" | "authors" | "history">("projects");
+  const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
   const [followedMods, setFollowedMods] = useState<ModHit[]>([]);
   const [modrinthStatus, setModrinthStatus] = useState<Record<string, any>>({});
   const [showOnlyWithUpdates, setShowOnlyWithUpdates] = useState(false);
@@ -11,7 +11,13 @@ export function useFomoFollowedManager() {
   useEffect(() => {
     const load = () => {
       try {
-        setFollowedAuthors(JSON.parse(localStorage.getItem("mim_followed_authors") || "[]"));
+        const authors = JSON.parse(localStorage.getItem("mim_followed_authors") || "[]");
+        // Normalizamos a objetos si eran strings (datos heredados)
+        const normalizedAuthors = authors.map((a: any) => typeof a === "string" ? { name: a, iconUrl: null } : a);
+        // Limpiamos autores nulos, vacíos o que quedaron como "Autor Desconocido"
+        const cleanAuthors = normalizedAuthors.filter((a: any) => a && a.name && a.name !== "Autor Desconocido");
+        setFollowedAuthors(cleanAuthors);
+        
         setFollowedMods(JSON.parse(localStorage.getItem("mim_followed_mods") || "[]"));
         setModrinthStatus(JSON.parse(localStorage.getItem("mim_modrinth_status") || "{}"));
       } catch {}
@@ -24,7 +30,7 @@ export function useFomoFollowedManager() {
   }, []);
 
   const handleUnfollowAuthor = useCallback((author: string) => {
-    const next = followedAuthors.filter(a => a !== author);
+    const next = followedAuthors.filter((a: any) => a.name !== author);
     setFollowedAuthors(next);
     localStorage.setItem("mim_followed_authors", JSON.stringify(next));
     window.dispatchEvent(new CustomEvent("mim-followed-authors-changed", { detail: next }));

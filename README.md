@@ -14,7 +14,7 @@
 
 **⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de Seguridad | 🧠 Diagnóstico de Crashes**
 
-[![Version](https://img.shields.io/badge/Version-6.3.1-6366f1.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-6.3.2-6366f1.svg)](./CHANGELOG.md)
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -73,6 +73,8 @@ Más tiempo jugando. Como debería ser.
 | **🎹 Keybind Editor** | Edita controles de mods sin abrir Minecraft | Control total, cero menús infernales |
 | **🔧 Priority Stack** | Orden visual de resource packs y reglas tipo **Fresh Animations** | Evita bugs visuales y packs peleándose como primos en Navidad |
 | **⚙️ TWEAK Optimizer** | Perfiles automáticos de rendimiento y tuning heurístico de JVM args según hardware detectado | Maximiza FPS y estabilidad sin tocar configuraciones manuales complejas |
+| **🛠️ Smart Config** | División automática de configs para cliente (`.user/`) y servidor (`.host/`) | Builds limpios y optimizados sin warnings |
+| **🖼️ Mod Gallery** | Galería de imágenes integrada en detalles de mods (Modrinth + CurseForge) | Previsualización visual antes de descargar |
 | **👤 Modo MIMU** | Vista sin proyectos para usuarios que solo buscan jugar | Interfaz simplificada con envíos directos al juego y gestor de mundos |
 
 ---
@@ -208,7 +210,7 @@ MIM implementa un sistema de seguridad avanzado para proteger tu PC de mods mali
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Versión 6.3.1)
+### ✅ Completado (Versión 6.3.2)
 - **Modo MIMU (User Mode) Extendido**: Ahora lee directamente de la carpeta del juego (`.minecraft`) los mods, resourcepacks, shaders y datapacks de cada mundo, sin necesidad de tener un proyecto activo.
 - **SAGE Rediseñado**: Implementación de escaneo en dos pasos (Local primero, VirusTotal después), cola inteligente con esperas de 15s y caché persistente de resultados en disco.
 - **Integración CurseForge "Community Picks"**: Visualización de colecciones curadas por la comunidad en el feed de Spotlight.
@@ -218,7 +220,16 @@ MIM implementa un sistema de seguridad avanzado para proteger tu PC de mods mali
 - **Envíos Directos al Juego**: Flag `toGame` en la clasificación para enrutar archivos directamente a la carpeta activa de Minecraft.
 
 ### ✅ Completado (Beta 5.9)
-- **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios (`useFileWatcher`, `FomoSidebarPortal`, heurísticas centralizadas).
+- **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios.
+  
+  | Archivo | Antes | Después | Reducción |
+  | :--- | :---: | :---: | :---: |
+  | `app/page.tsx` | 654 | ~130 | **-80%** |
+  | `security-scanner.ts` | 857 | ~130 | **-85%** |
+  | `sageRecoveryEngine.ts` | 557 | ~120 | **-78%** |
+  | `PackHealthModal.tsx` | 529 | ~150 | **-72%** |
+  | `incidentStorage.ts` | 512 | ~110 | **-78%** |
+
 - **Modrinth Rescue Fallback**: Búsqueda inteligente de rescate en Modrinth al detectar que un autor de CurseForge bloquea descargas de terceros, garantizando descargas exitosas.
 - **Interactive Dependency Modal**: Modal overlay premium para previsualizar dependencias requeridas antes de ejecutar descargas por lotes.
 - **Flujo de Detalles Sincronizado**: Carga y despliegue instantáneo del panel de detalles en cualquier mod de la librería sin cierres automáticos ni temporizadores.

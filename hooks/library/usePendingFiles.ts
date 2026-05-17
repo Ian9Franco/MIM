@@ -11,7 +11,7 @@ import { isVersionCompatible, isLoaderCompatible } from "@/lib/version-utils";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function usePendingFiles(pendingFiles: PendingFile[], activeProject: Project | null, onDeleteFile: any) {
+export function usePendingFiles(pendingFiles: PendingFile[], activeProject: Project | null, onDeleteFile: any, detectedVersion?: string, modrinthStatus: any = {}) {
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
   const [filesToDelete, setFilesToDelete] = useState<PendingFile[]>([]);
 
@@ -21,12 +21,28 @@ export function usePendingFiles(pendingFiles: PendingFile[], activeProject: Proj
    * satisfacen las restricciones del proyecto activo usando las utilidades avanzadas.
    */
   const checkCompatibility = useCallback((f: PendingFile) => {
-    if (!activeProject) return true;
-    const v = f.meta?.gameVersion ?? "unknown";
-    const l = f.meta?.loader ?? "unknown";
+    const targetVersion = activeProject?.version || detectedVersion || "1.20.1";
     
-    return isVersionCompatible(v, activeProject.version) && isLoaderCompatible(l, activeProject.loader, activeProject.version);
-  }, [activeProject]);
+    let v = f.meta?.gameVersion ?? "unknown";
+    if (v === "unknown" || v === "UNKNOWN") {
+      const mrVersion = modrinthStatus[f.path]?.gameVersions?.[0];
+      if (mrVersion) v = mrVersion;
+    }
+    
+    const versionComp = isVersionCompatible(v, targetVersion);
+    
+    if (!activeProject) {
+      return versionComp; // En modo MIMU solo filtramos por versión
+    }
+    
+    let l = f.meta?.loader ?? "unknown";
+    if (l === "unknown" || l === "UNKNOWN") {
+      const mrLoader = modrinthStatus[f.path]?.loaders?.[0];
+      if (mrLoader) l = mrLoader;
+    }
+    
+    return versionComp && isLoaderCompatible(l, activeProject.loader, activeProject.version);
+  }, [activeProject, detectedVersion, modrinthStatus]);
 
   /**
    * groups: Divide el array de pendientes en compatibles e incompatibles (Quarentena).

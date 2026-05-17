@@ -52,7 +52,7 @@ class IncidentManager {
     eventBus.subscribe("sage:security-risk", (data) => {
       if (data.severity === "critical" || data.severity === "suspicious") {
         this.createIncident({
-          id: "sage-security-report",
+          id: `sage-security-${data.fileName}-${data.riskType}`,
           title: `Riesgo de seguridad: ${data.severity.toUpperCase()}`,
           detail: `Se ha detectado una amenaza tipo ${data.riskType} en el archivo ${data.fileName} con una puntuación de riesgo de ${data.riskScore}/100.`,
           severity: data.severity === "critical" ? "danger" : "warning",

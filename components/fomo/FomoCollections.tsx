@@ -48,6 +48,23 @@ interface LibraryUpdateInfo {
   [key: string]: unknown;
 }
 
+function CollectionIcon({ url, fallbackSize = "w-6 h-6", fallbackOpacity = "opacity-30" }: { url?: string | null, fallbackSize?: string, fallbackOpacity?: string }) {
+  const [failed, setFailed] = useState(false);
+  
+  if (url && !failed) {
+    return (
+      <img 
+        src={url} 
+        alt="" 
+        className="w-full h-full object-cover" 
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  
+  return <Library className={`${fallbackSize} ${fallbackOpacity}`} style={{ color: COLORS.primary }} />;
+}
+
 export const FomoCollections = memo(function FomoCollections({
   loader, gameVersion, onStatus, addingForMod, onClearAddingFor,
   downloading, onDownloadMod, onOpenVersions,
@@ -72,6 +89,7 @@ export const FomoCollections = memo(function FomoCollections({
 
   const [isTransitioningColumns, setIsTransitioningColumns] = useState(false);
   const [transitionTarget, setTransitionTarget] = useState<"two" | "three">("three");
+  const [activeCategory, setActiveCategory] = useState("all");
   const lastDetailsState = useRef(isDetailsOpen);
 
   useEffect(() => {
@@ -141,12 +159,19 @@ export const FomoCollections = memo(function FomoCollections({
 
   const handleCreate = useCallback(async (name: string) => {
     const modsToAdd = addingForMod ? [addingForMod] : selectedMods;
-    if (modsToAdd.length === 0) return;
+    if (modsToAdd.length === 0) {
+      const { error } = await createCollection(name, null, targetType);
+      if (error) { onStatus(error, "error"); return; }
+      onStatus(`Colección "${name}" creada con éxito`, "success");
+      setCreating(false);
+      load();
+      return;
+    }
 
     let successCount = 0;
     let lastError = null;
 
-    // Crear la colección primero con el primer mod (o ninguno)
+    // Crear la colección primero con el primer mod
     const { collection, error } = await createCollection(name, modsToAdd[0], targetType);
     
     if (error) { onStatus(error, "error"); return; }
@@ -205,9 +230,13 @@ export const FomoCollections = memo(function FomoCollections({
 
   const handleDownloadCollection = useCallback(async (coll: CollectionEntry) => {
     setCollDl(coll.id);
-    const { count, error } = await downloadCollection(coll.id, loader, gameVersion);
+    const { count, skipped, error } = await downloadCollection(coll.id, loader, gameVersion);
     if (error) onStatus(error, "error");
-    else       onStatus(`${count} mods descargados de "${coll.name}"`, "success");
+    else {
+      let msg = `${count} mods descargados de "${coll.name}".`;
+      if (skipped > 0) msg += ` ${skipped} omitidos por incompatibilidad.`;
+      onStatus(msg, "success");
+    }
     setCollDl(null);
   }, [loader, gameVersion, onStatus]);
 
@@ -241,6 +270,28 @@ export const FomoCollections = memo(function FomoCollections({
       setConfirmDelete(null);
     }
   }, [onStatus, load]);
+
+  const handleRemoveModFromCollection = useCallback(async (collId: string, mod: any) => {
+    try {
+      const endpoint = viewing?.isLocal ? "/api/local-collections" : "/api/modrinth/collections";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove_project", collectionId: collId, projectId: mod.projectId }),
+      });
+
+      if (res.ok) {
+        onStatus(`"${mod.title}" eliminado de la colección`, "success");
+        setViewMods(prev => prev.filter(m => m.projectId !== mod.projectId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        onStatus(data.error || "No se pudo eliminar el proyecto", "error");
+      }
+    } catch (err) {
+      console.error("Error removing project:", err);
+      onStatus("Error de red", "error");
+    }
+  }, [viewing, onStatus]);
 
   if (addingForMod || creating || (selectedMods.length > 0 && !viewing)) {
     return (
@@ -300,8 +351,7 @@ export const FomoCollections = memo(function FomoCollections({
             {collections.filter((c) => c.id !== "followed-projects").map((coll) => (
               <button key={coll.id} onClick={() => handleAddTo(coll)} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-transparent hover:border-primary/30 hover:bg-white/10 transition-all text-left group">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-5 h-5 opacity-40" style={{ color: COLORS.primary }} />}
+                  <CollectionIcon url={coll.iconUrl} fallbackSize="w-5 h-5" fallbackOpacity="opacity-40" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm truncate">{coll.name}</p>
@@ -335,6 +385,39 @@ export const FomoCollections = memo(function FomoCollections({
             {collDl === viewing.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "↓ Descargar todos"}
           </button>
         </div>
+        
+        {/* Filtros por categoría */}
+        {!viewLoading && viewMods.length > 0 && (
+          <div className="flex items-center gap-2 px-6 py-2 border-b shrink-0 overflow-x-auto custom-scrollbar" style={{ borderColor: COLORS.border }}>
+            <button
+              onClick={() => setActiveCategory("all")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeCategory === "all" ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
+              style={{ color: activeCategory === "all" ? "white" : COLORS.muted }}
+            >
+              Todos
+            </button>
+            {Array.from(new Set(viewMods.map(m => m.projectType || "mod"))).map((type) => {
+              const typeLabels: Record<string, string> = {
+                "resourcepack": "Texturas",
+                "shader": "Shaders",
+                "datapack": "Datapacks",
+                "modpack": "Modpacks",
+                "mod": "Mods"
+              };
+              return (
+                <button
+                  key={type}
+                  onClick={() => setActiveCategory(type)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeCategory === type ? "bg-white/10 text-white" : "opacity-40 hover:opacity-100"}`}
+                  style={{ color: activeCategory === type ? "white" : COLORS.muted }}
+                >
+                  {typeLabels[type] || "Otros"}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className={`flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pt-2 grid grid-cols-1 ${isDetailsOpen ? "lg:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"} gap-2 content-start transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]`}>
           {viewLoading ? (
             <div className="col-span-full">
@@ -350,23 +433,88 @@ export const FomoCollections = memo(function FomoCollections({
                     count={transitionTarget === "two" ? 6 : 9} 
                   />
                 </div>
-              ) : viewMods.map((mod) => (
-                <div key={mod.projectId} className="p-2 bg-transparent overflow-visible">
-                  <FomoModCard 
-                    mod={mod} 
-                    isDownloading={!!downloading[mod.projectId]} 
-                    onDownload={onDownloadMod} 
-                    onOpenVersions={onOpenVersions} 
-                    onAddToCollection={() => {}} 
-                    isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
-                    onToggleSelect={onToggleSelect}
-                    sinytraActive={sinytraActive}
-                    hasUpdateAvailable={Object.values(libraryUpdates).some(
-                      (s: LibraryUpdateInfo) => s.projectId === mod.projectId && s.status === "update_available"
-                    )}
-                  />
-                </div>
-              ))}
+              ) : (() => {
+                const typeLabels: Record<string, string> = {
+                  "resourcepack": "Texturas",
+                  "shader": "Shaders",
+                  "datapack": "Datapacks",
+                  "modpack": "Modpacks",
+                  "mod": "Mods"
+                };
+
+                const filteredMods = activeCategory === "all" 
+                  ? viewMods 
+                  : viewMods.filter(m => (m.projectType || "mod") === activeCategory);
+
+                if (activeCategory !== "all") {
+                  return filteredMods.map((mod) => (
+                    <div key={mod.projectId} className="p-2 bg-transparent overflow-visible relative group">
+                      <FomoModCard 
+                        mod={mod} 
+                        isDownloading={!!downloading[mod.projectId]} 
+                        onDownload={onDownloadMod} 
+                        onOpenVersions={onOpenVersions} 
+                        onAddToCollection={() => {}} 
+                        isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
+                        onToggleSelect={onToggleSelect}
+                        sinytraActive={sinytraActive}
+                        hasUpdateAvailable={Object.values(libraryUpdates).some(
+                          (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                        )}
+                      />
+                      <button 
+                        onClick={() => handleRemoveModFromCollection(viewing!.id, mod)}
+                        className="absolute top-4 right-4 p-1.5 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+                        title="Eliminar de la colección"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ));
+                }
+
+                // Si es "todos", los agrupamos con títulos
+                const groupedMods = viewMods.reduce((acc, mod) => {
+                  const type = mod.projectType || "mod";
+                  if (!acc[type]) acc[type] = [];
+                  acc[type].push(mod);
+                  return acc;
+                }, {} as Record<string, any[]>);
+
+                return Object.entries(groupedMods).map(([type, mods]) => (
+                  <React.Fragment key={type}>
+                    <div className="col-span-full mt-4 first:mt-0">
+                      <h4 className="font-headline text-xs uppercase tracking-wider opacity-40 mb-2" style={{ color: COLORS.foreground }}>
+                        {typeLabels[type] || "Otros"}
+                      </h4>
+                    </div>
+                    {mods.map((mod) => (
+                      <div key={mod.projectId} className="p-2 bg-transparent overflow-visible relative group">
+                        <FomoModCard 
+                          mod={mod} 
+                          isDownloading={!!downloading[mod.projectId]} 
+                          onDownload={onDownloadMod} 
+                          onOpenVersions={onOpenVersions} 
+                          onAddToCollection={() => {}} 
+                          isSelected={selectedMods.some(m => m.projectId === mod.projectId)}
+                          onToggleSelect={onToggleSelect}
+                          sinytraActive={sinytraActive}
+                          hasUpdateAvailable={Object.values(libraryUpdates).some(
+                            (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                          )}
+                        />
+                        <button 
+                          onClick={() => handleRemoveModFromCollection(viewing!.id, mod)}
+                          className="absolute top-4 right-4 p-1.5 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+                          title="Eliminar de la colección"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ));
+              })()}
             </>
           )}
         </div>
@@ -419,28 +567,25 @@ export const FomoCollections = memo(function FomoCollections({
   } else if (activeTab === "curseforge") {
     displayedCollections = cfCollections;
   } else if (activeTab === "mim") {
-    displayedCollections = collections.filter(c => c.id !== "followed-projects");
-  } else if (activeTab === "followed") {
-    displayedCollections = collections.filter(c => c.id === "followed-projects");
+    displayedCollections = collections;
   }
 
   const TABS = [
     { value: "official", label: "Modrinth Official", activeColor: "#1ED760", activeBg: "rgba(30,215,96,0.15)", activeBorder: "rgba(30,215,96,0.3)" },
     { value: "curseforge", label: "CurseForge Picks", activeColor: "#f87171", activeBg: "rgba(248,113,113,0.15)", activeBorder: "rgba(248,113,113,0.3)" },
     { value: "mim", label: "Colecciones MIM", activeColor: "#FF6C3E", activeBg: "rgba(255,108,62,0.15)", activeBorder: "rgba(255,108,62,0.3)" },
-    { value: "followed", label: "Proyectos Seguidos", activeColor: "#66C8A0", activeBg: "rgba(102,200,160,0.15)", activeBorder: "rgba(102,200,160,0.3)" },
   ];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Tabs Header */}
-      <div className="px-4 py-3 border-b shrink-0 flex items-center justify-center" style={{ borderColor: COLORS.border, background: "rgba(0,0,0,0.2)" }}>
+      <div className="px-4 py-3 border-b shrink-0 flex items-center justify-center" style={{ borderColor: "var(--color-border)", background: "var(--color-card)", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <PillToggleGroup 
           options={TABS} 
           value={activeTab} 
           onChange={(v) => setActiveTab(v as any)} 
           className="p-1.5 w-full max-w-xl" 
-          style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}
+          style={{ background: "var(--color-secondary-bg)", borderColor: "var(--color-border)" }}
           ariaLabel="Pestañas de colecciones" 
         />
       </div>
@@ -458,20 +603,30 @@ export const FomoCollections = memo(function FomoCollections({
             <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
               <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
                 <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {coll.iconUrl ? <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" /> : <Library className="w-6 h-6 opacity-30" style={{ color: COLORS.primary }} />}
+                  <CollectionIcon url={coll.iconUrl} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-headline text-sm truncate flex items-center gap-2" style={{ color: COLORS.foreground }}>
                     {coll.name}
                     {activeTab === "official" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(30,215,96,0.12)", color: "#1ED760", border: "1px solid rgba(30,215,96,0.3)" }}>✓ Oficial</span>}
                   </p>
-                  <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                  <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos • ID: {coll.id}</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
                     {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
                   </div>
                 </div>
+                
+                {/* Miniaturas de mods (Overlap) */}
+                {coll.previewIcons && coll.previewIcons.length > 0 && (
+                  <div className="flex items-center -space-x-6 ml-auto mr-4 shrink-0">
+                    {coll.previewIcons.map((icon, idx) => (
+                      <div key={idx} className="w-12 h-12 rounded-lg bg-card border border-white/10 overflow-hidden shadow-lg transition-transform hover:translate-y-[-2px]" style={{ zIndex: (coll.previewIcons?.length || 0) - idx }}>
+                        <img src={icon} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </button>
 
               {/* Delete Button / Confirmation */}

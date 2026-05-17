@@ -12,6 +12,7 @@ import { useProjects }        from "../hooks/useProjects";
 import { useLibrary }         from "../hooks/useLibrary";
 import { useFileWatcher }     from "../hooks/useFileWatcher";
 import { useStatusBanner }    from "../hooks/useStatusBanner";
+import { usePendingFiles }    from "../hooks/library/usePendingFiles";
 import { CATEGORY_HOTKEYS }   from "../constants/app";
 import { SectionHeading, StatusBanner }     from "@/components/ui/primitives";
 import { ProjectsSection }    from "@/components/projects/ProjectsSection";
@@ -36,6 +37,22 @@ function Divider() {
 export default function Page() {
   const projects = useProjects();
   const { pendingFiles, setPendingFiles, loading } = useFileWatcher();
+  const [detectedVersion, setDetectedVersion] = useState("1.20.1");
+
+  useEffect(() => {
+    const fetchVersion = () => {
+      fetch("/api/minecraft/mods")
+        .then(res => res.json())
+        .then(data => {
+          if (data.detectedVersion) setDetectedVersion(data.detectedVersion);
+        })
+        .catch(err => console.error("Failed to detect version:", err));
+    };
+    
+    fetchVersion();
+    window.addEventListener("refresh-system", fetchVersion);
+    return () => window.removeEventListener("refresh-system", fetchVersion);
+  }, []);
   
   const [selectedFiles,    setSelectedFiles]    = useState<PendingFile[]>([]);
   const [selectedLibFiles, setSelectedLibFiles] = useState<LibraryFile[]>([]);
@@ -65,6 +82,8 @@ export default function Page() {
 
   const lib = useLibrary(projects.activeProject, pendingFiles, setPendingFiles, selectedLibFiles, setSelectedLibFiles);
   const { status, showStatus, clearStatus } = useStatusBanner();
+  
+  const { compatibleFiles } = usePendingFiles(pendingFiles, projects.activeProject, () => {}, detectedVersion, lib.modrinthStatus);
 
   // ── Global Events ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -136,7 +155,12 @@ export default function Page() {
   }, [autoClassify, pendingFiles, projects.activeProject, lib, setPendingFiles]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleClassify = useCallback((cat: string, sub: string) => lib.handleClassify(cat, sub, [...selectedFiles, ...selectedLibFiles], setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }, appMode === "MIMU"), [lib, selectedFiles, selectedLibFiles, setPendingFiles, appMode]);
+  const handleClassify = useCallback((cat: string, sub: string) => {
+    const filesToProcess = selectedFiles.length > 0 || selectedLibFiles.length > 0 
+      ? [...selectedFiles, ...selectedLibFiles] 
+      : compatibleFiles;
+    lib.handleClassify(cat, sub, filesToProcess, setPendingFiles, () => { setSelectedFiles([]); setSelectedLibFiles([]); setShowSubcategories(null); }, appMode === "MIMU");
+  }, [lib, selectedFiles, selectedLibFiles, compatibleFiles, setPendingFiles, appMode]);
   
   const handleDeleteFile = useCallback(async (file: PendingFile) => {
     const res = await fetch("/api/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: file.path }) });
@@ -196,41 +220,61 @@ export default function Page() {
         )}
 
         {appMode === "MIMU" ? (
-          <div className="max-w-7xl mx-auto mt-6 animate-fade-up">
-            <div className="mb-6 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto mt-6 animate-fade-up space-y-6">
+            {/* Header / Top Bar */}
+            <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-6 rounded-2xl backdrop-blur-md">
               <div>
                 <h2 className="font-headline text-2xl text-foreground">Modo Usuario (MIMU)</h2>
                 <p className="text-sm text-muted mt-1">Las descargas se envían directamente a tu juego.</p>
-                <div className="flex gap-2 mt-4">
-                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
-                    <FolderOpen className="w-3.5 h-3.5" /> Descargas
-                  </button>
-                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "minecraft" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
-                    <FolderOpen className="w-3.5 h-3.5" /> Carpeta Juego
-                  </button>
-                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "mods" }) })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 hover:text-primary transition-all active:scale-95 text-muted">
-                    <FolderOpen className="w-3.5 h-3.5" /> Mods
-                  </button>
-                </div>
               </div>
               <button
                 onClick={() => handleClassify("auto", "")}
-                className="flex items-center gap-3 px-8 py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25 transition-all active:scale-95 hover:shadow-emerald-500/40 border border-emerald-400/20"
+                className="flex items-center gap-3 px-6 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25 transition-all active:scale-95 hover:shadow-emerald-500/40 border border-emerald-400/20"
               >
                 <Package className="w-5 h-5" /> Enviar Todo al Juego
               </button>
             </div>
-            <div className="grid grid-cols-[1.5fr_1fr] gap-6 items-start mt-6">
-              <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}>
-                <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} />
+
+            {/* Bento Grid */}
+            <div className="grid grid-cols-[240px_1.5fr_1fr] gap-6 items-start">
+              {/* Left Card - Quick Actions */}
+              <div className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] backdrop-blur-xl space-y-4">
+                <h3 className="font-headline text-sm uppercase tracking-wider text-muted">Accesos Rápidos</h3>
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
+                    <FolderOpen className="w-4 h-4 text-primary" /> Descargas
+                  </button>
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "minecraft" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
+                    <FolderOpen className="w-4 h-4 text-primary" /> Carpeta Juego
+                  </button>
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "mods" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
+                    <FolderOpen className="w-4 h-4 text-primary" /> Mods
+                  </button>
+                  <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "resourcepacks" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
+                    <FolderOpen className="w-4 h-4 text-primary" /> Texturas
+                  </button>
+                </div>
               </div>
-              <InstalledModsSection />
+
+              {/* Middle Card - Pending Files */}
+              <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl`}>
+                <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
+              </div>
+
+              {/* Right Card - Installed Mods (Tall) */}
+              <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl h-full">
+                <InstalledModsSection />
+              </div>
             </div>
-            <WorldsSection />
+
+            {/* Bottom Card - Worlds */}
+            <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl">
+              <WorldsSection pendingFiles={pendingFiles} />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
-            <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} /></div>
+            <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} /></div>
             <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
             <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} />
           </div>
@@ -239,7 +283,7 @@ export default function Page() {
         {lib.modDescription && <DescriptionModal modDescription={lib.modDescription} onClose={() => lib.setModDescription(null)} />}
         <AlertSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} conflicts={lib.conflicts} bytecodeConflicts={lib.bytecodeConflicts} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} library={lib.library} downloadingMods={lib.downloadingMods} handleResolveConflict={lib.handleResolveConflict} handleDownloadUpdate={lib.handleDownloadUpdate} handleDismissUpdate={lib.handleDismissUpdate} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} />
 
-        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} />, document.body)}
+        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />, document.body)}
       </div>
 
       <ConfirmModal isOpen={filesToDelete.length > 0} onClose={() => setFilesToDelete([])} onConfirm={handleBulkDelete} title={filesToDelete.length > 1 ? "¿Eliminar seleccionados?" : "¿Eliminar archivo?"} message={`¿Estás seguro? Esta acción no se puede deshacer.`} confirmLabel="Eliminar" cancelLabel="Cancelar" type="danger" />

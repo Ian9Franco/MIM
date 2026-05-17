@@ -218,7 +218,7 @@ export const PillToggleGroup = React.memo(function PillToggleGroup({
             aria-checked={isActive}
             onClick={() => onChange(opt.value)}
             className={`relative z-10 flex-1 h-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold transition-all rounded-xl whitespace-nowrap overflow-hidden ${
-              isActive ? "" : "opacity-50 hover:opacity-100 hover:bg-white/5"
+              isActive ? "" : "opacity-75 hover:opacity-100 hover:bg-white/5"
             }`}
             style={{
               color: isActive ? (opt.activeColor || "var(--color-primary)") : "var(--fomo-text-muted)",

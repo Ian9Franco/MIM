@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { PendingFile } from "@/lib/types";
+import { incidentManager } from "@/lib/incidentManager";
 
 /**
  * Genera un "fingerprint" o huella única para un archivo pendiente
@@ -35,6 +36,15 @@ export function useFileWatcher() {
         
         if (data.type === "deleted") {
           setPendingFiles((prev) => prev.filter((f) => f.path !== data.path));
+          
+          // Resolve SAGE incidents for the deleted file
+          const fileName = data.path.split(/[/\\]/).pop();
+          if (fileName) {
+            incidentManager.getIncidents("active").then(incidents => {
+              const forThisFile = incidents.filter(i => i.meta?.fileName === fileName);
+              forThisFile.forEach(i => incidentManager.resolveIncident(i.id));
+            });
+          }
           return;
         }
 

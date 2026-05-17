@@ -31,7 +31,7 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment, toGame } =
+    const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment, toGame, worldName } =
       await req.json();
 
     // Support both single-path (legacy) and batch array
@@ -128,8 +128,12 @@ export async function POST(req: NextRequest) {
             finalTargetDir = path.join(settings.stagingPath, "shaderpacks");
           }
         } else if (effectiveProjectType === "datapack") {
-          if (!projectName) throw new Error("projectName required for datapack classification");
-          finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
+          if (toGame && settings.minecraftPath && worldName) {
+            finalTargetDir = path.join(settings.minecraftPath, "saves", worldName, "datapacks");
+          } else {
+            if (!projectName) throw new Error("projectName required for datapack classification");
+            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
+          }
         } else {
           // Explicit or Automatic Mod Classification
           if (toGame && settings.minecraftPath) {
@@ -140,10 +144,9 @@ export async function POST(req: NextRequest) {
               const clRes = MimClassifier.classify({
                 fileName: path.basename(p),
                 modName: meta.modName !== "unknown" ? meta.modName : undefined,
-                categories: meta.categories,
                 clientSide: meta.clientSide,
                 serverSide: meta.serverSide,
-                environment: (environment as any) || meta.environment // Use environment from body
+                environment: (environment as any)
               });
               finalCategory = forceParentCategory || clRes.category;
               finalSub = clRes.sub;
@@ -176,9 +179,11 @@ export async function POST(req: NextRequest) {
       try {
         const currentMeta = scanMod(p);
         if (currentMeta && currentMeta.modId && currentMeta.modId !== "unknown") {
-          const projectRoot = projectName 
-            ? path.join(SOURCE_BASE, "_projects", projectName, "mods")
-            : path.join(SOURCE_BASE, version, modloader);
+          const projectRoot = toGame && settings.minecraftPath
+            ? path.join(settings.minecraftPath, "mods")
+            : projectName 
+              ? path.join(SOURCE_BASE, "_projects", projectName, "mods")
+              : path.join(SOURCE_BASE, version, modloader);
 
           if (fs.existsSync(projectRoot)) {
             const scanAndDelete = (dir: string) => {

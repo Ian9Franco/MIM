@@ -54,11 +54,22 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      const datapacksPath = path.join(worldPath, "datapacks");
+      const datapacks = [];
+      if (fs.existsSync(datapacksPath)) {
+        const dpEntries = fs.readdirSync(datapacksPath, { withFileTypes: true });
+        for (const dp of dpEntries) {
+          if (dp.isFile() && dp.name.endsWith(".zip")) datapacks.push(dp.name);
+          else if (dp.isDirectory()) datapacks.push(dp.name);
+        }
+      }
+
       worlds.push({
         folderName: entry.name,
         displayName: worldName,
         iconBase64,
-        path: worldPath
+        path: worldPath,
+        datapacks
       });
     }
 

@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { Globe, Loader2 } from "lucide-react";
+import { Globe, Loader2, Package, CheckCircle } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
+import { PendingFile } from "@/lib/types";
 
 interface World {
   folderName: string;
   displayName: string;
   iconBase64: string | null;
   path: string;
+  datapacks?: string[];
 }
 
-export function WorldsSection() {
+interface WorldsSectionProps {
+  pendingFiles: PendingFile[];
+}
+
+export function WorldsSection({ pendingFiles }: WorldsSectionProps) {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const pendingDatapacks = pendingFiles.filter(f => f.meta?.projectType === "datapack");
+
+  const fetchWorlds = () => {
+    setLoading(true);
     fetch("/api/minecraft/worlds")
       .then((res) => res.json())
       .then((data) => {
@@ -24,6 +33,10 @@ export function WorldsSection() {
         console.error("Failed to fetch worlds:", err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchWorlds();
   }, []);
 
   return (
@@ -36,7 +49,7 @@ export function WorldsSection() {
         accentColor="var(--color-primary)"
       />
 
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex items-center justify-center p-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -51,25 +64,60 @@ export function WorldsSection() {
           worlds.map((world) => (
             <div
               key={world.folderName}
-              className="p-3 rounded-2xl border border-white/5 bg-white/3 hover:bg-white/5 transition-all group flex items-center gap-3"
+              className="p-4 rounded-2xl border border-white/5 bg-white/3 hover:bg-white/5 transition-all group flex flex-col gap-3"
             >
-              {world.iconBase64 ? (
-                <img
-                  src={world.iconBase64}
-                  alt=""
-                  className="w-10 h-10 rounded-lg object-cover shadow-md"
-                  style={{ imageRendering: "pixelated" }}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-muted" />
+              <div className="flex items-center gap-3">
+                {world.iconBase64 ? (
+                  <img
+                    src={world.iconBase64}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover shadow-md"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-muted" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
+                    {world.displayName}
+                  </h3>
+                  <p className="font-caption text-xs text-muted truncate">{world.folderName}</p>
                 </div>
-              )}
-              <div className="min-w-0">
-                <h3 className="font-subhead text-sm truncate" style={{ color: "var(--color-foreground)" }}>
-                  {world.displayName}
-                </h3>
-                <p className="font-caption text-xs text-muted truncate">{world.folderName}</p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-muted mt-1">
+                <span className="flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5" /> {world.datapacks?.length || 0} Datapacks
+                </span>
+                
+                {pendingDatapacks.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      for (const dp of pendingDatapacks) {
+                        await fetch("/api/classify", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            sourcePaths: [dp.path],
+                            targetCategory: "auto",
+                            version: "1.20.1",
+                            modloader: "forge",
+                            toGame: true,
+                            worldName: world.folderName,
+                            projectType: "datapack"
+                          })
+                        });
+                      }
+                      fetchWorlds();
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
+                    style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}
+                  >
+                    <Package className="w-3.5 h-3.5" /> <span>Importar ({pendingDatapacks.length})</span>
+                  </button>
+                )}
               </div>
             </div>
           ))

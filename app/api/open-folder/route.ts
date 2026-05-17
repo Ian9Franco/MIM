@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     } else if (folderPath === "mods") {
       const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
       resolvedPath = path.join(mcPath, "mods");
+    } else if (folderPath === "resourcepacks") {
+      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+      resolvedPath = path.join(mcPath, "resourcepacks");
     }
 
     if (!fs.existsSync(resolvedPath)) {

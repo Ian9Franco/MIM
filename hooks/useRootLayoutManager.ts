@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Project, PackHealthReport } from "@/lib/types";
 import { incidentManager } from "@/lib/incidentManager";
 import { useStaging } from "@/hooks/useStaging";
@@ -21,6 +21,8 @@ export function useRootLayoutManager() {
   const [onForceBuildCallback, setOnForceBuildCallback] = useState<(() => void) | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<any[]>([]);
+  const [watcherStatusLabel, setWatcherStatusLabel] = useState("Watcher");
+  const [customWatcherStatus, setCustomWatcherStatus] = useState<string | null>(null);
   const staging = useStaging();
 
   // Listen for pending files updates
@@ -29,6 +31,30 @@ export function useRootLayoutManager() {
     window.addEventListener("fomo-pending-files-update", handleUpdate);
     return () => window.removeEventListener("fomo-pending-files-update", handleUpdate);
   }, []);
+
+  // Listen for custom watcher status changes
+  useEffect(() => {
+    const handleStatusChange = (e: any) => {
+      if (e.detail === "Watcher") {
+        setTimeout(() => setCustomWatcherStatus(null), 5000);
+      } else {
+        setCustomWatcherStatus(e.detail);
+      }
+    };
+    window.addEventListener("watcher-status-change", handleStatusChange);
+    return () => window.removeEventListener("watcher-status-change", handleStatusChange);
+  }, []);
+
+  // Detect new files and show "Descargas"
+  const prevLength = useRef(0);
+  useEffect(() => {
+    if (pendingFiles.length > prevLength.current) {
+      setWatcherStatusLabel("Descargas");
+      const timer = setTimeout(() => setWatcherStatusLabel("Watcher"), 5000);
+      return () => clearTimeout(timer);
+    }
+    prevLength.current = pendingFiles.length;
+  }, [pendingFiles.length]);
 
   // Mark alerts as seen
   useEffect(() => {
@@ -172,6 +198,8 @@ export function useRootLayoutManager() {
     setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } })), 400);
   };
 
+  const watcherStatus = isRefreshing ? ".minecraft" : (customWatcherStatus || watcherStatusLabel);
+
   return {
     fomoOpen, sageOpen, tweakOpen, activeProject, settingsOpen, setSettingsOpen,
     alertSidebarOpen, hasAlerts, alertCount, alertsSeen, stagingOpen, setStagingOpen,
@@ -179,6 +207,7 @@ export function useRootLayoutManager() {
     isValidatingHealth, onForceBuildCallback, isRefreshing, handleToggleUI, handleRefresh,
     handleCheckHealth, handleFomoSearch,
     pendingFiles,
+    watcherStatus,
     handleOpenDownloads: () => {
       window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: false } }));
       window.dispatchEvent(new CustomEvent("toggle-downloads", { detail: { collapsed: false } }));

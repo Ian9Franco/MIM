@@ -14,18 +14,32 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { path } = await req.json();
+    const { path, paths } = await req.json();
 
-    if (!path) {
-      return NextResponse.json({ error: "No path provided" }, { status: 400 });
+    if (!path && (!paths || !Array.isArray(paths))) {
+      return NextResponse.json({ error: "No path or paths provided" }, { status: 400 });
     }
 
-    if (!fs.existsSync(path)) {
-      return NextResponse.json({ success: true, message: "File already deleted or moved" });
+    const targetPaths = paths || [path];
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    for (const p of targetPaths) {
+      try {
+        if (fs.existsSync(p)) {
+          fs.unlinkSync(p);
+          deletedCount++;
+        }
+      } catch (e) {
+        console.error(`[/api/delete] Failed to delete ${p}:`, e);
+        failedCount++;
+      }
     }
 
-    fs.unlinkSync(path);
-    return NextResponse.json({ success: true, message: "File deleted successfully" });
+    return NextResponse.json({ 
+      success: true, 
+      message: `Files processed. Deleted: ${deletedCount}, Failed: ${failedCount}` 
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/delete] Unhandled error:", message);

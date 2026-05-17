@@ -282,7 +282,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
           )}
           {m.mode === "followed" && <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenVersionSelector} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />}
         </div>
-        {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} />}
+        {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} theme={currentTheme} />}
       </aside>
 
       {/* Details Sidebar — only rendered when FOMO is open to prevent ghost blocks */}

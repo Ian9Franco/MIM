@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Inbox, FolderOpen, Loader2, X, Info } from "lucide-react";
+import { Inbox, FolderOpen, Loader2, X, Info, Trash2 } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
 import { EmptyState } from "../ui/EmptyState";
@@ -15,11 +15,11 @@ import { usePendingFiles } from "@/hooks/library/usePendingFiles";
  * Clasifica los archivos en compatibles e incompatibles y permite su eliminación o selección para clasificación.
  */
 export function PendingFilesSection({
-  pendingFiles, loading, selectedFiles, setSelectedFiles, activeProject, onDeleteFile, layout = "sidebar", modrinthStatus = {}, onCloseSidebar
+  pendingFiles, loading, selectedFiles, setSelectedFiles, activeProject, onDeleteFile, layout = "sidebar", modrinthStatus = {}, onCloseSidebar, detectedVersion
 }: any) {
   
   const [openingFolder, setOpeningFolder] = useState(false);
-  const { compatibleFiles, incompatibleFiles, conflicts, deletingFiles, filesToDelete, setFilesToDelete, setDeletingFiles } = usePendingFiles(pendingFiles, activeProject, onDeleteFile);
+  const { compatibleFiles, incompatibleFiles, conflicts, deletingFiles, filesToDelete, setFilesToDelete, setDeletingFiles } = usePendingFiles(pendingFiles, activeProject, onDeleteFile, detectedVersion, modrinthStatus);
 
   const handleOpenDownloadsFolder = async () => {
     setOpeningFolder(true);
@@ -59,6 +59,26 @@ export function PendingFilesSection({
         </div>
       </div>
 
+      {selectedFiles.length > 0 && (
+        <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in">
+          <span className="text-sm text-red-400 font-medium">{selectedFiles.length} seleccionados</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedFiles([])}
+              className="px-3 py-1.5 rounded-lg bg-[var(--color-secondary-bg)] text-[var(--color-foreground)] text-xs font-medium hover:bg-[var(--color-border)] transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => setFilesToDelete(selectedFiles)}
+              className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors flex items-center gap-1"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Eliminar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={layout === "main" ? "space-y-2.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar" : "space-y-2.5"}>
         {loading ? (
           <div className="space-y-3"><SkeletonLoader message="Buscando archivos..." /><SkeletonLoader message="Analizando metadatos..." /></div>
@@ -72,7 +92,7 @@ export function PendingFilesSection({
                 <p className="text-xs font-bold opacity-60">No hay descargas compatibles</p>
               </div>
             ) : (
-              compatibleFiles.filter(f => !selectedFiles.some((s: any) => s.path === f.path)).map((f, i) => (
+              compatibleFiles.map((f, i) => (
                 <ModCard
                   key={f.path} index={i}
                   name={(() => {
@@ -89,7 +109,7 @@ export function PendingFilesSection({
                   onClick={() => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
                   activeVersion={activeProject?.version} activeLoader={activeProject?.loader} isPending={true}
                   onDelete={() => setFilesToDelete([f])} isDeleting={deletingFiles[f.path]} conflict={conflicts[f.path]}
-                  confidence={f.meta?.confidence} warnings={f.meta?.warnings}
+                  confidence={(f.meta as any)?.confidence} warnings={(f.meta as any)?.warnings}
                 />
               ))
             )}

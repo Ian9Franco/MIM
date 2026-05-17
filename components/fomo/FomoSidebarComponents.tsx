@@ -62,7 +62,7 @@ export function BulkCollectionModal({
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/65 backdrop-blur-xl animate-fade-in">
-      <div className={`w-full max-w-sm rounded-2xl border p-5 flex flex-col gap-4 shadow-2xl ${isModern ? 'bg-[#F0F2F4] border-black/5' : 'bg-[#121212] border-white/10'}`}>
+      <div className={`w-full max-w-sm rounded-2xl border p-5 flex flex-col gap-4 shadow-2xl ${isModern ? 'bg-white border-black/5' : 'bg-[#121212] border-white/10'}`}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className={`font-headline text-base font-bold ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>{isCreating ? "Nueva Colección" : "Añadir a Colección"}</h3>

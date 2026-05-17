@@ -142,9 +142,44 @@ export function JvmArgBox({ jvmArgs, modCount }: { jvmArgs?: string; modCount?: 
       </div>
 
       <div className="mt-4 text-xs text-muted/60 space-y-3 bg-black/20 p-5 rounded-2xl border border-white/5">
-        <p>
-          <span className="font-bold text-white/80">¿Qué es esto?</span> Son argumentos para la Máquina Virtual de Java (JVM). Sirven para decirle a Minecraft cuánta memoria RAM usar (`-Xmx`) y cómo limpiar la memoria basura (`-XX:+UseG1GC`) para evitar tirones (lag spikes) y mejorar los FPS.
+        <p className="mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-white/60">Beneficios de esta Optimización</span>
         </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
+            <Zap className="w-6 h-6 text-amber-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white/90">Cero Tirones</p>
+              <p className="text-xs text-muted/60 leading-normal">Limpia la memoria en micro-pausas sin congelar la pantalla.</p>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
+            <Layers className="w-6 h-6 text-indigo-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white/90">RAM Controlada</p>
+              <p className="text-xs text-muted/60 leading-normal">Asigna el combustible justo para el juego sin ahogar a Windows.</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
+            <Cpu className="w-6 h-6 text-emerald-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white/90">Trabajo en Equipo</p>
+              <p className="text-xs text-muted/60 leading-normal">Usa varios hilos de tu procesador para acelerar el juego.</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
+            <Package className="w-6 h-6 text-rose-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white/90">Filtro Anti-Lags</p>
+              <p className="text-xs text-muted/60 leading-normal">Bloquea comportamientos de mods que causan bajones de FPS.</p>
+            </div>
+          </div>
+        </div>
+
         <p>
           <span className="font-bold text-white/80">¿Cómo usarlo en el Launcher Oficial?</span>
         </p>

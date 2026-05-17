@@ -17,7 +17,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     alertSidebarOpen, hasAlerts, alertCount, alertsSeen, stagingOpen, setStagingOpen,
     hasStagingFiles, packHealthOpen, setPackHealthOpen, packHealthReport, setPackHealthReport,
     isValidatingHealth, onForceBuildCallback, isRefreshing, handleToggleUI, handleRefresh,
-    handleCheckHealth, handleFomoSearch, pendingFiles, handleOpenDownloads
+    handleCheckHealth, handleFomoSearch, pendingFiles, handleOpenDownloads, watcherStatus
   } = useRootLayoutManager();
 
   return (
@@ -65,6 +65,7 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           tweakOpen={tweakOpen} onToggleTweak={(v) => handleToggleUI('tweak', v)}
           packHealthOpen={packHealthOpen} onCheckHealth={handleCheckHealth}
           activeProject={activeProject} isValidatingHealth={isValidatingHealth}
+          watcherStatus={watcherStatus}
         />
 
         <main className="flex-1 w-full max-w-400 mx-auto px-4 sm:px-6 py-8 sm:py-10">

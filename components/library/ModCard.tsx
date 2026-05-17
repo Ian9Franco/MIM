@@ -77,6 +77,7 @@ export const ModCard = memo(function ModCard({
   
   const isCompatibleRange = useMemo(() => {
     if (!version || version === "unknown") return true;
+    if (!activeVersion || activeVersion === "unknown") return true;
     if (version === activeVersion) return true;
     if (version.endsWith("+")) return activeVersion.startsWith(version.slice(0, -1));
     if (activeVersion.startsWith(version + ".")) return true;
@@ -90,7 +91,7 @@ export const ModCard = memo(function ModCard({
   const isVersionError = version !== "unknown" && activeVersion !== "" && version !== activeVersion && !isCompatibleRange;
   
   const isLoaderError = useMemo(() => {
-    if (loader === "unknown" || activeLoader === "" || loader === activeLoader) return false;
+    if (loader === "unknown" || !activeLoader || loader === activeLoader) return false;
     if (activeVersion === "1.20.1" || activeVersion === "1.20") {
       const l = loader.toLowerCase();
       const al = activeLoader.toLowerCase();

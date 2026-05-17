@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { SOURCE_BASE } from "@/lib/constants";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -137,6 +138,61 @@ export async function POST(req: Request) {
       coll.projectCount = coll.projects.length;
       saveLocalCollections(collections);
       return NextResponse.json({ success: true });
+    }
+
+    // ── Descargar colección local ───────────────────────────────────────────
+    if (body.action === "download") {
+      const { collectionId, gameVersion, loader } = body;
+      const coll = collections.find((c) => c.id === collectionId);
+      if (!coll) {
+        return NextResponse.json({ error: "Colección no encontrada" }, { status: 404 });
+      }
+      const projectIds = coll.projects.map((p) => p.projectId);
+      
+      const downloadsDir = path.join(os.homedir(), "Downloads");
+      const queued = [];
+      const failed = [];
+      const headers = { "User-Agent": "MIM-App/1.0" };
+      
+      // Fetch all versions in parallel to save time
+      const versionPromises = projectIds.map(async (pId) => {
+        try {
+          const vRes = await fetch(`https://api.modrinth.com/v2/project/${pId}/version`, { headers });
+          if (!vRes.ok) throw new Error(`API error: ${vRes.status}`);
+          const versions = await vRes.json();
+          return { pId, versions };
+        } catch (e) {
+          return { pId, versions: [], error: String(e) };
+        }
+      });
+
+      const results = await Promise.all(versionPromises);
+
+      // Downloads are sequential (one by one) to avoid rate limits and congestion
+      for (const result of results) {
+        const { pId, versions, error } = result;
+        
+        if (error) {
+          failed.push({ projectId: pId, reason: error });
+          continue;
+        }
+
+        if (versions.length > 0) {
+          try {
+            const file = versions[0].files[0];
+            const dl = await fetch(file.url);
+            if (!dl.ok) throw new Error(`Download error: ${dl.status}`);
+            const dest = path.join(downloadsDir, file.filename);
+            fs.writeFileSync(dest, Buffer.from(await dl.arrayBuffer()));
+            queued.push({ projectId: pId, filename: file.filename });
+          } catch (e) { 
+            failed.push({ projectId: pId, reason: String(e) }); 
+          }
+        } else {
+          failed.push({ projectId: pId, reason: "No versions found" });
+        }
+      }
+      return NextResponse.json({ queued, failed });
     }
 
     return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });

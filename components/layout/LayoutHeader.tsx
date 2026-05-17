@@ -25,13 +25,14 @@ interface LayoutHeaderProps {
   onCheckHealth: () => void;
   activeProject: any;
   isValidatingHealth: boolean;
+  watcherStatus?: string;
 }
 
 export function LayoutHeader({
   fomoOpen, onToggleFomo, isRefreshing, onRefresh, onOpenSettings, onOpenStaging,
   hasStagingFiles, alertSidebarOpen, onToggleAlerts, hasAlerts, alertsSeen,
   sageOpen, onToggleSage, tweakOpen, onToggleTweak, packHealthOpen, onCheckHealth,
-  activeProject, isValidatingHealth
+  activeProject, isValidatingHealth, watcherStatus
 }: LayoutHeaderProps) {
   return (
     <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
@@ -83,7 +84,7 @@ export function LayoutHeader({
             <div className="flex items-center gap-2 mt-2.5 relative z-10">
               <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10">Beta</span>
               <span className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#66C8A0] shadow-[0_0_8px_#66C8A0]" /> Watcher
+                <span className="w-1 h-1 rounded-full bg-[#66C8A0] shadow-[0_0_8px_#66C8A0]" /> {watcherStatus || "Watcher"}
               </span>
             </div>
           </div>

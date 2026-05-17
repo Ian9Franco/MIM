@@ -120,20 +120,25 @@ export async function addModToCollection(collId: string, mod: ModHit, target: "l
   }
 }
 
-export async function downloadCollection(collId: string, loader: string, gameVersion: string): Promise<{ count: number, error: string | null }> {
+export async function downloadCollection(collId: string, loader: string, gameVersion: string): Promise<{ count: number, skipped: number, error: string | null }> {
   try {
-    const res = await fetch("/api/modrinth/collections", {
+    const isLocal = collId.startsWith("local_");
+    const endpoint = isLocal ? "/api/local-collections" : "/api/modrinth/collections";
+    
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ collectionId: collId, loader, gameVersion }),
+      body: JSON.stringify({ collectionId: collId, loader, gameVersion, action: isLocal ? "download" : undefined }),
     });
     if (res.ok) {
       const data = await res.json();
-      return { count: data.queued?.length || 0, error: null };
+      const skipped = data.failed?.length || 0;
+      return { count: data.queued?.length || 0, skipped, error: null };
     }
-    return { count: 0, error: "Error al descargar colección" };
+    const data = await res.json().catch(() => ({}));
+    return { count: 0, skipped: 0, error: data.error || "Error al descargar colección" };
   } catch (err) {
-    return { count: 0, error: "Error de red" };
+    return { count: 0, skipped: 0, error: "Error de red" };
   }
 }
 
@@ -171,7 +176,8 @@ export async function fetchOfficialCollections(): Promise<{ collections: Collect
       source: "modrinth" as const,
       webUrl: `https://modrinth.com/collection/${c.slug || c.id}`,
       visibility: c.status,
-      created: c.created
+      created: c.created,
+      previewIcons: c.previewIcons
     }));
     
     // Sort by created descending so the latest month (Vol. XX) is first

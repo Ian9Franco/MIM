@@ -57,6 +57,33 @@ function updateVersion(newVersion) {
   const pkg = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   pkg.version = newVersion;
   fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2));
+
+  // Actualizar README.md
+  const readmePath = path.join(process.cwd(), "README.md");
+  if (fs.existsSync(readmePath)) {
+    let readme = fs.readFileSync(readmePath, "utf-8");
+    // Reemplazar badge de versión
+    readme = readme.replace(/Version-(\d+\.\d+\.\d+)-/g, `Version-${newVersion}-`);
+    // Reemplazar sección de completado (asumiendo que la última versión es la que se acaba de completar)
+    readme = readme.replace(/### ✅ Completado \(Versión \d+\.\d+\.\d+\)/g, `### ✅ Completado (Versión ${newVersion})`);
+    fs.writeFileSync(readmePath, readme);
+    console.log(chalk.green("README.md actualizado con la nueva versión."));
+  }
+
+  // Actualizar docs/MIM.md
+  const mimDocPath = path.join(process.cwd(), "docs", "MIM.md");
+  if (fs.existsSync(mimDocPath)) {
+    let mimDoc = fs.readFileSync(mimDocPath, "utf-8");
+    // Reemplazar versión en el encabezado
+    mimDoc = mimDoc.replace(/\*\*Versión:\*\* \d+\.\d+\.\d+/g, `**Versión:** ${newVersion}`);
+    // Reemplazar menciones de versión en el texto
+    mimDoc = mimDoc.replace(/versión \d+\.\d+\.\d+/g, `versión ${newVersion}`);
+    // Actualizar fecha
+    const today = new Date().toISOString().slice(0, 10);
+    mimDoc = mimDoc.replace(/\*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `**Última actualización:** ${today}`);
+    fs.writeFileSync(mimDocPath, mimDoc);
+    console.log(chalk.green("docs/MIM.md actualizado con la nueva versión y fecha."));
+  }
 }
 
 function bumpVersion(version, type) {

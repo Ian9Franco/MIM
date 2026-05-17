@@ -46,25 +46,104 @@ export async function GET(req: NextRequest) {
         url: `https://modrinth.com/project/${m.slug}`, projectType: m.project_type
       })));
       return NextResponse.json({ mods });
+    } else if (collectionId === "followed-projects") {
+      const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
+      if (!profileRes.ok) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      const profile = await profileRes.json();
+      
+      const res = await fetch(`${MODRINTH_API}/user/${profile.id}/follows`, { headers });
+      if (!res.ok) return NextResponse.json({ error: "No se pudo cargar los proyectos seguidos" }, { status: res.status });
+      const projects = await res.json();
+      
+      const mods = await Promise.all(projects.map(async (m: any) => ({
+        projectId: m.id, slug: m.slug, title: m.title, description: m.description,
+        iconUrl: m.icon_url, author: await getAuthorName(m.id, headers),
+        downloads: m.downloads, follows: m.followers, categories: m.categories,
+        url: `https://modrinth.com/project/${m.slug}`, projectType: m.project_type
+      })));
+      return NextResponse.json({ mods });
     }
 
     const profileRes = await fetch(`${MODRINTH_API}/user`, { headers });
     if (!profileRes.ok) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     const profile = await profileRes.json();
+    
+    // Obtener seguidos para saber la cantidad y las miniaturas
+    const followsRes = await fetch(`${MODRINTH_API}/user/${profile.id}/follows`, { headers });
+    let followsCount = 0;
+    let previewIcons: string[] = [];
+    if (followsRes.ok) {
+      const follows = await followsRes.json();
+      followsCount = follows.length;
+      previewIcons = follows.slice(0, 20).map((p: any) => p.icon_url).filter(Boolean);
+    }
+
     const remoteCollections = await tryFetchUserCollections(profile.id, headers);
-    return NextResponse.json({ collections: remoteCollections.map(mapCollection), username: profile.username });
+    
+    // Recopilar todos los IDs de proyectos de todas las colecciones para traer iconos en masa
+    const allProjectIds = new Set<string>();
+    remoteCollections.forEach((coll: any) => {
+      if (Array.isArray(coll.projects)) {
+        coll.projects.slice(0, 20).forEach((id: string) => allProjectIds.add(id));
+      }
+    });
+    
+    // Traer proyectos en masa para obtener las URLs de los iconos
+    const projectsMap: Record<string, string> = {};
+    if (allProjectIds.size > 0) {
+      const idsArray = Array.from(allProjectIds);
+      const res = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(idsArray.slice(0, 100))}`, { headers });
+      if (res.ok) {
+        const projects = await res.json();
+        projects.forEach((p: any) => {
+          projectsMap[p.id] = p.icon_url;
+        });
+      }
+    }
+
+    const mappedColls = remoteCollections.map((coll: any) => {
+      const mapped = mapCollection(coll);
+      const collIcons = Array.isArray(coll.projects) 
+        ? coll.projects.map((id: string) => projectsMap[id]).filter(Boolean).slice(0, 20)
+        : [];
+      return {
+        ...mapped,
+        previewIcons: collIcons
+      };
+    });
+
+    mappedColls.unshift({
+      id: "followed-projects",
+      name: "Favoritos (Seguidos)",
+      description: "Proyectos que sigues en Modrinth",
+      projectCount: followsCount,
+      iconUrl: null,
+      previewIcons: previewIcons,
+      source: "modrinth",
+      webUrl: "https://modrinth.com/collection/following",
+      visibility: "public",
+    });
+
+    return NextResponse.json({ collections: mappedColls, username: profile.username });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const headers = buildHeaders();
-  if (!headers) return NextResponse.json({ error: "Sin token" }, { status: 401 });
+  const body = await req.json();
+  const { action, collectionId, gameVersion, loader } = body;
+  
+  const tokenHeaders = buildHeaders();
+  
+  // Validar token solo para acciones de escritura
+  if (action === "create" || action === "add_project" || action === "remove_project") {
+    if (!tokenHeaders) return NextResponse.json({ error: "Sin token" }, { status: 401 });
+  }
+
+  const headers = tokenHeaders || { "User-Agent": "MIM-App/1.0 (contact@mim.local)" };
 
   try {
-    const body = await req.json();
-    const { action, collectionId, gameVersion, loader } = body;
 
     if (action === "create") {
       const res = await fetch(`${MODRINTH_API_V3}/collection`, {
@@ -76,11 +155,37 @@ export async function POST(req: NextRequest) {
 
     if (action === "add_project") {
       const { projectId } = body;
+      
+      if (collectionId === "followed-projects") {
+        // Usar el endpoint de follow real!
+        const res = await fetch(`https://api.modrinth.com/v2/project/${projectId}/follow`, {
+          method: "POST",
+          headers: { ...headers }
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          return NextResponse.json({ error: errorData.error || "No se pudo seguir el proyecto" }, { status: res.status });
+        }
+        return NextResponse.json({ success: true });
+      }
+      
+      // 1. Obtener la colección actual para saber qué proyectos tiene
+      const getRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { headers });
+      if (!getRes.ok) return NextResponse.json({ error: "No se pudo obtener la colección" }, { status: getRes.status });
+      const collection = await getRes.json();
+      
+      const currentProjects = collection.projects || [];
+      if (!currentProjects.includes(projectId)) {
+        currentProjects.push(projectId);
+      }
+      
+      // 2. Guardar la lista completa actualizada
       const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
         method: "PATCH", 
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ add_projects: [projectId] })
+        body: JSON.stringify({ projects: currentProjects })
       });
+      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         console.error("[Modrinth API] Error adding project:", errorData);
@@ -91,11 +196,35 @@ export async function POST(req: NextRequest) {
 
     if (action === "remove_project") {
       const { projectId } = body;
+      
+      if (collectionId === "followed-projects") {
+        // Usar el endpoint de unfollow real!
+        const res = await fetch(`https://api.modrinth.com/v2/project/${projectId}/follow`, {
+          method: "DELETE",
+          headers: { ...headers }
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          return NextResponse.json({ error: errorData.error || "No se pudo dejar de seguir el proyecto" }, { status: res.status });
+        }
+        return NextResponse.json({ success: true });
+      }
+      
+      // 1. Obtener la colección actual
+      const getRes = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { headers });
+      if (!getRes.ok) return NextResponse.json({ error: "No se pudo obtener la colección" }, { status: getRes.status });
+      const collection = await getRes.json();
+      
+      const currentProjects = collection.projects || [];
+      const updatedProjects = currentProjects.filter((id: string) => id !== projectId);
+      
+      // 2. Guardar la lista completa actualizada
       const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, {
         method: "PATCH", 
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ remove_projects: [projectId] })
+        body: JSON.stringify({ projects: updatedProjects })
       });
+      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         console.error("[Modrinth API] Error removing project:", errorData);
@@ -117,19 +246,45 @@ export async function POST(req: NextRequest) {
     const queued = [];
     const failed = [];
 
-    for (const pId of projectIds) {
+    // Fetch all versions in parallel to save time
+    const versionPromises = projectIds.map(async (pId: string) => {
       try {
-        const vRes = await fetch(`${MODRINTH_API}/project/${pId}/version?game_versions=["${gameVersion}"]&loaders=["${loader}"]`, { headers });
+        const vRes = await fetch(`${MODRINTH_API}/project/${pId}/version`, { headers });
+        if (!vRes.ok) throw new Error(`API error: ${vRes.status}`);
         const versions = await vRes.json();
-        if (versions.length > 0) {
+        return { pId, versions };
+      } catch (e) {
+        return { pId, versions: [], error: String(e) };
+      }
+    });
+
+    const results = await Promise.all(versionPromises);
+
+    // Downloads are sequential (one by one) to avoid rate limits and congestion
+    for (const result of results) {
+      const { pId, versions, error } = result;
+      
+      if (error) {
+        failed.push({ projectId: pId, reason: error });
+        continue;
+      }
+
+      if (versions.length > 0) {
+        try {
           const file = versions[0].files[0];
           const dl = await fetch(file.url);
+          if (!dl.ok) throw new Error(`Download error: ${dl.status}`);
           const dest = path.join(downloadsDir, file.filename);
           fs.writeFileSync(dest, Buffer.from(await dl.arrayBuffer()));
           queued.push({ projectId: pId, filename: file.filename });
+        } catch (e) { 
+          failed.push({ projectId: pId, reason: String(e) }); 
         }
-      } catch (e) { failed.push({ projectId: pId, reason: String(e) }); }
+      } else {
+        failed.push({ projectId: pId, reason: "No versions found" });
+      }
     }
+
     return NextResponse.json({ queued, failed });
   } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
 }

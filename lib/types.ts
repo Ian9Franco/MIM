@@ -52,6 +52,7 @@ export interface CollectionEntry {
   webUrl?:      string | null;
   visibility?:  "private" | "unlisted" | "public" | "unknown";
   projects?:    ModHit[];
+  previewIcons?: string[];
 }
 
 export interface PresetEntry {
@@ -185,9 +186,10 @@ export interface Keybind {
 }
 
 export interface TweakSnapshot {
-  name: string;
-  fileName: string;
-  createdAt: string;
+  id: string;
+  profileName: string;
+  timestamp: string;
+  fileName?: string;
 }
 
 export interface TweakRecommendation {

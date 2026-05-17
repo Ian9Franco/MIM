@@ -137,6 +137,18 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
           return Array.from(map.values());
         });
         setSecScanned(true);
+
+        // Auto-resolve incidents for clean files
+        merged.forEach((r: any) => {
+          if (r.result?.riskLevel === "clean" || r.result?.riskLevel === "caution") {
+            import("@/lib/incidentManager").then(({ incidentManager }) => {
+              incidentManager.getIncidents("active", { module: "SAGE" }).then(incidents => {
+                const forThisFile = incidents.filter(i => i.meta?.fileName === r.fileName);
+                forThisFile.forEach(i => incidentManager.resolveIncident(i.id));
+              });
+            });
+          }
+        });
       } else { setSecError(data.error || "Error durante el scan"); }
     } catch (e) { setSecError("Error de conexión al ejecutar el scan"); }
     setSecScanning(false);

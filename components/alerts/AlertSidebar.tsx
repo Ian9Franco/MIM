@@ -105,7 +105,22 @@ export function AlertSidebar({
           {(conflicts.length + updates.length + incidents.length) > 0 && <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--color-danger-bg)", color: "var(--color-danger)" }}>{conflicts.length + updates.length + incidents.length}</span>}
         </h2>
         <div className="flex items-center gap-2">
-          {handleCheckUpdates && <button onClick={handleCheckUpdates} disabled={checkingUpdates} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}><RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} /> <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span></button>}
+          {activeTab === "sage" && (
+            <button 
+              onClick={async () => {
+                const sageIncidents = incidents.filter(i => i.module === "SAGE" && i.status === "active");
+                for (const inc of sageIncidents) {
+                  await incidentManager.resolveIncident(inc.id);
+                }
+                setIncidents(await incidentManager.getIncidents("active"));
+              }} 
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105" 
+              style={{ background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", border: "1px solid rgba(239, 68, 68, 0.2)" }}
+            >
+              <CheckCircle className="w-3.5 h-3.5" /> <span>Limpiar Todo</span>
+            </button>
+          )}
+          {handleCheckUpdates && activeTab === "updates" && <button onClick={handleCheckUpdates} disabled={checkingUpdates} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}><RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} /> <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span></button>}
           <button onClick={() => { setSidebarOpen(false); window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false })); }} className="p-2 rounded-xl transition-colors hover:bg-white/5" style={{ color: "var(--color-muted)" }}><X className="w-5 h-5" /></button>
         </div>
       </div>

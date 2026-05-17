@@ -225,7 +225,6 @@ export async function GET(req: NextRequest) {
       `-XX:MaxGCPauseMillis=200`,
       `-XX:+UnlockExperimentalVMOptions`,
       `-XX:+DisableExplicitGC`,
-      `-XX:+AlwaysPreTouch`,
       `-XX:G1NewSizePercent=${heavyMods ? 30 : 40}`,
       `-XX:G1MaxNewSizePercent=${heavyMods ? 50 : 60}`,
       `-XX:G1HeapRegionSize=16M`,
@@ -236,7 +235,6 @@ export async function GET(req: NextRequest) {
       `-XX:G1MixedGCLiveThresholdPercent=90`,
       `-XX:G1RSetUpdatingPauseTimePercent=5`,
       `-XX:SurvivorRatio=32`,
-      `-XX:+PerfDisableSharedMem`,
       `-XX:MaxTenuringThreshold=1`,
       `-XX:ParallelGCThreads=${gcThreads}`,
     ].join(" ");

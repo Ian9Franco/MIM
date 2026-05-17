@@ -8,11 +8,18 @@ export function getRecommendations(
 ) {
   const recommendations: any[] = [];
   const isFabric = detectedLoader.toLowerCase() === "fabric" || detectedLoader.toLowerCase() === "quilt";
+  const isNeoForge = detectedLoader.toLowerCase() === "neoforge";
 
   if (isFabric) {
     if (!installedMods.has("sodium")) recommendations.push({ title: "⚡ Sodium", desc: "Multiplica tus FPS x3 en Fabric.", impact: "high", action: "open-fomo", fomoQuery: "project:sodium" });
     if (!installedMods.has("iris")) recommendations.push({ title: "🌈 Iris", desc: "Soporte optimizado de shaders.", impact: "medium", action: "open-fomo", fomoQuery: "project:iris" });
     if (!installedMods.has("lithium")) recommendations.push({ title: "🧠 Lithium", desc: "Optimización de física e IA.", impact: "medium", action: "open-fomo", fomoQuery: "project:lithium" });
+  } else if (isNeoForge) {
+    if (!installedMods.has("embeddium")) recommendations.push({ title: "⚡ Embeddium", desc: "Ideal para NeoForge 1.20.1 (Menos incompatibilidades).", impact: "high", action: "open-fomo", fomoQuery: "project:embeddium" });
+    if (!installedMods.has("sodium")) recommendations.push({ title: "⚡ Sodium", desc: "Ideal para NeoForge 1.21+ (Soporte oficial).", impact: "high", action: "open-fomo", fomoQuery: "project:sodium" });
+    if (!installedMods.has("oculus")) recommendations.push({ title: "🌈 Oculus", desc: "Shaders para 1.20.1 (Usa con Embeddium).", impact: "medium", action: "open-fomo", fomoQuery: "project:oculus" });
+    if (!installedMods.has("iris")) recommendations.push({ title: "🌈 Iris", desc: "Shaders para 1.21+ (Usa con Sodium).", impact: "medium", action: "open-fomo", fomoQuery: "project:iris" });
+    if (!installedMods.has("modernfix")) recommendations.push({ title: "🛠️ ModernFix", desc: "Parches de memoria y carga rápida.", impact: "high", action: "open-fomo", fomoQuery: "project:modernfix" });
   } else {
     if (!installedMods.has("embeddium")) recommendations.push({ title: "⚡ Embeddium", desc: "Motor de renderizado avanzado para Forge.", impact: "high", action: "open-fomo", fomoQuery: "project:embeddium" });
     if (!installedMods.has("oculus")) recommendations.push({ title: "🌈 Oculus", desc: "Shaders de alto rendimiento para Forge.", impact: "medium", action: "open-fomo", fomoQuery: "project:oculus" });

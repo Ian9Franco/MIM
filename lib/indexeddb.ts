@@ -7,10 +7,11 @@
 
 import { dbCore } from './db/core';
 import { modStore } from './db/stores/ModStore';
-import { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport } from './db/schema';
+import { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport, ModEntity } from './db/schema';
 
 class MIMIndexedDB {
   async init() { await dbCore.init(); }
+  async getDB() { return dbCore.init(); }
 
   // === Descripciones (Delegado) ===
   async getDescription(f: string) { return (await dbCore.init()).get('descriptions', f); }
@@ -26,6 +27,23 @@ class MIMIndexedDB {
   }
   async setCache(key: string, data: any, ttl: number = 43200000, type: CacheEntry['type'] = 'metadata') {
     await (await dbCore.init()).put('cache', { key, data, expires: Date.now() + ttl, type });
+  }
+  async clearExpiredCache() {
+    const db = await dbCore.init();
+    const tx = db.transaction('cache', 'readwrite');
+    const store = tx.objectStore('cache');
+    let cursor = await store.openCursor();
+    let count = 0;
+    const now = Date.now();
+    while (cursor) {
+      if (cursor.value.expires < now) {
+        await cursor.delete();
+        count++;
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return count;
   }
 
   // === Proyectos (Delegado) ===
@@ -61,4 +79,4 @@ class MIMIndexedDB {
 }
 
 export const mimDB = new MIMIndexedDB();
-export type { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport };
+export type { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport, ModEntity };

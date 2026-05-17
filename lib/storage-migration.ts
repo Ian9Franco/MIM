@@ -111,7 +111,8 @@ export class StorageMigration {
       const content = await fs.readFile(this.LEGACY_DESCRIPTIONS_PATH, 'utf8');
       const legacyData: LegacyDescriptionData[] = JSON.parse(content);
 
-      const tx = mimDB.getDB().transaction('descriptions', 'readwrite');
+      const db = await mimDB.getDB();
+      const tx = db.transaction('descriptions', 'readwrite');
       const store = tx.objectStore('descriptions');
 
       for (const item of legacyData) {
@@ -151,7 +152,8 @@ export class StorageMigration {
       const content = await fs.readFile(this.LEGACY_CACHE_PATH, 'utf8');
       const legacyData: LegacyCacheData = JSON.parse(content);
 
-      const tx = mimDB.getDB().transaction('cache', 'readwrite');
+      const db = await mimDB.getDB();
+      const tx = db.transaction('cache', 'readwrite');
       const store = tx.objectStore('cache');
 
       const now = Date.now();

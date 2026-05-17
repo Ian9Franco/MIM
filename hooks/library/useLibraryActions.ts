@@ -47,6 +47,7 @@ export function useLibraryActions(
       // Pequeña pausa para asegurar sincronización de I/O en NTFS antes de refrescar el estado
       setTimeout(async () => {
         try {
+          if (!activeProject) return;
           const pRes = await fetch(`/api/pending-files?projectName=${activeProject.name}`);
           const pData = await pRes.json();
           setPendingFiles(pData.pendingFiles || []);

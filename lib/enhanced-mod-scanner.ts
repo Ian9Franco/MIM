@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { EnhancedModMeta, UNKNOWN } from "./mod-scanner/types";
+export type { EnhancedModMeta };
 import { normalizeVersion, extractVersionFromFileName, extractMcVersionFromFileName, isValidImage } from "./mod-scanner/Utils";
 import { parseFabricModJson, parseForgeToml, parseMcModInfo } from "./mod-scanner/Strategies";
 import { extractMixinTargets } from "./mixin-scanner";
@@ -67,7 +68,13 @@ async function extractMetadata(zip: AdmZip, filePath: string, warnings: string[]
   const result: Partial<EnhancedModMeta> = { 
     ...bestMatch,
     confidence,
-    warnings: scoreWarnings
+    warnings: scoreWarnings,
+    dependencies: bestMatch.dependencies ? (bestMatch.dependencies as any[]).map((dep: any) => {
+      if (typeof dep === 'string') {
+        return { modId: dep, type: "required" };
+      }
+      return dep;
+    }) : undefined
   };
 
   // Icon extraction

@@ -21,6 +21,7 @@ export function useLibraryConflicts(library: LibraryFile[], pendingFiles: Pendin
     for (const lib of library) {
       if (!lib.meta || lib.meta.modName === "unknown") continue;
       const key = lib.meta.modId && lib.meta.modId !== "unknown" ? lib.meta.modId : lib.meta.modName;
+      if (!key) continue;
       if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key)!.push(lib);
     }

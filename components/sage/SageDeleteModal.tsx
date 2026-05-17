@@ -7,7 +7,7 @@
 
 import React from "react";
 import { AlertTriangle } from "lucide-react";
-import type { LocalLogFile } from "./SageSidebar"; // We can pass a type structure directly to decouple
+
 
 interface SageDeleteModalProps {
   file: { name: string; path: string } | null;

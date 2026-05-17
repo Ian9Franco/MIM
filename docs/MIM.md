@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 6.3.0 | **Última actualización:** 2026-05-17
+> **Versión:** 6.3.1 | **Última actualización:** 2026-05-17
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Modos de Aplicación
 
-A partir de la versión 6.3.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+A partir de la versión 6.3.1, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
@@ -635,6 +635,12 @@ El motor de correlación cruzada actúa como el cerebro operacional de la aplica
 - **Reglas Dinámicas**: Sistema extensible runtime (`addRule()`, `removeRule()`, `enableRule()`) que permite definir reglas de correlación del tipo:
   `IF FOMO(mod_downloaded) + SAGE(dependency_missing) ➔ Generar incidente de Entorno Inconsistente`.
 - **Persistencia en IndexedDB**: Nueva capa de almacenamiento escalable (`incidentStorage.ts`) optimizada para guardar más de 10,000 incidentes persistentes con índices compuestos y fallback transparente a `localStorage`.
+
+#### SAGE Redesign: Cola y Caché (v6.3.0)
+Para manejar el límite estricto de VirusTotal (4 peticiones por minuto) sin bloquear la interfaz ni causar Timeouts en la API:
+- **Escaneo en Dos Pasos**: Primero se ejecuta el análisis local por bytecode en lote (muy rápido). Luego se inicia una cola en la interfaz para procesar archivos en VirusTotal uno por uno.
+- **Cola Inteligente**: La interfaz espera 15 segundos entre llamadas a VirusTotal solo si el archivo no estaba en el archivo de caché.
+- **Caché Persistente**: Los resultados se guardan en `.mim-index/vt-cache.json` indexados por hash SHA-256, compartiendo el estado entre sesiones.
 
 ---
 

@@ -1,10 +1,26 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** Beta 5.9 (Architecture & Code Consolidation)  
-> **Última actualización:** 2026-05-14
+> **Versión Actual:** 6.3.0 (MIMU Mode & SAGE Redesign)  
+> **Última actualización:** 2026-05-17
 
 ---
+
+## 🚀 Versión 6.3.0 — MIMU Mode & SAGE Redesign (2026-05-17)
+
+### SAGE (Security Scanner)
+- **Escaneo en Dos Pasos**: Implementación de un flujo donde el escaneo local (bytecode) se completa al instante y la verificación de VirusTotal se procesa en cola en segundo plano.
+- **Cola Inteligente de VirusTotal**: Sistema que respeta el límite de 4 peticiones por minuto de la API gratuita, esperando 15 segundos entre llamadas cuando es necesario.
+- **Caché Persistente**: Almacenamiento de resultados de VirusTotal en `.mim-index/vt-cache.json` para evitar re-consultas.
+- **Etiquetas de Estado**: Añadidos badges visuales para `Whitelist`, `SAGE Local`, `VirusTotal` y `VT Omitido`.
+
+### Modo MIMU (User Mode)
+- **Soporte Extendido**: Ahora lee directamente de la carpeta `.minecraft` los mods, resourcepacks, shaders y datapacks de mundos sin necesidad de un proyecto activo.
+- **Adaptación de Módulos**: GATE y SAGE ahora funcionan correctamente en modo MIMU leyendo del directorio global del juego.
+
+### CurseForge y Clasificación
+- **Community Picks**: Integración de colecciones curadas de CurseForge en el feed de Spotlight.
+- **Heurísticas de Clasificación**: Solucionado problema con datapacks complejos (ej. Tectonic) y mejor detección de shaders.
 
 ## 🚀 Beta 5.9 — Architecture & Code Consolidation (2026-05-14)
 

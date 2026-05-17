@@ -14,7 +14,7 @@
 
 **⚡ Gestión inteligente | 🔄 Sincronización Total | 🔍 Escaneo de Seguridad | 🧠 Diagnóstico de Crashes**
 
-[![Version](https://img.shields.io/badge/Version-6.3.0-6366f1.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-6.3.1-6366f1.svg)](./CHANGELOG.md)
 
 [📖 Documentación](./docs/) • [🗺️ Roadmap](./ROADMAP.md) • [📝 Changelog](./CHANGELOG.md) • [🔧 API](./API.md) • [🏗️ Arquitectura](./MIM.md)
 
@@ -190,22 +190,29 @@ D:\.mine\
 
 ---
 
-## 🛡️ Seguridad
+## 🛡️ Seguridad y SAGE
 
-MIM implementa **3 capas de seguridad**:
+MIM implementa un sistema de seguridad avanzado para proteger tu PC de mods maliciosos:
 
-1. **Bytecode Analysis (Local)** - Detecta patrones sospechosos
-2. **Whitelist (Local)** - Mods populares verificados
-3. **VirusTotal (Cloud)** - Verificación de reputación vía hash
+1. **Bytecode Analysis (Local)** - Analiza el código `.class` buscando patrones sospechosos (obfuscación rara, llamadas a red, ejecución de procesos).
+2. **Whitelist de Confianza** - Mods populares y verificados por la comunidad se marcan automáticamente para ahorrar recursos.
+3. **VirusTotal Cloud (Opcional)** - Verificación de reputación en la nube mediante hash SHA-256.
 
-**Risk Score:** 0-100 con badges visuales (🟢🟡🟠🔴)
+**✨ Mejoras en el Scanner (Nuevo):**
+* **Escaneo en Dos Pasos:** El escaneo local de código se completa en segundos y te muestra los resultados. La cola de VirusTotal sigue trabajando de fondo.
+* **Cola Inteligente:** Respeta el límite estricto de 4 peticiones por minuto de la API gratuita de VirusTotal con esperas automáticas de 15s.
+* **Caché Persistente:** Los resultados exitosos de VirusTotal se guardan en `.mim-index/vt-cache.json` para no volver a gastar tu cupo en el mismo archivo.
+* **Badges de Estado:** Ahora verás claramente si un archivo pasó por `SAGE Local`, `VirusTotal` o si está en la `Whitelist`.
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Completado (Versión 6.3.0)
-- **Modo MIMU (User Mode)**: Implementación de una vista simplificada sin proyectos ni categorización compleja. Ideal para usuarios finales que solo quieren descargar mods y jugar.
+### ✅ Completado (Versión 6.3.1)
+- **Modo MIMU (User Mode) Extendido**: Ahora lee directamente de la carpeta del juego (`.minecraft`) los mods, resourcepacks, shaders y datapacks de cada mundo, sin necesidad de tener un proyecto activo.
+- **SAGE Rediseñado**: Implementación de escaneo en dos pasos (Local primero, VirusTotal después), cola inteligente con esperas de 15s y caché persistente de resultados en disco.
+- **Integración CurseForge "Community Picks"**: Visualización de colecciones curadas por la comunidad en el feed de Spotlight.
+- **Mejoras en Clasificación**: Soporte mejorado para datapacks con estructuras complejas (ej. Tectonic) y enrutamiento correcto de shaders.
 - **Gestor de Mundos**: Visualización de mundos guardados con iconos y nombres reales leídos desde `level.dat`.
 - **Gestor de Mods Instalados**: Columna lateral para visualizar y eliminar mods directamente de la carpeta `.minecraft/mods`.
 - **Envíos Directos al Juego**: Flag `toGame` en la clasificación para enrutar archivos directamente a la carpeta activa de Minecraft.

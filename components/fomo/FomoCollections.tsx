@@ -94,6 +94,22 @@ export const FomoCollections = memo(function FomoCollections({
   const [activeCategory, setActiveCategory] = useState("all");
   const lastDetailsState = useRef(isDetailsOpen);
 
+  // Sistema de dirección para la animación de pestañas
+  const tabsOrder = ["official", "curseforge", "mim", "followed"];
+  const [direction, setDirection] = useState("forward");
+  const prevTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    if (activeTab !== prevTabRef.current) {
+      const idx = tabsOrder.indexOf(activeTab);
+      const prevIdx = tabsOrder.indexOf(prevTabRef.current);
+      setDirection(idx >= prevIdx ? "forward" : "backward");
+      prevTabRef.current = activeTab;
+    }
+  }, [activeTab]);
+
+  const animationClass = direction === "forward" ? "animate-slide-in-right" : "animate-slide-in-left";
+
   useEffect(() => {
     if (isDetailsOpen !== lastDetailsState.current) {
       setIsTransitioningColumns(true);
@@ -551,6 +567,26 @@ export const FomoCollections = memo(function FomoCollections({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Estilos inyectados para las animaciones direccionales */}
+      <style>{`
+        @keyframes slideInFromRight {
+          from { transform: translateX(30px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInFromLeft {
+          from { transform: translateX(-30px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in-right {
+          opacity: 0;
+          animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .animate-slide-in-left {
+          opacity: 0;
+          animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+      `}</style>
+
       {/* Tabs Header */}
       <div className="px-4 py-3 border-b shrink-0 flex items-center justify-center" style={{ borderColor: "var(--color-border)", background: "var(--color-card)", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <PillToggleGroup 
@@ -563,8 +599,9 @@ export const FomoCollections = memo(function FomoCollections({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-3" role="list" aria-label="Tus colecciones">
-        {activeTab === "mim" && (
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4" role="list" aria-label="Tus colecciones">
+        <div key={activeTab} className={`space-y-3 ${animationClass}`}>
+          {activeTab === "mim" && (
           <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 mb-2">
             <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
             <span className="font-bold text-sm">Nueva Colección</span>
@@ -635,6 +672,7 @@ export const FomoCollections = memo(function FomoCollections({
               )}
             </div>
           ))}
+        </div>
       </div>
 
       {/* Bulk Actions Bar for Collections */}

@@ -64,8 +64,8 @@ function updateVersion(newVersion) {
     let readme = fs.readFileSync(readmePath, "utf-8");
     // Reemplazar badge de versión
     readme = readme.replace(/Version-(\d+\.\d+\.\d+)-/g, `Version-${newVersion}-`);
-    // Reemplazar sección de completado (asumiendo que la última versión es la que se acaba de completar)
-    readme = readme.replace(/### ✅ Completado \(Versión \d+\.\d+\.\d+\)/g, `### ✅ Completado (Versión ${newVersion})`);
+    // Reemplazar sección de versión actual en el roadmap
+    readme = readme.replace(/### ✅ \*\*v\d+\.\d+\.\d+/g, `### ✅ **v${newVersion}`);
     fs.writeFileSync(readmePath, readme);
     console.log(chalk.green("README.md actualizado con la nueva versión."));
   }
@@ -83,6 +83,19 @@ function updateVersion(newVersion) {
     mimDoc = mimDoc.replace(/\*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `**Última actualización:** ${today}`);
     fs.writeFileSync(mimDocPath, mimDoc);
     console.log(chalk.green("docs/MIM.md actualizado con la nueva versión y fecha."));
+  }
+
+  // Actualizar docs/CHANGELOG.md
+  const changelogPath = path.join(process.cwd(), "docs", "CHANGELOG.md");
+  if (fs.existsSync(changelogPath)) {
+    let changelog = fs.readFileSync(changelogPath, "utf-8");
+    // Reemplazar versión actual en el encabezado
+    changelog = changelog.replace(/> \*\*Versión Actual:\*\* \d+\.\d+\.\d+/g, `> **Versión Actual:** ${newVersion}`);
+    // Reemplazar fecha de actualización
+    const today = new Date().toISOString().slice(0, 10);
+    changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
+    fs.writeFileSync(changelogPath, changelog);
+    console.log(chalk.green("docs/CHANGELOG.md actualizado con la nueva versión y fecha."));
   }
 }
 

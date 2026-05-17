@@ -1,10 +1,32 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 6.3.0 (MIMU Mode & SAGE Redesign)  
+> **Versión Actual:** 6.3.3 (FOMO Rankings & Live Details)  
 > **Última actualización:** 2026-05-17
 
 ---
+
+## 🚀 Versión 6.3.1 — FOMO Rankings & Live Details (2026-05-17)
+
+### FOMO (Discovery & Rankings)
+- **Sistema de Rankings Dinámicos**: Creación de tops de más descargados agrupados por tipo (Mods, Texturas, Shaders, Datapacks). Solo se muestran si hay un mínimo de 3 elementos para formar un Top 3.
+- **Diseño en Podio**: Los rankings se muestran en la parte superior con un diseño estilo podio (1º destacado a lo ancho, 2º y 3º abajo compartiendo fila).
+- **Detalles en Vivo**: Al abrir un proyecto desde el historial o ranking, se fuerza una petición a la API para cargar descargas, autor y galería actualizados.
+- **Iconos en Categorías**: Añadidos iconos representativos a las pestañas de tipos de proyecto dentro de las colecciones.
+- **Icono de Galería**: Actualizado el icono de la pestaña de galería a `<Images />` de Lucide.
+
+### Seguimiento de Autores
+- **Carrusel Dinámico de Iconos**: Las tarjetas de autores seguidos ahora rotan automáticamente (cada 5s) entre los iconos de todos los mods que posees de ese autor (historial y favoritos).
+- **Persistencia de Icono**: Al seguir a un autor, se guarda el icono del mod desde el que lo seguiste para evitar tarjetas vacías.
+
+### Backend & API
+- **Persistencia de Autor en Historial**: Ahora se guarda el campo `author` al registrar una descarga en `download-history.json` para evitar autores desconocidos.
+- **Ampliación de API Modrinth**: El endpoint `/api/modrinth/project` ahora devuelve el objeto completo del proyecto (`...data`), permitiendo el acceso a métricas de descargas reales.
+
+### Correcciones y Optimizaciones (Bugfixes)
+- **Fix NaN en Descargas**: Solucionado el problema que mostraba `NaNK` en la popularidad al abrir proyectos con datos incompletos.
+- **Descongelado de Botón**: Corregido el botón "Seguir Autor" en detalles que no cambiaba a "Siguiendo" por un problema de tipos de datos al comparar objetos con strings.
+- **Limpieza de Nulos**: Se añadió un filtro para ignorar y limpiar autores `null` o `"Autor Desconocido"` heredados de sesiones anteriores que causaban crashes.
 
 ## 🚀 Versión 6.3.0 — MIMU Mode & SAGE Redesign (2026-05-17)
 

@@ -7,7 +7,7 @@ import { MIMDatabase } from './schema';
  * configuraciones de proyectos y reportes de errores.
  */
 const DB_NAME = 'MIMStorage';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /**
  * MIMDatabaseCore (Singleton)
@@ -74,6 +74,18 @@ class MIMDatabaseCore {
           s.createIndex('by-modId', 'modId');
           s.createIndex('by-environment', 'environment');
           s.createIndex('by-lastSeen', 'lastSeen');
+        }
+
+        // 7. Autores Seguidos
+        if (!db.objectStoreNames.contains('followedAuthors')) {
+          const s = db.createObjectStore('followedAuthors', { keyPath: 'name' });
+          s.createIndex('by-dateFollowed', 'dateFollowed');
+        }
+
+        // 8. Mods Seguidos
+        if (!db.objectStoreNames.contains('followedMods')) {
+          const s = db.createObjectStore('followedMods', { keyPath: 'projectId' });
+          s.createIndex('by-dateFollowed', 'dateFollowed');
         }
       },
     });

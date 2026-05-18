@@ -91,6 +91,18 @@ export interface ModEntity {
   overrides?: Partial<Omit<ModEntity, "hash" | "overrides">>; // Ajustes manuales del usuario
 }
 
+export interface FollowedAuthor {
+  name: string;
+  iconUrl?: string;
+  dateFollowed: number;
+}
+
+export interface FollowedMod {
+  projectId: string;
+  data: any;
+  dateFollowed: number;
+}
+
 /**
  * MIMDatabase: Definición estructural completa para la librería 'idb'.
  */
@@ -125,4 +137,15 @@ export interface MIMDatabase extends DBSchema {
     value: ModEntity;
     indexes: { 'by-modId': string; 'by-environment': string; 'by-lastSeen': number };
   };
+  followedAuthors: {
+    key: string;
+    value: FollowedAuthor;
+    indexes: { 'by-dateFollowed': number };
+  };
+  followedMods: {
+    key: string;
+    value: FollowedMod;
+    indexes: { 'by-dateFollowed': number };
+  };
 }
+

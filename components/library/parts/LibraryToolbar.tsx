@@ -14,7 +14,7 @@ export function LibraryToolbar({
   selectedLibFiles, loadingDescription, showDupOptions, setShowDupOptions, 
   handleDuplicateTo, handleUnclassify, autoClassify, setAutoClassify, 
   setTransferOpen, handleOpenFolder, openingFolder, libraryCount,
-  onDeleteSelected, filterType, setFilterType
+  onDeleteSelected, filterType, setFilterType, previewMode, setPreviewMode
 }: any) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -143,8 +143,30 @@ export function LibraryToolbar({
         color="neutral" 
       />
 
-      {/* Filtro: Mods / Texturas / Datapacks / Shaders */}
+      {/* Previsualización de Entorno */}
       <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
+        <button
+          onClick={() => setPreviewMode("all")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === "all" ? "bg-emerald-500 text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Normal
+        </button>
+        <button
+          onClick={() => setPreviewMode("user")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === "user" ? "bg-emerald-500 text-white" : "text-white/40 hover:text-white"}`}
+        >
+          User (Client)
+        </button>
+        <button
+          onClick={() => setPreviewMode("host")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === "host" ? "bg-emerald-500 text-white" : "text-white/40 hover:text-white"}`}
+        >
+          Host (Server)
+        </button>
+      </div>
+
+      {/* Filtro: Mods / Texturas / Datapacks / Shaders */}
+      <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
         <button
           onClick={() => setFilterType("mod")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "mod" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}

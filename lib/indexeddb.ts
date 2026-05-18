@@ -7,7 +7,7 @@
 
 import { dbCore } from './db/core';
 import { modStore } from './db/stores/ModStore';
-import { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport, ModEntity } from './db/schema';
+import { ModDescription, CacheEntry, ProjectData, WorldData, CrashReport, ModEntity, FollowedAuthor, FollowedMod } from './db/schema';
 
 class MIMIndexedDB {
   async init() { await dbCore.init(); }
@@ -55,6 +55,18 @@ class MIMIndexedDB {
   getMod(hash: string) { return modStore.get(hash); }
   setMod(mod: any) { return modStore.set(mod); }
   getAllMods() { return modStore.getAll(); }
+
+  // === Autores Seguidos ===
+  async getFollowedAuthor(name: string) { return (await dbCore.init()).get('followedAuthors', name); }
+  async setFollowedAuthor(a: FollowedAuthor) { await (await dbCore.init()).put('followedAuthors', a); }
+  async getAllFollowedAuthors() { return (await dbCore.init()).getAll('followedAuthors'); }
+  async deleteFollowedAuthor(name: string) { await (await dbCore.init()).delete('followedAuthors', name); }
+
+  // === Mods Seguidos ===
+  async getFollowedMod(projectId: string) { return (await dbCore.init()).get('followedMods', projectId); }
+  async setFollowedMod(m: FollowedMod) { await (await dbCore.init()).put('followedMods', m); }
+  async getAllFollowedMods() { return (await dbCore.init()).getAll('followedMods'); }
+  async deleteFollowedMod(projectId: string) { await (await dbCore.init()).delete('followedMods', projectId); }
 
   // === Storage Management ===
   async getStorageStats() {

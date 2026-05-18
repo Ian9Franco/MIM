@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ModHit, VersionEntry } from "@/lib/types";
+import { mimDB } from "@/lib/indexeddb";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
 
@@ -70,38 +71,56 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, [mod.projectId, mod.body, mod._source]);
 
   useEffect(() => {
-    const load = () => {
+    const load = async () => {
       try {
-        const authors = JSON.parse(localStorage.getItem("mim_followed_authors") || "[]");
-        // Filtramos nulos y normalizamos a objetos si eran strings (datos heredados)
-        const normalizedAuthors = authors
-          .filter((a: any) => a !== null && a !== undefined)
-          .map((a: any) => typeof a === "string" ? { name: a, iconUrl: null } : a);
-        setFollowedAuthors(normalizedAuthors);
-        setFollowedMods(JSON.parse(localStorage.getItem("mim_followed_mods") || "[]"));
-      } catch {}
+        await mimDB.init();
+        const authors = await mimDB.getAllFollowedAuthors();
+        const mods = await mimDB.getAllFollowedMods();
+        
+        setFollowedAuthors(authors);
+        setFollowedMods(mods.map((m: any) => m.data));
+      } catch (err) {
+        console.error("Error loading followed data in overlay", err);
+      }
     };
     load();
-    window.addEventListener("mim-followed-authors-changed", load);
-    window.addEventListener("mim-followed-mods-changed", load);
-    return () => { window.removeEventListener("mim-followed-authors-changed", load); window.removeEventListener("mim-followed-mods-changed", load); };
+    
+    const handleEvent = () => { load(); };
+    
+    window.addEventListener("mim-followed-authors-changed", handleEvent);
+    window.addEventListener("mim-followed-mods-changed", handleEvent);
+    return () => { 
+      window.removeEventListener("mim-followed-authors-changed", handleEvent); 
+      window.removeEventListener("mim-followed-mods-changed", handleEvent); 
+    };
   }, []);
 
-  const toggleFollowAuthor = useCallback((author: string) => {
+  const toggleFollowAuthor = useCallback(async (author: string) => {
     const exists = followedAuthors.some((a: any) => a?.name === author);
-    const next = exists 
-      ? followedAuthors.filter((a: any) => a?.name !== author) 
-      : [...followedAuthors, { name: author, iconUrl: mod.iconUrl }];
+    let next;
+    if (exists) {
+      await mimDB.deleteFollowedAuthor(author);
+      next = followedAuthors.filter((a: any) => a?.name !== author);
+    } else {
+      const newAuthor = { name: author, iconUrl: mod.iconUrl ?? undefined, dateFollowed: Date.now() };
+      await mimDB.setFollowedAuthor(newAuthor);
+      next = [...followedAuthors, newAuthor];
+    }
     setFollowedAuthors(next);
-    localStorage.setItem("mim_followed_authors", JSON.stringify(next));
     window.dispatchEvent(new CustomEvent("mim-followed-authors-changed", { detail: next }));
   }, [followedAuthors, mod.iconUrl]);
 
-  const toggleFollowMod = useCallback((m: ModHit) => {
+  const toggleFollowMod = useCallback(async (m: ModHit) => {
     const exists = followedMods.some(x => x.projectId === m.projectId);
-    const next = exists ? followedMods.filter(x => x.projectId !== m.projectId) : [...followedMods, m];
+    let next;
+    if (exists) {
+      await mimDB.deleteFollowedMod(m.projectId);
+      next = followedMods.filter(x => x.projectId !== m.projectId);
+    } else {
+      await mimDB.setFollowedMod({ projectId: m.projectId, data: m, dateFollowed: Date.now() });
+      next = [...followedMods, m];
+    }
     setFollowedMods(next);
-    localStorage.setItem("mim_followed_mods", JSON.stringify(next));
     window.dispatchEvent(new CustomEvent("mim-followed-mods-changed", { detail: next }));
   }, [followedMods]);
 

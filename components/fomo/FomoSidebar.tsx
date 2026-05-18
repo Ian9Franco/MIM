@@ -22,6 +22,7 @@ import { FomoSpotlight }       from "./FomoSpotlight";
 import { FomoCollections }     from "./FomoCollections";
 import { FomoFollowedAuthors } from "./FomoFollowedAuthors";
 import { FomoSkeleton }        from "./FomoSkeleton";
+import { OnboardingTour }      from "@/components/ui/OnboardingTour";
 import { fetchCurseForgePickMods, fetchCollectionMods } from "@/services/api";
 import { ModrinthIcon, CurseForgeIcon } from "./parts/FomoPlatformIcons";
 import { BulkActionsBar, BulkCollectionModal } from "./FomoSidebarComponents";
@@ -47,6 +48,50 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
   const m = useFomoSidebarManager(open, discover, showStatus);
   const [currentTheme, setCurrentTheme] = useState("official");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("onboarding_fomo");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (open && (!seen || guidesEnabled)) {
+      setShowOnboarding(true);
+    } else if (!open) {
+      setShowOnboarding(false);
+    }
+  }, [open]);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-fomo-tabs',
+      title: 'Navegación FOMO',
+      content: 'Desde acá podés moverte entre Spotlight, Explorar, Colecciones y Autores Seguidos.'
+    },
+    {
+      target: '#onboarding-fomo-spotlight',
+      title: 'Spotlight',
+      content: 'Acá ves los mods destacados del momento, selecciones de la comunidad y carruseles temáticos.'
+    },
+    {
+      target: '#onboarding-fomo-discover',
+      title: 'Explorar Mods',
+      content: 'Acá podés buscar mods filtrando por versión, loader, categoría y más.'
+    },
+    {
+      target: '#onboarding-fomo-collections',
+      title: 'Mis Colecciones',
+      content: 'Acá podés crear y gestionar tus propias listas de mods para instalarlos todos juntos.'
+    },
+    {
+      target: '#onboarding-fomo-followed',
+      title: 'Seguidos',
+      content: 'Acá ves las novedades de los autores y mods que decidiste seguir.'
+    },
+    {
+      target: '#onboarding-fomo-details',
+      title: 'Detalles del Mod',
+      content: 'Cuando hacés clic en un mod, se abre este panel lateral con las versiones disponibles y dependencias.'
+    }
+  ];
 
   useEffect(() => {
     const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
@@ -162,7 +207,9 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7 animate-fomo-blink" />
               <div><h2 className="font-headline text-base text-white">FOMO</h2><p className="text-[8px] opacity-40 uppercase">{m.mode}</p></div>
             </div>
-            <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5" ariaLabel="Seleccionar pestaña" />
+            <div id="onboarding-fomo-tabs">
+              <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5" ariaLabel="Seleccionar pestaña" />
+            </div>
           </div>
           <div className="flex items-center gap-4">
             {m.mode === "discover" && (
@@ -182,24 +229,26 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {m.mode === "spotlight" && (
-            <FomoSpotlight 
-              onOpenVersions={discover.handleOpenVersionSelector} 
-              onOpenCollection={async (coll) => {
-                const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as "modrinth" | "curseforge";
-                discover.setSource(sourceKey);
-                discover.setCollectionId(coll.id);
-                discover.setPage(1); // Resetear a la primera página
-                m.setMode("discover");
-                showStatus(`Mostrando mods de "${coll.name}"`, "success");
-              }}
-              onDownloadMod={discover.handleDownload} 
-              downloading={discover.downloading} 
-              loader={discover.loader} 
-              gameVersion={discover.gameVersions[0]} 
-            />
+            <div id="onboarding-fomo-spotlight" className="flex-1 flex flex-col overflow-hidden">
+              <FomoSpotlight 
+                onOpenVersions={discover.handleOpenVersionSelector} 
+                onOpenCollection={async (coll) => {
+                  const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as "modrinth" | "curseforge";
+                  discover.setSource(sourceKey);
+                  discover.setCollectionId(coll.id);
+                  discover.setPage(1); // Resetear a la primera página
+                  m.setMode("discover");
+                  showStatus(`Mostrando mods de "${coll.name}"`, "success");
+                }}
+                onDownloadMod={discover.handleDownload} 
+                downloading={discover.downloading} 
+                loader={discover.loader} 
+                gameVersion={discover.gameVersions[0]} 
+              />
+            </div>
           )}
           {m.mode === "discover" && (
-            <div className="flex-1 flex overflow-hidden">
+            <div id="onboarding-fomo-discover" className="flex-1 flex overflow-hidden">
               <div className="w-65 p-4 border-r border-white/5 overflow-y-auto"><FomoDiscoverFilters {...discover} onLoader={discover.setLoader} onVersions={discover.setGameVersions} onProjectType={discover.setProjectType} onSort={discover.setSortOrder} onCategories={discover.setCategories} onEnvironments={discover.setEnvironments} onOnlyExclusives={discover.setOnlyExclusives} onQuery={discover.setQuery} onRefresh={discover.refetch} /></div>
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="px-6 py-4 flex items-center gap-4 border-b border-white/5">
@@ -271,25 +320,53 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
             </div>
           )}
           {m.mode === "collections" && (
-            <FomoCollections 
-              {...discover} 
-              onStatus={showStatus} 
-              gameVersion={discover.gameVersions[0]}
-              addingForMod={m.addingToCollectionFor}
-              onClearAddingFor={() => m.setAddingToCollectionFor(null)}
-              onDownloadMod={discover.handleDownload} 
-              onOpenVersions={discover.handleOpenLiveProject} 
-              onClearSelection={discover.clearSelection}
-            />
+            <div id="onboarding-fomo-collections" className="flex-1 flex flex-col overflow-hidden">
+              <FomoCollections 
+                {...discover} 
+                onStatus={showStatus} 
+                gameVersion={discover.gameVersions[0]}
+                addingForMod={m.addingToCollectionFor}
+                onClearAddingFor={() => m.setAddingToCollectionFor(null)}
+                onDownloadMod={discover.handleDownload} 
+                onOpenVersions={discover.handleOpenLiveProject} 
+                onClearSelection={discover.clearSelection}
+              />
+            </div>
           )}
-          {m.mode === "followed" && <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />}
+          {m.mode === "followed" && (
+            <div id="onboarding-fomo-followed" className="flex-1 flex flex-col overflow-hidden">
+              <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />
+            </div>
+          )}
         </div>
         {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} theme={currentTheme} />}
+
+        {showOnboarding && (
+          <OnboardingTour 
+            steps={onboardingSteps} 
+            onComplete={() => {
+              setShowOnboarding(false);
+              localStorage.setItem("onboarding_fomo", "true");
+            }} 
+            onStepChange={(step) => {
+              if (step === 1) m.setMode("spotlight");
+              if (step === 2) m.setMode("discover");
+              if (step === 3) m.setMode("collections");
+              if (step === 4) m.setMode("followed");
+              if (step === 5) {
+                if (!discover.selectingVersionFor && discover.mods.length > 0) {
+                  discover.handleOpenLiveProject(discover.mods[0]);
+                }
+              }
+            }}
+          />
+        )}
       </aside>
 
       {/* Details Sidebar — only rendered when FOMO is open to prevent ghost blocks */}
       {open && (
         <aside
+          id="onboarding-fomo-details"
           className={`fomo-sidebar fixed inset-y-0 right-0 z-[70] flex flex-col transition-all duration-500 ease-in-out ${
             detailsOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
           }`}

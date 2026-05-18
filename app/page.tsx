@@ -29,6 +29,7 @@ import { FomoSidebarPortal }  from "@/components/layout/FomoSidebarPortal";
 import { isVersionCompatible, isLoaderCompatible } from "@/lib/version-utils";
 import type { PendingFile, LibraryFile } from "@/lib/types";
 import { LOADER_COLORS } from "../constants/app";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 function Divider() {
   return <div className="h-px w-full" style={{ background: "var(--color-border)" }} aria-hidden="true" />;
@@ -57,6 +58,118 @@ export default function Page() {
   }, []);
   
   const [selectedFiles,    setSelectedFiles]    = useState<PendingFile[]>([]);
+  const [appMode,          setAppMode]          = useState<"MIM" | "MIMU">("MIMU");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem(appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (!seen || guidesEnabled) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [appMode]);
+
+  useEffect(() => {
+    const handleShowOnboarding = (e: any) => {
+      setShowOnboarding(e.detail);
+    };
+    window.addEventListener("show-onboarding", handleShowOnboarding as any);
+    return () => window.removeEventListener("show-onboarding", handleShowOnboarding as any);
+  }, []);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-projects',
+      title: 'Selección de Proyectos',
+      content: 'Acá podés crear nuevos proyectos o seleccionar en cuál querés trabajar.'
+    },
+    {
+      target: '#onboarding-downloads',
+      title: 'Descargas Pendientes',
+      content: 'Acá vas a ver los archivos que descargues. Podés seleccionarlos para clasificarlos o borrarlos.'
+    },
+    {
+      target: '#onboarding-categorize',
+      title: 'Categorización Rápida',
+      content: 'Arrastrá los archivos acá para moverlos a las carpetas específicas de tu proyecto.'
+    },
+    {
+      target: '#onboarding-library',
+      title: 'Librería de Source',
+      content: 'La lista completa de todos tus recursos categorizados. Desde acá los podés gestionar.'
+    },
+    {
+      target: '#onboarding-build',
+      title: 'Panel de Build',
+      content: 'Acá podés ver el estado de tu build y abrir la carpeta del proyecto.'
+    }
+  ];
+
+  const mimuOnboardingSteps = [
+    {
+      target: '#onboarding-slime',
+      title: 'El Slime de MIM',
+      content: 'Este es el logo de la app. Si lo ves saltando, significa que MIM está activo y listo para la acción.'
+    },
+    {
+      target: '#onboarding-watcher',
+      title: 'Estado del Watcher',
+      content: 'Te indica qué carpeta está vigilando MIMu en tiempo real (Mods, Texturas, etc.).'
+    },
+    {
+      target: '#onboarding-fomo-button',
+      title: 'Modo FOMO',
+      content: 'Hacé clic acá para abrir la búsqueda de mods en Modrinth y CurseForge.'
+    },
+    {
+      target: '#onboarding-header-tools',
+      title: 'Otras Herramientas',
+      content: 'Fijate qué más hay: Tweak, ALRT, Sage, Gate y Ajustes.'
+    },
+    {
+      target: '#onboarding-mimu-send',
+      title: 'Enviar Todo al Juego',
+      content: 'Este botón procesa y manda todas las descargas compatibles derecho a la carpeta de tu juego.'
+    },
+    {
+      target: '#onboarding-mimu-actions',
+      title: 'Accesos Rápidos',
+      content: 'Botones para abrir al toque las carpetas de descargas, del juego, mods y texturas.'
+    },
+    {
+      target: '#onboarding-mimu-downloads',
+      title: 'Descargas Pendientes',
+      content: 'Acá ves los archivos que descargaste y que ya están listos para mandar al juego.'
+    },
+    {
+      target: '#onboarding-mimu-installed',
+      title: 'Mods Instalados',
+      content: 'La lista de los mods que ya tenés activos en tu juego.'
+    },
+    {
+      target: '#onboarding-mimu-worlds',
+      title: 'Mundos Guardados',
+      content: 'Acá ves tus mundos guardados. Podés hacer backups o abrirlos directamente.'
+    },
+    {
+      target: '#onboarding-refresh',
+      title: 'Sincronizar con Disco',
+      content: 'Hacé clic acá para refrescar los archivos de tu computadora si hiciste cambios por fuera.'
+    },
+    {
+      target: '#onboarding-theme',
+      title: 'Cambiar Tema',
+      content: 'Podés alternar entre el modo Brutalista (oficial) y el modo Moderno (glassmorphism).'
+    },
+    {
+      target: '#onboarding-footer',
+      title: 'Pie de Página',
+      content: 'Acá tenés los links al repositorio, el desarrollador y un mensaje de Ian.'
+    }
+  ];
+
   const [selectedLibFiles, setSelectedLibFiles] = useState<LibraryFile[]>([]);
   const [showSubcategories,setShowSubcategories]= useState<string | null>(null);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
@@ -68,7 +181,6 @@ export default function Page() {
   const [autoClassify,     setAutoClassify]     = useState(false);
   const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
   const [projectToDelete,  setProjectToDelete]  = useState<string | null>(null);
-  const [appMode,          setAppMode]          = useState<"MIM" | "MIMU">("MIMU");
 
   useEffect(() => {
     const saved = localStorage.getItem("mim_app_mode") as "MIM" | "MIMU";
@@ -245,9 +357,11 @@ export default function Page() {
     <div className="transition-all duration-500 ease-out">
       <div className="space-y-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-5 items-start">
-          <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} appMode={appMode} setAppMode={setAppMode} />
+          <div id="onboarding-projects">
+            <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} appMode={appMode} setAppMode={setAppMode} />
+          </div>
           {appMode === "MIM" && projects.activeProject && (
-            <section className="animate-fade-up lg:min-w-[420px]">
+            <section id="onboarding-build" className="animate-fade-up lg:min-w-[420px]">
               <SectionHeading icon={<Pickaxe className="w-4 h-4" />} title="Build" sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`} accentColor="var(--color-accent)" className="mb-4" actions={<button onClick={() => fetch("/api/project/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: projects.activeProject?.name, version: projects.activeProject?.version }) })} className="flex items-center gap-3 px-12 py-3.5 rounded-2xl bg-white/5 border border-dashed border-white/10 hover:border-primary transition-all active:scale-95 text-[10px] font-bold uppercase text-muted group hover:text-primary"><FolderOpen className="w-4 h-4" /> Abrir Carpeta</button>} />
               <BuildPanel projectName={projects.activeProject.name} version={projects.activeProject.version} loader={projects.activeProject.loader} />
             </section>
@@ -271,9 +385,10 @@ export default function Page() {
             <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-6 rounded-2xl backdrop-blur-md">
               <div>
                 <h2 className="font-headline text-2xl text-foreground">Modo Usuario (MIMU)</h2>
-                <p className="text-sm text-muted mt-1">Las descargas se envían directamente a tu juego.</p>
+                <p className="text-sm text-muted mt-1">Las descargas se mandan derecho a tu juego.</p>
               </div>
               <button
+                id="onboarding-mimu-send"
                 onClick={() => {
                   handleClassify("auto", "");
                   setKeepOpenMimu(true);
@@ -290,7 +405,7 @@ export default function Page() {
             {/* Bento Grid */}
             <div className="grid grid-cols-[240px_1.5fr_1fr] gap-6 items-start">
               {/* Left Card - Quick Actions */}
-              <div className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] backdrop-blur-xl space-y-4">
+              <div id="onboarding-mimu-actions" className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] backdrop-blur-xl space-y-4">
                 <h3 className="font-headline text-sm uppercase tracking-wider text-muted flex items-center gap-2"><FolderTree className="w-4 h-4" />Accesos Rápidos</h3>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
@@ -309,26 +424,30 @@ export default function Page() {
               </div>
 
               {/* Middle Card - Pending Files */}
-              <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl`}>
+              <div id="onboarding-mimu-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl`}>
                 <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
               </div>
 
               {/* Right Card - Installed Mods (Tall) */}
-              <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl h-full">
+              <div id="onboarding-mimu-installed" className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl h-full">
                 <InstalledModsSection />
               </div>
             </div>
 
             {/* Bottom Card - Worlds */}
-            <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl">
+            <div id="onboarding-mimu-worlds" className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl">
               <WorldsSection pendingFiles={pendingFiles} />
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
-            <div className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} /></div>
-            <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
-            <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} onDeleteFile={handleDeleteFile} />
+            <div id="onboarding-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} /></div>
+            <div id="onboarding-categorize">
+              <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
+            </div>
+            <div id="onboarding-library">
+              <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} onDeleteFile={handleDeleteFile} />
+            </div>
           </div>
         )}
 
@@ -341,6 +460,17 @@ export default function Page() {
       <ConfirmModal isOpen={filesToDelete.length > 0} onClose={() => setFilesToDelete([])} onConfirm={handleBulkDelete} title={filesToDelete.length > 1 ? "¿Eliminar seleccionados?" : "¿Eliminar archivo?"} message={`¿Estás seguro? Esta acción no se puede deshacer.`} confirmLabel="Eliminar" cancelLabel="Cancelar" type="danger" />
       {pObjToDelete && (
         <ConfirmModal isOpen={!!projectToDelete} onClose={() => setProjectToDelete(null)} onConfirm={confirmDeleteProject} title={`¿Eliminar proyecto "${pObjToDelete.name}"?`} message="Se eliminarán físicamente todos sus archivos de configuración, recursos y carpetas en disco. Esta acción no se puede deshacer." confirmLabel="Eliminar Proyecto" cancelLabel="Cancelar" type="danger" />
+      )}
+
+      {showOnboarding && (
+        <OnboardingTour 
+          steps={appMode === "MIMU" ? mimuOnboardingSteps : onboardingSteps} 
+          onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem(appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main", "true");
+            window.dispatchEvent(new CustomEvent("show-onboarding", { detail: false }));
+          }} 
+        />
       )}
     </div>
   );

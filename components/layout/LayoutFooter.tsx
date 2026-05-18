@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function LayoutFooter() {
   return (
-    <footer className="px-6 py-10 border-t border-primary/20 bg-background/60 backdrop-blur-md transition-colors duration-500">
+    <footer id="onboarding-footer" className="px-6 py-10 border-t border-primary/20 bg-background/60 backdrop-blur-md transition-colors duration-500">
       <div className="max-w-400 mx-auto flex flex-col md:flex-row items-center justify-between gap-8 opacity-80 hover:opacity-100 transition-opacity duration-700">
         
         <div className="flex flex-col items-center md:items-start gap-2">

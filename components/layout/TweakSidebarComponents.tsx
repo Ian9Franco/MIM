@@ -14,6 +14,7 @@ export function TweakTabNav({ activeTab, setActiveTab }: { activeTab: string; se
     { id: "keybinds", icon: Keyboard, label: "Teclas" },
     { id: "resourcepacks", icon: Package, label: "Packs" },
     { id: "profiles",  icon: History,  label: "Perfiles" },
+    { id: "config",    icon: FolderOpen, label: "Configs" },
   ];
   return (
     <div className="flex px-6 pt-4 border-b shrink-0 gap-2 bg-white/[0.01]" style={{ borderColor: "var(--color-border)" }}>
@@ -307,6 +308,9 @@ export function ResourcePackItem({
 }) {
   const name = pack.replace("file/", "").replace(".zip", "");
   
+  const hasCritical = warnings.some(w => w.severity === "critical");
+  const hasWarning = warnings.some(w => w.severity === "warning");
+  
   return (
     <div
       draggable
@@ -316,6 +320,10 @@ export function ResourcePackItem({
       className={`group relative flex items-center gap-3 p-3 rounded-2xl border-2 transition-all duration-500 cursor-grab active:cursor-grabbing animate-in fade-in slide-in-from-left-4 ${
         isDragged 
           ? "opacity-20 scale-95 grayscale border-primary/20" 
+          : hasCritical
+          ? "bg-rose-500/5 border-rose-500/30 shadow-[0_15px_30px_-10px_rgba(239,68,68,0.15)]"
+          : hasWarning
+          ? "bg-amber-500/5 border-amber-500/30 shadow-[0_15px_30px_-10px_rgba(245,158,11,0.15)]"
           : isPriority
           ? "bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent border-emerald-500/40 shadow-[0_15px_30px_-10px_rgba(16,185,129,0.25)]"
           : "bg-white/[0.02] border-white/5 hover:border-primary/20 hover:bg-white/[0.04] hover:shadow-xl hover:shadow-black/20"
@@ -324,29 +332,39 @@ export function ResourcePackItem({
       {/* 1. LEFT: Priority Index */}
       <div className="flex flex-col items-center gap-1 shrink-0 relative">
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black border-2 transition-all duration-500 ${
-          isPriority 
+          hasCritical
+            ? "bg-rose-500 text-white border-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.6)]"
+          : hasWarning
+            ? "bg-amber-500 text-white border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.6)]"
+          : isPriority 
             ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)]" 
             : "bg-black/40 text-muted/30 border-white/5 group-hover:border-primary/40 group-hover:text-primary/60"
         }`}>
-          {isPriority ? "★" : uiIdx + 1}
+          {hasCritical ? "⚠️" : hasWarning ? "!" : isPriority ? "★" : uiIdx + 1}
         </div>
-        {!isPriority && <GripVertical className="w-3 h-3 text-muted/10 group-hover:text-primary/40 transition-colors" />}
-        {isPriority && <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full -z-10 animate-pulse" />}
+        {!isPriority && !hasWarning && !hasCritical && <GripVertical className="w-3 h-3 text-muted/10 group-hover:text-primary/40 transition-colors" />}
+        {isPriority && !hasWarning && !hasCritical && <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full -z-10 animate-pulse" />}
       </div>
 
       {/* 2. CENTER: Info Content */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg transition-colors ${
-            isPriority ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/10 text-muted/30 border border-white/5 group-hover:text-primary/40 group-hover:border-primary/10"
+            hasCritical
+              ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+            : hasWarning
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+            : isPriority 
+              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+              : "bg-white/10 text-muted/30 border border-white/5 group-hover:text-primary/40 group-hover:border-primary/10"
           }`}>
-            {isPriority ? "Prioridad Alta" : `Capa ${uiIdx + 1}`}
+            {hasCritical ? "Crítico" : hasWarning ? "Advertencia" : isPriority ? "Prioridad Alta" : `Capa ${uiIdx + 1}`}
           </span>
-          <div className={`h-px flex-1 transition-all duration-500 ${isPriority ? "bg-emerald-500/10" : "bg-white/[0.02] group-hover:bg-primary/5"}`} />
+          <div className={`h-px flex-1 transition-all duration-500 ${hasCritical ? "bg-rose-500/10" : hasWarning ? "bg-amber-500/10" : isPriority ? "bg-emerald-500/10" : "bg-white/[0.02] group-hover:bg-primary/5"}`} />
         </div>
         
         <p className={`text-xs font-black tracking-tight truncate transition-all duration-300 uppercase italic ${
-          isPriority ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "text-white/80 group-hover:text-white"
+          hasCritical ? "text-rose-300" : hasWarning ? "text-amber-300" : isPriority ? "text-emerald-300" : "text-white/80 group-hover:text-white"
         }`}>
           {name}
         </p>
@@ -365,21 +383,6 @@ export function ResourcePackItem({
                 <div className="flex items-center gap-1.5 font-bold">
                   {w.severity === "critical" ? "⚠️" : "ℹ️"} {w.message}
                 </div>
-                {w.explanation && (
-                  <p className="text-[8px] opacity-70 font-medium ml-4">
-                    {w.explanation}
-                  </p>
-                )}
-                {w.confidence && (
-                  <div className="flex items-center gap-1 mt-0.5 ml-4">
-                    <span className="text-[7px] uppercase font-black opacity-40">Confianza:</span>
-                    <span className={`text-[7px] uppercase font-black ${
-                      w.confidence === "high" ? "text-emerald-400" : w.confidence === "medium" ? "text-amber-400" : "text-rose-400"
-                    }`}>
-                      {w.confidence}
-                    </span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -398,8 +401,10 @@ export function ResourcePackItem({
       </div>
 
       {/* Side Indicator */}
-      {isPriority && (
-        <div className="absolute -left-1 top-3 bottom-3 w-1 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,1)]" />
+      {(isPriority || hasWarning || hasCritical) && (
+        <div className={`absolute -left-1 top-3 bottom-3 w-1 rounded-full shadow-lg ${
+          hasCritical ? "bg-rose-500 shadow-rose-500/50" : hasWarning ? "bg-amber-500 shadow-amber-500/50" : "bg-emerald-500 shadow-emerald-500/50"
+        }`} />
       )}
     </div>
   );

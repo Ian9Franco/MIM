@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, TweakData, Keybind } from "@/lib/types";
 
 export function useTweakManager(isOpen: boolean, activeProject: Project | null) {
-  const [activeTab, setActiveTab] = useState<"optimize" | "keybinds" | "resourcepacks" | "profiles">("optimize");
+  const [activeTab, setActiveTab] = useState<"optimize" | "keybinds" | "resourcepacks" | "profiles" | "config">("optimize");
   const [data, setData] = useState<TweakData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

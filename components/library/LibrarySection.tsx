@@ -23,6 +23,7 @@ export function LibrarySection({
   const [showDupOptions, setShowDupOptions] = useState(false);
   const [openingFolder, setOpeningFolder] = useState(false);
   const [filterType, setFilterType] = useState<"mod" | "resourcepack" | "datapack" | "shader">("mod");
+  const [previewMode, setPreviewMode] = useState<"all" | "user" | "host">("all");
 
   const { handleDuplicateTo } = useLibrarySection(
     activeProject, selectedLibFiles, setSelectedLibFiles, 
@@ -72,10 +73,31 @@ export function LibrarySection({
   };
 
   const filteredLibrary = library.filter((f: any) => {
+    // Primero filtrar por tipo
+    let matchType = false;
     if (filterType === "mod") {
-      return !f.meta?.projectType || f.meta?.projectType === "mod";
+      matchType = !f.meta?.projectType || f.meta?.projectType === "mod";
+    } else {
+      matchType = f.meta?.projectType === filterType;
     }
-    return f.meta?.projectType === filterType;
+    
+    if (!matchType) return false;
+
+    // Luego filtrar por previsualización de entorno
+    if (previewMode === "all") return true;
+    
+    const isEssential = f.path.includes(".essential");
+    const isLocal = f.path.includes(".local");
+    const isServer = f.path.includes(".server");
+
+    if (previewMode === "user") {
+      return isEssential || isLocal;
+    }
+    if (previewMode === "host") {
+      return isEssential || isServer;
+    }
+    
+    return true;
   });
 
   const handleDeleteSelected = async () => {
@@ -119,6 +141,7 @@ export function LibrarySection({
           setTransferOpen={setTransferOpen} handleOpenFolder={handleOpenFolder} 
           openingFolder={openingFolder} libraryCount={library.length}
           onDeleteSelected={handleDeleteSelected} filterType={filterType} setFilterType={setFilterType}
+          previewMode={previewMode} setPreviewMode={setPreviewMode}
         />
       </div>
 

@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSageManager, type LocalLogFile } from "@/hooks/useSageManager";
 import { SageHeader, SageNavigation } from "./SageComponents";
 import { SageSecurityScanner } from "./SageSecurityScanner";
@@ -14,6 +14,7 @@ import { SagePlayerRescue } from "./SagePlayerRescue";
 import { SageManualPaste } from "./SageManualPaste";
 import { SageDeleteModal } from "./SageDeleteModal";
 import type { Project } from "@/lib/types";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 export interface SageSidebarProps {
   open: boolean;
@@ -24,6 +25,45 @@ export interface SageSidebarProps {
 export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) {
   const sage = useSageManager(activeProject, open, onClose);
   const [fileToDelete, setFileToDelete] = useState<LocalLogFile | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("onboarding_sage");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (open && (!seen || guidesEnabled)) {
+      setShowOnboarding(true);
+    } else if (!open) {
+      setShowOnboarding(false);
+    }
+  }, [open]);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-sage-tabs',
+      title: 'Secciones de SAGE',
+      content: 'Desde acá podés moverte entre el Escáner de Seguridad, Análisis de Crashes, Logs del Juego y Rescate de Jugador.'
+    },
+    {
+      target: '#onboarding-sage-content',
+      title: 'Escáner de Seguridad',
+      content: 'Acá podés escanear tus mods en busca de malware usando la API de VirusTotal.'
+    },
+    {
+      target: '#onboarding-sage-content',
+      title: 'Análisis de Crashes',
+      content: 'Si el juego se te cierra, acá podés ver los reportes de crash y SAGE te va a decir qué mod falló.'
+    },
+    {
+      target: '#onboarding-sage-content',
+      title: 'Logs del Juego',
+      content: 'Acá ves el registro en tiempo real de lo que pasa en el juego para encontrar errores menores.'
+    },
+    {
+      target: '#onboarding-sage-content',
+      title: 'Rescate de Jugador',
+      content: 'Si te quedaste bugeado en un mundo y no podés entrar, acá podés resetear la posición de tu jugador.'
+    }
+  ];
 
   const handleAutoFix = (fix: any) => {
     onClose();
@@ -68,15 +108,17 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
 
         <SageHeader onClose={onClose} />
 
-        <SageNavigation 
-          mode={sage.mode} setMode={sage.setMode} 
-          activeProject={activeProject} 
-          fetchScannable={sage.fetchScannable}
-          secScannable={sage.secScannable}
-          secLoading={sage.secLoading}
-        />
+        <div id="onboarding-sage-tabs">
+          <SageNavigation 
+            mode={sage.mode} setMode={sage.setMode} 
+            activeProject={activeProject} 
+            fetchScannable={sage.fetchScannable}
+            secScannable={sage.secScannable}
+            secLoading={sage.secLoading}
+          />
+        </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <div id="onboarding-sage-content" className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
           {sage.mode === "security" && (
             <SageSecurityScanner 
               secLoading={sage.secLoading} secError={sage.secError} 
@@ -118,6 +160,22 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
             />
           )}
         </div>
+
+        {showOnboarding && (
+          <OnboardingTour 
+            steps={onboardingSteps} 
+            onComplete={() => {
+              setShowOnboarding(false);
+              localStorage.setItem("onboarding_sage", "true");
+            }} 
+            onStepChange={(step) => {
+              if (step === 1) sage.setMode("security");
+              if (step === 2) sage.setMode("crash");
+              if (step === 3) sage.setMode("latest-log");
+              if (step === 4) sage.setMode("player-rescue");
+            }}
+          />
+        )}
       </aside>
 
       <SageDeleteModal 

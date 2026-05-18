@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 import { incidentManager } from "@/lib/incidentManager";
 import { useAlertManager } from "@/hooks/useAlertManager";
+import { mimDB } from "@/lib/indexeddb";
 import { TabButton, AlertSection, ActionButton, UpdateCard, EmptyState, IncidentCard } from "./AlertSidebarComponents";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 interface AlertSidebarProps {
   sidebarOpen: boolean;
@@ -36,18 +38,54 @@ export function AlertSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [followedMods, setFollowedMods] = useState<any[]>([]);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const load = () => {
+    const seen = localStorage.getItem("onboarding_alrt");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (sidebarOpen && (!seen || guidesEnabled)) {
+      setShowOnboarding(true);
+    } else if (!sidebarOpen) {
+      setShowOnboarding(false);
+    }
+  }, [sidebarOpen]);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-alrt-tabs',
+      title: 'Secciones de Alertas',
+      content: 'Desde acá podés filtrar las alertas por categoría: SAGE (logs), Updates, Conflictos de archivos, Ajustes y Bytecode.'
+    },
+    {
+      target: '#onboarding-alrt-content',
+      title: 'Contenido de Alertas',
+      content: 'Acá vas a ver el listado de todas las alertas activas. Podés resolver conflictos, actualizar mods o limpiar el historial.'
+    }
+  ];
+
+  useEffect(() => {
+    const load = async () => {
       try {
-        setFollowedMods(JSON.parse(localStorage.getItem("mim_followed_mods") || "[]"));
-        setFollowedAuthors(JSON.parse(localStorage.getItem("mim_followed_authors") || "[]"));
-      } catch {}
+        await mimDB.init();
+        const mods = await mimDB.getAllFollowedMods();
+        const authors = await mimDB.getAllFollowedAuthors();
+        
+        setFollowedMods(mods.map((m: any) => m.data));
+        setFollowedAuthors(authors.map((a: any) => a.name));
+      } catch (err) {
+        console.error("Error loading followed data in AlertSidebar", err);
+      }
     };
     load();
-    window.addEventListener("mim-followed-mods-changed", load);
-    window.addEventListener("mim-followed-authors-changed", load);
-    return () => { window.removeEventListener("mim-followed-mods-changed", load); window.removeEventListener("mim-followed-authors-changed", load); };
+    
+    const handleEvent = () => { load(); };
+    
+    window.addEventListener("mim-followed-mods-changed", handleEvent);
+    window.addEventListener("mim-followed-authors-changed", handleEvent);
+    return () => { 
+      window.removeEventListener("mim-followed-mods-changed", handleEvent); 
+      window.removeEventListener("mim-followed-authors-changed", handleEvent); 
+    };
   }, []);
 
   const { 
@@ -66,7 +104,8 @@ export function AlertSidebar({
         if (target.closest('[data-sidebar-toggle="true"]') || 
             target.closest('[data-header-toggle="true"]') ||
             target.closest('.fomo-sidebar') ||
-            target.closest('.lightbox-overlay')) return;
+            target.closest('.lightbox-overlay') ||
+            target.closest('.onboarding-tooltip')) return;
             
         setSidebarOpen(false);
         window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false }));
@@ -125,7 +164,7 @@ export function AlertSidebar({
         </div>
       </div>
 
-      <div className="flex items-center gap-1 p-2 border-b overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: "var(--color-border)" }}>
+      <div id="onboarding-alrt-tabs" className="flex items-center gap-1 p-2 border-b overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: "var(--color-border)" }}>
         <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")} icon={<Info className="w-3.5 h-3.5" />} label="Todas" count={conflicts.length + updates.length + incidents.length} />
         <TabButton active={activeTab === "sage"} onClick={() => setActiveTab("sage")} icon={<Activity className="w-3.5 h-3.5" />} label="SAGE" count={incidents.filter(i => i.status === "active" && i.module === "SAGE").length} alert={incidents.some(i => i.status === "active" && i.module === "SAGE" && i.severity === "danger")} />
         <TabButton active={activeTab === "updates"} onClick={() => setActiveTab("updates")} icon={<RefreshCw className="w-3.5 h-3.5" />} label="Updates" count={updates.length} />
@@ -134,7 +173,7 @@ export function AlertSidebar({
         <TabButton active={activeTab === "bytecode"} onClick={() => setActiveTab("bytecode")} icon={<Binary className="w-3.5 h-3.5" />} label="Bytecode" count={bytecodeConflicts?.totalConflicts || 0} alert={(bytecodeConflicts?.highRiskConflicts || 0) > 0} />
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-40 min-h-0">
+      <div id="onboarding-alrt-content" className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-40 min-h-0">
         {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && incidents.filter(i => i.status === "active").length === 0 && <EmptyState icon={CheckCircle} title="Todo al día" desc="No hay alertas de ningún tipo en tu sistema" />}
         {activeTab === "sage" && incidents.filter(i => i.status === "active" && i.module === "SAGE").length === 0 && <EmptyState icon={Activity} title="SAGE: Todo en Orden" desc="No se han detectado amenazas críticas." color="#66C8A0" />}
         {activeTab === "config" && incidents.filter(i => i.status === "active" && i.module === "CONFIG").length === 0 && <EmptyState icon={Settings} title="Ajustes Correctos" desc="Todas las rutas son funcionales." color="#BB96E4" />}
@@ -256,6 +295,16 @@ export function AlertSidebar({
           </AlertSection>
         )}
       </div>
+
+      {showOnboarding && (
+        <OnboardingTour 
+          steps={onboardingSteps} 
+          onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem("onboarding_alrt", "true");
+          }} 
+        />
+      )}
     </aside>
   );
 }

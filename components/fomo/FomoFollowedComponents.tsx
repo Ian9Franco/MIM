@@ -14,7 +14,7 @@ const getGradientByName = (name: string) => {
 
 // ── FollowedProjectCard ─────────────────────────────────────────────────────
 
-export function FollowedProjectCard({ mod, updateInfo, isDownloading, onOpenVersions, onDownloadMod, onSearchProject, onUnfollow }: any) {
+export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, onOpenVersions, onDownloadMod, onSearchProject, onUnfollow }: any) {
   return (
     <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border p-4 flex flex-col justify-between transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-white/3 border-white/5 hover:border-white/10"}`}>
       <div className="flex gap-4 items-start min-w-0">
@@ -22,7 +22,11 @@ export function FollowedProjectCard({ mod, updateInfo, isDownloading, onOpenVers
           {mod.iconUrl ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <div className={`w-full h-full flex items-center justify-center text-white font-bold bg-gradient-to-br ${getGradientByName(mod.title)}`}>{mod.title.charAt(0)}</div>}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap"><h4 className="font-headline text-sm font-bold truncate text-white">{mod.title}</h4>{updateInfo && <span className="animate-pulse px-1.5 py-0.5 rounded-full text-[8px] font-black bg-emerald-500/15 text-emerald-500 border border-emerald-500/25 uppercase">UPDATE!</span>}</div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h4 className="font-headline text-sm font-bold truncate text-white">{mod.title}</h4>
+            {updateInfo && <span className="animate-pulse px-1.5 py-0.5 rounded-full text-[8px] font-black bg-emerald-500/15 text-emerald-500 border border-emerald-500/25 uppercase">UPDATE!</span>}
+            {isRecent && <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-blue-500/15 text-blue-400 border border-blue-500/25 uppercase">RECIENTE</span>}
+          </div>
           <p className="text-[10px] text-white/40 truncate">por {mod.author}</p>
         </div>
       </div>

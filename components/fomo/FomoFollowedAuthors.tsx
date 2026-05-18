@@ -21,7 +21,7 @@ interface FomoFollowedAuthorsProps {
 }
 
 export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVersions, onDownloadMod, downloading = {} }: FomoFollowedAuthorsProps) {
-  const { subTab, setSubTab, followedAuthors, followedMods, filteredMods, showOnlyWithUpdates, setShowOnlyWithUpdates, getModUpdateInfo, handleUnfollowAuthor, handleUnfollowMod } = useFomoFollowedManager();
+  const { subTab, setSubTab, followedAuthors, followedMods, filteredMods, showOnlyWithUpdates, setShowOnlyWithUpdates, getModUpdateInfo, handleUnfollowAuthor, handleUnfollowMod, isRecent } = useFomoFollowedManager();
   const [history, setHistory] = React.useState<any[]>([]);
   const [rankings, setRankings] = React.useState<Record<string, any[]>>({});
   const [loadingHistory, setLoadingHistory] = React.useState(false);
@@ -106,7 +106,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
               <div className="py-20 text-center flex flex-col items-center opacity-40"><FolderHeart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">No seguís ningún mod</h3><p className="text-xs max-w-sm">Seguí tus proyectos favoritos para verlos acá.</p></div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredMods.map(mod => <FollowedProjectCard key={mod.projectId} mod={mod} updateInfo={getModUpdateInfo(mod.projectId)} isDownloading={!!downloading[`collection:${mod.projectId}`]} onOpenVersions={onOpenVersions} onDownloadMod={onDownloadMod} onSearchProject={onSearchProject} onUnfollow={handleUnfollowMod} />)}
+                {filteredMods.map(mod => <FollowedProjectCard key={mod.projectId} mod={mod} updateInfo={getModUpdateInfo(mod.projectId)} isRecent={isRecent(mod)} isDownloading={!!downloading[`collection:${mod.projectId}`]} onOpenVersions={onOpenVersions} onDownloadMod={onDownloadMod} onSearchProject={onSearchProject} onUnfollow={handleUnfollowMod} />)}
               </div>
             )}
           </div>

@@ -8,14 +8,17 @@
 import React, { useRef, useEffect } from "react";
 import { 
   Settings2, Zap, X, RefreshCw, CheckCircle2, AlertTriangle, Save, 
-  History as HistoryIcon, Layers, Search, Sparkles, Keyboard, Package 
+  History as HistoryIcon, Layers, Search, Sparkles, Keyboard, Package, File, Check 
 } from "lucide-react";
 import { useTweakManager } from "@/hooks/useTweakManager";
 import { 
   TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, ResourcePackItem, AvailablePackItem, DetectedInstallations 
 } from "./TweakSidebarComponents";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { FolderOpen } from "lucide-react";
 import type { Project } from "@/lib/types";
+import { ConfigExplorer } from "../tweak/parts/ConfigExplorer";
+import PackHierarchyManager, { PackHierarchyManagerRef } from "../tweak/parts/PackHierarchyManager";
 
 interface TweakSidebarProps {
   isOpen: boolean;
@@ -26,18 +29,60 @@ interface TweakSidebarProps {
 export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const {
-    activeTab, setActiveTab, data, setData, loading, saving, message,
+    activeTab, setActiveTab, data, setData, loading, saving, message, setMessage,
     listeningKey, setListeningKey, handleAction, handleUndo, hasPackChanges,
     setHasPackChanges, draggedPackIdx, setDraggedPackIdx, addToHistory
   } = useTweakManager(isOpen, activeProject);
   const [selectedSnapshot, setSelectedSnapshot] = React.useState<string>("");
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const packManagerRef = useRef<PackHierarchyManagerRef>(null);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("onboarding_tweak");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (isOpen && (!seen || guidesEnabled)) {
+      setShowOnboarding(true);
+    } else if (!isOpen) {
+      setShowOnboarding(false);
+    }
+  }, [isOpen]);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-tweak-tabs',
+      title: 'Secciones de Tweak',
+      content: 'Desde acá podés moverte entre las pestañas de Optimización, Controles, Texturas y Archivos de Configuración.'
+    },
+    {
+      target: '#onboarding-tweak-content',
+      title: 'Optimización',
+      content: 'Acá podés ajustar parámetros de hardware y rendimiento para que el juego vuele.'
+    },
+    {
+      target: '#onboarding-tweak-content',
+      title: 'Controles',
+      content: 'Acá podés reasignar teclas rápidamente sin tener que abrir el juego.'
+    },
+    {
+      target: '#onboarding-tweak-content',
+      title: 'Texturas',
+      content: 'Acá gestionás el orden de prioridad de tus Resource Packs.'
+    },
+    {
+      target: '#onboarding-tweak-content',
+      title: 'Configuración',
+      content: 'Acá podés editar directamente los archivos .txt y .json de configuración de los mods.'
+    }
+  ];
 
   // Click-outside logic
   useEffect(() => {
     const handleOut = (e: MouseEvent) => {
       if (isOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        if (!(e.target as HTMLElement).closest('[data-header-toggle="true"]')) onClose();
+        if (!(e.target as HTMLElement).closest('[data-header-toggle="true"]') && 
+            !(e.target as HTMLElement).closest('[data-is-modal="true"]') &&
+            !(e.target as HTMLElement).closest('.onboarding-tooltip')) onClose();
       }
     };
     document.addEventListener("mousedown", handleOut);
@@ -164,6 +209,34 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
               <p className="text-[10px] text-muted/40 font-bold uppercase tracking-[0.2em] mt-0.5">Control de Configuración Profunda</p>
             </div>
           </div>
+          
+          {/* Header Actions for Resource Packs */}
+          {activeTab === "resourcepacks" && (
+            <div className="flex items-center gap-2 mr-4">
+              <button 
+                onClick={() => {
+                  const p = (data as any)?.minecraftPathUsed;
+                  if (p) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: `${p}/resourcepacks` }) });
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] text-white/60 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
+              >
+                <FolderOpen className="w-3 h-3" /> Abrir Carpeta
+              </button>
+              <button 
+                onClick={() => handleAction("sync-resourcepacks")}
+                className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] text-white/60 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
+              >
+                <RefreshCw className="w-3 h-3" /> Refrescar
+              </button>
+              <button 
+                onClick={() => packManagerRef.current?.handleCompile()}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-emerald-500/20"
+              >
+                <Check className="w-3.5 h-3.5" /> Compilar Orden
+              </button>
+            </div>
+          )}
+
           <button 
             onClick={onClose} 
             className="w-10 h-10 rounded-full bg-white/[0.02] hover:bg-white/[0.08] flex items-center justify-center transition-all text-muted/40 hover:text-white group active:scale-90"
@@ -171,6 +244,13 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
           </button>
         </div>
+
+        {message && (
+          <div className={`mx-8 mt-4 ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"} border px-4 py-2 rounded-xl flex items-center gap-2 animate-fade-in`}>
+            {message.type === "success" ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+            <span className="text-[10px] font-black uppercase tracking-wider">{message.text}</span>
+          </div>
+        )}
 
         {loading && !data ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-pulse">
@@ -197,9 +277,11 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
           </div>
         ) : (
           <>
-            <TweakTabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+            <div id="onboarding-tweak-tabs">
+              <TweakTabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+            </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-black/[0.05]">
+            <div id="onboarding-tweak-content" className="flex-1 overflow-y-auto custom-scrollbar bg-black/[0.05]">
               {message && (
                 <div className={`mx-8 mt-6 p-4 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 border-2 ${
                   message.type === "success" 
@@ -313,147 +395,143 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
               {/* ─── TEXTURAS (RESOURCE PACKS) ─── */}
               {activeTab === "resourcepacks" && (
                 <div className="p-8 space-y-6 animate-fade-in">
-                  {/* Status Banner */}
-                  <div className="p-5 rounded-3xl bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 flex items-center justify-between group overflow-hidden relative shadow-2xl shadow-primary/5">
-                    <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                      <Layers className="w-32 h-32" />
-                    </div>
-                    <div className="relative z-10">
-                      <h4 className="text-sm font-black text-white uppercase tracking-tighter italic">Gestión de Capas</h4>
-                      <p className="text-[10px] text-muted/50 font-black uppercase tracking-widest mt-0.5">El orden visual define la prioridad de renderizado</p>
-                    </div>
-                    <div className="flex items-center gap-2 relative z-10">
-                      <button 
-                        onClick={() => {
-                          const p = (data as any).minecraftPathUsed;
-                          if (p) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: `${p}/resourcepacks` }) });
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] text-white/60 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
-                      >
-                        <FolderOpen className="w-3 h-3" /> Abrir Carpeta
-                      </button>
-                      <button 
-                        onClick={() => handleAction("sync-resourcepacks")}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] text-white/60 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
-                      >
-                        <RefreshCw className="w-3 h-3" /> Refrescar
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-[1.1fr_0.9fr] gap-8 min-w-0">
-                    {/* Active Section */}
-                    <div className="space-y-5 min-w-0">
-                      <div className="flex items-center justify-between px-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-400">Pila Activa ({uiPacks.length})</p>
-                        </div>
-                      </div>
+                  <PackHierarchyManager 
+                    ref={packManagerRef}
+                    activePacks={uiPacks} 
+                    availablePacks={data.resourcePacks.available || []}
+                    onUpdatePacks={async (newPacks: string[]) => {
+                      const reversedPacks = [...newPacks].reverse();
+                      if (data) {
+                        setData({ ...data, resourcePacks: { ...data.resourcePacks, active: reversedPacks } });
+                        setHasPackChanges(true);
+                      }
                       
-                      <div className="space-y-2 min-h-[400px] p-2 bg-white/[0.01] rounded-[2rem] border border-white/[0.03] min-w-0">
-                        {uiPacks.map((p, uiIdx) => {
-                          const packAnalysis = (data as any)?.resourcePacks?.visualStack?.find((v: any) => v.packName === p);
-                          return (
-                            <ResourcePackItem 
-                              key={p} 
-                              pack={p} 
-                              uiIdx={uiIdx} 
-                              isPriority={packAnalysis?.needsPriority} 
-                              warnings={packAnalysis?.warnings}
-                              isDragged={draggedPackIdx === uiIdx}
-                              onDragStart={() => setDraggedPackIdx(uiIdx)}
-                              onDrop={() => handlePackDrop(uiIdx)}
-                              onToggle={() => handleTogglePack(p)}
-                            />
-                          );
-                        })}
-                        {uiPacks.length === 0 && (
-                          <div className="h-[300px] flex flex-col items-center justify-center text-center opacity-10">
-                            <Layers className="w-16 h-16 mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sin packs activos</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Available Section */}
-                    <div className="space-y-5 min-w-0">
-                      <div className="flex items-center justify-between px-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-muted/30" />
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/50">Librería Global ({(data.resourcePacks.available || []).length})</p>
-                        </div>
-                        <Search className="w-3 h-3 text-muted/20" />
-                      </div>
-
-                      <div className="space-y-1.5 max-h-[600px] overflow-y-auto custom-scrollbar p-2 bg-black/10 rounded-[2rem] border border-white/[0.02] min-w-0">
-                        {Array.from(new Set(data.resourcePacks.available || []))
-                          .filter((p: string) => !uiPacks.includes(p))
-                          .map((p: string) => (
-                          <AvailablePackItem 
-                            key={p} 
-                            pack={p} 
-                            onToggle={() => handleTogglePack(p)} 
-                          />
-                        ))}
-                        {(data.resourcePacks.available || []).length === 0 && (
-                          <div className="py-24 text-center opacity-10">
-                            <Package className="w-12 h-12 mx-auto mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Librería vacía</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                      try {
+                        const res = await fetch("/api/tweak", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                            action: "save",
+                            resourcePacks: reversedPacks 
+                          })
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                          // Actualizar análisis en segundo plano
+                          fetch("/api/tweak", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "analyze-packs", activePacks: reversedPacks })
+                          }).then(r => r.json()).then(analysis => {
+                            setData((prev: any) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                resourcePacks: {
+                                  ...prev.resourcePacks,
+                                  visualStack: analysis.visualStack,
+                                  issues: analysis.issues,
+                                  autoFixable: analysis.autoFixable
+                                }
+                              };
+                            });
+                          });
+                          
+                          setHasPackChanges(false);
+                          setMessage({ text: "¡Orden compilado y guardado en options.txt!", type: "success" });
+                          setTimeout(() => setMessage(null), 3000);
+                        }
+                      } catch (e) {
+                        console.error(e);
+                        setMessage({ text: "Error al guardar el orden", type: "error" });
+                        setTimeout(() => setMessage(null), 3000);
+                      }
+                    }}
+                  />
                 </div>
               )}
 
               {/* ─── PERFILES ─── */}
               {activeTab === "profiles" && data && (
-                <div className="p-8 space-y-6 animate-fade-in">
-                  {/* Centralized Save Card */}
-                  <div className="p-6 rounded-[2.5rem] bg-emerald-500/[0.05] border-2 border-emerald-500/10 flex items-center gap-5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 rounded-full -mr-12 -mt-12 blur-3xl" />
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 relative z-10">
-                      <Save className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 relative z-10">
-                      <h4 className="text-base font-black text-white uppercase tracking-tighter italic leading-none">Aplicar Cambios</h4>
-                      <p className="text-[11px] text-emerald-300/40 font-bold uppercase tracking-widest mt-1.5">Sobreescribe el options.txt del juego</p>
-                    </div>
-                    <button
-                      disabled={saving}
-                      onClick={() => handleAction("save", { 
-                        resourcePacks: data?.resourcePacks.active,
-                        keybinds: data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }))
-                      })}
-                      className="shrink-0 px-6 py-4 bg-emerald-500 text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all relative z-10 flex items-center gap-2"
-                    >
-                      {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      Guardar en el Juego
-                    </button>
+                <div className="p-8 space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between px-2 mb-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/60">Gestión de Perfiles y Archivos</p>
                   </div>
 
-                  {/* Cápsulas de Tiempo Card */}
-                  <div className="p-6 rounded-[2.5rem] bg-indigo-500/[0.05] border-2 border-indigo-500/10 flex items-center gap-5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-12 bg-indigo-500/10 rounded-full -mr-12 -mt-12 blur-3xl" />
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 relative z-10">
-                      <HistoryIcon className="w-8 h-8" />
-                    </div>
-                    <div className="flex-1 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-base font-black text-white uppercase tracking-tighter italic leading-none">Cápsulas de Tiempo</h4>
-                        <button 
-                          onClick={() => {
-                            fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: "D:/.mine/source/.mim-index/tweak/snapshots" }) });
-                          }}
-                          className="flex items-center gap-1.5 text-[9px] text-indigo-400/40 hover:text-indigo-400 font-black uppercase tracking-widest transition-colors group"
-                        >
-                          <FolderOpen className="w-3 h-3 group-hover:scale-110 transition-transform" /> Ver Archivos
-                        </button>
+                  <div className="space-y-2">
+                    {/* Acción 1: Aplicar Cambios */}
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                          <Save className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Aplicar Cambios</h4>
+                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-0.5">Sobreescribe el options.txt del juego</p>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-indigo-300/40 font-bold uppercase tracking-widest mt-1.5">Instantáneas de tu configuración maestra</p>
+                      <button
+                        disabled={saving}
+                        onClick={() => handleAction("save", { 
+                          resourcePacks: data?.resourcePacks.active,
+                          keybinds: data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }))
+                        })}
+                        className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-emerald-500/20 hover:border-transparent"
+                      >
+                        {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        Guardar
+                      </button>
+                    </div>
+
+                    {/* Acción 2: Cápsulas de Tiempo */}
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                          <HistoryIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Cápsulas de Tiempo</h4>
+                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-1.5">Instantáneas de tu configuración maestra</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: "D:/.mine/source/.mim-index/tweak/snapshots" }) });
+                        }}
+                        className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-indigo-500/20 hover:border-transparent"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        Ver Archivos
+                      </button>
+                    </div>
+
+                    {/* Acción 3: Generar Modlist */}
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                          <File className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Generar Modlist</h4>
+                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-1.5">Crea un archivo HTML con la lista de mods</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch(`/api/project/modlist?project=${activeProject?.name}&version=${activeProject?.version}`);
+                          const data = await res.json();
+                          if (data.success) {
+                            setMessage({ type: "success", text: `Modlist generado en: ${data.savedPath}` });
+                          } else {
+                            setMessage({ type: "error", text: `Error: ${data.error}` });
+                          }
+                        }}
+                        className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-amber-500/20 hover:border-transparent"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        Generar HTML
+                      </button>
                     </div>
                   </div>
 
@@ -521,8 +599,29 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   </div>
                 </div>
               )}
+
+              {activeTab === "config" && (
+                <div className="p-8 space-y-6 animate-fade-in">
+                  <ConfigExplorer project={activeProject?.name || "MIMU"} />
+                </div>
+              )}
             </div>
 
+            {showOnboarding && (
+              <OnboardingTour 
+                steps={onboardingSteps} 
+                onComplete={() => {
+                  setShowOnboarding(false);
+                  localStorage.setItem("onboarding_tweak", "true");
+                }} 
+                onStepChange={(step) => {
+                  if (step === 1) setActiveTab("optimize");
+                  if (step === 2) setActiveTab("controls");
+                  if (step === 3) setActiveTab("resourcepacks");
+                  if (step === 4) setActiveTab("config");
+                }}
+              />
+            )}
           </>
         )}
       </aside>

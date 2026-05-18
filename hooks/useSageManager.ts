@@ -159,6 +159,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
           
           // Solo consultamos si NO es Whitelist y NO tiene resultado de VirusTotal todavía
           if (!result.whitelisted && (!result.virusTotal || result.virusTotal.fromCache === undefined)) {
+            eventBus.emit("virustotal:scanning", { filePath: entry.filePath, fileName: entry.fileName });
             const resVT = await fetch("/api/security/scan", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -169,6 +170,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
             
             if (dataVT.success && dataVT.result) {
               const freshResult = dataVT.result;
+              eventBus.emit("virustotal:completed", { filePath: entry.filePath, fileName: entry.fileName, result: freshResult });
               const updatedEntry = { ...entry, result: { ...freshResult, riskScore: freshResult.riskScore ?? 0, riskLevel: freshResult.riskLevel ?? "clean" } };
               
               setSecResults(prev => {

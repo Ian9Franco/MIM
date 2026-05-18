@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-6.3.3-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.0.0-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -201,7 +201,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v6.3.3 (Actual — Mayo 2026)**
+### ✅ **v7.0.0 (Actual — Mayo 2026)**
 - ✨ Modo MIMU (User Mode) para jugadores
 - 🧠 SAGE rediseñado (2-step scanning)
 - 👥 CurseForge Community Picks integrado
@@ -294,6 +294,6 @@ No perdes mods. No rompes mundos. No sufres crashes.
 
 ---
 
-*"3 clics"*
+*"fuck you, minecraft"*
 
 </div>

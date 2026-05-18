@@ -17,6 +17,7 @@ export interface ModHit {
   latestVersion: string | null;
   categories:    string[];
   dateCreated:   string;
+  dateModified?:  string;
   url:           string;
   projectType?:  string;
   body?:         string;

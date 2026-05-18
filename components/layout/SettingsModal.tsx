@@ -3,6 +3,7 @@
 import React from "react";
 import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSearch } from "lucide-react";
 import { useSettingsManager } from "@/hooks/useSettingsManager";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
   SettingsTabNav, PathInputGroup, ApiKeyInputGroup, OverlayDialog, SettingsFooter 
 } from "./SettingsComponents";
@@ -18,6 +19,34 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
     pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
   } = useSettingsManager(onClose);
+
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+  React.useEffect(() => {
+    const seen = localStorage.getItem("onboarding_settings");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (!seen || guidesEnabled) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-settings-tabs',
+      title: 'Secciones de Ajustes',
+      content: 'Desde acá podés cambiar entre la configuración de Rutas del Sistema y las Claves de API.'
+    },
+    {
+      target: '#onboarding-settings-paths',
+      title: 'Rutas del Sistema',
+      content: 'Configurá las carpetas de descargas, del juego, staging, source y builds. Acordate que tenés que hacer clic en "Editar Rutas" arriba para poder cambiarlas.'
+    },
+    {
+      target: '#onboarding-settings-keys',
+      title: 'Conectividad (Keys)',
+      content: 'Acá pegás tus claves de CurseForge, Modrinth y VirusTotal para que MIM pueda buscar actualizaciones y verificar virus.'
+    }
+  ];
 
   return (
     <>
@@ -98,10 +127,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             <div className="space-y-6">
-              <SettingsTabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+              <div id="onboarding-settings-tabs">
+                <SettingsTabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+              </div>
               <div className="max-h-[350px] overflow-y-auto pr-2 space-y-6 scrollbar-thin">
                 {activeTab === "paths" ? (
-                  <div className="space-y-5">
+                  <div id="onboarding-settings-paths" className="space-y-5">
                     <PathInputGroup label="Carpeta Descargas" value={downloadsPath} onChange={setDownloadsPath} onPick={() => handlePickFolder(setDownloadsPath, false, downloadsPath)} canEdit={canEdit} isValid={pathValidation[downloadsPath]} saving={saving} placeholder="C:\Users\...\Downloads" />
                     <PathInputGroup label="Carpeta del Juego (.minecraft)" value={minecraftPath} onChange={setMinecraftPath} onPick={() => handlePickFolder(setMinecraftPath, true, minecraftPath)} canEdit={canEdit} isValid={pathValidation[minecraftPath]} saving={saving} placeholder="C:\Users\...\AppData\Roaming\.minecraft" />
                     <PathInputGroup label="Carpeta Staging" value={stagingPath} onChange={setStagingPath} onPick={() => handlePickFolder(setStagingPath, false, stagingPath)} canEdit={canEdit} isValid={pathValidation[stagingPath]} saving={saving} placeholder="D:\.mine\source\.mim-index\staging" desc="Depósito temporal para archivos cuando Minecraft no está disponible." />
@@ -109,7 +140,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <PathInputGroup label="Carpeta Builds (Compilados)" value={buildsBase} onChange={setBuildsBase} onPick={() => handlePickFolder(setBuildsBase, false, buildsBase)} canEdit={canEdit} isValid={pathValidation[buildsBase]} saving={saving} placeholder="d:\.mine\builds" />
                   </div>
                 ) : (
-                  <div className="space-y-5">
+                  <div id="onboarding-settings-keys" className="space-y-5">
                     <ApiKeyInputGroup label="CurseForge API Key" value={curseforgeApiKey} onChange={setCurseforgeApiKey} show={showCurseforge} onToggleShow={() => setShowCurseforge(!showCurseforge)} canEdit={canEdit} isValid={keyValidation.curseforge} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave de CurseForge..." badge="Requerida" link="https://console.curseforge.com/" />
                     <ApiKeyInputGroup label="Modrinth Token" value={modrinthApiKey} onChange={setModrinthApiKey} show={showModrinth} onToggleShow={() => setShowModrinth(!showModrinth)} canEdit={canEdit} isValid={keyValidation.modrinth} isValidating={isValidatingKeys} saving={saving} placeholder="mrp_..." badge="Opcional" color="emerald" link="https://modrinth.com/settings/pats" />
                     <ApiKeyInputGroup label="VirusTotal API Key" value={virusTotalApiKey} onChange={setVirusTotalApiKey} show={showVirusTotal} onToggleShow={() => setShowVirusTotal(!showVirusTotal)} canEdit={canEdit} isValid={keyValidation.virusTotal} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave API..." badge="Opcional" color="blue" link="https://www.virustotal.com/gui/user/join" />
@@ -125,6 +156,20 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
+
+      {showOnboarding && (
+        <OnboardingTour 
+          steps={onboardingSteps} 
+          onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem("onboarding_settings", "true");
+          }} 
+          onStepChange={(step) => {
+            if (step === 1) setActiveTab("paths");
+            if (step === 2) setActiveTab("apiKeys");
+          }}
+        />
+      )}
     </>
   );
 }

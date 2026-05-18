@@ -585,6 +585,37 @@ select:focus {
 .animate-spin       { animation: spin      1s   linear infinite; }
 .animate-spin-slow  { animation: spin-slow 4s   linear infinite; }
 .animate-slime       { animation: slime-squish 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; transform-origin: bottom; }
+.animate-led-blink { animation: led-blink 5s linear infinite; }
+
+@keyframes led-blink {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px var(--color-primary); }
+  5% { opacity: 0.8; text-shadow: 0 0 4px var(--color-primary); }
+  6% { opacity: 1; text-shadow: 0 0 12px var(--color-primary); }
+  20% { opacity: 0.2; text-shadow: none; }
+  22% { opacity: 1; text-shadow: 0 0 8px var(--color-primary); }
+  60% { opacity: 1; }
+  61% { opacity: 0.4; }
+  62% { opacity: 1; }
+  80% { opacity: 1; }
+  81% { opacity: 0.3; text-shadow: none; }
+  83% { opacity: 1; text-shadow: 0 0 8px var(--color-primary); }
+}
+
+.animate-led-border { animation: led-border-blink 10s linear infinite; }
+
+@keyframes led-border-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--color-primary); border-color: var(--color-primary); }
+  5% { opacity: 0.8; box-shadow: 0 0 4px var(--color-primary); border-color: var(--color-primary); }
+  6% { opacity: 1; box-shadow: 0 0 12px var(--color-primary); border-color: var(--color-primary); }
+  20% { opacity: 0.2; box-shadow: none; border-color: rgba(255,255,255,0.08); }
+  22% { opacity: 1; box-shadow: 0 0 8px var(--color-primary); border-color: var(--color-primary); }
+  60% { opacity: 1; }
+  61% { opacity: 0.4; }
+  62% { opacity: 1; }
+  80% { opacity: 1; }
+  81% { opacity: 0.3; box-shadow: none; border-color: rgba(255,255,255,0.08); }
+  83% { opacity: 1; box-shadow: 0 0 8px var(--color-primary); border-color: var(--color-primary); }
+}
 
 /* Efecto Slime Suave con retorno elástico */
 .hover-slime {

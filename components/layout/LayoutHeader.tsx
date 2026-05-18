@@ -2,7 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
-  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen 
+  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles 
 } from "lucide-react";
 
 interface LayoutHeaderProps {
@@ -36,6 +36,11 @@ export function LayoutHeader({
   activeProject, isValidatingHealth, watcherStatus
 }: LayoutHeaderProps) {
   const [appMode, setAppMode] = React.useState<string>("MIMU");
+  const [guidesActive, setGuidesActive] = React.useState(false);
+
+  React.useEffect(() => {
+    setGuidesActive(localStorage.getItem("guides_enabled") === "true");
+  }, []);
 
   React.useEffect(() => {
     const saved = localStorage.getItem("mim_app_mode");
@@ -67,14 +72,15 @@ export function LayoutHeader({
         {/* Left side: FOMO toggle + App Title */}
         <div className="flex items-center gap-6 animate-fade-up">
           <button
+            id="onboarding-fomo-button"
             data-header-toggle="true"
             onClick={() => onToggleFomo(!fomoOpen)}
-            className="flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass"
+            className={`flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass ${!fomoOpen ? "animate-led-border" : ""}`}
             style={{
               background: fomoOpen ? "rgba(187,150,228,0.15)" : "rgba(255,255,255,0.03)",
-              borderColor: fomoOpen ? "rgba(187,150,228,0.4)" : "rgba(255,255,255,0.08)",
+              borderColor: fomoOpen ? "rgba(187,150,228,0.4)" : undefined,
               color: fomoOpen ? "var(--color-primary)" : "var(--color-muted)",
-              boxShadow: fomoOpen ? "0 8px 32px rgba(187,150,228,0.15)" : "none",
+              boxShadow: fomoOpen ? "0 8px 32px rgba(187,150,228,0.15)" : undefined,
             }}
           >
             <div className="relative flex items-center justify-center">
@@ -99,19 +105,21 @@ export function LayoutHeader({
           <div className="flex flex-col relative group/title">
             <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
               <span className="flex items-center gap-3">
-                <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
-                <span key={appMode} className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent animate-fade-in inline-block">
+                <span id="onboarding-slime">
+                  <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
+                </span>
+                <span key={appMode} className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent animate-scale-in inline-block">
                   {appMode === "MIMU" ? "MIMu" : "MIM"}
                 </span>
               </span>
               <div className="w-px h-4 bg-primary/30" />
-              <span className="font-caption text-[10px] text-primary/80 uppercase tracking-[0.2em] font-medium hidden sm:inline-block translate-y-px">
-                Intelligent <span className="text-foreground/40">Manager</span>
+              <span className="font-caption text-[10px] uppercase tracking-[0.2em] font-medium hidden sm:inline-block translate-y-px">
+                <span className="text-primary/80 animate-led-blink">Intelligent</span> <span className="text-foreground/40">Manager</span>
               </span>
             </h1>
             <div className="flex items-center gap-2 mt-2.5 relative z-10">
               <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10">Beta</span>
-              <span className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
+              <span id="onboarding-watcher" className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
                 {(() => {
                   const status = watcherStatus || "Watcher";
                   if (status.includes("Mods")) return <Puzzle className="w-3 h-3 text-[#66C8A0]" />;
@@ -123,15 +131,33 @@ export function LayoutHeader({
                 })()}
                 {watcherStatus || "Watcher"}
               </span>
+              <button
+                onClick={() => {
+                  const newState = !guidesActive;
+                  localStorage.setItem("guides_enabled", newState ? "true" : "false");
+                  setGuidesActive(newState);
+                  window.dispatchEvent(new CustomEvent("show-onboarding", { detail: newState }));
+                }}
+                className={`p-1.5 rounded-lg border transition-all ${
+                  guidesActive
+                    ? "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_rgba(187,150,228,0.2)]"
+                    : "bg-white/5 border-white/10 text-white/50 hover:text-white"
+                }`}
+                title="Activar/Desactivar Guías"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zodiac-gemini"><path d="M16 4.525v14.948"/><path d="M20 3A17 17 0 0 1 4 3"/><path d="M4 21a17 17 0 0 1 16 0"/><path d="M8 4.525v14.948"/></svg>
+              </button>
             </div>
           </div>
         </div>
 
         {/* Right side: Global controls */}
-        <div className="flex items-center gap-3 animate-fade-up stagger-2">
-          <HeaderButton onClick={onRefresh} title="Sincronizar con Disco" active={isRefreshing}>
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </HeaderButton>
+        <div id="onboarding-header-tools" className="flex items-center gap-3 animate-fade-up stagger-2">
+          <div id="onboarding-refresh">
+            <HeaderButton onClick={onRefresh} title="Sincronizar con Disco" active={isRefreshing}>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </HeaderButton>
+          </div>
 
           <HeaderButton onClick={onOpenSettings} title="Ajustes de Ubicaciones">
             <Settings className="w-4 h-4" />
@@ -176,7 +202,9 @@ export function LayoutHeader({
             {isValidatingHealth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookAlert className="w-3.5 h-3.5" />}
           </HeaderButton>
 
-          <ThemeToggle />
+          <div id="onboarding-theme">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

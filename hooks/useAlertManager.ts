@@ -25,21 +25,40 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
     localStorage.setItem("mim_seen_collection_versions", JSON.stringify(updated));
   };
 
+  const [modrinthStatusStored, setModrinthStatusStored] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const load = () => {
+      setModrinthStatusStored(JSON.parse(localStorage.getItem("mim_modrinth_status") || "{}"));
+    };
+    load();
+    window.addEventListener("mim-modrinth-status-changed", load);
+    return () => window.removeEventListener("mim-modrinth-status-changed", load);
+  }, []);
+
   const { modUpdates, collectionUpdates, shaderUpdates, resourcePackUpdates } = useMemo(() => {
     const modsList: [string, any][] = [], collsList: [string, any][] = [], shadersList: [string, any][] = [], rpsList: [string, any][] = [];
     const followedModIds = new Set(followedMods.map(m => m.projectId));
 
-    Object.entries(modrinthStatus).forEach(([path, s]) => {
+    const mergedStatus = { ...modrinthStatus, ...modrinthStatusStored };
+    console.log("useAlertManager - mergedStatus:", mergedStatus);
+    console.log("useAlertManager - followedModIds:", Array.from(followedModIds));
+
+    Object.entries(mergedStatus).forEach(([path, s]) => {
       if (s.status !== "update_available" || !s.latestVersion) return;
       if (path.startsWith("collection:")) {
         const pId = path.replace("collection:", "");
-        if (followedModIds.has(pId) && seenVersions[pId] !== s.latestVersion) collsList.push([path, s]);
+        console.log("useAlertManager - checking collection:", pId, "followed:", followedModIds.has(pId), "ignored:", ignoredUpdates.has(path));
+        if (followedModIds.has(pId) && !ignoredUpdates.has(path)) {
+          collsList.push([path, s]);
+          console.log("useAlertManager - ADDED collection update:", pId);
+        }
       } else if (path.toLowerCase().includes("shaderpacks")) { if (!ignoredUpdates.has(path)) shadersList.push([path, s]); }
       else if (path.toLowerCase().includes("resourcepacks")) { if (!ignoredUpdates.has(path)) rpsList.push([path, s]); }
       else { if (library.find(l => l.path === path) && !ignoredUpdates.has(path)) modsList.push([path, s]); }
     });
     return { modUpdates: modsList, collectionUpdates: collsList, shaderUpdates: shadersList, resourcePackUpdates: rpsList };
-  }, [modrinthStatus, library, seenVersions, ignoredUpdates, followedMods]);
+  }, [modrinthStatus, modrinthStatusStored, library, seenVersions, ignoredUpdates, followedMods]);
 
   const fetchConfigAndSageAlerts = useCallback(async (proj = activeProject) => {
     try {
@@ -107,6 +126,52 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
     window.addEventListener("focus", focus);
     return () => { clearInterval(intId); window.removeEventListener("focus", focus); };
   }, [sidebarOpen, activeProject, fetchConfigAndSageAlerts]);
+
+  useEffect(() => {
+    const handleScanning = (payload: any) => {
+      incidentManager.createIncident({
+        id: `vt-scanning-${payload.filePath.replace(/[^a-zA-Z0-9]/g, "-")}`,
+        title: `Verificando reputación...`,
+        detail: `Analizando ${payload.fileName} en VirusTotal.`,
+        severity: "info",
+        module: "SAGE"
+      });
+    };
+
+    const handleCompleted = (payload: any) => {
+      const id = `vt-scanning-${payload.filePath.replace(/[^a-zA-Z0-9]/g, "-")}`;
+      incidentManager.resolveIncident(id);
+      
+      const result = payload.result;
+      if (result && result.virusTotal) {
+        if (result.virusTotal.maliciousCount > 0) {
+          incidentManager.createIncident({
+            id: `vt-alert-${payload.filePath.replace(/[^a-zA-Z0-9]/g, "-")}`,
+            title: `VirusTotal: ${result.virusTotal.maliciousCount} detecciones`,
+            detail: `Se encontraron amenazas en ${payload.fileName}.`,
+            severity: "danger",
+            module: "SAGE"
+          });
+        } else {
+          incidentManager.createIncident({
+            id: `vt-clean-${payload.filePath.replace(/[^a-zA-Z0-9]/g, "-")}`,
+            title: `VirusTotal: Limpio`,
+            detail: `${payload.fileName} verificado correctamente.`,
+            severity: "info",
+            module: "SAGE"
+          });
+        }
+      }
+    };
+
+    const unsubscribeScanning = eventBus.subscribe("virustotal:scanning", handleScanning);
+    const unsubscribeCompleted = eventBus.subscribe("virustotal:completed", handleCompleted);
+
+    return () => {
+      unsubscribeScanning();
+      unsubscribeCompleted();
+    };
+  }, []);
 
   useEffect(() => {
     if (!sidebarOpen || followedAuthors.length === 0) { setNewAuthorMods([]); return; }

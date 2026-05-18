@@ -44,7 +44,7 @@ export interface BuildResult {
  * @param loaderPath  e.g. `D:\.mine\source\1.20.1\forge`
  * @param categories  Ordered priority list, e.g. [".essential", ".local"]
  */
-function collectJars(
+export function collectJars(
   loaderPath: string,
   categories: string[]
 ): Map<string, string> {
@@ -353,6 +353,13 @@ export function buildAllUser(
     console.log(`[builder] Skipped options.txt (not found)`);
   }
 
+  // ── 5c. Modlist.html ─────────────────────────────────────────────────────────
+  const srcModlist = path.join(sourceBase, "_projects", projectName, "modlist.html");
+  if (fs.existsSync(srcModlist)) {
+    fs.copyFileSync(srcModlist, path.join(stagingDir, "modlist.html"));
+    console.log(`[builder] Copied modlist.html`);
+  }
+
   // ── 6. Safety: verify no server-only mods leaked into the player build ───────
   verifyNoServerLeak(loaderPath, jars);
 
@@ -452,6 +459,13 @@ export function buildAllHost(
         console.log(`[builder] Moved server root file to archive root: ${rf}`);
       }
     }
+  }
+
+  // ── 4b. Modlist.html ─────────────────────────────────────────────────────────
+  const srcModlist = path.join(sourceBase, "_projects", projectName, "modlist.html");
+  if (fs.existsSync(srcModlist)) {
+    fs.copyFileSync(srcModlist, path.join(outputDir, "modlist.html"));
+    console.log(`[builder] Copied modlist.html`);
   }
 
   // ── 5. Compress staging → ZIP and clean up ───────────────────────────────────

@@ -13,6 +13,7 @@ import ReactDOM from "react-dom";
 import { XCircle, ShieldCheck, CheckCircle } from "lucide-react";
 import type { PackHealthReport } from "@/lib/types";
 import { IssueSection } from "./PackHealthComponents";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ function ScoreRing({ score, grade }: { score: number; grade: keyof typeof GRADE_
   }, [score]);
 
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
+    <div id="onboarding-gate-score" className="relative w-24 h-24 flex items-center justify-center shrink-0">
       <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 88 88">
         <circle cx="44" cy="44" r={r} fill="none" stroke="var(--color-border)" strokeWidth="7" />
         <circle
@@ -91,6 +92,35 @@ export function PackHealthPanel({
 
   const [forceExpand, setForceExpand] = useState<{ errors?: boolean, warnings?: boolean, suggestions?: boolean }>({});
   const [visible, setVisible] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("onboarding_gate");
+    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
+    if (isOpen && (!seen || guidesEnabled)) {
+      setShowOnboarding(true);
+    } else if (!isOpen) {
+      setShowOnboarding(false);
+    }
+  }, [isOpen]);
+
+  const onboardingSteps = [
+    {
+      target: '#onboarding-gate-score',
+      title: 'Puntaje de Salud',
+      content: 'Este anillo te muestra la salud general de tu pack de mods. Una nota de 0 a 100 y una letra de rango.'
+    },
+    {
+      target: '#onboarding-gate-summary',
+      title: 'Resumen de Problemas',
+      content: 'Acá ves el conteo de Errores, Warnings y Tips. Podés hacer clic en ellos para ir derecho a la sección.'
+    },
+    {
+      target: '#onboarding-gate-issues',
+      title: 'Listado de Detalles',
+      content: 'Acá abajo tenés el detalle de cada problema. Los errores bloqueantes no te van a dejar exportar el pack hasta que los arregles.'
+    }
+  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -106,7 +136,8 @@ export function PackHealthPanel({
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     const click = (e: MouseEvent) => {
       if (isOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        if (!(e.target as HTMLElement).closest('[data-header-toggle="true"]')) onClose();
+        if (!(e.target as HTMLElement).closest('[data-header-toggle="true"]') && 
+            !(e.target as HTMLElement).closest('.onboarding-tooltip')) onClose();
       }
     };
     window.addEventListener("keydown", h);
@@ -162,7 +193,7 @@ export function PackHealthPanel({
                 <p className="text-[9px] tracking-wider uppercase opacity-45">{report.totalMods} mods globales · {report.buildTarget}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div id="onboarding-gate-summary" className="flex gap-2">
               {[
                 { label: 'Errores', count: report.errors.length, color: 'var(--color-theme-error)', ref: errorsRef, key: 'errors' },
                 { label: 'Warnings', count: report.warnings.length, color: 'var(--color-theme-warning)', ref: warningsRef, key: 'warnings' },
@@ -205,7 +236,7 @@ export function PackHealthPanel({
       </div>
 
       {/* Issues */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar">
+      <div id="onboarding-gate-issues" className="flex-1 overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar">
         {report.issues.length === 0 && (
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-green-500/10 border border-green-500/20 shadow-lg shadow-green-500/5 transition-all hover:-translate-y-1">
             <CheckCircle className="w-5 h-5 text-green-400" />
@@ -230,6 +261,16 @@ export function PackHealthPanel({
         )}
         <button onClick={onClose} className="w-full py-2 text-[10px] font-medium opacity-40 hover:opacity-100 transition-all">← Cerrar y corregir</button>
       </div>
+
+      {showOnboarding && (
+        <OnboardingTour 
+          steps={onboardingSteps} 
+          onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem("onboarding_gate", "true");
+          }} 
+        />
+      )}
     </aside>
   );
 

@@ -173,7 +173,7 @@ export function analyzePackOrder(activePacks: string[], installedMods: Set<strin
           const visualIdx = activePacks.length - 1 - i;
           const targetVisualIdx = activePacks.length - 1 - targetIdx;
           
-          if ((rule.type === "priority" || rule.type === "overlay") && visualIdx > targetVisualIdx) {
+          if ((rule.type === "priority" || rule.type === "overlay") && visualIdx < targetVisualIdx) {
             analysis.warnings.push(rule); 
             if (!issues.some(iss => iss.id === rule.id)) issues.push(rule);
             if (rule.autoFixable && !autoFixable.some(af => af.id === rule.id)) autoFixable.push(rule);
@@ -211,18 +211,13 @@ export function analyzePackOrder(activePacks: string[], installedMods: Set<strin
       const isOtherFa = otherNorm.includes("freshanimations");
       const matchesFaAlias = isFaAlias && isOtherFa;
 
-      // Heuristic: If it contains 'fresh' and is not 'freshanimations' itself, it's an addon of Fresh Animations
-      const isFreshAddon = normName.includes("fresh") && 
-                           !normName.includes("freshanimations") && 
-                           otherNorm.includes("freshanimations");
-
-      if ((normName.includes(otherNorm) && normName !== otherNorm && isAddonIndicator) || matchesFaAlias || isFreshAddon) {
+      if ((normName.includes(otherNorm) && normName !== otherNorm && isAddonIndicator) || matchesFaAlias) {
         analysis.needsPriority = true;
         
         const visualIdx = activePacks.length - 1 - i;
         const targetVisualIdx = activePacks.length - 1 - j;
         
-        if (visualIdx > targetVisualIdx) {
+        if (visualIdx < targetVisualIdx) {
           const dynamicRule: PackRule = {
             id: `auto-addon-${normName}-${otherNorm}`,
             type: "priority",
@@ -298,12 +293,7 @@ export function autoFixPackOrder(activePacks: string[]): string[] {
                               packName.toLowerCase().includes(" + fa")) && 
                              otherNorm.includes("freshanimations");
 
-      // Heuristic: If it contains 'fresh' and is not 'freshanimations' itself, it's an addon of Fresh Animations
-      const isFreshAddon = normName.includes("fresh") && 
-                           !normName.includes("freshanimations") && 
-                           otherNorm.includes("freshanimations");
-
-      if ((normName.includes(otherNorm) && normName !== otherNorm && isAddonIndicator) || matchesFaAlias || isFreshAddon) {
+      if ((normName.includes(otherNorm) && normName !== otherNorm && isAddonIndicator) || matchesFaAlias) {
         addEdge(activePacks[i], activePacks[j]);
       }
     }

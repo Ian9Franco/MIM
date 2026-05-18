@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-7.0.2-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.0.3-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -88,6 +88,7 @@ Logs en idiomas que no existen
 - JVM args inteligentes por hardware
 - Orden visual perfecta de Resource Packs
 - Detección automática de shaders
+- **Explorador de Configs**: Visualiza y edita `.minecraft/config` en 1 clic.
 - **Sin configurar nada manualmente**
 
 ### 📚 **Collections & Modpacks** — Descubre + Colecciona
@@ -99,6 +100,7 @@ Logs en idiomas que no existen
 - División automática cliente vs servidor
 - Validación de compatibilidad
 - Metadata persistente en IndexedDB
+- **Modlist Generator**: Crea `modlist.html` automático para compartir.
 
 ---
 
@@ -201,17 +203,22 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v7.0.2 (Actual — Mayo 2026)**
+### ✅ **v7.0.3 (Actual — Mayo 2026)**
 - ✨ Modo MIMU (User Mode) para jugadores
 - 🧠 SAGE rediseñado (2-step scanning)
 - 👥 CurseForge Community Picks integrado
 - 🎮 Gestor de mundos + Instalados visibles
 - 🔔 ALRT Center unificado
+- 📂 Explorador de configuraciones integrado
+- 📄 Generador de `modlist.html`
+- 🔔 Monitoreo de VirusTotal y Seguidos en ALRT
+- 🔰 Sistema de Onboarding / Guía de Uso interactiva
 
 ### 🚧 **v6.4 (Próximo — Junio 2026)**
 - 🔍 Conflict Detection Engine (Mixins analysis)
 - 🎪 Showcase Demo deployable
 - 💾 Perfiles personalizados guardables
+- 💾 Migración completa de `localStorage` a `IndexedDB`
 
 ### 🎯 **Futuro (2026+)**
 - 👥 Multiplayer pack sync

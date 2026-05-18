@@ -1,8 +1,24 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.0.2 (FOMO Rankings & Live Details)  
+> **Versión Actual:** 7.0.3 (Ideas & Plan Completados)  
 > **Última actualización:** 2026-05-18
+
+---
+
+## 🚀 Versión 7.0.3 — Mejoras de Sistema & ALRT (2026-05-18)
+
+### Features & Mejoras
+- **Explorador de Configuraciones**: Sistema para visualizar y editar archivos de configuración (`.minecraft\config`) integrado en la sección Tweak.
+- **Generación de `modlist.html`**: Implementación de generación automática de lista de mods para entornos host y user.
+- **Jerarquía de Resourcepacks**: Mejora en la visualización y manejo de prioridades en Tweaks.
+- **Preview de Entornos**: Previsualización de entornos `allhost` y `alluser` en Library Source.
+- **Detección Inteligente de Actualizaciones**: Proyectos considerados "nuevos" o "actualizados" si tienen menos de 15 días.
+- **Guía de Uso / Onboarding**: Sistema de ayuda interactiva para el primer inicio y por secciones (fomo, tweak, alrt, etc.).
+
+### ALRT (Alerts & Monitoring)
+- **Monitoreo de VirusTotal**: Visualización del estado de verificación en cola en ALRT y notificaciones al completar.
+- **Integración de Seguidos**: Consulta de autores/proyectos seguidos en FOMO para mostrar actualizaciones en ALRT.
 
 ---
 

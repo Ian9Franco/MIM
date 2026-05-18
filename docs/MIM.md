@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 7.0.2 | **Última actualización:** 2026-05-18
+> **Versión:** 7.0.3 | **Última actualización:** 2026-05-18
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Modos de Aplicación
 
-A partir de la versión 7.0.2, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+A partir de la versión 7.0.3, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
@@ -353,6 +353,9 @@ type BuildMode = 'alluser' | 'allhost';
 #### 🛠️ Smart Config Management
 MIM soporta una gestión inteligente de archivos de configuración separando lo que va al cliente y lo que va al servidor de forma automática durante la exportación.
 
+#### 📄 Generación de Modlist
+Generación automática de un archivo `modlist.html` que lista todos los mods activos tanto para el entorno de host como de user, facilitando la documentación del modpack.
+
 **Estructura de Carpetas en `config/`:**
 - `common_config.toml`: Se copia a AMBOS (User y Host).
 - `.user/`: Solo para `alluser` (Cliente). Ideal para configs de mods de optimización, keybinds visuales, etc.
@@ -383,6 +386,7 @@ interface HardwareProfile {
 Tweak es el centro de personalización del juego para el usuario final. Desacopla la configuración personal del jugador del contenido del modpack.
 
 **Características Detalladas:**
+- **Explorador de Configuraciones**: Sistema para visualizar y editar archivos de configuración (`.minecraft\config`) directamente desde la sección Tweak.
 - **Resource Pack Manager**: Drag-and-drop para priorizar packs. Validación de capas (Fresh Animations).
 - **Keybind Manager**: Buscador y resolución inteligente de conflictos por categorías de mod.
 - **Sistema de Snapshots (Combos)**: Guarda configuraciones completas (`options.txt` + packs activos).
@@ -657,6 +661,9 @@ MIM implementa una arquitectura desacoplada basada en eventos a través de un **
 
 #### ALRT Incident Correlation Engine (`lib/correlationEngine.ts`)
 El motor de correlación cruzada actúa como el cerebro operacional de la aplicación, analizando relaciones temporales y causales entre eventos independientes para reportar incidentes contextuales:
+
+- **Monitoreo de VirusTotal**: Integración con ALRT para visualizar el estado de la cola de VirusTotal y recibir notificaciones de completado.
+- **Integración de Seguidos**: Monitoreo de autores y proyectos seguidos en FOMO para alertar sobre actualizaciones o nuevos lanzamientos (<= 15 días).
 - **Fingerprinting & Memoización**: Cache reactivo con TTL de 5 segundos para evitar reevaluaciones redundantes.
 - **Reglas Dinámicas**: Sistema extensible runtime (`addRule()`, `removeRule()`, `enableRule()`) que permite definir reglas de correlación del tipo:
   `IF FOMO(mod_downloaded) + SAGE(dependency_missing) ➔ Generar incidente de Entorno Inconsistente`.
@@ -717,6 +724,9 @@ Para manejar el límite estricto de VirusTotal (4 peticiones por minuto) sin blo
 - No bloquea el main thread
 - Escalable a 10,000+ mods
 
+> [!IMPORTANT]
+> **Plan de Ejecución**: Se proyecta reemplazar TODA la memoria de `localStorage` por `IndexedDB` para unificar el almacenamiento persistente y mejorar la escalabilidad.
+
 ### 11.3 Por qué Dual-Source (Modrinth + CurseForge)
 
 **Problema:** No todos los mods están en ambas plataformas.
@@ -771,6 +781,16 @@ Para manejar el límite estricto de VirusTotal (4 peticiones por minuto) sin blo
 3. Si es necesario: POST /version_files con todos los hashes
 4. UI muestra badge "Update available" en mods desactualizados
 5. User puede ignorar o descargar actualización
+```
+
+### 12.3 Flujo de Onboarding
+
+```
+1. User abre la app por primera vez
+2. Se activa guía interactiva ("for dummies")
+3. Al entrar en secciones (fomo, tweak, alrt, source, gate):
+   └── Se activa guía específica de la sección
+   └── Explica funcionalidad de botones y propósito
 ```
 
 ---

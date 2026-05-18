@@ -7,6 +7,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project");
   const fileToRead = searchParams.get("file");
+  const folder = searchParams.get("folder") || "";
+  const history = searchParams.get("history") === "true";
+  const version = searchParams.get("version");
 
   if (!project) {
     return NextResponse.json({ error: "Falta parámetro obligatorio: 'project'" }, { status: 400 });
@@ -22,7 +25,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ files: [], message: "La carpeta config no existe." });
   }
 
-  // Modo 1: Leer archivo
+  // Modo 1: Leer historial (lista de versiones)
+  if (fileToRead && history) {
+    const historyDir = path.join(globalSettings.sourceBase, ".mim-index", "history", "config", project, fileToRead);
+    if (fs.existsSync(historyDir)) {
+      const files = fs.readdirSync(historyDir).sort().reverse(); // Más recientes primero
+      return NextResponse.json({ history: files.map(f => f.replace(".txt", "")) });
+    }
+    return NextResponse.json({ history: [] });
+  }
+
+  // Modo 2: Leer una versión específica del historial
+  if (fileToRead && version) {
+    const versionPath = path.join(globalSettings.sourceBase, ".mim-index", "history", "config", project, fileToRead, `${version}.txt`);
+    if (!fs.existsSync(versionPath)) {
+      return NextResponse.json({ error: "La versión no existe" }, { status: 404 });
+    }
+    try {
+      const content = fs.readFileSync(versionPath, "utf-8");
+      return NextResponse.json({ content });
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  // Modo 3: Leer archivo actual
   if (fileToRead) {
     const resolvedPath = path.resolve(basePath, fileToRead);
     if (!resolvedPath.startsWith(path.resolve(basePath))) {
@@ -39,11 +66,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Modo 2: Listar archivos
+  // Modo 4: Listar archivos
   try {
-    const files = fs.readdirSync(basePath);
+    const targetPath = path.resolve(basePath, folder);
+    if (!targetPath.startsWith(path.resolve(basePath))) {
+      return NextResponse.json({ error: "Acceso no autorizado" }, { status: 403 });
+    }
+    if (!fs.existsSync(targetPath)) {
+      return NextResponse.json({ files: [], message: "La carpeta no existe." });
+    }
+    const files = fs.readdirSync(targetPath);
     const fileList = files.map(file => {
-      const stats = fs.statSync(path.join(basePath, file));
+      const stats = fs.statSync(path.join(targetPath, file));
       return {
         name: file,
         isDirectory: stats.isDirectory(),
@@ -79,6 +113,27 @@ export async function POST(req: NextRequest) {
 
     // Asegurar que el directorio existe
     fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+
+    // Guardar en historial antes de pisar
+    if (fs.existsSync(resolvedPath)) {
+      try {
+        const oldContent = fs.readFileSync(resolvedPath, "utf-8");
+        const historyDir = path.join(globalSettings.sourceBase, ".mim-index", "history", "config", project, file);
+        fs.mkdirSync(historyDir, { recursive: true });
+        
+        const timestamp = new Date().toISOString().replace(/:/g, "-").replace(/\./g, "_");
+        fs.writeFileSync(path.join(historyDir, `${timestamp}.txt`), oldContent, "utf-8");
+        
+        // Limitar a los últimos 20 snapshots
+        const historyFiles = fs.readdirSync(historyDir).sort();
+        if (historyFiles.length > 20) {
+          const toDelete = historyFiles.slice(0, historyFiles.length - 20);
+          toDelete.forEach(f => fs.unlinkSync(path.join(historyDir, f)));
+        }
+      } catch (err) {
+        console.error("Error al guardar historial:", err);
+      }
+    }
 
     fs.writeFileSync(resolvedPath, content, "utf-8");
     return NextResponse.json({ success: true });

@@ -1,6 +1,6 @@
 {
   "name": "temp_next",
-  "version": "7.0.3",
+  "version": "7.1.0",
   "private": true,
   "main": "standalone/main.js",
   "scripts": {
@@ -25,7 +25,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-window": "^2.2.7",
-    "react-window-infinite-loader": "^2.0.1"
+    "react-window-infinite-loader": "^2.0.1",
+    "yt-dlp-wrap": "^2.3.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -335,7 +335,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
           )}
           {m.mode === "followed" && (
             <div id="onboarding-fomo-followed" className="flex-1 flex flex-col overflow-hidden">
-              <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={p => { m.setMode("discover"); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />
+              <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={(p, type, source, loader, version) => { m.setMode("discover"); if (source) discover.setSource(source as "modrinth" | "curseforge" | "all"); if (type) discover.setProjectType(type); if (loader) discover.setLoader(loader); if (version) discover.setGameVersions([version]); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />
             </div>
           )}
         </div>

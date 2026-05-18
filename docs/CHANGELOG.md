@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.0.3 (Ideas & Plan Completados)  
+> **Versión Actual:** 7.1.0 (Ideas & Plan Completados)  
 > **Última actualización:** 2026-05-18
 
 ---

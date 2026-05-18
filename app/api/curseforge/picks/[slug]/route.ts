@@ -12,15 +12,15 @@ const CURATED_MODS: Record<string, string[]> = {
   ],
   "curseforge-mar26": [
     "exposure", "trowel", "better-than-mending", "supplementaries", "farmers-delight",
-    "create", "alexsmobs", "quark", "waystones", "jei"
+    "create", "alexsmobs", "quark", "waystones", "blue-skies"
   ],
   "curseforge-feb26": [
     "biomes-o-plenty", "serene-seasons", "tough-as-nails", "corpse", "xaeros-minimap",
     "iron-chests", "storage-drawers", "refined-storage", "applied-energistics-2", "journeymap"
   ],
   "the-best-minecraft-mods-of-2024": [
-    "jei", "mouse-tweaks", "appleskin", "journeymap", "curios", "patchouli", 
-    "clumps", "fast-leaf-decay", "controlling", "jade"
+    "valhelsia-structures", "moog-voyager-structures", "exposure", "trowel", "better-than-mending",
+    "serene-seasons", "alexsmobs", "create", "farmers-delight", "supplementaries"
   ]
 };
 

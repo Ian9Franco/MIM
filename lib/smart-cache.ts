@@ -72,6 +72,15 @@ const CACHE_STRATEGIES: Record<string, CacheStrategy> = {
     staleWhileRevalidate: 24 * 60 * 60 * 1000,
     backgroundRefresh: true,
     priority: 'medium'
+  },
+
+  // YouTube Showcase — el video nuevo sale cada 1-2 semanas, pero refrescamos
+  // en background para que Spotlight siempre muestre algo sin spinners.
+  'youtube_showcase': {
+    ttl: 2 * 60 * 60 * 1000,           // 2 horas
+    staleWhileRevalidate: 6 * 60 * 60 * 1000, // 6 horas extra stale
+    backgroundRefresh: true,
+    priority: 'medium'
   }
 };
 
@@ -172,6 +181,7 @@ class SmartCache {
     if (key.includes('project') && key.includes('curseforge')) return 'curseforge_project';
     if (key.includes('versions')) return 'modrinth_versions';
     if (key.includes('updates')) return 'mod_updates';
+    if (key.includes('youtube_showcase')) return 'youtube_showcase';
     return 'default';
   }
 
@@ -325,3 +335,10 @@ export const cachedModDescription = (modId: string, fetcher: () => Promise<any>)
 
 export const cachedModUpdates = (mods: any[], fetcher: () => Promise<any>) =>
   smartCache.get(`mod_updates:${mods.map(m => m.fileName).join(',')}`, fetcher, { strategy: 'mod_updates' });
+
+/**
+ * Cache para YouTube Showcase — TTL 2h, stale 6h, background refresh.
+ * Clave: `youtube_showcase:<channelUrl>:<limit>`
+ */
+export const cachedYoutubeShowcase = (channelUrl: string, limit: number, fetcher: () => Promise<any>) =>
+  smartCache.get(`youtube_showcase:${channelUrl}:${limit}`, fetcher, { strategy: 'youtube_showcase' });

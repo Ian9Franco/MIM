@@ -3,7 +3,7 @@ import type { ModHit } from "@/lib/types";
 import { mimDB } from "@/lib/indexeddb";
 
 export function useFomoFollowedManager() {
-  const [subTab, setSubTab] = useState<"projects" | "authors" | "history">("projects");
+  const [subTab, setSubTab] = useState<"projects" | "authors" | "history" | "showcases">("projects");
   const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
   const [followedMods, setFollowedMods] = useState<ModHit[]>([]);
   const [modrinthStatus, setModrinthStatus] = useState<Record<string, any>>({});

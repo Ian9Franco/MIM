@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Download, Loader2, Heart, Spotlight, Clock, Calendar } from "lucide-react";
+import { Download, Loader2, Heart, Spotlight, Clock, Calendar, CirclePlay } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useSmoothMarquee } from "../../hooks/useSmoothMarquee";
 import type { ModHit } from "@/lib/types";
@@ -52,7 +52,10 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
     ? `${Math.round(mod.downloads / 1_000)}K` 
     : mod.downloads;
 
-  // Refined Dot-grid background (more dense like the image)
+  // Detectar plataforma por _source o URL
+  const isCurseForge = mod._source === "curseforge" || mod.url?.includes("curseforge.com");
+
+  // Refined Dot-grid background
   const dotGridStyle = {
     backgroundImage: `radial-gradient(circle, ${isModern ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.05)"} 1px, transparent 1px)`,
     backgroundSize: "6px 6px",
@@ -60,7 +63,7 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
 
   return (
     <div
-      className="w-[220px] xl:w-[252px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[170px] xl:w-[190px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: isModern ? "#f0ede3" : "hsl(220 14% 10%)",
         border: isModern ? "1.5px solid #d4cfc0" : "1.5px solid hsl(220 14% 18%)",
@@ -69,10 +72,14 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
       }}
       onClick={() => onOpenVersions(mod)}
     >
-      {/* Top label row */}
+      {/* Top label row — Estilo Showcase */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: isModern ? "1px solid #d4cfc0" : "1px solid hsl(220 14% 18%)" }}>
-        <span className="text-[8px] font-black uppercase tracking-[0.25em]" style={{ color: isModern ? "hsl(30 20% 35%)" : "hsl(220 14% 50%)" }}>
-          ◇ Spotlight
+        <span 
+          className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1" 
+          style={{ color: isCurseForge ? "#f87171" : "#4ade80" }}
+        >
+          <CirclePlay className="w-2 h-2" />
+          {isCurseForge ? "CurseForge" : "Modrinth"}
         </span>
         <span className="text-[8px] font-black tabular-nums" style={{ color: isModern ? "hsl(30 20% 40%)" : "hsl(220 14% 40%)" }}>
           {num}
@@ -84,7 +91,7 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
         className="relative flex items-center justify-center"
         style={{
           ...dotGridStyle,
-          height: "160px",
+          height: "120px",
           backgroundColor: isModern ? "#f0ede3" : "hsl(220 14% 10%)",
           borderBottom: isModern ? "1.5px solid #d4cfc0" : "1.5px solid hsl(220 14% 18%)",
         }}
@@ -94,8 +101,8 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
           <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: isModern ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.2)" }} />
         ))}
 
-        {/* Icon */}
-        <div className="relative w-16 h-16 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: isModern ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)", background: isModern ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)" }}>
+        {/* Icon — Reducido a w-14 h-14 como en Showcase */}
+        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: isModern ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)", background: isModern ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)" }}>
           {mod.iconUrl
             ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
             : <div className="text-2xl font-black" style={{ color: isModern ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)" }}>{mod.title.substring(0, 2).toUpperCase()}</div>

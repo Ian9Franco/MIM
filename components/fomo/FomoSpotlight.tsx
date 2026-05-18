@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar, Library } from "lucide-react";
+import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar, Library, CirclePlay } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { FomoSkeleton } from "./FomoSkeleton";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
 import type { ModHit, CollectionEntry } from "@/lib/types";
+import { FomoYoutubeShowcase } from "./FomoYoutubeShowcase";
 
 interface FomoSpotlightProps {
   onOpenVersions: (mod: ModHit) => void;
@@ -17,6 +18,8 @@ interface FomoSpotlightProps {
   sinytraActive?: boolean;
   loader?: string;
   gameVersion?: string;
+  /** Canal de YouTube para el Showcase (default: EnderVerse) */
+  showcaseChannelUrl?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,11 +358,13 @@ function HorizontalEditorialMarquee({
   return (
     <div className="relative w-full h-full flex flex-col group/marquee">
       {/* Title */}
-      <div className="px-8 mb-3 flex items-center gap-3">
-        <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
-          {title}
-        </span>
-      </div>
+      {title && (
+        <div className="px-8 mb-3 flex items-center gap-3">
+          <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
+            {title}
+          </span>
+        </div>
+      )}
 
       <div 
         ref={containerRef}
@@ -411,43 +416,72 @@ function SpotlightCollectionCard({
 }) {
   const [imgError, setImgError] = React.useState(false);
   const cardNum = String((index % 999) + 1).padStart(3, "0");
+  const isCurseForge = collection.source === "curseforge";
 
   return (
-    <div 
-      className="spotlight-ec-card shrink-0 relative group cursor-pointer"
+    <div
+      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      style={{
+        background: "hsl(220 14% 10%)",
+        border: "1.5px solid hsl(220 14% 18%)",
+        boxShadow: "0 4px 32px rgba(0,0,0,0.5)",
+      }}
       onClick={onClick}
     >
-      <div className="spotlight-ec-image-zone">
-        <span className="spotlight-ec-number">{cardNum}</span>
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--tl" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--tr" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--bl" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--br" />
-        <div className="spotlight-ec-icon-wrap">
+      {/* Top label row — Estilo Showcase */}
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: "1px solid hsl(220 14% 18%)" }}>
+        <span 
+          className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1" 
+          style={{ color: isCurseForge ? "#f87171" : "#4ade80" }}
+        >
+          <CirclePlay className="w-2 h-2" />
+          {isCurseForge ? "CurseForge" : "Modrinth"}
+        </span>
+        <span className="text-[8px] font-black tabular-nums" style={{ color: "hsl(220 14% 40%)" }}>
+          {cardNum}
+        </span>
+      </div>
+
+      {/* Visual area */}
+      <div
+        className="relative flex items-center justify-center"
+        style={{ height: "160px", borderBottom: "1.5px solid hsl(220 14% 18%)" }}
+      >
+        {/* Bracket corners */}
+        {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
+          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+        ))}
+
+        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
           {!imgError && collection.iconUrl ? (
-            <img 
-              src={collection.iconUrl} 
-              alt="" 
-              className="w-full h-full object-cover rounded-xl" 
-              onError={() => setImgError(true)}
-            />
+            <img src={collection.iconUrl} alt="" className="w-full h-full object-cover" onError={() => setImgError(true)} />
           ) : (
-            <div className="w-full h-full bg-white/5 rounded-xl flex items-center justify-center">
-               <Library className="w-8 h-8 opacity-20" />
+            <div className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.3)" }}>
+              {collection.name.substring(0, 2).toUpperCase()}
             </div>
           )}
         </div>
       </div>
-      <div className="spotlight-ec-text-zone">
-        <div className="spotlight-ec-text-main">
-          <h3 className="spotlight-ec-title">{collection.name}</h3>
-          <p className="spotlight-ec-author">{collection.projectCount || 0} PROYECTOS</p>
-          <div className="spotlight-ec-badges">
-            <span className="spotlight-ec-badge">Colección</span>
-            <span className="spotlight-ec-badge" style={{ color: accentColor }}>{collection.source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
+
+      {/* Text area */}
+      <div className="flex-1 flex flex-col p-3 gap-1 relative">
+        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: "hsl(0 0% 92%)" }}>
+          {collection.name}
+        </h3>
+        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: "hsl(220 14% 45%)" }}>
+          {collection.projectCount || 0} PROYECTOS
+        </p>
+
+        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: "1px solid hsl(220 14% 18%)" }}>
+          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "hsl(220 14% 40%)" }}>
+            Colección
+          </span>
+          <div className="flex gap-0.5">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+            ))}
           </div>
         </div>
-        <div className="spotlight-ec-dots" aria-hidden="true" />
       </div>
     </div>
   );
@@ -473,74 +507,89 @@ function SpotlightEditorialCard({
   globalLoader?: string;
   index?: number;
 }) {
-  
-  const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
-  const loaderTag = mod.categories?.find(c => knownLoaders.includes(c.toLowerCase())) || globalLoader;
-  const pType = mod.projectType === "mod" 
-    ? "Mod" 
-    : mod.projectType === "resourcepack" || mod.projectType === "texture"
-    ? "Textura" 
-    : mod.projectType === "shader" 
-    ? "Shader" 
-    : mod.projectType === "datapack"
-    ? "Datapack"
-    : mod.projectType === "modpack"
-    ? "Modpack"
-    : mod.projectType;
-
   const cardNum = String((index % 999) + 1).padStart(3, "0");
+  const isCurseForge = mod.url?.includes("curseforge.com") || mod._source === "curseforge";
+
+  const dls = mod.downloads >= 1_000_000 
+    ? `${(mod.downloads / 1_000_000).toFixed(1)}M` 
+    : mod.downloads >= 1_000 
+    ? `${Math.round(mod.downloads / 1_000)}K` 
+    : mod.downloads;
 
   return (
-    <div 
-      className="spotlight-ec-card shrink-0 relative group cursor-pointer"
+    <div
+      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      style={{
+        background: "hsl(220 14% 10%)",
+        border: "1.5px solid hsl(220 14% 18%)",
+        boxShadow: "0 4px 32px rgba(0,0,0,0.5)",
+      }}
       onClick={() => onOpenVersions(mod)}
     >
-      {/* TOP: Image Zone */}
-      <div className="spotlight-ec-image-zone">
-        <span className="spotlight-ec-number">{cardNum}</span>
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--tl" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--tr" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--bl" />
-        <span className="spotlight-ec-bracket spotlight-ec-bracket--br" />
-        <div className="spotlight-ec-icon-wrap">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {mod.iconUrl ? (
-            <img src={mod.iconUrl} alt="" className="w-full h-full object-cover rounded-xl" />
-          ) : (
-            <span className="font-headline text-3xl font-black opacity-20">
-              {mod.title.substring(0, 2).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <div className="spotlight-ec-dl-overlay">
-          <button
-            onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
-            disabled={isDownloading}
-            className="spotlight-ec-dl-btn"
-          >
-            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          </button>
-        </div>
+      {/* Top label row — Estilo Showcase */}
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: "1px solid hsl(220 14% 18%)" }}>
+        <span 
+          className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1" 
+          style={{ color: isCurseForge ? "#f87171" : "#4ade80" }}
+        >
+          <CirclePlay className="w-2 h-2" />
+          {isCurseForge ? "CurseForge" : "Modrinth"}
+        </span>
+        <span className="text-[8px] font-black tabular-nums" style={{ color: "hsl(220 14% 40%)" }}>
+          {cardNum}
+        </span>
       </div>
 
-      {/* BOTTOM: Text Zone */}
-      <div className="spotlight-ec-text-zone">
-        <div className="spotlight-ec-text-main">
-          <h3 className="spotlight-ec-title">{mod.title}</h3>
-          <p className="spotlight-ec-author">{mod.author}</p>
-          <div className="spotlight-ec-badges">
-            {pType && <span className="spotlight-ec-badge">{pType}</span>}
-            {loaderTag && (
-              <span 
-                className="spotlight-ec-badge spotlight-ec-badge--loader"
-                data-loader={loaderTag.toLowerCase()}
-              >
-                {loaderTag}
-              </span>
-            )}
+      {/* Visual area */}
+      <div
+        className="relative flex items-center justify-center"
+        style={{ height: "160px", borderBottom: "1.5px solid hsl(220 14% 18%)" }}
+      >
+        {/* Bracket corners */}
+        {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
+          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+        ))}
+
+        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
+          {mod.iconUrl ? (
+            <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.3)" }}>
+              {mod.title.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* Download button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
+          disabled={isDownloading}
+          className="absolute bottom-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90"
+          style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}
+        >
+          {isDownloading ? <Loader2 className="w-3 h-3 animate-spin text-white" /> : <Download className="w-3 h-3 text-white" />}
+        </button>
+      </div>
+
+      {/* Text area */}
+      <div className="flex-1 flex flex-col p-3 gap-1 relative">
+        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: "hsl(0 0% 92%)" }}>
+          {mod.title}
+        </h3>
+        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: "hsl(220 14% 45%)" }}>
+          {mod.author}
+        </p>
+
+        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: "1px solid hsl(220 14% 18%)" }}>
+          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "hsl(220 14% 40%)" }}>
+            {dls} ↓
+          </span>
+          <div className="flex gap-0.5">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+            ))}
           </div>
         </div>
-        <div className="spotlight-ec-dots" aria-hidden="true" />
       </div>
     </div>
   );
@@ -557,7 +606,9 @@ export function FomoSpotlight({
   loader = "forge",
   gameVersion = "1.20.1",
   sinytraActive = false,
+  showcaseChannelUrl,
 }: FomoSpotlightProps) {
+  const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
   const [loading, setLoading] = useState(true);
   const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
@@ -568,8 +619,22 @@ export function FomoSpotlight({
   const [latestCfCollection, setLatestCfCollection] = useState<CollectionEntry | null>(null);
   const [latestCfMods, setLatestCfMods] = useState<ModHit[]>([]);
 
+  useEffect(() => {
+    const cachedPicks = localStorage.getItem("fomo_cf_picks");
+    const cachedMods = localStorage.getItem("fomo_modrinth_mods");
+    
+    if (cachedPicks) setCfPicks(JSON.parse(cachedPicks));
+    if (cachedMods) setLatestCollectionMods(JSON.parse(cachedMods));
+    
+    // Si tenemos algo en caché, podemos saltarnos el skeleton inicial
+    if (cachedPicks || cachedMods) setLoading(false);
+  }, []);
+
   const loadSpotlight = useCallback(async () => {
-    setLoading(true);
+    // Si ya tenemos datos cacheados, no mostramos el skeleton completo (carga silenciosa)
+    const hasCache = localStorage.getItem("fomo_cf_picks") || localStorage.getItem("fomo_modrinth_mods");
+    if (!hasCache) setLoading(true);
+    
     try {
       // 1. Fetch CurseForge Community Picks (Collections)
       const picksRes = await fetch("/api/curseforge/picks");
@@ -577,6 +642,7 @@ export function FomoSpotlight({
         const d = await picksRes.json();
         const picks = d.picks || [];
         setCfPicks(picks);
+        localStorage.setItem("fomo_cf_picks", JSON.stringify(picks));
         
         // Pick the latest CurseForge collection to feature its mods
         if (picks.length > 0) {
@@ -651,6 +717,7 @@ export function FomoSpotlight({
         }
         
         setLatestCollectionMods(allMods.map((m: any) => ({ ...m, _source: "modrinth" })));
+        localStorage.setItem("fomo_modrinth_mods", JSON.stringify(allMods.map((m: any) => ({ ...m, _source: "modrinth" }))));
       }
 
     } catch (e) {
@@ -732,31 +799,60 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" style={{ background: "var(--glass-bg)", boxShadow: "var(--shadow-neomorphic-inner, inset 0 0 20px rgba(0,0,0,0.05))" }}>
 
-        {/* Row 1: Modrinth (Scrolls Right to Left) */}
-        <div className="flex-1 w-full min-h-0">
-          <HorizontalEditorialMarquee 
-            title={latestCollection?.name || "Modrinth Picks"}
-            items={modrinthMods} 
-            type="mod"
-            onOpenVersions={onOpenVersions} 
-            onDownload={onDownloadMod} 
-            downloading={downloading} 
-            speed={0.7}
-            reverse={false} 
-            globalLoader={loader}
-          />
+        {/* Row 1 & 2 Toggled: Modrinth / CurseForge */}
+        <div className="flex-1 w-full min-h-0 flex flex-col">
+          {/* Header with Toggle */}
+          <div className="px-8 mb-3 flex items-center justify-between">
+            <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
+              {activePlatform === "modrinth" 
+                ? (latestCollection?.name || "Modrinth Picks")
+                : "CurseForge Community Picks"}
+            </span>
+            
+            {/* Toggle Button */}
+            <button
+              onClick={() => setActivePlatform(activePlatform === "modrinth" ? "curseforge" : "modrinth")}
+              className="flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md hover:bg-white/10 transition-colors"
+            >
+              <span>{activePlatform === "modrinth" ? "Ver CurseForge" : "Ver Modrinth"}</span>
+              <ChevronRight className={`w-3 h-3 transform transition-transform ${activePlatform === "curseforge" ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+
+          {/* Marquee Content */}
+          <div className="flex-1 w-full min-h-0">
+            {activePlatform === "modrinth" ? (
+              <HorizontalEditorialMarquee 
+                items={modrinthMods} 
+                type="mod"
+                onOpenVersions={onOpenVersions} 
+                onDownload={onDownloadMod} 
+                downloading={downloading} 
+                speed={0.7}
+                reverse={true} 
+                globalLoader={loader}
+              />
+            ) : (
+              <HorizontalEditorialMarquee 
+                items={cfPicks} 
+                type="collection"
+                onOpenCollection={onOpenCollection}
+                speed={0.6}
+                reverse={true} 
+                accentColor={COLORS.primary}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Row 2: All CurseForge Community Picks (Collections) */}
-        <div className="flex-1 w-full min-h-0">
-          <HorizontalEditorialMarquee 
-            title="CurseForge Community Picks"
-            items={cfPicks} 
-            type="collection"
-            onOpenCollection={onOpenCollection}
-            speed={0.6}
-            reverse={true} 
-            accentColor={COLORS.primary}
+        {/* Row 3: YouTube Showcase — solo el último video de EnderVerse */}
+        <div className="w-full shrink-0 pb-2">
+          <FomoYoutubeShowcase
+            channelUrl={showcaseChannelUrl}
+            onOpenVersions={onOpenVersions}
+            onDownloadMod={onDownloadMod}
+            downloading={downloading}
+            globalLoader={loader}
           />
         </div>
       </div>

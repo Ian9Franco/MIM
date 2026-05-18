@@ -14,7 +14,7 @@ import { FomoSkeleton } from "./FomoSkeleton";
 
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
-  onSearchProject?: (title: string) => void;
+  onSearchProject?: (title: string, type?: string, source?: string, loader?: string, version?: string) => void;
   onOpenVersions?: (mod: any) => void;
   onDownloadMod?: (mod: any) => Promise<void>;
   downloading?: Record<string, boolean>;
@@ -29,7 +29,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
   const [hasMore, setHasMore] = React.useState(false);
 
   // Sistema de dirección para la animación
-  const TABS = ["projects", "authors", "history"];
+  const TABS = ["projects", "authors", "history", "showcases"];
   const [direction, setDirection] = React.useState("forward");
   const prevTabRef = React.useRef(subTab);
 
@@ -66,6 +66,68 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     }
   }, [subTab, page]);
 
+  const [showcases, setShowcases] = React.useState<any[]>([]);
+  const [loadingShowcases, setLoadingShowcases] = React.useState(false);
+  const [expandedVideo, setExpandedVideo] = React.useState<string | null>(null);
+  const [showcasePage, setShowcasePage] = React.useState(1);
+  const [hasMoreShowcases, setHasMoreShowcases] = React.useState(true);
+
+  const [channels, setChannels] = React.useState<string[]>([]);
+  const [activeChannel, setActiveChannel] = React.useState("https://www.youtube.com/@EnderVerseMC");
+
+  React.useEffect(() => {
+    fetch(`/api/fomo/youtube-channels`)
+      .then(res => res.json())
+      .then(data => {
+        const list = data.channels || [];
+        setChannels(list);
+        if (list.length > 0) {
+          setActiveChannel(list[0]);
+        }
+      })
+      .catch(e => console.error("Error loading channels", e));
+  }, []);
+
+  React.useEffect(() => {
+    setShowcases([]);
+    setShowcasePage(1);
+    setHasMoreShowcases(true);
+  }, [activeChannel]);
+
+  React.useEffect(() => {
+    const cached = localStorage.getItem(`fomo_showcases_${activeChannel}`);
+    if (cached && showcases.length === 0) {
+      setShowcases(JSON.parse(cached));
+    }
+  }, [activeChannel]);
+
+  React.useEffect(() => {
+    if (subTab === "showcases" && (showcases.length === 0 || showcasePage > 1)) {
+      setLoadingShowcases(true);
+      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=5&page=${showcasePage}`)
+        .then(res => res.json())
+        .then(data => {
+          const newShowcases = data.showcases || [];
+          if (showcasePage === 1) {
+            setShowcases(newShowcases);
+            localStorage.setItem(`fomo_showcases_${activeChannel}`, JSON.stringify(newShowcases));
+          } else {
+            setShowcases(prev => {
+              const combined = [...prev, ...newShowcases];
+              localStorage.setItem(`fomo_showcases_${activeChannel}`, JSON.stringify(combined));
+              return combined;
+            });
+          }
+          setHasMoreShowcases(newShowcases.length === 5);
+          setLoadingShowcases(false);
+        })
+        .catch(e => {
+          console.error("Error loading showcases", e);
+          setLoadingShowcases(false);
+        });
+    }
+  }, [subTab, showcasePage, activeChannel]);
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
       {/* Estilos inyectados para las animaciones direccionales */}
@@ -93,6 +155,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           <button onClick={() => setSubTab("projects")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "projects" ? "bg-primary text-white" : "opacity-40 text-white"}`}><CookingPot className="w-4 h-4" />Proyectos ({followedMods.length})</button>
           <button onClick={() => setSubTab("authors")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "authors" ? "bg-primary text-white" : "opacity-40 text-white"}`}><ChefHat className="w-4 h-4" />Autores ({followedAuthors.length})</button>
           <button onClick={() => { setSubTab("history"); setPage(1); }} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "history" ? "bg-primary text-white" : "opacity-40 text-white"}`}><Timeline className="w-4 h-4" />Rank/Historial</button>
+          <button onClick={() => setSubTab("showcases")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "showcases" ? "bg-primary text-white" : "opacity-40 text-white"}`}><Heart className="w-4 h-4" />Showcases</button>
         </div>
         {subTab === "projects" && followedMods.length > 0 && (
           <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
@@ -225,6 +288,179 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {subTab === "showcases" && (
+          <div key="showcases" className={animationClass}>
+            {/* Gestor de Canales */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 mb-6 bg-white/5 p-3 rounded-2xl border border-white/10">
+              <div className="w-full sm:w-1/2 min-w-0">
+                <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><Heart className="w-3.5 h-3.5 text-primary" />Canal Activo</p>
+                <select 
+                  value={activeChannel}
+                  onChange={(e) => setActiveChannel(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-primary/50 outline-none transition-all"
+                >
+                  {channels.map(c => (
+                    <option key={c} value={c}>{c.split("@")[1] || c}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="w-full sm:w-1/2 min-w-0">
+                <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><Puzzle className="w-3.5 h-3.5 text-primary" />Añadir Canal</p>
+                <input 
+                  type="text" 
+                  placeholder="@usuario o URL + Enter"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-primary/50 outline-none transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const value = e.currentTarget.value.trim();
+                      if (value) {
+                        let url = value;
+                        if (!url.startsWith("http")) {
+                          url = `https://www.youtube.com/${url.startsWith("@") ? "" : "@"}${url}`;
+                        }
+                        if (!channels.includes(url)) {
+                          const next = [...channels, url];
+                          setChannels(next);
+                          setActiveChannel(url); // Cambiar al nuevo canal
+                          fetch(`/api/fomo/youtube-channels`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ channels: next })
+                          });
+                        }
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {loadingShowcases && showcasePage === 1 ? (
+              <FomoSkeleton variant="list" message="Cargando showcases..." count={5} />
+            ) : showcases.length === 0 ? (
+              <div className="py-20 text-center flex flex-col items-center opacity-40"><Heart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">No hay showcases</h3><p className="text-xs max-w-sm">Los videos del canal aparecerán acá.</p></div>
+            ) : (
+              <div className="space-y-4">
+                {showcases.map((video, idx) => (
+                  <div key={`${video.videoId}-${idx}`} className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+                    <div 
+                      className="flex items-center gap-4"
+                      onClick={() => setExpandedVideo(expandedVideo === video.videoId ? null : video.videoId)}
+                    >
+                      <div className="w-20 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
+                        {video.thumbnail ? <img src={video.thumbnail} alt="" className="w-full h-full object-cover" /> : <Heart className="w-4 h-4 opacity-40" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{video.title}</p>
+                        <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>{video.modSlugs.length} mods detectados</p>
+                      </div>
+                      <div className="text-[10px] font-black px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase">
+                        YouTube
+                      </div>
+                    </div>
+                    
+                    {/* Expandable Grid */}
+                    {expandedVideo === video.videoId && (
+                      <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
+                        <h4 className="font-headline text-xs mb-2 flex items-center gap-2"><Puzzle className="w-3.5 h-3.5 text-primary" />Mods Detectados</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {video.modSlugs.map((slugStr: string, sIdx: number) => {
+                            const parts = slugStr.split(":");
+                            const source = parts[0];
+                            const type = parts.length >= 3 ? parts[1] : "mod";
+                            const slug = parts.length >= 3 ? parts[2] : parts[1];
+                            const loader = parts.length >= 4 ? parts[3] : "";
+                            const version = parts.length >= 5 ? parts[4] : "";
+                            
+                            const isCurse = source === "curseforge";
+                            const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                            
+                            const typeLabels: Record<string, string> = {
+                              mod: "Mod",
+                              plugin: "Plugin",
+                              datapack: "Data",
+                              shader: "Shader",
+                              resourcepack: "Pack",
+                              modpack: "Pack",
+                              "mc-mods": "Mod",
+                              "texture-packs": "Pack",
+                              customization: "Cust",
+                              "mc-addons": "Addon"
+                            };
+                            const typeToProjectType: Record<string, string> = {
+                              mod: "mod",
+                              plugin: "mod",
+                              datapack: "datapack",
+                              shader: "shader",
+                              resourcepack: "resourcepack",
+                              modpack: "modpack",
+                              "mc-mods": "mod",
+                              "texture-packs": "resourcepack",
+                              customization: "datapack",
+                              "mc-addons": "mod"
+                            };
+                            const typeLabel = typeLabels[type] || "Mod";
+                            const extraInfo = [loader, version].filter(Boolean).join(" ");
+                            const fullTypeLabel = extraInfo ? `${typeLabel} (${extraInfo})` : typeLabel;
+                            
+                            return (
+                              <div 
+                                key={`${slug}-${sIdx}`}
+                                className="p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 hover:shadow-lg hover:-translate-y-0.5"
+                                style={{
+                                  background: "rgba(0, 0, 0, 0.6)",
+                                  borderColor: isCurse ? "rgba(248,113,113,0.3)" : "rgba(30,215,96,0.3)",
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Evitar colapsar el video
+                                  const query = slug.replace(/-/g, " ");
+                                  const targetType = typeToProjectType[type] || "mod";
+                                  if (onSearchProject) onSearchProject(query, targetType, source, loader, version);
+                                }}
+                              >
+                                <div 
+                                  className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase shrink-0" 
+                                  style={{ 
+                                    background: isCurse ? "rgba(248,113,113,0.2)" : "rgba(30,215,96,0.2)", 
+                                    color: isCurse ? "#f87171" : "#4ade80",
+                                    border: isCurse ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(30,215,96,0.4)"
+                                  }}
+                                >
+                                  {source.substring(0, 2)}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[10px] font-bold truncate" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
+                                    {displayName}
+                                  </span>
+                                  <span className="text-[8px] font-medium opacity-60" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
+                                    {fullTypeLabel}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {hasMoreShowcases && (
+                  <button
+                    onClick={() => setShowcasePage(prev => prev + 1)}
+                    disabled={loadingShowcases}
+                    className="w-full p-3 rounded-2xl border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-sm font-bold mt-4"
+                  >
+                    {loadingShowcases ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Cargar más"}
+                  </button>
+                )}
               </div>
             )}
           </div>

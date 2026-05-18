@@ -616,7 +616,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                 }} 
                 onStepChange={(step) => {
                   if (step === 1) setActiveTab("optimize");
-                  if (step === 2) setActiveTab("controls");
+                  if (step === 2) setActiveTab("keybinds");
                   if (step === 3) setActiveTab("resourcepacks");
                   if (step === 4) setActiveTab("config");
                 }}

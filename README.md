@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-7.0.1-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.0.2-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -201,7 +201,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v7.0.1 (Actual — Mayo 2026)**
+### ✅ **v7.0.2 (Actual — Mayo 2026)**
 - ✨ Modo MIMU (User Mode) para jugadores
 - 🧠 SAGE rediseñado (2-step scanning)
 - 👥 CurseForge Community Picks integrado

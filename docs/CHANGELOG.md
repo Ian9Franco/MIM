@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.0.1 (FOMO Rankings & Live Details)  
+> **Versión Actual:** 7.0.2 (FOMO Rankings & Live Details)  
 > **Última actualización:** 2026-05-18
 
 ---

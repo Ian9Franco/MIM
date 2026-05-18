@@ -54,6 +54,8 @@ export type MimEventMap = {
   "security:threat-detected": { threatId: string; threatType: "malware" | "suspicious" | "network" | "file-system"; severity: "low" | "medium" | "high" | "critical"; fileName: string; filePath: string; riskScore: number; indicators: string[]; virusTotal?: { positives: number; total: number; scanDate: string; }; };
   "security:scan-completed": { scanId: string; filesScanned: number; threatsFound: number; duration: number; threats: string[]; };
   "security:quarantine-applied": { threatId: string; fileName: string; quarantinePath: string; action: "move" | "delete" | "disable"; timestamp: string; };
+  "virustotal:scanning": { filePath: string; fileName: string; };
+  "virustotal:completed": { filePath: string; fileName: string; result: { virusTotal?: { maliciousCount: number; }; }; };
 
   // WATCHER EVENTS
   "watcher:file-changed": { filePath: string; changeType: "created" | "modified" | "deleted"; fileSize: number; fileType: "mod" | "config" | "resourcepack" | "shader" | "unknown"; timestamp: string; };

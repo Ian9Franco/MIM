@@ -124,21 +124,56 @@ export const FomoCollections = memo(function FomoCollections({
     }
   }, [isDetailsOpen]);
 
+  useEffect(() => {
+    const cachedMim = localStorage.getItem("fomo_mim_collections");
+    const cachedOfficial = localStorage.getItem("fomo_official_collections");
+    const cachedCf = localStorage.getItem("fomo_cf_collections");
+    
+    if (cachedMim) setCollections(JSON.parse(cachedMim));
+    if (cachedOfficial) setOfficialCollections(JSON.parse(cachedOfficial));
+    if (cachedCf) setCfCollections(JSON.parse(cachedCf));
+    
+    if (cachedMim || cachedOfficial || cachedCf) setLoading(false);
+  }, []);
+
   const [libraryUpdates, setLibraryUpdates] = useState<Record<string, LibraryUpdateInfo>>({});
 
   const load = useCallback(async () => {
-    setLoading(true);
-    const { collections: colls, error: err } = await fetchCollections();
-    setCollections(colls);
+    const cachedMim = localStorage.getItem("fomo_mim_collections");
+    const cachedOfficial = localStorage.getItem("fomo_official_collections");
+    const cachedCf = localStorage.getItem("fomo_cf_collections");
     
-    const { collections: official, error: offErr } = await fetchOfficialCollections();
-    setOfficialCollections(official);
-
-    const { picks: cfPicks, error: cfErr } = await fetchCurseForgePicks();
-    setCfCollections(cfPicks);
+    if (!cachedMim && !cachedOfficial && !cachedCf) {
+      setLoading(true);
+    }
     
-    setError(err || offErr || cfErr);
-    setLoading(false);
+    try {
+      // Cargar en paralelo para evitar bloqueo secuencial
+      const [collsRes, officialRes, cfRes] = await Promise.all([
+        fetchCollections(),
+        fetchOfficialCollections(),
+        fetchCurseForgePicks()
+      ]);
+      
+      const colls = collsRes.collections || [];
+      const official = officialRes.collections || [];
+      const cfPicks = cfRes.picks || [];
+      
+      setCollections(colls);
+      setOfficialCollections(official);
+      setCfCollections(cfPicks);
+      
+      localStorage.setItem("fomo_mim_collections", JSON.stringify(colls));
+      localStorage.setItem("fomo_official_collections", JSON.stringify(official));
+      localStorage.setItem("fomo_cf_collections", JSON.stringify(cfPicks));
+      
+      setError(collsRes.error || officialRes.error || cfRes.error);
+    } catch (e: any) {
+      console.error("Error loading collections", e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);

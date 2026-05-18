@@ -48,12 +48,14 @@ interface FomoYoutubeShowcaseProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function resolveSlug(identifier: string): Promise<ResolvedShowcaseMod | null> {
-  const [platform, slug] = identifier.split(":");
+  const parts = identifier.split(":");
+  const platform = parts[0];
+  const slug = parts[2] || parts[1]; // Tomamos la 3ra parte (slug) o la 2da si es el formato viejo
   if (!slug) return null;
 
   try {
     if (platform === "modrinth") {
-      const res = await fetch(`https://api.modrinth.com/v2/project/${slug}`);
+      const res = await fetch(`/api/modrinth/project?projectId=${encodeURIComponent(slug)}`);
       if (!res.ok) return null;
       const d = await res.json();
       return {
@@ -86,7 +88,8 @@ async function resolveSlug(identifier: string): Promise<ResolvedShowcaseMod | nu
         _showcaseSource: "curseforge" as const,
       };
     }
-  } catch {
+  } catch (e) {
+    console.error(`[resolveSlug] Error resolving ${identifier}:`, e);
     // El mod no existe o fue borrado — falla silenciosamente (Pro-Tip #2)
   }
 
@@ -414,14 +417,25 @@ export function FomoYoutubeShowcase({
       }
 
       setShowcase(entry);
-      setStatus("loading-mods");
+      
+      // Intentar cargar mods resueltos de cache para no re-calcular al movernos entre pestañas
+      const cacheKey = `fomo_resolved_mods_${entry.videoId}`;
+      const cachedMods = localStorage.getItem(cacheKey);
+      
+      if (cachedMods) {
+        setMods(JSON.parse(cachedMods));
+        setStatus("done");
+      } else {
+        setStatus("loading-mods");
 
-      // Resolver los slugs a mods reales (con concurrencia limitada = 4)
-      const resolved = await resolveSlugs(entry.modSlugs);
-      if (!isMounted.current) return;
+        // Resolver los slugs a mods reales (con concurrencia limitada = 4)
+        const resolved = await resolveSlugs(entry.modSlugs);
+        if (!isMounted.current) return;
 
-      setMods(resolved);
-      setStatus("done");
+        localStorage.setItem(cacheKey, JSON.stringify(resolved));
+        setMods(resolved);
+        setStatus("done");
+      }
     } catch (err: any) {
       if (!isMounted.current) return;
       setErrorMsg(err.message ?? "Error desconocido");

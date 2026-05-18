@@ -115,20 +115,23 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
       .catch(e => console.error("Error loading channels", e));
   }, []);
 
-  React.useEffect(() => {
-    setVideos([]);
-    setShorts([]);
-    setVideoPage(1);
-    setShortsPage(1);
-    setHasMoreVideos(true);
-    setHasMoreShorts(true);
-  }, [activeChannel]);
-
-  // El caché ahora se maneja en el backend (archivos JSON)
+  const prevChannelRef = React.useRef(activeChannel);
 
   React.useEffect(() => {
     let ignore = false;
     
+    // Si cambió el canal, reseteamos todo y salimos para que el próximo render use las listas vacías
+    if (prevChannelRef.current !== activeChannel) {
+      setVideos([]);
+      setShorts([]);
+      setVideoPage(1);
+      setShortsPage(1);
+      setHasMoreVideos(true);
+      setHasMoreShorts(true);
+      prevChannelRef.current = activeChannel;
+      return;
+    }
+
     const isVideos = showcaseType === "videos";
     const currentList = isVideos ? videos : shorts;
     const currentPage = isVideos ? videoPage : shortsPage;
@@ -169,7 +172,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     return () => {
       ignore = true;
     };
-  }, [subTab, videoPage, shortsPage, activeChannel, showcaseType]);
+  }, [subTab, videoPage, shortsPage, activeChannel, showcaseType, videos, shorts, hasMoreVideos, hasMoreShorts]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">

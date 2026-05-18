@@ -606,32 +606,41 @@ export function FomoSpotlight({
   loader = "forge",
   gameVersion = "1.20.1",
   sinytraActive = false,
-  showcaseChannelUrl,
+  showcaseChannelUrl = "https://www.youtube.com/@EnderVerseMC",
 }: FomoSpotlightProps) {
   const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
-  const [loading, setLoading] = useState(true);
-  const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
+  const [cfPicks, setCfPicks] = useState<CollectionEntry[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("fomo_cf_picks");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
   const [cfRecent, setCfRecent] = useState<ModHit[]>([]);
   const [newestMods, setNewestMods] = useState<ModHit[]>([]);
   const [latestCollection, setLatestCollection] = useState<CollectionEntry | null>(null);
-  const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>([]);
+  const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("fomo_modrinth_mods");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const cachedPicks = localStorage.getItem("fomo_cf_picks");
+      const cachedMods = localStorage.getItem("fomo_modrinth_mods");
+      return !(cachedPicks || cachedMods);
+    }
+    return true;
+  });
   const [latestCfCollection, setLatestCfCollection] = useState<CollectionEntry | null>(null);
   const [latestCfMods, setLatestCfMods] = useState<ModHit[]>([]);
 
-  useEffect(() => {
-    const cachedPicks = localStorage.getItem("fomo_cf_picks");
-    const cachedMods = localStorage.getItem("fomo_modrinth_mods");
-    
-    if (cachedPicks) setCfPicks(JSON.parse(cachedPicks));
-    if (cachedMods) setLatestCollectionMods(JSON.parse(cachedMods));
-    
-    // Si tenemos algo en caché, podemos saltarnos el skeleton inicial
-    if (cachedPicks || cachedMods) setLoading(false);
-  }, []);
+  // El cache se carga sincrónicamente en el useState para evitar flickeos de UI
 
   const loadSpotlight = useCallback(async () => {
-    // Si ya tenemos datos cacheados, no mostramos el skeleton completo (carga silenciosa)
     const hasCache = localStorage.getItem("fomo_cf_picks") || localStorage.getItem("fomo_modrinth_mods");
     if (!hasCache) setLoading(true);
     

@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-7.1.0-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.2.0-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -60,6 +60,7 @@ Logs en idiomas que no existen
 
 ### 🔍 **FOMO 3.0** — Busca en 2 Plataformas a la Vez
 - **Modrinth + CurseForge unificado**
+- **YouTube Showcases**: Extrae mods directamente desde descripciones de videos y shorts.
 - Visualización dual sin salir de la app
 - Filtros por versión, loader, categoría
 - Smart matching por SHA1 (100% exacto)
@@ -203,7 +204,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v7.1.0 (Actual — Mayo 2026)**
+### ✅ **v7.2.0 (Actual — Mayo 2026)**
 - ✨ Modo MIMU (User Mode) para jugadores
 - 🧠 SAGE rediseñado (2-step scanning)
 - 👥 CurseForge Community Picks integrado

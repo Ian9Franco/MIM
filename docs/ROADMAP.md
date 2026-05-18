@@ -8,6 +8,32 @@
 
 # ✅ Logros Implementados (HECHO)
 
+## 🏛️ Versión 7.1.1 — FOMO Showcases & Standalone Cache (2026-05-18)
+- **YouTube Showcases**: Integración que permite extraer los mods presentados en videos y shorts de YouTube leyendo las descripciones.
+- **Carga Perezosa (Lazy Loading)**: Los videos se cargan de 5 en 5 para optimizar el rendimiento y consumo de red.
+- **Gestión de Canales**: Dropdown personalizado con opción de eliminar canales y botones de **Accesos Rápidos** para los 4 canales más usados.
+- **Caché Físico en JSON**: Migración de `localStorage` a archivos JSON en `.MIM/source/.mim-index/` para persistir datos en modo standalone/Electron.
+- **Seguridad contra Colisiones (MD5)**: Uso de hashes MD5 para evitar que canales distintos compartan el mismo archivo de caché.
+- **Persistencia de Interfaz**: La app recuerda la subpestaña activa (Proyectos, Autores, Historial, Showcases) al navegar.
+- **Enlace Directo**: Botón para abrir el video de YouTube directamente desde la tarjeta.
+
+## 🏛️ GATE — Pack Validation & Build System
+- **Validation Engine (`validateProject`)**: Análisis preventivo previo a la exportación que retorna errores graves (bloqueantes), advertencias y sugerencias de optimización.
+- **Build Gate Inflexible**: Bloqueo absoluto de exportación ante errores graves ("No negociación, no democracia").
+- **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
+- **Smart Split Export**: Generación validada y separada de `alluser.zip` (client) y `allhost.zip` (server).
+
+## 🏛️ Versión 7.0.3 — Mejoras de Sistema & ALRT (2026-05-18)
+- **Generación de `modlist.html`**: Implementación de generación automática de lista de mods para entornos host y user.
+- **Preview de Entornos**: Previsualización de entornos `allhost` y `alluser` en Library Source.
+- **Detección Inteligente de Actualizaciones**: Proyectos considerados "nuevos" o "actualizados" si tienen menos de 15 días.
+- **Guía de Uso / Onboarding**: Sistema de ayuda interactiva para el primer inicio y por secciones (fomo, tweak, alrt, etc.).
+
+## 🏛️ Versión 6.3.1 — FOMO Rankings & Live Details (2026-05-17)
+- **Sistema de Rankings Dinámicos**: Creación de tops de más descargados agrupados por tipo (Mods, Texturas, Shaders, Datapacks) con diseño estilo podio.
+- **Detalles en Vivo**: Al abrir un proyecto desde el historial o ranking, se fuerza una petición a la API para cargar descargas, autor y galería actualizados.
+- **Carrusel Dinámico de Iconos**: Las tarjetas de autores seguidos ahora rotan automáticamente entre los iconos de todos los mods que posees de ese autor.
+
 ## 🏛️ Beta 5.9 — Architecture & Code Consolidation
 - **Consolidación y Limpieza Técnica**: Reducción drástica de líneas de código y modularización avanzada de servicios (`useFileWatcher`, `FomoSidebarPortal`, heurísticas centralizadas).
 - **Modrinth Rescue Fallback**: Búsqueda inteligente de rescate en Modrinth al detectar que un autor de CurseForge bloquea descargas de terceros, garantizando descargas exitosas.
@@ -51,6 +77,7 @@
 - **Visual Stack Inversion**: Reordenamiento de texturas con prioridad real invertida (Minecraft style).
 - **Advanced Keybinds**: Edición directa de teclas de mods (Iris, Sodium, etc.) mediante scanner dinámico de prefijos.
 - **Header Stability**: Z-Index refactor para mantener controles accesibles sobre backdrops.
+- **Explorador de Configs**: Visualiza y edita `.minecraft/config` directamente desde la sección Tweak en 1 clic.
 
 ## 🧠 SAGE (Systematic Analyzer for Glitches & Exceptions)
 - **Crash Log Interpreter (S+)**: Analizador heurístico avanzado 100% local que parsea stack traces de Java de Minecraft.
@@ -139,17 +166,7 @@
 - [x] **Incident Persistence & Session Memory**: Persistencia local en IndexedDB con índices compuestos y fallback a localStorage.
 - [x] **Reactive Rule System**: Sistema extensible runtime de reglas con addRule(), removeRule() y enableRule().
 
----
-
-# 🚧 Roadmap y Próximos Pasos (PENDIENTE)
-
-## 🎯 Prioridades Inmediatas (S+)
-1. **Conflict Detection Engine (Avanzado)**: Extender SAGE para realizar análisis estático de colisiones lógicas de bytecode (Mixins modificando el mismo método de Minecraft) previo al lanzamiento físico del juego.
-2. **Intelligent Pack Validation & Build Gate**: Pipeline de validación de dependencias, conflictos y entornos previo al empaquetado de exportación.
-
-## 🗺️ Roadmap Estratégico
-
-### Fase 3.1: Ecosistema Interactivo  
+### Fase 3.1: Ecosistema Interactivo ✅
 - [x] **Rule-Based Optimization Engine**: Sistema de optimización automática basado en reglas.
   - Detección de hardware (GPU/RAM/CPU) y perfil de carga de mods
   - Presets automáticos: RTX 3060 + 300 mods → HIGH preset
@@ -189,6 +206,10 @@
   - [x] **Smart Split Export**: Generación validada y separada de `alluser.zip` (client + essential + shaders/resources) y `allhost.zip` (server + essential + datapacks).
   - [x] **Pack Health Score**: Puntuación de salud global (ej. `91/100`) para certificar la integridad del modpack.
 
+---
+
+# 🚧 Roadmap y Próximos Pasos (PENDIENTE)
+
 ### Fase 5: Posicionamiento Profesional 
 - [ ] **Demo Deployable**: Showcase visual o landing funcional.
 - [ ] **Video Demo**: "Problema → Solución → Wow factor".
@@ -219,3 +240,5 @@
 ---
 
 *MIM — Minecraft Intelligent Manager*
+
+# Ian Pontorno <3

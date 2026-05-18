@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import YTDlpWrap from "yt-dlp-wrap";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
+import { getPortableDir } from "@/lib/settings";
 
 // Definimos la ruta del binario en la carpeta standalone del proyecto
 const binDir = path.join(process.cwd(), "standalone");
@@ -134,10 +136,30 @@ export async function GET(request: Request) {
   const pageParam = parseInt(searchParams.get("page") ?? "1", 10);
   const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
 
-  // Asegurar que apuntamos a la sección de videos para evitar destacados/shorts
-  let targetUrl = channelUrl;
-  if (/youtube\.com\/@[^\/]+$/.test(targetUrl.replace(/\/$/, "")) || (targetUrl.includes("@") && !targetUrl.includes("/videos") && !targetUrl.includes("/shorts") && !targetUrl.includes("/streams"))) {
-    targetUrl = targetUrl.replace(/\/$/, "") + "/videos";
+  const type = searchParams.get("type") ?? (channelUrl.includes("/shorts") ? "shorts" : "videos");
+
+  // Asegurar que apuntamos a la sección correcta (videos o shorts)
+  let targetUrl = channelUrl.replace(/\/$/, "");
+  
+  // Extraer el handle base si es una URL completa de YouTube
+  const handleMatch = targetUrl.match(/(https?:\/\/www\.youtube\.com\/@[^\/]+)/);
+  if (handleMatch) {
+    targetUrl = handleMatch[1] + (type === "shorts" ? "/shorts" : "/videos");
+  } else if (!targetUrl.startsWith("http")) {
+    // Si es solo el handle o nombre de usuario
+    targetUrl = `https://www.youtube.com/${targetUrl.startsWith("@") ? "" : "@"}${targetUrl}${type === "shorts" ? "/shorts" : "/videos"}`;
+  }
+
+  const channelHash = crypto.createHash("md5").update(targetUrl).digest("hex").substring(0, 10);
+  const cacheFile = path.join(getPortableDir(), `showcase_cache_${channelHash}_${type}_page_${page}.json`);
+
+  if (fs.existsSync(cacheFile)) {
+    try {
+      const cachedData = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
+      return NextResponse.json(cachedData);
+    } catch (e) {
+      console.error("Error reading cache file", e);
+    }
   }
 
   try {
@@ -145,7 +167,9 @@ export async function GET(request: Request) {
 
     if (limit === 1 && page === 1) {
       const showcase = await scrapeLatestVideo(targetUrl);
-      return NextResponse.json({ mode: "spotlight", showcases: [showcase] });
+      const responseData = { mode: "spotlight", showcases: [showcase] };
+      fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
+      return NextResponse.json(responseData);
     }
 
     const start = (page - 1) * limit + 1;
@@ -179,7 +203,9 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ mode: "archive", showcases: results });
+    const responseData = { mode: "archive", showcases: results };
+    fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
+    return NextResponse.json(responseData);
   } catch (err: any) {
     console.error("[youtube-showcase] Error:", err.message);
     return NextResponse.json(

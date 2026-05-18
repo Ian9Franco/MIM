@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { CirclePlay, ExternalLink, Loader2, AlertTriangle, Download } from "lucide-react";
+import { CirclePlay, ExternalLink, Loader2, AlertTriangle, Download, TvMinimalPlay } from "lucide-react";
 import { useSmoothMarquee } from "@/hooks/useSmoothMarquee";
 import { cachedYoutubeShowcase } from "@/lib/smart-cache";
 import type { ModHit } from "@/lib/types";
@@ -473,7 +473,7 @@ export function FomoYoutubeShowcase({
             backdropFilter: "blur(8px)",
           }}
         >
-          <CirclePlay className="w-2.5 h-2.5" />
+          <TvMinimalPlay className="w-2.5 h-2.5" />
           Showcase · EnderVerse
         </span>
         {/* Subtle refresh indicator when resolving mods in bg */}

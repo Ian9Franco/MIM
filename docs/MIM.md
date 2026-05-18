@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 7.1.0 | **Última actualización:** 2026-05-18
+> **Versión:** 7.2.0 | **Última actualización:** 2026-05-18
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Modos de Aplicación
 
-A partir de la versión 7.1.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+A partir de la versión 7.2.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
@@ -492,11 +492,13 @@ El ecosistema de descubrimiento avanzado (FOMO) actúa como un agregador unifica
 #### 1. Spotlight Feed (Destacados y Novedades)
 Actúa como la vitrina principal de aterrizaje, presentando las recomendaciones curadas de la comunidad (*Community Picks*), proyectos que marcan tendencia, los más descargados y las actualizaciones más recientes extraídas en tiempo real desde las APIs de Modrinth y CurseForge. Esto permite descubrir mods de alta calidad al instante sin abandonar la aplicación.
 
-#### 2. Seguidos (Following & Tracking Dedicado)
-Una sección especializada para monitorizar creadores de contenido y mods individuales favoritos en ambas plataformas.
+#### 2. Seguidos (Following & Showcases)
+Una sección especializada para monitorizar creadores de contenido, mods individuales favoritos y extraer contenido de YouTube.
+- **Pestañas Especializadas**: Organizado en Proyectos, Autores, Historial y Showcases.
 - **Búsqueda Híbrida Inteligente**: Al hacer clic en el botón de búsqueda (lupa) de un autor o mod seguido, FOMO activa de forma autónoma la fuente combinada `"all"` (Ambos) y realiza una consulta exacta (`author:XYZ` o `project:XYZ`).
-- **Comparativa Cruzada**: Muestra las tarjetas del mismo mod de Modrinth y CurseForge lado a lado, permitiendo al usuario contrastar de un vistazo versiones, fechas de actualización y loaders soportados (Forge vs Fabric/NeoForge) para detectar posibles discrepancias entre catálogos.
-- **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado, permitiendo iniciar nuevas búsquedas de forma continua sin requerir la eliminación manual previa del filtro.
+- **YouTube Showcases**: Integración que permite extraer los mods presentados en videos y shorts de YouTube leyendo las descripciones. Los videos se cargan de 5 en 5 para optimizar el rendimiento.
+- **Caché Standalone**: Almacenamiento de datos de uso y videos en archivos JSON en `.MIM/source/.mim-index/` con hashes MD5 para evitar colisiones.
+- **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado.
 
 ### 6.5 Mod Gallery Integration
 Integración de galerías de imágenes en la superposición de detalles de mods (`FomoVersionOverlay`), unificando fuentes de Modrinth y CurseForge.

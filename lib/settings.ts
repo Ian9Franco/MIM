@@ -24,7 +24,7 @@ const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
  *  2. %USERPROFILE%\.mim-index (universal portable fallback for executable/dist/host runs)
  */
 export function getPortableDir(): string {
-  const dMineSource = path.join("D:", ".mine", "source");
+  const dMineSource = path.join("D:", ".MIM", "source");
   if (fs.existsSync(dMineSource)) {
     return path.join(dMineSource, ".mim-index");
   }
@@ -71,8 +71,8 @@ export function getSettings(): MimSettings {
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
       return {
-        sourceBase: data.sourceBase || path.join("D:", ".mine", "source"),
-        buildsBase: data.buildsBase || path.join("D:", ".mine", "builds"),
+        sourceBase: data.sourceBase || path.join("D:", ".MIM", "source"),
+        buildsBase: data.buildsBase || path.join("D:", ".MIM", "builds"),
         downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads"),
         minecraftPath: data.minecraftPath || defaultMinecraft,
         stagingPath: data.stagingPath || defaultStaging,
@@ -84,8 +84,8 @@ export function getSettings(): MimSettings {
     } catch (e) {}
   }
   return {
-    sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".mine", "source"),
-    buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".mine", "builds"),
+    sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".MIM", "source"),
+    buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".MIM", "builds"),
     downloadsPath: path.join(os.homedir(), "Downloads"),
     minecraftPath: defaultMinecraft,
     stagingPath: defaultStaging,

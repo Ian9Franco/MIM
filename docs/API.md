@@ -422,6 +422,43 @@ Módulo API para listar logs y crash reports, leer contenidos de diagnóstico li
 
 ---
 
+### 8.5 YouTube Showcases API
+`GET /api/fomo/youtube-showcase?channel={url}&limit={5}&page={1}&type={videos|shorts}`
+
+Extrae y devuelve los mods detectados en las descripciones de los videos de un canal de YouTube. Utiliza un sistema de caché en disco (`.mim-index/showcase_cache_[HASH].json`) basado en MD5 para evitar peticiones repetitivas.
+
+**Parámetros:**
+- `channel` (Obligatorio): URL o handle del canal.
+- `limit`: Cantidad de videos por página (por defecto 5).
+- `page`: Número de página para paginación.
+- `type`: `videos` o `shorts`.
+
+**Respuesta:**
+```json
+{
+  "showcases": [
+    {
+      "videoId": "XYZ123",
+      "title": "Top 10 Mods...",
+      "thumbnail": "https://...",
+      "modSlugs": ["modrinth:slug", "curseforge:slug"]
+    }
+  ]
+}
+```
+
+---
+
+### 8.6 YouTube Usage API
+`GET /api/fomo/youtube-usage` | `POST /api/fomo/youtube-usage`
+
+Gestiona el conteo de uso de los canales de YouTube para generar la lista de Accesos Rápidos (Top 4).
+
+**GET**: Devuelve el objeto de uso registrado en `showcase_usage.json`.
+**POST**: Incrementa el uso de un canal. Body: `{ "channel": "https://..." }`.
+
+---
+
 ## 📊 Métricas de Optimización
 
 | Escenario | Antes | Ahora | Mejora |

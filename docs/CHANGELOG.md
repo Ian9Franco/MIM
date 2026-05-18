@@ -1,8 +1,24 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.1.0 (Ideas & Plan Completados)  
+> **Versión Actual:** 7.2.0 (FOMO Showcases & Standalone Cache)  
 > **Última actualización:** 2026-05-18
+
+---
+
+## 🚀 Versión 7.1.1 — FOMO Showcases & Standalone Cache (2026-05-18)
+
+### FOMO (YouTube Showcases & Seguidos)
+- **Integración de YouTube Showcases**: Extracción automática de mods desde descripciones de videos y shorts de YouTube.
+- **Carga Perezosa (Lazy Loading)**: Los videos se cargan de 5 en 5 para optimizar el rendimiento y consumo de red.
+- **Gestión de Canales**: Dropdown personalizado con opción de eliminar canales y botones de **Accesos Rápidos** para los 4 canales más usados.
+- **Persistencia de Interfaz**: La app recuerda la subpestaña activa (Proyectos, Autores, Historial, Showcases) al navegar.
+- **Enlace Directo**: Botón para abrir el video de YouTube directamente desde la tarjeta.
+
+### Backend & Optimización (Standalone)
+- **Caché Físico en JSON**: Migración de `localStorage` a archivos JSON en `.MIM/source/.mim-index/` para persistir datos en modo standalone/Electron.
+- **Seguridad contra Colisiones (MD5)**: Uso de hashes MD5 para evitar que canales distintos compartan el mismo archivo de caché.
+- **Rutas .MIM**: Cambio de la carpeta base por defecto de `.mine` a `.MIM` para alinearse con el nombre del proyecto.
 
 ---
 

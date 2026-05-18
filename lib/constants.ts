@@ -60,18 +60,18 @@ export type Loader = (typeof LOADERS)[number];
  * Structure: SOURCE_BASE / [version] / [loader] / [category] / [sub] / *.jar
  *
  * Override via MIM_SOURCE_BASE env var:
- *   MIM_SOURCE_BASE=D:\.mine\source   (Windows default)
+ *   MIM_SOURCE_BASE=D:\.MIM\source   (Windows default)
  *   MIM_SOURCE_BASE=/mnt/mine/source  (Linux / WSL)
  */
 export const SOURCE_BASE: string =
-  process.env.MIM_SOURCE_BASE ?? path.join("D:", "\\.mine", "source");
+  process.env.MIM_SOURCE_BASE ?? path.join("D:", "\\.MIM", "source");
 
 /**
  * Root where finished builds are written.
  * Override via MIM_BUILDS_BASE env var.
  */
 export const BUILDS_BASE: string =
-  process.env.MIM_BUILDS_BASE ?? path.join("D:", "\\.mine", "builds");
+  process.env.MIM_BUILDS_BASE ?? path.join("D:", "\\.MIM", "builds");
 
 /**
  * Marker used internally — the actual Downloads path is resolved at runtime

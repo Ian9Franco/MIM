@@ -155,7 +155,7 @@ export async function GET(request: Request) {
   if (!fs.existsSync(cacheDir)) {
     fs.mkdirSync(cacheDir, { recursive: true });
   }
-  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_page_${page}.json`);
+  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_page_${page}_limit_${limit}.json`);
 
   if (fs.existsSync(cacheFile)) {
     try {

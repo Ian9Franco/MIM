@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.3.0 (FOMO Showcases & Standalone Cache)  
+> **Versión Actual:** 7.3.1 (FOMO Showcases & Standalone Cache)  
 > **Última actualización:** 2026-05-19
 
 ---

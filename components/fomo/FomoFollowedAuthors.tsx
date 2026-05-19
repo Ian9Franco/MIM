@@ -82,8 +82,10 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
   const [expandedVideo, setExpandedVideo] = React.useState<string | null>(null);
   const [videos, setVideos] = React.useState<any[]>([]);
   const [shorts, setShorts] = React.useState<any[]>([]);
-  const [videoPage, setVideoPage] = React.useState(1);
-  const [shortsPage, setShortsPage] = React.useState(1);
+  const [videoCursor, setVideoCursor] = React.useState(1);
+  const [shortsCursor, setShortsCursor] = React.useState(1);
+  const [nextVideoCursor, setNextVideoCursor] = React.useState(1);
+  const [nextShortsCursor, setNextShortsCursor] = React.useState(1);
   const [hasMoreVideos, setHasMoreVideos] = React.useState(true);
   const [hasMoreShorts, setHasMoreShorts] = React.useState(true);
 
@@ -127,6 +129,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
   }, []);
 
   const prevChannelRef = React.useRef(activeChannel);
+  const lastFetchRef = React.useRef("");
 
   React.useEffect(() => {
     let ignore = false;
@@ -135,41 +138,51 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     if (prevChannelRef.current !== activeChannel) {
       setVideos([]);
       setShorts([]);
-      setVideoPage(1);
-      setShortsPage(1);
+      setVideoCursor(1);
+      setShortsCursor(1);
+      setNextVideoCursor(1);
+      setNextShortsCursor(1);
       setHasMoreVideos(true);
       setHasMoreShorts(true);
       prevChannelRef.current = activeChannel;
+      lastFetchRef.current = "";
       return;
     }
 
     const isVideos = showcaseType === "videos";
     const currentList = isVideos ? videos : shorts;
-    const currentPage = isVideos ? videoPage : shortsPage;
+    const currentCursor = isVideos ? videoCursor : shortsCursor;
     const hasMore = isVideos ? hasMoreVideos : hasMoreShorts;
+    const fetchKey = `${activeChannel}_${showcaseType}_${currentCursor}`;
 
-    if (subTab === "showcases" && (currentList.length === 0 || currentPage > 1) && hasMore) {
+    if (subTab === "showcases" && hasMore && lastFetchRef.current !== fetchKey) {
+      if (currentCursor === 1 && currentList.length > 0) return;
+      
+      lastFetchRef.current = fetchKey;
       setLoadingShowcases(true);
-      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=5&page=${currentPage}&type=${showcaseType}`)
+      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=5&cursor=${currentCursor}&type=${showcaseType}`)
         .then(res => res.json())
         .then(data => {
           if (ignore) return;
           
           const newItems = data.showcases || [];
+          const nextCursor = data.nextCursor || currentCursor + 5;
           if (isVideos) {
             setVideos(prev => {
-              const next = currentPage === 1 ? newItems : [...prev, ...newItems];
+              const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
               localStorage.setItem(`fomo_videos_${activeChannel}`, JSON.stringify(next));
               return next;
             });
-            setHasMoreVideos(newItems.length === 5);
+            setNextVideoCursor(nextCursor);
+            setHasMoreVideos(data.hasMore !== undefined ? data.hasMore : newItems.length === 5);
           } else {
             setShorts(prev => {
-              const next = currentPage === 1 ? newItems : [...prev, ...newItems];
+              const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
               localStorage.setItem(`fomo_shorts_${activeChannel}`, JSON.stringify(next));
               return next;
             });
-            setHasMoreShorts(newItems.length === 5);
+            setNextShortsCursor(nextCursor);
+            setHasMoreShorts(data.hasMore !== undefined ? data.hasMore : newItems.length === 5);
           }
           setLoadingShowcases(false);
         })
@@ -183,7 +196,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     return () => {
       ignore = true;
     };
-  }, [subTab, videoPage, shortsPage, activeChannel, showcaseType, videos, shorts, hasMoreVideos, hasMoreShorts]);
+  }, [subTab, videoCursor, shortsCursor, activeChannel, showcaseType, hasMoreVideos, hasMoreShorts, videos, shorts]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
@@ -503,9 +516,11 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
             {(() => {
               const showcasesList = showcaseType === "videos" ? videos : shorts;
               const hasMore = showcaseType === "videos" ? hasMoreVideos : hasMoreShorts;
-              const page = showcaseType === "videos" ? videoPage : shortsPage;
-              const setPage = showcaseType === "videos" ? setVideoPage : setShortsPage;
-              const loading = loadingShowcases && page === 1;
+              const cursor = showcaseType === "videos" ? videoCursor : shortsCursor;
+              // setCursor is not needed here as we update it in the fetch success.
+              // We just need a way to trigger the next fetch. But wait, we can't trigger next fetch if we don't have a state to update.
+              // The "Load more" button is handled below...
+              const loading = loadingShowcases && cursor === 1;
 
               if (loading) {
                 return <FomoSkeleton variant="list" message={`Cargando ${showcaseType}...`} count={5} />;
@@ -636,7 +651,13 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                   
                   {hasMore && (
                     <button
-                      onClick={() => setPage(prev => prev + 1)}
+                      onClick={() => {
+                        if (showcaseType === "videos") {
+                          setVideoCursor(nextVideoCursor);
+                        } else {
+                          setShortsCursor(nextShortsCursor);
+                        }
+                      }}
                       disabled={loadingShowcases}
                       className="w-full p-3 rounded-2xl border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-sm font-bold mt-4"
                     >

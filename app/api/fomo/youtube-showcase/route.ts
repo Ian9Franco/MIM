@@ -133,8 +133,8 @@ export async function GET(request: Request) {
   const channelUrl = searchParams.get("channel") ?? "https://www.youtube.com/@EnderVerseMC";
   const limitParam = parseInt(searchParams.get("limit") ?? "1", 10);
   const limit = isNaN(limitParam) || limitParam < 1 ? 1 : Math.min(limitParam, 20);
-  const pageParam = parseInt(searchParams.get("page") ?? "1", 10);
-  const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+  const cursorParam = parseInt(searchParams.get("cursor") ?? searchParams.get("page") ?? "1", 10);
+  const cursor = isNaN(cursorParam) || cursorParam < 1 ? 1 : cursorParam;
 
   const type = searchParams.get("type") ?? (channelUrl.includes("/shorts") ? "shorts" : "videos");
 
@@ -155,7 +155,7 @@ export async function GET(request: Request) {
   if (!fs.existsSync(cacheDir)) {
     fs.mkdirSync(cacheDir, { recursive: true });
   }
-  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_page_${page}_limit_${limit}.json`);
+  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_cursor_${cursor}_limit_${limit}.json`);
 
   if (fs.existsSync(cacheFile)) {
     try {
@@ -169,17 +169,20 @@ export async function GET(request: Request) {
   try {
     await ensureYtDlp();
 
-    if (limit === 1 && page === 1) {
+    if (limit === 1 && cursor === 1) {
       const showcase = await scrapeLatestVideo(targetUrl);
       const responseData = { mode: "spotlight", showcases: [showcase] };
       fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
       return NextResponse.json(responseData);
     }
 
-    const start = (page - 1) * limit + 1;
-    const end = page * limit;
 
-    // Modo Archivo (Seguidos) — paginado
+    // To fulfill the limit, we fetch a larger window from the playlist (e.g. 15 items).
+    // We will stop processing once we have exactly `limit` successful items.
+    const start = cursor;
+    const end = cursor + 14; 
+
+    // Modo Archivo (Seguidos) — paginado por cursor
     const flatOut = await ytDlpWrap.execPromise([
       targetUrl,
       "--flat-playlist",
@@ -191,10 +194,14 @@ export async function GET(request: Request) {
     const lines = flatOut.trim().split("\n").filter(Boolean);
     const videoEntries = lines.map((line) => JSON.parse(line));
 
-    const CONCURRENCY = 3;
     const results: any[] = [];
+    let itemsProcessed = 0;
 
+    // Resolve in chunks of 3, but stop as soon as we hit the limit.
+    const CONCURRENCY = 3;
     for (let i = 0; i < videoEntries.length; i += CONCURRENCY) {
+      if (results.length >= limit) break;
+
       const batch = videoEntries.slice(i, i + CONCURRENCY);
       const settled = await Promise.allSettled(
         batch.map((entry) => {
@@ -202,12 +209,24 @@ export async function GET(request: Request) {
           return scrapeVideoDetail(vUrl);
         })
       );
-      for (const res of settled) {
-        if (res.status === "fulfilled") results.push(res.value);
+
+      for (let j = 0; j < settled.length; j++) {
+        itemsProcessed++;
+        const res = settled[j];
+        if (res.status === "fulfilled") {
+          results.push(res.value);
+          if (results.length === limit) {
+            // We reached the limit, stop adding more even if the batch had more successes.
+            break;
+          }
+        }
       }
     }
 
-    const responseData = { mode: "archive", showcases: results };
+    const nextCursor = cursor + itemsProcessed;
+    const hasMore = videoEntries.length > 0 && itemsProcessed < videoEntries.length || results.length === limit;
+
+    const responseData = { mode: "archive", showcases: results, nextCursor, hasMore };
     fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
     return NextResponse.json(responseData);
   } catch (err: any) {

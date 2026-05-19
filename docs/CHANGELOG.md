@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.4.1 (SWR Caching, Video Dates & Volume Controls)  
+> **Versión Actual:** 7.4.2 (SWR Caching, Video Dates & Volume Controls)  
 > **Última actualización:** 2026-05-19
 
 ---

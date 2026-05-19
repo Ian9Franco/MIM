@@ -4,10 +4,16 @@ export interface CompatibilityPrediction {
   label: string;
   reason: string;
 }
-
 export function predictConnectorCompatibility(title: string, categories: string[] = []): CompatibilityPrediction {
   const t = title.toLowerCase();
-  const cats = categories.map(c => c.toLowerCase());
+  const cats = (categories || []).map((c: any) => {
+    if (typeof c === "string") return c.toLowerCase();
+    if (c && typeof c === "object") {
+      if (typeof c.name === "string") return c.name.toLowerCase();
+      if (typeof c.slug === "string") return c.slug.toLowerCase();
+    }
+    return "";
+  }).filter(Boolean);
 
   // 1. Caso crítico: Ecosistema Sodium/Iris (Incompatibles por diseño o requieren ports nativos)
   if (

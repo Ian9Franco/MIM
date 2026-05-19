@@ -275,7 +275,11 @@ function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = fals
       <div ref={innerRef} className="flex flex-col gap-3 w-full px-2 pb-2">
         {duplicatedMods.map((mod, i) => {
           const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
-          const loaderTag = mod.categories?.find(c => knownLoaders.includes(c.toLowerCase())) || globalLoader;
+          const loaderTag = mod.categories?.map((c: any) => {
+            if (typeof c === "string") return c;
+            if (c && typeof c === "object" && typeof c.name === "string") return c.name;
+            return "";
+          }).find((c: string) => c && knownLoaders.includes(c.toLowerCase())) || globalLoader;
           const pType = mod.projectType === "mod" ? "Mod" : mod.projectType === "resourcepack" ? "Texture" : mod.projectType === "shader" ? "Shader" : mod.projectType;
 
           return (

@@ -258,7 +258,14 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
 
   const getProjectTypeIcon = (type: string, categories: string[] = []) => {
     const t = type.toLowerCase();
-    const cats = categories.map(c => c.toLowerCase());
+    const cats = categories.map((c: any) => {
+      if (typeof c === "string") return c.toLowerCase();
+      if (c && typeof c === "object") {
+        if (typeof c.name === "string") return c.name.toLowerCase();
+        if (typeof c.slug === "string") return c.slug.toLowerCase();
+      }
+      return "";
+    }).filter(Boolean);
     
     if (t === "resourcepack") return <Layers className="w-3.5 h-3.5" />;
     if (t === "shader") return <Glasses className="w-3.5 h-3.5" />;
@@ -306,7 +313,14 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
                 {getProjectTypeIcon(projectType, mod.categories)}
                 {projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase()}
               </button>
-              {mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack") && (
+              {mod.categories?.map((c: any) => {
+                if (typeof c === "string") return c.toLowerCase();
+                if (c && typeof c === "object") {
+                  if (typeof c.name === "string") return c.name.toLowerCase();
+                  if (typeof c.slug === "string") return c.slug.toLowerCase();
+                }
+                return "";
+              }).includes("datapack") && (
                 <button 
                   onClick={() => onSelectProjectType?.("datapack")}
                   className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
@@ -412,8 +426,11 @@ export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { 
   // If no loaders found (common in CurseForge hits), check categories
   if (loaderSet.size === 0 || (loaderSet.size === 1 && loaderSet.has("datapack"))) {
     const loaderKeywords = ["fabric", "forge", "neoforge", "quilt", "bukkit", "spigot", "paper"];
-    mod.categories?.forEach((c: string) => {
-      const cat = c.toLowerCase();
+    mod.categories?.forEach((c: any) => {
+      const cat = typeof c === "string" 
+        ? c.toLowerCase() 
+        : (c && typeof c === "object" && typeof c.name === "string" ? c.name.toLowerCase() : "");
+      if (!cat) return;
       loaderKeywords.forEach(k => {
         if (cat.includes(k)) loaderSet.add(k);
       });
@@ -435,7 +452,12 @@ export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { 
         <div className="flex flex-wrap gap-1 max-w-[160px]">
           {(() => {
             const noise = ["fabric", "forge", "neoforge", "quilt", "datapack", "mod", "client", "server", "universal", "locale", "minecraft", "modded", "babric"];
-            const filtered = mod.categories?.filter((c: string) => !noise.includes(c.toLowerCase())) || [];
+            const filtered = mod.categories?.filter((c: any) => {
+              const cat = typeof c === "string" 
+                ? c.toLowerCase() 
+                : (c && typeof c === "object" && typeof c.name === "string" ? c.name.toLowerCase() : "");
+              return cat && !noise.includes(cat);
+            }).map((c: any) => typeof c === "string" ? c : (c.name || "")) || [];
             
             return (
               <>

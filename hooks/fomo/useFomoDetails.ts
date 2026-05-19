@@ -51,11 +51,22 @@ export function useFomoDetails(source: string, loader: string, projectType: stri
           downloads = Number(downloads) || 0;
         }
         
+        const rawCategories = data.categories || mod.categories || [];
+        const normalizedCategories = Array.from(new Set(rawCategories.map((c: any) => {
+          if (typeof c === "string") return c;
+          if (c && typeof c === "object") {
+            if (typeof c.name === "string") return c.name;
+            if (typeof c.slug === "string") return c.slug;
+          }
+          return "";
+        }).filter(Boolean)));
+
         const fullMod = { 
           ...mod, 
           ...data, 
           author,
-          downloads
+          downloads,
+          categories: normalizedCategories
         };
         setSelectingVersionFor(fullMod);
       }
@@ -80,7 +91,16 @@ export function useFomoDetails(source: string, loader: string, projectType: stri
       const res = await fetch(`/api/modrinth/project?projectId=${id}`);
       if (res.ok) {
         const data = await res.json();
-        setSelectingVersionFor(data);
+        const rawCategories = data.categories || [];
+        const normalizedCategories = Array.from(new Set(rawCategories.map((c: any) => {
+          if (typeof c === "string") return c;
+          if (c && typeof c === "object") {
+            if (typeof c.name === "string") return c.name;
+            if (typeof c.slug === "string") return c.slug;
+          }
+          return "";
+        }).filter(Boolean)));
+        setSelectingVersionFor({ ...data, categories: normalizedCategories });
       }
     } catch (e) {
       console.error(e);

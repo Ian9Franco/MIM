@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-7.4.2-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.4.3-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -204,7 +204,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v7.4.2 (Actual — Mayo 2026)**
+### ✅ **v7.4.3 (Actual — Mayo 2026)**
 - 📺 **Showcase Native Player**: Reproductor flotante integrado con inercias físicas, controles de velocidad y volumen analógico.
 - 🌐 **Soporte de Canales Universal**: Normalización y carga de cualquier URL de YouTube (canales no Minecraft).
 - 🔄 **SWR Cache & Background Sync**: Carga instantánea de videos y actualización silenciosa.

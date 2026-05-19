@@ -370,9 +370,14 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                               ? nameLower.includes("datapack") 
                               : (selectedProjectType === "mod" ? !nameLower.includes("datapack") : true);
                           } else {
-                            // Si no hay versiones específicas con la palabra "datapack",
-                            // pero el mod tiene la categoría "datapack" (como Terralith), las mostramos todas.
-                            const isHybrid = mod.categories?.map((c: string) => c.toLowerCase()).includes("datapack");
+                            const isHybrid = mod.categories?.map((c: any) => {
+                              if (typeof c === "string") return c.toLowerCase();
+                              if (c && typeof c === "object") {
+                                if (typeof c.name === "string") return c.name.toLowerCase();
+                                if (typeof c.slug === "string") return c.slug.toLowerCase();
+                              }
+                              return "";
+                            }).includes("datapack");
                             if (isHybrid && selectedProjectType === "datapack") {
                               matchesType = true; // Mostramos todas porque el archivo sirve para ambos
                             }

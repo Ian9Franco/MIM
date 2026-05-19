@@ -137,6 +137,7 @@ function YoutubeTriggerCard({
   modCount: number;
   theme?: string;
 }) {
+  const [imgError, setImgError] = useState(false);
   const isModern = theme === "modern";
   const isVampire = theme === "vampire";
 
@@ -167,13 +168,27 @@ function YoutubeTriggerCard({
       title={showcase.title}
     >
       {/* Thumbnail */}
-      <div className="relative h-[140px] overflow-hidden rounded-t-[calc(1.5rem-1.5px)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={showcase.thumbnail}
-          alt={showcase.title}
-          className="w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity duration-300"
-        />
+      <div className="relative h-[140px] overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40">
+        {!imgError && showcase.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={showcase.thumbnail}
+            alt={showcase.title}
+            className="w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity duration-300"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
+               style={{
+                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+                 backgroundColor: cardBg
+               }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-tr from-red-950/20 via-transparent to-black/40 pointer-events-none" />
+            <TvMinimalPlay className="w-10 h-10 text-red-500/50 group-hover:text-red-500/80 group-hover:scale-110 transition-all duration-500" />
+            <span className="text-[8px] font-black uppercase tracking-widest text-white/30 mt-1">Showcase Offline</span>
+          </div>
+        )}
         {/* Overlay gradient */}
         <div
           className="absolute inset-0"

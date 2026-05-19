@@ -23,9 +23,20 @@ export const FomoModCard = memo(function FomoModCard({
   isSelected, onToggleSelect, sinytraActive,
   riskScore, riskLevel, onSecurityDetails,
 }: any) {
+  const categories = React.useMemo(() => {
+    return (mod.categories || []).map((c: any) => {
+      if (typeof c === "string") return c;
+      if (c && typeof c === "object") {
+        if (typeof c.name === "string") return c.name;
+        if (typeof c.slug === "string") return c.slug;
+      }
+      return "";
+    }).filter(Boolean);
+  }, [mod.categories]);
+
   // Identificación del proveedor y exclusividad de loader
   const isCF = mod._source === "curseforge";
-  const isFabricOnly = mod.categories?.includes("fabric") && !mod.categories?.includes("forge");
+  const isFabricOnly = categories.includes("fabric") && !categories.includes("forge");
 
   // Disponibilidad en ambas plataformas
   const onModrinth = mod.availability?.modrinth ?? !isCF;
@@ -42,7 +53,7 @@ export const FomoModCard = memo(function FomoModCard({
     if (pt === "resourcepack") foundTypes.add("textura");
     else foundTypes.add(pt);
   }
-  mod.categories?.forEach((c: string) => {
+  categories.forEach((c: string) => {
     const lc = c.toLowerCase();
     if (potentialTypes.includes(lc)) {
       if (lc === "resourcepack") foundTypes.add("textura");
@@ -61,10 +72,10 @@ export const FomoModCard = memo(function FomoModCard({
     return a.localeCompare(b);
   });
 
-  const modLoaders = mod.categories?.filter((c: string) => knownLoaders.includes(c.toLowerCase())) || [];
+  const modLoaders = categories.filter((c: string) => knownLoaders.includes(c.toLowerCase())) || [];
   
   // Filtrar categorías que no sean ni loaders ni tipos base
-  const otherCategories = mod.categories?.filter((c: string) => 
+  const otherCategories = categories.filter((c: string) => 
     !knownLoaders.includes(c.toLowerCase()) && 
     !potentialTypes.includes(c.toLowerCase()) &&
     c.toLowerCase() !== "resourcepack"
@@ -132,6 +143,21 @@ export const FomoModCard = memo(function FomoModCard({
         {/* Overlay degradado para texto si se necesita, o simplemente sombra interior */}
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220,14%,10%)] via-transparent to-transparent z-20 pointer-events-none" />
 
+        {/* Brand / Platform Badge (Top-Left) */}
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-1 px-1.5 py-0.5 rounded border backdrop-blur-md bg-black/60 border-white/10 shadow-lg select-none">
+          {isOnBoth ? (
+            <div className="flex items-center gap-1" title="Disponible en ambas plataformas">
+              <ModrinthIcon />
+              <CurseForgeIcon />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1" title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}>
+              {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
+              <span className="text-[8px] font-black uppercase tracking-wider text-white/80">Excl.</span>
+            </div>
+          )}
+        </div>
+
         {/* Botones de acción flotantes (Opción A del plan) */}
         <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
           <button 
@@ -186,7 +212,7 @@ export const FomoModCard = memo(function FomoModCard({
         {/* Predicción de Compatibilidad Asistida (Sinytra) */}
         {sinytraActive && isFabricOnly && (
           <div className="mb-3 shrink-0">
-            <FomoCompatibilityBadge title={mod.title} categories={mod.categories} />
+            <FomoCompatibilityBadge title={mod.title} categories={categories} />
           </div>
         )}
 
@@ -224,9 +250,9 @@ export const FomoModCard = memo(function FomoModCard({
               <Download className="w-3.5 h-3.5" /> {formatNumber(mod.downloads)}
             </div>
 
-            {/* Loaders (Iconos Locales) en formación 2x2 */}
+            {/* Loaders (Iconos Locales) en una sola fila (1-1-1-1) */}
             {modLoaders.length > 0 && (
-              <div className="grid grid-cols-2 gap-0.5 shrink-0" title={`Loaders: ${modLoaders.join(", ")}`}>
+              <div className="flex gap-1 shrink-0" title={`Loaders: ${modLoaders.join(", ")}`}>
                 {modLoaders.map((loader: string) => {
                   const l = loader.toLowerCase();
                   let src = "";
@@ -237,8 +263,8 @@ export const FomoModCard = memo(function FomoModCard({
                   
                   if (src) {
                     return (
-                      <div key={loader} className="bg-foreground/10 p-0.5 rounded-sm">
-                        <img src={src} alt={loader} title={loader} className="w-4 h-4 object-contain opacity-90 hover:opacity-100 transition-opacity cursor-help" />
+                      <div key={loader} className="bg-foreground/10 p-0.5 rounded-sm flex items-center justify-center">
+                        <img src={src} alt={loader} title={loader} className="w-3.5 h-3.5 object-contain opacity-90 hover:opacity-100 transition-opacity cursor-help" />
                       </div>
                     );
                   }
@@ -255,26 +281,6 @@ export const FomoModCard = memo(function FomoModCard({
           </div>
           
           <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            {isOnBoth ? (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/10 bg-foreground/5 opacity-80 shrink-0" title="Disponible en ambas plataformas">
-                <ModrinthIcon />
-                <CurseForgeIcon />
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border opacity-60 shrink-0"
-                style={{ 
-                  background: isCF ? "rgba(244,115,22,0.1)" : "rgba(27,214,114,0.1)",
-                  borderColor: isCF ? "rgba(244,115,22,0.2)" : "rgba(27,214,114,0.2)"
-                }}
-                title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}
-              >
-                {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
-                <span className="text-[8px] font-black uppercase tracking-tight hidden sm:inline"
-                  style={{ color: isCF ? "rgba(251,146,60,0.8)" : "rgba(27,214,114,0.8)" }}
-                >Excl.</span>
-              </div>
-            )}
-            
             <button 
               onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }} 
               className="px-2 py-1.5 sm:px-2.5 rounded-lg bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 hover:border-foreground/20 transition-all flex items-center gap-1 text-foreground/60 hover:text-foreground font-medium shrink-0"

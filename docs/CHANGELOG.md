@@ -1,8 +1,21 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.3.2 (FOMO Showcases & Standalone Cache)  
+> **Versión Actual:** 7.4.1 (SWR Caching, Video Dates & Volume Controls)  
 > **Última actualización:** 2026-05-19
+
+---
+
+## 🚀 Versión 7.4.0 — SWR Caching, Video Dates & Volume Controls (2026-05-19)
+
+### FOMO (YouTube Showcases & Reproductor)
+- **SWR (Stale-While-Revalidate) de Showcases**: Carga instantánea de videos y shorts cacheados localmente en `localStorage` al cambiar de canal o pestaña, evitando pantallas de carga eternas y realizando una sincronización silenciosa en segundo plano.
+- **Barra de Carga Superior (Trickle Progress Bar)**: Indicador visual premium con degradado neón (`from-red-500 via-orange-500 to-red-600`) que simula el progreso no lineal al cargar contenido y se desvanece de forma fluida (fade-out) al 100%.
+- **Sincronización en Segundo Plano**: Indicador animado `🔄 Actualizando...` que notifica al usuario si se está refrescando la lista de videos silenciosamente por detrás.
+- **Control de Volumen Analógico**: Deslizador de volumen fluido con soporte completo para silenciado directo (Mute) que recuerda el último nivel, integrado al 100% con la API del reproductor de YouTube.
+- **Fecha de Creación de Videos**: Parseador automático de la fecha nativa de carga (`YYYYMMDD` ➔ `DD mes YYYY`) para mostrar el momento exacto de publicación tanto en el Spotlight central como en las listas secundarias.
+- **Compatibilidad de Canales Universal**: Normalización robusta en backend para cualquier URL de YouTube (canales no-Minecraft, IDs `/channel/`, alias legacy, etc.).
+- **Fallback de Mods Vacío**: Tarjeta informativa premium y contextual para videos sin mods detectados, permitiendo la reproducción multimedia nativa limpia.
 
 ---
 

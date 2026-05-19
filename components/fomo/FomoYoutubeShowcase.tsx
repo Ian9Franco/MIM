@@ -114,6 +114,16 @@ async function resolveSlugs(slugs: string[]): Promise<ResolvedShowcaseMod[]> {
   return results;
 }
 
+function formatYoutubeDate(rawDate?: string): string {
+  if (!rawDate || rawDate.length !== 8) return "";
+  const year = rawDate.substring(0, 4);
+  const monthIdx = parseInt(rawDate.substring(4, 6), 10) - 1;
+  const day = parseInt(rawDate.substring(6, 8), 10);
+  
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${day} ${months[monthIdx] || ""} ${year}`;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Trigger Card (miniatura del video de YouTube)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,11 +149,15 @@ function YoutubeTriggerCard({
   const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 90%)";
   const statColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "rgba(255,255,255,0.3)";
 
+  const handlePlay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: showcase.videoId } }));
+  };
+
   return (
     <a
       href={showcase.videoUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+      onClick={handlePlay}
       className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
       style={{
         border: cardBorder,
@@ -172,8 +186,12 @@ function YoutubeTriggerCard({
           <CirclePlay className="w-2.5 h-2.5 text-white" />
           <span className="text-[8px] font-black text-white uppercase tracking-wider">YouTube</span>
         </div>
-        {/* External link icon */}
-        <ExternalLink className="absolute top-2 right-2 w-3 h-3 text-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* Hover Play Button Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+          <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300">
+            <CirclePlay className="w-5 h-5 ml-0.5 fill-white" />
+          </div>
+        </div>
       </div>
 
       {/* Text zone */}
@@ -184,7 +202,7 @@ function YoutubeTriggerCard({
             className="text-[7.5px] font-black uppercase tracking-widest"
             style={{ color: labelColor }}
           >
-            ◇ Showcase
+            ◇ Showcase {showcase.publishedAt ? `• ${formatYoutubeDate(showcase.publishedAt)}` : ""}
           </span>
         </div>
 

@@ -13,6 +13,16 @@ import { FollowedProjectCard, FollowedAuthorCard } from "./FomoFollowedComponent
 import { FomoSkeleton } from "./FomoSkeleton";
 import { PillToggleGroup } from "../ui/primitives";
 
+function formatYoutubeDate(rawDate?: string): string {
+  if (!rawDate || rawDate.length !== 8) return "";
+  const year = rawDate.substring(0, 4);
+  const monthIdx = parseInt(rawDate.substring(4, 6), 10) - 1;
+  const day = parseInt(rawDate.substring(6, 8), 10);
+  
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${day} ${months[monthIdx] || ""} ${year}`;
+}
+
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
   onSearchProject?: (title: string, type?: string, source?: string, loader?: string, version?: string) => void;
@@ -79,6 +89,40 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
 
   const [showcaseType, setShowcaseType] = React.useState<"videos" | "shorts">("videos");
   const [loadingShowcases, setLoadingShowcases] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
+  const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    if (loadingShowcases) {
+      setProgress(10);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 95;
+          if (prev >= 80) return prev + 0.4;
+          if (prev >= 50) return prev + 1.2;
+          return prev + 3.8;
+        });
+      }, 100);
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setProgress(prev => {
+        if (prev > 0) return 100;
+        return 0;
+      });
+      const t = setTimeout(() => {
+        setProgress(0);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+    return () => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, [loadingShowcases]);
+
   const [expandedVideo, setExpandedVideo] = React.useState<string | null>(null);
   const [videos, setVideos] = React.useState<any[]>([]);
   const [shorts, setShorts] = React.useState<any[]>([]);
@@ -128,36 +172,40 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
       .catch(e => console.error("Error loading channels", e));
   }, []);
 
-  const prevChannelRef = React.useRef(activeChannel);
   const lastFetchRef = React.useRef("");
+
+  // Cargar caché local y resetear estados en canal activo al montar/cambiar
+  React.useEffect(() => {
+    const cachedV = localStorage.getItem(`fomo_videos_${activeChannel}`);
+    const cachedS = localStorage.getItem(`fomo_shorts_${activeChannel}`);
+    if (cachedV) {
+      try { setVideos(JSON.parse(cachedV)); } catch (e) { setVideos([]); }
+    } else {
+      setVideos([]);
+    }
+    if (cachedS) {
+      try { setShorts(JSON.parse(cachedS)); } catch (e) { setShorts([]); }
+    } else {
+      setShorts([]);
+    }
+    setVideoCursor(1);
+    setShortsCursor(1);
+    setNextVideoCursor(1);
+    setNextShortsCursor(1);
+    setHasMoreVideos(true);
+    setHasMoreShorts(true);
+    lastFetchRef.current = "";
+  }, [activeChannel]);
 
   React.useEffect(() => {
     let ignore = false;
-    
-    // Si cambió el canal, reseteamos todo y salimos para que el próximo render use las listas vacías
-    if (prevChannelRef.current !== activeChannel) {
-      setVideos([]);
-      setShorts([]);
-      setVideoCursor(1);
-      setShortsCursor(1);
-      setNextVideoCursor(1);
-      setNextShortsCursor(1);
-      setHasMoreVideos(true);
-      setHasMoreShorts(true);
-      prevChannelRef.current = activeChannel;
-      lastFetchRef.current = "";
-      return;
-    }
 
     const isVideos = showcaseType === "videos";
-    const currentList = isVideos ? videos : shorts;
     const currentCursor = isVideos ? videoCursor : shortsCursor;
     const hasMore = isVideos ? hasMoreVideos : hasMoreShorts;
     const fetchKey = `${activeChannel}_${showcaseType}_${currentCursor}`;
 
     if (subTab === "showcases" && hasMore && lastFetchRef.current !== fetchKey) {
-      if (currentCursor === 1 && currentList.length > 0) return;
-      
       lastFetchRef.current = fetchKey;
       setLoadingShowcases(true);
       fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=5&cursor=${currentCursor}&type=${showcaseType}`)
@@ -196,7 +244,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     return () => {
       ignore = true;
     };
-  }, [subTab, videoCursor, shortsCursor, activeChannel, showcaseType, hasMoreVideos, hasMoreShorts, videos, shorts]);
+  }, [subTab, videoCursor, shortsCursor, activeChannel, showcaseType, hasMoreVideos, hasMoreShorts]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
@@ -487,6 +535,23 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ channels: next })
                             });
+                          } else {
+                            if (activeChannel === url) {
+                              // Si ya es el canal activo, forzar recarga limpia
+                              setVideos([]);
+                              setShorts([]);
+                              setVideoCursor(1);
+                              setShortsCursor(1);
+                              setNextVideoCursor(1);
+                              setNextShortsCursor(1);
+                              setHasMoreVideos(true);
+                              setHasMoreShorts(true);
+                              lastFetchRef.current = "";
+                            } else {
+                              // Si está en la lista pero no es activo, cambiar a él
+                              setActiveChannel(url);
+                              trackChannelUsage(url);
+                            }
                           }
                           e.currentTarget.value = "";
                         }
@@ -497,30 +562,51 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
               </div>
             </div>
 
+            {/* Top Loading Progress Bar */}
+            <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-4">
+              <div 
+                className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-red-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+                style={{ 
+                  width: `${progress}%`,
+                  opacity: progress > 0 && progress < 100 ? 1 : 0,
+                  transition: progress === 100 ? "width 0.2s, opacity 0.5s 0.2s" : "width 0.4s ease-out"
+                }}
+              />
+            </div>
+
             {/* Toggle Videos/Shorts */}
-            <div className="flex gap-2 mb-4 bg-white/5 p-1 rounded-xl w-fit border border-white/5">
-              <button 
-                onClick={() => setShowcaseType("videos")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${showcaseType === "videos" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
-              >
-                Videos
-              </button>
-              <button 
-                onClick={() => setShowcaseType("shorts")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${showcaseType === "shorts" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
-              >
-                Shorts
-              </button>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex gap-2 bg-white/5 p-1 rounded-xl w-fit border border-white/5">
+                <button 
+                  onClick={() => setShowcaseType("videos")}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
+                >
+                  Videos
+                </button>
+                <button 
+                  onClick={() => setShowcaseType("shorts")}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${showcaseType === "shorts" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
+                >
+                  Shorts
+                </button>
+              </div>
+              
+              {/* SWR Syncing Indicator */}
+              {loadingShowcases && (showcaseType === "videos" ? videos : shorts).length > 0 && (
+                <div className="flex items-center gap-1.5 opacity-55 text-[10px] font-mono select-none mr-2">
+                  <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+                  <span>Actualizando...</span>
+                </div>
+              )}
             </div>
 
             {(() => {
               const showcasesList = showcaseType === "videos" ? videos : shorts;
               const hasMore = showcaseType === "videos" ? hasMoreVideos : hasMoreShorts;
               const cursor = showcaseType === "videos" ? videoCursor : shortsCursor;
-              // setCursor is not needed here as we update it in the fetch success.
-              // We just need a way to trigger the next fetch. But wait, we can't trigger next fetch if we don't have a state to update.
-              // The "Load more" button is handled below...
-              const loading = loadingShowcases && cursor === 1;
+              
+              // Solo mostrar skeleton si no hay nada cargado aún en caché
+              const loading = loadingShowcases && cursor === 1 && showcasesList.length === 0;
 
               if (loading) {
                 return <FomoSkeleton variant="list" message={`Cargando ${showcaseType}...`} count={5} />;
@@ -549,101 +635,111 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{video.title}</p>
-                          <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>{video.modSlugs.length} mods detectados</p>
+                          <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>
+                            {video.publishedAt ? `${formatYoutubeDate(video.publishedAt)} • ` : ""}{video.modSlugs.length} mods detectados
+                          </p>
                         </div>
-                        <a 
-                          href={`https://www.youtube.com/watch?v=${video.videoId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[10px] font-black px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase hover:bg-red-500/20 transition-all flex items-center gap-1"
-                          title="Ver video en YouTube"
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
+                          }}
+                          className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase hover:bg-red-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          title="Reproducir video en la app"
                         >
-                          YouTube <ExternalLink className="w-3 h-3" />
-                        </a>
+                          Reproducir <TvMinimalPlay className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                       
-                      {/* Expandable Grid */}
+                      {/* Expandable Grid / Fallback info */}
                       {expandedVideo === video.videoId && (
                         <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
-                          <h4 className="font-headline text-xs mb-2 flex items-center gap-2"><Puzzle className="w-3.5 h-3.5 text-primary" />Mods Detectados</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {video.modSlugs.map((slugStr: string, sIdx: number) => {
-                              const parts = slugStr.split(":");
-                              const source = parts[0];
-                              const type = parts.length >= 3 ? parts[1] : "mod";
-                              const slug = parts.length >= 3 ? parts[2] : parts[1];
-                              const loader = parts.length >= 4 ? parts[3] : "";
-                              const version = parts.length >= 5 ? parts[4] : "";
-                              
-                              const isCurse = source === "curseforge";
-                              const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                              
-                              const typeLabels: Record<string, string> = {
-                                mod: "Mod",
-                                plugin: "Plugin",
-                                datapack: "Data",
-                                shader: "Shader",
-                                resourcepack: "Pack",
-                                modpack: "Pack",
-                                "mc-mods": "Mod",
-                                "texture-packs": "Pack",
-                                customization: "Cust",
-                                "mc-addons": "Addon"
-                              };
-                              const typeToProjectType: Record<string, string> = {
-                                mod: "mod",
-                                plugin: "mod",
-                                datapack: "datapack",
-                                shader: "shader",
-                                resourcepack: "resourcepack",
-                                modpack: "modpack",
-                                "mc-mods": "mod",
-                                "texture-packs": "resourcepack",
-                                customization: "datapack",
-                                "mc-addons": "mod"
-                              };
-                              const typeLabel = typeLabels[type] || "Mod";
-                              const extraInfo = [loader, version].filter(Boolean).join(" ");
-                              const fullTypeLabel = extraInfo ? `${typeLabel} (${extraInfo})` : typeLabel;
-                              
-                              return (
-                                <div 
-                                  key={`${slug}-${sIdx}`}
-                                  className="p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 hover:shadow-lg hover:-translate-y-0.5"
-                                  style={{
-                                    background: "rgba(0, 0, 0, 0.6)",
-                                    borderColor: isCurse ? "rgba(248,113,113,0.3)" : "rgba(30,215,96,0.3)",
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Evitar colapsar el video
-                                    const query = slug.replace(/-/g, " ");
-                                    const targetType = typeToProjectType[type] || "mod";
-                                    if (onSearchProject) onSearchProject(query, targetType, source, loader, version);
-                                  }}
-                                >
-                                  <div 
-                                    className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase shrink-0" 
-                                    style={{ 
-                                      background: isCurse ? "rgba(248,113,113,0.2)" : "rgba(30,215,96,0.2)", 
-                                      color: isCurse ? "#f87171" : "#4ade80",
-                                      border: isCurse ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(30,215,96,0.4)"
-                                    }}
-                                  >
-                                    {source.substring(0, 2)}
-                                  </div>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-bold truncate" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
-                                      {displayName}
-                                    </span>
-                                    <span className="text-[8px] font-medium opacity-60" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
-                                      {fullTypeLabel}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                          {video.modSlugs.length > 0 ? (
+                            <>
+                              <h4 className="font-headline text-xs mb-2 flex items-center gap-2"><Puzzle className="w-3.5 h-3.5 text-primary" />Mods Detectados</h4>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {video.modSlugs.map((slugStr: string, sIdx: number) => {
+                                  const parts = slugStr.split(":");
+                                  const source = parts[0];
+                                  const type = parts.length >= 3 ? parts[1] : "mod";
+                                  const slug = parts.length >= 3 ? parts[2] : parts[1];
+                                  const loader = parts.length >= 4 ? parts[3] : "";
+                                  const version = parts.length >= 5 ? parts[4] : "";
+                                  
+                                  const isCurse = source === "curseforge";
+                                  const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                                  
+                                  const typeLabels: Record<string, string> = {
+                                    mod: "Mod",
+                                    plugin: "Plugin",
+                                    datapack: "Data",
+                                    shader: "Shader",
+                                    resourcepack: "Pack",
+                                    modpack: "Pack",
+                                    "mc-mods": "Mod",
+                                    "texture-packs": "Pack",
+                                    customization: "Cust",
+                                    "mc-addons": "Addon"
+                                  };
+                                  const typeToProjectType: Record<string, string> = {
+                                    mod: "mod",
+                                    plugin: "mod",
+                                    datapack: "datapack",
+                                    shader: "shader",
+                                    resourcepack: "resourcepack",
+                                    modpack: "modpack",
+                                    "mc-mods": "mod",
+                                    "texture-packs": "resourcepack",
+                                    customization: "datapack",
+                                    "mc-addons": "mod"
+                                  };
+                                  const typeLabel = typeLabels[type] || "Mod";
+                                  const extraInfo = [loader, version].filter(Boolean).join(" ");
+                                  const fullTypeLabel = extraInfo ? `${typeLabel} (${extraInfo})` : typeLabel;
+                                  
+                                  return (
+                                    <div 
+                                      key={`${slug}-${sIdx}`}
+                                      className="p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 hover:shadow-lg hover:-translate-y-0.5"
+                                      style={{
+                                        background: "rgba(0, 0, 0, 0.6)",
+                                        borderColor: isCurse ? "rgba(248,113,113,0.3)" : "rgba(30,215,96,0.3)",
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Evitar colapsar el video
+                                        const query = slug.replace(/-/g, " ");
+                                        const targetType = typeToProjectType[type] || "mod";
+                                        if (onSearchProject) onSearchProject(query, targetType, source, loader, version);
+                                      }}
+                                    >
+                                      <div 
+                                        className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase shrink-0" 
+                                        style={{ 
+                                          background: isCurse ? "rgba(248,113,113,0.2)" : "rgba(30,215,96,0.2)", 
+                                          color: isCurse ? "#f87171" : "#4ade80",
+                                          border: isCurse ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(30,215,96,0.4)"
+                                        }}
+                                      >
+                                        {source.substring(0, 2)}
+                                      </div>
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="text-[10px] font-bold truncate" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
+                                          {displayName}
+                                        </span>
+                                        <span className="text-[8px] font-medium opacity-60" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
+                                          {fullTypeLabel}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-mono text-center text-white/40">
+                              ℹ️ Este video no contiene mods de Minecraft detectados en su descripción. ¡Podés reproducirlo directamente haciendo click en <strong>Reproducir</strong>!
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

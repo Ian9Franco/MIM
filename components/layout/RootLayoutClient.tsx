@@ -10,6 +10,7 @@ import { StagingModal } from "@/components/layout/StagingModal";
 import { PackHealthPanel } from "@/components/gate/PackHealthModal";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutFooter } from "./LayoutFooter";
+import { FomoFloatingPlayer } from "@/components/fomo/FomoFloatingPlayer";
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const {
@@ -122,6 +123,8 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
           isBuilding={false}
         />
       )}
+
+      <FomoFloatingPlayer />
     </div>
   );
 }

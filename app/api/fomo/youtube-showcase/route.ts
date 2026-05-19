@@ -118,7 +118,10 @@ async function scrapeLatestVideo(channelUrl: string) {
     "--dump-json"
   ]);
 
-  const flatInfo = JSON.parse(flatOut.trim());
+  const lines = flatOut.trim().split("\n").filter(Boolean);
+  const jsonLine = lines.slice().reverse().find(l => l.startsWith("{"));
+  if (!jsonLine) throw new Error("No JSON found in yt-dlp output");
+  const flatInfo = JSON.parse(jsonLine);
   const videoId: string = flatInfo.id;
   const videoUrl: string = flatInfo.url || `https://www.youtube.com/watch?v=${videoId}`;
 
@@ -138,15 +141,16 @@ export async function GET(request: Request) {
 
   const type = searchParams.get("type") ?? (channelUrl.includes("/shorts") ? "shorts" : "videos");
 
-  // Asegurar que apuntamos a la sección correcta (videos o shorts)
+  // Normalizar cualquier URL de canal de YouTube para asegurar que apunte a /videos o /shorts
   let targetUrl = channelUrl.replace(/\/$/, "");
   
-  // Extraer el handle base si es una URL completa de YouTube
-  const handleMatch = targetUrl.match(/(https?:\/\/www\.youtube\.com\/@[^\/]+)/);
-  if (handleMatch) {
-    targetUrl = handleMatch[1] + (type === "shorts" ? "/shorts" : "/videos");
-  } else if (!targetUrl.startsWith("http")) {
-    // Si es solo el handle o nombre de usuario
+  if (targetUrl.startsWith("http")) {
+    // Remover sufijos existentes para evitar duplicados
+    targetUrl = targetUrl.replace(/\/(videos|shorts|featured|streams|playlists)$/, "");
+    // Añadir el sufijo correcto
+    targetUrl = targetUrl + (type === "shorts" ? "/shorts" : "/videos");
+  } else {
+    // Si es un handle o nombre de usuario simple
     targetUrl = `https://www.youtube.com/${targetUrl.startsWith("@") ? "" : "@"}${targetUrl}${type === "shorts" ? "/shorts" : "/videos"}`;
   }
 
@@ -192,7 +196,9 @@ export async function GET(request: Request) {
     ]);
 
     const lines = flatOut.trim().split("\n").filter(Boolean);
-    const videoEntries = lines.map((line) => JSON.parse(line));
+    const videoEntries = lines.map((line) => {
+      try { return JSON.parse(line); } catch (e) { return null; }
+    }).filter(Boolean);
 
     const results: any[] = [];
     let itemsProcessed = 0;

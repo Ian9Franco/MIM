@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-7.3.2-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-7.4.1-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -60,7 +60,7 @@ Logs en idiomas que no existen
 
 ### 🔍 **FOMO 3.0** — Busca en 2 Plataformas a la Vez
 - **Modrinth + CurseForge unificado**
-- **YouTube Showcases**: Extrae mods directamente desde descripciones de videos y shorts.
+- **YouTube Showcases**: Extrae mods directamente desde descripciones de videos y shorts. Incluye un **Reproductor Flotante Nativo** redimensionable (Mini, Normal, Maxi) con físicas de rebote y amortiguación inercial tipo DVD, control de velocidad (1x, 1.5x, 2x) y volumen analógico/mute integrado. Soporta búsquedas de **cualquier canal de YouTube** (incluyendo canales no Minecraft) mediante normalización universal de URLs y handles, con un esqueleto de carga SWR y fallbacks explicativos si el video no posee mods.
 - Visualización dual sin salir de la app
 - Filtros por versión, loader, categoría
 - Smart matching por SHA1 (100% exacto)
@@ -204,7 +204,10 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v7.3.2 (Actual — Mayo 2026)**
+### ✅ **v7.4.1 (Actual — Mayo 2026)**
+- 📺 **Showcase Native Player**: Reproductor flotante integrado con inercias físicas, controles de velocidad y volumen analógico.
+- 🌐 **Soporte de Canales Universal**: Normalización y carga de cualquier URL de YouTube (canales no Minecraft).
+- 🔄 **SWR Cache & Background Sync**: Carga instantánea de videos y actualización silenciosa.
 - ✨ Modo MIMU (User Mode) para jugadores
 - 🧠 SAGE rediseñado (2-step scanning)
 - 👥 CurseForge Community Picks integrado

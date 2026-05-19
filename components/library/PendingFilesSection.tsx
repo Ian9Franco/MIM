@@ -110,7 +110,7 @@ export function PendingFilesSection({
         ) : (
           <>
             {compatibleFiles.length === 0 && incompatibleFiles.length > 0 ? (
-              <div className="p-6 text-center border border-dashed border-white/10 rounded-2xl bg-white/5">
+              <div className="p-6 text-center border border-dashed rounded-2xl" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
                 <Info className="w-5 h-5 mx-auto mb-2 opacity-30" />
                 <p className="text-xs font-bold opacity-60">No hay descargas compatibles</p>
               </div>

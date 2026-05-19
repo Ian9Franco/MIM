@@ -117,9 +117,9 @@ export function QuickCategorizeSection({
           <div 
             className="rounded-[2rem] p-5 border relative overflow-hidden transition-all duration-500"
             style={{ 
-              background: "rgba(255,255,255,0.015)", 
-              borderColor: "var(--color-border-strong)",
-              boxShadow: "inset 0 0 40px rgba(0,0,0,0.1)"
+              background: "var(--color-card)", 
+              borderColor: "var(--color-border)",
+              boxShadow: "inset 0 0 40px rgba(0,0,0,0.05)"
             }}
           >
             {/* Header info for the bucket */}

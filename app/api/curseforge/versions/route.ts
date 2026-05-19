@@ -11,7 +11,7 @@ import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
 
-const CACHE_FILE = path.join(getPortableDir(), "fomo_modpack_dependencies_cache.json");
+const CACHE_FILE = path.join(getPortableDir(), "cache", "fomo_modpack_dependencies_cache.json");
 
 function getModpackCache(): Record<string, any[]> {
   if (fs.existsSync(CACHE_FILE)) {

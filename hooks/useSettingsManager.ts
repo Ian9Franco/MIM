@@ -33,6 +33,7 @@ export function useSettingsManager(onClose: () => void) {
   const [isValidating, setIsValidating] = useState(false);
   const [isValidatingKeys, setIsValidatingKeys] = useState(false);
   const [showStagingWarning, setShowStagingWarning] = useState<{ pathName: string; stagingPath: string } | null>(null);
+  const [showInvalidPathsWarning, setShowInvalidPathsWarning] = useState(false);
   const [pathPickWarning, setPathPickWarning] = useState<{
     message: string;
     onConfirm: () => void;
@@ -199,7 +200,7 @@ export function useSettingsManager(onClose: () => void) {
       if (pathValidation[minecraftPath] === false) {
         setShowStagingWarning({ pathName: "Minecraft (.minecraft)", stagingPath: stagingPath });
       } else {
-        alert("No podés cerrar los ajustes hasta que todas las rutas sean válidas.");
+        setShowInvalidPathsWarning(true);
       }
       setCanEdit(true);
       return;
@@ -262,6 +263,7 @@ export function useSettingsManager(onClose: () => void) {
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, 
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
+    showInvalidPathsWarning, setShowInvalidPathsWarning,
     pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
   };
 }

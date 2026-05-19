@@ -152,26 +152,37 @@ export function SpotlightEditorialCard({ mod, onOpenVersions, onDownload, isDown
 
 export function SmallSpotlightCard({ mod, onOpenVersions, accentColor, theme }: any) {
   const isModern = theme === "modern";
+  const isVampire = theme === "vampire";
+
+  const cardBg = isModern ? "rgba(255,255,255,0.8)" : isVampire ? "#1a1525" : "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)";
+  const cardBorder = isModern ? "border-[#d4cfc0]" : isVampire ? "border-[rgba(187,150,228,0.15)]" : "border-white/5";
+  const cardHoverBorder = isModern ? "hover:border-[rgba(0,0,0,0.2)]" : isVampire ? "hover:border-[rgba(187,150,228,0.3)]" : "hover:border-white/20";
+  const titleColor = isModern ? "#1e1b4b" : isVampire ? "#DEDEDE" : "#fff";
+  const badgeColor = isModern ? "#333" : isVampire ? "#BB96E4" : "#fff";
+  const bgImageGrid = `radial-gradient(circle, ${isModern ? "rgba(0,0,0,0.1)" : isVampire ? "rgba(187,150,228,0.08)" : "rgba(255,255,255,0.05)"} 1px, transparent 1px)`;
+  const gridBorder = isModern ? "#d4cfc0" : isVampire ? "rgba(187,150,228,0.2)" : "rgba(255,255,255,0.05)";
+  const bracketBorder = isModern ? "#000" : isVampire ? "rgba(187,150,228,0.6)" : "#fff";
+
   return (
     <div 
-      className="w-full shrink-0 relative group cursor-pointer overflow-hidden transition-all duration-300 flex items-center border border-white/5 hover:border-white/20 hover:shadow-xl" 
+      className={`w-full shrink-0 relative group cursor-pointer overflow-hidden transition-all duration-300 flex items-center border ${cardBorder} ${cardHoverBorder} hover:shadow-xl`} 
       style={{ 
-        background: isModern ? "rgba(255,255,255,0.8)" : "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
+        background: cardBg,
         borderRadius: "12px"
       }} 
       onClick={() => onOpenVersions(mod)}
     >
       {/* Technical Icon Container */}
       <div className="w-14 h-14 shrink-0 relative flex items-center justify-center border-r" style={{ 
-        borderColor: isModern ? "#d4cfc0" : "rgba(255,255,255,0.05)",
-        backgroundImage: `radial-gradient(circle, ${isModern ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.05)"} 1px, transparent 1px)`,
+        borderColor: gridBorder,
+        backgroundImage: bgImageGrid,
         backgroundSize: "4px 4px"
       }}>
         {/* Minimal Brackets - Shifted slightly for rounded corners */}
-        <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l opacity-30" style={{ borderColor: isModern ? "#000" : "#fff" }} />
-        <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r opacity-30" style={{ borderColor: isModern ? "#000" : "#fff" }} />
-        <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l opacity-30" style={{ borderColor: isModern ? "#000" : "#fff" }} />
-        <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r opacity-30" style={{ borderColor: isModern ? "#000" : "#fff" }} />
+        <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l opacity-30" style={{ borderColor: bracketBorder }} />
+        <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r opacity-30" style={{ borderColor: bracketBorder }} />
+        <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l opacity-30" style={{ borderColor: bracketBorder }} />
+        <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r opacity-30" style={{ borderColor: bracketBorder }} />
 
         <div className="w-9 h-9 rounded-lg overflow-hidden bg-black/20 border border-white/5 relative z-10 group-hover:scale-110 transition-transform duration-500 shadow-lg">
           {mod.iconUrl ? (
@@ -184,11 +195,11 @@ export function SmallSpotlightCard({ mod, onOpenVersions, accentColor, theme }: 
 
       {/* Info Section */}
       <div className="flex-1 min-w-0 px-3 py-2 flex flex-col gap-0.5">
-        <h3 className="font-headline text-[11px] font-bold truncate leading-tight" style={{ color: isModern ? "#1e1b4b" : "#fff" }}>
+        <h3 className="font-headline text-[11px] font-bold truncate leading-tight" style={{ color: titleColor }}>
           {mod.title}
         </h3>
         <div className="flex items-center gap-2">
-          <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: isModern ? "#333" : "#fff" }}>
+          <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: badgeColor }}>
             {mod.projectType === "resourcepack" ? "Texture" : "Mod"}
           </span>
           <span className="text-[7px] font-mono opacity-20">#{String(Math.abs(mod.projectId?.split('').reduce((a:any,b:any)=>a+b.charCodeAt(0),0)) % 999).padStart(3, '0')}</span>

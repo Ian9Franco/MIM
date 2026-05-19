@@ -16,7 +16,7 @@ const getGradientByName = (name: string) => {
 
 export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, onOpenVersions, onDownloadMod, onSearchProject, onUnfollow }: any) {
   return (
-    <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border p-4 flex flex-col justify-between transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-white/3 border-white/5 hover:border-white/10"}`}>
+    <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border p-4 flex flex-col justify-between transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-foreground/5 border-foreground/10 hover:border-foreground/20 shadow-sm"}`}>
       <div className="flex gap-4 items-start min-w-0">
         <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
           {mod.iconUrl ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <div className={`w-full h-full flex items-center justify-center text-white font-bold bg-gradient-to-br ${getGradientByName(mod.title)}`}>{mod.title.charAt(0)}</div>}
@@ -64,7 +64,7 @@ export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow }:
   }, [icons.length]);
 
   return (
-    <div className="group relative rounded-2xl border border-white/5 bg-white/3 p-4 flex items-center justify-between transition-all hover:bg-white/5">
+    <div className="group relative rounded-2xl border border-foreground/10 bg-foreground/5 p-4 flex items-center justify-between transition-all hover:bg-foreground/10 shadow-sm">
       <div className="flex items-center gap-4 relative z-10 min-w-0 pr-3">
         <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
           {icons.length > 0 ? (

@@ -17,6 +17,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, 
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
+    showInvalidPathsWarning, setShowInvalidPathsWarning,
     pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
   } = useSettingsManager(onClose);
 
@@ -85,6 +86,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               )}
               primaryAction={{ label: "Entendido, salir de todas formas", onClick: onClose, color: 'amber' }}
               secondaryAction={{ label: "Volver y corregir ruta", onClick: () => setShowStagingWarning(null) }}
+            />
+          )}
+
+          {showInvalidPathsWarning && (
+            <OverlayDialog 
+              icon={AlertTriangle} title="Rutas de Sistema Inválidas" 
+              desc="Hay rutas marcadas en rojo que no existen en tu sistema. Si salís ahora sin guardarlas correctamente, algunas funciones de MIM podrían fallar."
+              primaryAction={{ label: "Corregir rutas", onClick: () => setShowInvalidPathsWarning(false) }}
+              secondaryAction={{ label: "Salir de todas formas", onClick: onClose }}
             />
           )}
 

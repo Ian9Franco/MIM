@@ -382,7 +382,7 @@ export default function Page() {
         {appMode === "MIMU" ? (
           <div className="max-w-7xl mx-auto mt-6 animate-fade-up space-y-6">
             {/* Header / Top Bar */}
-            <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-6 rounded-2xl backdrop-blur-md">
+            <div className="flex items-center justify-between p-6 rounded-2xl backdrop-blur-md" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <div>
                 <h2 className="font-headline text-2xl text-foreground">Modo Usuario (MIMU)</h2>
                 <p className="text-sm text-muted mt-1">Las descargas se mandan derecho a tu juego.</p>
@@ -405,7 +405,7 @@ export default function Page() {
             {/* Bento Grid */}
             <div className="grid grid-cols-[240px_1.5fr_1fr] gap-6 items-start">
               {/* Left Card - Quick Actions */}
-              <div id="onboarding-mimu-actions" className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] backdrop-blur-xl space-y-4">
+              <div id="onboarding-mimu-actions" className="p-5 rounded-[2rem] backdrop-blur-xl space-y-4" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                 <h3 className="font-headline text-sm uppercase tracking-wider text-muted flex items-center gap-2"><FolderTree className="w-4 h-4" />Accesos Rápidos</h3>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => fetch("/api/open-folder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderPath: "downloads" }) })} className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 hover:text-primary transition-all active:scale-95 text-foreground/80">
@@ -424,28 +424,30 @@ export default function Page() {
               </div>
 
               {/* Middle Card - Pending Files */}
-              <div id="onboarding-mimu-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl`}>
+              <div id="onboarding-mimu-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 p-6 rounded-[2rem] backdrop-blur-xl`} style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                 <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
               </div>
 
               {/* Right Card - Installed Mods (Tall) */}
-              <div id="onboarding-mimu-installed" className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl h-full">
+              <div id="onboarding-mimu-installed" className="p-6 rounded-[2rem] backdrop-blur-xl h-full" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                 <InstalledModsSection />
               </div>
             </div>
 
             {/* Bottom Card - Worlds */}
-            <div id="onboarding-mimu-worlds" className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl">
+            <div id="onboarding-mimu-worlds" className="p-6 rounded-[2rem] backdrop-blur-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <WorldsSection pendingFiles={pendingFiles} />
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
-            <div id="onboarding-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700`}><PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} /></div>
-            <div id="onboarding-categorize">
+            <div id="onboarding-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 p-6 rounded-[2rem] backdrop-blur-xl`} style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+              <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
+            </div>
+            <div id="onboarding-categorize" className="p-6 rounded-[2rem] backdrop-blur-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
             </div>
-            <div id="onboarding-library">
+            <div id="onboarding-library" className="p-6 rounded-[2rem] backdrop-blur-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <LibrarySection library={lib.library} loadingLibrary={lib.loadingLibrary} selectedLibFiles={selectedLibFiles} setSelectedLibFiles={setSelectedLibFiles} activeProject={projects.activeProject} projects={projects.projects} downloadingMods={lib.downloadingMods} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} conflicts={lib.conflicts} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} handleViewDescription={lib.handleViewDescription} loadingDescription={lib.loadingDescription} handleSyncAllDescriptions={lib.handleSyncAllDescriptions} syncingDescriptions={lib.syncingDescriptions} handleUnclassify={lib.handleUnclassify} handleDownloadUpdate={lib.handleDownloadUpdate} autoClassify={autoClassify} setAutoClassify={setAutoClassify} pendingFiles={pendingFiles} onDeleteFile={handleDeleteFile} />
             </div>
           </div>

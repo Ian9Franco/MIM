@@ -183,7 +183,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
 
       {/* FOMO Sidebar — left, contracts when details open */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-2xl transition-all duration-500 ease-in-out border border-l-0 fomo-sidebar ${
+        className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-2xl transition-all duration-500 ease-in-out border border-l-0 fomo-sidebar overflow-hidden ${
           open ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
         }`} 
         style={{ 
@@ -197,8 +197,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
           backdropFilter: "blur(40px)"
         }}
       >
-        {/* Accent Top Line */}
-        <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
+        <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 border-b shrink-0 relative z-10" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
@@ -367,7 +366,7 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
       {open && (
         <aside
           id="onboarding-fomo-details"
-          className={`fomo-sidebar fixed inset-y-0 right-0 z-[70] flex flex-col transition-all duration-500 ease-in-out ${
+          className={`fomo-sidebar fixed inset-y-0 right-0 z-[70] flex flex-col transition-all duration-500 ease-in-out overflow-hidden ${
             detailsOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
           }`}
           style={{

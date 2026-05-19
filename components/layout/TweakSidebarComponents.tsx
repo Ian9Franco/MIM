@@ -17,7 +17,7 @@ export function TweakTabNav({ activeTab, setActiveTab }: { activeTab: string; se
     { id: "config",    icon: FolderOpen, label: "Configs" },
   ];
   return (
-    <div className="flex px-6 pt-4 border-b shrink-0 gap-2 bg-white/[0.01]" style={{ borderColor: "var(--color-border)" }}>
+    <div className="flex px-6 pt-4 border-b shrink-0 gap-2 bg-[var(--color-secondary-bg)]" style={{ borderColor: "var(--color-border)" }}>
       {tabs.map(tab => (
         <button
           key={tab.id}
@@ -25,7 +25,7 @@ export function TweakTabNav({ activeTab, setActiveTab }: { activeTab: string; se
           className={`flex-1 flex flex-col items-center py-3 px-1 rounded-t-2xl transition-all duration-300 relative text-[10px] font-black uppercase tracking-widest group ${
             activeTab === tab.id
               ? "text-primary bg-primary/10 shadow-[0_-4px_12px_rgba(var(--color-primary-rgb),0.1)]"
-              : "text-muted/40 hover:text-white/60 hover:bg-white/[0.03]"
+              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-hover)]"
           }`}
         >
           <tab.icon className={`w-4 h-4 mb-1.5 transition-all duration-300 ${activeTab === tab.id ? "scale-110 drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" : "opacity-50 group-hover:opacity-100"}`} />
@@ -69,25 +69,25 @@ export function HardwareStats({ data }: { data: any }) {
         </div>
       </div>
       
-      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col gap-1 hover:bg-white/[0.05] transition-colors group">
-        <p className="text-[8px] uppercase text-muted/40 font-black tracking-widest flex items-center gap-1.5">
+      <div className="p-4 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] flex flex-col gap-1 hover:bg-[var(--color-hover)] transition-colors group">
+        <p className="text-[8px] uppercase text-[var(--color-muted)] font-black tracking-widest flex items-center gap-1.5">
           <Layers className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors" /> Memoria
         </p>
-        <p className="text-xl font-black text-white leading-none tracking-tight">{data.totalRamGB || "?"}<span className="text-[10px] text-muted/40 font-bold ml-1">GB</span></p>
+        <p className="text-xl font-black text-[var(--color-foreground)] leading-none tracking-tight">{data.totalRamGB || "?"}<span className="text-[10px] text-[var(--color-muted)] font-bold ml-1">GB</span></p>
       </div>
       
-      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col gap-1 hover:bg-white/[0.05] transition-colors group">
-        <p className="text-[8px] uppercase text-muted/40 font-black tracking-widest flex items-center gap-1.5">
+      <div className="p-4 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] flex flex-col gap-1 hover:bg-[var(--color-hover)] transition-colors group">
+        <p className="text-[8px] uppercase text-[var(--color-muted)] font-black tracking-widest flex items-center gap-1.5">
           <Cpu className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors" /> Procesador
         </p>
-        <p className="text-xl font-black text-white leading-none tracking-tight">{data.cpuCores || "?"}<span className="text-[10px] text-muted/40 font-bold ml-1">HILOS</span></p>
+        <p className="text-xl font-black text-[var(--color-foreground)] leading-none tracking-tight">{data.cpuCores || "?"}<span className="text-[10px] text-[var(--color-muted)] font-bold ml-1">HILOS</span></p>
       </div>
 
-      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col gap-1 hover:bg-white/[0.05] transition-colors group overflow-hidden">
-        <p className="text-[8px] uppercase text-muted/40 font-black tracking-widest flex items-center gap-1.5">
+      <div className="p-4 rounded-2xl bg-[var(--color-card)] border border-[var(--color-border)] flex flex-col gap-1 hover:bg-[var(--color-hover)] transition-colors group overflow-hidden">
+        <p className="text-[8px] uppercase text-[var(--color-muted)] font-black tracking-widest flex items-center gap-1.5">
           <Monitor className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors" /> Gráficos
         </p>
-        <p className="text-[10px] font-black text-white/80 leading-tight uppercase truncate" title={data.gpu}>
+        <p className="text-[10px] font-black text-[var(--color-foreground)] leading-tight uppercase truncate" title={data.gpu}>
           {data.gpu || "DETECT..."}
         </p>
       </div>
@@ -137,58 +137,58 @@ export function JvmArgBox({ jvmArgs, modCount }: { jvmArgs?: string; modCount?: 
         </button>
       </div>
       <div className="relative group/code">
-        <code className="block text-[11px] font-mono text-indigo-200/50 bg-black/40 border border-white/5 rounded-2xl p-4 leading-relaxed break-all transition-all group-hover/code:text-indigo-200/80">
+        <code className="block text-[11px] font-mono !text-white bg-black/60 border border-[var(--color-border)] rounded-2xl p-4 leading-relaxed break-all transition-all">
           {jvmArgs}
         </code>
       </div>
 
-      <div className="mt-4 text-xs text-muted/60 space-y-3 bg-black/20 p-5 rounded-2xl border border-white/5">
+      <div className="mt-4 text-xs text-[var(--color-muted)] space-y-3 bg-[var(--color-secondary-bg)] p-5 rounded-2xl border border-[var(--color-border)]">
         <p className="mb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-white/60">Beneficios de esta Optimización</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-foreground)]">Beneficios de esta Optimización</span>
         </p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
-            <Zap className="w-6 h-6 text-amber-400 shrink-0" />
+          <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex items-center gap-4 hover:bg-[var(--color-hover)] transition-colors">
+            <Zap className="w-6 h-6 text-amber-500 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white/90">Cero Tirones</p>
-              <p className="text-xs text-muted/60 leading-normal">Limpia la memoria en micro-pausas sin congelar la pantalla.</p>
+              <p className="text-sm font-bold text-[var(--color-foreground)]">Cero Tirones</p>
+              <p className="text-xs text-[var(--color-muted)] leading-normal">Limpia la memoria en micro-pausas sin congelar la pantalla.</p>
             </div>
           </div>
           
-          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
-            <Layers className="w-6 h-6 text-indigo-400 shrink-0" />
+          <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex items-center gap-4 hover:bg-[var(--color-hover)] transition-colors">
+            <Layers className="w-6 h-6 text-indigo-500 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white/90">RAM Controlada</p>
-              <p className="text-xs text-muted/60 leading-normal">Asigna el combustible justo para el juego sin ahogar a Windows.</p>
+              <p className="text-sm font-bold text-[var(--color-foreground)]">RAM Controlada</p>
+              <p className="text-xs text-[var(--color-muted)] leading-normal">Asigna el combustible justo para el juego sin ahogar a Windows.</p>
             </div>
           </div>
 
-          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
-            <Cpu className="w-6 h-6 text-emerald-400 shrink-0" />
+          <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex items-center gap-4 hover:bg-[var(--color-hover)] transition-colors">
+            <Cpu className="w-6 h-6 text-emerald-500 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white/90">Trabajo en Equipo</p>
-              <p className="text-xs text-muted/60 leading-normal">Usa varios hilos de tu procesador para acelerar el juego.</p>
+              <p className="text-sm font-bold text-[var(--color-foreground)]">Trabajo en Equipo</p>
+              <p className="text-xs text-[var(--color-muted)] leading-normal">Usa varios hilos de tu procesador para acelerar el juego.</p>
             </div>
           </div>
 
-          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
-            <Package className="w-6 h-6 text-rose-400 shrink-0" />
+          <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl flex items-center gap-4 hover:bg-[var(--color-hover)] transition-colors">
+            <Package className="w-6 h-6 text-rose-500 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white/90">Filtro Anti-Lags</p>
-              <p className="text-xs text-muted/60 leading-normal">Bloquea comportamientos de mods que causan bajones de FPS.</p>
+              <p className="text-sm font-bold text-[var(--color-foreground)]">Filtro Anti-Lags</p>
+              <p className="text-xs text-[var(--color-muted)] leading-normal">Bloquea comportamientos de mods que causan bajones de FPS.</p>
             </div>
           </div>
         </div>
 
         <p>
-          <span className="font-bold text-white/80">¿Cómo usarlo en el Launcher Oficial?</span>
+          <span className="font-bold text-[var(--color-foreground)]">¿Cómo usarlo en el Launcher Oficial?</span>
         </p>
-        <ol className="list-decimal list-inside space-y-1.5 ml-1 text-muted/70">
-          <li>Ve a la pestaña <span className="text-white/70 font-bold">Instalaciones</span> en el launcher.</li>
-          <li>Pasa el ratón sobre tu versión (ej: Forge) y dale a los <span className="text-white/70 font-bold">tres puntos (...)</span> -&gt; <span className="text-white/70 font-bold">Editar</span>.</li>
-          <li>Haz clic en <span className="text-white/70 font-bold">Más Opciones</span> abajo del todo.</li>
-          <li>Borra lo que haya en <span className="text-white/70 font-bold">Argumentos JVM</span> y pega este código generado por MIM.</li>
+        <ol className="list-decimal list-inside space-y-1.5 ml-1 text-[var(--color-muted)]">
+          <li>Ve a la pestaña <span className="text-[var(--color-foreground)] font-bold">Instalaciones</span> en el launcher.</li>
+          <li>Pasa el ratón sobre tu versión (ej: Forge) y dale a los <span className="text-[var(--color-foreground)] font-bold">tres puntos (...)</span> -&gt; <span className="text-[var(--color-foreground)] font-bold">Editar</span>.</li>
+          <li>Haz clic en <span className="text-[var(--color-foreground)] font-bold">Más Opciones</span> abajo del todo.</li>
+          <li>Borra lo que haya en <span className="text-[var(--color-foreground)] font-bold">Argumentos JVM</span> y pega este código generado por MIM.</li>
         </ol>
       </div>
     </div>
@@ -200,20 +200,20 @@ export function JvmArgBox({ jvmArgs, modCount }: { jvmArgs?: string; modCount?: 
 export function DetectedInstallations({ installations }: { installations?: any[] }) {
   if (!installations || installations.length === 0) return null;
   return (
-    <div className="p-5 rounded-3xl bg-white/[0.01] border border-white/5 space-y-3">
+    <div className="p-5 rounded-3xl bg-[var(--color-secondary-bg)] border border-[var(--color-border)] space-y-3">
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-primary/50" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/60">Instalaciones Detectadas (Launcher Oficial)</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-muted)]">Instalaciones Detectadas (Launcher Oficial)</p>
       </div>
       <div className="space-y-2">
         {installations.map(inst => (
-          <div key={inst.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5 hover:bg-white/[0.02] transition-colors group">
+          <div key={inst.id} className="flex items-center justify-between p-3 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-hover)] transition-colors group">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white group-hover:text-primary transition-colors">{inst.name}</p>
-              <p className="text-[9px] text-muted/40 font-mono truncate">{inst.lastVersionId}</p>
+              <p className="text-xs font-bold text-[var(--color-foreground)] group-hover:text-primary transition-colors">{inst.name}</p>
+              <p className="text-[9px] text-[var(--color-muted)] font-mono truncate">{inst.lastVersionId}</p>
             </div>
             <div className="text-right ml-2">
-              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${inst.jvmArgs ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-muted/30'}`}>
+              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${inst.jvmArgs ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--color-secondary-bg)] text-[var(--color-muted)]'}`}>
                 {inst.jvmArgs ? "Con Args" : "Default"}
               </span>
             </div>
@@ -260,7 +260,7 @@ export function KeybindItem({ kb, listeningKey, setListeningKey }: { kb: any; li
     .toUpperCase();
 
   return (
-    <div className={`flex items-center gap-4 px-6 py-4 transition-all relative overflow-hidden group ${isListening ? "bg-primary/[0.08]" : "hover:bg-white/[0.02]"}`}>
+    <div className={`flex items-center gap-4 px-6 py-4 transition-all relative overflow-hidden group ${isListening ? "bg-primary/[0.08]" : "hover:bg-[var(--color-hover)]"}`}>
       {isListening && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_15px_var(--color-primary)]" />}
       
       <div className="flex-1 min-w-0">
@@ -269,10 +269,10 @@ export function KeybindItem({ kb, listeningKey, setListeningKey }: { kb: any; li
             {style.label}
           </span>
           {kb.modSource && kb.modSource !== "vanilla" && (
-            <span className="text-[7px] text-muted/30 font-bold uppercase tracking-tighter">[{kb.modSource}]</span>
+            <span className="text-[7px] text-[var(--color-muted)] font-bold uppercase tracking-tighter">[{kb.modSource}]</span>
           )}
         </div>
-        <p className="text-xs font-black text-white/90 tracking-tight truncate group-hover:text-white transition-colors uppercase italic">{cleanName}</p>
+        <p className="text-xs font-black text-[var(--color-foreground)] tracking-tight truncate group-hover:text-[var(--color-foreground)] transition-colors uppercase italic">{cleanName}</p>
       </div>
 
       <button
@@ -281,8 +281,8 @@ export function KeybindItem({ kb, listeningKey, setListeningKey }: { kb: any; li
           isListening
             ? "bg-primary border-primary text-white shadow-primary/40 animate-pulse"
             : isEmpty
-            ? "bg-black/20 border-white/5 text-muted/20 hover:border-primary/40 hover:text-muted/40"
-            : "bg-white/[0.03] border-white/10 text-white/80 group-hover:border-primary/40 group-hover:text-primary group-hover:bg-primary/5 shadow-black/20"
+            ? "bg-[var(--color-secondary-bg)] border-[var(--color-border)] text-[var(--color-muted)] hover:border-primary/40"
+            : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-foreground)] group-hover:border-primary/40 group-hover:text-primary group-hover:bg-primary/5 shadow-black/20"
         }`}
       >
         <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10 rounded-full mx-2 mt-1" />

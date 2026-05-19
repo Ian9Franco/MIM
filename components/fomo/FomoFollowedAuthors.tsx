@@ -11,6 +11,7 @@ import { COLORS } from "@/theme/tokens";
 import { useFomoFollowedManager } from "@/hooks/useFomoFollowedManager";
 import { FollowedProjectCard, FollowedAuthorCard } from "./FomoFollowedComponents";
 import { FomoSkeleton } from "./FomoSkeleton";
+import { PillToggleGroup } from "../ui/primitives";
 
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
@@ -27,6 +28,16 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
   const [loadingHistory, setLoadingHistory] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
+
+  const [currentTheme, setCurrentTheme] = React.useState("official");
+  React.useEffect(() => {
+    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  const isModern = currentTheme === "modern";
 
   // Sistema de dirección para la animación
   const TABS = ["projects", "authors", "history", "showcases"];
@@ -197,12 +208,21 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
       `}</style>
 
       <div className="px-6 pt-5 pb-3 border-b flex items-center justify-between shrink-0" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
-        <div className="flex p-1 rounded-2xl bg-black/20 gap-1 border border-white/5">
-          <button onClick={() => setSubTab("projects")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "projects" ? "bg-primary text-white" : "opacity-40 text-white"}`}><CookingPot className="w-4 h-4" />Proyectos ({followedMods.length})</button>
-          <button onClick={() => setSubTab("authors")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "authors" ? "bg-primary text-white" : "opacity-40 text-white"}`}><ChefHat className="w-4 h-4" />Autores ({followedAuthors.length})</button>
-          <button onClick={() => { setSubTab("history"); setPage(1); }} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "history" ? "bg-primary text-white" : "opacity-40 text-white"}`}><Timeline className="w-4 h-4" />Rank/Historial</button>
-          <button onClick={() => setSubTab("showcases")} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${subTab === "showcases" ? "bg-primary text-white" : "opacity-40 text-white"}`}><TvMinimalPlay className="w-4 h-4" />Showcases</button>
-        </div>
+        <PillToggleGroup 
+          options={[
+            { value: "projects", label: `Proyectos (${followedMods.length})`, icon: <CookingPot className="w-4 h-4" /> },
+            { value: "authors", label: `Autores (${followedAuthors.length})`, icon: <ChefHat className="w-4 h-4" /> },
+            { value: "history", label: "Rank/Historial", icon: <Timeline className="w-4 h-4" /> },
+            { value: "showcases", label: "Showcases", icon: <TvMinimalPlay className="w-4 h-4" /> },
+          ]} 
+          value={subTab} 
+          onChange={(v: any) => {
+            setSubTab(v);
+            if (v === "history") setPage(1);
+          }} 
+          ariaLabel="Seleccionar sub-pestaña"
+          className="p-1"
+        />
         {subTab === "projects" && followedMods.length > 0 && (
           <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
         )}
@@ -380,18 +400,18 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                   <div className="relative">
                     <button 
                       onClick={() => setDropdownOpen(!dropdownOpen)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between focus:border-primary/50 outline-none transition-all"
+                      className={`w-full border rounded-xl px-3 py-2 text-xs flex items-center justify-between focus:border-primary/50 outline-none transition-all ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
                     >
                       <span className="truncate">{(activeChannel.split("@")[1] || activeChannel).split("/")[0]}</span>
                       <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
                     </button>
                     
                     {dropdownOpen && (
-                      <div className="absolute z-50 w-full mt-1 border border-white/10 rounded-xl shadow-xl max-h-60 overflow-y-auto" style={{ background: "hsl(220 14% 9%)" }}>
+                      <div className={`absolute z-50 w-full mt-1 border rounded-xl shadow-xl max-h-60 overflow-y-auto ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`} style={{ background: isModern ? "white" : "hsl(220 14% 9%)" }}>
                         {channels.map(c => (
                           <div 
                             key={c} 
-                            className="flex items-center justify-between px-3 py-2 text-xs text-white hover:bg-white/5 cursor-pointer"
+                            className={`flex items-center justify-between px-3 py-2 text-xs hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"}`}
                             onClick={() => {
                               setActiveChannel(c);
                               trackChannelUsage(c);
@@ -430,7 +450,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                   <input 
                     type="text" 
                     placeholder="@usuario o URL + Enter"
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-primary/50 outline-none transition-all"
+                    className={`w-full border rounded-xl px-3 py-2 text-xs focus:border-primary/50 outline-none transition-all ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         const value = e.currentTarget.value.trim();

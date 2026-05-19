@@ -151,7 +151,11 @@ export async function GET(request: Request) {
   }
 
   const channelHash = crypto.createHash("md5").update(targetUrl).digest("hex").substring(0, 10);
-  const cacheFile = path.join(getPortableDir(), `showcase_cache_${channelHash}_${type}_page_${page}.json`);
+  const cacheDir = path.join(getPortableDir(), "cache");
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_page_${page}.json`);
 
   if (fs.existsSync(cacheFile)) {
     try {

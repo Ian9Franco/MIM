@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { getPortableDir } from "@/lib/settings";
 
-const CHANNELS_FILE = path.join(getPortableDir(), "showcase_channels.json");
+const DATA_DIR = path.join(getPortableDir(), "data");
+const CHANNELS_FILE = path.join(DATA_DIR, "showcase_channels.json");
 
 function getChannels(): string[] {
   if (fs.existsSync(CHANNELS_FILE)) {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     if (!Array.isArray(channels)) {
       return NextResponse.json({ error: "Invalid channels data" }, { status: 400 });
     }
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(CHANNELS_FILE, JSON.stringify(channels, null, 2), "utf-8");
     return NextResponse.json({ success: true, channels });
   } catch (err: any) {

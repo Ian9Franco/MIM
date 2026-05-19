@@ -16,15 +16,12 @@ interface FomoPaginationProps {
   onPage:     (p: number) => void;
 }
 
-/** Calculates the window of page numbers to display around the current page */
 function getPageWindow(page: number, totalPages: number, windowSize = 5): number[] {
-  const count = Math.min(windowSize, totalPages);
-  let start: number;
-  if (totalPages <= windowSize) start = 1;
-  else if (page <= 3)           start = 1;
-  else if (page >= totalPages - 2) start = totalPages - windowSize + 1;
-  else                          start = page - 2;
-  return Array.from({ length: count }, (_, i) => start + i);
+  // Paginación por bloques: mantiene la ventana estática para que la animación fluya
+  const currentBlock = Math.floor((Math.max(1, page) - 1) / windowSize);
+  const start = currentBlock * windowSize + 1;
+  const count = Math.min(windowSize, totalPages - start + 1);
+  return Array.from({ length: Math.max(0, count) }, (_, i) => start + i);
 }
 
 export const FomoPagination = memo(function FomoPagination({
@@ -50,21 +47,41 @@ export const FomoPagination = memo(function FomoPagination({
         Anterior
       </button>
 
-      <div className="flex items-center gap-1.5" role="list" aria-label="Páginas">
-        {pages.map((p) => (
-          <button
-            key={p}
-            role="listitem"
-            onClick={() => onPage(p)}
-            aria-label={`Página ${p}`}
-            aria-current={p === page ? "page" : undefined}
-            className={`w-9 h-9 rounded-xl text-sm font-subhead transition-all border ${
-              p === page ? "fomo-pagination-page-active" : "fomo-pagination-page-inactive"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
+      <div className="relative flex items-center gap-1.5 p-1 bg-foreground/5 rounded-2xl" role="list" aria-label="Páginas">
+        {/* Liquid Sliding Background */}
+        {pages.indexOf(page) !== -1 && (
+          <div 
+            className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none"
+            style={{
+              width: "2.25rem",
+              height: "2.25rem",
+              top: "0.25rem",
+              left: `calc(${pages.indexOf(page)} * 2.625rem + 0.25rem)`, // 2.25rem (w-9) + 0.375rem (gap-1.5) = 2.625rem. + 0.25rem (p-1)
+              background: "var(--color-primary)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 12px color-mix(in srgb, var(--color-primary) 30%, transparent)",
+            }}
+          />
+        )}
+
+        {pages.map((p) => {
+          const isActive = p === page;
+          return (
+            <button
+              key={p}
+              role="listitem"
+              onClick={() => onPage(p)}
+              aria-label={`Página ${p}`}
+              aria-current={isActive ? "page" : undefined}
+              className={`relative z-10 w-9 h-9 rounded-xl text-sm font-subhead transition-all flex items-center justify-center border ${
+                isActive 
+                  ? "text-white border-transparent" 
+                  : "text-foreground/70 border-white/5 hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              {p}
+            </button>
+          );
+        })}
       </div>
 
       <button

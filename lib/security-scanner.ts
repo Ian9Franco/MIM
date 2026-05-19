@@ -20,7 +20,7 @@ function getWhitelistedMods(): Set<string> {
     const { getPortableDir } = require("./settings");
     const portableDir = getPortableDir();
     if (portableDir) {
-      const pFile = path.join(portableDir, "whitelist.json");
+      const pFile = path.join(portableDir, "data", "whitelist.json");
       if (fs.existsSync(pFile)) {
         const custom = JSON.parse(fs.readFileSync(pFile, "utf-8"));
         if (Array.isArray(custom)) custom.forEach(m => modsSet.add(String(m).toLowerCase().trim()));
@@ -39,7 +39,7 @@ function isTrustedMod(modId: string, filename: string): boolean {
 }
 
 // ── Cloud API & Cache ──────────────────────────────────────────────────────────────
-const CACHE_FILE = path.join(path.dirname(path.dirname(__filename)), ".mim-index", "vt-cache.json");
+const CACHE_FILE = path.join(path.dirname(path.dirname(__filename)), ".mim-index", "cache", "vt-cache.json");
 
 function loadVTCache(): Record<string, any> {
   if (fs.existsSync(CACHE_FILE)) {

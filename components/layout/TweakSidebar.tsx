@@ -185,28 +185,28 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
         style={{
           width: "780px",
           maxWidth: "98vw",
-          background: "linear-gradient(165deg, rgba(10,10,12,0.98) 0%, rgba(5,5,7,1) 100%)",
-          borderColor: "rgba(255,255,255,0.08)",
+          background: "var(--glass-bg)",
+          borderColor: "var(--color-border)",
           backdropFilter: "blur(64px)",
           borderRadius: "3rem 0 0 3rem",
-          boxShadow: "-40px 0 100px rgba(0,0,0,0.9), inset 1px 0 0 rgba(255,255,255,0.05)",
+          boxShadow: "-40px 0 100px rgba(0,0,0,0.2), inset 1px 0 0 var(--color-border)",
         }}
       >
         {/* Decorative Top Glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full -mr-48 -mt-48 pointer-events-none" />
 
         {/* Header Section */}
-        <div className="px-8 py-6 border-b border-white/[0.04] flex items-center justify-between shrink-0 relative">
+        <div className="px-8 py-6 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 relative">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-inner">
               <Settings2 className="w-6 h-6 drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic">Tweak</h2>
+                <h2 className="text-xl font-black text-[var(--color-foreground)] uppercase tracking-tighter italic">Tweak</h2>
                 <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest border border-primary/20">v2.0 Premium</span>
               </div>
-              <p className="text-[10px] text-muted/40 font-bold uppercase tracking-[0.2em] mt-0.5">Control de Configuración Profunda</p>
+              <p className="text-[10px] text-[var(--color-muted)] font-bold uppercase tracking-[0.2em] mt-0.5">Control de Configuración Profunda</p>
             </div>
           </div>
           
@@ -321,23 +321,23 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 px-2">
                       <Sparkles className="w-4 h-4 text-primary" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/60">Recomendaciones Inteligentes</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-muted)]">Recomendaciones Inteligentes</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       {data.recommendations.map((rec: any, i: number) => (
-                        <div key={i} className="p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-primary/20 hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+                        <div key={i} className="p-5 rounded-3xl bg-[var(--color-card)] border border-[var(--color-border)] hover:border-primary/20 hover:bg-[var(--color-hover)] transition-all group relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-4 bg-primary/5 rounded-full -mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                           <div className="flex items-start justify-between gap-3 mb-3">
-                            <h5 className="text-[12px] font-black text-white/90 group-hover:text-primary transition-colors tracking-tight leading-tight uppercase italic">{rec.title}</h5>
-                            <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0 ${rec.impact?.toLowerCase() === "high" ? "bg-red-500/10 text-red-400" : "bg-primary/10 text-primary"}`}>
+                            <h5 className="text-[12px] font-black text-[var(--color-foreground)] group-hover:text-primary transition-colors tracking-tight leading-tight uppercase italic">{rec.title}</h5>
+                            <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest shrink-0 ${rec.impact?.toLowerCase() === "high" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary"}`}>
                               {rec.impact}
                             </span>
                           </div>
-                          <p className="text-[11px] text-muted/40 font-medium leading-relaxed mb-4 group-hover:text-muted/60 transition-colors uppercase tracking-tight">{rec.desc}</p>
+                          <p className="text-[11px] text-[var(--color-muted)] font-medium leading-relaxed mb-4 group-hover:text-[var(--color-foreground)] transition-colors uppercase tracking-tight">{rec.desc}</p>
                           {rec.settingKey && (
                             <button
                               onClick={() => handleAction("save", { settings: { [rec.settingKey]: rec.recommendedValue } })}
-                              className="w-full py-2 bg-primary/5 text-primary border border-primary/20 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg shadow-black/20"
+                              className="w-full py-2 bg-[var(--color-primary)] text-white border border-transparent rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-[var(--color-accent)] transition-all active:scale-95 shadow-lg shadow-black/10"
                             >
                               Aplicar Ajuste
                             </button>
@@ -461,14 +461,14 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
 
                   <div className="space-y-2">
                     {/* Acción 1: Aplicar Cambios */}
-                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl hover:bg-[var(--color-hover)] transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                           <Save className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Aplicar Cambios</h4>
-                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-0.5">Sobreescribe el options.txt del juego</p>
+                          <h4 className="text-sm font-black text-[var(--color-foreground)] uppercase italic tracking-tight">Aplicar Cambios</h4>
+                          <p className="text-[10px] text-[var(--color-muted)] font-bold uppercase tracking-widest mt-0.5">Sobreescribe el options.txt del juego</p>
                         </div>
                       </div>
                       <button
@@ -477,7 +477,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           resourcePacks: data?.resourcePacks.active,
                           keybinds: data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }))
                         })}
-                        className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-emerald-500/20 hover:border-transparent"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-emerald-600/20"
                       >
                         {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         Guardar
@@ -485,21 +485,21 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     </div>
 
                     {/* Acción 2: Cápsulas de Tiempo */}
-                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl hover:bg-[var(--color-hover)] transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                           <HistoryIcon className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Cápsulas de Tiempo</h4>
-                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-1.5">Instantáneas de tu configuración maestra</p>
+                          <h4 className="text-sm font-black text-[var(--color-foreground)] uppercase italic tracking-tight">Cápsulas de Tiempo</h4>
+                          <p className="text-[10px] text-[var(--color-muted)] font-bold uppercase tracking-widest mt-1.5">Instantáneas de tu configuración maestra</p>
                         </div>
                       </div>
                       <button 
                         onClick={() => {
                           fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: "D:/.mine/source/.mim-index/tweak/snapshots" }) });
                         }}
-                        className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-indigo-500/20 hover:border-transparent"
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-indigo-600/20"
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
                         Ver Archivos
@@ -507,14 +507,14 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     </div>
 
                     {/* Acción 3: Generar Modlist */}
-                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-colors group">
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl hover:bg-[var(--color-hover)] transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
                           <File className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-black text-white uppercase italic tracking-tight">Generar Modlist</h4>
-                          <p className="text-[10px] text-muted/40 font-bold uppercase tracking-widest mt-1.5">Crea un archivo HTML con la lista de mods</p>
+                          <h4 className="text-sm font-black text-[var(--color-foreground)] uppercase italic tracking-tight">Generar Modlist</h4>
+                          <p className="text-[10px] text-[var(--color-muted)] font-bold uppercase tracking-widest mt-1.5">Crea un archivo HTML con la lista de mods</p>
                         </div>
                       </div>
                       <button
@@ -527,7 +527,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                             setMessage({ type: "error", text: `Error: ${data.error}` });
                           }
                         }}
-                        className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border border-amber-500/20 hover:border-transparent"
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-amber-600/20"
                       >
                         <Save className="w-3.5 h-3.5" />
                         Generar HTML
@@ -547,21 +547,21 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           {/* Trigger Button */}
                           <div 
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="w-full p-5 bg-white/[0.02] border border-white/5 rounded-2xl text-xs font-black text-white uppercase italic tracking-tight hover:border-white/10 hover:bg-white/[0.04] transition-all cursor-pointer flex items-center justify-between group"
+                            className="w-full p-5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl text-xs font-black text-[var(--color-foreground)] uppercase italic tracking-tight hover:border-primary/20 hover:bg-[var(--color-hover)] transition-all cursor-pointer flex items-center justify-between group"
                           >
-                            <span className={selectedSnapshot ? "text-white" : "text-muted/40"}>
+                            <span className={selectedSnapshot ? "text-[var(--color-foreground)]" : "text-[var(--color-muted)]"}>
                               {selectedSnapshot ? 
                                 data.snapshots.find((s: any) => s.id === selectedSnapshot)?.profileName : 
                                 "Seleccionar Cápsula..."}
                             </span>
-                            <Layers className={`w-4 h-4 transition-colors ${dropdownOpen ? "text-indigo-400" : "text-muted/20 group-hover:text-muted/40"}`} />
+                            <Layers className={`w-4 h-4 transition-colors ${dropdownOpen ? "text-indigo-500" : "text-[var(--color-muted)] group-hover:text-primary"}`} />
                           </div>
 
                           {/* Dropdown Menu */}
                           {dropdownOpen && (
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                              <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar animate-fade-in">
+                              <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar animate-fade-in">
                                 {data.snapshots.map((snap: any) => (
                                   <div 
                                     key={snap.id}
@@ -569,15 +569,15 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                                       setSelectedSnapshot(snap.id);
                                       setDropdownOpen(false);
                                     }}
-                                    className={`p-4 hover:bg-white/[0.05] cursor-pointer transition-colors border-b border-white/[0.02] last:border-0 flex flex-col gap-1 ${selectedSnapshot === snap.id ? "bg-white/[0.03]" : ""}`}
+                                    className={`p-4 hover:bg-[var(--color-hover)] cursor-pointer transition-colors border-b border-[var(--color-border)] last:border-0 flex flex-col gap-1 ${selectedSnapshot === snap.id ? "bg-primary/5" : ""}`}
                                   >
-                                    <span className={`text-xs font-black uppercase italic tracking-tight ${selectedSnapshot === snap.id ? "text-indigo-400" : "text-white"}`}>
+                                    <span className={`text-xs font-black uppercase italic tracking-tight ${selectedSnapshot === snap.id ? "text-primary" : "text-[var(--color-foreground)]"}`}>
                                       {snap.profileName}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-[9px] font-bold text-muted/30 uppercase">{new Date(snap.timestamp).toLocaleDateString()}</span>
-                                      <span className="text-[9px] font-bold text-muted/10 uppercase">•</span>
-                                      <span className="text-[9px] font-bold text-muted/30 uppercase">{new Date(snap.timestamp).toLocaleTimeString()}</span>
+                                      <span className="text-[9px] font-bold text-[var(--color-muted)] uppercase">{new Date(snap.timestamp).toLocaleDateString()}</span>
+                                      <span className="text-[9px] font-bold text-[var(--color-muted)] uppercase">•</span>
+                                      <span className="text-[9px] font-bold text-[var(--color-muted)] uppercase">{new Date(snap.timestamp).toLocaleTimeString()}</span>
                                     </div>
                                   </div>
                                 ))}
@@ -589,7 +589,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                         <button
                           disabled={!selectedSnapshot || saving}
                           onClick={() => handleAction("apply-snapshot", { snapshotId: selectedSnapshot })}
-                          className="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-2 italic"
+                          className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-2 italic mt-4"
                         >
                           {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <HistoryIcon className="w-4 h-4" />}
                           Restaurar Cápsula Seleccionada

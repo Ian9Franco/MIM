@@ -34,7 +34,7 @@ interface LegacyCacheData {
 
 export class StorageMigration {
   private readonly LEGACY_DESCRIPTIONS_PATH = path.join(SOURCE_BASE, '.mim-index', 'mod-descriptions.json');
-  private readonly LEGACY_CACHE_PATH = path.join(SOURCE_BASE, '.mim-index', 'remote-cache.json');
+  private readonly LEGACY_CACHE_PATH = path.join(SOURCE_BASE, '.mim-index', 'cache', 'remote-cache.json');
   private readonly MIGRATION_MARKER_PATH = path.join(SOURCE_BASE, '.mim-index', '.indexeddb-migration-complete');
 
   async needsMigration(): Promise<boolean> {

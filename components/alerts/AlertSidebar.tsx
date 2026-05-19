@@ -136,8 +136,7 @@ export function AlertSidebar({
         borderRadius: "2.5rem 0 0 2.5rem" 
       }}
     >
-      {/* Accent Top Line */}
-      <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
+      <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
       <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border)" }}>
         <h2 className="text-lg font-headline flex items-center gap-2" style={{ color: "var(--color-foreground)" }}>
           <Bell className="w-5 h-5" style={{ color: "var(--color-primary)" }} /> Centro de Alertas

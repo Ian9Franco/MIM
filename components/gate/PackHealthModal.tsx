@@ -168,7 +168,7 @@ export function PackHealthPanel({
           boxShadow:  `-24px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 color-mix(in srgb, ${cfg.color} 12%, transparent)`,
         }}
       >
-      <div className="absolute top-0 inset-x-0 h-[2px] opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)` }} />
+      <div className="absolute top-0 inset-x-0 h-[2px] opacity-70 animate-led-flicker" style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)` }} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">

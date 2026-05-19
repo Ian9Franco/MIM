@@ -32,14 +32,83 @@ export const FomoModCard = memo(function FomoModCard({
   const onCurseForge = mod.availability?.curseforge ?? isCF;
   const isOnBoth = onModrinth && onCurseForge;
   const isExclusive = !isOnBoth;
+  const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
+  const potentialTypes = ["datapack", "mod", "resourcepack", "shader", "textura", "modpack"];
   
-  // Normalización del tipo de proyecto para la etiqueta superior
-  const typeLabel = mod.projectType === "resourcepack" ? "Textura" : mod.projectType === "shader" ? "Shader" : "Mod";
+  // Extraer los tipos reales del proyecto
+  const foundTypes = new Set<string>();
+  if (mod.projectType) {
+    const pt = mod.projectType.toLowerCase();
+    if (pt === "resourcepack") foundTypes.add("textura");
+    else foundTypes.add(pt);
+  }
+  mod.categories?.forEach((c: string) => {
+    const lc = c.toLowerCase();
+    if (potentialTypes.includes(lc)) {
+      if (lc === "resourcepack") foundTypes.add("textura");
+      else foundTypes.add(lc);
+    }
+  });
+  
+  // Ordenar tipos: datapack > modpack > mod > otros
+  const sortedTypes = Array.from(foundTypes).sort((a, b) => {
+    if (a === "datapack") return -1;
+    if (b === "datapack") return 1;
+    if (a === "modpack") return -1;
+    if (b === "modpack") return 1;
+    if (a === "mod") return -1;
+    if (b === "mod") return 1;
+    return a.localeCompare(b);
+  });
+
+  const modLoaders = mod.categories?.filter((c: string) => knownLoaders.includes(c.toLowerCase())) || [];
+  
+  // Filtrar categorías que no sean ni loaders ni tipos base
+  const otherCategories = mod.categories?.filter((c: string) => 
+    !knownLoaders.includes(c.toLowerCase()) && 
+    !potentialTypes.includes(c.toLowerCase()) &&
+    c.toLowerCase() !== "resourcepack"
+  ).slice(0, 2) || [];
+  
+  const bannerUrl = mod.gallery?.[0];
+  const primaryType = sortedTypes[0] || "mod";
+  
+  // Color base del banner según el tipo principal
+  let bannerBgColor = "#18181b";
+  let fallbackTexture = {};
+
+  if (primaryType === "datapack") {
+    bannerBgColor = "#022c22"; // Verde esmeralda oscuro
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H8v-2h12V9.5h-2V7h2V5H8v-2h12V.5h-2V-2h2v2h2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2.5H20zm0 0V23h20v2H20v2h12v2H20v2h12v2H20v2h12v2H20v2.5h2V42h-2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2.5H20z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "shader") {
+    bannerBgColor = "#2e1065"; // Violeta/Morado oscuro
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.392-5.351-2.352-10.051-6.102-13.799C11.332 2.453 6.136.634 0 0h100c-6.136.634-11.332 2.453-15.082 6.201C81.168 9.949 78.424 14.649 78.816 20h-57.632z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "textura" || primaryType === "resourcepack") {
+    bannerBgColor = "#451a03"; // Ámbar/Marrón oscuro
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "modpack") {
+    bannerBgColor = "#172554"; // Azul oscuro
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='100' viewBox='0 0 60 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 50L0 67.5V100l30-17.5V50zm0-50L0 17.5V50l30-17.5V0zm30 17.5L30 35v33.25l30-17.5V17.5zM30 67.5L0 85v33.25l30-17.5V67.5z'/%3E%3Cpath fill-opacity='0.04' d='M30 50l30 17.5V100L30 82.5V50zm0-50l30 17.5V50L30 32.5V0zm-30 17.5L30 0v33.25L0 50V17.5zM0 67.5L30 50v33.25L0 100V67.5z'/%3E%3Cpath fill-opacity='0.08' d='M30 50L0 32.5l30-17.5 30 17.5L30 50zm0-50L0-17.5l30-17.5 30 17.5L30 0zm0 100L0 82.5l30-17.5 30 17.5L30 100z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else {
+    // Mod (Hexagon / Honeycomb Pattern)
+    bannerBgColor = "#500724"; // Rosa/Fucsia oscuro (Rosa 950)
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.65V49h-2z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  }
 
   return (
     <article 
       onClick={() => onToggleSelect?.(mod)}
-      className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-full border border-white/5 ${
+      className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-[340px] border border-white/5 overflow-hidden ${
         isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
       } ${isCF ? 'rounded-none' : 'rounded-3xl'}`}
       style={{ 
@@ -49,93 +118,170 @@ export const FomoModCard = memo(function FomoModCard({
         borderColor: "rgba(255,255,255,0.08)"
       }}
     >
-      <div className="p-4 flex flex-col flex-1">
-        {/* Cabecera: Icono + Título + Metadatos */}
-        <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0 border border-white/10 shadow-lg group-hover:scale-105 transition-transform duration-500">
+      {/* 1. Banner Image */}
+      <div className="relative h-28 w-full shrink-0 border-b border-white/5" style={{ backgroundColor: bannerBgColor }}>
+        {bannerUrl ? (
+          <img src={bannerUrl} alt="" className="w-full h-full object-cover relative z-10 opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+        ) : (
+          <div 
+            className="absolute inset-0 opacity-80 pointer-events-none" 
+            style={fallbackTexture} 
+          />
+        )}
+        
+        {/* Overlay degradado para texto si se necesita, o simplemente sombra interior */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220,14%,10%)] via-transparent to-transparent z-20 pointer-events-none" />
+
+        {/* Botones de acción flotantes (Opción A del plan) */}
+        <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
+            className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
+              isSelected ? 'bg-primary border-primary text-white' : 'bg-black/60 border-white/20 text-white hover:bg-black/80'
+            }`}
+            title={isSelected ? "Quitar de la lista" : "Añadir a la lista"}
+          >
+            <ListTree className="w-4 h-4" style={{ color: '#ffffff' }} />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
+            disabled={isDownloading} 
+            className="w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500 transition-all shadow-xl hover:scale-110 active:scale-95"
+            title="Descargar"
+          >
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#ffffff' }} /> : <Download className="w-4 h-4" style={{ color: '#ffffff' }} />}
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Contenido Principal */}
+      <div className="p-4 flex flex-col grow relative z-30">
+        
+        {/* Perfil (Icono + Título) superpuesto al banner */}
+        <div className="flex gap-3 mb-2 -mt-10 relative shrink-0">
+          <div className="w-16 h-16 rounded-[1rem] overflow-hidden bg-[hsl(220,14%,10%)] border-4 border-[hsl(220,14%,10%)] shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500 relative z-10">
             {mod.iconUrl ? (
               <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <Flame className="w-8 h-8 m-4 opacity-20" />
+              <Flame className="w-8 h-8 m-3 opacity-20" />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold truncate text-sm text-white/90 group-hover:text-white transition-colors">{mod.title}</h3>
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-white/40">
+          <div className="flex-1 min-w-0 pt-7 relative z-20 drop-shadow-md">
+            <h3 className="font-bold truncate text-[15px] text-white/90 group-hover:text-white transition-colors">{mod.title}</h3>
+            <div className="flex items-center gap-1.5 text-[10px] text-white/50">
               <span className="truncate">por {mod.author}</span>
               <ExternalLink 
-                className="w-3 h-3 cursor-pointer hover:text-primary transition-colors" 
+                className="w-3 h-3 cursor-pointer hover:text-primary transition-colors shrink-0" 
                 onClick={(e) => { e.stopPropagation(); openExternal(mod.url); }} 
               />
-            </div>
-            
-            {/* Fila de Chips y Badges */}
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {riskScore !== undefined && riskLevel && (
-                <SecurityBadgeCompact riskScore={riskScore} riskLevel={riskLevel} onClick={onSecurityDetails} />
-              )}
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/60">
-                <Download className="w-2.5 h-2.5" /> {formatNumber(mod.downloads)}
-              </div>
-              {/* Iconos de plataforma: ambos si está en los dos, uno solo si es exclusivo */}
-              <div className="ml-auto flex items-center gap-1">
-                {isOnBoth ? (
-                  // Disponible en ambas plataformas
-                  <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all duration-500">
-                    <ModrinthIcon />
-                    <CurseForgeIcon />
-                  </div>
-                ) : (
-                  // Exclusivo de una sola plataforma
-                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md border transition-all duration-500 opacity-50 group-hover:opacity-100"
-                    style={{ 
-                      background: isCF ? "rgba(244,115,22,0.08)" : "rgba(27,214,114,0.08)",
-                      borderColor: isCF ? "rgba(244,115,22,0.2)" : "rgba(27,214,114,0.2)"
-                    }}
-                    title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}
-                  >
-                    {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
-                    <span className="text-[8px] font-black uppercase tracking-tight"
-                      style={{ color: isCF ? "rgba(251,146,60,0.8)" : "rgba(27,214,114,0.8)" }}
-                    >Excl.</span>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
         {/* Descripción corta */}
-        <p className="text-xs text-white/50 mt-4 line-clamp-2 h-8 group-hover:text-white/70 transition-colors">{mod.description}</p>
-        
+        <p className="text-xs text-white/60 line-clamp-2 mt-2 mb-3 group-hover:text-white/80 transition-colors shrink-0 leading-relaxed">
+          {mod.description}
+        </p>
+
         {/* Predicción de Compatibilidad Asistida (Sinytra) */}
         {sinytraActive && isFabricOnly && (
-          <FomoCompatibilityBadge title={mod.title} categories={mod.categories} />
+          <div className="mb-3 shrink-0">
+            <FomoCompatibilityBadge title={mod.title} categories={mod.categories} />
+          </div>
         )}
 
-        {/* Acciones de Tarjeta (Grid Inferior) */}
-        <div className="grid grid-cols-3 gap-2 mt-auto pt-6">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
-            className={`flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold border transition-all ${
-              isSelected ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
-            }`}
-          >
-            <ListTree className="w-3.5 h-3.5" /> {isSelected ? "Listo" : "Añadir"}
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
-            disabled={isDownloading} 
-            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
-          >
-            {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Descargar
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }} 
-            className="flex items-center justify-center gap-1.5 h-9 rounded-xl text-[10px] font-bold bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
-          >
-            <Info className="w-3.5 h-3.5" /> Detalles
-          </button>
+        {/* Badges / Tags (Scrollable/Hidden if overflowing) */}
+        <div className="flex flex-wrap gap-1.5 mb-2 overflow-hidden h-[36px] content-start">
+          {/* Etiquetas de Tipo (Siempre primero, en mayúsculas y con color) */}
+          {sortedTypes.map((type: string) => {
+            const t = type.toLowerCase();
+            let colors = "bg-white/5 text-white/50 border-white/10";
+            if (t === "datapack") colors = "bg-emerald-900/40 text-emerald-300 border-emerald-700/50";
+            else if (t === "textura" || t === "resourcepack") colors = "bg-amber-900/40 text-amber-300 border-amber-700/50";
+            else if (t === "shader") colors = "bg-purple-900/40 text-purple-300 border-purple-700/50";
+            else if (t === "modpack") colors = "bg-blue-900/20 text-blue-300 border-blue-700/30";
+            else if (t === "mod") colors = "bg-rose-900/40 text-rose-300 border-rose-700/50";
+            
+            return (
+              <span key={type} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border shrink-0 ${colors}`}>
+                {type}
+              </span>
+            );
+          })}
+
+          {/* Categorías Secundarias (Tags normales) */}
+          {otherCategories.map((cat: string) => (
+            <span key={cat} className="px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-wide bg-white/10 text-foreground/60 border border-transparent shrink-0">
+              {cat}
+            </span>
+          ))}
+        </div>
+
+        {/* Footer (Estadísticas y Detalles) */}
+        <div className="flex items-center justify-between text-[11px] text-foreground/60 mt-auto pt-3 border-t border-foreground/10 shrink-0 bg-foreground/5 -mx-4 px-4 pb-0 -mb-4 h-14">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0 overflow-hidden">
+            <div className="flex items-center gap-1 font-mono bg-foreground/10 px-1.5 py-1 rounded-md shrink-0">
+              <Download className="w-3.5 h-3.5" /> {formatNumber(mod.downloads)}
+            </div>
+
+            {/* Loaders (Iconos Locales) en formación 2x2 */}
+            {modLoaders.length > 0 && (
+              <div className="grid grid-cols-2 gap-0.5 shrink-0" title={`Loaders: ${modLoaders.join(", ")}`}>
+                {modLoaders.map((loader: string) => {
+                  const l = loader.toLowerCase();
+                  let src = "";
+                  if (l === "forge") src = "/modloaders/forge.png";
+                  else if (l === "fabric") src = "/modloaders/fabric.png";
+                  else if (l === "neoforge") src = "/modloaders/neo.png";
+                  else if (l === "quilt") src = "/modloaders/quilt.png";
+                  
+                  if (src) {
+                    return (
+                      <div key={loader} className="bg-foreground/10 p-0.5 rounded-sm">
+                        <img src={src} alt={loader} title={loader} className="w-4 h-4 object-contain opacity-90 hover:opacity-100 transition-opacity cursor-help" />
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            )}
+            
+            {riskScore !== undefined && riskLevel && (
+              <div className="shrink-0 hidden sm:block">
+                <SecurityBadgeCompact riskScore={riskScore} riskLevel={riskLevel} onClick={onSecurityDetails} />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            {isOnBoth ? (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/10 bg-foreground/5 opacity-80 shrink-0" title="Disponible en ambas plataformas">
+                <ModrinthIcon />
+                <CurseForgeIcon />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border opacity-60 shrink-0"
+                style={{ 
+                  background: isCF ? "rgba(244,115,22,0.1)" : "rgba(27,214,114,0.1)",
+                  borderColor: isCF ? "rgba(244,115,22,0.2)" : "rgba(27,214,114,0.2)"
+                }}
+                title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}
+              >
+                {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
+                <span className="text-[8px] font-black uppercase tracking-tight hidden sm:inline"
+                  style={{ color: isCF ? "rgba(251,146,60,0.8)" : "rgba(27,214,114,0.8)" }}
+                >Excl.</span>
+              </div>
+            )}
+            
+            <button 
+              onClick={(e) => { e.stopPropagation(); onOpenVersions(mod); }} 
+              className="px-2 py-1.5 sm:px-2.5 rounded-lg bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 hover:border-foreground/20 transition-all flex items-center gap-1 text-foreground/60 hover:text-foreground font-medium shrink-0"
+            >
+              <Info className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Detalles</span>
+            </button>
+          </div>
         </div>
       </div>
     </article>

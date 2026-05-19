@@ -23,6 +23,7 @@
   --glass-bg: rgba(28, 28, 33, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
   --shadow-drop: 0 15px 35px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.15);
   --shadow-inner: inset 0 2px 4px rgba(255, 255, 255, 0.05), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
   --liquid-blur: blur(20px);
 
@@ -51,6 +52,7 @@
   --glass-bg: rgba(30, 30, 30, 0.8);
   --glass-border: rgba(187, 150, 228, 0.15);
   --shadow-drop: 0 15px 35px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25);
   --shadow-inner: inset 0 2px 4px rgba(187, 150, 228, 0.1), inset 0 -2px 4px rgba(0, 0, 0, 0.5);
 
   /* CurseForge Vampire */
@@ -63,8 +65,8 @@
 /* MODERN (Light Neomorphic) */
 [data-theme="modern"] {
   --color-background: #E8EAEC; /* Color de fondo de la paleta */
-  --color-surface:    #F0F2F4;
-  --color-card:       #E8EAEC; /* Mismo que el fondo para neomorfismo */
+  --color-surface:    #F8F9FA; /* Tono crudo para mayor contraste */
+  --color-card:       #F3F5F7; /* Ligeramente más claro que el fondo */
   --color-primary:    #7C3AED;
   --color-accent:     #0891B2;
   --color-foreground: #0D2750; /* Color oscuro de la paleta */
@@ -77,8 +79,9 @@
   
   /* Neomorphic Shadows from palette - Reduced for better clipping */
   --shadow-drop: 12px 12px 25px rgba(13, 39, 80, 0.12), -10px -10px 20px #FFFFFF;
+  --shadow-card: 4px 4px 10px rgba(13, 39, 80, 0.06), -4px -4px 10px #FFFFFF;
   --shadow-inner: inset -8px -8px 12px #FFFFFF, inset 8px 8px 12px rgba(13, 39, 80, 0.12);
-  --glass-bg: rgba(232, 234, 236, 0.6);
+  --glass-bg: rgba(248, 249, 250, 0.65);
   --glass-border: rgba(255, 255, 255, 0.8);
   --liquid-blur: blur(12px);
 
@@ -665,3 +668,22 @@ select:focus {
 .stagger-3 { animation-delay: 0.18s; }
 .stagger-4 { animation-delay: 0.24s; }
 .stagger-5 { animation-delay: 0.30s; }
+
+/* Subtle Broken LED / Neon Flicker */
+@keyframes led-flicker {
+  0%   { opacity: 0.6; }
+  2%   { opacity: 0.1; }
+  4%   { opacity: 0.8; }
+  6%   { opacity: 0.6; }
+  22%  { opacity: 0.6; }
+  23%  { opacity: 0.3; }
+  24%  { opacity: 0.6; }
+  65%  { opacity: 0.6; }
+  66%  { opacity: 0.2; }
+  68%  { opacity: 0.9; }
+  69%  { opacity: 0.6; }
+  100% { opacity: 0.6; }
+}
+.animate-led-flicker {
+  animation: led-flicker 6s ease-in-out infinite;
+}

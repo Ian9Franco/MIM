@@ -40,7 +40,7 @@ interface FomoYoutubeShowcaseProps {
   downloading: Record<string, boolean>;
   globalLoader?: string;
   /** Tema visual heredado de Spotlight */
-  theme?: "dark" | "modern";
+  theme?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -128,6 +128,16 @@ function YoutubeTriggerCard({
   theme?: string;
 }) {
   const isModern = theme === "modern";
+  const isVampire = theme === "vampire";
+
+  const cardBg = isModern ? "#f0ede3" : isVampire ? "#1a1525" : "hsl(220 14% 9%)";
+  const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid rgba(255,255,255,0.08)";
+  const cardShadow = isModern ? "0 4px 20px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
+  const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid rgba(255,255,255,0.07)";
+  
+  const labelColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 45%)";
+  const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 90%)";
+  const statColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "rgba(255,255,255,0.3)";
 
   return (
     <a
@@ -136,9 +146,9 @@ function YoutubeTriggerCard({
       rel="noopener noreferrer"
       className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
       style={{
-        border: isModern ? "1.5px solid #d4cfc0" : "1.5px solid rgba(255,255,255,0.08)",
-        background: isModern ? "#f0ede3" : "hsl(220 14% 9%)",
-        boxShadow: isModern ? "0 4px 20px rgba(0,0,0,0.08)" : "0 4px 32px rgba(0,0,0,0.5)",
+        border: cardBorder,
+        background: cardBg,
+        boxShadow: cardShadow,
       }}
       title={showcase.title}
     >
@@ -154,7 +164,7 @@ function YoutubeTriggerCard({
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, transparent 40%, hsl(220 14% 9%) 100%)",
+            background: `linear-gradient(to bottom, transparent 40%, ${cardBg} 100%)`,
           }}
         />
         {/* YouTube badge */}
@@ -172,7 +182,7 @@ function YoutubeTriggerCard({
         <div className="flex items-center justify-between">
           <span
             className="text-[7.5px] font-black uppercase tracking-widest"
-            style={{ color: isModern ? "hsl(30 20% 40%)" : "hsl(220 14% 45%)" }}
+            style={{ color: labelColor }}
           >
             ◇ Showcase
           </span>
@@ -180,18 +190,18 @@ function YoutubeTriggerCard({
 
         <h3
           className="font-headline text-[11px] font-semibold leading-tight line-clamp-3 mt-0.5"
-          style={{ color: isModern ? "hsl(30 20% 15%)" : "hsl(0 0% 90%)" }}
+          style={{ color: titleColor }}
         >
           {showcase.title}
         </h3>
 
         <div
           className="flex items-center gap-1 mt-auto pt-2"
-          style={{ borderTop: isModern ? "1px solid #d4cfc0" : "1px solid rgba(255,255,255,0.07)" }}
+          style={{ borderTop: sepColor }}
         >
           <span
             className="text-[7.5px] font-black uppercase tracking-widest"
-            style={{ color: isModern ? "hsl(30 20% 45%)" : "rgba(255,255,255,0.3)" }}
+            style={{ color: statColor }}
           >
             {modCount} mods detectados
           </span>
@@ -221,9 +231,30 @@ function ShowcaseModCard({
   theme?: string;
 }) {
   const isModern = theme === "modern";
+  const isVampire = theme === "vampire";
   const num = String((index % 999) + 1).padStart(3, "0");
+  
+  const cardBg = isModern ? "#f0ede3" : isVampire ? "#1a1525" : "hsl(220 14% 10%)";
+  const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  const cardShadow = isModern ? "0 10px 40px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
+
+  const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid hsl(220 14% 18%)";
+  const numColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 40%)";
+  const sepColorThick = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  
+  const bracketColor = isModern ? "rgba(0,0,0,0.25)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.2)";
+  const iconBorder = isModern ? "rgba(0,0,0,0.12)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.1)";
+  const iconBg = isModern ? "rgba(0,0,0,0.06)" : isVampire ? "rgba(187, 150, 228, 0.05)" : "rgba(255,255,255,0.05)";
+  const iconFallback = isModern ? "rgba(0,0,0,0.3)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.3)";
+  
+  const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 92%)";
+  const authorColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "#BB96E4" : "hsl(220 14% 45%)";
+  const statColor = isModern ? "hsl(30 20% 50%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "hsl(220 14% 40%)";
+  const dotColor = isModern ? "rgba(0,0,0,0.2)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.15)";
+  const dlBtnBg = isModern ? "rgba(0,0,0,0.7)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.15)";
+
   const dotGridStyle = {
-    backgroundImage: `radial-gradient(circle, ${isModern ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.05)"} 1px, transparent 1px)`,
+    backgroundImage: `radial-gradient(circle, ${isModern ? "rgba(0,0,0,0.12)" : isVampire ? "rgba(187, 150, 228, 0.08)" : "rgba(255,255,255,0.05)"} 1px, transparent 1px)`,
     backgroundSize: "6px 6px",
   };
 
@@ -231,16 +262,16 @@ function ShowcaseModCard({
     <div
       className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
-        background: isModern ? "#f0ede3" : "hsl(220 14% 10%)",
-        border: isModern ? "1.5px solid #d4cfc0" : "1.5px solid hsl(220 14% 18%)",
-        boxShadow: isModern ? "0 4px 24px rgba(0,0,0,0.10)" : "0 4px 32px rgba(0,0,0,0.5)",
+        background: cardBg,
+        border: cardBorder,
+        boxShadow: cardShadow,
       }}
       onClick={() => onOpenVersions(mod)}
     >
       {/* Top label row */}
       <div
         className="flex items-center justify-between px-3 pt-2.5 pb-1.5"
-        style={{ borderBottom: isModern ? "1px solid #d4cfc0" : "1px solid hsl(220 14% 18%)" }}
+        style={{ borderBottom: sepColor }}
       >
         <span
           className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1"
@@ -251,7 +282,7 @@ function ShowcaseModCard({
         </span>
         <span
           className="text-[8px] font-black tabular-nums"
-          style={{ color: isModern ? "hsl(30 20% 40%)" : "hsl(220 14% 40%)" }}
+          style={{ color: numColor }}
         >
           {num}
         </span>
@@ -260,7 +291,7 @@ function ShowcaseModCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ ...dotGridStyle, height: "160px", borderBottom: isModern ? "1.5px solid #d4cfc0" : "1.5px solid hsl(220 14% 18%)" }}
+        style={{ ...dotGridStyle, height: "160px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[
@@ -272,15 +303,15 @@ function ShowcaseModCard({
           <div
             key={i}
             className={`absolute ${pos} w-3 h-3 ${borders}`}
-            style={{ borderColor: isModern ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.2)" }}
+            style={{ borderColor: bracketColor }}
           />
         ))}
 
         <div
-          className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110"
+          className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110"
           style={{
-            borderColor: isModern ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)",
-            background: isModern ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)",
+            borderColor: iconBorder,
+            background: iconBg,
           }}
         >
           {mod.iconUrl ? (
@@ -289,7 +320,7 @@ function ShowcaseModCard({
           ) : (
             <div
               className="text-2xl font-black"
-              style={{ color: isModern ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)" }}
+              style={{ color: iconFallback }}
             >
               {mod.title.substring(0, 2).toUpperCase()}
             </div>
@@ -301,7 +332,7 @@ function ShowcaseModCard({
           onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
           disabled={isDownloading}
           className="absolute bottom-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90"
-          style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}
+          style={{ background: dlBtnBg, backdropFilter: "blur(8px)" }}
         >
           {isDownloading
             ? <Loader2 className="w-3 h-3 text-white animate-spin" />
@@ -314,24 +345,24 @@ function ShowcaseModCard({
       <div className="flex-1 flex flex-col p-3 gap-1 relative">
         <h3
           className="font-headline text-sm leading-tight line-clamp-2"
-          style={{ color: isModern ? "hsl(30 20% 15%)" : "hsl(0 0% 92%)" }}
+          style={{ color: titleColor }}
         >
           {mod.title}
         </h3>
         <p
           className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5"
-          style={{ color: isModern ? "hsl(30 20% 45%)" : "hsl(220 14% 45%)" }}
+          style={{ color: authorColor }}
         >
           {mod.author}
         </p>
 
         <div
           className="flex items-center justify-between mt-auto pt-2"
-          style={{ borderTop: isModern ? "1px solid #d4cfc0" : "1px solid hsl(220 14% 18%)" }}
+          style={{ borderTop: sepColor }}
         >
           <span
             className="text-[7.5px] font-black uppercase tracking-widest"
-            style={{ color: isModern ? "hsl(30 20% 50%)" : "hsl(220 14% 40%)" }}
+            style={{ color: statColor }}
           >
             {mod.downloads >= 1_000_000
               ? `${(mod.downloads / 1_000_000).toFixed(1)}M`
@@ -344,7 +375,7 @@ function ShowcaseModCard({
               <div
                 key={i}
                 className="w-1 h-1 rounded-full"
-                style={{ background: isModern ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.15)" }}
+                style={{ background: dotColor }}
               />
             ))}
           </div>

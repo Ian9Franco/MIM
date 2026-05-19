@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { getPortableDir } from "@/lib/settings";
 
-const USAGE_FILE = path.join(getPortableDir(), "showcase_usage.json");
+const DATA_DIR = path.join(getPortableDir(), "data");
+const USAGE_FILE = path.join(DATA_DIR, "showcase_usage.json");
 
 function getUsage(): Record<string, number> {
   if (fs.existsSync(USAGE_FILE)) {
@@ -23,6 +24,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { usage } = await request.json();
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(USAGE_FILE, JSON.stringify(usage, null, 2), "utf-8");
     return NextResponse.json({ success: true, usage });
   } catch (err: any) {

@@ -163,7 +163,7 @@ export const ModCard = memo(function ModCard({
                radial-gradient(circle at 2px 2px, rgba(255,255,255,0.04) 1px, transparent 0)`,
           backgroundSize: isPending ? "auto" : "100% 100%, 8px 8px",
           backdropFilter: isPending ? "none" : "var(--liquid-blur)",
-          boxShadow: isPending ? "none" : "var(--shadow-drop)",
+          boxShadow: isPending ? "none" : "var(--shadow-card)",
           margin: "8px",
           transform: "translateZ(0)",
           WebkitTransform: "translateZ(0)",

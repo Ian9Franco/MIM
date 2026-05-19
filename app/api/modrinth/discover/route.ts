@@ -82,6 +82,7 @@ export async function GET(req: NextRequest) {
             projectType: p.project_type ?? "mod",
             client_side: p.client_side,
             server_side: p.server_side,
+            gallery:     Array.from(new Set([p.featured_gallery, ...(p.gallery ?? [])].filter(Boolean))),
           }));
           
           return NextResponse.json({
@@ -186,6 +187,7 @@ export async function GET(req: NextRequest) {
         projectType: h.project_type ?? "mod",
         client_side: h.client_side,
         server_side: h.server_side,
+        gallery:     Array.from(new Set([h.featured_gallery, ...(h.gallery ?? [])].filter(Boolean))),
       }));
 
     return NextResponse.json({

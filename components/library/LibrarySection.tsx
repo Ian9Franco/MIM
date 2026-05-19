@@ -149,7 +149,7 @@ export function LibrarySection({
         <div className="space-y-3"><SkeletonLoader message="Escaneando librería..." /><SkeletonLoader message="Buscando actualizaciones..." /></div>
       ) : filteredLibrary.length === 0 ? (
         (!pendingFiles || pendingFiles.length === 0) ? (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed border-white/10 bg-white/5">
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-[2.5rem] border border-dashed" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
             <Layers className="w-12 h-12 mb-4 opacity-10 text-emerald-400" />
             <p className="text-sm font-bold opacity-80 mb-2">No hay {typeLabels[filterType] || filterType} instalados en este proyecto aún</p>
             {activeProject && filterType === "mod" && (
@@ -159,7 +159,7 @@ export function LibrarySection({
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-6 text-center rounded-[2.5rem] border border-dashed border-white/5 bg-white/5 animate-fade-in">
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center rounded-[2.5rem] border border-dashed animate-fade-in" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
             <Layers className="w-8 h-8 mb-3 opacity-20 text-emerald-400" />
             <p className="text-xs font-medium text-white/50 italic">No hay {typeLabels[filterType] || filterType} en la librería. Clasificá archivos pendientes para llenar esta sección.</p>
           </div>

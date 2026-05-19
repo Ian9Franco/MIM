@@ -999,8 +999,8 @@
 
 /* ── Vampire Theme ── */
 [data-theme="vampire"] .spotlight-ec-mini-card {
-  background: #231133;
-  border-color: rgba(187, 150, 228, 0.2);
+  background: #1a1525;
+  border-color: rgba(187, 150, 228, 0.15);
 }
 [data-theme="vampire"] .spotlight-ec-mini-image-zone {
   background-color: #2a113a;
@@ -1013,9 +1013,9 @@
 
 /* ── Modern Theme ── */
 [data-theme="modern"] .spotlight-ec-mini-card {
-  background: #ffffff;
-  border-color: rgba(124, 58, 237, 0.1);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.05);
+  background: #f0ede3;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 [data-theme="modern"] .spotlight-ec-mini-card:hover {
   background: #fdfcff;

@@ -103,8 +103,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
           boxShadow: `24px 0 60px rgba(0,0,0,0.45), inset -1px 0 0 color-mix(in srgb, var(--color-primary) 10%, transparent)`,
         }}
       >
-        {/* Accent Top Line */}
-        <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
+        <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
 
         <SageHeader onClose={onClose} />
 

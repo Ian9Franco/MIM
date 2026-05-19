@@ -88,10 +88,20 @@ export class CurseForgeService {
         author: m.authors?.[0]?.name || "Desconocido",
         downloads: m.downloadCount,
         url: m.links?.websiteUrl || "",
-        categories: (m.categories || []).map((c: any) => c.name),
+        categories: Array.from(new Set([
+          ...(m.categories || []).map((c: any) => c.name),
+          ...((m.latestFilesIndexes || []).map((idx: any) => {
+            if (idx.modLoaderType === 1) return "forge";
+            if (idx.modLoaderType === 2) return "fabric";
+            if (idx.modLoaderType === 4) return "quilt";
+            if (idx.modLoaderType === 5) return "neoforge";
+            return null;
+          }).filter(Boolean) as string[])
+        ])),
         latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
         projectType: projectType,
         allowModDistribution: m.allowModDistribution !== false,
+        gallery: (m.screenshots || []).map((s: any) => s.url),
         // Inferencia de entorno para CurseForge basada en categorías
         ...(() => {
           const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());

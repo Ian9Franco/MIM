@@ -43,9 +43,9 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         {/* Project Type Dropdown */}
         <div className="relative">
           <button 
-            onClick={() => !isAuthorSearch && setProjectTypeOpen(!projectTypeOpen)} 
+            onClick={() => !isAuthorSearch && (setProjectTypeOpen(!projectTypeOpen), setLoaderOpen(false))} 
             disabled={isAuthorSearch}
-            className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/20 text-white border-white/10"}`}
           >
             <span>{isAuthorSearch ? "Cualquier Tipo" : (PROJECT_TYPES.find(pt => pt.value === props.projectType)?.label || "Seleccionar Tipo")}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${projectTypeOpen ? "rotate-180" : ""}`} />
@@ -70,9 +70,9 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         {(props.projectType === "mod" || props.projectType === "modpack" || isAuthorSearch) && (
           <div className="relative">
             <button 
-              onClick={() => !isAuthorSearch && setLoaderOpen(!loaderOpen)} 
+              onClick={() => !isAuthorSearch && (setLoaderOpen(!loaderOpen), setProjectTypeOpen(false))} 
               disabled={isAuthorSearch}
-              className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 bg-black/20 text-white border-white/10 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/20 text-white border-white/10"}`}
             >
               <span>{isAuthorSearch ? "Cualquier Loader" : (props.loader === "unknown" ? "Cualquier Loader" : (props.loader.charAt(0).toUpperCase() + props.loader.slice(1)))}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${loaderOpen ? "rotate-180" : ""}`} />
@@ -199,7 +199,25 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
 
       <div className="pt-4 border-t border-white/5 flex flex-col gap-3 shrink-0">
         <button onClick={m.clear} className="w-full py-2 rounded-xl border border-white/5 bg-white/5 text-white/40 text-[10px] font-bold">Limpiar Filtros</button>
-        <div className="grid grid-cols-2 gap-1.5">{SORT_OPTIONS.map(opt => <button key={opt.value} onClick={() => props.onSort(opt.value)} className={`flex items-center gap-2 px-2 py-1.5 rounded-xl text-[10px] font-bold border ${props.sortOrder === opt.value ? "bg-orange-500/10 text-orange-400 border-orange-500/30" : "bg-white/5 border-white/5 text-white/40"} ${opt.value === "relevance" ? "col-span-2 justify-center" : ""}`}>{SORT_ICONS[opt.value] || <SlidersHorizontal className="w-3.5 h-3.5" />}{opt.label}</button>)}</div>
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-foreground/5 rounded-2xl border border-white/5 relative">
+          {SORT_OPTIONS.map((opt, i) => {
+            const isActive = props.sortOrder === opt.value;
+            return (
+              <button 
+                key={opt.value} 
+                onClick={() => props.onSort(opt.value)} 
+                className={`flex items-center gap-2 px-2 py-2 rounded-xl text-[10px] font-bold border transition-all duration-300 ${isActive ? "text-white border-transparent z-10" : "bg-transparent border-transparent text-white/40 hover:text-white hover:bg-white/5"} ${opt.value === "relevance" ? "col-span-2 justify-center" : ""}`}
+                style={isActive ? {
+                  background: "var(--color-primary)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 12px color-mix(in srgb, var(--color-primary) 30%, transparent)"
+                } : {}}
+              >
+                {SORT_ICONS[opt.value] || <SlidersHorizontal className="w-3.5 h-3.5" />}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
         <button onClick={props.onRefresh} disabled={props.loading} className="w-full py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">{props.loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{props.loading ? "Actualizando..." : "Actualizar"}</button>
       </div>
     </div>

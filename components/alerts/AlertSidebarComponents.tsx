@@ -79,10 +79,10 @@ export function AlertSection({ icon, title, count, color, children, defaultOpen 
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="mb-4 border border-white/5 rounded-2xl overflow-hidden transition-all duration-300" style={{ background: "rgba(255, 255, 255, 0.01)" }}>
+    <div className="mb-4 border border-[var(--color-border)] rounded-2xl overflow-hidden transition-all duration-300" style={{ background: "var(--color-card)" }}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2 p-3.5 text-left transition-colors hover:bg-white/5"
+        className="w-full flex items-center gap-2 p-3.5 text-left transition-colors hover:bg-[var(--color-hover)]"
       >
         <span style={{ color }}>{icon}</span>
         <h3 className="text-xs font-headline tracking-wider uppercase font-bold" style={{ color }}>{title}</h3>
@@ -94,7 +94,7 @@ export function AlertSection({ icon, title, count, color, children, defaultOpen 
           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", color }}
         />
       </button>
-      {isOpen && <div className="p-3.5 border-t border-white/5 flex flex-col gap-3 animate-fade-in bg-black/15">{children}</div>}
+      {isOpen && <div className="p-3.5 border-t border-[var(--color-border)] flex flex-col gap-3 animate-fade-in bg-[var(--color-secondary-bg)]">{children}</div>}
     </div>
   );
 }
@@ -159,9 +159,9 @@ export function UpdateCard({
   const currentVersion = isCollection ? null : mod?.meta?.modVersion;
 
   return (
-    <div className="p-3 rounded-xl border animate-fade-in transition-all duration-300 hover:border-white/10" style={{ borderColor: "var(--color-accent-border)", background: "var(--color-accent-bg)" }}>
+    <div className="p-3 rounded-xl border animate-fade-in transition-all duration-300 hover:border-[var(--color-border)]" style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}>
       <div className="flex items-start gap-2">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--color-accent-hover)" }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--color-secondary-bg)" }}>
           <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
         </div>
         <div className="flex-1 min-w-0">
@@ -234,17 +234,17 @@ interface IncidentCardProps {
 
 export function IncidentCard({ inc, onResolve, onViewSage }: IncidentCardProps) {
   return (
-    <div className="p-3.5 rounded-2xl border animate-fade-in relative group" style={{ borderColor: inc.severity === "danger" ? "rgba(239,68,68,0.2)" : "rgba(167,139,250,0.2)", background: inc.severity === "danger" ? "rgba(239,68,68,0.04)" : "rgba(167,139,250,0.04)" }}>
+    <div className="p-3.5 rounded-2xl border animate-fade-in relative group" style={{ borderColor: inc.severity === "danger" ? "rgba(239,68,68,0.3)" : "rgba(167,139,250,0.3)", background: "var(--color-card)" }}>
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: inc.severity === "danger" ? "rgba(239,68,68,0.08)" : "rgba(167,139,250,0.08)" }}>
-          {inc.severity === "danger" ? <ShieldX className="w-4 h-4 text-red-400" /> : <ShieldAlert className="w-4 h-4 text-purple-400" />}
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: inc.severity === "danger" ? "rgba(239,68,68,0.1)" : "rgba(167,139,250,0.1)" }}>
+          {inc.severity === "danger" ? <ShieldX className="w-4 h-4 text-red-600" /> : <ShieldAlert className="w-4 h-4 text-purple-600" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className={`font-headline text-xs font-bold ${inc.severity === "danger" ? 'text-red-300' : 'text-purple-300'}`}>{inc.title}</p>
-            <span className="text-[8px] opacity-30">{new Date(inc.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <p className={`font-headline text-xs font-bold ${inc.severity === "danger" ? 'text-red-600' : 'text-purple-600'}`}>{inc.title}</p>
+            <span className="text-[8px] opacity-50">{new Date(inc.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <p className="text-[10px] mt-1 text-foreground/70">{inc.detail}</p>
+          <p className="text-[10px] mt-1 text-[var(--color-foreground)] opacity-80">{inc.detail}</p>
           <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <ActionButton small onClick={() => onResolve(inc.id)} icon={<CheckCircle className="w-3 h-3 text-emerald-400" />} label="Resolver" />
             {inc.module === "SAGE" && <ActionButton small onClick={onViewSage} label="Ver SAGE" />}

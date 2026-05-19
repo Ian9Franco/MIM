@@ -262,7 +262,7 @@ function useSmoothMarquee(speed: number, reverse: boolean, isVertical: boolean) 
 // ─────────────────────────────────────────────────────────────────────────────
 // Vertical Scrolling Ticker (Marquee Y) - Used for small items
 // ─────────────────────────────────────────────────────────────────────────────
-function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = false, globalLoader }: { mods: ModHit[], onOpenVersions: (m: ModHit) => void, speed?: number, color?: string, reverse?: boolean, globalLoader?: string }) {
+function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = false, globalLoader, theme }: { mods: ModHit[], onOpenVersions: (m: ModHit) => void, speed?: number, color?: string, reverse?: boolean, globalLoader?: string, theme?: string }) {
   const duplicatedMods = [...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods];
   const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, true);
 
@@ -347,7 +347,8 @@ function HorizontalEditorialMarquee({
   speed = 1, 
   reverse = false, 
   accentColor, 
-  globalLoader 
+  globalLoader,
+  theme
 }: any) {
   // Para un loop infinito seamless: exactamente 2 copias.
   // El hook resetea al llegar a halfSize (mitad del contenido = 1 copia).
@@ -380,6 +381,7 @@ function HorizontalEditorialMarquee({
                 onClick={() => onOpenCollection?.(item)}
                 accentColor={accentColor}
                 index={i % items.length}
+                theme={theme}
               />
             ) : (
               <SpotlightEditorialCard
@@ -391,6 +393,7 @@ function HorizontalEditorialMarquee({
                 accentColor={item.color || accentColor}
                 globalLoader={globalLoader}
                 index={i % items.length}
+                theme={theme}
               />
             )
           ))}
@@ -407,29 +410,51 @@ function SpotlightCollectionCard({
   collection,
   onClick,
   accentColor = COLORS.primary,
-  index = 0
+  index = 0,
+  theme
 }: {
   collection: CollectionEntry;
   onClick: () => void;
   accentColor?: string;
   index?: number;
+  theme?: string;
 }) {
   const [imgError, setImgError] = React.useState(false);
   const cardNum = String((index % 999) + 1).padStart(3, "0");
   const isCurseForge = collection.source === "curseforge";
+  const isModern = theme === "modern";
+  const isVampire = theme === "vampire";
+
+  const cardBg = isModern ? "#f0ede3" : isVampire ? "#1a1525" : "hsl(220 14% 10%)";
+  const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  const cardShadow = isModern ? "0 10px 40px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
+
+  const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid hsl(220 14% 18%)";
+  const numColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 40%)";
+  const sepColorThick = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  
+  const bracketColor = isModern ? "rgba(0,0,0,0.25)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.2)";
+  const iconBorder = isModern ? "rgba(0,0,0,0.12)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.1)";
+  const iconBg = isModern ? "rgba(0,0,0,0.06)" : isVampire ? "rgba(187, 150, 228, 0.05)" : "rgba(255,255,255,0.05)";
+  const iconFallback = isModern ? "rgba(0,0,0,0.3)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.3)";
+  
+  const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 92%)";
+  const authorColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "#BB96E4" : "hsl(220 14% 45%)";
+  const statColor = isModern ? "hsl(30 20% 50%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "hsl(220 14% 40%)";
+  const dotColor = isModern ? "rgba(0,0,0,0.2)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.15)";
 
   return (
     <div
       className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
-        background: "hsl(220 14% 10%)",
-        border: "1.5px solid hsl(220 14% 18%)",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.5)",
+        background: cardBg,
+        border: cardBorder,
+        boxShadow: cardShadow,
       }}
       onClick={onClick}
     >
       {/* Top label row — Estilo Showcase */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: "1px solid hsl(220 14% 18%)" }}>
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: sepColor }}>
         <span 
           className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1" 
           style={{ color: isCurseForge ? "#f87171" : "#4ade80" }}
@@ -437,7 +462,7 @@ function SpotlightCollectionCard({
           <CirclePlay className="w-2 h-2" />
           {isCurseForge ? "CurseForge" : "Modrinth"}
         </span>
-        <span className="text-[8px] font-black tabular-nums" style={{ color: "hsl(220 14% 40%)" }}>
+        <span className="text-[8px] font-black tabular-nums" style={{ color: numColor }}>
           {cardNum}
         </span>
       </div>
@@ -445,18 +470,18 @@ function SpotlightCollectionCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "160px", borderBottom: "1.5px solid hsl(220 14% 18%)" }}
+        style={{ height: "160px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
-          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: bracketColor }} />
         ))}
 
-        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
+        <div className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
           {!imgError && collection.iconUrl ? (
             <img src={collection.iconUrl} alt="" className="w-full h-full object-cover" onError={() => setImgError(true)} />
           ) : (
-            <div className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div className="text-2xl font-black" style={{ color: iconFallback }}>
               {collection.name.substring(0, 2).toUpperCase()}
             </div>
           )}
@@ -465,20 +490,20 @@ function SpotlightCollectionCard({
 
       {/* Text area */}
       <div className="flex-1 flex flex-col p-3 gap-1 relative">
-        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: "hsl(0 0% 92%)" }}>
+        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: titleColor }}>
           {collection.name}
         </h3>
-        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: "hsl(220 14% 45%)" }}>
+        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: authorColor }}>
           {collection.projectCount || 0} PROYECTOS
         </p>
 
-        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: "1px solid hsl(220 14% 18%)" }}>
-          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "hsl(220 14% 40%)" }}>
+        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: sepColor }}>
+          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: statColor }}>
             Colección
           </span>
           <div className="flex gap-0.5">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+              <div key={i} className="w-1 h-1 rounded-full" style={{ background: dotColor }} />
             ))}
           </div>
         </div>
@@ -498,6 +523,7 @@ function SpotlightEditorialCard({
   accentColor = COLORS.primary,
   globalLoader,
   index = 0,
+  theme
 }: { 
   mod: ModHit & { versions?: string[] }; 
   onOpenVersions: (m: ModHit) => void;
@@ -506,9 +532,12 @@ function SpotlightEditorialCard({
   accentColor?: string;
   globalLoader?: string;
   index?: number;
+  theme?: string;
 }) {
   const cardNum = String((index % 999) + 1).padStart(3, "0");
   const isCurseForge = mod.url?.includes("curseforge.com") || mod._source === "curseforge";
+  const isModern = theme === "modern";
+  const isVampire = theme === "vampire";
 
   const dls = mod.downloads >= 1_000_000 
     ? `${(mod.downloads / 1_000_000).toFixed(1)}M` 
@@ -516,18 +545,37 @@ function SpotlightEditorialCard({
     ? `${Math.round(mod.downloads / 1_000)}K` 
     : mod.downloads;
 
+  const cardBg = isModern ? "#f0ede3" : isVampire ? "#1a1525" : "hsl(220 14% 10%)";
+  const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  const cardShadow = isModern ? "0 10px 40px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
+
+  const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid hsl(220 14% 18%)";
+  const numColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 40%)";
+  const sepColorThick = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
+  
+  const bracketColor = isModern ? "rgba(0,0,0,0.25)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.2)";
+  const iconBorder = isModern ? "rgba(0,0,0,0.12)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.1)";
+  const iconBg = isModern ? "rgba(0,0,0,0.06)" : isVampire ? "rgba(187, 150, 228, 0.05)" : "rgba(255,255,255,0.05)";
+  const iconFallback = isModern ? "rgba(0,0,0,0.3)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.3)";
+  
+  const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 92%)";
+  const authorColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "#BB96E4" : "hsl(220 14% 45%)";
+  const statColor = isModern ? "hsl(30 20% 50%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "hsl(220 14% 40%)";
+  const dotColor = isModern ? "rgba(0,0,0,0.2)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.15)";
+  const dlBtnBg = isModern ? "rgba(0,0,0,0.7)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.15)";
+
   return (
     <div
       className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
-        background: "hsl(220 14% 10%)",
-        border: "1.5px solid hsl(220 14% 18%)",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.5)",
+        background: cardBg,
+        border: cardBorder,
+        boxShadow: cardShadow,
       }}
       onClick={() => onOpenVersions(mod)}
     >
       {/* Top label row — Estilo Showcase */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: "1px solid hsl(220 14% 18%)" }}>
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: sepColor }}>
         <span 
           className="text-[8px] font-black uppercase tracking-[0.25em] flex items-center gap-1" 
           style={{ color: isCurseForge ? "#f87171" : "#4ade80" }}
@@ -535,7 +583,7 @@ function SpotlightEditorialCard({
           <CirclePlay className="w-2 h-2" />
           {isCurseForge ? "CurseForge" : "Modrinth"}
         </span>
-        <span className="text-[8px] font-black tabular-nums" style={{ color: "hsl(220 14% 40%)" }}>
+        <span className="text-[8px] font-black tabular-nums" style={{ color: numColor }}>
           {cardNum}
         </span>
       </div>
@@ -543,18 +591,18 @@ function SpotlightEditorialCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "160px", borderBottom: "1.5px solid hsl(220 14% 18%)" }}
+        style={{ height: "160px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
-          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+          <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: bracketColor }} />
         ))}
 
-        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
+        <div className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
           {mod.iconUrl ? (
             <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div className="text-2xl font-black" style={{ color: iconFallback }}>
               {mod.title.substring(0, 2).toUpperCase()}
             </div>
           )}
@@ -565,7 +613,7 @@ function SpotlightEditorialCard({
           onClick={(e) => { e.stopPropagation(); onDownload(mod); }}
           disabled={isDownloading}
           className="absolute bottom-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-90"
-          style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}
+          style={{ background: dlBtnBg, backdropFilter: "blur(8px)" }}
         >
           {isDownloading ? <Loader2 className="w-3 h-3 animate-spin text-white" /> : <Download className="w-3 h-3 text-white" />}
         </button>
@@ -573,20 +621,20 @@ function SpotlightEditorialCard({
 
       {/* Text area */}
       <div className="flex-1 flex flex-col p-3 gap-1 relative">
-        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: "hsl(0 0% 92%)" }}>
+        <h3 className="font-headline text-sm leading-tight line-clamp-2" style={{ color: titleColor }}>
           {mod.title}
         </h3>
-        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: "hsl(220 14% 45%)" }}>
+        <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-0.5" style={{ color: authorColor }}>
           {mod.author}
         </p>
 
-        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: "1px solid hsl(220 14% 18%)" }}>
-          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "hsl(220 14% 40%)" }}>
+        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: sepColor }}>
+          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: statColor }}>
             {dls} ↓
           </span>
           <div className="flex gap-0.5">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+              <div key={i} className="w-1 h-1 rounded-full" style={{ background: dotColor }} />
             ))}
           </div>
         </div>
@@ -620,29 +668,55 @@ export function FomoSpotlight({
   const [cfRecent, setCfRecent] = useState<ModHit[]>([]);
   const [newestMods, setNewestMods] = useState<ModHit[]>([]);
   const [latestCollection, setLatestCollection] = useState<CollectionEntry | null>(null);
-  const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("fomo_modrinth_mods");
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== "undefined") {
-      const cachedPicks = localStorage.getItem("fomo_cf_picks");
-      const cachedMods = localStorage.getItem("fomo_modrinth_mods");
-      return !(cachedPicks || cachedMods);
-    }
-    return true;
-  });
+  const [latestCollectionMods, setLatestCollectionMods] = useState<ModHit[]>([]);
+  const [loading, setLoading] = useState(true);
   const [latestCfCollection, setLatestCfCollection] = useState<CollectionEntry | null>(null);
   const [latestCfMods, setLatestCfMods] = useState<ModHit[]>([]);
+
+  const [currentTheme, setCurrentTheme] = useState("official");
+  useEffect(() => {
+    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  const isModern = currentTheme === "modern";
+  const isVampire = currentTheme === "vampire";
+
+  // Compute styles for the right pane container
+  const paneBg = isModern 
+    ? "linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(240,237,227,0.4) 100%)" 
+    : isVampire 
+    ? "linear-gradient(135deg, rgba(30,22,45,0.75) 0%, rgba(15,10,25,0.5) 100%)" 
+    : "linear-gradient(135deg, rgba(40,40,40,0.6) 0%, rgba(15,15,15,0.4) 100%)";
+
+  const paneBorder = isModern 
+    ? "1px solid rgba(255,255,255,0.9)" 
+    : isVampire 
+    ? "1px solid rgba(187,150,228,0.25)" 
+    : "1px solid rgba(255,255,255,0.08)";
+
+  const paneShadow = isModern 
+    ? "0 30px 60px rgba(0,0,0,0.08), inset 0 2px 5px rgba(255,255,255,1), inset 0 -5px 20px rgba(0,0,0,0.03)" 
+    : isVampire 
+    ? "0 30px 60px rgba(0,0,0,0.6), inset 0 2px 4px rgba(187,150,228,0.4), inset 0 -5px 20px rgba(0,0,0,0.5)" 
+    : "0 30px 60px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.15), inset 0 -5px 20px rgba(0,0,0,0.5)";
 
   // El cache se carga sincrónicamente en el useState para evitar flickeos de UI
 
   const loadSpotlight = useCallback(async () => {
-    const hasCache = localStorage.getItem("fomo_cf_picks") || localStorage.getItem("fomo_modrinth_mods");
-    if (!hasCache) setLoading(true);
+    const cachedPicks = localStorage.getItem("fomo_cf_picks");
+    const cachedMods = localStorage.getItem("fomo_modrinth_mods");
+    
+    if (cachedPicks) setCfPicks(JSON.parse(cachedPicks));
+    if (cachedMods) setLatestCollectionMods(JSON.parse(cachedMods));
+    
+    if (cachedPicks || cachedMods) {
+      setLoading(false); // Disable loading immediately to show cached UI
+    } else {
+      setLoading(true);
+    }
     
     try {
       // 1. Fetch CurseForge Community Picks (Collections)
@@ -779,6 +853,7 @@ export function FomoSpotlight({
                   speed={0.5} 
                   color="text-blue-400" 
                   reverse={true}
+                  theme={currentTheme}
                 />
               </div>
             </div>
@@ -796,6 +871,7 @@ export function FomoSpotlight({
                   onOpenVersions={onOpenVersions} 
                   speed={0.6} 
                   color="text-purple-400" 
+                  theme={currentTheme}
                 />
               </div>
             </div>
@@ -806,10 +882,34 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* RIGHT PANE: Horizontal Editorial Marquees (Stacked) */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" style={{ background: "var(--glass-bg)", boxShadow: "var(--shadow-neomorphic-inner, inset 0 0 20px rgba(0,0,0,0.05))" }}>
-
+      <div 
+        className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" 
+        style={{ 
+          background: paneBg,
+          border: paneBorder,
+          boxShadow: paneShadow,
+          backdropFilter: "blur(40px)",
+          WebkitBackdropFilter: "blur(40px)"
+        }}
+      >
+        {/* Decorative Glass Highlights and Ambient Glow */}
+        <div 
+          className="absolute inset-x-0 top-0 h-px w-full z-0 opacity-70" 
+          style={{ 
+            background: isModern 
+              ? "linear-gradient(90deg, transparent, rgba(255,255,255,1), transparent)" 
+              : isVampire 
+              ? "linear-gradient(90deg, transparent, rgba(187,150,228,0.8), transparent)" 
+              : "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" 
+          }} 
+        />
+        <div 
+          className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[120px] opacity-30 pointer-events-none z-0" 
+          style={{ background: isModern ? "#ffffff" : isVampire ? "#bb96e4" : "#ffffff" }} 
+        />
+        
         {/* Row 1 & 2 Toggled: Modrinth / CurseForge */}
-        <div className="flex-1 w-full min-h-0 flex flex-col">
+        <div className="flex-1 w-full min-h-0 flex flex-col relative z-10">
           {/* Header with Toggle */}
           <div className="px-8 mb-3 flex items-center justify-between">
             <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
@@ -840,6 +940,7 @@ export function FomoSpotlight({
                 speed={0.7}
                 reverse={true} 
                 globalLoader={loader}
+                theme={currentTheme}
               />
             ) : (
               <HorizontalEditorialMarquee 
@@ -849,6 +950,7 @@ export function FomoSpotlight({
                 speed={0.6}
                 reverse={true} 
                 accentColor={COLORS.primary}
+                theme={currentTheme}
               />
             )}
           </div>
@@ -862,6 +964,7 @@ export function FomoSpotlight({
             onDownloadMod={onDownloadMod}
             downloading={downloading}
             globalLoader={loader}
+            theme={currentTheme}
           />
         </div>
       </div>

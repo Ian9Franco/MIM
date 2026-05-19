@@ -1,0 +1,62 @@
+¡Hola! Qué buena pregunta. Entiendo perfectamente a qué te refieres: ese fondo borroso o estilizado que aparece detrás de la tarjeta de cada mod (como el laberinto gris en "No Animal Tempt Delay" o el fondo del nether en "More Mobs").
+
+La respuesta corta es que **no existe un campo directo llamado `banner` o `background**` en los datos principales del proyecto, pero **sí se genera a partir de la galería**.
+
+Tu lógica inicial no estaba mal, solo que Modrinth maneja un truco en su interfaz. Te cuento detalladamente cómo funciona y cómo puedes replicarlo o extraerlo:
+
+### ¿De dónde sale ese "banner"?
+
+Modrinth no obliga a los creadores a subir un banner exclusivo para las tarjetas de búsqueda. En su lugar, la interfaz web y la app de Modrinth toman la **primera imagen de la galería que esté marcada como destacada (`featured": true`)**.
+
+Si revisas el objeto que te devuelve el endpoint de un proyecto (`GET /project/{id|slug}`), verás un arreglo llamado `gallery`. Cada objeto dentro de la galería tiene esta estructura:
+
+```json
+"gallery": [
+  {
+    "url": "https://cdn.modrinth.com/data/.../images/...",
+    "featured": true,
+    "title": "Mi captura de pantalla",
+    "description": "...",
+    "ordering": 0
+  }
+]
+
+```
+
+### ¿Cómo lo recrean en la interfaz?
+
+Si el mod tiene imágenes en la galería, la plataforma toma la que tiene `"featured": true` (o la que tenga el `ordering` más bajo) y mediante código (CSS/estilos de la app) hace lo siguiente:
+
+1. Coloca esa imagen de fondo en el contenedor.
+2. Le aplica un filtro de desenfoque (`blur`) o la oscurece para que el texto del título y la descripción sigan siendo legibles.
+
+### ¿Qué pasa si el mod no tiene imágenes en la galería?
+
+Como habrás notado en el mod "Easy NPC" de tu captura, cuando un proyecto no tiene imágenes destacadas en su galería, la API no tendrá elementos útiles en ese arreglo. En ese caso, la interfaz simplemente coloca un **fondo gris plano o texturizado por defecto** basado en la categoría del proyecto.
+
+### Resumen para tu desarrollo:
+
+Para extraerlo e imitarlo en tu propia aplicación:
+
+1. Llama al endpoint del proyecto.
+2. Busca en el arreglo `gallery` la imagen que tenga `"featured": true`.
+3. Si la encuentras, esa es la URL de tu imagen de fondo. Para que se vea igual que en la captura, tendrás que aplicarle un efecto de desenfoque o una capa semitransparente oscura en tu código frontend.
+4. Si el arreglo está vacío, usa un fondo oscuro por defecto.
+
+
+¡Exacto! Diste justo en el clavo. Cuando un mod no tiene imágenes configuradas en su galería para actuar como banner, la interfaz de Modrinth no se complica y recurre a un **patrón repetitivo por defecto**.
+
+Ese fondo de laberinto oscuro no es una imagen aleatoria que sube el creador, sino que es un **recurso SVG o PNG estático** que la propia plataforma tiene guardado en sus servidores.
+
+Si estás armando un proyecto o una app y quieres replicar exactamente esa misma estética para los mods que vengan sin imagen, puedes manejarlo de la siguiente manera:
+
+### El truco para replicarlo
+
+1. **El patrón por defecto:** La web de Modrinth utiliza una textura repetitiva (en formato SVG para que no pese nada y escale infinito). Puedes diseñar un patrón similar de líneas diagonales o laberínticas en gris oscuro (`#1e1e1e` o `#111111`) y guardarlo en los assets de tu aplicación.
+2. **Tu lógica en el código:** Cuando consumas la API, haz una validación simple:
+* **¿Tiene `gallery` con una imagen válida?** $\rightarrow$ Descargas esa imagen, la pones de fondo y le aplicas el filtro de desenfoque (`blur`).
+* **¿El arreglo `gallery` está vacío?** $\rightarrow$ Activas por defecto tu asset del laberinto oscuro.
+
+
+
+¡De esta forma tu interfaz se va a ver tan pulida y consistente como la original de Modrinth!

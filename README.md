@@ -58,12 +58,14 @@ Logs en idiomas que no existen
 
 ## 🚀 Features Principales
 
-### 🔍 **FOMO 3.0** — Busca en 2 Plataformas a la Vez
-- **Modrinth + CurseForge unificado**
-- **YouTube Showcases**: Extrae mods directamente desde descripciones de videos y shorts. Incluye un **Reproductor Flotante Nativo** redimensionable (Mini, Normal, Maxi) con físicas de rebote y amortiguación inercial tipo DVD, control de velocidad (1x, 1.5x, 2x) y volumen analógico/mute integrado. Soporta búsquedas de **cualquier canal de YouTube** (incluyendo canales no Minecraft) mediante normalización universal de URLs y handles, con un esqueleto de carga SWR y fallbacks explicativos si el video no posee mods.
-- Visualización dual sin salir de la app
-- Filtros por versión, loader, categoría
-- Smart matching por SHA1 (100% exacto)
+### 🔍 **FOMO 4.0 & Comunidad Online** — Búsqueda Dual, Videos y Red Social
+- **Modrinth + CurseForge unificado**: Visualización dual, filtros por versión, loader y categorías, con smart matching por SHA1 (100% exacto).
+- **YouTube Showcases (Pestaña Principal)**: Showcases ha evolucionado a una sección de primer nivel en la barra de FOMO. Incluye un **Reproductor Flotante Premium (PiP)** redimensionable (Mini, Normal, Maxi) con físicas inerciales de rebote tipo DVD, control de velocidad, memoria de volumen y barra de progreso de triple capa con hover-scrubbing. Puedes reproducir videos y shorts en segundo plano mientras organizas, clasificas o construyes tus modpacks.
+- **Comunidad FOMO (Powered by Supabase)**: Plataforma social integrada que conecta a la comunidad de MIM.
+  - **Autenticación e Historial**: Inicio de sesión seguro vía Supabase Auth y perfiles personalizados en la nube.
+  - **Compartir Modpacks y Contenido**: Sube modpacks ligeros (modelo híbrido: JSON manifest + ZIP de overrides en Cloud Storage), videos y mods favoritos.
+  - **Sistema de Seguimiento (`followed_mods`)**: Base de datos dedicada para sincronizar local (IndexedDB) con la nube, mostrando avatares dinámicos en las tarjetas de mods ("Seguido por") con enlaces interactivos directos a los perfiles.
+  - **Cola de Descarga Concurrente**: Descarga packs de la comunidad usando una cola inteligente secuencial que protege el rate limit de las APIs externas.
 
 ### ⚡ **Hotkeys 1-9** — Clasificación Fulminante
 - Presiona **1** → Tecnología

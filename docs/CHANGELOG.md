@@ -1,8 +1,32 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 8.0.1 (Asynchronous IndexedDB Cache Migration)  
+> **Versión Actual:** 8.0.1 (Comunidad Online & Showcases PiP)  
 > **Última actualización:** 2026-05-20
+
+---
+
+## 🚀 Versión 8.0.1 — Comunidad Online & Showcases PiP (2026-05-20)
+
+### 👥 FOMO Comunidad Online (Supabase)
+- **Integración de Base de Datos en la Nube**: Conexión con Supabase para habilitar un feed social interactivo de mods compartidos, creadores y modpacks.
+- **Autenticación e Historial**: Registro e inicio de sesión seguro mediante Supabase Auth. Sincronización automática de perfiles de usuario con avatares y colores personalizados.
+- **Sincronización de Seguidos (`followed_mods`)**: Sincronización bidireccional entre el almacenamiento local (IndexedDB) y la base de datos Supabase para registrar y recuperar qué miembros de la comunidad siguen cada proyecto.
+- **Badge Social Clickeable**: El badge "Seguido por" en las tarjetas de mods ahora muestra avatares de otros usuarios y permite hacer click para abrir directamente su perfil de la comunidad (`fomo-community-apply-filter`).
+- **Cola de Descarga Segura**: Implementación de una cola secuencial (`SafeDownloader` con concurrency de 2 y delay de 300ms) para descargar modpacks protegiendo las cuotas de rate-limit de Modrinth y CurseForge.
+
+### 📺 Showcases a Tab Principal y Reproductor PiP
+- **Migración a Sección de Primer Nivel**: Showcases (videos) se ha extraído de la sección "Seguidos" para convertirse en una pestaña independiente en el sidebar de FOMO.
+- **Reproductor Flotante Premium (PiP)**: Reproducción multimedia inercial que persiste en pantalla permitiendo realizar búsquedas, descargas o configuraciones mientras se reproduce el contenido.
+- **Barra de Progreso Multicapa**: Aislamiento de eventos de hover/scrubbing de la posición de reproducción real mediante una barra de progreso de triple capa (Track Base, Progress Track, Hover Preview).
+- **Recuperación Resiliente de Miniaturas**: Lógica secuencial de fallbacks de calidad para corregir imágenes rotas de YouTube en videos privados o miembros.
+
+### 🎨 Refinamientos de UI/UX & Bugfixes
+- **Z-Index del Modal de Comentarios**: Se corrigió el posicionamiento del modal de compartir en `FomoOverlayComponents.tsx` (cambiado de `absolute` a `fixed` con `z-[9999]`) para evitar solapamientos con el panel de detalles.
+- **Comportamiento del Teclado en Textarea**: En los campos de comentarios de compartir, presionar `Enter` confirma y envía el formulario sin necesidad de agregar comentario, mientras que `Shift+Enter` salta de línea.
+- **Overflow de la Pestaña Comunidad**: Ajuste en `CommunityPanel.tsx` limitando el ancho del pill deslizante e incorporando `overflow-hidden` al contenedor para evitar desbordes en resoluciones reducidas.
+- **Loader Tags en Spotlight**: Se hidrata la etiqueta de modloader del ticker "Actualizados" pasando la prop `globalLoader` correspondiente.
+- **Contraste del Botón Compartir (Modern Theme)**: Ajuste de colores del botón Compartir en `FomoFollowedComponents.tsx` al activar el tema claro Modern para garantizar una legibilidad óptima y accesibilidad (AAA).
 
 ---
 

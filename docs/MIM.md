@@ -2,7 +2,7 @@
 
 > Master technical documentation of Minecraft Intelligent Manager.  
 > Architecture, data flows, components, and design decisions.  
-> **Version:** 7.6.0 | **Last updated:** 2026-05-20
+> **Version:** 8.0.1 | **Last updated:** 2026-05-20
 
 ---
 
@@ -42,7 +42,7 @@ Starting from version 7.6.0, MIM supports two operation modes to suit different 
 | Backend | Next.js API Routes | Endpoints REST + SSE |
 | Native | Tauri (Rust) | Versión de escritorio |
 | File System | chokidar | File watching en tiempo real |
-| Storage | IndexedDB | Cache persistente local |
+| Storage | IndexedDB + Supabase | Cache local + Sync en Nube (Comunidad) |
 
 ---
 
@@ -127,6 +127,8 @@ D:\.mine\                         # Root del workspace
 │   │   ├── watcher.ts            # File watcher + SSE
 │   │   ├── security-scanner.ts   # Análisis de bytecode
 │   │   ├── smart-cache.ts        # Sistema de caché
+│   │   ├── supabaseClient.ts     # Cliente de conexión a Supabase
+│   │   ├── downloadQueue.ts      # Cola secuencial de descarga comunitaria
 │   │   └── types.ts              # TypeScript types
 │   └── docs\                     # Documentación
 │
@@ -423,6 +425,8 @@ RootLayout
 │   │   ├── UserCollections (Colecciones creadas)
 │   │   ├── Following (Seguimiento)
 │   │   └── PresetTemplates (Plantillas pre-armadas)
+│   ├── FomoYoutubeShowcase (Showcases - Pestaña Principal)
+│   │   └── FomoFloatingPlayer (Reproductor PiP)
 │   └── FomoVersionOverlay (Detalles)
 ├── Tweak Sidebar (Portal - Derecha)
 │   ├── ResourcePack Stack
@@ -492,27 +496,38 @@ El ecosistema de descubrimiento avanzado (FOMO) actúa como un agregador unifica
 #### 1. Spotlight Feed (Destacados y Novedades)
 Actúa como la vitrina principal de aterrizaje, presentando las recomendaciones curadas de la comunidad (*Community Picks*), proyectos que marcan tendencia, los más descargados y las actualizaciones más recientes extraídas en tiempo real desde las APIs de Modrinth y CurseForge. Esto permite descubrir mods de alta calidad al instante sin abandonar la aplicación.
 
-#### 2. Seguidos (Following & Showcases)
-Una sección especializada para monitorizar creadores de contenido, mods individuales favoritos y extraer contenido de YouTube.
-- **Pestañas Especializadas**: Organizado en Proyectos, Autores, Historial y Showcases.
+#### 2. Seguidos (Following)
+Una sección especializada para monitorizar creadores de contenido y mods individuales favoritos en la nube.
 - **Búsqueda Híbrida Inteligente**: Al hacer clic en el botón de búsqueda (lupa) de un autor o mod seguido, FOMO activa de forma autónoma la fuente combinada `"all"` (Ambos) y realiza una consulta exacta (`author:XYZ` o `project:XYZ`).
-- **YouTube Showcases**: Integración que permite extraer los mods presentados en videos y shorts de YouTube leyendo las descripciones. Los videos se cargan de 5 en 5 para optimizar el rendimiento.
-- **Caché Standalone**: Almacenamiento de datos de uso y videos en archivos JSON en `.MIM/source/.mim-index/` con hashes MD5 para evitar colisiones.
 - **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado.
 
-#### 3. Native Media Player & Progressive Seek Bar
-MIM incorpora un reproductor multimedia flotante (`FomoFloatingPlayer.tsx`) con una interfaz de reproducción interactiva avanzada:
+#### 3. YouTube Showcases (Pestaña Principal)
+Debido a la importancia de la integración multimedia en el descubrimiento de mods, Showcases ha evolucionado a una sección de primer nivel en el sidebar de FOMO.
+- **Extracción de Mods**: Analiza y extrae mods de forma inteligente leyendo las descripciones y comentarios de videos y shorts de YouTube, mostrando una tarjeta simplificada o un aviso si no contiene mods.
+- **Carga Perezosa (Lazy Loading)**: Carga de 5 en 5 videos para proteger el ancho de banda y la tasa de peticiones.
+- **Caché Standalone**: Almacena localmente en JSON los metadatos y uso de canales en `.MIM/source/.mim-index/` con identificadores MD5 para prevenir colisiones de nombres de canales.
+
+#### 4. Reproductor Flotante PiP & Progressive Seek Bar
+MIM incorpora un reproductor multimedia flotante (`FomoFloatingPlayer.tsx`) persistente en pantalla que permite navegar y configurar la aplicación mientras reproduce:
+- **PiP Independiente**: Se despliega sobre una capa flotante interactiva y redimensionable con soporte para control de velocidad (1x, 1.5x, 2x) y silenciado (Mute).
 - **Seek Bar Multicapa**: Tres capas visuales superpuestas que aíslan completamente los estados del puntero:
   1. *Track de Duración Total (Gris)*: Muestra la barra base completa.
-  2. *Progress Track (Gradiente Rojo)*: Representa estrictamente la posición actual de reproducción (`currentTime / duration`).
+  2. *Progress Track (Gradiente Rojo)*: Representa estrictamente la posición actual de reproducción.
   3. *Hover/Scrub Track (Blanco Tenue)*: Capa de previsualización que sigue dinámicamente la posición del puntero para indicarle al usuario dónde quedará el video si hace click.
-- **Aislamiento de Scrubbing**: Control de estados independientes (`hoverPercent` y `isDragging`) que previene la desincronización visual durante el arrastre y el hover de cursor, actualizando la posición real sólo tras eventos de acción activa (`onClick` o arrastre de `Thumb`).
+- **Aislamiento de Scrubbing**: Control de estados independientes (`hoverPercent` y `isDragging`) que previene la desincronización visual durante el arrastre y el hover de cursor.
 
-#### 4. Resilient YouTube Thumbnail Recovery (Sequential Fallback)
-El sistema gestiona de forma autónoma la carga errónea de miniaturas de YouTube (causada comunmente por cambio de privacidad o videos "Solo miembros" a públicos):
+#### 5. Comunidad FOMO (Powered by Supabase)
+Plataforma comunitaria en línea que expande MIM a un ecosistema compartido en la nube:
+- **Modelo Híbrido de Modpacks**: Para evitar cargas y descargas pesadas de archivos `.jar` en el cloud, MIM sube únicamente el listado de IDs/hashes (como un JSONb `manifest`) y archivos `.zip` ligeros de overrides y configuraciones (almacenados de manera RLS-segura en un bucket público de Supabase Storage).
+- **Sincronización de Seguidos (`followed_mods`)**: Los mods que los usuarios deciden seguir se sincronizan entre IndexedDB local y la tabla `followed_mods` en la nube.
+- **Badges Sociales Dinámicos**: Las tarjetas de mods (`FomoModCard.tsx`) muestran quiénes siguen cada proyecto en la comunidad mediante avatares interactivos. Al hacer click en estos avatares se abre de manera fluida el perfil público del usuario.
+- **Cola de Descarga Segura (`SafeDownloader`)**: Descarga los proyectos de un modpack comunitario de manera secuencial (concurrencia máxima de 2, retardo de 300ms) respetando las cuotas de rate-limit de Modrinth y CurseForge.
+
+#### 6. Resilient YouTube Thumbnail Recovery (Sequential Fallback)
+El sistema gestiona de forma autónoma la carga errónea de miniaturas de YouTube (causada comúnmente por cambio de privacidad o videos "Solo miembros" a públicos):
 - **Recovery Queue**: Utiliza un flujo reactivo secuencial en cascada para recuperar la imagen:
   1. Intenta `maxresdefault.jpg` (Máxima Calidad).
-  2. Si falla (403/404), escala a `mqdefault.jpg` (Calidad Media - Altamente Resiliente).
+  2. Si falla (403/404), escala a `mqdefault.jpg` (Calidad Media).
   3. Si falla, escala a `hqdefault.jpg` (Calidad Estándar).
   4. Si todos fallan, renderiza un placeholder temático offline con una cuadrícula visual y un icono de Lucide (`TvMinimalPlay`).
 
@@ -544,6 +559,8 @@ Integración de galerías de imágenes en la superposición de detalles de mods 
 | `/api/curseforge/picks` | GET | Listado de picks recomendados de CurseForge con conteo dinámico |
 | `/api/curseforge/picks/[slug]` | GET | Detalle y listado de mods para una colección CurseForge específica |
 | `/api/settings` | GET/POST | Configuración persistente |
+| `/api/community/download-queue` | POST | Orquesta y encola de manera segura las descargas de un modpack comunitario |
+| `/api/community/modpacks` | GET/POST | Lista y publica modpacks en la base de datos Supabase |
 
 ### 7.2 Server-Sent Events
 

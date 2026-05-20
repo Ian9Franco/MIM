@@ -1,8 +1,8 @@
 # MIM — API Documentation
 
-> Guía completa de integraciones API: Modrinth, CurseForge y VirusTotal.  
+> Guía completa de integraciones API: Modrinth, CurseForge, VirusTotal y Supabase Community.  
 > Estrategias de optimización, rate limiting y seguridad.  
-> **Versión:** 7.6.0 | **Última actualización:** 2026-05-20
+> **Versión:** 8.0.1 | **Última actualización:** 2026-05-20
 
 ---
 
@@ -16,6 +16,7 @@
 6. [Gestión de Rate Limits](#6-gestión-de-rate-limits)
 7. [Seguridad y Cache](#7-seguridad-y-cache)
 8. [MIM Core APIs (Control Interno)](#8-mim-core-apis-control-interno)
+9. [Supabase & Community Cloud API](#9-supabase--community-cloud-api)
 
 ---
 
@@ -505,6 +506,117 @@ Módulo API para listar las colecciones destacadas (Picks) de CurseForge y consu
 
 ---
 
+## 9. Supabase & Community Cloud API
+
+MIM utiliza Supabase como backend en la nube para habilitar su plataforma comunitaria e interactiva. El sistema utiliza seguridad a nivel de filas (**Row Level Security - RLS**) en PostgreSQL para permitir consultas y escrituras seguras directamente desde el cliente React.
+
+### Configuración del Entorno
+```env
+# Variables requeridas para activar la plataforma online
+NEXT_PUBLIC_SUPABASE_URL=https://tu_proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+```
+
+---
+
+### Esquemas de Base de Datos (Cloud)
+
+#### 1. Perfiles de Usuario (`public.profiles`)
+Almacena metadatos públicos de usuarios registrados. Se crea automáticamente mediante un trigger de PostgreSQL cuando un usuario se registra vía Supabase Auth.
+```sql
+CREATE TABLE public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    avatar_url TEXT,
+    color TEXT, -- Color de perfil hexadecimal
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+```
+
+#### 2. Mods Compartidos / Favoritos (`public.favorite_mods`)
+Mods que los usuarios deciden recomendar en el feed global de la comunidad.
+```sql
+CREATE TABLE public.favorite_mods (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    mod_id TEXT NOT NULL,
+    platform TEXT NOT NULL CHECK (platform IN ('modrinth', 'curseforge')),
+    name TEXT NOT NULL,
+    icon_url TEXT,
+    summary TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE (profile_id, mod_id, platform)
+);
+```
+
+#### 3. Videos de Showcases (`public.showcase_videos`)
+Lista de videos de YouTube compartidos por creadores o usuarios para el feed de Showcases.
+```sql
+CREATE TABLE public.showcase_videos (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    thumbnail_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE (profile_id, youtube_video_id)
+);
+```
+
+#### 4. Distribución de Modpacks (`public.modpack_builds`)
+Modelo híbrido ligero que guarda únicamente la estructura e IDs del modpack en formato JSON, junto a un archivo ZIP de overrides almacenado en Supabase Storage.
+```sql
+CREATE TABLE public.modpack_builds (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    game_version TEXT NOT NULL,
+    modloader TEXT NOT NULL,
+    version_label TEXT NOT NULL,
+    config_zip_url TEXT,      -- URL al ZIP con overrides en Storage (modpack-configs)
+    manifest JSONB NOT NULL,   -- Listado de mods con su id, versión y plataforma
+    downloads_count INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+```
+
+#### 5. Mods Seguidos (`public.followed_mods`)
+Tabla utilizada para sincronizar el estado de "seguimiento" privado de mods entre el almacenamiento local (IndexedDB) y la nube. Permite calcular el indicador social "Seguido por" en la UI.
+```sql
+CREATE TABLE public.followed_mods (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    mod_id TEXT NOT NULL,
+    platform TEXT NOT NULL CHECK (platform IN ('modrinth', 'curseforge')),
+    name TEXT,
+    icon_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE (profile_id, mod_id, platform)
+);
+```
+
+---
+
+### Endpoints de API de la Comunidad
+
+#### Descarga Segura por Lotes (Orquestador)
+`POST /api/community/download-queue`
+
+Cuando un usuario descarga un modpack compartido, el backend encola secuencialmente las dependencias de Modrinth/CurseForge mediante un despachador controlado (`SafeDownloader`). 
+- **Concurrencia Máxima**: 2 descargas en paralelo.
+- **Delay entre peticiones**: 300ms (evita bloqueos temporales de IP por exceso de peticiones a las APIs oficiales).
+
+#### Almacenamiento de Overrides (Supabase Storage)
+- **Bucket**: `modpack-configs` (Público)
+- **Tamaño Máximo**: 5MB
+- **Tipos Permitidos**: `application/zip`, `application/x-zip-compressed`
+- **Políticas RLS**: Sólo el creador del modpack puede subir (`uploads/{profile_id}/*`) o eliminar archivos de este bucket.
+
+---
+
 ## 📊 Métricas de Optimización
 
 | Escenario | Antes | Ahora | Mejora |
@@ -513,6 +625,7 @@ Módulo API para listar las colecciones destacadas (Picks) de CurseForge y consu
 | 1000 mods - Uso posterior | 2050 API calls | ~50 calls | 97% |
 | Verificación de updates | 1000 requests | 1 bulk POST | 99.9% |
 | Colección 300 mods | 300 requests | 4 requests | 98.7% |
+| Sync de followed_mods | 300 requests | 1 request batch | 99.6% |
 | Memory usage | 200-300MB | 40-60MB | 80% |
 | Tiempo de carga | 3-5 min | 15-30 seg | 90% |
 

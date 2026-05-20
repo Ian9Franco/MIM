@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 7.4.3 | **Última actualización:** 2026-05-19
+> **Versión:** 7.5.0 | **Última actualización:** 2026-05-20
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Modos de Aplicación
 
-A partir de la versión 7.4.3, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+A partir de la versión 7.5.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
@@ -500,6 +500,22 @@ Una sección especializada para monitorizar creadores de contenido, mods individ
 - **Caché Standalone**: Almacenamiento de datos de uso y videos en archivos JSON en `.MIM/source/.mim-index/` con hashes MD5 para evitar colisiones.
 - **Pill Filter UI**: Los filtros activos de autor o proyecto se renderizan visualmente como píldoras (*pills*) interactivas dentro de una barra de búsqueda ampliada y ergonómica. El input de texto permanece plenamente funcional a su lado.
 
+#### 3. Native Media Player & Progressive Seek Bar
+MIM incorpora un reproductor multimedia flotante (`FomoFloatingPlayer.tsx`) con una interfaz de reproducción interactiva avanzada:
+- **Seek Bar Multicapa**: Tres capas visuales superpuestas que aíslan completamente los estados del puntero:
+  1. *Track de Duración Total (Gris)*: Muestra la barra base completa.
+  2. *Progress Track (Gradiente Rojo)*: Representa estrictamente la posición actual de reproducción (`currentTime / duration`).
+  3. *Hover/Scrub Track (Blanco Tenue)*: Capa de previsualización que sigue dinámicamente la posición del puntero para indicarle al usuario dónde quedará el video si hace click.
+- **Aislamiento de Scrubbing**: Control de estados independientes (`hoverPercent` y `isDragging`) que previene la desincronización visual durante el arrastre y el hover de cursor, actualizando la posición real sólo tras eventos de acción activa (`onClick` o arrastre de `Thumb`).
+
+#### 4. Resilient YouTube Thumbnail Recovery (Sequential Fallback)
+El sistema gestiona de forma autónoma la carga errónea de miniaturas de YouTube (causada comunmente por cambio de privacidad o videos "Solo miembros" a públicos):
+- **Recovery Queue**: Utiliza un flujo reactivo secuencial en cascada para recuperar la imagen:
+  1. Intenta `maxresdefault.jpg` (Máxima Calidad).
+  2. Si falla (403/404), escala a `mqdefault.jpg` (Calidad Media - Altamente Resiliente).
+  3. Si falla, escala a `hqdefault.jpg` (Calidad Estándar).
+  4. Si todos fallan, renderiza un placeholder temático offline con una cuadrícula visual y un icono de Lucide (`TvMinimalPlay`).
+
 ### 6.5 Mod Gallery Integration
 Integración de galerías de imágenes en la superposición de detalles de mods (`FomoVersionOverlay`), unificando fuentes de Modrinth y CurseForge.
 
@@ -525,6 +541,8 @@ Integración de galerías de imágenes en la superposición de detalles de mods 
 | `/api/modrinth/download` | POST | Descargar desde Modrinth |
 | `/api/modrinth/check-updates` | POST | Verificar actualizaciones batch |
 | `/api/curseforge/discover` | GET | Buscar en CurseForge |
+| `/api/curseforge/picks` | GET | Listado de picks recomendados de CurseForge con conteo dinámico |
+| `/api/curseforge/picks/[slug]` | GET | Detalle y listado de mods para una colección CurseForge específica |
 | `/api/settings` | GET/POST | Configuración persistente |
 
 ### 7.2 Server-Sent Events

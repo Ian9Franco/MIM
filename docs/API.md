@@ -2,7 +2,7 @@
 
 > Guía completa de integraciones API: Modrinth, CurseForge y VirusTotal.  
 > Estrategias de optimización, rate limiting y seguridad.  
-> **Versión:** Beta 5.5 | **Última actualización:** 2026-05-08
+> **Versión:** 7.5.0 | **Última actualización:** 2026-05-19
 
 ---
 
@@ -456,6 +456,52 @@ Gestiona el conteo de uso de los canales de YouTube para generar la lista de Acc
 
 **GET**: Devuelve el objeto de uso registrado en `showcase_usage.json`.
 **POST**: Incrementa el uso de un canal. Body: `{ "channel": "https://..." }`.
+
+---
+
+### 8.7 CurseForge Picks API
+`GET /api/curseforge/picks` | `GET /api/curseforge/picks/[slug]`
+
+Módulo API para listar las colecciones destacadas (Picks) de CurseForge y consultar los mods de un pick específico. Resuelve automáticamente las limitaciones de projectCount asociando las cantidades exactas mediante un diccionario optimizado en el servidor.
+
+**Listar Picks:**
+`GET /api/curseforge/picks`
+
+**Response:**
+```json
+{
+  "picks": [
+    {
+      "id": "curseforge-apr26",
+      "name": "10 Cool New Minecraft Mods on CurseForge",
+      "description": "Curated by CurseForge Community",
+      "iconUrl": "https://...",
+      "slug": "curseforge-apr26",
+      "source": "curseforge",
+      "projectCount": 10
+    }
+  ]
+}
+```
+
+**Obtener Mods del Pick:**
+`GET /api/curseforge/picks/curseforge-apr26`
+
+**Response:**
+```json
+{
+  "mods": [
+    {
+      "projectId": "12345",
+      "slug": "blocks-previewer",
+      "title": "Blocks Previewer",
+      "description": "...",
+      "iconUrl": "...",
+      "_source": "curseforge"
+    }
+  ]
+}
+```
 
 ---
 

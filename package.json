@@ -1,6 +1,6 @@
 {
   "name": "temp_next",
-  "version": "7.4.3",
+  "version": "7.5.0",
   "private": true,
   "main": "standalone/main.js",
   "scripts": {

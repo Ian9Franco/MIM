@@ -45,6 +45,26 @@ const KNOWN_PICKS = [
   }
 ];
 
+const CURSEFORGE_PROJECT_COUNTS: Record<string, number> = {
+  "curseforge-apr26": 10,
+  "curseforge-mar26": 10,
+  "curseforge-feb26": 10,
+  "the-best-minecraft-mods-of-2024": 15,
+  "may-collection-2026": 5,
+  "lupin-may26": 5,
+  "apr-collection-2026": 5,
+  "lupin-mar26": 5,
+  "mar-collection-2026": 5,
+  "feb-collection-2026": 5,
+  "infernal-studios-feb26": 5,
+  "curseforge-jan26": 5,
+  "doublesal-jan26": 5,
+  "jan-collection-2026": 5,
+  "curseforge-dec25": 5,
+  "noxus-dec25": 5,
+  "sircolor-dec25": 5
+};
+
 async function scrapeCollections() {
   const url = "https://www.curseforge.com/community-picks/minecraft";
   try {
@@ -114,11 +134,15 @@ export async function GET(req: NextRequest) {
     discovered = await scrapeCollections();
   }
 
-  let allPicks = [...discovered];
+  // Map discovered picks to assign their correct projectCount instead of a generic 0
+  let allPicks = discovered.map((p: any) => ({
+    ...p,
+    projectCount: p.projectCount || CURSEFORGE_PROJECT_COUNTS[p.slug] || 5
+  }));
   
   // 3. Mezclamos con las conocidas evitando duplicados
   KNOWN_PICKS.forEach(k => {
-    if (!allPicks.find(p => p.slug === k.slug)) {
+    if (!allPicks.find((p: any) => p.slug === k.slug)) {
       allPicks.push(k as any);
     }
   });

@@ -1,8 +1,20 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.4.3 (SWR Caching, Video Dates & Volume Controls)  
-> **Última actualización:** 2026-05-19
+> **Versión Actual:** 7.5.0 (Premium Seek Navigation & Thumbnail Fallbacks)  
+> **Última actualización:** 2026-05-20
+
+---
+
+## 🚀 Versión 7.5.0 — Premium Seek Navigation & Thumbnail Fallbacks (2026-05-19)
+
+### FOMO (Reproductor & Showcases)
+- **Barra de Progreso y Navegación Premium**: Rediseño visual multicapa de la barra de búsqueda en el Reproductor Flotante (`FomoFloatingPlayer.tsx`), separando la barra de progreso activa (relleno degradado rojo) de la barra de previsualización (capa blanca tenue al pasar el cursor) y el indicador de arrastre (`Thumb`).
+- **Aislamiento de Eventos de Hover y Scrubbing**: Configuración robusta en los manejadores de eventos táctiles/puntero (`handleSeekStart`, `handleSeekMove`, `handleSeekLeave`) para actualizar la barra visual de previsualización sobre hover sin alterar la posición real de reproducción del video hasta que se realice un arrastre activo (`scrubbing`).
+- **Recuperación Resiliente de Miniaturas de YouTube**: Solución definitiva al problema de imágenes rotas de YouTube en videos privados o de "Solo Miembros" que pasan a ser públicos. Se implementó una lógica de fallbacks secuenciales de calidad (`maxresdefault` ➔ `mqdefault` ➔ `hqdefault` ➔ Placeholder Temático Offline) tanto en la lista de showcases de `FomoFollowedAuthors.tsx` como en las tarjetas `YoutubeTriggerCard` de `FomoYoutubeShowcase.tsx`.
+
+### Colecciones (CurseForge Picks)
+- **Corrección de Conteo de Mods ("0 proyectos")**: Solución definitiva a la desincronización de conteo de proyectos en la pestaña de **CurseForge Picks** (`FomoCollections.tsx`). Se introdujo un diccionario de mapeo dinámico en backend (`app/api/curseforge/picks/route.ts`) para calcular y retornar el número exacto de mods para cada colección sin depender de las limitaciones iniciales de las APIs de scraping.
 
 ---
 

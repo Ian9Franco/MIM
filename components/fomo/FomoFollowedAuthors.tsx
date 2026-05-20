@@ -23,6 +23,51 @@ function formatYoutubeDate(rawDate?: string): string {
   return `${day} ${months[monthIdx] || ""} ${year}`;
 }
 
+function ShowcaseVideoThumbnail({ video }: { video: any }) {
+  const [imgError, setImgError] = React.useState(false);
+  const [imgSrc, setImgSrc] = React.useState(video.thumbnail);
+
+  // Fallback secuencial de YouTube: maxresdefault -> mqdefault -> hqdefault -> default
+  const handleError = () => {
+    if (video.videoId && imgSrc && imgSrc.includes("maxresdefault")) {
+      setImgSrc(`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`);
+    } else if (video.videoId && imgSrc && imgSrc.includes("mqdefault")) {
+      setImgSrc(`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  React.useEffect(() => {
+    setImgSrc(video.thumbnail);
+    setImgError(false);
+  }, [video.thumbnail, video.videoId]);
+
+  if (imgError || !imgSrc) {
+    return (
+      <div 
+        className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+          backgroundColor: "rgba(255,255,255,0.02)"
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-tr from-red-950/20 via-transparent to-black/40 pointer-events-none" />
+        <TvMinimalPlay className="w-5 h-5 text-red-500/40" />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={imgSrc} 
+      alt="" 
+      className="w-full h-full object-cover" 
+      onError={handleError}
+    />
+  );
+}
+
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
   onSearchProject?: (title: string, type?: string, source?: string, loader?: string, version?: string) => void;
@@ -631,7 +676,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                         onClick={() => setExpandedVideo(expandedVideo === video.videoId ? null : video.videoId)}
                       >
                         <div className="w-20 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
-                          {video.thumbnail ? <img src={video.thumbnail} alt="" className="w-full h-full object-cover" /> : <TvMinimalPlay className="w-4 h-4 opacity-40" />}
+                          <ShowcaseVideoThumbnail video={video} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{video.title}</p>

@@ -138,6 +138,23 @@ function YoutubeTriggerCard({
   theme?: string;
 }) {
   const [imgError, setImgError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(showcase.thumbnail);
+
+  const handleImgError = () => {
+    if (showcase.videoId && imgSrc && imgSrc.includes("maxresdefault")) {
+      setImgSrc(`https://img.youtube.com/vi/${showcase.videoId}/mqdefault.jpg`);
+    } else if (showcase.videoId && imgSrc && imgSrc.includes("mqdefault")) {
+      setImgSrc(`https://img.youtube.com/vi/${showcase.videoId}/hqdefault.jpg`);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  useEffect(() => {
+    setImgSrc(showcase.thumbnail);
+    setImgError(false);
+  }, [showcase.thumbnail, showcase.videoId]);
+
   const isModern = theme === "modern";
   const isVampire = theme === "vampire";
 
@@ -172,10 +189,10 @@ function YoutubeTriggerCard({
         {!imgError && showcase.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={showcase.thumbnail}
+            src={imgSrc}
             alt={showcase.title}
             className="w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity duration-300"
-            onError={() => setImgError(true)}
+            onError={handleImgError}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"

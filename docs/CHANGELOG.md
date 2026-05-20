@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 8.0.0 (Asynchronous IndexedDB Cache Migration)  
+> **Versión Actual:** 8.0.1 (Asynchronous IndexedDB Cache Migration)  
 > **Última actualización:** 2026-05-20
 
 ---

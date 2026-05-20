@@ -1,8 +1,0 @@
-el modal de comentario para compartir, en detalles, esta roto. y al tocar enter en el comentario no lo envia.
-corregirlo y chequear que lo suba bien a comunidad al proyecto
-
-al tocar el icono de compartir en favoritos, abre un local host. crear modal para este tambien
-mejorar el boton de compartir en detalles y en favoritos para hacerlo mas parecido al de compartir en showcases, que dice "compartido" o "compartir"
-
-agregar el icono de seguido por: tambien en la modcard de explorar (actualmente solo esta en detalles.)
-el icono debe estar abajo del icono de exclusividad en la mdocard 

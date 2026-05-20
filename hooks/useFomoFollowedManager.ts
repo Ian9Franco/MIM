@@ -52,7 +52,22 @@ export function useFomoFollowedManager() {
         setFollowedAuthors(cleanAuthors);
         // Extraemos el data de los objetos de IndexedDB para mantener compatibilidad con ModHit[]
         setFollowedMods(mods.map((m: any) => m.data));
-        setModrinthStatus(JSON.parse(localStorage.getItem("mim_modrinth_status") || "{}"));
+
+        let statusData = {};
+        const cacheStatusEntry = await mimDB.getCache("mim_modrinth_status");
+        if (cacheStatusEntry?.data) {
+          statusData = cacheStatusEntry.data;
+        } else {
+          const lsStatus = localStorage.getItem("mim_modrinth_status");
+          if (lsStatus) {
+            try {
+              statusData = JSON.parse(lsStatus);
+              await mimDB.setCache("mim_modrinth_status", statusData, 30 * 24 * 60 * 60 * 1000);
+              localStorage.removeItem("mim_modrinth_status");
+            } catch (e) {}
+          }
+        }
+        setModrinthStatus(statusData);
       } catch (err) {
         console.error("Error loading followed data from IndexedDB", err);
       }

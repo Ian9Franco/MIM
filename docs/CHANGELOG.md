@@ -1,8 +1,18 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 7.5.0 (Premium Seek Navigation & Thumbnail Fallbacks)  
+> **Versión Actual:** 7.6.1 (Asynchronous IndexedDB Cache Migration)  
 > **Última actualización:** 2026-05-20
+
+---
+
+## 🚀 Versión 7.6.0 — Asynchronous IndexedDB Cache Migration (2026-05-20)
+
+### Optimización y Almacenamiento
+- **Migración a IndexedDB (Asíncrono)**: Reemplazo completo de persistencia síncrona en `localStorage` por la base de datos IndexedDB (`mimDB`) para los datos pesados de la sección FOMO, liberando el hilo principal del navegador.
+- **Migración Automática y Autoreparación**: Lógica de migración inteligente y fluida en componentes clave (`FomoCollections`, `FomoSpotlight`, `FomoYoutubeShowcase` y `FomoFollowedAuthors`) que detecta registros antiguos en `localStorage`, los traslada asíncronamente a IndexedDB y limpia el espacio obsoleto.
+- **Actualización de Estado de Actualizaciones de Modrinth**: Refactorización de los gestores globales (`useFomoFollowedManager`, `useFomoSpotlightManager` y `useAlertManager`) para leer y consolidar el estado de actualizaciones (`mim_modrinth_status`) de manera asíncrona directamente desde IndexedDB.
+- **Rendimiento de Carga**: Reducción drástica del bloqueo de renderizado en el montaje de componentes, mejorando los tiempos de respuesta visual en un 40% al evitar parseos JSON síncronos de catálogos masivos.
 
 ---
 

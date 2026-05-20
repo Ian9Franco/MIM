@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
 import type { ModHit, CollectionEntry } from "@/lib/types";
+import { mimDB } from "@/lib/indexeddb";
 
 export function useFomoSpotlightManager(loader: string, gameVersion: string, sinytraActive: boolean) {
   const [loading, setLoading] = useState(true);
@@ -40,17 +41,35 @@ export function useFomoSpotlightManager(loader: string, gameVersion: string, sin
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    const check = () => {
+    const check = async () => {
       try {
-        const stored = JSON.parse(localStorage.getItem("mim_followed_mods") || "[]");
-        const status = JSON.parse(localStorage.getItem("mim_modrinth_status") || "{}");
-        setFollowedUpdates(stored.filter((m: any) => status[`collection:${m.projectId}`]?.status === "update_available"));
-      } catch {}
+        await mimDB.init();
+        const mods = await mimDB.getAllFollowedMods();
+        const stored = mods.map((m: any) => m.data);
+        
+        let status = {};
+        const cacheStatusEntry = await mimDB.getCache("mim_modrinth_status");
+        if (cacheStatusEntry?.data) {
+          status = cacheStatusEntry.data;
+        } else {
+          const lsStatus = localStorage.getItem("mim_modrinth_status");
+          if (lsStatus) {
+            try { status = JSON.parse(lsStatus); } catch {}
+          }
+        }
+        
+        setFollowedUpdates(stored.filter((m: any) => (status as any)[`collection:${m.projectId}`]?.status === "update_available"));
+      } catch (err) {
+        console.error("Error checking followed updates in spotlight manager", err);
+      }
     };
     check();
     window.addEventListener("mim-followed-mods-changed", check);
     window.addEventListener("mim-modrinth-status-changed", check);
-    return () => { window.removeEventListener("mim-followed-mods-changed", check); window.removeEventListener("mim-modrinth-status-changed", check); };
+    return () => { 
+      window.removeEventListener("mim-followed-mods-changed", check); 
+      window.removeEventListener("mim-modrinth-status-changed", check); 
+    };
   }, []);
 
   useEffect(() => {

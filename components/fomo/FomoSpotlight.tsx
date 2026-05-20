@@ -7,6 +7,7 @@ import { FomoSkeleton } from "./FomoSkeleton";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
 import type { ModHit, CollectionEntry } from "@/lib/types";
 import { FomoYoutubeShowcase } from "./FomoYoutubeShowcase";
+import { mimDB } from "@/lib/indexeddb";
 
 interface FomoSpotlightProps {
   onOpenVersions: (mod: ModHit) => void;
@@ -661,13 +662,7 @@ export function FomoSpotlight({
   showcaseChannelUrl = "https://www.youtube.com/@EnderVerseMC",
 }: FomoSpotlightProps) {
   const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
-  const [cfPicks, setCfPicks] = useState<CollectionEntry[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("fomo_cf_picks");
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
+  const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
   const [cfRecent, setCfRecent] = useState<ModHit[]>([]);
   const [newestMods, setNewestMods] = useState<ModHit[]>([]);
@@ -709,27 +704,68 @@ export function FomoSpotlight({
 
   // El cache se carga sincrónicamente en el useState para evitar flickeos de UI
 
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        await mimDB.init();
+        
+        let cachedPicks = null;
+        let cachedMods = null;
+        
+        const cachePicksEntry = await mimDB.getCache("fomo_cf_picks");
+        const cacheModsEntry = await mimDB.getCache("fomo_modrinth_mods");
+        
+        if (cachePicksEntry?.data) cachedPicks = cachePicksEntry.data;
+        if (cacheModsEntry?.data) cachedMods = cacheModsEntry.data;
+        
+        const lsPicks = localStorage.getItem("fomo_cf_picks");
+        const lsMods = localStorage.getItem("fomo_modrinth_mods");
+        
+        if (!cachedPicks && lsPicks) {
+          try {
+            cachedPicks = JSON.parse(lsPicks);
+            await mimDB.setCache("fomo_cf_picks", cachedPicks, 12 * 60 * 60 * 1000);
+            localStorage.removeItem("fomo_cf_picks");
+          } catch (e) {}
+        }
+        
+        if (!cachedMods && lsMods) {
+          try {
+            cachedMods = JSON.parse(lsMods);
+            await mimDB.setCache("fomo_modrinth_mods", cachedMods, 12 * 60 * 60 * 1000);
+            localStorage.removeItem("fomo_modrinth_mods");
+          } catch (e) {}
+        }
+        
+        if (cachedPicks) setCfPicks(cachedPicks);
+        if (cachedMods) setLatestCollectionMods(cachedMods);
+        
+        if (cachedPicks || cachedMods) {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error loading spotlight cache from IndexedDB", err);
+      }
+    };
+    loadCache();
+  }, []);
+
   const loadSpotlight = useCallback(async () => {
-    const cachedPicks = localStorage.getItem("fomo_cf_picks");
-    const cachedMods = localStorage.getItem("fomo_modrinth_mods");
-    
-    if (cachedPicks) setCfPicks(JSON.parse(cachedPicks));
-    if (cachedMods) setLatestCollectionMods(JSON.parse(cachedMods));
-    
-    if (cachedPicks || cachedMods) {
-      setLoading(false); // Disable loading immediately to show cached UI
-    } else {
-      setLoading(true);
-    }
-    
     try {
+      const cachePicksEntry = await mimDB.getCache("fomo_cf_picks");
+      const cacheModsEntry = await mimDB.getCache("fomo_modrinth_mods");
+      
+      if (!cachePicksEntry?.data && !cacheModsEntry?.data) {
+        setLoading(true);
+      }
+      
       // 1. Fetch CurseForge Community Picks (Collections)
       const picksRes = await fetch("/api/curseforge/picks");
       if (picksRes.ok) {
         const d = await picksRes.json();
         const picks = d.picks || [];
         setCfPicks(picks);
-        localStorage.setItem("fomo_cf_picks", JSON.stringify(picks));
+        await mimDB.setCache("fomo_cf_picks", picks, 12 * 60 * 60 * 1000);
         
         // Pick the latest CurseForge collection to feature its mods
         if (picks.length > 0) {
@@ -803,8 +839,9 @@ export function FomoSpotlight({
           }
         }
         
-        setLatestCollectionMods(allMods.map((m: any) => ({ ...m, _source: "modrinth" })));
-        localStorage.setItem("fomo_modrinth_mods", JSON.stringify(allMods.map((m: any) => ({ ...m, _source: "modrinth" }))));
+        const mappedMods = allMods.map((m: any) => ({ ...m, _source: "modrinth" }));
+        setLatestCollectionMods(mappedMods);
+        await mimDB.setCache("fomo_modrinth_mods", mappedMods, 12 * 60 * 60 * 1000);
       }
 
     } catch (e) {

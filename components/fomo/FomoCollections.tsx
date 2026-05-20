@@ -25,6 +25,7 @@ import { FomoSkeleton }               from "./FomoSkeleton";
 import { FomoModCard }               from "./FomoModCard";
 import { BulkActionsBar }            from "./FomoSidebarComponents";
 import type { CollectionEntry, ModHit } from "@/lib/types";
+import { mimDB } from "@/lib/indexeddb";
 import type { StatusType } from "@/hooks/useStatusBanner";
 
 interface FomoCollectionsProps {
@@ -125,29 +126,72 @@ export const FomoCollections = memo(function FomoCollections({
   }, [isDetailsOpen]);
 
   useEffect(() => {
-    const cachedMim = localStorage.getItem("fomo_mim_collections");
-    const cachedOfficial = localStorage.getItem("fomo_official_collections");
-    const cachedCf = localStorage.getItem("fomo_cf_collections");
-    
-    if (cachedMim) setCollections(JSON.parse(cachedMim));
-    if (cachedOfficial) setOfficialCollections(JSON.parse(cachedOfficial));
-    if (cachedCf) setCfCollections(JSON.parse(cachedCf));
-    
-    if (cachedMim || cachedOfficial || cachedCf) setLoading(false);
+    const loadCache = async () => {
+      try {
+        await mimDB.init();
+        
+        let cachedMim = null;
+        let cachedOfficial = null;
+        let cachedCf = null;
+        
+        const cacheMimEntry = await mimDB.getCache("fomo_mim_collections");
+        const cacheOfficialEntry = await mimDB.getCache("fomo_official_collections");
+        const cacheCfEntry = await mimDB.getCache("fomo_cf_collections");
+        
+        if (cacheMimEntry?.data) cachedMim = cacheMimEntry.data;
+        if (cacheOfficialEntry?.data) cachedOfficial = cacheOfficialEntry.data;
+        if (cacheCfEntry?.data) cachedCf = cacheCfEntry.data;
+        
+        const lsMim = localStorage.getItem("fomo_mim_collections");
+        const lsOfficial = localStorage.getItem("fomo_official_collections");
+        const lsCf = localStorage.getItem("fomo_cf_collections");
+        
+        if (!cachedMim && lsMim) {
+          try {
+            cachedMim = JSON.parse(lsMim);
+            await mimDB.setCache("fomo_mim_collections", cachedMim, 12 * 60 * 60 * 1000);
+            localStorage.removeItem("fomo_mim_collections");
+          } catch (e) {}
+        }
+        if (!cachedOfficial && lsOfficial) {
+          try {
+            cachedOfficial = JSON.parse(lsOfficial);
+            await mimDB.setCache("fomo_official_collections", cachedOfficial, 12 * 60 * 60 * 1000);
+            localStorage.removeItem("fomo_official_collections");
+          } catch (e) {}
+        }
+        if (!cachedCf && lsCf) {
+          try {
+            cachedCf = JSON.parse(lsCf);
+            await mimDB.setCache("fomo_cf_collections", cachedCf, 12 * 60 * 60 * 1000);
+            localStorage.removeItem("fomo_cf_collections");
+          } catch (e) {}
+        }
+        
+        if (cachedMim) setCollections(cachedMim);
+        if (cachedOfficial) setOfficialCollections(cachedOfficial);
+        if (cachedCf) setCfCollections(cachedCf);
+        
+        if (cachedMim || cachedOfficial || cachedCf) setLoading(false);
+      } catch (err) {
+        console.error("Error loading collections cache from IndexedDB", err);
+      }
+    };
+    loadCache();
   }, []);
 
   const [libraryUpdates, setLibraryUpdates] = useState<Record<string, LibraryUpdateInfo>>({});
 
   const load = useCallback(async () => {
-    const cachedMim = localStorage.getItem("fomo_mim_collections");
-    const cachedOfficial = localStorage.getItem("fomo_official_collections");
-    const cachedCf = localStorage.getItem("fomo_cf_collections");
-    
-    if (!cachedMim && !cachedOfficial && !cachedCf) {
-      setLoading(true);
-    }
-    
     try {
+      const cacheMimEntry = await mimDB.getCache("fomo_mim_collections");
+      const cacheOfficialEntry = await mimDB.getCache("fomo_official_collections");
+      const cacheCfEntry = await mimDB.getCache("fomo_cf_collections");
+      
+      if (!cacheMimEntry?.data && !cacheOfficialEntry?.data && !cacheCfEntry?.data) {
+        setLoading(true);
+      }
+      
       // Cargar en paralelo para evitar bloqueo secuencial
       const [collsRes, officialRes, cfRes] = await Promise.all([
         fetchCollections(),
@@ -163,9 +207,9 @@ export const FomoCollections = memo(function FomoCollections({
       setOfficialCollections(official);
       setCfCollections(cfPicks);
       
-      localStorage.setItem("fomo_mim_collections", JSON.stringify(colls));
-      localStorage.setItem("fomo_official_collections", JSON.stringify(official));
-      localStorage.setItem("fomo_cf_collections", JSON.stringify(cfPicks));
+      await mimDB.setCache("fomo_mim_collections", colls, 12 * 60 * 60 * 1000);
+      await mimDB.setCache("fomo_official_collections", official, 12 * 60 * 60 * 1000);
+      await mimDB.setCache("fomo_cf_collections", cfPicks, 12 * 60 * 60 * 1000);
       
       setError(collsRes.error || officialRes.error || cfRes.error);
     } catch (e: any) {

@@ -9,6 +9,7 @@ import React from "react";
 import { Heart, FolderHeart, Sparkles, Package, UserCheck, RefreshCw, Timeline, ChefHat, CookingPot, Award, Star, Puzzle, TvMinimalPlay, MonitorCheck, MonitorUp, ChevronDown, Trash2, ExternalLink } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useFomoFollowedManager } from "@/hooks/useFomoFollowedManager";
+import { mimDB } from "@/lib/indexeddb";
 import { FollowedProjectCard, FollowedAuthorCard } from "./FomoFollowedComponents";
 import { FomoSkeleton } from "./FomoSkeleton";
 import { PillToggleGroup } from "../ui/primitives";
@@ -221,18 +222,50 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
 
   // Cargar caché local y resetear estados en canal activo al montar/cambiar
   React.useEffect(() => {
-    const cachedV = localStorage.getItem(`fomo_videos_${activeChannel}`);
-    const cachedS = localStorage.getItem(`fomo_shorts_${activeChannel}`);
-    if (cachedV) {
-      try { setVideos(JSON.parse(cachedV)); } catch (e) { setVideos([]); }
-    } else {
-      setVideos([]);
-    }
-    if (cachedS) {
-      try { setShorts(JSON.parse(cachedS)); } catch (e) { setShorts([]); }
-    } else {
-      setShorts([]);
-    }
+    const loadCache = async () => {
+      try {
+        await mimDB.init();
+        const cacheVKey = `fomo_videos_${activeChannel}`;
+        const cacheSKey = `fomo_shorts_${activeChannel}`;
+        
+        let cachedV = null;
+        let cachedS = null;
+        
+        const cacheVEntry = await mimDB.getCache(cacheVKey);
+        const cacheSEntry = await mimDB.getCache(cacheSKey);
+        
+        if (cacheVEntry?.data) cachedV = cacheVEntry.data;
+        if (cacheSEntry?.data) cachedS = cacheSEntry.data;
+        
+        const lsV = localStorage.getItem(cacheVKey);
+        const lsS = localStorage.getItem(cacheSKey);
+        
+        if (!cachedV && lsV) {
+          try {
+            cachedV = JSON.parse(lsV);
+            await mimDB.setCache(cacheVKey, cachedV, 12 * 60 * 60 * 1000);
+            localStorage.removeItem(cacheVKey);
+          } catch (e) {}
+        }
+        if (!cachedS && lsS) {
+          try {
+            cachedS = JSON.parse(lsS);
+            await mimDB.setCache(cacheSKey, cachedS, 12 * 60 * 60 * 1000);
+            localStorage.removeItem(cacheSKey);
+          } catch (e) {}
+        }
+        
+        setVideos(cachedV || []);
+        setShorts(cachedS || []);
+      } catch (err) {
+        console.error("Error loading followed authors cache from IndexedDB", err);
+        setVideos([]);
+        setShorts([]);
+      }
+    };
+    
+    loadCache();
+    
     setVideoCursor(1);
     setShortsCursor(1);
     setNextVideoCursor(1);
@@ -263,7 +296,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           if (isVideos) {
             setVideos(prev => {
               const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
-              localStorage.setItem(`fomo_videos_${activeChannel}`, JSON.stringify(next));
+              mimDB.setCache(`fomo_videos_${activeChannel}`, next, 12 * 60 * 60 * 1000).catch(console.error);
               return next;
             });
             setNextVideoCursor(nextCursor);
@@ -271,7 +304,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           } else {
             setShorts(prev => {
               const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
-              localStorage.setItem(`fomo_shorts_${activeChannel}`, JSON.stringify(next));
+              mimDB.setCache(`fomo_shorts_${activeChannel}`, next, 12 * 60 * 60 * 1000).catch(console.error);
               return next;
             });
             setNextShortsCursor(nextCursor);

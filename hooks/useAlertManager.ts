@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { eventBus } from "@/lib/eventBus";
 import { incidentManager, Incident } from "@/lib/incidentManager";
+import { mimDB } from "@/lib/indexeddb";
 
 export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthStatus: Record<string, any>, followedMods: any[], followedAuthors: string[], ignoredUpdates: Set<string>) {
   const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config" | "bytecode">("all");
@@ -28,8 +29,27 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
   const [modrinthStatusStored, setModrinthStatusStored] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    const load = () => {
-      setModrinthStatusStored(JSON.parse(localStorage.getItem("mim_modrinth_status") || "{}"));
+    const load = async () => {
+      try {
+        await mimDB.init();
+        let status = {};
+        const cacheStatusEntry = await mimDB.getCache("mim_modrinth_status");
+        if (cacheStatusEntry?.data) {
+          status = cacheStatusEntry.data;
+        } else {
+          const lsStatus = localStorage.getItem("mim_modrinth_status");
+          if (lsStatus) {
+            try {
+              status = JSON.parse(lsStatus);
+              await mimDB.setCache("mim_modrinth_status", status, 30 * 24 * 60 * 60 * 1000);
+              localStorage.removeItem("mim_modrinth_status");
+            } catch (e) {}
+          }
+        }
+        setModrinthStatusStored(status);
+      } catch (err) {
+        console.error("Error loading modrinth status cache in useAlertManager", err);
+      }
     };
     load();
     window.addEventListener("mim-modrinth-status-changed", load);

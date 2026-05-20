@@ -15,6 +15,7 @@ import { CirclePlay, ExternalLink, Loader2, AlertTriangle, Download, TvMinimalPl
 import { useSmoothMarquee } from "@/hooks/useSmoothMarquee";
 import { cachedYoutubeShowcase } from "@/lib/smart-cache";
 import type { ModHit } from "@/lib/types";
+import { mimDB } from "@/lib/indexeddb";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -501,19 +502,31 @@ export function FomoYoutubeShowcase({
       
       // Intentar cargar mods resueltos de cache para no re-calcular al movernos entre pestañas
       const cacheKey = `fomo_resolved_mods_${entry.videoId}`;
-      const cachedMods = localStorage.getItem(cacheKey);
+      const cachedModsEntry = await mimDB.getCache(cacheKey);
       
-      if (cachedMods) {
-        setMods(JSON.parse(cachedMods));
+      if (cachedModsEntry?.data) {
+        setMods(cachedModsEntry.data);
         setStatus("done");
       } else {
+        const lsMods = localStorage.getItem(cacheKey);
+        if (lsMods) {
+          try {
+            const parsed = JSON.parse(lsMods);
+            await mimDB.setCache(cacheKey, parsed, 7 * 24 * 60 * 60 * 1000); // 7 days TTL for resolved mods
+            localStorage.removeItem(cacheKey);
+            setMods(parsed);
+            setStatus("done");
+            return;
+          } catch (e) {}
+        }
+
         setStatus("loading-mods");
 
         // Resolver los slugs a mods reales (con concurrencia limitada = 4)
         const resolved = await resolveSlugs(entry.modSlugs);
         if (!isMounted.current) return;
 
-        localStorage.setItem(cacheKey, JSON.stringify(resolved));
+        await mimDB.setCache(cacheKey, resolved, 7 * 24 * 60 * 60 * 1000);
         setMods(resolved);
         setStatus("done");
       }

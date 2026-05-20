@@ -2,7 +2,7 @@
 
 > Guía completa de integraciones API: Modrinth, CurseForge y VirusTotal.  
 > Estrategias de optimización, rate limiting y seguridad.  
-> **Versión:** 7.5.0 | **Última actualización:** 2026-05-19
+> **Versión:** 7.6.0 | **Última actualización:** 2026-05-20
 
 ---
 

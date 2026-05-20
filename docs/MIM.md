@@ -1,34 +1,34 @@
 # MIM — Arquitectura y Funcionamiento Completo
 
-> Documentación técnica maestra de Minecraft Intelligent Manager.  
-> Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 7.5.0 | **Última actualización:** 2026-05-20
+> Master technical documentation of Minecraft Intelligent Manager.  
+> Architecture, data flows, components, and design decisions.  
+> **Version:** 7.6.0 | **Last updated:** 2026-05-20
 
 ---
 
-## 📑 Tabla de Contenidos
+## 📑 Table of Contents
 
-1. [Visión General](#1-visión-general)
-2. [Arquitectura del Sistema](#2-arquitectura-del-sistema)
-3. [Estructura de Directorios](#3-estructura-de-directorios)
-4. [Flujo de Datos](#4-flujo-de-datos)
+1. [Overview](#1-overview)
+2. [System Architecture](#2-system-architecture)
+3. [Directory Structure](#3-directory-structure)
+4. [Data Flow](#4-data-flow)
 5. [Core Engine](#5-core-engine)
 6. [Frontend Architecture](#6-frontend-architecture)
 7. [API Layer](#7-api-layer)
-8. [Integraciones Externas](#8-integraciones-externas)
-9. [Sistemas de Seguridad](#9-sistemas-de-seguridad)
-10. [Optimizaciones de Performance](#10-optimizaciones-de-performance)
-11. [Decisiones Técnicas](#11-decisiones-técnicas)
+8. [External Integrations](#8-external-integrations)
+9. [Security Systems](#9-security-systems)
+10. [Performance Optimizations](#10-performance-optimizations)
+11. [Technical Decisions](#11-technical-decisions)
 
 ---
 
-## 1. Visión General
+## 1. Overview
 
-**Minecraft Intelligent Manager (MIM)** es una aplicación de gestión de modpacks que transforma el caos de crear modpacks en un flujo de trabajo de **3 clics**. Combina un scanner inteligente de JARs, integración dual con Modrinth/CurseForge, y un sistema de diagnóstico de crashes (SAGE) en una interfaz glassmórfica moderna.
+**Minecraft Intelligent Manager (MIM)** is a modpack management application that transforms the chaos of creating modpacks into a **3-click** workflow. It combines an intelligent JAR scanner, dual Modrinth/CurseForge integration, and a crash diagnosis system (SAGE) in a modern glassmorphic interface.
 
-### Modos de Aplicación
+### Application Modes
 
-A partir de la versión 7.5.0, MIM soporta dos modos de operación para adaptarse a diferentes tipos de usuarios:
+Starting from version 7.6.0, MIM supports two operation modes to suit different types of users:
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.

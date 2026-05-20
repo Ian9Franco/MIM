@@ -5,9 +5,9 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
-import { X, Search, Library, Download, Plus, ChevronLeft, Workflow, Heart, Spotlight } from "lucide-react";
+import { X, Search, Library, Download, Plus, ChevronLeft, Workflow, Heart, Spotlight, Globe, TvMinimalPlay } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -28,13 +28,18 @@ import { ModrinthIcon, CurseForgeIcon } from "./parts/FomoPlatformIcons";
 import { BulkActionsBar, BulkCollectionModal } from "./FomoSidebarComponents";
 import { formatNumber, getProjectTypeLabel } from "@/utils/format";
 import type { ModHit, Project } from "@/lib/types";
+import { CommunityPanel } from "./CommunityPanel";
+import { FomoFollowedShowcases } from "./FomoFollowedShowcases";
+import { supabase } from "@/lib/supabaseClient";
 import "./fomo.css";
 
 const TAB_OPTIONS = [
   { value: "spotlight", label: "Spotlight", icon: <Spotlight className="w-4 h-4" /> },
+  { value: "showcases", label: "Showcases", icon: <TvMinimalPlay className="w-4 h-4" /> },
   { value: "discover", label: "Explorar", icon: <Search className="w-4 h-4" /> },
   { value: "collections", label: "Colecciones", icon: <Library className="w-4 h-4" /> },
   { value: "followed", label: "Seguidos", icon: <Heart className="w-4 h-4" /> },
+  { value: "community", label: "Comunidad", icon: <Globe className="w-4 h-4" /> },
 ];
 
 const SOURCE_OPTIONS = [
@@ -49,6 +54,69 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   const m = useFomoSidebarManager(open, discover, showStatus);
   const [currentTheme, setCurrentTheme] = useState("official");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [allSharedMods, setAllSharedMods] = useState<any[]>([]);
+  const [allSharedVideos, setAllSharedVideos] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserColor, setCurrentUserColor] = useState<string | null>(null);
+
+  const fetchSharedMods = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
+      setCurrentUser(user);
+
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("color").eq("id", user.id).single();
+        if (profile?.color) setCurrentUserColor(profile.color);
+      }
+
+      const { data: modsData } = await supabase
+        .from("favorite_mods")
+        .select("mod_id, platform, profile_id, profiles ( username, avatar_url, color )");
+      if (modsData) setAllSharedMods(modsData);
+
+      const { data: vidsData } = await supabase
+        .from("showcase_videos")
+        .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
+      if (vidsData) setAllSharedVideos(vidsData);
+    } catch (err) {
+      console.error("Error fetching shared mods in sidebar:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSharedMods();
+    window.addEventListener("fomo-refresh-sharing", fetchSharedMods);
+    
+    const handleSwitchTab = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab;
+      if (tab) {
+        m.setMode(tab);
+      }
+    };
+    
+    const handleOpenProjectDetails = (e: Event) => {
+      const { id, platform } = (e as CustomEvent).detail || {};
+      if (id) {
+        discover.handleOpenProjectById(id, platform);
+      }
+    };
+
+    window.addEventListener("fomo-switch-tab", handleSwitchTab);
+    window.addEventListener("fomo-open-project-details", handleOpenProjectDetails);
+
+    return () => {
+      window.removeEventListener("fomo-refresh-sharing", fetchSharedMods);
+      window.removeEventListener("fomo-switch-tab", handleSwitchTab);
+      window.removeEventListener("fomo-open-project-details", handleOpenProjectDetails);
+    };
+  }, [m, discover]);
+
+  useEffect(() => {
+    if (m.mode === "community") {
+      fetchSharedMods();
+    }
+  }, [m.mode]);
 
   useEffect(() => {
     const seen = localStorage.getItem("onboarding_fomo");
@@ -134,14 +202,45 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
       }
     };
 
+    const handleSearchAuthor = (e: Event) => {
+      const { author } = (e as CustomEvent).detail || {};
+      if (author) {
+        m.setMode("discover");
+        discover.setSource("all");
+        discover.setQuery(`author:${author}`);
+      }
+    };
+
+    const handleShowStatus = (e: Event) => {
+      const { text, type } = (e as CustomEvent).detail || {};
+      if (text) showStatus(text, type || "info");
+    };
+
+    const handleOpenCommunityUser = (e: Event) => {
+      const { username, type } = (e as CustomEvent).detail || {};
+      m.setMode("community");
+      localStorage.setItem("fomo_community_user_filter", JSON.stringify({ username, type }));
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
+          detail: { username, type }
+        }));
+      }, 100);
+    };
+
     window.addEventListener("fomo-open-details", handleOpenDetails);
     window.addEventListener("fomo-search-and-open", handleSearchAndOpen);
+    window.addEventListener("fomo-search-author", handleSearchAuthor);
+    window.addEventListener("fomo-show-status", handleShowStatus);
+    window.addEventListener("fomo-open-community-user", handleOpenCommunityUser);
 
     return () => {
       window.removeEventListener("fomo-open-details", handleOpenDetails);
       window.removeEventListener("fomo-search-and-open", handleSearchAndOpen);
+      window.removeEventListener("fomo-search-author", handleSearchAuthor);
+      window.removeEventListener("fomo-show-status", handleShowStatus);
+      window.removeEventListener("fomo-open-community-user", handleOpenCommunityUser);
     };
-  }, [discover, m]);
+  }, [discover, m, showStatus]);
 
   const [isForcedHidden, setIsForcedHidden] = useState(false);
 
@@ -171,6 +270,31 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
   };
 
   // Los detalles se muestran si hay un mod seleccionado Y no han sido ocultados forzosamente
+  const detailsSharing = useMemo(() => {
+    const dm = discover.selectingVersionFor;
+    if (!dm) {
+      return { sharers: [] as { username: string; color?: string | null; avatar_url?: string | null }[], sharedByMe: false };
+    }
+    const pf = dm._source === "curseforge" ? "curseforge" : "modrinth";
+    const byProfile = new Map<string, { username: string; color?: string | null; avatar_url?: string | null }>();
+    for (const s of allSharedMods) {
+      if (String(s.mod_id) !== String(dm.projectId)) continue;
+      if (s.platform !== pf) continue;
+      const pid = s.profile_id as string | undefined;
+      const username = s.profiles?.username as string | undefined;
+      if (!pid || !username) continue;
+      byProfile.set(pid, {
+        username,
+        color: s.profiles?.color,
+        avatar_url: s.profiles?.avatar_url,
+      });
+    }
+    const sharedByMe = !!(currentUser && allSharedMods.some(
+      (s: any) => String(s.mod_id) === String(dm.projectId) && s.profile_id === currentUser.id && s.platform === pf
+    ));
+    return { sharers: [...byProfile.values()], sharedByMe };
+  }, [discover.selectingVersionFor, allSharedMods, currentUser]);
+
   const detailsOpen = open && !!discover.selectingVersionFor && !isForcedHidden;
 
   return (
@@ -206,8 +330,8 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7 animate-fomo-blink" />
               <div><h2 className="font-headline text-base text-white">FOMO</h2><p className="text-[8px] opacity-40 uppercase">{m.mode}</p></div>
             </div>
-            <div id="onboarding-fomo-tabs">
-              <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5" ariaLabel="Seleccionar pestaña" />
+            <div id="onboarding-fomo-tabs" className="min-w-0 flex-1 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15">
+              <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5 min-w-max" ariaLabel="Seleccionar pestaña" />
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -298,19 +422,37 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
                   {discover.loading ? (
                     <FomoSkeleton count={9} variant="card" isCurseForge={discover.source === "curseforge"} />
                   ) : (
-                    discover.mods.map(mod => (
-                      <FomoModCard 
-                        key={mod.projectId} 
-                        mod={mod} 
-                        isDownloading={!!discover.downloading[mod.projectId]} 
-                        onDownload={discover.handleDownload} 
-                        onOpenVersions={discover.handleOpenLiveProject} 
-                        isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} 
-                        onToggleSelect={discover.toggleModSelection} 
-                        sinytraActive={discover.sinytraActive}
-                        onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} 
-                      />
-                    ))
+                    discover.mods.map(mod => {
+                      const platformKey = mod._source === "curseforge" ? "curseforge" : "modrinth";
+                      const sharersByProfile = new Map<string, { username: string; color?: string | null; avatar_url?: string | null }>();
+                      for (const s of allSharedMods) {
+                        if (String(s.mod_id) !== String(mod.projectId)) continue;
+                        if (s.platform !== platformKey) continue;
+                        const pid = s.profile_id as string | undefined;
+                        const username = s.profiles?.username as string | undefined;
+                        if (!pid || !username) continue;
+                        sharersByProfile.set(pid, {
+                          username,
+                          color: s.profiles?.color,
+                          avatar_url: s.profiles?.avatar_url,
+                        });
+                      }
+                      const communitySharers = [...sharersByProfile.values()];
+                      return (
+                        <FomoModCard 
+                          key={`${platformKey}:${mod.projectId}`} 
+                          mod={mod} 
+                          isDownloading={!!discover.downloading[mod.projectId]} 
+                          onDownload={discover.handleDownload} 
+                          onOpenVersions={discover.handleOpenLiveProject} 
+                          isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} 
+                          onToggleSelect={discover.toggleModSelection} 
+                          sinytraActive={discover.sinytraActive}
+                          onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} 
+                          followedByUsers={communitySharers}
+                        />
+                      );
+                    })
                   )}
                 </div>
                 {discover.selectedMods.length > 0 && <BulkActionsBar mods={discover.selectedMods} isModern={isModern} onCancel={discover.clearSelection} onAdd={() => { m.setBulkAdding(true); m.loadCollections(); }} onDownload={() => discover.selectedMods.forEach(m => discover.handleDownload(m))} />}
@@ -332,9 +474,54 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               />
             </div>
           )}
+          {m.mode === "showcases" && (
+            <div id="onboarding-fomo-showcases" className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                <FomoFollowedShowcases 
+                  currentUser={currentUser}
+                  allSharedVideos={allSharedVideos}
+                  fetchCommunitySharingInfo={fetchSharedMods}
+                  animationClass="animate-fade-in"
+                  currentUserColor={currentUserColor}
+                />
+              </div>
+            </div>
+          )}
           {m.mode === "followed" && (
             <div id="onboarding-fomo-followed" className="flex-1 flex flex-col overflow-hidden">
-              <FomoFollowedAuthors onSearchAuthor={a => { m.setMode("discover"); discover.setSource("all"); discover.setQuery(`author:${a}`); }} onSearchProject={(p, type, source, loader, version) => { m.setMode("discover"); if (source) discover.setSource(source as "modrinth" | "curseforge" | "all"); if (type) discover.setProjectType(type); if (loader) discover.setLoader(loader); if (version) discover.setGameVersions([version]); discover.setQuery(p); }} onOpenVersions={discover.handleOpenLiveProject} onDownloadMod={discover.handleDownload} downloading={discover.downloading} />
+              <div className="flex-1 overflow-y-auto">
+                <FomoFollowedAuthors 
+                  onSearchAuthor={a => { 
+                    m.setMode("discover"); 
+                    discover.setSource("all"); 
+                    discover.setQuery(`author:${a}`); 
+                    discover.setLoader("all"); 
+                    discover.setGameVersions([]); 
+                  }} 
+                  onSearchProject={(p, type, source, loader, version) => { 
+                    m.setMode("discover"); 
+                    discover.setSource((source as "modrinth" | "curseforge" | "all") || "all"); 
+                    discover.setProjectType(type || "mod"); 
+                    discover.setLoader(loader || "all"); 
+                    discover.setGameVersions(version ? [version] : []); 
+                    discover.setQuery(p); 
+                  }} 
+                  onOpenVersions={discover.handleOpenLiveProject} 
+                  onDownloadMod={discover.handleDownload} 
+                  downloading={discover.downloading} 
+                />
+              </div>
+            </div>
+          )}
+          {m.mode === "community" && (
+            <div id="onboarding-fomo-community" className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto">
+                <CommunityPanel 
+                  activeProject={activeProject} 
+                  onClose={handleCloseAll} 
+                  onStatus={showStatus} 
+                />
+              </div>
             </div>
           )}
         </div>
@@ -402,6 +589,9 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
               }}
               pendingFilesCount={pendingFiles.length}
               onOpenDownloads={onOpenDownloads}
+              communitySharers={detailsSharing.sharers}
+              communitySharedByMe={detailsSharing.sharedByMe}
+              currentUserCommunityColor={currentUserColor}
             />
           )}
         </aside>

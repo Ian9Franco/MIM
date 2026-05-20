@@ -50,4 +50,6 @@ dist/
 *.exe
 *.asar
 
-# audit
+# sql files
+/squl_querys/
+

@@ -84,13 +84,31 @@ export function useFomoDetails(source: string, loader: string, projectType: stri
     }
   }, [projectType]);
 
-  const handleOpenProjectById = useCallback(async (id: string) => {
-    // Logic for opening by ID
+  const handleOpenProjectById = useCallback(async (id: string, sourcePlatform?: string) => {
     setVersLoading(true);
     try {
-      const res = await fetch(`/api/modrinth/project?projectId=${id}`);
+      const apiSource = sourcePlatform === "curseforge" ? "curseforge" : "modrinth";
+      const endpoint = apiSource === "curseforge" 
+        ? `/api/curseforge/project?projectId=${id}`
+        : `/api/modrinth/project?projectId=${id}`;
+        
+      const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
+        
+        let author = "Creador";
+        if (apiSource === "modrinth" && data.members) {
+          const owner = data.members.find((m: any) => m.role.toLowerCase() === "owner") || data.members[0];
+          if (owner) author = owner.username;
+        } else if (apiSource === "curseforge" && data.authors) {
+          author = data.authors[0]?.name || author;
+        }
+        
+        let downloads = data.downloads ?? data.downloadCount ?? 0;
+        if (typeof downloads !== "number" || isNaN(downloads)) {
+          downloads = Number(downloads) || 0;
+        }
+        
         const rawCategories = data.categories || [];
         const normalizedCategories = Array.from(new Set(rawCategories.map((c: any) => {
           if (typeof c === "string") return c;
@@ -100,14 +118,64 @@ export function useFomoDetails(source: string, loader: string, projectType: stri
           }
           return "";
         }).filter(Boolean)));
-        setSelectingVersionFor({ ...data, categories: normalizedCategories });
+
+        const pt = data.projectType || data.project_type || (apiSource === "curseforge" ? "mod" : "mod");
+
+        const slug =
+          typeof data.slug === "string" && data.slug.length > 0 ? data.slug : String(id);
+
+        const follows =
+          typeof data.followers === "number" && !Number.isNaN(data.followers)
+            ? data.followers
+            : 0;
+
+        const latestVersion =
+          data.latest_version != null
+            ? String(data.latest_version)
+            : data.latestFilesIndexes?.[0]?.gameVersion != null
+              ? String(data.latestFilesIndexes[0].gameVersion)
+              : null;
+
+        const rawDate = data.published ?? data.dateReleased ?? data.dateCreated;
+        const dateCreated =
+          rawDate == null || rawDate === ""
+            ? ""
+            : typeof rawDate === "number"
+              ? new Date(rawDate).toISOString()
+              : String(rawDate);
+
+        const modHit: ModHit = {
+          projectId: id,
+          slug,
+          title: data.title || data.name || "Proyecto",
+          description: data.description || data.summary || "",
+          author: author,
+          downloads: downloads,
+          follows,
+          latestVersion,
+          iconUrl: data.iconUrl || data.icon_url || data.logo?.url || null,
+          url: data.url || (apiSource === "modrinth" ? `https://modrinth.com/${pt}/${id}` : `https://www.curseforge.com/minecraft/${pt}s/${id}`),
+          categories: normalizedCategories as string[],
+          dateCreated,
+          _source: apiSource,
+          projectType: pt
+        };
+        
+        setSelectingVersionFor(modHit);
+        
+        // Cargar versiones
+        const versRes = await fetch(`/api/${apiSource}/versions?projectId=${id}&loader=all&projectType=${pt}`);
+        if (versRes.ok) {
+          const dataV = await versRes.json();
+          setProjectVersions(dataV.versions ?? []);
+        }
       }
     } catch (e) {
       console.error(e);
     } finally {
       setVersLoading(false);
     }
-  }, []);
+  }, [projectType]);
 
   return { selectingVersionFor, setSelectingVersionFor, projectVersions, versLoading, handleOpenVersionSelector, handleOpenLiveProject, handleOpenProjectById };
 }

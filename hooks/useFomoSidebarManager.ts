@@ -3,7 +3,7 @@ import { fetchCollections, createCollection, addModToCollection } from "@/servic
 import type { ModHit, Project } from "@/lib/types";
 
 export function useFomoSidebarManager(open: boolean, discover: any, showStatus: any) {
-  const [mode, setMode] = useState<"spotlight" | "discover" | "collections" | "followed">("spotlight");
+  const [mode, setMode] = useState<"spotlight" | "showcases" | "discover" | "collections" | "followed" | "community">("spotlight");
   const [addingToCollectionFor, setAddingToCollectionFor] = useState<ModHit | null>(null);
   const [bulkAdding, setBulkAdding] = useState(false);
   const [collectionsList, setCollectionsList] = useState<any[]>([]);

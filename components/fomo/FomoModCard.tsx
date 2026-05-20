@@ -21,7 +21,7 @@ import { FomoCompatibilityBadge } from "./parts/FomoCompatibilityBadge";
 export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions,
   isSelected, onToggleSelect, sinytraActive,
-  riskScore, riskLevel, onSecurityDetails,
+  riskScore, riskLevel, onSecurityDetails, followedByUsers = []
 }: any) {
   const categories = React.useMemo(() => {
     return (mod.categories || []).map((c: any) => {
@@ -154,6 +154,45 @@ export const FomoModCard = memo(function FomoModCard({
             <div className="flex items-center gap-1" title={isCF ? "Exclusivo de CurseForge" : "Exclusivo de Modrinth"}>
               {isCF ? <CurseForgeIcon /> : <ModrinthIcon />}
               <span className="text-[8px] font-black uppercase tracking-wider text-white/80">Excl.</span>
+            </div>
+          )}
+
+          {/* Seguido por — aparece debajo del badge de exclusividad, mismo X */}
+          {followedByUsers && followedByUsers.length > 0 && (
+            <div 
+              className="absolute top-10 left-3 z-30 flex items-center gap-1 px-1.5 py-0.5 rounded border backdrop-blur-md bg-black/60 border-white/10 shadow-lg select-none cursor-pointer hover:border-white/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                const first = followedByUsers[0];
+                if (first?.username) {
+                  window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
+                    detail: { username: first.username }
+                  }));
+                }
+              }}
+              title={`Ver perfil de @${followedByUsers[0]?.username}`}
+            >
+              <div className="flex items-center gap-0.5">
+                {followedByUsers.slice(0, 3).map((info: any, i: number) => (
+                  <div
+                    key={i}
+                    className="w-3.5 h-3.5 rounded-full overflow-hidden border shrink-0"
+                    style={{ borderColor: info.color || 'rgba(255,255,255,0.2)' }}
+                    title={`@${info.username}`}
+                  >
+                    {info.avatar_url ? (
+                      <img src={info.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[5px] font-black text-white" style={{ backgroundColor: info.color || 'var(--primary)' }}>
+                        {(info.username || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[7px] font-black uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Seg{followedByUsers.length > 1 ? ` x${followedByUsers.length}` : ""}
+              </span>
             </div>
           )}
         </div>

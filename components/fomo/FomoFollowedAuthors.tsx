@@ -1,72 +1,26 @@
 /**
  * MIM — FOMO Followed Authors & Projects
- * Optimized for v5.9: Modularized into hooks and components.
+ * Optimized for v5.9: Modularized into hooks and subcomponents.
  */
 
 "use client";
 
 import React from "react";
-import { Heart, FolderHeart, Sparkles, Package, UserCheck, RefreshCw, Timeline, ChefHat, CookingPot, Award, Star, Puzzle, TvMinimalPlay, MonitorCheck, MonitorUp, ChevronDown, Trash2, ExternalLink } from "lucide-react";
-import { COLORS } from "@/theme/tokens";
+import { 
+  Heart, FolderHeart, RefreshCw, 
+  Timeline, ChefHat, CookingPot, TvMinimalPlay,
+  CircleFadingPlus, X, Loader2
+} from "lucide-react";
 import { useFomoFollowedManager } from "@/hooks/useFomoFollowedManager";
-import { mimDB } from "@/lib/indexeddb";
+import { supabase } from "@/lib/supabaseClient";
+import { fetchJsonWithRetry } from "@/lib/fetchJsonWithRetry";
 import { FollowedProjectCard, FollowedAuthorCard } from "./FomoFollowedComponents";
-import { FomoSkeleton } from "./FomoSkeleton";
 import { PillToggleGroup } from "../ui/primitives";
+import { FomoFollowedRankings } from "./FomoFollowedRankings";
+import { FomoFollowedShowcases } from "./FomoFollowedShowcases";
 
-function formatYoutubeDate(rawDate?: string): string {
-  if (!rawDate || rawDate.length !== 8) return "";
-  const year = rawDate.substring(0, 4);
-  const monthIdx = parseInt(rawDate.substring(4, 6), 10) - 1;
-  const day = parseInt(rawDate.substring(6, 8), 10);
-  
-  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-  return `${day} ${months[monthIdx] || ""} ${year}`;
-}
-
-function ShowcaseVideoThumbnail({ video }: { video: any }) {
-  const [imgError, setImgError] = React.useState(false);
-  const [imgSrc, setImgSrc] = React.useState(video.thumbnail);
-
-  // Fallback secuencial de YouTube: maxresdefault -> mqdefault -> hqdefault -> default
-  const handleError = () => {
-    if (video.videoId && imgSrc && imgSrc.includes("maxresdefault")) {
-      setImgSrc(`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`);
-    } else if (video.videoId && imgSrc && imgSrc.includes("mqdefault")) {
-      setImgSrc(`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`);
-    } else {
-      setImgError(true);
-    }
-  };
-
-  React.useEffect(() => {
-    setImgSrc(video.thumbnail);
-    setImgError(false);
-  }, [video.thumbnail, video.videoId]);
-
-  if (imgError || !imgSrc) {
-    return (
-      <div 
-        className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundColor: "rgba(255,255,255,0.02)"
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-tr from-red-950/20 via-transparent to-black/40 pointer-events-none" />
-        <TvMinimalPlay className="w-5 h-5 text-red-500/40" />
-      </div>
-    );
-  }
-
-  return (
-    <img 
-      src={imgSrc} 
-      alt="" 
-      className="w-full h-full object-cover" 
-      onError={handleError}
-    />
-  );
+function platformKeyForMod(mod: { _source?: string }): "modrinth" | "curseforge" {
+  return mod._source === "curseforge" ? "curseforge" : "modrinth";
 }
 
 interface FomoFollowedAuthorsProps {
@@ -77,11 +31,168 @@ interface FomoFollowedAuthorsProps {
   downloading?: Record<string, boolean>;
 }
 
-export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVersions, onDownloadMod, downloading = {} }: FomoFollowedAuthorsProps) {
-  const { subTab, setSubTab, followedAuthors, followedMods, filteredMods, showOnlyWithUpdates, setShowOnlyWithUpdates, getModUpdateInfo, handleUnfollowAuthor, handleUnfollowMod, isRecent } = useFomoFollowedManager();
+export function FomoFollowedAuthors({ 
+  onSearchAuthor, 
+  onSearchProject, 
+  onOpenVersions, 
+  onDownloadMod, 
+  downloading = {} 
+}: FomoFollowedAuthorsProps) {
+  const { 
+    subTab, 
+    setSubTab, 
+    followedAuthors, 
+    followedMods, 
+    filteredMods, 
+    showOnlyWithUpdates, 
+    setShowOnlyWithUpdates, 
+    getModUpdateInfo, 
+    handleUnfollowAuthor, 
+    handleUnfollowMod, 
+    isRecent 
+  } = useFomoFollowedManager();
+  
+  // Community sharing — favorite_mods + showcase_videos for sub-tabs
+  const [allSharedMods, setAllSharedMods] = React.useState<any[]>([]);
+  const [allSharedVideos, setAllSharedVideos] = React.useState<any[]>([]);
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [currentUserColor, setCurrentUserColor] = React.useState<string | null>(null);
+
+  const fetchCommunitySharingInfo = React.useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
+      setCurrentUser(user);
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("color")
+          .eq("id", user.id)
+          .single();
+        if (profile?.color) {
+          setCurrentUserColor(profile.color);
+        }
+      }
+
+      const { data: modsData } = await supabase
+        .from("favorite_mods")
+        .select("id, profile_id, mod_id, platform, name, profiles ( username, avatar_url, color )");
+      if (modsData) setAllSharedMods(modsData);
+
+      const { data: videosRows } = await supabase
+        .from("showcase_videos")
+        .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
+      if (videosRows) setAllSharedVideos(videosRows);
+    } catch (err) {
+      console.error("Error loading community shared info:", err);
+    }
+  }, []);
+
+  // Share modal state — declared BEFORE handleShareToCommunity that uses them
+  const [shareModalItem, setShareModalItem] = React.useState<any>(null);
+  const [shareComment, setShareComment] = React.useState("");
+  const [isSharing, setIsSharing] = React.useState(false);
+
+  const openShareModal = async (item: any) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Tenés que iniciar sesión en la pestaña Comunidad para compartir.", type: "error" }
+      }));
+      return;
+    }
+    setShareModalItem(item);
+    setShareComment("");
+  };
+
+  const handleShareToCommunity = async () => {
+    if (!shareModalItem || isSharing) return;
+    try {
+      setIsSharing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
+      if (!user) {
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "Tenés que iniciar sesión en la pestaña Comunidad para compartir.", type: "error" }
+        }));
+        setShareModalItem(null);
+        return;
+      }
+
+      const item = shareModalItem;
+
+      if (item.isAuthor) {
+        const summaryText = shareComment.trim() || "Autor de Minecraft";
+        const { error } = await supabase.from("favorite_mods").insert({
+          profile_id: user.id,
+          mod_id: item.id,
+          platform: "modrinth",
+          name: item.name,
+          icon_url: item.icon_url,
+          summary: summaryText
+        });
+        if (error) {
+          if (error.code === "23505") {
+            window.dispatchEvent(new CustomEvent("fomo-show-status", {
+              detail: { text: "Este creador ya está compartido en la comunidad.", type: "info" }
+            }));
+            setShareModalItem(null);
+            return;
+          }
+          throw error;
+        }
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "¡Creador compartido con la comunidad!", type: "success" }
+        }));
+        fetchCommunitySharingInfo();
+        window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
+      } else {
+        const summaryText = shareComment.trim() || (item.description || item.summary || "Mod de Minecraft");
+        const { error } = await supabase.from("favorite_mods").insert({
+          profile_id: user.id,
+          mod_id: item.projectId || item.id,
+          platform: item._source || 'modrinth',
+          name: item.title || item.name || "Mod",
+          icon_url: item.iconUrl || item.icon_url || null,
+          summary: summaryText
+        });
+        if (error) {
+          if (error.code === "23505") {
+            window.dispatchEvent(new CustomEvent("fomo-show-status", {
+              detail: { text: "Este mod ya está compartido en la comunidad.", type: "info" }
+            }));
+            setShareModalItem(null);
+            return;
+          }
+          throw error;
+        }
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "¡Mod compartido con la comunidad!", type: "success" }
+        }));
+        fetchCommunitySharingInfo();
+        window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
+      }
+    } catch (err: any) {
+      console.error("[ShareError]:", err);
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Error al compartir en la comunidad.", type: "error" }
+      }));
+    } finally {
+      setIsSharing(false);
+      setShareModalItem(null);
+      setShareComment("");
+    }
+  };
+
   const [history, setHistory] = React.useState<any[]>([]);
   const [rankings, setRankings] = React.useState<Record<string, any[]>>({});
+  const [communityRankings, setCommunityRankings] = React.useState<Record<string, any[]>>({});
   const [loadingHistory, setLoadingHistory] = React.useState(false);
+  const [loadingCommunityRankings, setLoadingCommunityRankings] = React.useState(false);
+  const [historyFetchError, setHistoryFetchError] = React.useState<string | null>(null);
+  const [communityRankingsError, setCommunityRankingsError] = React.useState<string | null>(null);
+  const [rankingsRetryKey, setRankingsRetryKey] = React.useState(0);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
 
@@ -93,10 +204,16 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => obs.disconnect();
   }, []);
-  const isModern = currentTheme === "modern";
 
-  // Sistema de dirección para la animación
-  const TABS = ["projects", "authors", "history", "showcases"];
+  // Load community shared info on mount and tab changes
+  React.useEffect(() => {
+    fetchCommunitySharingInfo();
+    const handleRefresh = () => fetchCommunitySharingInfo();
+    window.addEventListener("fomo-refresh-sharing", handleRefresh);
+    return () => window.removeEventListener("fomo-refresh-sharing", handleRefresh);
+  }, [fetchCommunitySharingInfo, subTab]);
+
+  const TABS = ["projects", "authors", "showcases", "history"];
   const [direction, setDirection] = React.useState("forward");
   const prevTabRef = React.useRef(subTab);
 
@@ -112,221 +229,60 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
   const animationClass = direction === "forward" ? "animate-slide-in-right" : "animate-slide-in-left";
 
   React.useEffect(() => {
-    if (subTab === "history") {
-      setLoadingHistory(true);
-      fetch(`/api/fomo/download-history?page=${page}&limit=20`)
-        .then(res => res.json())
-        .then(data => {
-          if (page === 1) {
-            setHistory(data.history || []);
-            setRankings(data.rankings || {});
-          } else {
-            setHistory(prev => [...prev, ...(data.history || [])]);
-          }
-          setHasMore(data.hasMore);
-          setLoadingHistory(false);
-        })
-        .catch(e => {
-          console.error("Error loading history", e);
-          setLoadingHistory(false);
-        });
-    }
-  }, [subTab, page]);
+    if (subTab !== "history") return;
 
-  const [showcaseType, setShowcaseType] = React.useState<"videos" | "shorts">("videos");
-  const [loadingShowcases, setLoadingShowcases] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+    setLoadingHistory(true);
+    setLoadingCommunityRankings(true);
+    setHistoryFetchError(null);
+    setCommunityRankingsError(null);
 
-  React.useEffect(() => {
-    if (loadingShowcases) {
-      setProgress(10);
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) return 95;
-          if (prev >= 80) return prev + 0.4;
-          if (prev >= 50) return prev + 1.2;
-          return prev + 3.8;
-        });
-      }, 100);
-    } else {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
+    const fetchPersonalData = async () => {
+      const result = await fetchJsonWithRetry<{
+        history?: any[];
+        rankings?: Record<string, any[]>;
+        hasMore?: boolean;
+      }>(`/api/fomo/download-history?page=${page}&limit=20`, { retries: 4, retryDelayMs: 350 });
+
+      if (result.ok) {
+        const data = result.data;
+        if (page === 1) {
+          setHistory(data.history || []);
+          setRankings(data.rankings || {});
+        } else {
+          setHistory((prev) => [...prev, ...(data.history || [])]);
+        }
+        setHasMore(!!data.hasMore);
+        setHistoryFetchError(null);
+      } else {
+        console.error("Error loading history", result.error);
+        setHistoryFetchError(result.error);
       }
-      setProgress(prev => {
-        if (prev > 0) return 100;
-        return 0;
-      });
-      const t = setTimeout(() => {
-        setProgress(0);
-      }, 500);
-      return () => clearTimeout(t);
-    }
-    return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      setLoadingHistory(false);
     };
-  }, [loadingShowcases]);
 
-  const [expandedVideo, setExpandedVideo] = React.useState<string | null>(null);
-  const [videos, setVideos] = React.useState<any[]>([]);
-  const [shorts, setShorts] = React.useState<any[]>([]);
-  const [videoCursor, setVideoCursor] = React.useState(1);
-  const [shortsCursor, setShortsCursor] = React.useState(1);
-  const [nextVideoCursor, setNextVideoCursor] = React.useState(1);
-  const [nextShortsCursor, setNextShortsCursor] = React.useState(1);
-  const [hasMoreVideos, setHasMoreVideos] = React.useState(true);
-  const [hasMoreShorts, setHasMoreShorts] = React.useState(true);
+    const fetchCommunityRankings = async () => {
+      const result = await fetchJsonWithRetry<{ rankings?: Record<string, any[]> }>(
+        "/api/fomo/community-rankings",
+        { retries: 4, retryDelayMs: 350 }
+      );
 
-  const [channels, setChannels] = React.useState<string[]>([]);
-  const [activeChannel, setActiveChannel] = React.useState("https://www.youtube.com/@EnderVerseMC");
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const [channelUsage, setChannelUsage] = React.useState<Record<string, number>>({});
-
-  React.useEffect(() => {
-    fetch(`/api/fomo/youtube-usage`)
-      .then(res => res.json())
-      .then(data => {
-        setChannelUsage(data.usage || {});
-      })
-      .catch(e => console.error("Error loading usage", e));
-  }, []);
-
-  const trackChannelUsage = (url: string) => {
-    setChannelUsage(prev => {
-      const next = { ...prev, [url]: (prev[url] || 0) + 1 };
-      fetch(`/api/fomo/youtube-usage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usage: next })
-      });
-      return next;
-    });
-  };
-
-  React.useEffect(() => {
-    fetch(`/api/fomo/youtube-channels`)
-      .then(res => res.json())
-      .then(data => {
-        const list = data.channels || [];
-        setChannels(list);
-        if (list.length > 0) {
-          setActiveChannel(list[0]);
-        }
-      })
-      .catch(e => console.error("Error loading channels", e));
-  }, []);
-
-  const lastFetchRef = React.useRef("");
-
-  // Cargar caché local y resetear estados en canal activo al montar/cambiar
-  React.useEffect(() => {
-    const loadCache = async () => {
-      try {
-        await mimDB.init();
-        const cacheVKey = `fomo_videos_${activeChannel}`;
-        const cacheSKey = `fomo_shorts_${activeChannel}`;
-        
-        let cachedV = null;
-        let cachedS = null;
-        
-        const cacheVEntry = await mimDB.getCache(cacheVKey);
-        const cacheSEntry = await mimDB.getCache(cacheSKey);
-        
-        if (cacheVEntry?.data) cachedV = cacheVEntry.data;
-        if (cacheSEntry?.data) cachedS = cacheSEntry.data;
-        
-        const lsV = localStorage.getItem(cacheVKey);
-        const lsS = localStorage.getItem(cacheSKey);
-        
-        if (!cachedV && lsV) {
-          try {
-            cachedV = JSON.parse(lsV);
-            await mimDB.setCache(cacheVKey, cachedV, 12 * 60 * 60 * 1000);
-            localStorage.removeItem(cacheVKey);
-          } catch (e) {}
-        }
-        if (!cachedS && lsS) {
-          try {
-            cachedS = JSON.parse(lsS);
-            await mimDB.setCache(cacheSKey, cachedS, 12 * 60 * 60 * 1000);
-            localStorage.removeItem(cacheSKey);
-          } catch (e) {}
-        }
-        
-        setVideos(cachedV || []);
-        setShorts(cachedS || []);
-      } catch (err) {
-        console.error("Error loading followed authors cache from IndexedDB", err);
-        setVideos([]);
-        setShorts([]);
+      if (result.ok) {
+        setCommunityRankings(result.data.rankings || {});
+        setCommunityRankingsError(null);
+      } else {
+        console.error("Error loading community rankings", result.error);
+        setCommunityRankings({});
+        setCommunityRankingsError(result.error);
       }
+      setLoadingCommunityRankings(false);
     };
-    
-    loadCache();
-    
-    setVideoCursor(1);
-    setShortsCursor(1);
-    setNextVideoCursor(1);
-    setNextShortsCursor(1);
-    setHasMoreVideos(true);
-    setHasMoreShorts(true);
-    lastFetchRef.current = "";
-  }, [activeChannel]);
 
-  React.useEffect(() => {
-    let ignore = false;
-
-    const isVideos = showcaseType === "videos";
-    const currentCursor = isVideos ? videoCursor : shortsCursor;
-    const hasMore = isVideos ? hasMoreVideos : hasMoreShorts;
-    const fetchKey = `${activeChannel}_${showcaseType}_${currentCursor}`;
-
-    if (subTab === "showcases" && hasMore && lastFetchRef.current !== fetchKey) {
-      lastFetchRef.current = fetchKey;
-      setLoadingShowcases(true);
-      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=5&cursor=${currentCursor}&type=${showcaseType}`)
-        .then(res => res.json())
-        .then(data => {
-          if (ignore) return;
-          
-          const newItems = data.showcases || [];
-          const nextCursor = data.nextCursor || currentCursor + 5;
-          if (isVideos) {
-            setVideos(prev => {
-              const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
-              mimDB.setCache(`fomo_videos_${activeChannel}`, next, 12 * 60 * 60 * 1000).catch(console.error);
-              return next;
-            });
-            setNextVideoCursor(nextCursor);
-            setHasMoreVideos(data.hasMore !== undefined ? data.hasMore : newItems.length === 5);
-          } else {
-            setShorts(prev => {
-              const next = currentCursor === 1 ? newItems : [...prev, ...newItems];
-              mimDB.setCache(`fomo_shorts_${activeChannel}`, next, 12 * 60 * 60 * 1000).catch(console.error);
-              return next;
-            });
-            setNextShortsCursor(nextCursor);
-            setHasMoreShorts(data.hasMore !== undefined ? data.hasMore : newItems.length === 5);
-          }
-          setLoadingShowcases(false);
-        })
-        .catch(e => {
-          if (ignore) return;
-          console.error(`Error loading ${showcaseType}`, e);
-          setLoadingShowcases(false);
-        });
-    }
-    
-    return () => {
-      ignore = true;
-    };
-  }, [subTab, videoCursor, shortsCursor, activeChannel, showcaseType, hasMoreVideos, hasMoreShorts]);
+    void fetchPersonalData();
+    void fetchCommunityRankings();
+  }, [subTab, page, rankingsRetryKey]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
-      {/* Estilos inyectados para las animaciones direccionales */}
       <style>{`
         @keyframes slideInFromRight {
           from { transform: translateX(30px); opacity: 0; }
@@ -351,8 +307,8 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           options={[
             { value: "projects", label: `Proyectos (${followedMods.length})`, icon: <CookingPot className="w-4 h-4" /> },
             { value: "authors", label: `Autores (${followedAuthors.length})`, icon: <ChefHat className="w-4 h-4" /> },
-            { value: "history", label: "Rank/Historial", icon: <Timeline className="w-4 h-4" /> },
             { value: "showcases", label: "Showcases", icon: <TvMinimalPlay className="w-4 h-4" /> },
+            { value: "history", label: "Rank/Historial", icon: <Timeline className="w-4 h-4" /> },
           ]} 
           value={subTab} 
           onChange={(v: any) => {
@@ -363,7 +319,7 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
           className="p-1"
         />
         {subTab === "projects" && followedMods.length > 0 && (
-          <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
+          <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60 cursor-pointer"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
         )}
       </div>
 
@@ -374,7 +330,36 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
               <div className="py-20 text-center flex flex-col items-center opacity-40"><FolderHeart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">No seguís ningún mod</h3><p className="text-xs max-w-sm">Seguí tus proyectos favoritos para verlos acá.</p></div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredMods.map(mod => <FollowedProjectCard key={mod.projectId} mod={mod} updateInfo={getModUpdateInfo(mod.projectId)} isRecent={isRecent(mod)} isDownloading={!!downloading[`collection:${mod.projectId}`]} onOpenVersions={onOpenVersions} onDownloadMod={onDownloadMod} onSearchProject={onSearchProject} onUnfollow={handleUnfollowMod} />)}
+                {filteredMods.map(mod => {
+                  const pf = platformKeyForMod(mod);
+                  const isSharedByMe = allSharedMods.some(
+                    m => m.mod_id === mod.projectId && m.profile_id === currentUser?.id && m.platform === pf
+                  );
+                  const sharedByOthers = allSharedMods
+                    .filter(m => m.mod_id === mod.projectId && m.profile_id !== currentUser?.id && m.platform === pf)
+                    .map(m => ({
+                      username: m.profiles?.username || "Usuario",
+                      color: m.profiles?.color,
+                      avatar_url: m.profiles?.avatar_url,
+                    }));
+                  return (
+                    <FollowedProjectCard 
+                      key={mod.projectId} 
+                      mod={mod} 
+                      updateInfo={getModUpdateInfo(mod.projectId)} 
+                      isRecent={isRecent(mod)} 
+                      isDownloading={!!downloading[`collection:${mod.projectId}`]} 
+                      onOpenVersions={onOpenVersions} 
+                      onDownloadMod={onDownloadMod} 
+                      onSearchProject={onSearchProject} 
+                      onUnfollow={handleUnfollowMod} 
+                      onShare={openShareModal} 
+                      isSharedByMe={isSharedByMe}
+                      sharedByOthers={sharedByOthers}
+                      currentUserColor={currentUserColor}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -406,444 +391,123 @@ export function FomoFollowedAuthors({ onSearchAuthor, onSearchProject, onOpenVer
                   {followedAuthors.map((author, idx) => {
                     const icons = getAuthorIcons(author);
                     const authorName = typeof author === "string" ? author : author?.name;
-                    return <FollowedAuthorCard key={authorName || `unknown-${idx}`} author={author} icons={icons} onSearch={onSearchAuthor} onUnfollow={handleUnfollowAuthor} />;
+                    const isSharedByMe = allSharedMods.some(m => m.mod_id === authorName && m.profile_id === currentUser?.id);
+                    const sharedByOthers = allSharedMods
+                      .filter(m => m.mod_id === authorName && m.profile_id !== currentUser?.id)
+                      .map(m => ({
+                        username: m.profiles?.username || "Usuario",
+                        color: m.profiles?.color,
+                        avatar_url: m.profiles?.avatar_url,
+                      }));
+                    return (
+                      <FollowedAuthorCard 
+                        key={authorName || `unknown-${idx}`} 
+                        author={author} 
+                        icons={icons} 
+                        onSearch={onSearchAuthor} 
+                        onUnfollow={handleUnfollowAuthor} 
+                        onShare={openShareModal} 
+                        isSharedByMe={isSharedByMe}
+                        sharedByOthers={sharedByOthers}
+                        currentUserColor={currentUserColor}
+                      />
+                    );
                   })}
                 </div>
               );
             })()}
-          </div>
-        )}
-
-        {subTab === "history" && (
-          <div key="history" className={animationClass}>
-            {loadingHistory && page === 1 ? (
-              <FomoSkeleton variant="list" message="Cargando historial..." count={5} />
-            ) : history.length === 0 ? (
-              <div className="py-20 text-center flex flex-col items-center opacity-40"><Puzzle className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">Sin historial de descargas</h3><p className="text-xs max-w-sm">Los mods que descargues aparecerán acá.</p></div>
-            ) : (
-              <div className="space-y-6">
-                {/* Ranking Sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {Object.entries(rankings).map(([type, typeRanking]) => {
-                    const labels: Record<string, string> = {
-                      mod: "Mods",
-                      resourcepack: "Texturas",
-                      shader: "Shaders",
-                      datapack: "Datapacks"
-                    };
-                    return (
-                      <div key={type} className="space-y-2">
-                        <h4 className="font-headline text-xs flex items-center gap-2"><Award className="w-3.5 h-3.5 text-primary" />Top {labels[type] || type}</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {typeRanking.map((item, idx) => (
-                            <div 
-                              key={item.mod.projectId} 
-                              onClick={() => onOpenVersions && onOpenVersions(item.mod)}
-                              className={`p-2 rounded-xl bg-white/5 border border-white/10 flex relative hover:bg-white/10 transition-all cursor-pointer ${idx === 0 ? "col-span-2 flex-row items-center gap-3" : "col-span-1 flex-col items-center text-center"}`}
-                            >
-                              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-10 ${idx === 0 ? "bg-amber-500" : "bg-primary"}`}>
-                                {idx + 1}
-                              </div>
-                              <div className={`${idx === 0 ? "w-10 h-10" : "w-8 h-8 mb-1"} rounded-lg bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 shrink-0`}>
-                                {item.mod.iconUrl ? <img src={item.mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <Puzzle className="w-4 h-4 opacity-40" />}
-                              </div>
-                              <div className={idx === 0 ? "flex-1 min-w-0" : "w-full"}>
-                                <p className={`font-bold text-[10px] truncate w-full ${idx === 0 ? "text-sm" : ""}`}>{item.mod.title}</p>
-                                <p className="font-caption text-[8px] mt-0.5" style={{ color: COLORS.muted }}>{item.count} dls</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Full History Section */}
-                <div className="space-y-3">
-                  <h4 className="font-headline text-sm flex items-center gap-2"><Star className="w-4 h-4 text-primary" />Historial Completo</h4>
-                  <div className="space-y-2">
-                    {history.map((item, idx) => (
-                      <div 
-                        key={`${item.projectId}-${idx}`} 
-                        onClick={() => onOpenVersions && onOpenVersions({ projectId: item.projectId, title: item.title, iconUrl: item.iconUrl })}
-                        className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
-                          {item.iconUrl ? <img src={item.iconUrl} alt="" className="w-full h-full object-cover" /> : <Puzzle className="w-4 h-4 opacity-40" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate">{item.title}</p>
-                          <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>{item.loader} • {item.gameVersion} • {new Date(item.downloadedAt).toLocaleDateString()}</p>
-                        </div>
-                        <div className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white/5 border border-white/10 uppercase">
-                          {item._source}
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {hasMore && (
-                      <button
-                        onClick={() => setPage(prev => prev + 1)}
-                        disabled={loadingHistory}
-                        className="w-full p-3 rounded-2xl border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-sm font-bold mt-2"
-                      >
-                        {loadingHistory ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Cargar más"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {subTab === "showcases" && (
-          <div key="showcases" className={animationClass}>
-            {/* Gestor de Canales */}
-            <div className="mb-6 bg-white/5 p-4 rounded-2xl border border-white/10 space-y-4">
-              {/* Accesos Rápidos */}
-              {(() => {
-                const quickAccess = Object.entries(channelUsage)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 4)
-                  .map(([url]) => url)
-                  .filter(url => channels.includes(url));
-
-                if (quickAccess.length === 0) return null;
-
-                return (
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider opacity-40">Accesos Rápidos:</span>
-                    {quickAccess.map(url => (
-                      <button
-                        key={url}
-                        onClick={() => {
-                          setActiveChannel(url);
-                          trackChannelUsage(url);
-                        }}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${url === activeChannel ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"}`}
-                      >
-                        @{((url.split("@")[1] || url).split("/")[0])}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-full sm:w-1/2 min-w-0">
-                  <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><MonitorCheck className="w-3.5 h-3.5 text-primary" />Canal Activo</p>
-                  
-                  {/* Custom Dropdown */}
-                  <div className="relative">
-                    <button 
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
-                      className={`w-full border rounded-xl px-3 py-2 text-xs flex items-center justify-between focus:border-primary/50 outline-none transition-all ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
-                    >
-                      <span className="truncate">{(activeChannel.split("@")[1] || activeChannel).split("/")[0]}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-                    </button>
-                    
-                    {dropdownOpen && (
-                      <div className={`absolute z-50 w-full mt-1 border rounded-xl shadow-xl max-h-60 overflow-y-auto ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`} style={{ background: isModern ? "white" : "hsl(220 14% 9%)" }}>
-                        {channels.map(c => (
-                          <div 
-                            key={c} 
-                            className={`flex items-center justify-between px-3 py-2 text-xs hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"}`}
-                            onClick={() => {
-                              setActiveChannel(c);
-                              trackChannelUsage(c);
-                              setDropdownOpen(false);
-                            }}
-                          >
-                            <span className={`truncate ${c === activeChannel ? "text-primary font-bold" : "opacity-80"}`}>{(c.split("@")[1] || c).split("/")[0]}</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const next = channels.filter(chan => chan !== c);
-                                setChannels(next);
-                                if (activeChannel === c) {
-                                  setActiveChannel(next[0] || "");
-                                }
-                                fetch(`/api/fomo/youtube-channels`, {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ channels: next })
-                                });
-                              }}
-                              className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-2"
-                              title="Eliminar canal"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="w-full sm:w-1/2 min-w-0">
-                  <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><MonitorUp className="w-3.5 h-3.5 text-primary" />Añadir Canal</p>
-                  <input 
-                    type="text" 
-                    placeholder="@usuario o URL + Enter"
-                    className={`w-full border rounded-xl px-3 py-2 text-xs focus:border-primary/50 outline-none transition-all ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const value = e.currentTarget.value.trim();
-                        if (value) {
-                          let url = value;
-                          if (!url.startsWith("http")) {
-                            url = `https://www.youtube.com/${url.startsWith("@") ? "" : "@"}${url}`;
-                          }
-                          // Normalizar para remover /featured, /videos, /shorts etc.
-                          const handleMatch = url.match(/(https?:\/\/www\.youtube\.com\/@[^\/]+)/);
-                          if (handleMatch) {
-                            url = handleMatch[1];
-                          }
-                          if (!channels.includes(url)) {
-                            const next = [...channels, url];
-                            setChannels(next);
-                            setActiveChannel(url); // Cambiar al nuevo canal
-                            trackChannelUsage(url); // Contar como uso
-                            fetch(`/api/fomo/youtube-channels`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ channels: next })
-                            });
-                          } else {
-                            if (activeChannel === url) {
-                              // Si ya es el canal activo, forzar recarga limpia
-                              setVideos([]);
-                              setShorts([]);
-                              setVideoCursor(1);
-                              setShortsCursor(1);
-                              setNextVideoCursor(1);
-                              setNextShortsCursor(1);
-                              setHasMoreVideos(true);
-                              setHasMoreShorts(true);
-                              lastFetchRef.current = "";
-                            } else {
-                              // Si está en la lista pero no es activo, cambiar a él
-                              setActiveChannel(url);
-                              trackChannelUsage(url);
-                            }
-                          }
-                          e.currentTarget.value = "";
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Top Loading Progress Bar */}
-            <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-4">
-              <div 
-                className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-red-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                style={{ 
-                  width: `${progress}%`,
-                  opacity: progress > 0 && progress < 100 ? 1 : 0,
-                  transition: progress === 100 ? "width 0.2s, opacity 0.5s 0.2s" : "width 0.4s ease-out"
-                }}
-              />
-            </div>
-
-            {/* Toggle Videos/Shorts */}
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex gap-2 bg-white/5 p-1 rounded-xl w-fit border border-white/5">
-                <button 
-                  onClick={() => setShowcaseType("videos")}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
-                >
-                  Videos
-                </button>
-                <button 
-                  onClick={() => setShowcaseType("shorts")}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${showcaseType === "shorts" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
-                >
-                  Shorts
-                </button>
-              </div>
-              
-              {/* SWR Syncing Indicator */}
-              {loadingShowcases && (showcaseType === "videos" ? videos : shorts).length > 0 && (
-                <div className="flex items-center gap-1.5 opacity-55 text-[10px] font-mono select-none mr-2">
-                  <RefreshCw className="w-3 h-3 animate-spin text-primary" />
-                  <span>Actualizando...</span>
-                </div>
-              )}
-            </div>
-
-            {(() => {
-              const showcasesList = showcaseType === "videos" ? videos : shorts;
-              const hasMore = showcaseType === "videos" ? hasMoreVideos : hasMoreShorts;
-              const cursor = showcaseType === "videos" ? videoCursor : shortsCursor;
-              
-              // Solo mostrar skeleton si no hay nada cargado aún en caché
-              const loading = loadingShowcases && cursor === 1 && showcasesList.length === 0;
-
-              if (loading) {
-                return <FomoSkeleton variant="list" message={`Cargando ${showcaseType}...`} count={5} />;
-              }
-
-              if (showcasesList.length === 0) {
-                return (
-                  <div className="py-20 text-center flex flex-col items-center opacity-40">
-                    <TvMinimalPlay className="w-16 h-16 mb-4" />
-                    <h3 className="font-headline text-lg">No hay {showcaseType === "videos" ? "videos" : "shorts"}</h3>
-                    <p className="text-xs max-w-sm">Los {showcaseType === "videos" ? "videos" : "shorts"} del canal aparecerán acá.</p>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="space-y-4">
-                  {showcasesList.map((video, idx) => (
-                    <div key={`${video.videoId}-${idx}`} className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
-                      <div 
-                        className="flex items-center gap-4"
-                        onClick={() => setExpandedVideo(expandedVideo === video.videoId ? null : video.videoId)}
-                      >
-                        <div className="w-20 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
-                          <ShowcaseVideoThumbnail video={video} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate">{video.title}</p>
-                          <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>
-                            {video.publishedAt ? `${formatYoutubeDate(video.publishedAt)} • ` : ""}{video.modSlugs.length} mods detectados
-                          </p>
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
-                          }}
-                          className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase hover:bg-red-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                          title="Reproducir video en la app"
-                        >
-                          Reproducir <TvMinimalPlay className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      
-                      {/* Expandable Grid / Fallback info */}
-                      {expandedVideo === video.videoId && (
-                        <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
-                          {video.modSlugs.length > 0 ? (
-                            <>
-                              <h4 className="font-headline text-xs mb-2 flex items-center gap-2"><Puzzle className="w-3.5 h-3.5 text-primary" />Mods Detectados</h4>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {video.modSlugs.map((slugStr: string, sIdx: number) => {
-                                  const parts = slugStr.split(":");
-                                  const source = parts[0];
-                                  const type = parts.length >= 3 ? parts[1] : "mod";
-                                  const slug = parts.length >= 3 ? parts[2] : parts[1];
-                                  const loader = parts.length >= 4 ? parts[3] : "";
-                                  const version = parts.length >= 5 ? parts[4] : "";
-                                  
-                                  const isCurse = source === "curseforge";
-                                  const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                                  
-                                  const typeLabels: Record<string, string> = {
-                                    mod: "Mod",
-                                    plugin: "Plugin",
-                                    datapack: "Data",
-                                    shader: "Shader",
-                                    resourcepack: "Pack",
-                                    modpack: "Pack",
-                                    "mc-mods": "Mod",
-                                    "texture-packs": "Pack",
-                                    customization: "Cust",
-                                    "mc-addons": "Addon"
-                                  };
-                                  const typeToProjectType: Record<string, string> = {
-                                    mod: "mod",
-                                    plugin: "mod",
-                                    datapack: "datapack",
-                                    shader: "shader",
-                                    resourcepack: "resourcepack",
-                                    modpack: "modpack",
-                                    "mc-mods": "mod",
-                                    "texture-packs": "resourcepack",
-                                    customization: "datapack",
-                                    "mc-addons": "mod"
-                                  };
-                                  const typeLabel = typeLabels[type] || "Mod";
-                                  const extraInfo = [loader, version].filter(Boolean).join(" ");
-                                  const fullTypeLabel = extraInfo ? `${typeLabel} (${extraInfo})` : typeLabel;
-                                  
-                                  return (
-                                    <div 
-                                      key={`${slug}-${sIdx}`}
-                                      className="p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 hover:shadow-lg hover:-translate-y-0.5"
-                                      style={{
-                                        background: "rgba(0, 0, 0, 0.6)",
-                                        borderColor: isCurse ? "rgba(248,113,113,0.3)" : "rgba(30,215,96,0.3)",
-                                      }}
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Evitar colapsar el video
-                                        const query = slug.replace(/-/g, " ");
-                                        const targetType = typeToProjectType[type] || "mod";
-                                        if (onSearchProject) onSearchProject(query, targetType, source, loader, version);
-                                      }}
-                                    >
-                                      <div 
-                                        className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase shrink-0" 
-                                        style={{ 
-                                          background: isCurse ? "rgba(248,113,113,0.2)" : "rgba(30,215,96,0.2)", 
-                                          color: isCurse ? "#f87171" : "#4ade80",
-                                          border: isCurse ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(30,215,96,0.4)"
-                                        }}
-                                      >
-                                        {source.substring(0, 2)}
-                                      </div>
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="text-[10px] font-bold truncate" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
-                                          {displayName}
-                                        </span>
-                                        <span className="text-[8px] font-medium opacity-60" style={{ color: isCurse ? "#fca5a5" : "#a7f3d0" }}>
-                                          {fullTypeLabel}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          ) : (
-                            <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-mono text-center text-white/40">
-                              ℹ️ Este video no contiene mods de Minecraft detectados en su descripción. ¡Podés reproducirlo directamente haciendo click en <strong>Reproducir</strong>!
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {hasMore && (
-                    <button
-                      onClick={() => {
-                        if (showcaseType === "videos") {
-                          setVideoCursor(nextVideoCursor);
-                        } else {
-                          setShortsCursor(nextShortsCursor);
-                        }
-                      }}
-                      disabled={loadingShowcases}
-                      className="w-full p-3 rounded-2xl border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-sm font-bold mt-4"
-                    >
-                      {loadingShowcases ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Cargar más"}
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
+          <div key="showcases" className={`${animationClass} flex-1 flex flex-col min-h-[420px]`}>
+            <FomoFollowedShowcases
+              currentUser={currentUser}
+              allSharedVideos={allSharedVideos}
+              fetchCommunitySharingInfo={async () => {
+                await fetchCommunitySharingInfo();
+                window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
+              }}
+              onSearchProject={onSearchProject}
+              animationClass=""
+              currentUserColor={currentUserColor}
+            />
           </div>
         )}
+
+        {subTab === "history" && (
+          <FomoFollowedRankings 
+            animationClass={animationClass}
+            loadingHistory={loadingHistory}
+            loadingCommunityRankings={loadingCommunityRankings}
+            historyFetchError={historyFetchError}
+            communityRankingsError={communityRankingsError}
+            onRetryRankingsLoads={() => setRankingsRetryKey((k) => k + 1)}
+            page={page}
+            setPage={setPage}
+            history={history}
+            rankings={rankings}
+            communityRankings={communityRankings}
+            hasMore={hasMore}
+            onOpenVersions={onOpenVersions}
+          />
+        )}
       </div>
+
+      {/* Share Modal */}
+      {shareModalItem && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShareModalItem(null)}>
+          <div className="bg-[hsl(220,14%,10%)] border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <CircleFadingPlus className="w-4 h-4 text-primary" />
+                {shareModalItem.isAuthor ? "Compartir Creador" : "Compartir Proyecto"}
+              </h3>
+              <button onClick={() => setShareModalItem(null)} className="text-white/40 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-[11px] text-white/60">
+                ¿Querés agregar un comentario u opinión opcional sobre{" "}
+                <strong>{shareModalItem.name || shareModalItem.title}</strong>?
+              </p>
+              <textarea
+                value={shareComment}
+                onChange={e => setShareComment(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleShareToCommunity();
+                  }
+                  // Shift+Enter → nueva línea
+                }}
+                placeholder={shareModalItem.isAuthor ? "Escribe algo sobre este creador... (Enter para enviar, Shift+Enter para nueva línea)" : "Escribe algo interesante sobre este mod... (Enter para enviar, Shift+Enter para nueva línea)"}
+                className="w-full h-20 bg-black/20 border rounded-xl p-3 text-xs text-white placeholder-white/30 resize-none focus:outline-none transition-colors custom-scrollbar"
+                style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                autoFocus
+              />
+            </div>
+            <div className="p-3 border-t border-white/5 bg-white/5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShareModalItem(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                disabled={isSharing}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleShareToCommunity}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary hover:bg-primary/90 flex items-center gap-2 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                disabled={isSharing}
+              >
+                {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleFadingPlus className="w-3.5 h-3.5" />}
+                {isSharing ? "Compartiendo..." : "Compartir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

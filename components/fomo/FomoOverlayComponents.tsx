@@ -1,7 +1,8 @@
 import React from "react";
-import { ListTree, Download, ExternalLink, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow, Search, Heart, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses } from "lucide-react";
+import { ListTree, Download, ExternalLink, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow, Search, Heart, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses, CircleFadingPlus, Globe, X } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { formatSize, openExternal } from "@/utils/format";
+import { supabase } from "@/lib/supabaseClient";
 
 // ── TabButton ───────────────────────────────────────────────────────────────
 
@@ -245,7 +246,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
 
 // ── ModHeader ───────────────────────────────────────────────────────────────
 
-export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType }: any) {
+export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType, communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null }: any) {
   const [currentTheme, setCurrentTheme] = React.useState("official");
   
   React.useEffect(() => {
@@ -278,6 +279,84 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
   const isModern = currentTheme === "modern";
   const projectType = (mod.projectType || "").toLowerCase();
   const typeLabel = projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase();
+
+  const [showShareModal, setShowShareModal] = React.useState(false);
+  const [shareComment, setShareComment] = React.useState("");
+  const [isSharing, setIsSharing] = React.useState(false);
+
+  const handleShareClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Tenés que iniciar sesión en la pestaña Comunidad para compartir.", type: "error" }
+      }));
+      return;
+    }
+    if (communitySharedByMe) {
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Este proyecto ya está compartido desde tu cuenta.", type: "info" }
+      }));
+      return;
+    }
+    setShowShareModal(true);
+  };
+
+  const sharersToShow: { username: string; color?: string | null; avatar_url?: string | null }[] =
+    Array.isArray(communitySharers) && communitySharers.length > 0
+      ? communitySharers.filter((u: any) => u?.username)
+      : mod.sharingInfo?.profiles?.username
+        ? [{
+            username: mod.sharingInfo.profiles.username,
+            color: mod.sharingInfo.profiles?.color,
+            avatar_url: mod.sharingInfo.profiles?.avatar_url,
+          }]
+        : [];
+  const confirmShare = async () => {
+    if (isSharing) return;
+    try {
+      setIsSharing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
+      if (!user) return;
+      
+      const summaryText = shareComment.trim() || mod.description || "";
+      const platform = mod._source === "curseforge" ? "curseforge" : "modrinth";
+      const { error } = await supabase.from("favorite_mods").insert({
+        profile_id: user.id,
+        mod_id: mod.projectId,
+        platform,
+        name: mod.title,
+        icon_url: mod.iconUrl || null,
+        summary: summaryText,
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          window.dispatchEvent(new CustomEvent("fomo-show-status", {
+            detail: { text: "Este proyecto ya está en tus compartidos de comunidad.", type: "info" }
+          }));
+          setShowShareModal(false);
+          setShareComment("");
+          return;
+        }
+        throw error;
+      }
+
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "¡Compartido en la Comunidad exitosamente!", type: "success" }
+      }));
+      window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
+      setShowShareModal(false);
+      setShareComment("");
+    } catch (err) {
+      console.error(err);
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Error al compartir en la comunidad.", type: "error" }
+      }));
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <div className="px-5 py-6 border-b relative overflow-hidden group/header" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
@@ -313,6 +392,45 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
                 {getProjectTypeIcon(projectType, mod.categories)}
                 {projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase()}
               </button>
+              
+              {sharersToShow.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 ml-1">
+                  <span className="text-[8px] uppercase tracking-wider text-white/50 shrink-0">Compartido por:</span>
+                  {sharersToShow.map((info: { username: string; color?: string | null; avatar_url?: string | null }, idx: number) => (
+                    <button
+                      key={`${info.username}-${idx}`}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
+                          detail: { username: info.username, type: "mods" }
+                        }));
+                        window.dispatchEvent(new CustomEvent("fomo-switch-tab", {
+                          detail: { tab: "community" }
+                        }));
+                      }}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border backdrop-blur-md bg-black/60 text-[9px] font-bold text-white hover:scale-[1.02] hover:bg-black/80 transition-all cursor-pointer shadow-sm"
+                      style={{ borderColor: info.color || "rgba(255,255,255,0.1)" }}
+                      title={`Ver @${info.username} en la comunidad`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] uppercase overflow-hidden shrink-0 border border-white/10"
+                        style={{
+                          backgroundColor: info.color || "var(--primary)",
+                          color: info.color ? "#000000" : "var(--primary-foreground)",
+                        }}
+                      >
+                        {info.avatar_url ? (
+                          <img src={info.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (info.username || "U").charAt(0)
+                        )}
+                      </div>
+                      <span style={{ color: info.color || "var(--primary)" }}>@{info.username}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {mod.categories?.map((c: any) => {
                 if (typeof c === "string") return c.toLowerCase();
                 if (c && typeof c === "object") {
@@ -376,6 +494,30 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
             >
                <Heart className={`w-3.5 h-3.5 mr-1.5 ${followedMods.some((m: any) => m.projectId === mod.projectId) ? "fill-current" : ""}`} /> Favorito
             </button>
+            <button 
+              onClick={handleShareClick}
+              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black border transition-all ${
+                communitySharedByMe ? "" : "hover:bg-white/10 bg-white/5 border-white/10 text-primary"
+              }`}
+              style={
+                communitySharedByMe
+                  ? {
+                      backgroundColor: currentUserCommunityColor ? `${currentUserCommunityColor}22` : "rgba(249, 115, 22, 0.2)",
+                      color: currentUserCommunityColor || "#f97316",
+                      border: `1px solid ${currentUserCommunityColor ? `${currentUserCommunityColor}44` : "rgba(249, 115, 22, 0.3)"}`,
+                    }
+                  : undefined
+              }
+              title={communitySharedByMe ? "Ya lo compartiste en Comunidad" : "Compartir en Comunidad"}
+              type="button"
+            >
+              {communitySharedByMe ? (
+                <Globe className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              ) : (
+                <CircleFadingPlus className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              )}
+              {communitySharedByMe ? "Compartido" : "Compartir"}
+            </button>
             
             {mod._source === "modrinth" && (
               <button 
@@ -413,6 +555,59 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
           <ExternalLink className="w-5 h-5 opacity-40 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
+
+      {/* Modal para Compartir */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowShareModal(false)}>
+          <div className="bg-[var(--fomo-bg)] border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-zoom-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <CircleFadingPlus className="w-4 h-4 text-primary" /> Compartir Proyecto
+              </h3>
+              <button onClick={() => setShowShareModal(false)} className="text-white/40 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-[11px] text-white/60">
+                ¿Querés agregar un comentario u opinión opcional sobre <strong>{mod.title}</strong>?
+              </p>
+              <textarea 
+                value={shareComment}
+                onChange={e => setShareComment(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    confirmShare();
+                  }
+                  // Shift+Enter → nueva línea (comportamiento por defecto del textarea)
+                }}
+                placeholder="Escribe algo interesante... (Enter para enviar, Shift+Enter para nueva línea)"
+                className="w-full h-20 bg-black/20 border rounded-xl p-3 text-xs text-white placeholder-white/30 resize-none focus:outline-none transition-colors custom-scrollbar"
+                style={{ borderColor: "rgba(255,255,255,0.1)", outline: "none" }}
+                autoFocus
+              />
+            </div>
+            <div className="p-3 border-t border-white/5 bg-white/5 flex items-center justify-end gap-2">
+              <button 
+                onClick={() => setShowShareModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                disabled={isSharing}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmShare}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary hover:bg-primary/90 flex items-center gap-2 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                disabled={isSharing}
+              >
+                {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleFadingPlus className="w-3.5 h-3.5" />}
+                {isSharing ? "Compartiendo..." : "Compartir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

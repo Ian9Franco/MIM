@@ -1,0 +1,1 @@
+las marquisee de showcases, estan rotas, los iconos de los mods estan enormes y perdieron sus styles, revisar css para estilizarlas seguin la imagen esta:

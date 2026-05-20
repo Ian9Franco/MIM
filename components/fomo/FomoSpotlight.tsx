@@ -894,6 +894,7 @@ export function FomoSpotlight({
                   speed={0.5} 
                   color="text-blue-400" 
                   reverse={true}
+                  globalLoader={loader}
                   theme={currentTheme}
                 />
               </div>

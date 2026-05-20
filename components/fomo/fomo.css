@@ -1,7 +1,7 @@
 /* components/fomo/fomo.css */
 
 .fomo-sidebar {
-  /* Default: Official Dark Theme */
+  /* Default: Coffee Dark Theme */
   --fomo-bg: rgba(20, 20, 22, 0.95);
   --fomo-card-bg: #1c1c1f;
   --fomo-card-border: rgba(255, 255, 255, 0.08);
@@ -449,349 +449,6 @@
   animation: fomo-liquid-shimmer 1.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
-/* ==========================================
-   SPOTLIGHT EDITORIAL CARDS (Editorial/Brutalist)
-   ========================================== */
-
-/* ── Card shell ── */
-.spotlight-ec-card {
-  width: 200px;
-  height: 280px;
-  display: flex;
-  flex-direction: column;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #111114;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.3s ease;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-}
-
-@media (min-width: 640px) {
-  .spotlight-ec-card {
-    width: 240px;
-    height: 330px;
-  }
-}
-
-.spotlight-ec-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.6);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-/* ── TOP: Image zone ── */
-.spotlight-ec-image-zone {
-  flex: 0 0 62%;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Dotted background texture */
-  background-color: #18181c;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
-  background-size: 14px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-/* Cardinal number — top right */
-.spotlight-ec-number {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.25);
-  line-height: 1;
-  user-select: none;
-}
-
-/* Corner brackets */
-.spotlight-ec-bracket {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: rgba(255, 255, 255, 0.25);
-  border-style: solid;
-  transition: border-color 0.3s ease;
-}
-
-.spotlight-ec-card:hover .spotlight-ec-bracket {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.spotlight-ec-bracket--tl {
-  top: 10px;
-  left: 10px;
-  border-width: 1.5px 0 0 1.5px;
-}
-
-.spotlight-ec-bracket--tr {
-  top: 10px;
-  right: 10px;
-  border-width: 1.5px 1.5px 0 0;
-}
-
-.spotlight-ec-bracket--bl {
-  bottom: 10px;
-  left: 10px;
-  border-width: 0 0 1.5px 1.5px;
-}
-
-.spotlight-ec-bracket--br {
-  bottom: 10px;
-  right: 10px;
-  border-width: 0 1.5px 1.5px 0;
-}
-
-/* Centered icon */
-.spotlight-ec-icon-wrap {
-  width: 72px;
-  height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  z-index: 1;
-}
-
-@media (min-width: 640px) {
-  .spotlight-ec-icon-wrap {
-    width: 88px;
-    height: 88px;
-  }
-}
-
-.spotlight-ec-card:hover .spotlight-ec-icon-wrap {
-  transform: scale(1.07);
-}
-
-/* Download overlay on hover */
-.spotlight-ec-dl-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  z-index: 2;
-}
-
-.spotlight-ec-card:hover .spotlight-ec-dl-overlay {
-  opacity: 1;
-}
-
-.spotlight-ec-dl-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fff;
-  color: #000;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.spotlight-ec-dl-btn:hover {
-  transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.spotlight-ec-dl-btn:active {
-  transform: scale(0.95);
-}
-
-/* ── BOTTOM: Text zone ── */
-.spotlight-ec-text-zone {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  padding: 0;
-  background: #111114;
-  position: relative;
-  overflow: hidden;
-}
-
-.spotlight-ec-text-main {
-  flex: 1;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-/* Title — bold, left-aligned, truncated */
-.spotlight-ec-title {
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.25;
-  color: rgba(255, 255, 255, 0.92);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-@media (min-width: 640px) {
-  .spotlight-ec-title {
-    font-size: 14px;
-  }
-}
-
-/* Author */
-.spotlight-ec-author {
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-/* Badges row */
-.spotlight-ec-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.spotlight-ec-badge {
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  white-space: nowrap;
-}
-
-.spotlight-ec-badge--loader[data-loader="fabric"] {
-  background: rgba(234, 179, 8, 0.1);
-  color: rgba(253, 224, 71, 0.8);
-  border-color: rgba(234, 179, 8, 0.2);
-}
-
-.spotlight-ec-badge--loader[data-loader="forge"],
-.spotlight-ec-badge--loader[data-loader="neoforge"] {
-  background: rgba(239, 68, 68, 0.1);
-  color: rgba(252, 165, 165, 0.8);
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.spotlight-ec-badge--loader[data-loader="quilt"] {
-  background: rgba(139, 92, 246, 0.1);
-  color: rgba(196, 181, 253, 0.8);
-  border-color: rgba(139, 92, 246, 0.2);
-}
-
-/* Decorative dots column — right side of text zone */
-.spotlight-ec-dots {
-  flex: 0 0 28px;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
-  background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
-  background-size: 6px 6px;
-  background-position: center;
-  opacity: 0.6;
-}
-
-
-/* ── Theme Overrides: VAMPIRE ── */
-[data-theme="vampire"] .spotlight-ec-card {
-  background: #1e0d29;
-  border-color: rgba(187, 150, 228, 0.15);
-}
-
-[data-theme="vampire"] .spotlight-ec-image-zone {
-  background-color: #261135;
-  background-image: radial-gradient(circle, rgba(187, 150, 228, 0.15) 1px, transparent 1px);
-  border-bottom-color: rgba(187, 150, 228, 0.1);
-}
-
-[data-theme="vampire"] .spotlight-ec-number,
-[data-theme="vampire"] .spotlight-ec-bracket {
-  color: rgba(187, 150, 228, 0.4);
-  border-color: rgba(187, 150, 228, 0.3);
-}
-
-[data-theme="vampire"] .spotlight-ec-text-zone {
-  background: #1e0d29;
-}
-
-[data-theme="vampire"] .spotlight-ec-title {
-  color: #F2ECF9;
-}
-
-[data-theme="vampire"] .spotlight-ec-dots {
-  border-left-color: rgba(187, 150, 228, 0.1);
-  background-image: radial-gradient(circle, rgba(187, 150, 228, 0.25) 1px, transparent 1px);
-}
-
-/* ── Theme Overrides: MODERN (Light) ── */
-[data-theme="modern"] .spotlight-ec-card {
-  background: #ffffff;
-  border-color: rgba(124, 58, 237, 0.15);
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.08);
-}
-
-[data-theme="modern"] .spotlight-ec-image-zone {
-  background-color: #f9f8ff;
-  background-image: radial-gradient(circle, rgba(124, 58, 237, 0.1) 1px, transparent 1px);
-  border-bottom-color: rgba(124, 58, 237, 0.1);
-}
-
-[data-theme="modern"] .spotlight-ec-number,
-[data-theme="modern"] .spotlight-ec-bracket {
-  color: rgba(124, 58, 237, 0.4);
-  border-color: rgba(124, 58, 237, 0.3);
-}
-
-[data-theme="modern"] .spotlight-ec-text-zone {
-  background: #ffffff;
-}
-
-[data-theme="modern"] .spotlight-ec-title {
-  color: #1E1B4B;
-}
-
-[data-theme="modern"] .spotlight-ec-author {
-  color: #4338CA;
-  opacity: 0.7;
-}
-
-[data-theme="modern"] .spotlight-ec-dots {
-  border-left-color: rgba(124, 58, 237, 0.1);
-  background-image: radial-gradient(circle, rgba(124, 58, 237, 0.2) 1px, transparent 1px);
-}
-
-[data-theme="modern"] .spotlight-ec-badge {
-  background: rgba(124, 58, 237, 0.05);
-  color: #4F46E5;
-  border-color: rgba(124, 58, 237, 0.1);
-}
-
-
 /* Modrinth Green Liquid Glow */
 .fomo-source-modrinth .fomo-skeleton-glass::after {
   background-image: linear-gradient(
@@ -816,29 +473,6 @@
   );
 }
 
-/* ── Theme Specific Skeleton Overrides ── */
-[data-theme="vampire"] .fomo-skeleton-glass::after {
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.01) 25%,
-    rgba(187, 150, 228, 0.15) 50%, /* Vampire Purple */
-    rgba(255, 255, 255, 0.01) 75%,
-    rgba(255, 255, 255, 0) 100%
-  ) !important;
-}
-
-[data-theme="modern"] .fomo-skeleton-glass::after {
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.01) 25%,
-    rgba(124, 58, 237, 0.15) 50%, /* Modern Indigo */
-    rgba(255, 255, 255, 0.01) 75%,
-    rgba(255, 255, 255, 0) 100%
-  ) !important;
-}
-
 @keyframes fomo-liquid-shimmer {
   0% {
     transform: translate3d(-100%, 0, 0);
@@ -848,197 +482,232 @@
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SPOTLIGHT EDITORIAL MINI CARDS (For Vertical Tickers)
-   ───────────────────────────────────────────────────────────────────────────── */
+/* ==========================================
+   SPOTLIGHT VERTICAL TICKER — MINI CARDS
+   ========================================== */
 
 .spotlight-ec-mini-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
-  border-radius: 14px;
-  background: #1c1c21;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
   position: relative;
-  /* overflow: hidden removed to prevent clipping on hover */
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: hsl(220 14% 10%);
+  border: 1.5px solid hsl(220 14% 18%);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
 }
 
 .spotlight-ec-mini-card:hover {
-  background: var(--fomo-secondary-bg, #18181c);
-  border-color: var(--fomo-card-hover-border, rgba(255, 255, 255, 0.25));
-  box-shadow: 0 12px 24px -6px rgba(0,0,0,0.5);
-  transform: translateY(-3px);
-  z-index: 2;
+  border-color: hsl(220 14% 30%);
+  transform: translateX(3px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
+/* bracket corner decorations */
+.spotlight-ec-mini-bracket {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: rgba(255,255,255,0.2);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.spotlight-ec-mini-bracket--tl {
+  top: 4px;
+  left: 4px;
+  border-width: 1.5px 0 0 1.5px;
+}
+
+.spotlight-ec-mini-bracket--bl {
+  bottom: 4px;
+  left: 4px;
+  border-width: 0 0 1.5px 1.5px;
+}
+
+/* Left image zone */
 .spotlight-ec-mini-image-zone {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
   position: relative;
-  background-color: #1a1a1e;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 0.5px, transparent 0.5px);
-  background-size: 8px 8px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-right: 1.5px solid hsl(220 14% 18%);
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 4px 4px;
+  flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.spotlight-ec-mini-image-zone img {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  transition: transform 0.4s ease;
+}
+
+.spotlight-ec-mini-card:hover .spotlight-ec-mini-image-zone img {
+  transform: scale(1.08);
+}
+
+/* Sequential number badge */
 .spotlight-ec-mini-number {
   position: absolute;
-  top: 4px;
-  right: 5px;
-  font-family: var(--font-mono);
+  top: 3px;
+  right: 4px;
   font-size: 7px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.15);
+  font-weight: 900;
+  font-family: monospace;
+  color: rgba(255,255,255,0.2);
   line-height: 1;
-}
-
-.spotlight-ec-mini-bracket {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-color: rgba(255, 255, 255, 0.15);
-  border-style: solid;
-}
-
-.spotlight-ec-mini-bracket--tl { top: 4px; left: 4px; border-width: 1px 0 0 1px; }
-.spotlight-ec-mini-bracket--tr { top: 4px; right: 4px; border-width: 1px 1px 0 0; }
-.spotlight-ec-mini-bracket--bl { bottom: 4px; left: 4px; border-width: 0 0 1px 1px; }
-.spotlight-ec-mini-bracket--br { bottom: 4px; right: 4px; border-width: 0 1px 1px 0; }
-
-.spotlight-ec-mini-bracket--custom-br {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  bottom: 4px;
-  right: 24px; /* 20px (ancho de puntos) + 4px (gap) */
-  border-style: solid;
-  border-width: 0 1px 1px 0;
-  border-color: rgba(255, 255, 255, 0.3); /* Color por defecto */
-  transition: border-color 0.3s ease;
   z-index: 3;
+  pointer-events: none;
 }
 
-.spotlight-ec-mini-card:hover .spotlight-ec-mini-bracket--custom-br {
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
+/* Text zone */
 .spotlight-ec-mini-text-zone {
   flex: 1;
   min-width: 0;
+  padding: 6px 8px 6px 8px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
 }
 
 .spotlight-ec-mini-title {
-  font-family: var(--font-headline);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  color: #fff;
+  line-height: 1.2;
+  color: hsl(0 0% 88%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
+  margin: 0;
 }
 
 .spotlight-ec-mini-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  opacity: 0.5;
-  transition: opacity 0.3s ease;
-}
-
-.spotlight-ec-mini-card:hover .spotlight-ec-mini-meta {
-  opacity: 0.9;
+  gap: 4px;
 }
 
 .spotlight-ec-mini-badge {
-  font-family: var(--font-mono);
   font-size: 7px;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1px 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-  color: var(--fomo-text-muted, rgba(255, 255, 255, 0.7));
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.35);
+  line-height: 1;
 }
 
+/* Three-dot decorative pattern */
 .spotlight-ec-mini-dots {
-  flex: 0 0 20px;
-  align-self: stretch;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.3) 1.5px, transparent 1.5px);
-  background-size: 8px 8px;
-  background-position: center;
-  opacity: 0.9;
-  border-top-right-radius: inherit;
-  border-bottom-right-radius: inherit;
-}
-[data-theme="modern"] .spotlight-ec-mini-dots {
-  background-image: radial-gradient(circle, rgba(124, 58, 237, 0.3) 1.5px, transparent 1.5px);
-}
-[data-theme="modern"] .spotlight-ec-mini-bracket--custom-br {
-  border-color: rgba(124, 58, 237, 0.5);
-}
-[data-theme="vampire"] .spotlight-ec-mini-dots {
-  background-image: radial-gradient(circle, rgba(187, 150, 228, 0.4) 1.5px, transparent 1.5px);
-}
-[data-theme="vampire"] .spotlight-ec-mini-bracket--custom-br {
-  border-color: rgba(187, 150, 228, 0.5);
+  width: 20px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 4px;
+  border-left: 1.5px solid hsl(220 14% 14%);
 }
 
-/* ── Vampire Theme ── */
+.spotlight-ec-mini-dots::before,
+.spotlight-ec-mini-dots::after {
+  content: "";
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+}
+
+.spotlight-ec-mini-dots:hover::before,
+.spotlight-ec-mini-dots:hover::after {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Vampire theme override */
 [data-theme="vampire"] .spotlight-ec-mini-card {
   background: #1a1525;
   border-color: rgba(187, 150, 228, 0.15);
 }
-[data-theme="vampire"] .spotlight-ec-mini-image-zone {
-  background-color: #2a113a;
-  background-image: radial-gradient(circle, rgba(187, 150, 228, 0.15) 0.5px, transparent 0.5px);
-  border-color: rgba(187, 150, 228, 0.1);
+
+[data-theme="vampire"] .spotlight-ec-mini-card:hover {
+  border-color: rgba(187, 150, 228, 0.35);
 }
+
+[data-theme="vampire"] .spotlight-ec-mini-image-zone {
+  border-right-color: rgba(187, 150, 228, 0.15);
+  background-image: radial-gradient(circle, rgba(187,150,228,0.07) 1px, transparent 1px);
+}
+
 [data-theme="vampire"] .spotlight-ec-mini-bracket {
   border-color: rgba(187, 150, 228, 0.4);
 }
 
-/* ── Modern Theme ── */
-[data-theme="modern"] .spotlight-ec-mini-card {
-  background: #f0ede3;
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-[data-theme="modern"] .spotlight-ec-mini-card:hover {
-  background: #fdfcff;
-  border-color: rgba(124, 58, 237, 0.3);
-  box-shadow: 0 16px 32px rgba(124, 58, 237, 0.15);
-  transform: translateY(-3px);
-}
-[data-theme="modern"] .spotlight-ec-mini-title {
-  color: #1e1b4b;
-}
-[data-theme="modern"] .spotlight-ec-mini-image-zone {
-  background-color: #f5f3ff;
-  background-image: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0.5px, transparent 0.5px);
-  border-color: rgba(124, 58, 237, 0.15);
-}
-[data-theme="modern"] .spotlight-ec-mini-number {
-  color: rgba(124, 58, 237, 0.4);
-}
-[data-theme="modern"] .spotlight-ec-mini-bracket {
-  border-color: rgba(124, 58, 237, 0.4);
-}
-[data-theme="modern"] .spotlight-ec-mini-badge {
-  background: rgba(124, 58, 237, 0.08);
-  color: #6d28d9;
+[data-theme="vampire"] .spotlight-ec-mini-title {
+  color: #DEDEDE;
 }
 
+[data-theme="vampire"] .spotlight-ec-mini-dots {
+  border-left-color: rgba(187, 150, 228, 0.1);
+}
+
+[data-theme="vampire"] .spotlight-ec-mini-dots::before,
+[data-theme="vampire"] .spotlight-ec-mini-dots::after {
+  background: rgba(187, 150, 228, 0.25);
+}
+
+/* Modern theme override */
+[data-theme="modern"] .spotlight-ec-mini-card {
+  background: rgba(255,255,255,0.85);
+  border-color: #d4cfc0;
+}
+
+[data-theme="modern"] .spotlight-ec-mini-card:hover {
+  border-color: rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+[data-theme="modern"] .spotlight-ec-mini-image-zone {
+  border-right-color: #d4cfc0;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px);
+}
+
+[data-theme="modern"] .spotlight-ec-mini-bracket {
+  border-color: rgba(0,0,0,0.2);
+}
+
+[data-theme="modern"] .spotlight-ec-mini-title {
+  color: hsl(30 20% 15%);
+}
+
+[data-theme="modern"] .spotlight-ec-mini-badge {
+  color: rgba(0,0,0,0.4);
+}
+
+[data-theme="modern"] .spotlight-ec-mini-dots {
+  border-left-color: #e8e3d8;
+}
+
+[data-theme="modern"] .spotlight-ec-mini-dots::before,
+[data-theme="modern"] .spotlight-ec-mini-dots::after {
+  background: rgba(0,0,0,0.15);
+}

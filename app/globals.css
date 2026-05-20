@@ -125,6 +125,23 @@
 [data-theme="modern"] .border-white\/10 { border-color: rgba(0, 0, 0, 0.12) !important; }
 [data-theme="modern"] .border-white\/20 { border-color: rgba(0, 0, 0, 0.18) !important; }
 
+/* Fix black-overlay elements (shared-by badges, etc) in Modern Light Theme */
+[data-theme="modern"] .bg-black\/10 { background-color: rgba(0, 0, 0, 0.025) !important; }
+[data-theme="modern"] .bg-black\/20 { background-color: rgba(0, 0, 0, 0.04) !important; }
+[data-theme="modern"] .bg-black\/40 { background-color: rgba(0, 0, 0, 0.06) !important; }
+[data-theme="modern"] .bg-black\/60 { background-color: rgba(255,255,255,0.75) !important; }
+[data-theme="modern"] .bg-black\/80 { background-color: rgba(255,255,255,0.88) !important; }
+
+/* Ensure community section elements readable in modern theme */
+[data-theme="modern"] .text-white:not(button):not(h1):not(h2):not(h3):not(h4) {
+  color: var(--color-foreground) !important;
+}
+
+/* Modern theme pill tab borders: override inline border that may appear black */
+[data-theme="modern"] [style*="border: 1px solid rgba(0,0,0"] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
 /* Improve text contrast of opacity colors */
 [data-theme="modern"] .text-foreground\/20 { color: var(--color-muted) !important; opacity: 0.7; }
 [data-theme="modern"] .text-foreground\/30 { color: var(--color-muted) !important; opacity: 0.8; }

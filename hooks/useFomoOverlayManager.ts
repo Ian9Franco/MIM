@@ -31,43 +31,67 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, [mod.projectId]);
 
   useEffect(() => {
-    if (lastFetchedId !== mod.projectId && !loadingGallery) {
-      setLoadingGallery(true);
-      setLastFetchedId(mod.projectId);
-      
-      fetch(`/api/mod-gallery?projectId=${mod.projectId}&source=${mod._source || "modrinth"}`)
-        .then(r => r.json())
-        .then(d => {
-          const items = d.gallery || [];
-          setGallery(items);
-          if (items.length > 0) {
-            // Pre-fetch first image for the banner cache
-            const img = new Image();
-            img.src = items[0].url;
-          }
-        })
-        .catch(e => {
-          console.error("[Gallery] Fetch failed:", e);
-        })
-        .finally(() => setLoadingGallery(false));
-    }
+    if (lastFetchedId === mod.projectId || loadingGallery) return;
+    setLoadingGallery(true);
+    setLastFetchedId(mod.projectId);
+    const controller = new AbortController();
+    
+    const doFetch = async (retries = 2, delayMs = 400) => {
+      try {
+        const r = await fetch(
+          `/api/mod-gallery?projectId=${mod.projectId}&source=${mod._source || "modrinth"}`,
+          { signal: controller.signal }
+        );
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json();
+        const items = d.gallery || [];
+        setGallery(items);
+        if (items.length > 0) {
+          const img = new Image();
+          img.src = items[0].url;
+        }
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+        if (retries > 0) {
+          await new Promise(res => setTimeout(res, delayMs));
+          return doFetch(retries - 1, delayMs * 1.5);
+        }
+        console.error("[Gallery] Fetch failed after retries:", e);
+      } finally {
+        setLoadingGallery(false);
+      }
+    };
+    
+    // Small delay to avoid race with other fetches on mount
+    const t = setTimeout(() => doFetch(), 150);
+    return () => { controller.abort(); clearTimeout(t); };
   }, [mod.projectId, mod._source, lastFetchedId, loadingGallery]);
 
   useEffect(() => {
-    if (!mod.body) {
-      const endpoint = mod._source === "curseforge" 
-        ? `/api/curseforge/project?projectId=${mod.projectId}`
-        : `/api/modrinth/project?projectId=${mod.projectId}`;
-        
-      fetch(endpoint)
-        .then(r => r.json())
-        .then(data => {
-          if (data.body) {
-            setFullBody(data.body);
-          }
-        })
-        .catch(e => console.error("[FullBody] Fetch failed:", e));
-    }
+    if (mod.body) return;
+    const controller = new AbortController();
+    const endpoint = mod._source === "curseforge" 
+      ? `/api/curseforge/project?projectId=${mod.projectId}`
+      : `/api/modrinth/project?projectId=${mod.projectId}`;
+    
+    const doFetch = async (retries = 2, delayMs = 500) => {
+      try {
+        const r = await fetch(endpoint, { signal: controller.signal });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        if (data.body) setFullBody(data.body);
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+        if (retries > 0) {
+          await new Promise(res => setTimeout(res, delayMs));
+          return doFetch(retries - 1, delayMs * 1.5);
+        }
+        console.error("[FullBody] Fetch failed after retries:", e);
+      }
+    };
+    
+    const t = setTimeout(() => doFetch(), 200);
+    return () => { controller.abort(); clearTimeout(t); };
   }, [mod.projectId, mod.body, mod._source]);
 
   useEffect(() => {

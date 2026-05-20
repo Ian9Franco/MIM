@@ -14,6 +14,12 @@ import { TabButton, DependencyCard, VersionCard, ModHeader, StatsGrid, Compatibi
 import { FomoSkeleton } from "./FomoSkeleton";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
+export type CommunitySharerLite = {
+  username: string;
+  color?: string | null;
+  avatar_url?: string | null;
+};
+
 interface FomoVersionOverlayProps {
   mod: ModHit;
   versions: VersionEntry[];
@@ -31,11 +37,17 @@ interface FomoVersionOverlayProps {
   hideVersions?: boolean;
   pendingFilesCount?: number;
   onOpenDownloads?: () => void;
+  /** Usuarios que compartieron este proyecto en la nube MIM (misma plataforma). */
+  communitySharers?: CommunitySharerLite[];
+  /** Si el usuario actual ya lo tiene en favorite_mods para esta plataforma. */
+  communitySharedByMe?: boolean;
+  currentUserCommunityColor?: string | null;
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload, onSearchProject, onSearchAuthor, onSearchMod, disablePortal = false, hideVersions = false,
-  pendingFilesCount = 0, onOpenDownloads
+  pendingFilesCount = 0, onOpenDownloads,
+  communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null,
 }: FomoVersionOverlayProps) {
   if (!mod) return null;
 
@@ -189,6 +201,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             followedMods={followedMods}
             toggleFollowAuthor={toggleFollowAuthor} 
             toggleFollowMod={toggleFollowMod}
+            selectedProjectType={selectedProjectType}
+            onSelectProjectType={setSelectedProjectType}
+            communitySharers={communitySharers}
+            communitySharedByMe={communitySharedByMe}
+            currentUserCommunityColor={currentUserCommunityColor}
           />
           <div className="px-6 py-2 fomo-scroll shrink-0 overflow-y-auto max-h-[400px]">
             <StatsGrid mod={mod} />

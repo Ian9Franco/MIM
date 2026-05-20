@@ -82,7 +82,9 @@ export async function GET(req: NextRequest) {
             projectType: p.project_type ?? "mod",
             client_side: p.client_side,
             server_side: p.server_side,
-            gallery:     Array.from(new Set([p.featured_gallery, ...(p.gallery ?? [])].filter(Boolean))),
+            gallery:     Array.from(new Set([
+              ...(p.gallery ?? []).map((img: any) => typeof img === "string" ? img : img.url)
+            ].filter(Boolean))),
           }));
           
           return NextResponse.json({

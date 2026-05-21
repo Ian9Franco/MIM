@@ -80,5 +80,5 @@ export function checkNewCommunityShares(
     currentUserId
   );
   notifyNew(videos, "showcase", "showcase", currentUserId);
-  notifyNew(modpacks, "modpack", "modpack", currentUserId);
+  // Modpack notifications disabled in UI per product decision.
 }

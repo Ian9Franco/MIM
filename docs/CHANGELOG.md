@@ -1,8 +1,19 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 9.1.2 (Comunidad Online & Showcases PiP)  
+> **Versión Actual:** 9.2.0 (Comunidad Online & Showcases PiP)  
 > **Última actualización:** 2026-05-21
+
+---
+
+## 🚀 Versión 9.1.2 — FOMO Cloud — UX & Plataforma (2026-05-21)
+
+### 🛠️ Ajustes UX y prioridad FOMO
+- Modal de detalle de clubs: renderizado via `portal` y z-index aumentado para evitar solapamientos con paneles (fix: modal aparecía detrás de FOMO).
+- Mejoras de accesibilidad: cierre del modal con tecla `Escape` y bloqueo de scroll de fondo mientras está abierto.
+- Tarjetas compactas: aumentada altura y avatar/imágenes más grandes para mejor legibilidad en vista general.
+- Pestaña `Modpacks` retirada de la UI pública: compartir modpacks deshabilitado (sólo seguir/compartir proyectos y autores).
+- Documentación: añadida `docs/FOMO_CLOUD.md` y actualizado `docs/MIM.md` con descripción técnica del servicio.
 
 ---
 

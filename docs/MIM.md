@@ -34,6 +34,40 @@ Starting from version 7.6.0, MIM supports two operation modes to suit different 
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
 * **FOMO Cloud (Comunidad Online)**: Plataforma social integrada con Supabase para perfiles comunitarios, favoritos compartidos, clubs de usuario, videos de Showcase y descargas seguras de modpacks.
 
+### FOMO Cloud — Technical overview
+
+FOMO Cloud es la capa social y de descubrimiento de MIM, implementada sobre Supabase (Postgres + Auth + Storage). Está diseñada para sincronizar los `Seguidos` locales del usuario (IndexedDB) con un perfil público mínimo (`profiles.club_data`) y permitir descubrimiento social, rankings y show-cases.
+
+- Data model:
+  - `profiles.club_data` (jsonb): { mods: [{projectId, platform, title, iconUrl, gameVersion, modloader, projectType}], authors: [{name}], youtubeChannels: [url] }
+  - `favorite_mods` (tabla): conteos para rankings públicos.
+  - `showcase_videos` (tabla + storage): cache de extracción de YouTube por canal.
+
+- Sync flow (client):
+  1. Usuario pulsa "Publicar mi club" o la app sincroniza al iniciar sesión.
+  2. `lib/clubService.syncMyClubToCloud` construye el JSON y llama a Supabase (`upsert profiles` o RPC).
+  3. Backend valida los datos y aplica RLS para asegurar que sólo el propietario puede modificar su `profiles`.
+  4. Otros clientes consultan `GET /api/fomo/community-rankings` o leen `profiles` para mostrar clubs en la UI.
+
+- Endpoints relevantes (server side):
+  - `GET /api/fomo/community-rankings` — rankings y top mods por conteo.
+  - `GET /api/fomo/youtube-showcase` — extracción y enriquecimiento de videos (con cache y fallbacks).
+  - (Nota) `POST /api/fomo/modpack-download` existe como orquestador de descargas internas, pero la compartición pública de modpacks está deshabilitada en la UI por ahora.
+
+- UI considerations:
+  - `CommunityClubs` carga la lista con `fetchCommunityClubs` y ofrece filtros por `projectType`.
+  - `CommunityClubCard` ahora soporta expansión modal (renderizado en portal), cierre con `Escape`, bloqueo de scroll de fondo y mejor lectura en vista compacta.
+  - `searchProjectInFomo` actúa como puente hacia el panel Discover, usando `projectId`/`platform` y fallback semántico por título.
+
+- Seguridad & RLS:
+  - `profiles` tiene políticas RLS que permiten lectura pública y escritura sólo por `auth.uid()`.
+  - Storage (overrides/modpack configs) limitado por bucket y políticas de subida por usuario.
+
+- Next improvements (tech):
+  - Focus trap y ARIA roles completos en modal.
+  - Medir telemetría no identificable para priorizar mejoras UX de FOMO.
+  - Inline expansion (no modal) que permita a la tarjeta ocupar múltiples columnas cuando se expande.
+
 ### Stack Tecnológico
 
 | Capa | Tecnología | Propósito |

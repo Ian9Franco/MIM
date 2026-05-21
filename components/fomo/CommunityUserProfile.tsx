@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Package, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club } from "lucide-react";
+import { ArrowLeft, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club } from "lucide-react";
 import { CommunityClubs } from "./CommunityClubs";
 import { CommunityProfileModPool } from "./CommunityProfileModPool";
 import { supabase } from "@/lib/supabaseClient";
@@ -20,9 +20,8 @@ export function CommunityUserProfile({
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
-  const [modpacks, setModpacks] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<
-    "pool" | "videos" | "modpacks" | "clubs"
+    "pool" | "videos" | "clubs"
   >("pool");
   const [currentTheme, setCurrentTheme] = useState("official");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -69,18 +68,15 @@ export function CommunityUserProfile({
           const [
             { data: { session } },
             { data: favs },
-            { data: vids },
-            { data: packs }
+            { data: vids }
           ] = await Promise.all([
             supabase.auth.getSession(),
             supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
             supabase.from("showcase_videos").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
-            supabase.from("modpack_builds").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
           ]);
           setCurrentUserId(session?.user?.id || null);
           setFavorites(favs || []);
           setVideos(vids || []);
-          setModpacks(packs || []);
         }
       } catch (err: any) {
         const errMsg = err?.message || err?.code || String(err);
@@ -113,7 +109,7 @@ export function CommunityUserProfile({
   const isModern = currentTheme === "modern";
   const isOwnProfile = !!currentUserId && profileData?.id === currentUserId;
 
-  const deleteItem = async (type: 'favorite' | 'video' | 'modpack', id: string) => {
+  const deleteItem = async (type: 'favorite' | 'video', id: string) => {
     if (deletingId) return;
     setDeletingId(id);
     try {
@@ -121,7 +117,7 @@ export function CommunityUserProfile({
       if (!ok) throw new Error(error || "Error al eliminar");
       if (type === 'favorite') setFavorites(prev => prev.filter(f => f.id !== id));
       else if (type === 'video') setVideos(prev => prev.filter(v => v.id !== id));
-      else setModpacks(prev => prev.filter(m => m.id !== id));
+      
     } catch (err) {
       console.error(err);
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
@@ -203,12 +199,6 @@ export function CommunityUserProfile({
           Showcases ({videos.length})
         </button>
         <button
-          onClick={() => setActiveTab("modpacks")}
-          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all ${activeTab === "modpacks" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
-        >
-          Modpacks ({modpacks.length})
-        </button>
-        <button
           onClick={() => setActiveTab("clubs")}
           className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all flex items-center gap-1 ${activeTab === "clubs" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
         >
@@ -264,43 +254,6 @@ export function CommunityUserProfile({
           )
         )}
 
-        {activeTab === 'modpacks' && (
-          modpacks.length === 0 ? (
-            <div className={`py-12 text-center text-xs border border-dashed rounded-2xl ${isModern ? 'text-muted-foreground border-border' : 'text-white/40 border-white/10'}`}>
-              No compartió modpacks todavía.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {modpacks.map(m => (
-                <div key={m.id} className={`p-4 rounded-2xl border flex flex-col gap-2 group ${isModern ? 'bg-card text-card-foreground border-border' : 'bg-white/4 border-white/5'}`}>
-                  <div className="flex gap-3 items-start">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border text-primary ${isModern ? 'bg-muted border-border' : 'bg-white/5 border-white/10'}`}>
-                      <Package className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className={`font-bold text-xs truncate ${isModern ? 'text-foreground' : 'text-white'}`}>{m.name}</h4>
-                      <p className={`text-[10px] line-clamp-2 ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>{m.description || "Sin descripción."}</p>
-                    </div>
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => deleteItem('modpack', m.id)}
-                        disabled={deletingId === m.id}
-                        className="shrink-0 p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none bg-transparent disabled:opacity-30"
-                        title="Eliminar modpack"
-                      >
-                        <Trash2 className={`w-3.5 h-3.5 ${deletingId === m.id ? 'animate-spin' : ''}`} />
-                      </button>
-                    )}
-                  </div>
-                  <div className={`mt-2 text-[9px] flex items-center justify-between ${isModern ? 'text-muted-foreground' : 'text-white/40'}`}>
-                    <span>v{m.version} • {m.loader} {m.game_version}</span>
-                    <span>{formatDate(m.created_at)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
 
         {activeTab === "clubs" && profileData?.username && (
           <CommunityClubs username={profileData.username} singleUser />

@@ -48,6 +48,9 @@ export function CommunityModpacks({
   browseOnly = false,
   maxVisible,
 }: CommunityModpacksProps = {}) {
+  // Modpack sharing is disabled in the UI per product decision.
+  return null;
+
   const { user } = useAuth();
   const currentUserId = currentUserIdProp ?? user?.id;
   const { projects } = useProjects();

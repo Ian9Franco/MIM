@@ -210,6 +210,13 @@
 
 # 🚧 Roadmap y Próximos Pasos (PENDIENTE)
 
+### Prioridad Inmediata: FOMO Cloud — Plataforma y UX
+- [ ] **UX: Inline expand & modal polish**: Animaciones de apertura con `framer-motion`, focus-trap, y soporte inline para expandir tarjeta en el grid.
+- [ ] **Platform: Supabase rules & sync audits**: Revisar políticas RLS y migración incremental de `profiles.club_data` para evitar inconsistencias durante sincronización masiva.
+- [ ] **Discover fidelity**: Mejorar `searchProjectInFomo` para fallback semántico cuando `projectId`/`platform` no resuelven.
+- [ ] **Showcases pipeline**: Optimizar `GET /api/fomo/youtube-showcase` para tolerar cambios en descripciones y nuevas heurísticas de extracción.
+- [ ] **Telemetry & Monitoring**: Añadir métricas de uso para FOMO (sin datos personales) para priorizar mejoras UX.
+
 ### Fase 5: Posicionamiento Profesional 
 - [ ] **Demo Deployable**: Showcase visual o landing funcional.
 - [ ] **Video Demo**: "Problema → Solución → Wow factor".

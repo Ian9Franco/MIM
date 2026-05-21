@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.1.2-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-9.2.0-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -58,14 +58,13 @@ Logs en idiomas que no existen
 
 ## 🚀 Features Principales
 
-### 🔍 **FOMO 4.0 & Comunidad Online** — Búsqueda Dual, Videos y Red Social
+### 🔍 **FOMO Cloud (Comunidad Online)** — Búsqueda Dual, Videos y Red Social
+- **Plataforma Social (Supabase)**: FOMO Cloud es la capa social de MIM: perfiles públicos, clubs de usuario, favoritos y Showcases. Está diseñada para compartir `Seguidos` (mods, autores, canales) y facilitar el descubrimiento social.
 - **Modrinth + CurseForge unificado**: Visualización dual, filtros por versión, loader y categorías, con smart matching por SHA1 (100% exacto).
-- **YouTube Showcases (Pestaña Principal)**: Showcases ha evolucionado a una sección de primer nivel en la barra de FOMO. Incluye un **Reproductor Flotante Premium (PiP)** redimensionable (Mini, Normal, Maxi) con físicas inerciales de rebote tipo DVD, control de velocidad, memoria de volumen y barra de progreso de triple capa con hover-scrubbing. Puedes reproducir videos y shorts en segundo plano mientras organizas, clasificas o construyes tus modpacks.
-- **Comunidad FOMO (Powered by Supabase)**: Plataforma social integrada que conecta a la comunidad de MIM.
-  - **Autenticación e Historial**: Inicio de sesión seguro vía Supabase Auth y perfiles personalizados en la nube.
-  - **Compartir Modpacks y Contenido**: Sube modpacks ligeros (modelo híbrido: JSON manifest + ZIP de overrides en Cloud Storage), videos y mods favoritos.
-  - **Sistema de Seguimiento (`followed_mods`)**: Base de datos dedicada para sincronizar local (IndexedDB) con la nube, mostrando avatares dinámicos en las tarjetas de mods ("Seguido por") con enlaces interactivos directos a los perfiles.
-  - **Cola de Descarga Concurrente**: Descarga packs de la comunidad usando una cola inteligente secuencial que protege el rate limit de las APIs externas.
+- **YouTube Showcases (Pestaña Principal)**: Showcases ha evolucionado a una sección de primer nivel en la barra de FOMO. Incluye un **Reproductor Flotante Premium (PiP)** redimensionable (Mini, Normal, Maxi) y extracción heurística de mods desde descripciones.
+- **Comunidad FOMO**: Perfil público con `profiles.club_data` (JSON) que contiene mods seguidos, autores y canales. Actualmente la compartición de modpacks está deshabilitada — se comparten proyectos y autores.
+- **Sync y Seguridad**: Sincronización bidireccional IndexedDB ↔ Supabase con reglas RLS; la UI permite publicar manualmente el club y revalidar automáticamente al iniciar sesión.
+- **UX reciente**: Mejoras en el modal de detalle de clubs (renderizado via portal, cierre con `Escape`, bloqueo de scroll) y tamaño de tarjetas compactas para mejor legibilidad. Ver `docs/FOMO_CLOUD.md` para detalles técnicos.
 
 ### ⚡ **Hotkeys 1-9** — Clasificación Fulminante
 - Presiona **1** → Tecnología
@@ -206,11 +205,11 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v9.1.2 (Actual — Mayo 2026)**
+### ✅ **v9.2.0 (Actual — Mayo 2026)**
 - 💾 **Asynchronous Storage Architecture (IndexedDB)**: Migración completa de almacenamiento síncrono `localStorage` de FOMO a IndexedDB (`mimDB`) para mejorar el rendimiento del hilo principal del navegador.
 - ⚙️ **Auto-Migration & Self-Healing**: Detección automática y traslado fluido de colecciones, showcases y modrinth status viejos de `localStorage` a IndexedDB.
 
-### ✅ **v9.1.2 (Actual — Mayo 2026)**
+### ✅ **v9.2.0 (Actual — Mayo 2026)**
 - 📺 **Showcase Native Player**: Reproductor flotante integrado con controles de volumen analógico, barra de navegación premium multicapa y aislamiento de eventos de previsualización (hover) contra reproducción real (seek-scrubbing).
 - 🖼️ **Thumbnail Auto-Healing Fallbacks**: Recuperación resiliente de miniaturas de YouTube mediante cola de fallbacks de calidad (`maxresdefault` ➔ `mqdefault` ➔ `hqdefault` ➔ Placeholder Offline) para videos privados o miembros.
 - 👥 **CurseForge Picks dynamic project count resolution**: Resolución de conteo dinámico de mods por colección CurseForge en backend para evitar displays vacíos en la UI.

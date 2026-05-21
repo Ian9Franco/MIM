@@ -132,6 +132,10 @@ export function CommunityModPool({
       title: fav.name,
       projectType: parseShareMeta(fav.summary).projectType,
     });
+    // Ensure the Discover panel applies pending search/open actions
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+    });
   };
 
   return (

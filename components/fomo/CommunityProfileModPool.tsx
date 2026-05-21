@@ -118,6 +118,9 @@ export function CommunityProfileModPool({
                       title: fav.name,
                       projectType: meta.projectType,
                     });
+                    requestAnimationFrame(() => {
+                      window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+                    });
                   }
                 }}
                 className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white shrink-0 cursor-pointer border-none self-end"

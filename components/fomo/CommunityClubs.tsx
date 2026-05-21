@@ -9,8 +9,9 @@ import {
 } from "@/lib/clubService";
 import type { CommunityClubMember } from "@/lib/clubTypes";
 import { CommunityClubCard } from "./CommunityClubCard";
+import styles from "./community-clubs.module.css";
 
-type ClubTypeFilter = "all" | "mod" | "textura" | "shader" | "datapack" | "modpack";
+type ClubTypeFilter = "all" | "mod" | "textura" | "shader" | "datapack";
 
 const TYPE_TABS: { id: ClubTypeFilter; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -18,7 +19,6 @@ const TYPE_TABS: { id: ClubTypeFilter; label: string }[] = [
   { id: "textura", label: "Texturas" },
   { id: "shader", label: "Shaders" },
   { id: "datapack", label: "Datapacks" },
-  { id: "modpack", label: "Modpacks" },
 ];
 
 interface CommunityClubsProps {
@@ -117,7 +117,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
   }
 
   return (
-    <div className="space-y-4 flex flex-col min-h-0">
+    <div className={`${styles.glassBody} space-y-4 flex flex-col min-h-0`}>
       {!singleUser && (
         <div className="flex items-start justify-between gap-3 shrink-0">
           <div>
@@ -190,7 +190,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
           className={
             singleUser
               ? "space-y-3"
-              : "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto max-h-[min(62vh,520px)] pr-1 scrollbar-thin pb-2"
+              : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto max-h-[min(62vh,520px)] pr-1 scrollbar-thin pb-2"
           }
         >
           {filteredMembers.map((member) => (

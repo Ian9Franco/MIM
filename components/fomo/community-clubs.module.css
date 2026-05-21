@@ -1,0 +1,151 @@
+.glassCard {
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.06);
+  /* Softer, rounded shadow to avoid large solid rectangle */
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12), inset 0 1px 0 rgba(255,255,255,0.02);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.glassHeader {
+  position: relative;
+}
+
+.glassBody {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+
+/* Theme variants using data-theme attribute on root element */
+[data-theme="vampire"] .glassCard {
+  background: linear-gradient(180deg, rgba(38,4,12,0.55), rgba(8,2,6,0.25));
+  border-color: rgba(200,20,60,0.12);
+  box-shadow: 0 14px 48px rgba(120,10,30,0.28);
+}
+
+[data-theme="oficial"] .glassCard {
+  background: linear-gradient(180deg, rgba(6,22,36,0.45), rgba(3,12,24,0.18));
+  border-color: rgba(3,169,244,0.10);
+  box-shadow: 0 10px 36px rgba(2,24,40,0.32);
+}
+
+[data-theme="modern"] .glassCard {
+  /* subtle extra highlight for modern */
+  border-color: rgba(125,162,255,0.08);
+}
+
+/* Small animated liquid accent for headers */
+.liquidAccent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+  background-size: 200% 100%;
+  animation: slide 6s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes slide {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Modal / expanded pane */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3,6,12,0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.modalContent {
+  width: min(1100px, 96%);
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(2,6,23,0.25);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.expandButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+  font-weight: 700;
+  color: var(--primary);
+  background-color: rgba(255,255,255,0.03);
+  transition: background-color 160ms ease, transform 120ms ease;
+}
+
+.expandButton:focus {
+  outline: 2px solid rgba(99,102,241,0.18);
+  outline-offset: 2px;
+}
+
+/* Higher contrast tab/button used in Clubs header */
+.tabButton {
+  box-shadow: none;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.tabButton:hover {
+  filter: brightness(1.05);
+}
+.tabButton.active {
+  background: linear-gradient(90deg, rgba(99,102,241,0.12), rgba(139,92,246,0.06));
+  border-color: rgba(99,102,241,0.25);
+  color: var(--primary);
+}
+
+
+.largeIcon {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+/* Club description styling - small card under header */
+.clubDescription {
+  padding: 10px 14px;
+  margin-top: 4px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.01);
+}
+
+.clubDescription p {
+  margin: 0;
+  color: rgba(255,255,255,0.75);
+  font-style: italic;
+}
+
+/* Inline-expanded pane shown inside the card (not full modal) */
+.inlineExpanded {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius: 12px;
+}
+

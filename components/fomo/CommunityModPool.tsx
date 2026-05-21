@@ -248,7 +248,7 @@ export function CommunityModPool({
                     <button
                       type="button"
                       onClick={() => onOpenProfile?.(username)}
-                      className="px-3.5 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold transition-all cursor-pointer bg-transparent"
+                      className="px-3.5 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold transition-all cursor-pointer"
                     >
                       Ver perfil (+{userFavs.length - 4})
                     </button>

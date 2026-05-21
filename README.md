@@ -13,7 +13,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.1.0-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-9.1.1-indigo.svg)](CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -206,11 +206,11 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v9.1.0 (Actual — Mayo 2026)**
+### ✅ **v9.1.1 (Actual — Mayo 2026)**
 - 💾 **Asynchronous Storage Architecture (IndexedDB)**: Migración completa de almacenamiento síncrono `localStorage` de FOMO a IndexedDB (`mimDB`) para mejorar el rendimiento del hilo principal del navegador.
 - ⚙️ **Auto-Migration & Self-Healing**: Detección automática y traslado fluido de colecciones, showcases y modrinth status viejos de `localStorage` a IndexedDB.
 
-### ✅ **v9.1.0 (Actual — Mayo 2026)**
+### ✅ **v9.1.1 (Actual — Mayo 2026)**
 - 📺 **Showcase Native Player**: Reproductor flotante integrado con controles de volumen analógico, barra de navegación premium multicapa y aislamiento de eventos de previsualización (hover) contra reproducción real (seek-scrubbing).
 - 🖼️ **Thumbnail Auto-Healing Fallbacks**: Recuperación resiliente de miniaturas de YouTube mediante cola de fallbacks de calidad (`maxresdefault` ➔ `mqdefault` ➔ `hqdefault` ➔ Placeholder Offline) para videos privados o miembros.
 - 👥 **CurseForge Picks dynamic project count resolution**: Resolución de conteo dinámico de mods por colección CurseForge en backend para evitar displays vacíos en la UI.

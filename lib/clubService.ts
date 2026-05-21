@@ -78,8 +78,7 @@ export async function buildLocalClubSnapshot(): Promise<UserClubData> {
         iconUrl: m.iconUrl,
         platform: m._source || "modrinth",
         projectType: inferTypeFromModHit(m),
-        gameVersion: m.gameVersions?.[0] || (m as { gameVersion?: string }).gameVersion,
-        modloader:
+        gameVersion: (m as any).gameVersions?.[0] || (m as { gameVersion?: string }).gameVersion,        modloader:
           cats.find((c) => known.includes(c)) ||
           (typeof (m as { loader?: string }).loader === "string"
             ? (m as { loader?: string }).loader

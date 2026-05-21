@@ -1,7 +1,7 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 9.0.0 (Comunidad Online & Showcases PiP)  
+> **Versión Actual:** 9.0.1 (Comunidad Online & Showcases PiP)  
 > **Última actualización:** 2026-05-21
 
 ---

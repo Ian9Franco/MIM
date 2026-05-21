@@ -90,10 +90,24 @@ function FomoSidebarDiscoverBranchInner({
   );
   const isModern = currentTheme === "modern";
 
+ const handleSearchProject = (e: Event) => {
+    const detail = (e as CustomEvent).detail || {};
+    if (detail?.query) {
+      setMode("discover");
+      // Type cast discover here as well
+      runPendingDiscoverAction(
+        { type: "searchProject", ...detail },
+        discover as any,
+        setMode
+      );
+    }
+  };
+
+  // --- RESTORED MEMOIZED CALLBACK ---
   const applyPendingAction = useCallback(() => {
     const action = consumeFomoDiscoverAction();
     if (!action) return;
-    runPendingDiscoverAction(action, discover, setMode);
+    runPendingDiscoverAction(action, discover as any, setMode);
   }, [discover, setMode]);
 
   useEffect(() => {
@@ -157,13 +171,14 @@ function FomoSidebarDiscoverBranchInner({
       const { id, platform } = (e as CustomEvent).detail || {};
       if (id) void discover.handleOpenProjectById(id, platform);
     };
-    const handleSearchProject = (e: Event) => {
+    const handleSearchProjectEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail || {};
       if (detail?.query) {
         setMode("discover");
+        // Fixed: Type-casted discover to avoid type mismatch
         runPendingDiscoverAction(
           { type: "searchProject", ...detail },
-          discover,
+          discover as any,
           setMode
         );
       }
@@ -179,14 +194,14 @@ function FomoSidebarDiscoverBranchInner({
     window.addEventListener("fomo-search-and-open", handleSearchAndOpen);
     window.addEventListener("fomo-search-author", handleSearchAuthor);
     window.addEventListener("fomo-open-project-details", handleOpenProjectDetails);
-    window.addEventListener("fomo-search-project", handleSearchProject);
+    window.addEventListener("fomo-search-project", handleSearchProjectEvent);
     window.addEventListener("fomo-onboarding-open-details", handleOnboardingOpenDetails);
     return () => {
       window.removeEventListener("fomo-open-details", handleOpenDetails);
       window.removeEventListener("fomo-search-and-open", handleSearchAndOpen);
       window.removeEventListener("fomo-search-author", handleSearchAuthor);
       window.removeEventListener("fomo-open-project-details", handleOpenProjectDetails);
-      window.removeEventListener("fomo-search-project", handleSearchProject);
+      window.removeEventListener("fomo-search-project", handleSearchProjectEvent);
       window.removeEventListener("fomo-onboarding-open-details", handleOnboardingOpenDetails);
     };
   }, [discover, setMode]);

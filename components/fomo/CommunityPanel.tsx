@@ -383,7 +383,7 @@ function CommunityPanelInner({
         )}
       </div>
 
-      {/* Profile Editing Modal */}
+     {/* Profile Editing Modal */}
       <CommunityEditProfileModal 
         showEditProfileModal={showEditProfileModal}
         setShowEditProfileModal={setShowEditProfileModal}
@@ -395,7 +395,13 @@ function CommunityPanelInner({
         setEditAvatarUrl={setEditAvatarUrl}
         savingProfile={savingProfile}
         handleSaveProfile={handleSaveProfile}
-        onStatus={onStatus}
+        // Highlight-start: Safely wrap the optional function and match the expected signature
+        onStatus={(msg, type) => {
+          if (onStatus) {
+            onStatus(msg, type === "warning" ? "info" : type);
+          }
+        }}
+        // Highlight-end
       />
     </div>
   );

@@ -4,6 +4,7 @@ import React from "react";
 import { Inbox } from "lucide-react";
 import { PendingFilesSection } from "@/components/library/PendingFilesSection";
 import type { PendingFile } from "@/lib/types";
+import { FOMO_DETAILS_RESERVE } from "@/lib/fomoLayout";
 
 interface FomoSidebarPortalProps {
   fomoOpen: boolean;
@@ -74,12 +75,11 @@ export function FomoSidebarPortal({
       {showFloatingBtn && (
         <button
           onClick={() => setDownloadsSidebarCollapsed(false)}
-          className={`fixed top-20 z-[80] flex items-center gap-2.5 px-4 py-3 rounded-full border backdrop-blur-md hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-fade-in group ${
-            detailsOpen ? "right-[520px]" : "right-5"
-          }`}
+          className="fixed top-20 z-[80] flex items-center gap-2.5 px-4 py-3 rounded-full border backdrop-blur-md hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-fade-in group right-5"
           style={{
+            right: detailsOpen ? FOMO_DETAILS_RESERVE + 24 : 20,
             borderColor: "rgba(99, 102, 241, 0.3)",
-            background: "color-mix(in srgb, var(--color-card) 95%, transparent)"
+            background: "color-mix(in srgb, var(--color-card) 95%, transparent)",
           }}
         >
           <div className="relative shrink-0">

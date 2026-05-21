@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mail, Lock, User, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
+import { Mail, Lock, User, RefreshCw, AlertCircle, CloudAlert } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface LoginPortalProps {
@@ -83,7 +83,7 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-8 rounded-3xl border border-primary/20 shadow-2xl relative overflow-hidden backdrop-blur-md"
+    <div className="fomo-login-portal w-full max-w-md mx-auto p-8 rounded-3xl border border-primary/20 shadow-2xl relative overflow-hidden backdrop-blur-md"
          style={{ background: "rgba(32, 13, 45, 0.4)" }}>
       {/* Decorative ambient light */}
       <div className="absolute -top-12 -left-12 w-24 h-24 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
@@ -91,7 +91,7 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
 
       <div className="text-center mb-6">
         <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-3 text-primary animate-pulse">
-          <Sparkles className="w-6 h-6" />
+          <CloudAlert className="w-6 h-6" />
         </div>
         <h3 className="font-headline text-lg text-white">
           {isRegister ? "Crear Cuenta de MIM" : "Conectar con MIM Cloud"}
@@ -104,7 +104,7 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-black/30 rounded-xl p-1 mb-6 border border-white/5">
+      <div className="fomo-login-tabs flex bg-black/30 rounded-xl p-1 mb-6 border border-white/5">
         <button
           onClick={() => { setIsRegister(false); setErrorMsg(null); setSuccessMsg(null); }}
           className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${!isRegister ? "bg-primary text-background" : "text-white/60 hover:text-white"}`}

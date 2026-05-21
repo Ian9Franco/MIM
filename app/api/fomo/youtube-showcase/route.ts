@@ -163,8 +163,18 @@ export async function GET(request: Request) {
 
   if (fs.existsSync(cacheFile)) {
     try {
-      const cachedData = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
-      return NextResponse.json(cachedData);
+      const stats = fs.statSync(cacheFile);
+      const now = new Date().getTime();
+      const mtime = new Date(stats.mtime).getTime();
+      const ageHours = (now - mtime) / (1000 * 60 * 60);
+
+      // Expirar la caché cada 6 horas para buscar videos nuevos
+      if (ageHours < 6) {
+        const cachedData = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
+        return NextResponse.json(cachedData);
+      } else {
+        console.log(`[youtube-showcase] Caché expirada (${ageHours.toFixed(1)}h), buscando nuevos videos...`);
+      }
     } catch (e) {
       console.error("Error reading cache file", e);
     }

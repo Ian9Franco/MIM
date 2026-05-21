@@ -1,7 +1,43 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { X, Play, Pause, FastForward, Move, Volume1, Volume2, VolumeX, RotateCcw, RotateCw } from "lucide-react";
+
+/** Isolated iframe — avoids remount when seek/time state updates in the parent. */
+const YoutubePlayerIframe = React.memo(function YoutubePlayerIframe({
+  videoId,
+  isDragging,
+  iframeRef,
+  onReady,
+}: {
+  videoId: string;
+  isDragging: boolean;
+  iframeRef: React.RefObject<HTMLIFrameElement | null>;
+  onReady: () => void;
+}) {
+  const src = useMemo(() => {
+    const origin =
+      typeof window !== "undefined"
+        ? encodeURIComponent(window.location.origin)
+        : "";
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&controls=0&modestbranding=1&rel=0&origin=${origin}`;
+  }, [videoId]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      key={videoId}
+      width="100%"
+      height="100%"
+      src={src}
+      frameBorder="0"
+      allow="autoplay; encrypted-media"
+      allowFullScreen
+      className={isDragging ? "pointer-events-none" : "pointer-events-auto"}
+      onLoad={onReady}
+    />
+  );
+});
 
 interface FloatingPlayerState {
   isOpen: boolean;
@@ -283,24 +319,31 @@ export function FomoFloatingPlayer() {
     setState({ isOpen: false, videoId: null });
   };
 
-  const sendCommand = (func: string, args: any[] = []) => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(JSON.stringify({
-        event: "command",
-        func,
-        args
-      }), "*");
+  const sendCommand = useCallback((func: string, args: any[] = []) => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func, args }),
+        "*"
+      );
     }
-  };
+  }, []);
 
-  // Dedicated helper to trigger active telemetry events from YouTube
-  const sendListening = () => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(JSON.stringify({
-        event: "listening"
-      }), "*");
+  const sendListening = useCallback(() => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "listening" }),
+        "*"
+      );
     }
-  };
+  }, []);
+
+  const handleIframeReady = useCallback(() => {
+    // API must be ready before postMessage; autoplay=0 avoids race on mount.
+    setTimeout(() => {
+      sendCommand("playVideo");
+      sendListening();
+    }, 600);
+  }, [sendCommand, sendListening]);
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -412,7 +455,7 @@ export function FomoFloatingPlayer() {
 
   return (
     <div
-      className="fixed z-[9999] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] rounded-2xl overflow-hidden border flex flex-col select-none transition-[width,height] duration-300 ease-out"
+      className="fomo-floating-player fixed z-[9999] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] rounded-2xl overflow-hidden border flex flex-col select-none transition-[width,height] duration-300 ease-out"
       style={{
         width: currentWidth,
         background: "hsl(220 14% 8%)",
@@ -455,20 +498,12 @@ export function FomoFloatingPlayer() {
 
       {/* Video Content */}
       <div className="relative bg-black w-full shrink-0" style={{ height: currentHeight }}>
-        <iframe
-          ref={iframeRef}
-          width="100%"
-          height="100%"
-          src={`https://www.youtube.com/embed/${state.videoId}?enablejsapi=1&autoplay=1&controls=0&modestbranding=1&rel=0`}
-          frameBorder="0"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          className={isDragging ? "pointer-events-none" : "pointer-events-auto"}
-          onLoad={() => {
-            // Send listening command immediately on iframe load
-            setTimeout(sendListening, 500);
-          }}
-        ></iframe>
+        <YoutubePlayerIframe
+          videoId={state.videoId}
+          isDragging={isDragging}
+          iframeRef={iframeRef}
+          onReady={handleIframeReady}
+        />
       </div>
 
       {/* Seek Bar & Telemetry Display */}

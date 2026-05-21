@@ -1,23 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { LogOut, Package, TvMinimalPlay, Heart, RefreshCw, CircleFadingPlus, Blocks } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { LogOut, TvMinimalPlay, RefreshCw, Blocks, Club } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "./LoginPortal";
 import { supabase } from "@/lib/supabaseClient";
 
 // Subcomponents
 import { CommunityEditProfileModal } from "./CommunityEditProfileModal";
-import { CommunityModpacks } from "./CommunityModpacks";
+import { CommunityModPool } from "./CommunityModPool";
 import { CommunityVideos } from "./CommunityVideos";
-import { CommunityFavorites } from "./CommunityFavorites";
+import { CommunityClubs } from "./CommunityClubs";
 import { CommunityUserProfile } from "./CommunityUserProfile";
 
-export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
+function CommunityPanelInner({
+  activeProject,
+  onClose,
+  onStatus,
+  onOpenProjectDetails,
+}: {
+  activeProject?: unknown;
+  onClose?: () => void;
+  onStatus?: (text: string, type?: "success" | "error" | "info") => void;
+  onOpenProjectDetails?: (id: string, platform?: string) => void;
+}) {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   
-  // Navigation Tabs: 'modpacks' | 'videos' | 'favorites' | 'profile'
-  const [activeSubTab, setActiveSubTab] = useState<'modpacks' | 'videos' | 'favorites' | 'profile'>('modpacks');
+  // Navigation Tabs: 'modpacks' (pool) | 'videos' | 'clubs' | 'profile'
+  const [activeSubTab, setActiveSubTab] = useState<
+    "modpacks" | "videos" | "clubs" | "profile"
+  >("modpacks");
   
   // States for Videos
   const [videos, setVideos] = useState<any[]>([]);
@@ -37,13 +49,14 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
   const [cloudFavorites, setCloudFavorites] = useState<any[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
 
-  // Auto-fetch data trigger
+  // Auto-fetch data trigger (only used after publish/profile update)
   const [reloadTrigger, setReloadTrigger] = useState(0);
-  const onStatusRef = useRef(onStatus);
+  // Track which tabs have already loaded data (lazy fetch)
+  const loadedTabs = React.useRef<Set<string>>(new Set());
 
   const [currentTheme, setCurrentTheme] = useState("official");
   const [tabIndex, setTabIndex] = useState(0);
-  const tabOrder = ['modpacks', 'videos', 'favorites'] as const;
+  const tabOrder = ["modpacks", "videos", "clubs"] as const;
 
   useEffect(() => {
     const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
@@ -54,13 +67,9 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
   }, []);
 
   useEffect(() => {
-    onStatusRef.current = onStatus;
-  }, [onStatus]);
-
-  useEffect(() => {
-    if (activeSubTab !== 'profile') {
+    if (activeSubTab !== "profile") {
       setSelectedUserProfile(null);
-      const idx = ['modpacks', 'videos', 'favorites'].indexOf(activeSubTab);
+      const idx = tabOrder.indexOf(activeSubTab as (typeof tabOrder)[number]);
       if (idx !== -1) setTabIndex(idx);
     }
   }, [activeSubTab]);
@@ -87,9 +96,19 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
       localStorage.removeItem("fomo_community_user_filter");
     }
 
+    const handleOpenUser = (e: Event) => {
+      const { username } = (e as CustomEvent).detail || {};
+      if (username) {
+        setActiveSubTab("profile");
+        setSelectedUserProfile(username);
+      }
+    };
+
     window.addEventListener("fomo-community-apply-filter", handleApplyFilter);
+    window.addEventListener("fomo-open-community-user", handleOpenUser);
     return () => {
       window.removeEventListener("fomo-community-apply-filter", handleApplyFilter);
+      window.removeEventListener("fomo-open-community-user", handleOpenUser);
     };
   }, []);
 
@@ -124,88 +143,79 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
       // Dispatch event to refresh followed authors/projects sharing
       window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
 
-      if (onStatusRef.current) onStatusRef.current("¡Perfil actualizado con éxito!", "success");
+      if (onStatus) onStatus("¡Perfil actualizado con éxito!", "success");
       setShowEditProfileModal(false);
       setReloadTrigger(prev => prev + 1);
     } catch (err: any) {
       console.error(err);
-      if (onStatusRef.current) {
-        onStatusRef.current("Error al actualizar perfil.", "error");
+      if (onStatus) {
+        onStatus("Error al actualizar perfil.", "error");
       }
     } finally {
       setSavingProfile(false);
     }
   };
 
-  // Fetch data for subtabs (modpacks handles its own fetching)
+  // Lazy-fetch: only load a tab's data when the user opens it for the first time.
+  // On reloadTrigger bump (after profile save), clear the cache so data refreshes.
+  useEffect(() => {
+    loadedTabs.current.clear();
+  }, [reloadTrigger]);
+
+  const fetchVideos = React.useCallback(async (retries = 2): Promise<void> => {
+    setLoadingVideos(true);
+    try {
+      const { data, error } = await supabase
+        .from("showcase_videos")
+        .select("id, profile_id, youtube_video_id, title, description, created_at, profiles ( username, avatar_url, color )")
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchVideos(retries - 1); }
+        console.error("Error fetching videos:", error.message);
+        return;
+      }
+      setVideos(data || []);
+    } catch (err: any) {
+      if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchVideos(retries - 1); }
+      console.error("Error fetching videos:", err?.message || err);
+    } finally {
+      setLoadingVideos(false);
+    }
+  }, []);
+
+  const fetchFavorites = React.useCallback(async (retries = 2): Promise<void> => {
+    setLoadingFavorites(true);
+    try {
+      const { data, error } = await supabase
+        .from("favorite_mods")
+        .select("id, profile_id, mod_id, platform, name, icon_url, summary, created_at, profiles ( username, avatar_url, color )")
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchFavorites(retries - 1); }
+        console.error("Error fetching favorites:", error.message);
+        return;
+      }
+      setCloudFavorites(data || []);
+    } catch (err: any) {
+      if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchFavorites(retries - 1); }
+      console.error("Error fetching favorites:", err?.message || err);
+    } finally {
+      setLoadingFavorites(false);
+    }
+  }, []);
+
+  // Fire fetch when tab becomes active for the first time (lazy)
   useEffect(() => {
     if (!user) return;
-
-    const fetchAllData = async (retries = 2) => {
-      // Fetch videos
-      const fetchVideos = async (r = retries): Promise<void> => {
-        setLoadingVideos(true);
-        try {
-          const { data, error } = await supabase
-            .from("showcase_videos")
-            .select("id, youtube_video_id, title, description, created_at, profiles ( username, avatar_url, color )")
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            if (r > 0) {
-              await new Promise(res => setTimeout(res, 500));
-              return fetchVideos(r - 1);
-            }
-            console.error("Error fetching videos:", error.message, error.details, error.hint);
-            return;
-          }
-          setVideos(data || []);
-        } catch (err: any) {
-          if (r > 0) {
-            await new Promise(res => setTimeout(res, 500));
-            return fetchVideos(r - 1);
-          }
-          console.error("Error fetching videos (exception):", err?.message || err);
-        } finally {
-          setLoadingVideos(false);
-        }
-      };
-
-      // Fetch favorites
-      const fetchFavorites = async (r = retries): Promise<void> => {
-        setLoadingFavorites(true);
-        try {
-          const { data, error } = await supabase
-            .from("favorite_mods")
-            .select("id, mod_id, platform, name, icon_url, summary, created_at, profiles ( username, avatar_url, color )")
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            if (r > 0) {
-              await new Promise(res => setTimeout(res, 500));
-              return fetchFavorites(r - 1);
-            }
-            console.error("Error fetching favorites:", error.message, error.details);
-            return;
-          }
-          setCloudFavorites(data || []);
-        } catch (err: any) {
-          if (r > 0) {
-            await new Promise(res => setTimeout(res, 500));
-            return fetchFavorites(r - 1);
-          }
-          console.error("Error fetching favorites (exception):", err?.message || err);
-        } finally {
-          setLoadingFavorites(false);
-        }
-      };
-
-      // Fetch all data in parallel
-      await Promise.all([fetchVideos(), fetchFavorites()]);
-    };
-
-    fetchAllData();
-  }, [user?.id, reloadTrigger]);
+    if (activeSubTab === 'videos' && !loadedTabs.current.has('videos')) {
+      loadedTabs.current.add('videos');
+      fetchVideos();
+    }
+    if (activeSubTab === "modpacks" && !loadedTabs.current.has("modpacks")) {
+      loadedTabs.current.add("modpacks");
+      fetchFavorites();
+    }
+  }, [user?.id, activeSubTab, fetchVideos, fetchFavorites]);
 
   if (loading) {
     return (
@@ -233,7 +243,7 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
   };
 
   return (
-    <div className={`flex-1 flex flex-col overflow-hidden animate-fade-in ${isModern ? 'bg-background text-foreground' : ''}`}>
+    <div className={`fomo-community flex-1 flex flex-col overflow-hidden animate-fade-in ${isModern ? 'bg-background text-foreground' : ''}`}>
       {/* Profile Header */}
       <div className={`px-6 py-4 border-b shrink-0 flex items-center justify-between ${isModern ? 'bg-card/80 border-border shadow-sm' : 'bg-white/2 border-white/5'}`}>
         <div className="flex items-center gap-3">
@@ -275,7 +285,7 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
       </div>
 
       {/* Sub Tabs – Liquid Glass Pill Style */}
-      <div className={`px-6 py-3 border-b shrink-0 ${isModern ? 'bg-card/60 border-border' : 'bg-black/20 border-white/5'}`}>
+      <div id="onboarding-fomo-community-tabs" className={`px-6 py-3 border-b shrink-0 ${isModern ? 'bg-card/60 border-border' : 'bg-black/20 border-white/5'}`}>
         <div
           className="relative flex items-center h-10 p-1 rounded-2xl overflow-hidden"
           style={{
@@ -299,7 +309,11 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
             }}
           />
 
-          {[{id: 'modpacks', icon: <Blocks className="w-3.5 h-3.5" />, label: 'Modpacks'}, {id: 'videos', icon: <TvMinimalPlay className="w-3.5 h-3.5" />, label: 'Showcases'}, {id: 'favorites', icon: <CircleFadingPlus className="w-3.5 h-3.5" />, label: 'Compartidos'}].map((tab, i) => (
+          {[
+            { id: "modpacks", icon: <Blocks className="w-3.5 h-3.5" />, label: "Pool" },
+            { id: "videos", icon: <TvMinimalPlay className="w-3.5 h-3.5" />, label: "Showcases" },
+            { id: "clubs", icon: <Club className="w-3.5 h-3.5" />, label: "Clubs" },
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => switchTab(tab.id as any)}
@@ -321,52 +335,50 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col">
         {activeSubTab !== 'profile' && (
           <div className="p-6 flex-1">
-            {activeSubTab === 'modpacks' && (
-              <CommunityModpacks />
-            )}
-
-            {activeSubTab === 'videos' && (
-              <CommunityVideos 
-                videos={videos}
-                loadingVideos={loadingVideos}
-                selectedUserFilter={null}
-                setSelectedUserFilter={(f) => {
-                  if (f?.username) {
-                    setSelectedUserProfile(f.username);
-                    setActiveSubTab('profile');
-                  }
-                }}
-              />
-            )}
-
-            {activeSubTab === 'favorites' && (
-              <CommunityFavorites 
+            {activeSubTab === "modpacks" && (
+              <CommunityModPool
                 cloudFavorites={cloudFavorites}
                 loadingFavorites={loadingFavorites}
-                selectedUserFilter={null}
-                setSelectedUserFilter={(f) => {
-                  if (f?.username) {
-                    setSelectedUserProfile(f.username);
-                    setActiveSubTab('profile');
-                  }
+                currentUserId={user.id}
+                onOpenProjectDetails={onOpenProjectDetails}
+                onFavoriteDeleted={(id) =>
+                  setCloudFavorites((prev) => prev.filter((f) => f.id !== id))
+                }
+                onOpenProfile={(username) => {
+                  setSelectedUserProfile(username);
+                  setActiveSubTab("profile");
                 }}
-                onSearchAuthor={(a) => {
-                  window.dispatchEvent(new CustomEvent("fomo-search-author", { 
-                    detail: { author: a } 
-                  }));
+                onContentDeleted={() => setReloadTrigger((p) => p + 1)}
+              />
+            )}
+
+            {activeSubTab === "videos" && (
+              <CommunityVideos
+                videos={videos}
+                loadingVideos={loadingVideos}
+                currentUserId={user.id}
+                onVideoDeleted={(id) =>
+                  setVideos((prev) => prev.filter((v) => v.id !== id))
+                }
+                onOpenProfile={(username) => {
+                  setSelectedUserProfile(username);
+                  setActiveSubTab("profile");
                 }}
               />
             )}
+
+            {activeSubTab === "clubs" && <CommunityClubs />}
           </div>
         )}
 
         {activeSubTab === 'profile' && selectedUserProfile && (
-          <CommunityUserProfile 
-            username={selectedUserProfile} 
+          <CommunityUserProfile
+            username={selectedUserProfile}
+            onOpenProjectDetails={onOpenProjectDetails}
             onBack={() => {
-              setActiveSubTab('favorites');
+              setActiveSubTab("modpacks");
               setSelectedUserProfile(null);
-            }} 
+            }}
           />
         )}
       </div>
@@ -388,3 +400,5 @@ export function CommunityPanel({ activeProject, onClose, onStatus }: any) {
     </div>
   );
 }
+
+export const CommunityPanel = React.memo(CommunityPanelInner);

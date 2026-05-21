@@ -1,9 +1,17 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchCollections, createCollection, addModToCollection } from "@/services/api";
-import type { ModHit, Project } from "@/lib/types";
+import type { ModHit } from "@/lib/types";
+import type { FomoMode } from "@/components/fomo/fomoSidebarTypes";
 
-export function useFomoSidebarManager(open: boolean, discover: any, showStatus: any) {
-  const [mode, setMode] = useState<"spotlight" | "showcases" | "discover" | "collections" | "followed" | "community">("spotlight");
+export function useFomoSidebarManager(
+  discover: {
+    selectedMods: ModHit[];
+    clearSelection: () => void;
+    selectingVersionFor: ModHit | null;
+  },
+  showStatus: (text: string, type?: string) => void,
+  setMode: (mode: FomoMode) => void
+) {
   const [addingToCollectionFor, setAddingToCollectionFor] = useState<ModHit | null>(null);
   const [bulkAdding, setBulkAdding] = useState(false);
   const [collectionsList, setCollectionsList] = useState<any[]>([]);
@@ -64,5 +72,26 @@ export function useFomoSidebarManager(open: boolean, discover: any, showStatus: 
     }
   }, [isDetailsOpen]);
 
-  return { mode, setMode, addingToCollectionFor, setAddingToCollectionFor, bulkAdding, setBulkAdding, collectionsList, loadingColls, isCreatingColl, setIsCreatingColl, newCollName, setNewName: setNewCollName, newCollTarget, setNewCollTarget, addingToCollId, loadCollections, handleBulkAddToCollection, handleBulkCreateCollection, isTransitioning, isDetailsOpen, isCurseSelected };
+  return {
+    addingToCollectionFor,
+    setAddingToCollectionFor,
+    bulkAdding,
+    setBulkAdding,
+    collectionsList,
+    loadingColls,
+    isCreatingColl,
+    setIsCreatingColl,
+    newCollName,
+    setNewName: setNewCollName,
+    newCollTarget,
+    setNewCollTarget,
+    addingToCollId,
+    loadCollections,
+    handleBulkAddToCollection,
+    handleBulkCreateCollection,
+    isTransitioning,
+    isDetailsOpen,
+    isCurseSelected,
+    setMode,
+  };
 }

@@ -66,8 +66,8 @@ function AnimatedHeadline() {
   }, [subIndex, isDeleting, index]);
 
   useEffect(() => {
-    const timeout = setInterval(() => setBlink((prev) => !prev), 500);
-    return () => clearTimeout(timeout);
+    const interval = setInterval(() => setBlink((prev) => !prev), 500);
+    return () => clearInterval(interval);
   }, []);
 
   const phrase = HEADLINE_PHRASES[index];

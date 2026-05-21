@@ -1,16 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, LayoutGrid, Package, TvMinimalPlay, Heart, CircleFadingPlus, Calendar, ExternalLink, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Package, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club } from "lucide-react";
+import { CommunityClubs } from "./CommunityClubs";
+import { CommunityProfileModPool } from "./CommunityProfileModPool";
 import { supabase } from "@/lib/supabaseClient";
+import { deleteCommunityContent } from "./communityActions";
 
-export function CommunityUserProfile({ username, onBack }: { username: string; onBack: () => void }) {
+export function CommunityUserProfile({
+  username,
+  onBack,
+  onOpenProjectDetails,
+}: {
+  username: string;
+  onBack: () => void;
+  onOpenProjectDetails?: (id: string, platform?: string) => void;
+}) {
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [modpacks, setModpacks] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'favorites' | 'videos' | 'modpacks'>('favorites');
+  const [activeTab, setActiveTab] = useState<
+    "pool" | "videos" | "modpacks" | "clubs"
+  >("pool");
   const [currentTheme, setCurrentTheme] = useState("official");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -23,13 +36,7 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
     return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id || null);
-    };
-    load();
-  }, []);
+  // currentUserId is resolved during the main profile fetch below — no separate auth call needed.
 
   useEffect(() => {
     const fetchUserAndContent = async (retries = 2) => {
@@ -58,28 +65,21 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
         setProfileData(profile || null);
 
         if (profile) {
-          // 2. Fetch Favorites
-          const { data: favs } = await supabase
-            .from("favorite_mods")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .order("created_at", { ascending: false });
+          // Resolve current user id + all content in parallel — single async wave
+          const [
+            { data: { session } },
+            { data: favs },
+            { data: vids },
+            { data: packs }
+          ] = await Promise.all([
+            supabase.auth.getSession(),
+            supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
+            supabase.from("showcase_videos").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
+            supabase.from("modpack_builds").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
+          ]);
+          setCurrentUserId(session?.user?.id || null);
           setFavorites(favs || []);
-
-          // 3. Fetch Videos
-          const { data: vids } = await supabase
-            .from("showcase_videos")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .order("created_at", { ascending: false });
           setVideos(vids || []);
-
-          // 4. Fetch Modpacks
-          const { data: packs } = await supabase
-            .from("modpack_builds")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .order("created_at", { ascending: false });
           setModpacks(packs || []);
         }
       } catch (err: any) {
@@ -117,22 +117,11 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
     if (deletingId) return;
     setDeletingId(id);
     try {
-      let error: any;
-      if (type === 'favorite') {
-        ({ error } = await supabase.from("favorite_mods").delete().eq("id", id));
-        if (!error) setFavorites(prev => prev.filter(f => f.id !== id));
-      } else if (type === 'video') {
-        ({ error } = await supabase.from("showcase_videos").delete().eq("id", id));
-        if (!error) setVideos(prev => prev.filter(v => v.id !== id));
-      } else if (type === 'modpack') {
-        ({ error } = await supabase.from("modpack_builds").delete().eq("id", id));
-        if (!error) setModpacks(prev => prev.filter(m => m.id !== id));
-      }
-      if (error) throw error;
-      window.dispatchEvent(new CustomEvent("fomo-show-status", {
-        detail: { text: "Eliminado correctamente.", type: "success" }
-      }));
-      window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
+      const { ok, error } = await deleteCommunityContent(type, id);
+      if (!ok) throw new Error(error || "Error al eliminar");
+      if (type === 'favorite') setFavorites(prev => prev.filter(f => f.id !== id));
+      else if (type === 'video') setVideos(prev => prev.filter(v => v.id !== id));
+      else setModpacks(prev => prev.filter(m => m.id !== id));
     } catch (err) {
       console.error(err);
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
@@ -202,10 +191,10 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
       {/* Internal Tabs */}
       <div className={`flex gap-4 px-6 py-3 border-b shrink-0 ${isModern ? 'bg-muted/20 border-border' : 'bg-black/10 border-white/5'}`}>
         <button
-          onClick={() => setActiveTab('favorites')}
-          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all ${activeTab === 'favorites' ? (isModern ? 'text-foreground border-b-2 border-primary' : 'text-white border-b-2 border-primary') : (isModern ? 'text-muted-foreground hover:text-foreground' : 'text-white/40 hover:text-white/80')}`}
+          onClick={() => setActiveTab("pool")}
+          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all ${activeTab === "pool" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
         >
-          Mods & Autores ({favorites.length})
+          Pool ({favorites.filter((f) => !/autor de minecraft/i.test(f.summary || "")).length})
         </button>
         <button
           onClick={() => setActiveTab('videos')}
@@ -214,46 +203,26 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
           Showcases ({videos.length})
         </button>
         <button
-          onClick={() => setActiveTab('modpacks')}
-          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all ${activeTab === 'modpacks' ? (isModern ? 'text-foreground border-b-2 border-primary' : 'text-white border-b-2 border-primary') : (isModern ? 'text-muted-foreground hover:text-foreground' : 'text-white/40 hover:text-white/80')}`}
+          onClick={() => setActiveTab("modpacks")}
+          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all ${activeTab === "modpacks" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
         >
           Modpacks ({modpacks.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("clubs")}
+          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all flex items-center gap-1 ${activeTab === "clubs" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
+        >
+          <Club className="w-3 h-3" /> Club
         </button>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-        {activeTab === 'favorites' && (
-          favorites.length === 0 ? (
-            <div className={`py-12 text-center text-xs border border-dashed rounded-2xl ${isModern ? 'text-muted-foreground border-border' : 'text-white/40 border-white/10'}`}>
-              No compartió proyectos todavía.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {favorites.map(f => (
-                <div key={f.id} className={`p-3 rounded-2xl border flex gap-3 group relative transition-colors ${isModern ? 'bg-card text-card-foreground border-border hover:bg-muted/50' : 'bg-white/4 border-white/5 hover:bg-white/10'}`}>
-                  <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 border overflow-hidden relative ${isModern ? 'bg-muted border-border' : 'bg-white/5 border-white/10'}`}>
-                    {f.icon_url ? <img src={f.icon_url} alt="" className="w-full h-full object-cover" /> : <LayoutGrid className={`w-5 h-5 ${isModern ? 'text-muted-foreground' : 'opacity-40'}`} />}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h4 className={`font-bold text-xs truncate ${isModern ? 'text-foreground' : 'text-white'}`}>{f.name}</h4>
-                    {f.summary && <p className={`text-[10px] line-clamp-1 italic ${isModern ? 'text-muted-foreground' : 'text-white/50'}`}>"{f.summary}"</p>}
-                    <span className={`text-[8px] mt-1 ${isModern ? 'text-muted-foreground/60' : 'text-white/30'}`}>{formatDate(f.created_at)}</span>
-                  </div>
-                  {isOwnProfile && (
-                    <button
-                      onClick={() => deleteItem('favorite', f.id)}
-                      disabled={deletingId === f.id}
-                      className="shrink-0 self-center p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none bg-transparent disabled:opacity-30"
-                      title="Eliminar compartido"
-                    >
-                      <Trash2 className={`w-3.5 h-3.5 ${deletingId === f.id ? 'animate-spin' : ''}`} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )
+        {activeTab === "pool" && (
+          <CommunityProfileModPool
+            favorites={favorites}
+            onOpenProjectDetails={onOpenProjectDetails}
+          />
         )}
 
         {activeTab === 'videos' && (
@@ -331,6 +300,10 @@ export function CommunityUserProfile({ username, onBack }: { username: string; o
               ))}
             </div>
           )
+        )}
+
+        {activeTab === "clubs" && profileData?.username && (
+          <CommunityClubs username={profileData.username} singleUser />
         )}
       </div>
     </div>

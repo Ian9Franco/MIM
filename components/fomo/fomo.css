@@ -41,6 +41,17 @@
   --fomo-sinytra-switch-border-active: rgba(6, 182, 212, 0.4);
   --fomo-sinytra-switch-knob-active: #22d3ee;
   --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+
+  /* Detalles — banner cinematográfico */
+  --fomo-banner-filter: blur(2px) saturate(0.92);
+  --fomo-banner-image-opacity: 0.28;
+  --fomo-banner-pattern-opacity: 0.75;
+  --fomo-banner-overlay: linear-gradient(
+    to top,
+    var(--fomo-secondary-bg) 0%,
+    rgba(20, 20, 22, 0.82) 42%,
+    rgba(20, 20, 22, 0.45) 100%
+  );
 }
 
 /* Vampire Theme Overrides */
@@ -84,6 +95,16 @@
   --fomo-sinytra-switch-border-active: rgba(187, 150, 228, 0.45);
   --fomo-sinytra-switch-knob-active: #BB96E4;
   --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(187, 150, 228, 0.8);
+
+  --fomo-banner-filter: blur(2px) saturate(0.95) hue-rotate(-4deg);
+  --fomo-banner-image-opacity: 0.32;
+  --fomo-banner-pattern-opacity: 0.7;
+  --fomo-banner-overlay: linear-gradient(
+    to top,
+    var(--fomo-secondary-bg) 0%,
+    rgba(32, 13, 45, 0.88) 40%,
+    rgba(32, 13, 45, 0.5) 100%
+  );
 }
 
 /* Modern Theme Overrides (LIGHT THEME) */
@@ -127,6 +148,16 @@
   --fomo-sinytra-switch-border-active: rgba(8, 145, 178, 0.35);
   --fomo-sinytra-switch-knob-active: #0891b2;
   --fomo-sinytra-switch-knob-shadow: 0 0 8px rgba(8, 145, 178, 0.5);
+
+  --fomo-banner-filter: blur(2px) brightness(1.02);
+  --fomo-banner-image-opacity: 0.2;
+  --fomo-banner-pattern-opacity: 0.55;
+  --fomo-banner-overlay: linear-gradient(
+    to top,
+    var(--fomo-secondary-bg) 0%,
+    rgba(243, 240, 254, 0.92) 45%,
+    rgba(243, 240, 254, 0.65) 100%
+  );
 }
 
 /* Structural Components */
@@ -675,6 +706,51 @@
   background: rgba(187, 150, 228, 0.25);
 }
 
+/* ==========================================
+   FOMO ACTION BUTTONS (ModCard hover actions)
+   ========================================== */
+
+/* Default (dark themes): white text on dark frosted bg — works as-is */
+.fomo-action-btn {
+  color: #ffffff;
+}
+
+/* Modern (light) theme: restyle the "Add to list" ghost button */
+[data-theme="modern"] .fomo-action-btn--list {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(124, 58, 237, 0.35) !important;
+  color: #4338CA !important;
+}
+
+[data-theme="modern"] .fomo-action-btn--list:hover {
+  background-color: rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.6) !important;
+  color: #7C3AED !important;
+}
+
+/* Download btn is emerald-solid — keep white text explicitly */
+[data-theme="modern"] .fomo-action-btn--download {
+  color: #ffffff !important;
+}
+
+/* "Seg" label inside the Seguido por badge on ModCard */
+.fomo-badge-seg-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+[data-theme="modern"] .fomo-badge-seg-label {
+  color: #4338CA !important;
+}
+
+/* ==========================================
+   COMMUNITY VIDEOS — Modern theme contrast
+   ========================================== */
+
+/* The video area (bg-black) inside cards must stay dark in all themes
+   so the YouTube thumbnail is always legible */
+[data-theme="modern"] .community-video-thumb {
+  background-color: #0f172a !important;
+}
+
 /* Modern theme override */
 [data-theme="modern"] .spotlight-ec-mini-card {
   background: rgba(255,255,255,0.85);
@@ -710,4 +786,223 @@
 [data-theme="modern"] .spotlight-ec-mini-dots::before,
 [data-theme="modern"] .spotlight-ec-mini-dots::after {
   background: rgba(0,0,0,0.15);
+}
+
+/* ==========================================
+   FLOATING PLAYER — Protect from Modern theme utility remapping
+   The player has a permanently-dark background via inline style.
+   Modern theme would remap bg-white/* → dark, making controls invisible.
+   ========================================== */
+
+[data-theme="modern"] .fomo-floating-player .bg-white\/5  { background-color: rgba(255, 255, 255, 0.05) !important; }
+[data-theme="modern"] .fomo-floating-player .bg-white\/10 { background-color: rgba(255, 255, 255, 0.10) !important; }
+[data-theme="modern"] .fomo-floating-player .bg-white\/15 { background-color: rgba(255, 255, 255, 0.15) !important; }
+
+[data-theme="modern"] .fomo-floating-player .hover\:bg-white\/15:hover { background-color: rgba(255, 255, 255, 0.15) !important; }
+[data-theme="modern"] .fomo-floating-player .hover\:bg-white\/10:hover { background-color: rgba(255, 255, 255, 0.10) !important; }
+
+[data-theme="modern"] .fomo-floating-player .border-white\/5  { border-color: rgba(255, 255, 255, 0.05) !important; }
+[data-theme="modern"] .fomo-floating-player .border-white\/10 { border-color: rgba(255, 255, 255, 0.10) !important; }
+
+
+/* All text inside the player stays white — the container is always dark */
+[data-theme="modern"] .fomo-floating-player .text-white,
+[data-theme="modern"] .fomo-floating-player .text-white\/50,
+[data-theme="modern"] .fomo-floating-player .text-white\/80,
+[data-theme="modern"] .fomo-floating-player .text-white\/85 {
+  color: #ffffff !important;
+}
+
+/* Buttons inside the player keep white text (dark background context) */
+[data-theme="modern"] .fomo-floating-player button {
+  color: #ffffff !important;
+}
+[data-theme="modern"] .fomo-floating-player button:hover {
+  color: #ffffff !important;
+}
+[data-theme="modern"] .fomo-floating-player button.hover\:text-red-400:hover {
+  color: #f87171 !important;
+}
+[data-theme="modern"] .fomo-floating-player .text-red-400 {
+  color: #f87171 !important;
+}
+
+/* ==========================================
+   LOGIN PORTAL — Modern theme overhaul
+   Dark themes: dark violet glass card (as-is)
+   Modern theme: clean white neomorphic card
+   ========================================== */
+
+/* Card container */
+[data-theme="modern"] .fomo-login-portal {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+  box-shadow:
+    0 24px 64px rgba(124, 58, 237, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ambient blobs — violet/cyan toned */
+[data-theme="modern"] .fomo-login-portal > div:nth-child(1) {
+  background-color: rgba(124, 58, 237, 0.08) !important;
+}
+[data-theme="modern"] .fomo-login-portal > div:nth-child(2) {
+  background-color: rgba(8, 145, 178, 0.08) !important;
+}
+
+/* Title */
+[data-theme="modern"] .fomo-login-portal h3 {
+  color: #1E1B4B !important;
+}
+
+/* Subtitle */
+[data-theme="modern"] .fomo-login-portal .font-caption {
+  color: #4B5563 !important;
+  opacity: 1 !important;
+}
+
+/* Sparkle icon container */
+[data-theme="modern"] .fomo-login-portal .bg-primary\/10 {
+  background-color: rgba(124, 58, 237, 0.08) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+/* Tab bar */
+[data-theme="modern"] .fomo-login-tabs {
+  background: rgba(124, 58, 237, 0.06) !important;
+  border-color: rgba(124, 58, 237, 0.15) !important;
+}
+
+/* Inactive tab text */
+[data-theme="modern"] .fomo-login-tabs button.text-white\/60 {
+  color: rgba(30, 27, 75, 0.45) !important;
+}
+[data-theme="modern"] .fomo-login-tabs button.text-white\/60:hover {
+  color: #7C3AED !important;
+}
+
+/* Form labels */
+[data-theme="modern"] .fomo-login-portal label {
+  color: rgba(30, 27, 75, 0.55) !important;
+}
+
+/* Input fields */
+[data-theme="modern"] .fomo-login-portal input {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+  color: #1E1B4B !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="modern"] .fomo-login-portal input:focus {
+  background: #ffffff !important;
+  border-color: #7C3AED !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+}
+[data-theme="modern"] .fomo-login-portal input::placeholder {
+  color: rgba(30, 27, 75, 0.3) !important;
+}
+
+/* Error banner */
+[data-theme="modern"] .fomo-login-portal .border-red-500\/20 {
+  background-color: rgba(220, 38, 38, 0.06) !important;
+  border-color: rgba(220, 38, 38, 0.25) !important;
+  color: #DC2626 !important;
+}
+
+/* Success banner */
+[data-theme="modern"] .fomo-login-portal .border-emerald-500\/20 {
+  background-color: rgba(5, 150, 105, 0.06) !important;
+  border-color: rgba(5, 150, 105, 0.25) !important;
+  color: #059669 !important;
+}
+
+/* FOMO Cloud — contraste en tema Modern (claro) */
+[data-theme="modern"] .fomo-community {
+  color: var(--fomo-text-primary);
+}
+
+[data-theme="modern"] .fomo-community .text-white {
+  color: var(--fomo-text-primary) !important;
+}
+
+[data-theme="modern"] .fomo-community .text-white\/25 {
+  color: rgba(30, 27, 75, 0.35) !important;
+}
+[data-theme="modern"] .fomo-community .text-white\/30 {
+  color: rgba(30, 27, 75, 0.4) !important;
+}
+[data-theme="modern"] .fomo-community .text-white\/35 {
+  color: rgba(30, 27, 75, 0.45) !important;
+}
+[data-theme="modern"] .fomo-community .text-white\/40,
+[data-theme="modern"] .fomo-community .text-white\/45 {
+  color: var(--fomo-text-subtle) !important;
+}
+[data-theme="modern"] .fomo-community .text-white\/50,
+[data-theme="modern"] .fomo-community .text-white\/55,
+[data-theme="modern"] .fomo-community .text-white\/60 {
+  color: var(--fomo-text-muted) !important;
+}
+[data-theme="modern"] .fomo-community .text-white\/85,
+[data-theme="modern"] .fomo-community .text-white\/90 {
+  color: var(--fomo-text-primary) !important;
+}
+
+[data-theme="modern"] .fomo-community .bg-white\/4,
+[data-theme="modern"] .fomo-community .bg-white\/5,
+[data-theme="modern"] .fomo-community .bg-white\/\[0\.02\],
+[data-theme="modern"] .fomo-community .bg-white\/\[0\.03\],
+[data-theme="modern"] .fomo-community .bg-white\/\[0\.04\],
+[data-theme="modern"] .fomo-community .bg-white\/\[0\.06\] {
+  background-color: rgba(124, 58, 237, 0.06) !important;
+}
+
+[data-theme="modern"] .fomo-community .hover\:bg-white\/10:hover,
+[data-theme="modern"] .fomo-community .hover\:bg-white\/\[0\.04\]:hover,
+[data-theme="modern"] .fomo-community .hover\:bg-white\/\[0\.05\]:hover {
+  background-color: rgba(124, 58, 237, 0.1) !important;
+}
+
+[data-theme="modern"] .fomo-community .border-white\/5,
+[data-theme="modern"] .fomo-community .border-white\/10 {
+  border-color: var(--fomo-border) !important;
+}
+
+[data-theme="modern"] .fomo-community .border-dashed.border-white\/10 {
+  border-color: rgba(124, 58, 237, 0.22) !important;
+}
+
+[data-theme="modern"] .fomo-community .bg-black\/30 {
+  background-color: rgba(30, 27, 75, 0.08) !important;
+}
+
+[data-theme="modern"] .fomo-community .bg-black\/25 {
+  background-color: rgba(30, 27, 75, 0.06) !important;
+}
+
+[data-theme="modern"] .fomo-community .ring-black\/30,
+[data-theme="modern"] .fomo-community .ring-black\/40 {
+  --tw-ring-color: rgba(124, 58, 237, 0.15) !important;
+}
+
+[data-theme="modern"] .fomo-community select {
+  color: var(--fomo-text-primary) !important;
+  background-color: var(--fomo-input-bg) !important;
+  border-color: var(--fomo-input-border) !important;
+}
+
+[data-theme="modern"] .fomo-community .from-white\/\[0\.06\] {
+  --tw-gradient-from: rgba(124, 58, 237, 0.08) !important;
+}
+[data-theme="modern"] .fomo-community .to-white\/\[0\.02\] {
+  --tw-gradient-to: rgba(124, 58, 237, 0.03) !important;
+}
+
+[data-theme="modern"] .fomo-community .bg-gradient-to-b.from-white\/\[0\.06\].to-white\/\[0\.02\] {
+  background: linear-gradient(
+    to bottom,
+    rgba(124, 58, 237, 0.08),
+    rgba(255, 255, 255, 0.95)
+  ) !important;
 }

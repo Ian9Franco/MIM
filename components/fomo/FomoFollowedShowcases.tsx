@@ -304,7 +304,9 @@ export function FomoFollowedShowcases({
                           fetch(`/api/fomo/youtube-channels`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ channels: next })
+                            body: JSON.stringify({ channels: next }),
+                          }).then(() => {
+                            window.dispatchEvent(new CustomEvent("fomo-club-changed"));
                           });
                         }}
                         className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-2 cursor-pointer bg-transparent border-none"
@@ -345,7 +347,9 @@ export function FomoFollowedShowcases({
                       fetch(`/api/fomo/youtube-channels`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ channels: next })
+                        body: JSON.stringify({ channels: next }),
+                      }).then(() => {
+                        window.dispatchEvent(new CustomEvent("fomo-club-changed"));
                       });
                     } else {
                       if (activeChannel === url) {

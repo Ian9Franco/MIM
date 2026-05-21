@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -9,6 +9,7 @@ interface Profile {
   username: string;
   avatar_url: string | null;
   color?: string | null;
+  club_data?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -33,9 +34,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Ref tracks last fetched user ID — prevents double-fetch when Supabase
+  // fires both INITIAL_SESSION and SIGNED_IN for the same user on mount.
+  const lastFetchedUserIdRef = React.useRef<string | null>(null);
 
   // Fetch additional profile data from the profiles table
   const fetchProfile = async (userId: string) => {
+    console.count("profile fetch");
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -56,13 +61,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = React.useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
     }
-  };
+  }, [user]);
 
-  const signOut = async () => {
+  const signOut = React.useCallback(async () => {
     setLoading(true);
     let errorObj = null;
     try {
@@ -76,27 +81,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     }
     return { error: errorObj };
-  };
+  }, []);
 
   useEffect(() => {
-    // 1. Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        }
-      } catch (err) {
-        console.error("Error getting initial session:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getInitialSession();
-
-    // 2. Listen for auth state changes
+    // Supabase fires INITIAL_SESSION immediately on mount, then may also fire
+    // SIGNED_IN for the same user. The ref guard ensures fetchProfile runs
+    // only once per unique user ID regardless of how many events fire.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
@@ -104,8 +94,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(currentUser);
 
           if (currentUser) {
-            await fetchProfile(currentUser.id);
+            if (currentUser.id !== lastFetchedUserIdRef.current) {
+              lastFetchedUserIdRef.current = currentUser.id;
+              await fetchProfile(currentUser.id);
+            }
           } else {
+            lastFetchedUserIdRef.current = null;
             setProfile(null);
           }
         } catch (err) {
@@ -121,8 +115,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  const contextValue = React.useMemo(() => ({
+    user,
+    profile,
+    loading,
+    signOut,
+    refreshProfile
+  }), [user, profile, loading, signOut, refreshProfile]);
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

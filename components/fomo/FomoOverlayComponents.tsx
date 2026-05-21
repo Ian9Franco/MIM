@@ -3,6 +3,12 @@ import { ListTree, Download, ExternalLink, Loader2, CheckCircle2, ChevronDown, C
 import { COLORS } from "@/theme/tokens";
 import { formatSize, openExternal } from "@/utils/format";
 import { supabase } from "@/lib/supabaseClient";
+import { buildShareMetaFromMod } from "@/lib/communityShareMeta";
+import {
+  communityTypeToBannerType,
+  getBannerFallbackStyle,
+  inferPrimaryProjectType,
+} from "@/lib/fomoModBanner";
 
 // ── TabButton ───────────────────────────────────────────────────────────────
 
@@ -246,7 +252,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
 
 // ── ModHeader ───────────────────────────────────────────────────────────────
 
-export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType, communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null }: any) {
+export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType, communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null }: any) {
   const [currentTheme, setCurrentTheme] = React.useState("official");
   
   React.useEffect(() => {
@@ -279,6 +285,10 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
   const isModern = currentTheme === "modern";
   const projectType = (mod.projectType || "").toLowerCase();
   const typeLabel = projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase();
+  const bannerType = communityTypeToBannerType(
+    bannerProjectType || selectedProjectType || inferPrimaryProjectType(mod)
+  );
+  const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(bannerType);
 
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [shareComment, setShareComment] = React.useState("");
@@ -319,7 +329,9 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
       const user = session?.user || null;
       if (!user) return;
       
-      const summaryText = shareComment.trim() || mod.description || "";
+      const summaryText = buildShareMetaFromMod(mod, {
+        comment: shareComment.trim() || mod.description || "",
+      });
       const platform = mod._source === "curseforge" ? "curseforge" : "modrinth";
       const { error } = await supabase.from("favorite_mods").insert({
         profile_id: user.id,
@@ -360,18 +372,32 @@ export function ModHeader({ mod, bannerUrl, onSearchAuthor, onSearchMod, followe
 
   return (
     <div className="px-5 py-6 border-b relative overflow-hidden group/header" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
-      {/* Cinematic Banner Background */}
-      {bannerUrl && (
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none animate-fade-in duration-1000">
-          <img 
-            src={bannerUrl} 
-            alt="" 
-            className="w-full h-full object-cover opacity-30 scale-110"
-            style={{ filter: "var(--fomo-banner-filter)" }}
+      {/* Banner: primera imagen de galería o patrón por tipo */}
+      <div
+        className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+        style={{ backgroundColor: bannerBgColor }}
+      >
+        {bannerUrl ? (
+          <img
+            src={bannerUrl}
+            alt=""
+            className="fomo-details-banner-img w-full h-full object-cover scale-110 animate-fade-in duration-1000"
+            style={{
+              filter: "var(--fomo-banner-filter)",
+              opacity: "var(--fomo-banner-image-opacity)",
+            }}
           />
-          <div className="absolute inset-0" style={{ background: "var(--fomo-banner-overlay)" }} />
-        </div>
-      )}
+        ) : (
+          <div
+            className="absolute inset-0 fomo-details-banner-pattern"
+            style={{
+              ...fallbackTexture,
+              opacity: "var(--fomo-banner-pattern-opacity)",
+            }}
+          />
+        )}
+        <div className="absolute inset-0" style={{ background: "var(--fomo-banner-overlay)" }} />
+      </div>
 
       <div className="flex items-center gap-5 relative z-10">
         <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-2xl bg-black/40 backdrop-blur-md transition-transform duration-500 group-hover/header:scale-105">

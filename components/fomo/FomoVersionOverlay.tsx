@@ -11,6 +11,8 @@ import { COLORS } from "@/theme/tokens";
 import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
 import { TabButton, DependencyCard, VersionCard, ModHeader, StatsGrid, CompatibilitySection } from "./FomoOverlayComponents";
+import { getFirstGalleryUrl } from "@/lib/fomoModBanner";
+import { useModGalleryBanner } from "@/hooks/fomo/useModGalleryBanner";
 import { FomoSkeleton } from "./FomoSkeleton";
 import type { ModHit, VersionEntry } from "@/lib/types";
 
@@ -57,6 +59,10 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     isTranslating, translatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, 
     toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery 
   } = useFomoOverlayManager(mod, versions, hideVersions);
+
+  const galleryBanner = useModGalleryBanner(mod);
+  const detailsBannerUrl =
+    gallery[0]?.url || galleryBanner || getFirstGalleryUrl(mod.gallery);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isFullView, setIsFullView] = useState(false);
@@ -194,7 +200,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
           <ModHeader 
             mod={mod} 
-            bannerUrl={gallery[0]?.url}
+            bannerUrl={detailsBannerUrl}
+            bannerProjectType={selectedProjectType || projectType}
             onSearchAuthor={onSearchAuthor} 
             onSearchMod={onSearchMod} 
             followedAuthors={followedAuthors} 

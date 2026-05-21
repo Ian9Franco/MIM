@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { eventBus } from "@/lib/eventBus";
 import { incidentManager, Incident } from "@/lib/incidentManager";
 import { mimDB } from "@/lib/indexeddb";
@@ -6,6 +6,7 @@ import { mimDB } from "@/lib/indexeddb";
 export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthStatus: Record<string, any>, followedMods: any[], followedAuthors: string[], ignoredUpdates: Set<string>) {
   const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config" | "bytecode">("all");
   const [activeProject, setActiveProject] = useState<any>(null);
+  const activeProjectRef = useRef<any>(null); // stable ref to avoid re-creating fetchConfigAndSageAlerts
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [newAuthorMods, setNewAuthorMods] = useState<any[]>([]);
   const [scanningAuthors, setScanningAuthors] = useState(false);
@@ -61,17 +62,13 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
     const followedModIds = new Set(followedMods.map(m => m.projectId));
 
     const mergedStatus = { ...modrinthStatus, ...modrinthStatusStored };
-    console.log("useAlertManager - mergedStatus:", mergedStatus);
-    console.log("useAlertManager - followedModIds:", Array.from(followedModIds));
 
     Object.entries(mergedStatus).forEach(([path, s]) => {
       if (s.status !== "update_available" || !s.latestVersion) return;
       if (path.startsWith("collection:")) {
         const pId = path.replace("collection:", "");
-        console.log("useAlertManager - checking collection:", pId, "followed:", followedModIds.has(pId), "ignored:", ignoredUpdates.has(path));
         if (followedModIds.has(pId) && !ignoredUpdates.has(path)) {
           collsList.push([path, s]);
-          console.log("useAlertManager - ADDED collection update:", pId);
         }
       } else if (path.toLowerCase().includes("shaderpacks")) { if (!ignoredUpdates.has(path)) shadersList.push([path, s]); }
       else if (path.toLowerCase().includes("resourcepacks")) { if (!ignoredUpdates.has(path)) rpsList.push([path, s]); }
@@ -80,7 +77,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
     return { modUpdates: modsList, collectionUpdates: collsList, shaderUpdates: shadersList, resourcePackUpdates: rpsList };
   }, [modrinthStatus, modrinthStatusStored, library, seenVersions, ignoredUpdates, followedMods]);
 
-  const fetchConfigAndSageAlerts = useCallback(async (proj = activeProject) => {
+  const fetchConfigAndSageAlerts = useCallback(async (proj?: any) => {
+    // Use provided proj arg, then ref, then state — all without capturing in deps
+    const currentProj = proj !== undefined ? proj : activeProjectRef.current;
     try {
       const settingsRes = await fetch("/api/settings");
       const alerts: any[] = [];
@@ -102,8 +101,8 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
       alerts.forEach(a => incidentManager.createIncident({ id: a.id, title: a.title, detail: a.detail, severity: a.type === "danger" ? "danger" : "warning", module: "CONFIG" }));
       ["cfg-virustotal", "cfg-modrinth", "cfg-source", "cfg-builds", "cfg-minecraft", "cfg-downloads", "cfg-staging"].forEach(id => { if (!alerts.find(a => a.id === id)) incidentManager.resolveIncident(id); });
 
-      if (proj) {
-        const logsRes = await fetch(`/api/project/logs?project=${proj.name}&version=${proj.version}`);
+      if (currentProj) {
+        const logsRes = await fetch(`/api/project/logs?project=${currentProj.name}&version=${currentProj.version}`);
         if (logsRes.ok) {
           const logData = await logsRes.json();
           const latest = logData.files?.find((f: any) => f.path.includes("latest.log"));
@@ -112,40 +111,44 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
             eventBus.emit("sage:crash-detected", { crashId: `crash-${Date.now()}`, crashType: "mod", severity: "high", logFile: "logs/latest.log", sessionId: sessionDate });
           } else incidentManager.resolveIncident("sage-active-crash");
         }
-        const dRes = await fetch(`/api/library/resolve-ownership?project=${proj.name}&version=${proj.version}&loader=${proj.loader}`);
+        const dRes = await fetch(`/api/library/resolve-ownership?project=${currentProj.name}&version=${currentProj.version}&loader=${currentProj.loader}`);
         if (dRes.ok) {
           const dData = await dRes.json();
           dData.actions?.forEach((act: any) => incidentManager.createIncident({ id: `dep-ownership-${act.modId}`, title: `Librería mal aislada: ${act.modName}`, detail: act.reason, severity: act.severity === "warning" ? "warning" : "info", module: "SYSTEM", meta: { type: "dependency_move", modId: act.modId, currentPath: act.currentPath, suggestedCategory: act.suggestedCategory } }));
         }
       }
     } catch {}
-  }, [activeProject]);
+  }, []); // empty deps — uses ref for activeProject, stable identity
 
   useEffect(() => {
-    const handleActiveProject = (e: any) => { setActiveProject(e.detail); fetchConfigAndSageAlerts(e.detail); };
-    const handleRefresh = () => fetchConfigAndSageAlerts(activeProject);
+    const handleActiveProject = (e: any) => {
+      activeProjectRef.current = e.detail;
+      setActiveProject(e.detail);
+      fetchConfigAndSageAlerts(e.detail);
+    };
+    const handleRefresh = () => fetchConfigAndSageAlerts();
     const handleIncidents = (e: any) => setIncidents([...e.detail]);
     window.addEventListener("active-project-changed", handleActiveProject);
     window.addEventListener("refresh-system", handleRefresh);
     window.addEventListener("mim:incidents-updated", handleIncidents);
     incidentManager.getIncidents("active").then(setIncidents);
-    fetchConfigAndSageAlerts(activeProject);
+    fetchConfigAndSageAlerts();
     return () => {
       window.removeEventListener("active-project-changed", handleActiveProject);
       window.removeEventListener("refresh-system", handleRefresh);
       window.removeEventListener("mim:incidents-updated", handleIncidents);
     };
-  }, [activeProject, fetchConfigAndSageAlerts]);
+  }, [fetchConfigAndSageAlerts]); // stable — fetchConfigAndSageAlerts now has empty deps
 
   useEffect(() => {
     if (!sidebarOpen) return;
-    fetchConfigAndSageAlerts(activeProject);
+    fetchConfigAndSageAlerts();
     incidentManager.markAsSeen();
-    const intId = setInterval(() => fetchConfigAndSageAlerts(activeProject), 15000);
-    const focus = () => fetchConfigAndSageAlerts(activeProject);
+    const intId = setInterval(() => fetchConfigAndSageAlerts(), 30000); // 30s polling (was 15s)
+    const focus = () => fetchConfigAndSageAlerts();
     window.addEventListener("focus", focus);
     return () => { clearInterval(intId); window.removeEventListener("focus", focus); };
-  }, [sidebarOpen, activeProject, fetchConfigAndSageAlerts]);
+  }, [sidebarOpen, fetchConfigAndSageAlerts]);
 
   useEffect(() => {
     const handleScanning = (payload: any) => {

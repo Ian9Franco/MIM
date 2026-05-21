@@ -1,7 +1,8 @@
 import React from "react";
-import { Search, ExternalLink, Trash2, ArrowRight, Download, Loader2, Package, UserCheck, Heart, Globe } from "lucide-react";
-import { COLORS } from "@/theme/tokens";
+import { Search, ExternalLink, Trash2, ArrowRight, Download, Loader2, Globe } from "lucide-react";
 import { openExternal } from "@/utils/format";
+import { FomoModBannerStrip } from "./FomoModBannerStrip";
+import { inferPrimaryProjectType, resolveModBannerUrl } from "@/lib/fomoModBanner";
 
 // ── Helper ──────────────────────────────────────────────────────────────────
 
@@ -24,10 +25,22 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
     return () => obs.disconnect();
   }, []);
 
+  const bannerUrl = resolveModBannerUrl(mod);
+  const projectType = inferPrimaryProjectType(mod);
+
   return (
-    <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border p-4 flex flex-col justify-between transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-foreground/5 border-foreground/10 hover:border-foreground/20 shadow-sm"}`}>
-      <div className="flex gap-4 items-start min-w-0">
-        <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+    <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border overflow-hidden flex flex-col transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-foreground/5 border-foreground/10 hover:border-foreground/20 shadow-sm"}`}>
+      <FomoModBannerStrip
+        bannerUrl={bannerUrl}
+        projectId={mod.projectId}
+        platform={mod._source}
+        projectType={projectType}
+        heightClass="h-24"
+        fetchIfMissing={!bannerUrl}
+      />
+      <div className="p-4 flex flex-col justify-between flex-1">
+      <div className="flex gap-4 items-start min-w-0 -mt-8 relative z-10">
+        <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0 ring-2 ring-black/40 shadow-lg">
           {mod.iconUrl ? <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" /> : <div className={`w-full h-full flex items-center justify-center text-white font-bold bg-gradient-to-br ${getGradientByName(mod.title)}`}>{mod.title.charAt(0)}</div>}
         </div>
         <div className="min-w-0 flex-1">
@@ -45,12 +58,11 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
                 <button
                   key={o.username}
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
-                      detail: { username: o.username, type: 'mods' }
-                    }));
-                    window.dispatchEvent(new CustomEvent("fomo-switch-tab", {
-                      detail: { tab: "community" }
-                    }));
+                    window.dispatchEvent(
+                      new CustomEvent("fomo-open-community-user", {
+                        detail: { username: o.username },
+                      })
+                    );
                   }}
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/10 text-[9px] text-white transition-all cursor-pointer"
                   title={`Ver perfil de @${o.username}`}
@@ -101,6 +113,7 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
           <button onClick={() => onUnfollow(mod.projectId)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/40 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -148,12 +161,11 @@ export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow, o
                 <button
                   key={o.username}
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
-                      detail: { username: o.username, type: 'mods' }
-                    }));
-                    window.dispatchEvent(new CustomEvent("fomo-switch-tab", {
-                      detail: { tab: "community" }
-                    }));
+                    window.dispatchEvent(
+                      new CustomEvent("fomo-open-community-user", {
+                        detail: { username: o.username },
+                      })
+                    );
                   }}
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/10 text-[8px] text-white transition-all cursor-pointer"
                   title={`Ver perfil de @${o.username}`}

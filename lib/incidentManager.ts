@@ -27,6 +27,7 @@ class IncidentManager {
   private initialized = false;
   private cacheExpiry = 0;
   private readonly CACHE_DURATION = 30000; // 30 segundos de cache
+  private notifyTimer: ReturnType<typeof setTimeout> | null = null; // debounce notify
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -227,9 +228,13 @@ class IncidentManager {
   }
 
   private notify() {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    // Debounce: coalesce rapid consecutive incidents into a single dispatch
+    if (this.notifyTimer) clearTimeout(this.notifyTimer);
+    this.notifyTimer = setTimeout(() => {
+      this.notifyTimer = null;
       window.dispatchEvent(new CustomEvent("mim:incidents-updated", { detail: this.incidents }));
-    }
+    }, 100);
   }
 
   public subscribe(callback: () => void) {

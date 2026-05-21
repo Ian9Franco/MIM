@@ -1,36 +1,39 @@
 /**
- * @fileoverview FomoSidebar – slide-in panel for discovering Minecraft mods.
- * Optimized for v5.9: Modularized into hooks and components.
+ * @fileoverview FomoSidebar – shell + isolated tab branches.
+ * Community runs without useFomoDiscover; discover mounts only when needed.
  */
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { X, Search, Library, Download, Plus, ChevronLeft, Workflow, Heart, Spotlight, Globe, TvMinimalPlay } from "lucide-react";
-import { COLORS } from "@/theme/tokens";
+import {
+  X,
+  Search,
+  Library,
+  Heart,
+  Spotlight,
+  TvMinimalPlay,
+  Cloudy,
+} from "lucide-react";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
-import { useFomoDiscover } from "@/hooks/useFomoDiscover";
-import { useFomoSidebarManager } from "@/hooks/useFomoSidebarManager";
 import { PillToggleGroup, StatusBanner } from "../ui/primitives";
-import { ConfirmModal } from "../ui/ConfirmModal";
-import { FomoDiscoverFilters } from "./FomoDiscoverFilters";
-import { FomoModCard }         from "./FomoModCard";
-import { FomoPagination }      from "./FomoPagination";
-import { FomoVersionOverlay }  from "./FomoVersionOverlay";
-import { FomoSpotlight }       from "./FomoSpotlight";
-import { FomoCollections }     from "./FomoCollections";
-import { FomoFollowedAuthors } from "./FomoFollowedAuthors";
-import { FomoSkeleton }        from "./FomoSkeleton";
-import { OnboardingTour }      from "@/components/ui/OnboardingTour";
-import { fetchCurseForgePickMods, fetchCollectionMods } from "@/services/api";
-import { ModrinthIcon, CurseForgeIcon } from "./parts/FomoPlatformIcons";
-import { BulkActionsBar, BulkCollectionModal } from "./FomoSidebarComponents";
-import { formatNumber, getProjectTypeLabel } from "@/utils/format";
-import type { ModHit, Project } from "@/lib/types";
-import { CommunityPanel } from "./CommunityPanel";
-import { FomoFollowedShowcases } from "./FomoFollowedShowcases";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/components/security/AuthContext";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { FomoSidebarDiscoverBranch } from "./FomoSidebarDiscoverBranch";
+import { FomoSidebarCommunityBranch } from "./FomoSidebarCommunityBranch";
+import { queueFomoDiscoverAction } from "@/lib/fomoDiscoverPending";
+import {
+  FOMO_DETAILS_RESERVE,
+  fomoMainWidthWhenDetailsOpen,
+} from "@/lib/fomoLayout";
+import {
+  checkNewCommunityShares,
+  seedCommunityShareSeen,
+  type ShareRow,
+} from "@/lib/communitySharingAlerts";
+import type { FomoMode } from "./fomoSidebarTypes";
 import "./fomo.css";
 
 const TAB_OPTIONS = [
@@ -39,84 +42,121 @@ const TAB_OPTIONS = [
   { value: "discover", label: "Explorar", icon: <Search className="w-4 h-4" /> },
   { value: "collections", label: "Colecciones", icon: <Library className="w-4 h-4" /> },
   { value: "followed", label: "Seguidos", icon: <Heart className="w-4 h-4" /> },
-  { value: "community", label: "Comunidad", icon: <Globe className="w-4 h-4" /> },
+  { value: "community", label: "FOMO Cloud", icon: <Cloudy className="w-4 h-4" /> },
 ];
 
-const SOURCE_OPTIONS = [
-  { value: "all", label: "Ambos" },
-  { value: "modrinth", label: "Modrinth", icon: <ModrinthIcon /> }, 
-  { value: "curseforge", label: "CurseForge", icon: <CurseForgeIcon /> }
-];
-
-export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVersion = "1.20.1", activeProject, pendingFiles = [], onOpenDownloads }: any) {
+function FomoSidebarInner({
+  open,
+  onClose,
+  defaultLoader = "forge",
+  defaultVersion = "1.20.1",
+  activeProject,
+  pendingFiles = [],
+  onOpenDownloads,
+}: {
+  open: boolean;
+  onClose: () => void;
+  defaultLoader?: string;
+  defaultVersion?: string;
+  activeProject?: unknown;
+  pendingFiles?: unknown[];
+  onOpenDownloads?: () => void;
+}) {
+  const [mode, setMode] = useState<FomoMode>("spotlight");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [discoverKeepAlive, setDiscoverKeepAlive] = useState(false);
   const { status, showStatus, clearStatus } = useStatusBanner();
-  const discover = useFomoDiscover(defaultLoader, defaultVersion, showStatus);
-  const m = useFomoSidebarManager(open, discover, showStatus);
+  const { user: currentUser, profile: currentUserProfile } = useAuth();
+  const currentUserColor = currentUserProfile?.color ?? null;
   const [currentTheme, setCurrentTheme] = useState("official");
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [allSharedMods, setAllSharedMods] = useState<any[]>([]);
-  const [allSharedVideos, setAllSharedVideos] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserColor, setCurrentUserColor] = useState<string | null>(null);
+  const [allSharedMods, setAllSharedMods] = useState<unknown[]>([]);
+  const [allSharedVideos, setAllSharedVideos] = useState<unknown[]>([]);
+  const [isForcedHidden, setIsForcedHidden] = useState(false);
 
-  const fetchSharedMods = async () => {
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  const discoverMounted =
+    mode !== "community" || discoverKeepAlive || detailsOpen;
+
+  const fetchingRef = useRef(false);
+  const sharedFetchedRef = useRef(false);
+  const fetchSharedMods = useCallback(async (opts?: { force?: boolean }) => {
+    if (fetchingRef.current) return;
+    if (!opts?.force && sharedFetchedRef.current) return;
+    fetchingRef.current = true;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user || null;
-      setCurrentUser(user);
-
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("color").eq("id", user.id).single();
-        if (profile?.color) setCurrentUserColor(profile.color);
-      }
-
       const { data: modsData } = await supabase
         .from("favorite_mods")
-        .select("mod_id, platform, profile_id, profiles ( username, avatar_url, color )");
+        .select("id, mod_id, platform, profile_id, profiles ( username, avatar_url, color )");
       if (modsData) setAllSharedMods(modsData);
 
       const { data: vidsData } = await supabase
         .from("showcase_videos")
         .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
       if (vidsData) setAllSharedVideos(vidsData);
+
+      const { data: packsData } = await supabase
+        .from("modpack_builds")
+        .select("id, profile_id, profiles ( username )")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      const uid = currentUser?.id;
+      if (opts?.force) {
+        checkNewCommunityShares(
+          (modsData as ShareRow[]) || [],
+          (vidsData as ShareRow[]) || [],
+          (packsData as ShareRow[]) || [],
+          uid
+        );
+      } else if (!sharedFetchedRef.current) {
+        seedCommunityShareSeen(
+          (modsData as { id: string }[]) || [],
+          (vidsData as { id: string }[]) || [],
+          (packsData as { id: string }[]) || []
+        );
+      }
+
+      sharedFetchedRef.current = true;
     } catch (err) {
       console.error("Error fetching shared mods in sidebar:", err);
+    } finally {
+      fetchingRef.current = false;
     }
-  };
+  }, [currentUser?.id]);
+
+  const refreshSharing = useCallback(
+    () => fetchSharedMods({ force: true }),
+    [fetchSharedMods]
+  );
 
   useEffect(() => {
-    fetchSharedMods();
-    window.addEventListener("fomo-refresh-sharing", fetchSharedMods);
-    
+    const handleRefreshSharing = () => {
+      void fetchSharedMods({ force: true });
+    };
     const handleSwitchTab = (e: Event) => {
-      const tab = (e as CustomEvent).detail?.tab;
-      if (tab) {
-        m.setMode(tab);
-      }
+      const tab = (e as CustomEvent).detail?.tab as FomoMode | undefined;
+      if (tab) setMode(tab);
     };
-    
-    const handleOpenProjectDetails = (e: Event) => {
-      const { id, platform } = (e as CustomEvent).detail || {};
-      if (id) {
-        discover.handleOpenProjectById(id, platform);
-      }
-    };
-
+    window.addEventListener("fomo-refresh-sharing", handleRefreshSharing);
     window.addEventListener("fomo-switch-tab", handleSwitchTab);
-    window.addEventListener("fomo-open-project-details", handleOpenProjectDetails);
-
     return () => {
-      window.removeEventListener("fomo-refresh-sharing", fetchSharedMods);
+      window.removeEventListener("fomo-refresh-sharing", handleRefreshSharing);
       window.removeEventListener("fomo-switch-tab", handleSwitchTab);
-      window.removeEventListener("fomo-open-project-details", handleOpenProjectDetails);
     };
-  }, [m, discover]);
+  }, [fetchSharedMods]);
 
   useEffect(() => {
-    if (m.mode === "community") {
-      fetchSharedMods();
+    if (!open) {
+      sharedFetchedRef.current = false;
+      return;
     }
-  }, [m.mode]);
+    void fetchSharedMods();
+  }, [open, fetchSharedMods]);
 
   useEffect(() => {
     const seen = localStorage.getItem("onboarding_fomo");
@@ -130,547 +170,365 @@ export function FomoSidebar({ open, onClose, defaultLoader = "forge", defaultVer
 
   const onboardingSteps = [
     {
-      target: '#onboarding-fomo-tabs',
-      title: 'Navegación FOMO',
-      content: 'Desde acá podés moverte entre Spotlight, Explorar, Colecciones y Autores Seguidos.'
+      target: "#onboarding-fomo-tabs",
+      title: "Navegación FOMO",
+      content:
+        "Desde acá podés moverte entre Spotlight, Explorar, Colecciones, Seguidos y FOMO Cloud.",
     },
     {
-      target: '#onboarding-fomo-spotlight',
-      title: 'Spotlight',
-      content: 'Acá ves los mods destacados del momento, selecciones de la comunidad y carruseles temáticos.'
+      target: "#onboarding-fomo-community",
+      title: "FOMO Cloud",
+      content:
+        "La nube de la comunidad: compartí mods, descubrí showcases y explorá los clubs de otros jugadores.",
     },
     {
-      target: '#onboarding-fomo-discover',
-      title: 'Explorar Mods',
-      content: 'Acá podés buscar mods filtrando por versión, loader, categoría y más.'
+      target: "#onboarding-fomo-community-tabs",
+      title: "FOMO Cloud — secciones",
+      content:
+        "Pool (mods compartidos), Showcases (videos de YouTube) y Clubs (lo que cada usuario sigue y guarda). Tocá un avatar para ver el perfil completo.",
     },
     {
-      target: '#onboarding-fomo-collections',
-      title: 'Mis Colecciones',
-      content: 'Acá podés crear y gestionar tus propias listas de mods para instalarlos todos juntos.'
+      target: "#onboarding-fomo-spotlight",
+      title: "Spotlight",
+      content:
+        "Acá ves los mods destacados del momento, selecciones de la comunidad y carruseles temáticos.",
     },
     {
-      target: '#onboarding-fomo-followed',
-      title: 'Seguidos',
-      content: 'Acá ves las novedades de los autores y mods que decidiste seguir.'
+      target: "#onboarding-fomo-discover",
+      title: "Explorar Mods",
+      content: "Acá podés buscar mods filtrando por versión, loader, categoría y más.",
     },
     {
-      target: '#onboarding-fomo-details',
-      title: 'Detalles del Mod',
-      content: 'Cuando hacés clic en un mod, se abre este panel lateral con las versiones disponibles y dependencias.'
-    }
+      target: "#onboarding-fomo-collections",
+      title: "Mis Colecciones",
+      content:
+        "Acá podés crear y gestionar tus propias listas de mods para instalarlos todos juntos.",
+    },
+    {
+      target: "#onboarding-fomo-followed",
+      title: "Seguidos",
+      content: "Acá ves las novedades de los autores y mods que decidiste seguir.",
+    },
+    {
+      target: "#onboarding-fomo-details",
+      title: "Detalles del Mod",
+      content:
+        "Cuando hacés clic en un mod, se abre este panel lateral con las versiones disponibles y dependencias.",
+    },
   ];
 
   useEffect(() => {
-    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
+    const update = () =>
+      setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
     update();
     const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     return () => obs.disconnect();
   }, []);
 
-  const isModern = currentTheme === "modern";
-
-  useEffect(() => {
-    if (activeProject) {
-      discover.setLoader(activeProject.loader);
-      discover.setGameVersions([activeProject.version]);
-    }
-  }, [activeProject]);
-
-  // Escuchamos eventos globales para abrir detalles de un mod o buscar desde otras secciones
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
     }
-    return () => { document.body.style.overflow = "unset"; };
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, [open]);
 
+  // Discover events when the discover branch is unmounted (pure community tab).
   useEffect(() => {
+    if (discoverMounted) return;
+
     const handleOpenDetails = (e: Event) => {
       const modHit = (e as CustomEvent).detail;
-      if (modHit) discover.handleOpenLiveProject(modHit);
+      if (modHit) {
+        queueFomoDiscoverAction({ type: "openMod", mod: modHit });
+        setDiscoverKeepAlive(true);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+        });
+      }
     };
-
     const handleSearchAndOpen = (e: Event) => {
       const { query } = (e as CustomEvent).detail || {};
       if (query) {
-        m.setMode("discover");
-        discover.setQuery(query);
+        queueFomoDiscoverAction({ type: "search", query });
+        setMode("discover");
       }
     };
-
     const handleSearchAuthor = (e: Event) => {
       const { author } = (e as CustomEvent).detail || {};
       if (author) {
-        m.setMode("discover");
-        discover.setSource("all");
-        discover.setQuery(`author:${author}`);
+        queueFomoDiscoverAction({ type: "author", author });
+        setMode("discover");
       }
     };
-
-    const handleShowStatus = (e: Event) => {
-      const { text, type } = (e as CustomEvent).detail || {};
-      if (text) showStatus(text, type || "info");
+    const handleOpenProjectDetails = (e: Event) => {
+      const { id, platform, title, projectType } = (e as CustomEvent).detail || {};
+      if (id) {
+        queueFomoDiscoverAction({ type: "projectId", id, platform, title, projectType });
+        setDiscoverKeepAlive(true);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+        });
+      }
     };
-
-    const handleOpenCommunityUser = (e: Event) => {
-      const { username, type } = (e as CustomEvent).detail || {};
-      m.setMode("community");
-      localStorage.setItem("fomo_community_user_filter", JSON.stringify({ username, type }));
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
-          detail: { username, type }
-        }));
-      }, 100);
+    const handleSearchProject = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      if (detail?.query) {
+        queueFomoDiscoverAction({ type: "searchProject", ...detail });
+        setDiscoverKeepAlive(true);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+        });
+      }
     };
 
     window.addEventListener("fomo-open-details", handleOpenDetails);
     window.addEventListener("fomo-search-and-open", handleSearchAndOpen);
     window.addEventListener("fomo-search-author", handleSearchAuthor);
-    window.addEventListener("fomo-show-status", handleShowStatus);
-    window.addEventListener("fomo-open-community-user", handleOpenCommunityUser);
-
+    window.addEventListener("fomo-open-project-details", handleOpenProjectDetails);
+    window.addEventListener("fomo-search-project", handleSearchProject);
     return () => {
       window.removeEventListener("fomo-open-details", handleOpenDetails);
       window.removeEventListener("fomo-search-and-open", handleSearchAndOpen);
       window.removeEventListener("fomo-search-author", handleSearchAuthor);
+      window.removeEventListener("fomo-open-project-details", handleOpenProjectDetails);
+      window.removeEventListener("fomo-search-project", handleSearchProject);
+    };
+  }, [discoverMounted]);
+
+  useEffect(() => {
+    const handleShowStatus = (e: Event) => {
+      const { text, type } = (e as CustomEvent).detail || {};
+      if (text) showStatus(text, type || "info");
+    };
+    const handleOpenCommunityUser = (e: Event) => {
+      const { username, type } = (e as CustomEvent).detail || {};
+      setMode("community");
+      setDiscoverKeepAlive(false);
+      localStorage.setItem(
+        "fomo_community_user_filter",
+        JSON.stringify({ username, type })
+      );
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("fomo-community-apply-filter", { detail: { username, type } })
+        );
+      }, 100);
+    };
+
+    window.addEventListener("fomo-show-status", handleShowStatus);
+    window.addEventListener("fomo-open-community-user", handleOpenCommunityUser);
+    return () => {
       window.removeEventListener("fomo-show-status", handleShowStatus);
       window.removeEventListener("fomo-open-community-user", handleOpenCommunityUser);
     };
-  }, [discover, m, showStatus]);
-
-  const [isForcedHidden, setIsForcedHidden] = useState(false);
+  }, [showStatus]);
 
   useEffect(() => {
-    const handleToggle = (e: any) => {
-      // Si recibimos una orden de cerrar detalles desde fuera (ej: durante una descarga)
-      // activamos el modo oculto temporal
-      if (e.detail.open === false) {
+    const handleToggle = (e: CustomEvent<{ open?: boolean }>) => {
+      if (e.detail?.open === false) {
         setIsForcedHidden(true);
       } else {
         setIsForcedHidden(false);
       }
     };
-    window.addEventListener("fomo-details-toggle", handleToggle);
-    return () => window.removeEventListener("fomo-details-toggle", handleToggle);
+    window.addEventListener("fomo-details-toggle", handleToggle as EventListener);
+    return () =>
+      window.removeEventListener("fomo-details-toggle", handleToggle as EventListener);
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: !!discover.selectingVersionFor } }));
-    }
-  }, [discover.selectingVersionFor]);
-
-  const handleCloseAll = () => {
-    discover.setSelectingVersionFor(null);
+  const handleCloseAll = useCallback(() => {
+    setDiscoverKeepAlive(false);
     onClose();
-  };
+  }, [onClose]);
 
-  // Los detalles se muestran si hay un mod seleccionado Y no han sido ocultados forzosamente
-  const detailsSharing = useMemo(() => {
-    const dm = discover.selectingVersionFor;
-    if (!dm) {
-      return { sharers: [] as { username: string; color?: string | null; avatar_url?: string | null }[], sharedByMe: false };
+  const handleDetailsOpenChange = useCallback((openDetails: boolean) => {
+    setDetailsOpen(openDetails);
+  }, []);
+
+  const handleDiscoverKeepAlive = useCallback((alive: boolean) => {
+    if (modeRef.current === "community") {
+      setDiscoverKeepAlive(alive);
     }
-    const pf = dm._source === "curseforge" ? "curseforge" : "modrinth";
-    const byProfile = new Map<string, { username: string; color?: string | null; avatar_url?: string | null }>();
-    for (const s of allSharedMods) {
-      if (String(s.mod_id) !== String(dm.projectId)) continue;
-      if (s.platform !== pf) continue;
-      const pid = s.profile_id as string | undefined;
-      const username = s.profiles?.username as string | undefined;
-      if (!pid || !username) continue;
-      byProfile.set(pid, {
-        username,
-        color: s.profiles?.color,
-        avatar_url: s.profiles?.avatar_url,
+  }, []);
+
+  const openProjectByIdRef = useRef<
+    ((id: string, platform?: string) => void) | null
+  >(null);
+
+  const handleOpenProjectFromCloud = useCallback(
+    (id: string, platform?: string) => {
+      if (!id) return;
+      setDiscoverKeepAlive(true);
+      if (openProjectByIdRef.current) {
+        void openProjectByIdRef.current(id, platform);
+        return;
+      }
+      queueFomoDiscoverAction({ type: "projectId", id, platform });
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
       });
-    }
-    const sharedByMe = !!(currentUser && allSharedMods.some(
-      (s: any) => String(s.mod_id) === String(dm.projectId) && s.profile_id === currentUser.id && s.platform === pf
-    ));
-    return { sharers: [...byProfile.values()], sharedByMe };
-  }, [discover.selectingVersionFor, allSharedMods, currentUser]);
+    },
+    []
+  );
 
-  const detailsOpen = open && !!discover.selectingVersionFor && !isForcedHidden;
+  useEffect(() => {
+    if (mode === "community" && !discoverKeepAlive && !detailsOpen) {
+      setDetailsOpen(false);
+    }
+  }, [mode, discoverKeepAlive, detailsOpen]);
+
+  const layoutDetailsOpen = open && detailsOpen && !isForcedHidden;
 
   return (
     <>
-      {/* Shared Backdrop */}
-      <div 
-        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-500 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`} 
-        onClick={handleCloseAll} 
+      <div
+        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-500 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={handleCloseAll}
       />
 
-      {/* FOMO Sidebar — left, contracts when details open */}
-      <aside 
+      <aside
         className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-2xl transition-all duration-500 ease-in-out border border-l-0 fomo-sidebar overflow-hidden ${
           open ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
-        }`} 
-        style={{ 
-          width: detailsOpen ? "72vw" : "80vw",
-          maxWidth: detailsOpen ? "1200px" : "1400px",
-          background: "var(--fomo-bg)", 
+        }`}
+        style={{
+          width: layoutDetailsOpen ? fomoMainWidthWhenDetailsOpen() : "min(80vw, 1400px)",
+          maxWidth: layoutDetailsOpen
+            ? `calc(100vw - ${FOMO_DETAILS_RESERVE}px)`
+            : "1400px",
+          background: "var(--fomo-bg)",
           borderColor: "var(--color-border)",
-          borderRightColor: detailsOpen ? "transparent" : "color-mix(in srgb, var(--color-primary) 15%, transparent)",
+          borderRightColor: layoutDetailsOpen
+            ? "transparent"
+            : "color-mix(in srgb, var(--color-primary) 15%, transparent)",
           borderRadius: "0 2.5rem 2.5rem 0",
           boxShadow: "24px 0 60px rgba(0,0,0,0.4)",
-          backdropFilter: "blur(40px)"
+          backdropFilter: "blur(40px)",
         }}
       >
-        <div className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
+        <div
+          className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker"
+          style={{
+            background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)`,
+          }}
+        />
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b shrink-0 relative z-10" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
+        <div
+          className="flex items-center justify-between px-6 py-3 border-b shrink-0 relative z-10"
+          style={{
+            background: "var(--fomo-secondary-bg)",
+            borderColor: "var(--fomo-border)",
+          }}
+        >
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Image src="/fomoico.png" alt="" width={28} height={28} className="w-7 h-7 animate-fomo-blink" />
-              <div><h2 className="font-headline text-base text-white">FOMO</h2><p className="text-[8px] opacity-40 uppercase">{m.mode}</p></div>
+              <Image
+                src="/fomoico.png"
+                alt=""
+                width={28}
+                height={28}
+                className="w-7 h-7 animate-fomo-blink"
+              />
+              <div>
+                <h2 className="font-headline text-base text-white">FOMO</h2>
+                <p className="text-[8px] opacity-40 uppercase">{mode}</p>
+              </div>
             </div>
-            <div id="onboarding-fomo-tabs" className="min-w-0 flex-1 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15">
-              <PillToggleGroup options={TAB_OPTIONS} value={m.mode} onChange={(v: any) => m.setMode(v)} className="p-1.5 min-w-max" ariaLabel="Seleccionar pestaña" />
+            <div
+              id="onboarding-fomo-tabs"
+              className="min-w-0 flex-1 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15"
+            >
+              <PillToggleGroup
+                options={TAB_OPTIONS}
+                value={mode}
+                onChange={(v: string) => setMode(v as FomoMode)}
+                className="p-1.5 min-w-max"
+                ariaLabel="Seleccionar pestaña"
+              />
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {m.mode === "discover" && (
-              <PillToggleGroup 
-                options={SOURCE_OPTIONS.filter(s => s.value !== "all" || (discover.query.length > 0 && (discover.source === "all" || discover.query.startsWith("author:"))))} 
-                value={discover.source} 
-                onChange={(v: any) => discover.setSource(v)} 
-                className="p-1.5" 
-                ariaLabel="Seleccionar fuente" 
-              />
-            )}
-            <button onClick={handleCloseAll} className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400"><X className="w-5 h-5" /></button>
+            <button
+              onClick={handleCloseAll}
+              className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          {status && <StatusBanner text={status.text} type={status.type} onClose={clearStatus} />}
+          {status && (
+            <StatusBanner text={status.text} type={status.type} onClose={clearStatus} />
+          )}
         </div>
 
-        {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {m.mode === "spotlight" && (
-            <div id="onboarding-fomo-spotlight" className="flex-1 flex flex-col overflow-hidden">
-              <FomoSpotlight 
-                onOpenVersions={discover.handleOpenVersionSelector} 
-                onOpenCollection={async (coll) => {
-                  const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as "modrinth" | "curseforge";
-                  discover.setSource(sourceKey);
-                  discover.setCollectionId(coll.id);
-                  discover.setPage(1); // Resetear a la primera página
-                  m.setMode("discover");
-                  showStatus(`Mostrando mods de "${coll.name}"`, "success");
-                }}
-                onDownloadMod={discover.handleDownload} 
-                downloading={discover.downloading} 
-                loader={discover.loader} 
-                gameVersion={discover.gameVersions[0]} 
-              />
-            </div>
+          {mode === "community" && (
+            <FomoSidebarCommunityBranch
+              activeProject={activeProject}
+              onClose={handleCloseAll}
+              onStatus={showStatus}
+              onOpenProjectDetails={handleOpenProjectFromCloud}
+            />
           )}
-          {m.mode === "discover" && (
-            <div id="onboarding-fomo-discover" className="flex-1 flex overflow-hidden">
-              <div className="w-65 p-4 border-r border-white/5 overflow-y-auto"><FomoDiscoverFilters {...discover} onLoader={discover.setLoader} onVersions={discover.setGameVersions} onProjectType={discover.setProjectType} onSort={discover.setSortOrder} onCategories={discover.setCategories} onEnvironments={discover.setEnvironments} onOnlyExclusives={discover.setOnlyExclusives} onQuery={discover.setQuery} onRefresh={discover.refetch} /></div>
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="px-6 py-4 flex items-center gap-4 border-b border-white/5">
-                  <Search className="w-5 h-5 opacity-40" />
-                  
-                  {/* Chips para filtros activos */}
-                  {discover.collectionId && (
-                    <div className="flex items-center gap-1.5 bg-primary/20 text-primary text-[11px] font-bold px-2 py-1 rounded-lg border border-primary/30 animate-fade-in shrink-0">
-                      <span>Colección</span>
-                      <button onClick={() => discover.setCollectionId(null)} className="hover:text-white transition-colors" title="Quitar filtro de colección">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                  
-                  {discover.query.startsWith("author:") && (
-                    <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-500 text-[11px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 animate-fade-in shrink-0">
-                      <span>Autor: {discover.query.replace("author:", "")}</span>
-                      <button onClick={() => discover.setQuery("")} className="hover:text-white transition-colors" title="Quitar filtro de autor">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-
-                  <input 
-                    type="search" 
-                    value={discover.query.startsWith("author:") ? "" : discover.query} 
-                    onChange={e => {
-                      const val = e.target.value;
-                      discover.setQuery(val);
-                      if (val === "" && discover.source === "all") {
-                        discover.setSource("modrinth");
-                      }
-                    }} 
-                    onFocus={() => {
-                      if (discover.query !== "") {
-                        discover.setQuery("");
-                        if (discover.source === "all") {
-                          discover.setSource("modrinth");
-                        }
-                      }
-                    }}
-                    placeholder="Buscar mods..." 
-                    className="flex-1 bg-transparent border-none outline-none text-sm text-white" 
-                  />
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {discover.loading ? (
-                    <FomoSkeleton count={9} variant="card" isCurseForge={discover.source === "curseforge"} />
-                  ) : (
-                    discover.mods.map(mod => {
-                      const platformKey = mod._source === "curseforge" ? "curseforge" : "modrinth";
-                      const sharersByProfile = new Map<string, { username: string; color?: string | null; avatar_url?: string | null }>();
-                      for (const s of allSharedMods) {
-                        if (String(s.mod_id) !== String(mod.projectId)) continue;
-                        if (s.platform !== platformKey) continue;
-                        const pid = s.profile_id as string | undefined;
-                        const username = s.profiles?.username as string | undefined;
-                        if (!pid || !username) continue;
-                        sharersByProfile.set(pid, {
-                          username,
-                          color: s.profiles?.color,
-                          avatar_url: s.profiles?.avatar_url,
-                        });
-                      }
-                      const communitySharers = [...sharersByProfile.values()];
-                      return (
-                        <FomoModCard 
-                          key={`${platformKey}:${mod.projectId}`} 
-                          mod={mod} 
-                          isDownloading={!!discover.downloading[mod.projectId]} 
-                          onDownload={discover.handleDownload} 
-                          onOpenVersions={discover.handleOpenLiveProject} 
-                          isSelected={discover.selectedMods.some(s => s.projectId === mod.projectId)} 
-                          onToggleSelect={discover.toggleModSelection} 
-                          sinytraActive={discover.sinytraActive}
-                          onAddToCollection={() => { m.setAddingToCollectionFor(mod); m.loadCollections(); }} 
-                          followedByUsers={communitySharers}
-                        />
-                      );
-                    })
-                  )}
-                </div>
-                {discover.selectedMods.length > 0 && <BulkActionsBar mods={discover.selectedMods} isModern={isModern} onCancel={discover.clearSelection} onAdd={() => { m.setBulkAdding(true); m.loadCollections(); }} onDownload={() => discover.selectedMods.forEach(m => discover.handleDownload(m))} />}
-                <FomoPagination page={discover.page} totalPages={discover.totalPages} onPage={discover.setPage} loading={discover.loading} />
-              </div>
-            </div>
-          )}
-          {m.mode === "collections" && (
-            <div id="onboarding-fomo-collections" className="flex-1 flex flex-col overflow-hidden">
-              <FomoCollections 
-                {...discover} 
-                onStatus={showStatus} 
-                gameVersion={discover.gameVersions[0]}
-                addingForMod={m.addingToCollectionFor}
-                onClearAddingFor={() => m.setAddingToCollectionFor(null)}
-                onDownloadMod={discover.handleDownload} 
-                onOpenVersions={discover.handleOpenLiveProject} 
-                onClearSelection={discover.clearSelection}
-              />
-            </div>
-          )}
-          {m.mode === "showcases" && (
-            <div id="onboarding-fomo-showcases" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
-                <FomoFollowedShowcases 
-                  currentUser={currentUser}
-                  allSharedVideos={allSharedVideos}
-                  fetchCommunitySharingInfo={fetchSharedMods}
-                  animationClass="animate-fade-in"
-                  currentUserColor={currentUserColor}
-                />
-              </div>
-            </div>
-          )}
-          {m.mode === "followed" && (
-            <div id="onboarding-fomo-followed" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto">
-                <FomoFollowedAuthors 
-                  onSearchAuthor={a => { 
-                    m.setMode("discover"); 
-                    discover.setSource("all"); 
-                    discover.setQuery(`author:${a}`); 
-                    discover.setLoader("all"); 
-                    discover.setGameVersions([]); 
-                  }} 
-                  onSearchProject={(p, type, source, loader, version) => { 
-                    m.setMode("discover"); 
-                    discover.setSource((source as "modrinth" | "curseforge" | "all") || "all"); 
-                    discover.setProjectType(type || "mod"); 
-                    discover.setLoader(loader || "all"); 
-                    discover.setGameVersions(version ? [version] : []); 
-                    discover.setQuery(p); 
-                  }} 
-                  onOpenVersions={discover.handleOpenLiveProject} 
-                  onDownloadMod={discover.handleDownload} 
-                  downloading={discover.downloading} 
-                />
-              </div>
-            </div>
-          )}
-          {m.mode === "community" && (
-            <div id="onboarding-fomo-community" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto">
-                <CommunityPanel 
-                  activeProject={activeProject} 
-                  onClose={handleCloseAll} 
-                  onStatus={showStatus} 
-                />
-              </div>
-            </div>
+          {discoverMounted && (
+            <FomoSidebarDiscoverBranch
+              open={open}
+              mode={mode}
+              setMode={setMode}
+              hidden={mode === "community"}
+              layoutDetailsOpen={layoutDetailsOpen}
+              onDetailsOpenChange={handleDetailsOpenChange}
+              onDiscoverKeepAlive={handleDiscoverKeepAlive}
+              onRegisterOpenProjectById={(fn) => {
+                openProjectByIdRef.current = fn;
+              }}
+              onClose={handleCloseAll}
+              defaultLoader={defaultLoader}
+              defaultVersion={defaultVersion}
+              activeProject={activeProject}
+              pendingFiles={pendingFiles}
+              onOpenDownloads={onOpenDownloads}
+              showStatus={showStatus}
+              allSharedMods={allSharedMods}
+              allSharedVideos={allSharedVideos}
+              currentUser={currentUser}
+              currentUserColor={currentUserColor}
+              refreshSharing={refreshSharing}
+              currentTheme={currentTheme}
+              isForcedHidden={isForcedHidden}
+            />
           )}
         </div>
-        {m.bulkAdding && <BulkCollectionModal onClose={() => { m.setBulkAdding(false); m.setAddingToCollectionFor(null); }} isCreating={m.isCreatingColl} setIsCreating={m.setIsCreatingColl} collections={m.collectionsList} loading={m.loadingColls} addingId={m.addingToCollId} onAdd={m.handleBulkAddToCollection} onCreate={m.handleBulkCreateCollection} name={m.newCollName} setName={m.setNewName} target={m.newCollTarget} setTarget={m.setNewCollTarget} selectedCount={m.addingToCollectionFor ? 1 : discover.selectedMods.length} isCurseSelected={m.isCurseSelected} theme={currentTheme} />}
 
-        {showOnboarding && (
-          <OnboardingTour 
-            steps={onboardingSteps} 
+        {showOnboarding && open && (
+          <OnboardingTour
+            steps={onboardingSteps}
             onComplete={() => {
               setShowOnboarding(false);
               localStorage.setItem("onboarding_fomo", "true");
-            }} 
+            }}
             onStepChange={(step) => {
-              if (step === 1) m.setMode("spotlight");
-              if (step === 2) m.setMode("discover");
-              if (step === 3) m.setMode("collections");
-              if (step === 4) m.setMode("followed");
-              if (step === 5) {
-                if (!discover.selectingVersionFor && discover.mods.length > 0) {
-                  discover.handleOpenLiveProject(discover.mods[0]);
-                }
+              if (step === 1 || step === 2) setMode("community");
+              if (step === 3) setMode("spotlight");
+              if (step === 4) setMode("discover");
+              if (step === 5) setMode("collections");
+              if (step === 6) setMode("followed");
+              if (step === 7) {
+                setMode("discover");
+                window.dispatchEvent(new CustomEvent("fomo-onboarding-open-details"));
               }
             }}
           />
         )}
       </aside>
-
-      {/* Details Sidebar — only rendered when FOMO is open to prevent ghost blocks */}
-      {open && (
-        <aside
-          id="onboarding-fomo-details"
-          className={`fomo-sidebar fixed inset-y-0 right-0 z-[70] flex flex-col transition-all duration-500 ease-in-out overflow-hidden ${
-            detailsOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-          }`}
-          style={{
-            width: "600px",
-            background: "var(--fomo-bg)",
-            borderLeft: "1px solid var(--fomo-border)",
-            borderRadius: "2rem 0 0 2rem",
-            boxShadow: "-24px 0 60px rgba(0,0,0,0.5)",
-            backdropFilter: "blur(40px)"
-          }}
-        >
-          {discover.selectingVersionFor && (
-            <FomoVersionOverlay 
-              mod={discover.selectingVersionFor} 
-              versions={discover.projectVersions} 
-              loading={discover.versLoading} 
-              downloading={!!discover.downloading[discover.selectingVersionFor.projectId]} 
-              loader={discover.loader} 
-              gameVersions={discover.gameVersions} 
-              projectType={discover.projectType} 
-              disablePortal={true}
-              onClose={() => discover.setSelectingVersionFor(null)} 
-              onDownload={discover.handleDownload} 
-              onSearchAuthor={(a: string) => {
-                m.setMode("discover");
-                discover.setSource("all");
-                discover.setQuery(`author:${a}`);
-              }}
-              onSearchMod={(title: string) => {
-                m.setMode("discover");
-                discover.setSource("all");
-                discover.setQuery(title);
-              }}
-              pendingFilesCount={pendingFiles.length}
-              onOpenDownloads={onOpenDownloads}
-              communitySharers={detailsSharing.sharers}
-              communitySharedByMe={detailsSharing.sharedByMe}
-              currentUserCommunityColor={currentUserColor}
-            />
-          )}
-        </aside>
-      )}
-
-      {discover.dependencyPrompt && (() => {
-        const t = discover.dependencyPrompt.mod.projectType || (discover.dependencyPrompt.mod as any).project_type || "mod";
-        const typeLabel = t === "resourcepack" ? "la textura" : t === "shader" ? "el shader" : "el mod";
-        
-        return (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-            <div 
-              className="w-full max-w-md p-7 rounded-[2.5rem] border shadow-2xl flex flex-col gap-6 animate-scale-in" 
-              style={{ 
-                background: isModern ? "#f0ede3" : "var(--fomo-secondary-bg)", 
-                borderColor: isModern ? "#d4cfc0" : "var(--fomo-border)" 
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-2xl ${isModern ? 'bg-amber-500/20 text-amber-600' : 'bg-amber-500/10 text-amber-400'}`}>
-                  <Workflow className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className={`font-headline text-xl ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>Dependencias Requeridas</h3>
-                  <p className={`text-xs ${isModern ? 'text-slate-600' : 'text-white/60'}`}>{discover.dependencyPrompt.mod.title} necesita otros mods para funcionar.</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-                {discover.dependencyPrompt.dependencies.map((dep: any) => (
-                  <div 
-                    key={dep.projectId} 
-                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
-                      isModern ? 'bg-white border-slate-200 shadow-sm' : 'bg-white/5 border-white/5'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/5">
-                      {dep.iconUrl ? (
-                        <img src={dep.iconUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-white/40">MOD</div>
-                      )}
-                    </div>
-                    <span className={`text-sm font-bold truncate ${isModern ? 'text-[#1e1b4b]' : 'text-white'}`}>{dep.title || dep.projectId}</span>
-                    <span className={`ml-auto text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
-                      isModern ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-red-500/20 text-red-300'
-                    }`}>Requerido</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className={`flex items-center justify-end gap-3 pt-4 border-t ${isModern ? 'border-slate-200' : 'border-white/5'}`}>
-                <button
-                  onClick={() => discover.setDependencyPrompt(null)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    isModern ? 'text-slate-500 hover:text-[#1e1b4b]' : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => discover.confirmDownloadWithDeps(false)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    isModern ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  Solo {typeLabel}
-                </button>
-                <button
-                  onClick={() => discover.confirmDownloadWithDeps(true)}
-                  className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
-                >
-                  Descargar todo ({discover.dependencyPrompt.dependencies.length + 1})
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </>
   );
 }
+
+export const FomoSidebar = React.memo(FomoSidebarInner);

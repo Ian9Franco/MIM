@@ -18,6 +18,7 @@ import { FollowedProjectCard, FollowedAuthorCard } from "./FomoFollowedComponent
 import { PillToggleGroup } from "../ui/primitives";
 import { FomoFollowedRankings } from "./FomoFollowedRankings";
 import { FomoFollowedShowcases } from "./FomoFollowedShowcases";
+import { buildShareMetaFromMod } from "@/lib/communityShareMeta";
 
 function platformKeyForMod(mod: { _source?: string }): "modrinth" | "curseforge" {
   return mod._source === "curseforge" ? "curseforge" : "modrinth";
@@ -108,22 +109,27 @@ export function FomoFollowedAuthors({
 
   const handleShareToCommunity = async () => {
     if (!shareModalItem || isSharing) return;
+    
+    // Optimistic UI: capturar item y cerrar modal al instante
+    const item = shareModalItem;
+    const commentText = shareComment;
+    setShareModalItem(null);
+    setShareComment("");
+    setIsSharing(true);
+
     try {
-      setIsSharing(true);
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user || null;
       if (!user) {
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
           detail: { text: "Tenés que iniciar sesión en la pestaña Comunidad para compartir.", type: "error" }
         }));
-        setShareModalItem(null);
+        setIsSharing(false);
         return;
       }
 
-      const item = shareModalItem;
-
       if (item.isAuthor) {
-        const summaryText = shareComment.trim() || "Autor de Minecraft";
+        const summaryText = commentText.trim() || "Autor de Minecraft";
         const { error } = await supabase.from("favorite_mods").insert({
           profile_id: user.id,
           mod_id: item.id,
@@ -137,7 +143,6 @@ export function FomoFollowedAuthors({
             window.dispatchEvent(new CustomEvent("fomo-show-status", {
               detail: { text: "Este creador ya está compartido en la comunidad.", type: "info" }
             }));
-            setShareModalItem(null);
             return;
           }
           throw error;
@@ -148,21 +153,26 @@ export function FomoFollowedAuthors({
         fetchCommunitySharingInfo();
         window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
       } else {
-        const summaryText = shareComment.trim() || (item.description || item.summary || "Mod de Minecraft");
+        const summaryText = buildShareMetaFromMod(item, {
+          comment:
+            commentText.trim() ||
+            (item.description || item.summary || "Mod de Minecraft"),
+          gameVersion: item.gameVersions?.[0] || item.gameVersion,
+          modloader: item.loader,
+        });
         const { error } = await supabase.from("favorite_mods").insert({
           profile_id: user.id,
           mod_id: item.projectId || item.id,
-          platform: item._source || 'modrinth',
+          platform: item._source || "modrinth",
           name: item.title || item.name || "Mod",
           icon_url: item.iconUrl || item.icon_url || null,
-          summary: summaryText
+          summary: summaryText,
         });
         if (error) {
           if (error.code === "23505") {
             window.dispatchEvent(new CustomEvent("fomo-show-status", {
               detail: { text: "Este mod ya está compartido en la comunidad.", type: "info" }
             }));
-            setShareModalItem(null);
             return;
           }
           throw error;
@@ -180,8 +190,6 @@ export function FomoFollowedAuthors({
       }));
     } finally {
       setIsSharing(false);
-      setShareModalItem(null);
-      setShareComment("");
     }
   };
 
@@ -213,7 +221,7 @@ export function FomoFollowedAuthors({
     return () => window.removeEventListener("fomo-refresh-sharing", handleRefresh);
   }, [fetchCommunitySharingInfo, subTab]);
 
-  const TABS = ["projects", "authors", "showcases", "history"];
+  const TABS = ["projects", "authors", "history"];
   const [direction, setDirection] = React.useState("forward");
   const prevTabRef = React.useRef(subTab);
 
@@ -281,6 +289,46 @@ export function FomoFollowedAuthors({
     void fetchCommunityRankings();
   }, [subTab, page, rankingsRetryKey]);
 
+  const communitySharedMap = React.useMemo(() => {
+    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: any[] }>();
+    for (const m of allSharedMods) {
+      const key = `${m.platform || "modrinth"}:${m.mod_id}`;
+      if (!map.has(key)) map.set(key, { isSharedByMe: false, sharedByOthers: [] });
+      const entry = map.get(key)!;
+      
+      if (m.profile_id === currentUser?.id) {
+        entry.isSharedByMe = true;
+      } else {
+        entry.sharedByOthers.push({
+          username: m.profiles?.username || "Usuario",
+          color: m.profiles?.color,
+          avatar_url: m.profiles?.avatar_url,
+        });
+      }
+    }
+    return map;
+  }, [allSharedMods, currentUser?.id]);
+
+  const communityAuthorSharedMap = React.useMemo(() => {
+    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: any[] }>();
+    for (const m of allSharedMods) {
+      const key = m.mod_id;
+      if (!map.has(key)) map.set(key, { isSharedByMe: false, sharedByOthers: [] });
+      const entry = map.get(key)!;
+      
+      if (m.profile_id === currentUser?.id) {
+        entry.isSharedByMe = true;
+      } else {
+        entry.sharedByOthers.push({
+          username: m.profiles?.username || "Usuario",
+          color: m.profiles?.color,
+          avatar_url: m.profiles?.avatar_url,
+        });
+      }
+    }
+    return map;
+  }, [allSharedMods, currentUser?.id]);
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
       <style>{`
@@ -307,7 +355,6 @@ export function FomoFollowedAuthors({
           options={[
             { value: "projects", label: `Proyectos (${followedMods.length})`, icon: <CookingPot className="w-4 h-4" /> },
             { value: "authors", label: `Autores (${followedAuthors.length})`, icon: <ChefHat className="w-4 h-4" /> },
-            { value: "showcases", label: "Showcases", icon: <TvMinimalPlay className="w-4 h-4" /> },
             { value: "history", label: "Rank/Historial", icon: <Timeline className="w-4 h-4" /> },
           ]} 
           value={subTab} 
@@ -332,16 +379,9 @@ export function FomoFollowedAuthors({
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredMods.map(mod => {
                   const pf = platformKeyForMod(mod);
-                  const isSharedByMe = allSharedMods.some(
-                    m => m.mod_id === mod.projectId && m.profile_id === currentUser?.id && m.platform === pf
-                  );
-                  const sharedByOthers = allSharedMods
-                    .filter(m => m.mod_id === mod.projectId && m.profile_id !== currentUser?.id && m.platform === pf)
-                    .map(m => ({
-                      username: m.profiles?.username || "Usuario",
-                      color: m.profiles?.color,
-                      avatar_url: m.profiles?.avatar_url,
-                    }));
+                  const shareData = communitySharedMap.get(`${pf}:${mod.projectId}`) || { isSharedByMe: false, sharedByOthers: [] };
+                  const isSharedByMe = shareData.isSharedByMe;
+                  const sharedByOthers = shareData.sharedByOthers;
                   return (
                     <FollowedProjectCard 
                       key={mod.projectId} 
@@ -391,14 +431,9 @@ export function FomoFollowedAuthors({
                   {followedAuthors.map((author, idx) => {
                     const icons = getAuthorIcons(author);
                     const authorName = typeof author === "string" ? author : author?.name;
-                    const isSharedByMe = allSharedMods.some(m => m.mod_id === authorName && m.profile_id === currentUser?.id);
-                    const sharedByOthers = allSharedMods
-                      .filter(m => m.mod_id === authorName && m.profile_id !== currentUser?.id)
-                      .map(m => ({
-                        username: m.profiles?.username || "Usuario",
-                        color: m.profiles?.color,
-                        avatar_url: m.profiles?.avatar_url,
-                      }));
+                    const shareData = communityAuthorSharedMap.get(authorName) || { isSharedByMe: false, sharedByOthers: [] };
+                    const isSharedByMe = shareData.isSharedByMe;
+                    const sharedByOthers = shareData.sharedByOthers;
                     return (
                       <FollowedAuthorCard 
                         key={authorName || `unknown-${idx}`} 
@@ -419,21 +454,6 @@ export function FomoFollowedAuthors({
           </div>
         )}
 
-        {subTab === "showcases" && (
-          <div key="showcases" className={`${animationClass} flex-1 flex flex-col min-h-[420px]`}>
-            <FomoFollowedShowcases
-              currentUser={currentUser}
-              allSharedVideos={allSharedVideos}
-              fetchCommunitySharingInfo={async () => {
-                await fetchCommunitySharingInfo();
-                window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
-              }}
-              onSearchProject={onSearchProject}
-              animationClass=""
-              currentUserColor={currentUserColor}
-            />
-          </div>
-        )}
 
         {subTab === "history" && (
           <FomoFollowedRankings 

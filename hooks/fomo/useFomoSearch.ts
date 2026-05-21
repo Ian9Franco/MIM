@@ -164,7 +164,7 @@ export function useFomoSearch(filters: any) {
     }
     const timer = setTimeout(() => {
       refetch();
-    }, 300);
+    }, 600);
     return () => clearTimeout(timer);
   }, [refetch]);
 

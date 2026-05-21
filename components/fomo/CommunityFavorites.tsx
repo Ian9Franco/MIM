@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { Heart, Search, RefreshCw, Puzzle, Sparkles, CircleFadingPlus } from "lucide-react";
+import { Search, RefreshCw, Puzzle, CircleFadingPlus } from "lucide-react";
+import { CommunityUserAvatar } from "./CommunityUserAvatar";
+import { CommunityDeleteButton } from "./CommunityDeleteButton";
 
 interface SharedFavorite {
   id: string;
@@ -22,9 +24,9 @@ interface SharedFavorite {
 interface CommunityFavoritesProps {
   cloudFavorites: SharedFavorite[];
   loadingFavorites: boolean;
-  selectedUserFilter: { username: string; type: 'mods' | 'videos' } | null;
-  setSelectedUserFilter: (val: { username: string; type: 'mods' | 'videos' } | null) => void;
-  onSearchProject?: (title: string, type?: string, source?: string, loader?: string, version?: string) => void;
+  currentUserId?: string;
+  onFavoriteDeleted?: (id: string) => void;
+  onOpenProfile?: (username: string) => void;
   onSearchAuthor: (author: string) => void;
 }
 
@@ -47,11 +49,45 @@ const formatSharedDate = (dateStr?: string) => {
 export function CommunityFavorites({
   cloudFavorites,
   loadingFavorites,
-  selectedUserFilter,
-  setSelectedUserFilter,
-  onSearchProject,
-  onSearchAuthor
+  currentUserId,
+  onFavoriteDeleted,
+  onOpenProfile,
+  onSearchAuthor,
 }: CommunityFavoritesProps) {
+  const [progress, setProgress] = React.useState(0);
+  const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    if (loadingFavorites) {
+      setProgress(10);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 95;
+          if (prev >= 80) return prev + 0.4;
+          if (prev >= 50) return prev + 1.2;
+          return prev + 3.8;
+        });
+      }, 100);
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setProgress(prev => {
+        if (prev > 0) return 100;
+        return 0;
+      });
+      const t = setTimeout(() => {
+        setProgress(0);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+    return () => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, [loadingFavorites]);
+
   const handleItemSearch = (fav: SharedFavorite) => {
     const isAuthor = fav.summary === "Autor de Minecraft" || fav.summary?.startsWith("¿Querés agregar") || fav.summary === "Autor de Minecraft";
     // Check if it's stored as author or minecraft creator
@@ -71,6 +107,18 @@ export function CommunityFavorites({
         <p className="text-[10px] text-white/40 mt-0.5">Descubre mods y creadores compartidos por la comunidad.</p>
       </div>
 
+      {/* Top Loading Progress Bar */}
+      <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-4">
+        <div 
+          className="h-full bg-gradient-to-r from-primary via-fuchsia-500 to-primary transition-all duration-300 ease-out shadow-[0_0_8px_rgba(187,150,228,0.8)]"
+          style={{ 
+            width: `${progress}%`,
+            opacity: progress > 0 && progress < 100 ? 1 : 0,
+            transition: progress === 100 ? "width 0.2s, opacity 0.5s 0.2s" : "width 0.4s ease-out"
+          }}
+        />
+      </div>
+
       {loadingFavorites ? (
         <div className="py-12 text-center text-white/40"><RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" /> Cargando compartidos...</div>
       ) : cloudFavorites.length === 0 ? (
@@ -78,87 +126,7 @@ export function CommunityFavorites({
           <CircleFadingPlus className="w-6 h-6 opacity-30" />
           Aún no hay contenido compartido.
         </div>
-      ) : selectedUserFilter && selectedUserFilter.type === 'mods' ? (() => {
-        const filteredFavs = cloudFavorites.filter(mod => (mod.profiles?.username || "Usuario") === selectedUserFilter.username);
-        const userProfile = filteredFavs[0]?.profiles;
-        const profileColor = userProfile?.color;
-        const profileAvatar = userProfile?.avatar_url;
-
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-white/5 relative overflow-hidden bg-white/4">
-              <div 
-                className="absolute inset-0 opacity-15"
-                style={{
-                  background: `linear-gradient(135deg, ${profileColor || 'var(--primary)'} 0%, transparent 100%)`
-                }}
-              />
-              <button 
-                onClick={() => setSelectedUserFilter(null)}
-                className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all text-[11px] font-bold cursor-pointer relative z-10"
-              >
-                ← Volver
-              </button>
-              <div className="flex items-center gap-3 relative z-10 pl-2">
-                <div 
-                  className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm uppercase border overflow-hidden shrink-0 bg-white/5"
-                  style={{ 
-                    borderColor: profileColor || 'var(--primary)',
-                  }}
-                >
-                  {profileAvatar ? (
-                    <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (selectedUserFilter.username || "U").charAt(0)
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Compartidos de @{selectedUserFilter.username}</h3>
-                  <p className="text-[10px] text-white/40 mt-0.5">{filteredFavs.length} items compartidos</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredFavs.map((fav) => {
-                const isAuthor = fav.summary === "Autor de Minecraft";
-                return (
-                  <div key={fav.id} className="p-4 rounded-2xl bg-white/4 border border-white/5 hover:border-primary/20 transition-all flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
-                      {fav.icon_url ? (
-                        <img src={fav.icon_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Puzzle className="w-5 h-5 opacity-40" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-white truncate">{fav.name}</h4>
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 uppercase opacity-60">
-                          {isAuthor ? "Autor" : fav.platform}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-white/50 mt-1 line-clamp-1">{fav.summary || ""}</p>
-                      {fav.created_at && (
-                        <span className="text-[8px] text-white/25 block mt-0.5 font-medium">
-                          Compartido el {formatSharedDate(fav.created_at)}
-                        </span>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => handleItemSearch(fav)}
-                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer"
-                      title={isAuthor ? "Buscar autor en la app" : "Buscar mod en la app"}
-                    >
-                      <Search className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })() : (() => {
+      ) : (() => {
         const groups: Record<string, SharedFavorite[]> = {};
         cloudFavorites.forEach(fav => {
           const username = fav.profiles?.username || "Usuario";
@@ -178,32 +146,34 @@ export function CommunityFavorites({
               return (
                 <div key={username} className="space-y-4">
                   <div className="flex items-center justify-between p-3.5 bg-white/4 rounded-2xl border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm uppercase border overflow-hidden shrink-0"
-                        style={{ 
-                          backgroundColor: profileColor || 'var(--primary)',
-                          borderColor: profileColor || 'var(--primary)',
-                          color: profileColor ? '#000000' : 'var(--primary-foreground)'
-                        }}
-                      >
-                        {profileAvatar ? (
-                          <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          (username || "U").charAt(0)
-                        )}
-                      </div>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onOpenProfile?.(username)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") onOpenProfile?.(username);
+                      }}
+                      className="flex items-center gap-3 cursor-pointer text-left"
+                    >
+                      <CommunityUserAvatar
+                        username={username}
+                        avatarUrl={profileAvatar}
+                        color={profileColor}
+                        size="sm"
+                        interactive={false}
+                      />
                       <div>
-                        <span className="text-xs font-bold text-white block">@{username}</span>
-                        <span className="text-[10px] text-white/40 block mt-0.5">Compartió {userFavs.length} {userFavs.length === 1 ? 'item' : 'items'}</span>
+                        <span className="text-xs font-bold text-white block hover:text-primary transition-colors">@{username}</span>
+                        <span className="text-[10px] text-white/40 block mt-0.5">Compartió {userFavs.length} {userFavs.length === 1 ? "item" : "items"}</span>
                       </div>
                     </div>
                     {userFavs.length > 3 && (
-                      <button 
-                        onClick={() => setSelectedUserFilter({ username, type: 'mods' })}
+                      <button
+                        type="button"
+                        onClick={() => onOpenProfile?.(username)}
                         className="px-3.5 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold transition-all cursor-pointer bg-transparent"
                       >
-                        Ver todos (+{userFavs.length - 3})
+                        Ver perfil (+{userFavs.length - 3})
                       </button>
                     )}
                   </div>
@@ -235,13 +205,23 @@ export function CommunityFavorites({
                                 {formatSharedDate(fav.created_at)}
                               </span>
                             ) : <span />}
-                            <button 
-                              onClick={() => handleItemSearch(fav)}
-                              className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                              title={isAuthor ? "Buscar autor en la app" : "Buscar mod en la app"}
-                            >
-                              Buscar <Search className="w-3 h-3" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {currentUserId && fav.profile_id === currentUserId && (
+                                <CommunityDeleteButton
+                                  type="favorite"
+                                  id={fav.id}
+                                  onDeleted={onFavoriteDeleted}
+                                />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleItemSearch(fav)}
+                                className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                                title={isAuthor ? "Buscar autor en la app" : "Buscar mod en la app"}
+                              >
+                                Buscar <Search className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

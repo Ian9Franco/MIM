@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Loader (AND with the rest)
-  if (projectType === "mod" && loader !== "unknown") {
+  if (projectType === "mod" && loader !== "unknown" && loader !== "all") {
     if (loader.includes(",")) {
       const loaders = loader.split(",");
       facetsArray.push(loaders.map((l: string) => `categories:${l.trim()}`));

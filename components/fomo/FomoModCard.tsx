@@ -8,6 +8,11 @@ import { COLORS } from "@/theme/tokens";
 import { Chip } from "../ui/primitives";
 import { ModrinthIcon, CurseForgeIcon } from "./parts/FomoPlatformIcons";
 import { FomoCompatibilityBadge } from "./parts/FomoCompatibilityBadge";
+import {
+  getBannerFallbackStyle,
+  inferPrimaryProjectType,
+  resolveModBannerUrl,
+} from "@/lib/fomoModBanner";
 
 /**
  * @fileoverview Tarjeta Visual de Búsqueda y Descubrimiento (FOMO).
@@ -81,40 +86,9 @@ export const FomoModCard = memo(function FomoModCard({
     c.toLowerCase() !== "resourcepack"
   ).slice(0, 2) || [];
   
-  const bannerUrl = mod.gallery?.[0];
-  const primaryType = sortedTypes[0] || "mod";
-  
-  // Color base del banner según el tipo principal
-  let bannerBgColor = "#18181b";
-  let fallbackTexture = {};
-
-  if (primaryType === "datapack") {
-    bannerBgColor = "#022c22"; // Verde esmeralda oscuro
-    fallbackTexture = {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H8v-2h12V9.5h-2V7h2V5H8v-2h12V.5h-2V-2h2v2h2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2.5H20zm0 0V23h20v2H20v2h12v2H20v2h12v2H20v2h12v2H20v2.5h2V42h-2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2.5H20z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-    };
-  } else if (primaryType === "shader") {
-    bannerBgColor = "#2e1065"; // Violeta/Morado oscuro
-    fallbackTexture = {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.392-5.351-2.352-10.051-6.102-13.799C11.332 2.453 6.136.634 0 0h100c-6.136.634-11.332 2.453-15.082 6.201C81.168 9.949 78.424 14.649 78.816 20h-57.632z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-    };
-  } else if (primaryType === "textura" || primaryType === "resourcepack") {
-    bannerBgColor = "#451a03"; // Ámbar/Marrón oscuro
-    fallbackTexture = {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-    };
-  } else if (primaryType === "modpack") {
-    bannerBgColor = "#172554"; // Azul oscuro
-    fallbackTexture = {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='100' viewBox='0 0 60 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 50L0 67.5V100l30-17.5V50zm0-50L0 17.5V50l30-17.5V0zm30 17.5L30 35v33.25l30-17.5V17.5zM30 67.5L0 85v33.25l30-17.5V67.5z'/%3E%3Cpath fill-opacity='0.04' d='M30 50l30 17.5V100L30 82.5V50zm0-50l30 17.5V50L30 32.5V0zm-30 17.5L30 0v33.25L0 50V17.5zM0 67.5L30 50v33.25L0 100V67.5z'/%3E%3Cpath fill-opacity='0.08' d='M30 50L0 32.5l30-17.5 30 17.5L30 50zm0-50L0-17.5l30-17.5 30 17.5L30 0zm0 100L0 82.5l30-17.5 30 17.5L30 100z'/%3E%3C/g%3E%3C/svg%3E")`,
-    };
-  } else {
-    // Mod (Hexagon / Honeycomb Pattern)
-    bannerBgColor = "#500724"; // Rosa/Fucsia oscuro (Rosa 950)
-    fallbackTexture = {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.65V49h-2z'/%3E%3C/g%3E%3C/svg%3E")`,
-    };
-  }
+  const bannerUrl = resolveModBannerUrl(mod);
+  const primaryType = sortedTypes[0] || inferPrimaryProjectType(mod);
+  const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(primaryType);
 
   return (
     <article 
@@ -165,9 +139,11 @@ export const FomoModCard = memo(function FomoModCard({
                 e.stopPropagation();
                 const first = followedByUsers[0];
                 if (first?.username) {
-                  window.dispatchEvent(new CustomEvent("fomo-community-apply-filter", {
-                    detail: { username: first.username }
-                  }));
+                  window.dispatchEvent(
+                    new CustomEvent("fomo-open-community-user", {
+                      detail: { username: first.username },
+                    })
+                  );
                 }
               }}
               title={`Ver perfil de @${followedByUsers[0]?.username}`}
@@ -190,7 +166,7 @@ export const FomoModCard = memo(function FomoModCard({
                   </div>
                 ))}
               </div>
-              <span className="text-[7px] font-black uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              <span className="fomo-badge-seg-label text-[7px] font-black uppercase tracking-wider">
                 Seg{followedByUsers.length > 1 ? ` x${followedByUsers.length}` : ""}
               </span>
             </div>
@@ -201,20 +177,20 @@ export const FomoModCard = memo(function FomoModCard({
         <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
-            className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
-              isSelected ? 'bg-primary border-primary text-white' : 'bg-black/60 border-white/20 text-white hover:bg-black/80'
+            className={`fomo-action-btn w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
+              isSelected ? 'bg-primary border-primary text-white' : 'fomo-action-btn--list bg-black/60 border-white/20 text-white hover:bg-black/80'
             }`}
             title={isSelected ? "Quitar de la lista" : "Añadir a la lista"}
           >
-            <ListTree className="w-4 h-4" style={{ color: '#ffffff' }} />
+            <ListTree className="w-4 h-4" />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
             disabled={isDownloading} 
-            className="w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500 transition-all shadow-xl hover:scale-110 active:scale-95"
+            className="fomo-action-btn fomo-action-btn--download w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500 transition-all shadow-xl hover:scale-110 active:scale-95"
             title="Descargar"
           >
-            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#ffffff' }} /> : <Download className="w-4 h-4" style={{ color: '#ffffff' }} />}
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           </button>
         </div>
       </div>

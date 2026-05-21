@@ -54,7 +54,7 @@ export class CurseForgeService {
     }
     
     // modLoaderType solo es válido para la clase 'Mods' (6)
-    if (classId === 6) {
+    if (classId === 6 && loader && loader !== "all" && loader !== "unknown") {
       query.set("modLoaderType", (LOADER_TO_CF_ID[loader] || 1).toString());
     }
 

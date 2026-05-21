@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Project, PackHealthReport } from "@/lib/types";
 import { incidentManager } from "@/lib/incidentManager";
 import { useStaging } from "@/hooks/useStaging";
@@ -24,6 +24,8 @@ export function useRootLayoutManager() {
   const [watcherStatusLabel, setWatcherStatusLabel] = useState("Watcher");
   const [customWatcherStatus, setCustomWatcherStatus] = useState<string | null>(null);
   const staging = useStaging();
+  const stagingRef = useRef(staging);  // stable ref — avoids re-registering event listeners
+  useEffect(() => { stagingRef.current = staging; });
 
   // Listen for pending files updates
   useEffect(() => {
@@ -129,7 +131,7 @@ export function useRootLayoutManager() {
     window.addEventListener("staging-status-changed", handleStagingStatus);
     window.addEventListener("pack-health-toggle", handlePackHealthToggle);
     
-    if (staging.hasFiles) setHasStagingFiles(true);
+    if (stagingRef.current.hasFiles) setHasStagingFiles(true);
 
     return () => {
       window.removeEventListener("alert-sidebar-toggle", handleAlertToggle);
@@ -140,17 +142,19 @@ export function useRootLayoutManager() {
       window.removeEventListener("staging-status-changed", handleStagingStatus);
       window.removeEventListener("pack-health-toggle", handlePackHealthToggle);
     };
-  }, [staging.hasFiles]);
+  }, []); // EMPTY — staging.hasFiles now read via ref
 
-  const handleToggleUI = (type: 'fomo' | 'sage' | 'tweak' | 'alerts', isOpen: boolean) => {
+  const handleToggleUI = useCallback((type: 'fomo' | 'sage' | 'tweak' | 'alerts', isOpen: boolean) => {
     const setters: Record<string, (v: boolean) => void> = { fomo: setFomoOpen, sage: setSageOpen, tweak: setTweakOpen, alerts: setAlertSidebarOpen };
     const events: Record<string, string> = { fomo: "fomo-toggle", sage: "sage-toggle", tweak: "tweak-toggle", alerts: "alert-sidebar-toggle" };
     
     setters[type](isOpen);
-    const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
-    const audio = new Audio(soundFile);
-    audio.volume = 0.35;
-    audio.play().catch(() => {});
+    if (type !== "alerts") {
+      const soundFile = isOpen ? "/fomo_sound.mp3" : "/fomoff.mp3";
+      const audio = new Audio(soundFile);
+      audio.volume = 0.35;
+      audio.play().catch(() => {});
+    }
 
     window.dispatchEvent(new CustomEvent(events[type], { detail: isOpen }));
     
@@ -158,7 +162,7 @@ export function useRootLayoutManager() {
       Object.keys(setters).forEach(k => { if (k !== type) { setters[k](false); window.dispatchEvent(new CustomEvent(events[k], { detail: false })); } });
       setPackHealthOpen(false);
     }
-  };
+  }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);

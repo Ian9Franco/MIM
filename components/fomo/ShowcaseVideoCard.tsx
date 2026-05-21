@@ -70,7 +70,7 @@ interface ShowcaseVideoCardProps {
   currentUserColor?: string | null;
 }
 
-export function ShowcaseVideoCard({
+function ShowcaseVideoCardInner({
   video,
   currentUser,
   allSharedVideos,
@@ -119,9 +119,8 @@ export function ShowcaseVideoCard({
       }));
       return;
     }
-    const comment = prompt("¿Querés agregar un comentario opcional sobre este video?");
-    if (comment === null) return; // cancelled
-    const descText = comment.trim() || "Compartido desde Seguidos/Showcases";
+    // En Electron, prompt() está bloqueado. Usamos una descripción por defecto.
+    const descText = "Compartido desde Seguidos/Showcases";
 
     try {
       const { error } = await supabase
@@ -293,3 +292,5 @@ export function ShowcaseVideoCard({
     </div>
   );
 }
+
+export const ShowcaseVideoCard = React.memo(ShowcaseVideoCardInner);

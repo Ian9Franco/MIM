@@ -76,7 +76,12 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
       }
     } catch (err: any) {
       console.error("[AuthError]:", err);
-      setErrorMsg(err.message || "Ocurrió un error inesperado al procesar la solicitud.");
+      const message = err?.message?.toString() || "";
+      if (message.includes("Invalid login credentials")) {
+        setErrorMsg("Usuario o contraseña incorrectos. Verificá tus datos.");
+      } else {
+        setErrorMsg(message || "Ocurrió un error inesperado al procesar la solicitud.");
+      }
     } finally {
       setLoading(false);
     }

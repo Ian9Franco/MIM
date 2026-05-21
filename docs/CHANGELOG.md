@@ -1,12 +1,44 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** 9.0.1 (Comunidad Online & Showcases PiP)  
+> **Versión Actual:** 9.1.0 (Comunidad Online & Showcases PiP)  
 > **Última actualización:** 2026-05-21
 
 ---
 
-## 🚀 Versión 8.0.1 — Comunidad Online & Showcases PiP (2026-05-20)
+## 🚀 Versión 9.0.1 — Correcciones de estabilidad FOMO Cloud (2026-05-21)
+
+### 🛠️ Ajustes y refinamientos
+- Correcciones de bugs menores en `CommunityPanel.tsx` y `FomoSidebarDiscoverBranch.tsx`.
+- Mejoras en la sincronización de perfil comunitario y guardado de datos de club en `lib/clubService.ts`.
+- Ajustes de compatibilidad UI/UX para el login comunitario y la edición de perfil.
+
+---
+
+## 🚀 Versión 9.0.0 — FOMO Cloud Online y Social Discovery (2026-05-20)
+
+### 🌐 FOMO Cloud / Comunidad Online
+- Activación completa de FOMO Cloud con autenticación Supabase y perfil comunitario.
+- Incorporación de nuevos componentes de comunidad: `LoginPortal`, `CommunityPanel`, `CommunityClubs`, `CommunityModPool`, `CommunityVideos`, `CommunityUserProfile`, `CommunityFavorites`, `CommunityEditProfileModal` y `CommunityDeleteButton`.
+- Implementación de clubes públicos de usuario mediante `profiles.club_data` para almacenar mods seguidos, autores favoritos y canales de YouTube.
+- Nuevo flujo de navegación en el sidebar con `FomoSidebarCommunityBranch` y `FomoSidebarDiscoverBranch`.
+- Soporte para edición de perfil de usuario en la nube, avatar, color y username con persistencia en Supabase.
+
+### 📊 Descubrimiento social y rankings
+- Nuevo endpoint `GET /api/fomo/community-rankings` para mostrar los mods más compartidos por la comunidad usando la tabla `favorite_mods`.
+- Rangos comunitarios agregados con conteo de `mod_id` + `platform`.
+
+### ⚡ Descarga segura de modpacks
+- Nuevo endpoint `POST /api/fomo/modpack-download` que resuelve descargas desde Modrinth y CurseForge, descarga JARs y guarda hashes SHA1.
+- Descargas orquestadas con espera entre peticiones para proteger las cuotas de APIs externas.
+
+### 🎥 Showcases de YouTube y extracción de mods
+- Nuevo endpoint `GET /api/fomo/youtube-showcase` basado en `yt-dlp` para extraer datos de videos y enlaces de mod descriptions.
+- Cache local por canal y tipo (`videos`/`shorts`) para reducir llamadas repetidas.
+
+---
+
+## 🚀 Versión 8.0.1 — Comunidad Online & Showcases PiP (2026-05-20)"
 
 ### 👥 FOMO Comunidad Online (Supabase)
 - **Integración de Base de Datos en la Nube**: Conexión con Supabase para habilitar un feed social interactivo de mods compartidos, creadores y modpacks.

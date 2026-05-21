@@ -84,33 +84,89 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Supabase fires INITIAL_SESSION immediately on mount, then may also fire
-    // SIGNED_IN for the same user. The ref guard ensures fetchProfile runs
-    // only once per unique user ID regardless of how many events fire.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
+    let mounted = true;
 
-          if (currentUser) {
-            if (currentUser.id !== lastFetchedUserIdRef.current) {
-              lastFetchedUserIdRef.current = currentUser.id;
-              await fetchProfile(currentUser.id);
-            }
-          } else {
-            lastFetchedUserIdRef.current = null;
-            setProfile(null);
+    const initSession = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Supabase auth session error:", error);
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          lastFetchedUserIdRef.current = null;
+          return;
+        }
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          if (currentUser.id !== lastFetchedUserIdRef.current) {
+            lastFetchedUserIdRef.current = currentUser.id;
+            await fetchProfile(currentUser.id);
           }
-        } catch (err) {
-          console.error("Error in onAuthStateChange:", err);
-        } finally {
+        } else {
+          lastFetchedUserIdRef.current = null;
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("Unable to initialize Supabase session:", err);
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        lastFetchedUserIdRef.current = null;
+      } finally {
+        if (mounted) {
           setLoading(false);
         }
+      }
+    };
+
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        void (async () => {
+          try {
+            if (event === 'TOKEN_REFRESH_ERROR') {
+              console.warn('Supabase token refresh failed; clearing local session.');
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+              lastFetchedUserIdRef.current = null;
+              return;
+            }
+
+            const currentUser = session?.user ?? null;
+            setUser(currentUser);
+
+            if (currentUser) {
+              if (currentUser.id !== lastFetchedUserIdRef.current) {
+                lastFetchedUserIdRef.current = currentUser.id;
+                await fetchProfile(currentUser.id);
+              }
+            } else {
+              lastFetchedUserIdRef.current = null;
+              setProfile(null);
+            }
+          } catch (err) {
+            console.error("Error in onAuthStateChange:", err);
+          } finally {
+            if (mounted) {
+              setLoading(false);
+            }
+          }
+        })();
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

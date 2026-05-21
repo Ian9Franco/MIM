@@ -2,7 +2,7 @@
 
 > Guía completa de integraciones API: Modrinth, CurseForge, VirusTotal y Supabase Community.  
 > Estrategias de optimización, rate limiting y seguridad.  
-> **Versión:** 8.0.1 | **Última actualización:** 2026-05-20
+> **Versión:** 9.0.1 | **Última actualización:** 2026-05-21
 
 ---
 
@@ -628,6 +628,87 @@ Cuando un usuario descarga un modpack compartido, el backend encola secuencialme
 | Sync de followed_mods | 300 requests | 1 request batch | 99.6% |
 | Memory usage | 200-300MB | 40-60MB | 80% |
 | Tiempo de carga | 3-5 min | 15-30 seg | 90% |
+
+---
+
+## 10. FOMO Cloud API Endpoints
+
+### 10.1 Community Rankings
+`GET /api/fomo/community-rankings`
+
+- Retorna los mods más compartidos por la comunidad a partir de `favorite_mods`.
+- Agrupa por `platform` + `mod_id` y ordena por cantidad de veces que cada mod fue marcado como favorito.
+- Respuesta típica:
+```json
+{
+  "rankings": {
+    "mod": [
+      {
+        "count": 12,
+        "mod": {
+          "projectId": "fabric-api",
+          "title": "Fabric API",
+          "iconUrl": "https://...",
+          "_source": "modrinth"
+        }
+      }
+    ]
+  }
+}
+```
+
+### 10.2 Descarga Segura de Modpacks
+`POST /api/fomo/modpack-download`
+
+- Consume un manifiesto de mods y resuelve sus descargas desde Modrinth o CurseForge.
+- Guarda los archivos descargados en la carpeta de descargas local configurada por el usuario.
+- Calcula o reutiliza SHA1 para cada descarga y enriquece la caché técnica del proyecto.
+
+**Body**:
+```json
+{
+  "mods": [
+    {
+      "id": "fabric-api",
+      "name": "Fabric API",
+      "fileName": "fabric-api-0.77.0.jar",
+      "platform": "modrinth",
+      "sha1": "...",
+      "downloadUrl": "https://..."
+    }
+  ],
+  "loader": "fabric",
+  "gameVersion": "1.20.1"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "succeeded": 4,
+  "failed": 0,
+  "total": 4,
+  "downloadsPath": "C:\\Users\\...\\Downloads",
+  "results": [
+    { "name": "Fabric API", "ok": true }
+  ]
+}
+```
+
+### 10.3 YouTube Showcase Extraction
+`GET /api/fomo/youtube-showcase?channel={url}&limit={n}&cursor={p}&type={videos|shorts}`
+
+- Usa `yt-dlp` para obtener lista de videos y extraer metadata de cada video.
+- Normaliza URLs de canales y soporta `videos` y `shorts`.
+- Extrae enlaces de Modrinth/CurseForge de la descripción mediante regex y devuelve `modSlugs`.
+- Cachea resultados localmente en la carpeta portable de la app para reducir consultas repetidas.
+
+**Parámetros**:
+- `channel`: URL o handle del canal de YouTube.
+- `limit`: máximo 20 elementos por petición.
+- `cursor`: página/offset de la lista.
+- `type`: `videos` o `shorts`.
 
 ---
 

@@ -170,28 +170,16 @@ function FomoSidebarInner({
 
   const onboardingSteps = [
     {
-      target: "#onboarding-fomo-tabs",
-      title: "Navegación FOMO",
-      content:
-        "Desde acá podés moverte entre Spotlight, Explorar, Colecciones, Seguidos y FOMO Cloud.",
-    },
-    {
-      target: "#onboarding-fomo-community",
-      title: "FOMO Cloud",
-      content:
-        "La nube de la comunidad: compartí mods, descubrí showcases y explorá los clubs de otros jugadores.",
-    },
-    {
-      target: "#onboarding-fomo-community-tabs",
-      title: "FOMO Cloud — secciones",
-      content:
-        "Pool (mods compartidos), Showcases (videos de YouTube) y Clubs (lo que cada usuario sigue y guarda). Tocá un avatar para ver el perfil completo.",
-    },
-    {
       target: "#onboarding-fomo-spotlight",
       title: "Spotlight",
       content:
         "Acá ves los mods destacados del momento, selecciones de la comunidad y carruseles temáticos.",
+    },
+    {
+      target: "#onboarding-fomo-showcases",
+      title: "Showcases",
+      content:
+        "Explorá los mejores videos y showcases compartidos por la comunidad.",
     },
     {
       target: "#onboarding-fomo-discover",
@@ -200,9 +188,8 @@ function FomoSidebarInner({
     },
     {
       target: "#onboarding-fomo-collections",
-      title: "Mis Colecciones",
-      content:
-        "Acá podés crear y gestionar tus propias listas de mods para instalarlos todos juntos.",
+      title: "Colecciones",
+      content: "Acá podés crear y organizar tus propias listas de mods.",
     },
     {
       target: "#onboarding-fomo-followed",
@@ -210,10 +197,10 @@ function FomoSidebarInner({
       content: "Acá ves las novedades de los autores y mods que decidiste seguir.",
     },
     {
-      target: "#onboarding-fomo-details",
-      title: "Detalles del Mod",
+      target: "#onboarding-fomo-community",
+      title: "FOMO Cloud",
       content:
-        "Cuando hacés clic en un mod, se abre este panel lateral con las versiones disponibles y dependencias.",
+        "Por último llegás a FOMO Cloud: pool, showcases y clubs de la comunidad.",
     },
   ];
 
@@ -514,15 +501,12 @@ function FomoSidebarInner({
               localStorage.setItem("onboarding_fomo", "true");
             }}
             onStepChange={(step) => {
-              if (step === 1 || step === 2) setMode("community");
-              if (step === 3) setMode("spotlight");
-              if (step === 4) setMode("discover");
-              if (step === 5) setMode("collections");
-              if (step === 6) setMode("followed");
-              if (step === 7) {
-                setMode("discover");
-                window.dispatchEvent(new CustomEvent("fomo-onboarding-open-details"));
-              }
+              if (step === 0) setMode("spotlight");
+              if (step === 1) setMode("showcases");
+              if (step === 2) setMode("discover");
+              if (step === 3) setMode("collections");
+              if (step === 4) setMode("followed");
+              if (step === 5) setMode("community");
             }}
           />
         )}

@@ -184,21 +184,36 @@ Colocaremos el código en las siguientes ubicaciones para mantener la consistenc
 d:\.mine\manager\
 ├── app/
 │   ├── api/
-│   │   └── community/
-│   │       ├── download-queue/      # API para orquestar descargas controladas
+│   │   └── fomo/
+│   │       ├── community-rankings/   # Rankings sociales vía Supabase
 │   │       │   └── route.ts
-│   │       └── modpacks/            # Backend opcional para transacciones seguras
+│   │       ├── modpack-download/      # Orquestador de descargas de modpacks
+│   │       │   └── route.ts
+│   │       └── youtube-showcase/      # Extracción de showcases y mods desde YouTube
 │   │           └── route.ts
 ├── components/
-│   ├── community/                   # UI del sistema online
-│   │   ├── CommunityPanel.tsx       # Vista principal (Pestaña en FOMO)
-│   │   ├── LoginPortal.tsx          # Pantalla de Login/Registro Glassmorphic
-│   │   ├── ModpackDownloader.tsx    # Barra de progreso con ETA y cola
-│   │   └── ShowcaseVideoShare.tsx   # Compartir enlaces de YouTube
+│   ├── fomo/                        # UI del sistema FOMO Cloud
+│   │   ├── CommunityPanel.tsx       # Vista principal y pestañas comunitarias
+│   │   ├── LoginPortal.tsx          # Pantalla de login/registro comunitario
+│   │   ├── CommunityClubs.tsx       # Clubs públicos de usuario
+│   │   ├── CommunityFavorites.tsx   # Favoritos compartidos por la comunidad
+│   │   ├── CommunityVideos.tsx      # Lista de videos Showcase
+│   │   ├── CommunityUserProfile.tsx # Perfil de usuario comunitario
+│   │   └── CommunityModPool.tsx     # Grilla de mods seguidos y recomendados
 └── lib/
-    ├── downloadQueue.ts             # Gestor secuencial de descargas con delay
-    └── supabaseClient.ts            # Cliente Supabase (Creado previamente)
+    ├── supabaseClient.ts            # Cliente Supabase centralizado
 ```
+
+### 📌 Nuevos endpoints de FOMO Cloud
+- `GET /api/fomo/community-rankings`: Rankings sociales de mods a partir de `favorite_mods`.
+- `POST /api/fomo/modpack-download`: Descarga modpacks resolviendo mod URLs de Modrinth/CurseForge y guardando JARs localmente.
+- `GET /api/fomo/youtube-showcase`: Extrae datos de videos y mods desde YouTube usando `yt-dlp` y cache local.
+
+### 🗄️ Nuevos campos y tablas de Supabase para comunidad
+- `profiles.club_data` (`jsonb`): snapshot de mods seguidos, autores y canales de YouTube de cada usuario.
+- `favorite_mods`: mods compartidos/favoritos de usuario.
+- `showcase_videos`: videos de Showcase cargados por usuarios.
+- `modpack_builds`: manifest y overrides de modpacks ligeros.
 
 ---
 

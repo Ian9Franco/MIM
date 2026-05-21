@@ -148,7 +148,7 @@ export function CommunityModPool({
           <Blocks className="w-4 h-4 text-primary" />
           Pool
         </h3>
-        <p className="text-[10px] text-white/40 mt-0.5">
+        <p className="text-xs text-white/40 mt-0.5">
           Mods compartidos por la comunidad. Ordenados por versión de Minecraft, modloader y fecha.
         </p>
       </div>
@@ -160,7 +160,7 @@ export function CommunityModPool({
             key={t.id}
             type="button"
             onClick={() => setTypeFilter(t.id)}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
               typeFilter === t.id
                 ? "bg-primary/20 border-primary/40 text-primary"
                 : "bg-white/5 border-white/10 text-white/50 hover:text-white"
@@ -173,7 +173,7 @@ export function CommunityModPool({
           <select
             value={versionFilter}
             onChange={(e) => setVersionFilter(e.target.value)}
-            className="ml-auto bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-[10px] text-white"
+            className="ml-auto bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white"
           >
             <option value="all">Todas las versiones</option>
             {versions.map((v) => (
@@ -187,7 +187,7 @@ export function CommunityModPool({
           <select
             value={loaderFilter}
             onChange={(e) => setLoaderFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-[10px] text-white"
+            className="bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white"
           >
             <option value="all">Todos los loaders</option>
             {loaders.map((l) => (
@@ -282,26 +282,26 @@ export function CommunityModPool({
                           <h4 className="text-xs font-bold text-white truncate">{fav.name}</h4>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {meta.gameVersion && (
-                              <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/30 text-white/60">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-black/30 text-white/60">
                                 MC {meta.gameVersion}
                               </span>
                             )}
                             {meta.modloader && (
-                              <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/30 text-primary/80 uppercase">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-black/30 text-primary/80 uppercase">
                                 {meta.modloader}
                               </span>
                             )}
                             {meta.projectType && meta.projectType !== "mod" && (
-                              <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 uppercase">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-white/5 text-white/50 uppercase">
                                 {meta.projectType}
                               </span>
                             )}
                           </div>
                           {summaryText && (
-                            <p className="text-[9px] text-white/45 line-clamp-1 mt-1">{summaryText}</p>
+                            <p className="text-xs text-white/45 line-clamp-1 mt-1">{summaryText}</p>
                           )}
                           {fav.created_at && (
-                            <span className="text-[8px] text-white/25 block mt-1">
+                            <span className="text-[10px] text-white/25 block mt-1">
                               {formatSharedDate(fav.created_at)}
                             </span>
                           )}

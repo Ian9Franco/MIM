@@ -127,7 +127,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
               </span>
               Clubs de la comunidad
             </h3>
-            <p className="text-[10px] text-white/45 mt-1 max-w-md leading-relaxed">
+            <p className="text-xs text-white/45 mt-1 max-w-md leading-relaxed">
               Cada usuario publica su club: proyectos y autores de Seguidos, más canales de
               YouTube para showcases.
             </p>
@@ -137,7 +137,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
               type="button"
               onClick={handleSync}
               disabled={syncing}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 border border-primary/30 text-primary text-[10px] font-bold hover:bg-primary/25 transition-all cursor-pointer disabled:opacity-50"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/25 transition-all cursor-pointer disabled:opacity-50"
               title="Subir tu Seguidos + canales YouTube al perfil público"
             >
               {syncing ? (
@@ -158,7 +158,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
               key={t.id}
               type="button"
               onClick={() => setTypeFilter(t.id)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                 typeFilter === t.id
                   ? "bg-primary/20 border-primary/40 text-primary"
                   : "bg-white/5 border-white/10 text-white/50 hover:text-white"

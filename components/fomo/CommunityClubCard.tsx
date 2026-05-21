@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Club,
   UserRound,
@@ -57,7 +58,11 @@ export function CommunityClubCard({
   };
 
   return (
-    <article
+    <motion.article
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       className={`group flex flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] overflow-hidden transition-all duration-300 hover:border-primary/30 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)] ${
         compact ? "min-h-0" : ""
       }`}
@@ -85,10 +90,10 @@ export function CommunityClubCard({
           interactive={false}
         />
         <div className="min-w-0 flex-1">
-          <span className="text-xs font-bold text-white block truncate group-hover:text-primary transition-colors">
+          <span className="text-sm font-bold text-white block truncate group-hover:text-primary transition-colors">
             @{member.username}
           </span>
-          <span className="text-[9px] text-white/45 flex items-center gap-1 mt-0.5">
+          <span className="text-[10px] text-white/45 flex items-center gap-1 mt-0.5">
             <Club className="w-3 h-3 text-primary shrink-0" />
             {totalItems === 0 ? "Club vacío" : `${totalItems} en el club`}
           </span>
@@ -109,11 +114,11 @@ export function CommunityClubCard({
       </div>
 
       <div
-        className={`p-3 space-y-3 text-[10px] ${compact && !expanded ? "max-h-[148px] overflow-hidden" : "max-h-[220px] overflow-y-auto scrollbar-thin"}`}
+        className={`p-3 space-y-3 text-sm ${compact && !expanded ? "max-h-[148px] overflow-hidden" : "max-h-[220px] overflow-y-auto scrollbar-thin"}`}
       >
         {previewAuthors.length > 0 && (
           <section>
-            <p className="text-[9px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
               <UserRound className="w-3 h-3 text-primary/70" /> Autores
               <span className="text-white/25 font-bold normal-case">({club.authors.length})</span>
             </p>
@@ -137,7 +142,7 @@ export function CommunityClubCard({
 
         {previewChannels.length > 0 && (
           <section>
-            <p className="text-[9px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
               <TvMinimalPlay className="w-3 h-3 text-red-400/80" /> YouTube
               <span className="text-white/25 font-bold normal-case">
                 ({club.youtubeChannels.length})
@@ -151,7 +156,7 @@ export function CommunityClubCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-200/90 hover:bg-red-500/20 inline-flex items-center gap-1 max-w-full truncate text-[9px]"
+                  className="px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-200/90 hover:bg-red-500/20 inline-flex items-center gap-1 max-w-full truncate text-[10px]"
                 >
                   {youtubeChannelLabel(url)}
                   <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
@@ -163,7 +168,7 @@ export function CommunityClubCard({
 
         {previewMods.length > 0 && (
           <section>
-            <p className="text-[9px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
               <Puzzle className="w-3 h-3 text-primary/70" /> Proyectos
               <span className="text-white/25 font-bold normal-case">({mods.length})</span>
             </p>
@@ -191,18 +196,18 @@ export function CommunityClubCard({
                       <div className="w-7 h-7 rounded-lg bg-white/5 shrink-0 ring-1 ring-white/10" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-white/90 truncate font-medium block text-[10px]">
+                      <span className="text-white/90 truncate font-medium block text-[11px]">
                         {m.title}
                       </span>
                       {(m.gameVersion || m.modloader) && (
                         <span className="flex flex-wrap gap-1 mt-0.5">
                           {m.gameVersion && (
-                            <span className="text-[8px] px-1 py-0.5 rounded bg-black/25 text-white/50">
+                            <span className="text-[10px] px-1 py-0.5 rounded bg-black/25 text-white/50">
                               {m.gameVersion}
                             </span>
                           )}
                           {m.modloader && (
-                            <span className="text-[8px] px-1 py-0.5 rounded bg-primary/15 text-primary/90 uppercase">
+                            <span className="text-[10px] px-1 py-0.5 rounded bg-primary/15 text-primary/90 uppercase">
                               {m.modloader}
                             </span>
                           )}
@@ -231,6 +236,6 @@ export function CommunityClubCard({
           <p className="text-white/35 text-center py-3 text-[10px]">Sin seguidos publicados aún.</p>
         )}
       </div>
-    </article>
+    </motion.article>
   );
 }

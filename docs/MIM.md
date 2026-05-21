@@ -2,7 +2,7 @@
 
 > Master technical documentation of Minecraft Intelligent Manager.  
 > Architecture, data flows, components, and design decisions.  
-> **Version:** 8.0.1 | **Last updated:** 2026-05-20
+> **Version:** 9.0.1 | **Last updated:** 2026-05-21
 
 ---
 
@@ -32,6 +32,7 @@ Starting from version 7.6.0, MIM supports two operation modes to suit different 
 
 * **Modo MIM (Modpack Maker)**: El modo tradicional enfocado en la creación, organización y construcción de modpacks. Incluye librería categorizada, gestión de proyectos y builder.
 * **Modo MIMU (User Mode)**: Una vista simplificada sin proyectos ni categorización compleja. Pensada para usuarios que solo quieren descargar mods y enviarlos directamente a su juego (`.minecraft`). Incluye un gestor de mundos y una columna de mods instalados.
+* **FOMO Cloud (Comunidad Online)**: Plataforma social integrada con Supabase para perfiles comunitarios, favoritos compartidos, clubs de usuario, videos de Showcase y descargas seguras de modpacks.
 
 ### Stack Tecnológico
 

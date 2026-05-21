@@ -377,7 +377,7 @@ function HorizontalEditorialMarquee({
         className="relative w-full flex-1 overflow-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing"
         {...handlers}
       >
-        <div ref={innerRef} className="flex gap-6 w-max px-4 py-2 h-full">
+        <div ref={innerRef} className="flex gap-6 w-max min-w-full px-4 py-2 h-full">
           {duplicatedItems.map((item: any, i: number) => (
             type === "collection" ? (
               <SpotlightCollectionCard
@@ -450,7 +450,7 @@ function SpotlightCollectionCard({
 
   return (
     <div
-      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -571,7 +571,7 @@ function SpotlightEditorialCard({
 
   return (
     <div
-      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))10px,calc(100vw-4rem))] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,

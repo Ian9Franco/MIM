@@ -31,39 +31,54 @@ const HEADLINE_PHRASES = [
   { p1: "Y los", h: "{picks}", p2: "mensuales" }
 ];
 
+const HEADLINE_DESCRIPTION = [
+  "Explora las colecciones dinámicas de CurseForge y Modrinth. Te traemos los mejores mods curados mes a mes.",
+  "Descubre las selecciones mensuales curadas de CurseForge y Modrinth y mantente al día con lo más destacado." 
+];
+
 function AnimatedHeadline() {
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
+  const [descSubIndex, setDescSubIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [blink, setBlink] = useState(true);
 
   useEffect(() => {
     if (subIndex === 0 && index === 0 && !isDeleting) {
       setSubIndex(1);
+      setDescSubIndex(1);
     }
   }, [subIndex, index, isDeleting]);
 
   useEffect(() => {
     const phrase = HEADLINE_PHRASES[index];
+    const description = HEADLINE_DESCRIPTION[index];
     const fullText = `${phrase.p1}\n${phrase.h}\n${phrase.p2}`;
 
-    if (subIndex === fullText.length && !isDeleting) {
-      const timeout = setTimeout(() => setIsDeleting(true), 5000); // Pausa de 5s
+    if (subIndex === fullText.length && descSubIndex === description.length && !isDeleting) {
+      const timeout = setTimeout(() => setIsDeleting(true), 5000);
       return () => clearTimeout(timeout);
     }
-    
-    if (subIndex === 0 && isDeleting) {
+
+    if (subIndex === 0 && descSubIndex === 0 && isDeleting) {
       setIsDeleting(false);
       setIndex((prev) => (prev + 1) % HEADLINE_PHRASES.length);
       return;
     }
-    
+
     const timeout = setTimeout(() => {
-      setSubIndex((prev) => prev + (isDeleting ? -1 : 1));
+      setSubIndex((prev) => {
+        const next = prev + (isDeleting ? -1 : 1);
+        return Math.max(0, Math.min(next, fullText.length));
+      });
+      setDescSubIndex((prev) => {
+        const next = prev + (isDeleting ? -1 : 1);
+        return Math.max(0, Math.min(next, description.length));
+      });
     }, isDeleting ? 12 : 32);
 
     return () => clearTimeout(timeout);
-  }, [subIndex, isDeleting, index]);
+  }, [subIndex, descSubIndex, isDeleting, index]);
 
   useEffect(() => {
     const interval = setInterval(() => setBlink((prev) => !prev), 500);
@@ -71,32 +86,39 @@ function AnimatedHeadline() {
   }, []);
 
   const phrase = HEADLINE_PHRASES[index];
+  const description = HEADLINE_DESCRIPTION[index];
   const fullText = `${phrase.p1}\n${phrase.h}\n${phrase.p2}`;
   const currentText = fullText.substring(0, subIndex);
   const lines = currentText.split('\n');
+  const currentDescription = description.substring(0, descSubIndex);
 
   return (
-    <h1 className="font-headline text-5xl xl:text-7xl leading-[1.1] tracking-tight text-white mb-6 min-h-[160px] xl:min-h-[230px]">
-      {lines.map((line, i, arr) => {
-        if (i === 1) {
+    <>
+      <h1 className="font-headline text-5xl xl:text-7xl leading-[1.1] tracking-tight text-white mb-4 min-h-[160px] xl:min-h-[230px]">
+        {lines.map((line, i, arr) => {
+          if (i === 1) {
+            return (
+              <React.Fragment key={i}>
+                <span className="italic font-light text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-200">
+                  {line}
+                </span>
+                {i < arr.length - 1 && <br />}
+              </React.Fragment>
+            );
+          }
           return (
             <React.Fragment key={i}>
-              <span className="italic font-light text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-200">
-                {line}
-              </span>
+              {line}
               {i < arr.length - 1 && <br />}
             </React.Fragment>
           );
-        }
-        return (
-          <React.Fragment key={i}>
-            {line}
-            {i < arr.length - 1 && <br />}
-          </React.Fragment>
-        );
-      })}
-      <span className={`inline-block w-[4px] h-[0.8em] bg-white ml-2 align-middle transition-opacity duration-100 ${blink ? 'opacity-100' : 'opacity-0'}`} />
-    </h1>
+        })}
+        <span className={`inline-block w-[4px] h-[0.8em] bg-white ml-2 align-middle transition-opacity duration-100 ${blink ? 'opacity-100' : 'opacity-0'}`} />
+      </h1>
+      <p className="font-caption text-sm xl:text-base opacity-60 leading-relaxed min-h-[48px]">
+        {currentDescription}
+      </p>
+    </>
   );
 }
 
@@ -184,55 +206,74 @@ function useSmoothMarquee(speed: number, reverse: boolean, isVertical: boolean) 
   const startPos = useRef(0);
   const startOffset = useRef(0);
   const isHovered = useRef(false);
-  const contentSize = useRef(0);
+  const resizeObserver = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
-    let animationFrameId: number;
+    let animationFrameId = 0;
     const inner = innerRef.current;
     if (!inner) return;
 
-    if (offset.current === 0 && targetOffset.current === 0 && reverse) {
-       const initialHalf = (isVertical ? inner.scrollHeight : inner.scrollWidth) / 2;
-       offset.current = initialHalf;
-       targetOffset.current = initialHalf;
-    }
+    const getSize = () => (isVertical ? inner.scrollHeight : inner.scrollWidth);
+    const resetLoop = () => {
+      const size = getSize();
+      if (!size) return;
+      const half = size / 2;
+      if (reverse) {
+        if (offset.current <= 0 || offset.current >= half * 2) {
+          offset.current = half;
+          targetOffset.current = half;
+        }
+      } else if (offset.current < 0 || offset.current >= half) {
+        offset.current = 0;
+        targetOffset.current = 0;
+      }
+    };
 
     const step = () => {
-      contentSize.current = isVertical ? inner.scrollHeight : inner.scrollWidth;
-      const halfSize = contentSize.current / 2;
+      const size = getSize();
+      const half = size / 2;
 
       if (!isDragging.current) {
         if (!isHovered.current) {
-           targetOffset.current += reverse ? -speed : speed;
+          targetOffset.current += reverse ? -speed : speed;
         }
         offset.current += (targetOffset.current - offset.current) * 0.08;
       } else {
         offset.current = targetOffset.current;
       }
 
-      if (reverse) {
-         if (offset.current <= 0) {
-            offset.current += halfSize;
-            targetOffset.current += halfSize;
-         }
-      } else {
-         if (offset.current >= halfSize) {
-            offset.current -= halfSize;
-            targetOffset.current -= halfSize;
-         }
-      }
+      if (size > 0) {
+        if (reverse && offset.current <= 0) {
+          offset.current += half;
+          targetOffset.current += half;
+        } else if (!reverse && offset.current >= half) {
+          offset.current -= half;
+          targetOffset.current -= half;
+        }
 
-      if (isVertical) {
-        inner.style.transform = `translateY(-${offset.current}px)`;
-      } else {
-        inner.style.transform = `translateX(-${offset.current}px)`;
+        inner.style.transform = isVertical
+          ? `translateY(-${offset.current}px)`
+          : `translateX(-${offset.current}px)`;
       }
 
       animationFrameId = requestAnimationFrame(step);
     };
 
+    resetLoop();
     animationFrameId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(animationFrameId);
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver.current = new ResizeObserver(() => {
+        resetLoop();
+      });
+      resizeObserver.current.observe(inner);
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      resizeObserver.current?.disconnect();
+      resizeObserver.current = null;
+    };
   }, [speed, reverse, isVertical]);
 
   const handlers = {
@@ -868,14 +909,11 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-md 2xl:max-w-lg">
         {/* Editorial Header */}
-        <div className="mt-8 xl:mt-16 shrink-0">
+        <div className="mt-0 xl:mt-6 shrink-0">
           <p className="font-mono text-xs uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2">
             <Spotlight className="w-4 h-4" /> Editorial
           </p>
           <AnimatedHeadline />
-          <p className="font-caption text-sm xl:text-base opacity-60 leading-relaxed">
-            Explora las colecciones dinámicas de CurseForge y Modrinth. Te traemos los mejores mods curados mes a mes.
-          </p>
         </div>
 
         {/* Bottom Area: Vertical Tickers side-by-side */}

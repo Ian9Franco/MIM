@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserCog, RefreshCw, ZoomIn, Move, Trash2 } from "lucide-react";
+import { UserCog, RefreshCw, ZoomIn, Move, Trash2, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/lib/core/supabaseClient";
 
 type BannerMeta = {
   zoom: number;
@@ -101,6 +102,11 @@ export function CommunityEditProfileModal({
   const [bannerPosX, setBannerPosX] = useState(0);
   const [bannerPosY, setBannerPosY] = useState(0);
   const [bannerBlur, setBannerBlur] = useState(0);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("official");
 
@@ -123,6 +129,11 @@ export function CommunityEditProfileModal({
       setBannerPosX((editBannerMeta?.x ?? 0));
       setBannerPosY((editBannerMeta?.y ?? 0));
       setBannerBlur((editBannerMeta?.blur ?? 0));
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+      setPasswordError(null);
     }
   }, [showEditProfileModal, editBannerMeta]);
 
@@ -133,8 +144,30 @@ export function CommunityEditProfileModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword || confirmPassword) {
+      if (newPassword !== confirmPassword) {
+        setPasswordError("Las contraseñas no coinciden.");
+        return;
+      }
+      if (newPassword.length > 0 && newPassword.length < 8) {
+        setPasswordError("La contraseña debe tener al menos 8 caracteres.");
+        return;
+      }
+    }
+
     setLocalSaving(true);
     try {
+      if (newPassword) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          console.error("Password update error:", error);
+          setPasswordError("No se pudo cambiar la contraseña. Intentá de nuevo.");
+          return;
+        }
+      }
+
       let finalAvatar = editAvatarUrl;
       let finalBanner = editBannerUrl;
       if (rawImage) {
@@ -149,6 +182,11 @@ export function CommunityEditProfileModal({
         ? { zoom: bannerZoom, x: bannerPosX, y: bannerPosY, blur: bannerBlur }
         : null;
       await handleSaveProfile(e, finalAvatar, finalBanner, finalBannerMeta);
+      if (newPassword) {
+        setNewPassword("");
+        setConfirmPassword("");
+        onStatus("Contraseña cambiada correctamente.", "success");
+      }
     } catch (err) {
       console.error(err);
       onStatus("Error al procesar la imagen de perfil.", "error");
@@ -412,6 +450,59 @@ export function CommunityEditProfileModal({
             placeholder="Nombre de usuario"
             className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary transition-colors ${isModern ? 'bg-background border-border text-foreground placeholder:text-muted-foreground' : 'bg-black/20 border-white/10 text-white'}`}
           />
+        </div>
+
+        {/* Change Password */}
+        <div className="space-y-3 p-4 rounded-2xl border border-white/10 bg-white/5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className={`text-[10px] font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>Cambiar contraseña</p>
+              <p className="text-[9px] text-muted">Dejar en blanco si no querés cambiarla.</p>
+            </div>
+            <span className="text-[9px] uppercase tracking-[0.2em] text-primary">Opcional</span>
+          </div>
+
+          <div className="space-y-2">
+            <div className="relative">
+              <label className={`text-[10px] font-semibold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>Nueva contraseña</label>
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary transition-colors ${isModern ? 'bg-background border-border text-foreground placeholder:text-muted-foreground' : 'bg-black/20 border-white/10 text-white'}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-8 text-muted hover:text-foreground"
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <label className={`text-[10px] font-semibold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>Confirmar nueva contraseña</label>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repite la contraseña"
+                className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary transition-colors ${isModern ? 'bg-background border-border text-foreground placeholder:text-muted-foreground' : 'bg-black/20 border-white/10 text-white'}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-8 text-muted hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {passwordError && (
+              <p className="text-[10px] text-red-400">{passwordError}</p>
+            )}
+          </div>
         </div>
 
         {/* Color Picker / Curated Colors Grid */}

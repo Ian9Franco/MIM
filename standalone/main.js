@@ -6,7 +6,29 @@ const { runCurseForgeScraper } = require('./scraper');
 
 let mainWindow = null;
 let serverProcess = null;
+let pendingProtocolUrl = null;
 const PORT = process.env.PORT || 3000;
+
+function handleDeepLink(url) {
+  try {
+    const parsed = new URL(url);
+    let targetPath = parsed.pathname;
+    if (targetPath === '/' && parsed.hostname) {
+      targetPath = `/${parsed.hostname}`;
+    }
+    const localUrl = `http://127.0.0.1:${PORT}${targetPath}${parsed.search}`;
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.loadURL(localUrl);
+    } else {
+      pendingProtocolUrl = localUrl;
+    }
+  } catch (err) {
+    console.error('Failed to handle deep link:', err);
+  }
+}
 
 // Start the Next.js standalone server as a background subprocess
 function startNextServer() {
@@ -80,7 +102,12 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 
   // Load local server URL
-  mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+  if (pendingProtocolUrl) {
+    mainWindow.loadURL(pendingProtocolUrl);
+    pendingProtocolUrl = null;
+  } else {
+    mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -88,7 +115,39 @@ function createWindow() {
 }
 
 // Initialize application
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+app.on('second-instance', (event, argv) => {
+  const protocolUrl = argv.find((arg) => typeof arg === 'string' && arg.startsWith('mim://'));
+  if (protocolUrl) {
+    handleDeepLink(protocolUrl);
+  }
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
+
 app.whenReady().then(() => {
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient('mim');
+  } else {
+    app.setAsDefaultProtocolClient('mim', process.execPath, [path.resolve(process.argv[1] || '')]);
+  }
+
+  const initialProtocolUrl = process.argv.find((arg) => typeof arg === 'string' && arg.startsWith('mim://'));
+  if (initialProtocolUrl) {
+    pendingProtocolUrl = initialProtocolUrl;
+  }
+
   startNextServer();
   
   waitForServer(() => {

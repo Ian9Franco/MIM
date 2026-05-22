@@ -320,4 +320,33 @@ export class SafeDownloader {
     }
   }
 }
+
+---
+
+## 🔎 Auditoría de uso de Supabase Storage
+
+Después de revisar el código y la configuración actual, se confirma que la aplicación no tiene referencias activas a `supabase.storage.from(...)` ni a operaciones directas de subida/descarga de archivos en el cliente. En otras palabras, el uso de Supabase Storage en el código actual no está implementado.
+
+### Qué sí se usa hoy
+
+- `profiles`, `favorite_mods`, `showcase_videos` y `modpack_builds` en la base de datos PostgreSQL.
+- `modpack_builds.manifest` guarda metadatos JSON de los mods publicados.
+- `profiles.avatar_url` y `profiles.banner_url` pueden contener URLs o `data:` URIs de imágenes, pero esto es metadata de perfil y no objetos del bucket.
+
+### Qué está pensado para Storage
+
+- El bucket `modpack-configs` está diseñado solo para archivos `.zip` de overrides/configuración ligeros.
+- No se deben subir mods `.jar`, recursos grandes ni packs completos a Supabase Storage.
+- Recomiendo mantener el tamaño máximo del bucket en `5MB` y restringir MIME types a `application/zip`.
+
+### Recomendaciones para evitar sobrecargar el plan gratuito
+
+- Limita el bucket a archivos pequeños de configuración.
+- No uses Supabase Storage para JARs o assets pesados.
+- Si subes banners/avatar como `data:` URIs, asegúrate de que sean imágenes pequeñas (128x128 o similares) para no crecer demasiado en la tabla `profiles`.
+- Si actúas sobre `modpack_builds`, guarda solo el manifest JSON y la URL opcional del ZIP; no subas contenidos binarios grandes a la base de datos ni a Storage.
+
+### Conclusión
+
+El riesgo de exceder la cuota de Storage viene de subir archivos binarios grandes al bucket. En el estado actual del proyecto, esto no está ocurriendo en el código, y la arquitectura propuesta sigue la regla correcta: datos ligeros en Supabase, mods grandes solo localmente.
 ```

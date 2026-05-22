@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mail, Lock, User, RefreshCw, AlertCircle, CloudAlert } from "lucide-react";
+import { Mail, Lock, User, RefreshCw, AlertCircle, CloudAlert, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 
 interface LoginPortalProps {
@@ -13,6 +13,8 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -84,6 +86,51 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordRecovery = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!email) {
+      setErrorMsg("Ingresá tu correo para recuperar la contraseña.");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const publicRedirect = process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_REDIRECT;
+      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
+      const isElectron = userAgent.includes("electron");
+      const localOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
+      const isLocalhost = localOrigin?.includes("localhost") || localOrigin?.includes("127.0.0.1");
+      const redirectTo = publicRedirect
+        ? publicRedirect
+        : isElectron
+        ? "mim://reset-password"
+        : isLocalhost
+        ? undefined
+        : localOrigin;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo ? { redirectTo } : undefined
+      );
+      if (error) throw error;
+
+      setSuccessMsg(
+        publicRedirect
+          ? "Te enviamos un enlace de recuperación. Ábrelo desde cualquier dispositivo."
+          : isElectron
+          ? "Te enviamos un enlace de recuperación. Abrí el correo en el mismo equipo para que la app pueda capturar el enlace."
+          : "Te enviamos un enlace de recuperación. Revisa tu correo."
+      );
+    } catch (err: any) {
+      const message = err?.message?.toString() || "No se pudo enviar el enlace de recuperación.";
+      setErrorMsg(message);
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -179,15 +226,35 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
           <div className="relative flex items-center">
             <Lock className="w-4 h-4 text-primary absolute left-3 pointer-events-none" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white/4 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-primary focus:bg-white/8 transition-all"
+              className="w-full bg-white/4 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-sm text-white focus:outline-none focus:border-primary focus:bg-white/8 transition-all"
               disabled={loading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 text-white/40 hover:text-white"
+              tabIndex={0}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
+          {!isRegister && (
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                onClick={handlePasswordRecovery}
+                disabled={loading || resettingPassword}
+                className="text-[10px] font-semibold text-primary/80 hover:text-primary transition-colors"
+              >
+                {resettingPassword ? "Enviando enlace..." : "Olvidé mi contraseña"}
+              </button>
+            </div>
+          )}
         </div>
 
         <button

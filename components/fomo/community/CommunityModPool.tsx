@@ -37,6 +37,7 @@ const TYPE_TABS: { id: CommunityProjectType | "all"; label: string }[] = [
   { id: "textura", label: "Texturas" },
   { id: "shader", label: "Shaders" },
   { id: "datapack", label: "Datapacks" },
+  { id: "modpack", label: "Modpacks" },
 ];
 
 interface CommunityModPoolProps {
@@ -215,7 +216,7 @@ export function CommunityModPool({
         <div className="space-y-10">
           {Object.keys(groups).map((username) => {
             const userFavs = groups[username];
-            const displayFavs = userFavs.slice(0, 4);
+            const displayFavs = userFavs;
             const firstFav = userFavs[0];
             const profileColor = firstFav?.profiles?.color;
             const profileAvatar = firstFav?.profiles?.avatar_url;
@@ -252,13 +253,13 @@ export function CommunityModPool({
                       </span>
                     </div>
                   </div>
-                  {userFavs.length > 4 && (
+                  {userFavs.length > 0 && (
                     <button
                       type="button"
                       onClick={() => onOpenProfile?.(username)}
                       className="px-4 py-2 rounded-xl border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-black tracking-wider uppercase transition-all cursor-pointer relative z-10 backdrop-blur-md"
                     >
-                      Ver perfil (+{userFavs.length - 4})
+                      Ver perfil
                     </button>
                   )}
                 </div>

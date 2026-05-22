@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Download, Loader2, Heart, Spotlight, Clock, Calendar, CirclePlay } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
-import { useSmoothMarquee } from "../../hooks/useSmoothMarquee";
+import { useSmoothMarquee } from "@/hooks/useSmoothMarquee";
 import type { ModHit } from "@/lib/core/types";
 
 // ── AnimatedHeadline ────────────────────────────────────────────────────────

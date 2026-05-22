@@ -1,4 +1,4 @@
-import { EventName, EventPayload, EventMetadata, Incident, Recommendation } from "../eventContract";
+import { EventName, EventPayload, EventMetadata, Incident, Recommendation } from "@/lib/events/eventContract";
 
 export interface DebugEvent {
   id: string;

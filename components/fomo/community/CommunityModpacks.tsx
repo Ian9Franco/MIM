@@ -286,10 +286,9 @@ export function CommunityModpacks({
     }
   };
 
-  const visibleModpacks =
-    maxVisible != null && maxVisible > 0 ? modpacks.slice(0, maxVisible) : modpacks;
-  const hiddenCount =
-    maxVisible != null && maxVisible > 0 ? Math.max(0, modpacks.length - maxVisible) : 0;
+const limit = maxVisible ?? 0;
+const visibleModpacks = limit > 0 ? modpacks.slice(0, limit) : modpacks;
+const hiddenCount = limit > 0 ? Math.max(0, modpacks.length - limit) : 0;
 
   if (browseOnly && !loadingModpacks && modpacks.length === 0) {
     return null;
@@ -442,7 +441,7 @@ export function CommunityModpacks({
                 {selectedProjectId && (() => {
                   const sel = projects.find((p) => p.id === selectedProjectId);
                   if (!sel) return null;
-                  const folder = projectFolderKey(sel);
+                  const folder = projectFolderKey(sel!);
                   return (
                     <p className="text-[10px] text-white/50 mt-1">
                       {loadingPreview ? (

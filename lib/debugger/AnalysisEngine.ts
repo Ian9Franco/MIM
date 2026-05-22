@@ -13,7 +13,7 @@ export function analyzeFlow(trace: EventFlowTrace) {
 
   trace.events.forEach(event => {
     summary.eventTypes[event.type] = (summary.eventTypes[event.type] || 0) + 1;
-    summary.sources[event.metadata.source] = (summary.sources[event.metadata.source] || 0) + 1;
+    summary.sources[event.metadata.source as EventSource] = (summary.sources[event.metadata.source as EventSource] || 0) + 1;
   });
 
   const bottlenecks = [];

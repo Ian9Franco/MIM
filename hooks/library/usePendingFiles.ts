@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { PendingFile, Project } from "@/lib/types";
-import { isVersionCompatible, isLoaderCompatible } from "@/lib/version-utils";
+import { PendingFile, Project } from "@/lib/core/types";
+import { isVersionCompatible, isLoaderCompatible } from "@/lib/modding/version-utils";
 
 /**
  * @fileoverview Orquestador de Archivos Pendientes (Quarantine & Staging).

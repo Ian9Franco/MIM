@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { LibraryFile } from '@/lib/types';
+import type { LibraryFile } from '@/lib/core/types';
 
 interface ScannerState {
   scanning: boolean;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Project, LibraryFile } from "@/lib/types";
+import { Project, LibraryFile } from "@/lib/core/types";
 
 /**
  * @fileoverview Hook de Acciones Masivas y de Gestión de la Librería.

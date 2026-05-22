@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings, getApiKey } from "@/lib/settings";
-import { enrichUpdatesCache } from "@/lib/cache-enricher";
+import { getSettings, getApiKey } from "@/lib/core/settings";
+import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";

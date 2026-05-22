@@ -15,7 +15,7 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 
 export async function POST(req: NextRequest) {
   try {

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 import { Keybind, SnapshotMetadata } from "./lib/types";
 import { 
   formatKeyName, parseCategoryFromId, extractModSource, detectKeybindConflicts, groupKeybindsForUI 
@@ -15,7 +15,7 @@ import { analyzePackOrder, autoFixPackOrder } from "./lib/PackIntelligence";
 import { analyzeKeybindIntelligence } from "./lib/KeybindIntelligence";
 import { calculateModpackHash, getModCount } from "./lib/SnapshotSystem";
 import { getRecommendations } from "./lib/RecommendationEngine";
-import { readProjectConfig, saveProjectConfig } from "@/lib/projectSubcategories";
+import { readProjectConfig, saveProjectConfig } from "@/lib/modding/projectSubcategories";
 
 export async function GET(req: NextRequest) {
   try {

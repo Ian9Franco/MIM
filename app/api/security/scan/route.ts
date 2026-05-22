@@ -23,9 +23,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { scanSecurity, scanSecurityBatch } from "@/lib/security-scanner";
-import { getSettings } from "@/lib/settings";
-import { SOURCE_BASE, CATEGORIES } from "@/lib/constants";
+import { scanSecurity, scanSecurityBatch } from "@/lib/security/security-scanner";
+import { getSettings } from "@/lib/core/settings";
+import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 

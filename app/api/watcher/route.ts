@@ -21,14 +21,14 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest } from "next/server";
-import { watcherEmitter, startWatcher, scanExistingFiles } from "@/lib/watcher";
+import { watcherEmitter, startWatcher, scanExistingFiles } from "@/lib/core/watcher";
 import { scanMod, ModMeta } from "@/lib/scanner";
 import path from "path";
 import os from "os";
 import fs from "fs";
 import crypto from "crypto";
-import { getSettings } from "@/lib/settings";
-import { SOURCE_BASE } from "@/lib/constants";
+import { getSettings } from "@/lib/core/settings";
+import { SOURCE_BASE } from "@/lib/core/constants";
 
 const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
 

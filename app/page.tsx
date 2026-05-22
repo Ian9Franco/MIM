@@ -26,8 +26,8 @@ import { DescriptionModal }   from "@/components/ui/DescriptionModal";
 import { ConfirmModal }       from "@/components/ui/ConfirmModal";
 import { BuildPanel }         from "@/components/projects/BuildPanel";
 import { FomoSidebarPortal }  from "@/components/layout/FomoSidebarPortal";
-import { isVersionCompatible, isLoaderCompatible } from "@/lib/version-utils";
-import type { PendingFile, LibraryFile } from "@/lib/types";
+import { isVersionCompatible, isLoaderCompatible } from "@/lib/modding/version-utils";
+import type { PendingFile, LibraryFile } from "@/lib/core/types";
 import { LOADER_COLORS } from "../constants/app";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
@@ -361,7 +361,7 @@ export default function Page() {
             <ProjectsSection projects={projects.projects} activeProjectId={projects.activeProjectId} editingId={projects.editingId} creatingNew={projects.creatingNew} setActiveProjectId={projects.setActiveProjectId} setEditingId={projects.setEditingId} setCreatingNew={projects.setCreatingNew} handleDeleteProject={(id) => setProjectToDelete(id)} handleSaveProject={projects.handleSaveProject} loaderColors={LOADER_COLORS} appMode={appMode} setAppMode={setAppMode} />
           </div>
           {appMode === "MIM" && projects.activeProject && (
-            <section id="onboarding-build" className="animate-fade-up lg:min-w-[420px]">
+            <section id="onboarding-build" className="animate-fade-up lg:min-w-[420px]">  
               <SectionHeading icon={<Pickaxe className="w-4 h-4" />} title="Build" sub={`${projects.activeProject.name} · ${projects.activeProject.version} · ${projects.activeProject.loader}`} accentColor="var(--color-accent)" className="mb-4" actions={<button onClick={() => fetch("/api/project/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectName: projects.activeProject?.name, version: projects.activeProject?.version }) })} className="flex items-center gap-3 px-12 py-3.5 rounded-2xl bg-white/5 border border-dashed border-white/10 hover:border-primary transition-all active:scale-95 text-[10px] font-bold uppercase text-muted group hover:text-primary"><FolderOpen className="w-4 h-4" /> Abrir Carpeta</button>} />
               <BuildPanel projectName={projects.activeProject.name} version={projects.activeProject.version} loader={projects.activeProject.loader} />
             </section>

@@ -1,4 +1,4 @@
-import { ModHit, VersionEntry } from "@/lib/types";
+import { ModHit, VersionEntry } from "@/lib/core/types";
 
 export interface PendingDependency {
   projectId: string;

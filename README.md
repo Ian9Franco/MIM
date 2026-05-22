@@ -9,11 +9,10 @@
 > **No pierdas mods, no rompas mundos, no sufres debugging.**  
 > Solo descarga, clasifica y juega. Todo en **3 clics**.
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=black)](https://tauri.app/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.2.0-indigo.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-9.3.0-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -58,13 +57,16 @@ Logs en idiomas que no existen
 
 ## 🚀 Features Principales
 
-### 🔍 **FOMO Cloud (Comunidad Online)** — Búsqueda Dual, Videos y Red Social
-- **Plataforma Social (Supabase)**: FOMO Cloud es la capa social de MIM: perfiles públicos, clubs de usuario, favoritos y Showcases. Está diseñada para compartir `Seguidos` (mods, autores, canales) y facilitar el descubrimiento social.
-- **Modrinth + CurseForge unificado**: Visualización dual, filtros por versión, loader y categorías, con smart matching por SHA1 (100% exacto).
-- **YouTube Showcases (Pestaña Principal)**: Showcases ha evolucionado a una sección de primer nivel en la barra de FOMO. Incluye un **Reproductor Flotante Premium (PiP)** redimensionable (Mini, Normal, Maxi) y extracción heurística de mods desde descripciones.
-- **Comunidad FOMO**: Perfil público con `profiles.club_data` (JSON) que contiene mods seguidos, autores y canales. Actualmente la compartición de modpacks está deshabilitada — se comparten proyectos y autores.
-- **Sync y Seguridad**: Sincronización bidireccional IndexedDB ↔ Supabase con reglas RLS; la UI permite publicar manualmente el club y revalidar automáticamente al iniciar sesión.
-- **UX reciente**: Mejoras en el modal de detalle de clubs (renderizado via portal, cierre con `Escape`, bloqueo de scroll) y tamaño de tarjetas compactas para mejor legibilidad. Ver `docs/FOMO_CLOUD.md` para detalles técnicos.
+### 🔥 **FOMO Cloud (Comunidad Online)** — Descubrimiento, Showcases y Red Social
+El valor central de FOMO no es la reproducción de video: es el **ecosistema integrado** de descubrimiento.
+
+- **Descubrir mods a través de creadores**: Sigue creadores de YouTube, navega sus showcases y extrae mods automáticamente desde sus descripciones.
+- **Showcase Integration**: Cada video de un creador se convierte en un punto de acceso directo a los mods que muestra — sin salir de MIM.
+- **Instalación directa desde videos**: Un workflow completo desde el showcase hasta el mod instalado en tu librería.
+- **Pool Comunitario (FOMO Cloud)**: Perfiles públicos, clubs de usuario, favoritos compartidos y modpacks de la comunidad — todo sincronizado con Supabase.
+- **Modrinth + CurseForge unificado**: Búsqueda dual, filtros por versión/loader/categoría con smart matching SHA1 (100% exacto).
+
+> **Nota sobre el reproductor de video**: El reproductor integrado es una conveniencia secundaria, no la función principal. Si `yt-dlp` falla por cambios de YouTube, el botón **"Abrir en YouTube"** siempre está disponible como fallback. La app funciona perfectamente aunque el video no reproduzca directamente.
 
 ### ⚡ **Hotkeys 1-9** — Clasificación Fulminante
 - Presiona **1** → Tecnología
@@ -115,8 +117,7 @@ cd mim
 npm install
 
 # Ejecuta (elige uno)
-npm run dev              # Web (limitado)
-npx tauri dev           # Desktop (completo) ⭐ RECOMENDADO
+npm run dev              # Web (limitado)    # Desktop (completo) ⭐ RECOMENDADO
 ```
 
 ### 2️⃣ **Variables de Entorno (Opcional)**
@@ -126,6 +127,10 @@ npx tauri dev           # Desktop (completo) ⭐ RECOMENDADO
 MODRINTH_API_KEY=mrp_tu_key          # 10x rate limits
 CURSEFORGE_API_KEY=tu_key             # Búsqueda extendida
 VIRUSTOTAL_API_KEY=tu_key             # Escaneo en nube
+
+# Para FOMO Cloud (Comunidad Online)
+NEXT_PUBLIC_SUPABASE_URL=https://tu_proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
 
 ### 3️⃣ **Primeros Pasos**
@@ -152,11 +157,35 @@ VIRUSTOTAL_API_KEY=tu_key             # Escaneo en nube
 ## 🛠️ Arquitectura & Performance
 
 ```
-Frontend      → Next.js 14 + Tailwind CSS v4 (Glassmorphism moderno)
+Frontend      → Next.js 15 + Tailwind CSS v4 (Glassmorphism moderno)
 Backend       → API Routes + Server Components (SSR)
-Desktop       → Tauri 2.0 (Rust nativo, sin Electron)
-Storage       → IndexedDB (local) + File System (Tauri)
+Desktop       → Electron (nativo)
+Storage       → IndexedDB (local) + Supabase (comunidad)
 Seguridad     → Bytecode analysis + VirusTotal + SHA1/256
+```
+
+### 📂 **Estructura de componentes organizada**
+```
+components/fomo/
+├── community/     # FOMO Cloud — Perfiles, Clubs, Pool
+├── discover/      # Búsqueda y tarjetas de mods
+├── showcase/      # Reproductor flotante y tarjetas de video
+├── collections/   # Colecciones de Modrinth
+├── followed/      # Autores y proyectos seguidos
+├── spotlight/     # Sección de destacados
+├── sidebar/       # Shell del sidebar y navegación
+└── core/          # Overlays, skeleton, CSS base
+```
+
+```
+lib/
+├── fomo/          # Servicios de FOMO Cloud
+├── modding/       # Scanner, builder, pack validator
+├── storage/       # IndexedDB, smart cache, migración
+├── events/        # Event bus y correlación
+├── intelligence/  # SAGE, incidentes, recuperación
+├── security/      # Análisis de bytecode
+└── core/          # Tipos, constantes, settings
 ```
 
 ### ⚙️ **Optimizaciones**
@@ -165,6 +194,7 @@ Seguridad     → Bytecode analysis + VirusTotal + SHA1/256
 - ✅ Smart cache con stale-while-revalidate
 - ✅ Concurrency limitado (5 req paralelas)
 - ✅ Animations a 60fps constante
+- ✅ IndexedDB para almacenamiento asíncrono
 
 ---
 
@@ -195,55 +225,33 @@ D:\.mine\
 
 | 📄 Documento | 📝 Contenido | 🔗 Enlace |
 |:---|:---|:---|
-| **CHANGELOG** | Qué cambió en cada versión | [CHANGELOG.md](./CHANGELOG.md) |
-| **ROADMAP** | Features futuras + logros | [ROADMAP.md](./ROADMAP.md) |
-| **API** | Modrinth, CurseForge, VirusTotal | [API.md](./API.md) |
-| **ARQUITECTURA** | Diseño técnico completo | [MIM.md](./MIM.md) |
-| **GUÍAS** | Deep dives técnicas | [docs/](./docs/) |
+| **CHANGELOG** | Qué cambió en cada versión | [CHANGELOG.md](./docs/CHANGELOG.md) |
+| **ROADMAP** | Features futuras + logros | [ROADMAP.md](./docs/ROADMAP.md) |
+| **API** | Modrinth, CurseForge, VirusTotal | [API.md](./docs/API.md) |
+| **ARQUITECTURA** | Diseño técnico completo | [MIM.md](./docs/MIM.md) |
+| **FOMO CLOUD** | Plataforma comunitaria | [FOMO_CLOUD.md](./docs/FOMO_CLOUD.md) |
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ **v9.2.0 (Actual — Mayo 2026)**
-- 💾 **Asynchronous Storage Architecture (IndexedDB)**: Migración completa de almacenamiento síncrono `localStorage` de FOMO a IndexedDB (`mimDB`) para mejorar el rendimiento del hilo principal del navegador.
-- ⚙️ **Auto-Migration & Self-Healing**: Detección automática y traslado fluido de colecciones, showcases y modrinth status viejos de `localStorage` a IndexedDB.
+### ✅ **v9.3.0 (Actual — Mayo 2026)**
+- 🗂️ **Reorganización de componentes FOMO**: Subfolders por dominio (`community/`, `discover/`, `showcase/`, `sidebar/`, `core/`, etc.) con paths corregidos en todo el proyecto.
+- 🗂️ **Reorganización de lib/**: Subfolders por dominio (`fomo/`, `modding/`, `storage/`, `events/`, `intelligence/`, `security/`, `core/`).
+- 🎨 **Rediseño FOMO Cloud**: Header inmersivo con gradientes de perfil, glassmorfismo, avatar con glow y tabs de navegación premium.
+- 🛡️ **Showcase como feature secundaria**: La reproducción de video nunca es mission-critical. Fallback "Abrir en YouTube" siempre disponible.
 
-### ✅ **v9.2.0 (Actual — Mayo 2026)**
-- 📺 **Showcase Native Player**: Reproductor flotante integrado con controles de volumen analógico, barra de navegación premium multicapa y aislamiento de eventos de previsualización (hover) contra reproducción real (seek-scrubbing).
-- 🖼️ **Thumbnail Auto-Healing Fallbacks**: Recuperación resiliente de miniaturas de YouTube mediante cola de fallbacks de calidad (`maxresdefault` ➔ `mqdefault` ➔ `hqdefault` ➔ Placeholder Offline) para videos privados o miembros.
-- 👥 **CurseForge Picks dynamic project count resolution**: Resolución de conteo dinámico de mods por colección CurseForge en backend para evitar displays vacíos en la UI.
-- 🌐 **Soporte de Canales Universal**: Normalización y carga de cualquier URL de YouTube (canales no Minecraft).
-- 🔄 **SWR Cache & Background Sync**: Carga instantánea de videos y actualización silenciosa.
-- ✨ Modo MIMU (User Mode) para jugadores
-- 🧠 SAGE rediseñado (2-step scanning)
-- 🎮 Gestor de mundos + Instalados visibles
-- 🔔 ALRT Center unificado
-- 📂 Explorador de configuraciones integrado
-- 📄 Generador de `modlist.html`
-- 🔔 Monitoreo de VirusTotal y Seguidos en ALRT
-- 🔰 Sistema de Onboarding / Guía de Uso interactiva
-- 💾 Migración completa de `localStorage` a `IndexedDB`
-
+### ✅ **v9.3.0 (Mayo 2026)**
+- 💾 **Asynchronous Storage Architecture (IndexedDB)**: Migración completa de almacenamiento síncrono de FOMO a IndexedDB.
+- 📺 **Showcase Native Player**: Reproductor flotante PiP con controles premium y barra de progreso multicapa.
+- 🖼️ **Thumbnail Auto-Healing**: Cola de fallbacks de calidad para miniaturas de YouTube.
 
 ### 🎯 **Futuro (2026+)**
 - 👥 Multiplayer pack sync
 - ☁️ Cloud backup de proyectos
 - 🎪 Showcase Demo deployable
-- 💾 Perfiles personalizados guardables
-
-
----
-
-## 📊 Estadísticas Reales
-
-| Métrica | Valor | Cambio |
-|:---|:---|:---|
-| ⭐ **Descargas** | 12K+ | ↗️ +45% MoM |
-| 👥 **Usuarios Activos** | 3.2K+ | ↗️ +28% MoM |
-| 📦 **Packs Creados** | 8.9K+ | ↗️ +62% MoM |
-| 🐛 **Issues Resueltos** | 445/450 | ✅ 98.9% |
-| ⏱️ **Uptime** | 99.8% | 🟢 Estable |
+- 💾 Perfiles personalizables guardables
+- 🔔 Notificaciones de nuevos videos de creadores seguidos
 
 ---
 
@@ -267,7 +275,6 @@ git push origin feature/mi-feature
 - 🐛 [Issues](https://github.com/Ian9Franco/MIM/issues) → Bugs
 - 💭 [Discussions](https://github.com/Ian9Franco/MIM/discussions) → Preguntas
 - ✉️ [Email](mailto:ian9franco@gmail.com) → Contacto directo
-- 🎮 [Discord](https://discord.gg/mim) → Comunidad (coming soon)(mentira)
 
 ---
 
@@ -275,6 +282,9 @@ git push origin feature/mi-feature
 
 ### ❓ **"MIM no detecta mis mods descargados"**
 → Verifica que los archivos estén en `Downloads` como `.jar`. MIM escanea cada 5 segundos.
+
+### ❓ **"El reproductor de video no funciona"**
+→ yt-dlp puede fallar por cambios de YouTube. Usa el botón **"Abrir en YouTube"** disponible en cada tarjeta. Es el fallback diseñado para esto.
 
 ### ❓ **"¿Cómo cambio la ruta de instalación?"**
 → En Settings, modifica `MIM_SOURCE_BASE` y `MIM_BUILDS_BASE` en variables de entorno.
@@ -290,8 +300,8 @@ git push origin feature/mi-feature
 ## 📄 Licencia & Créditos
 
 - **MIT License** — [Ver LICENSE](LICENSE)
-- **Stack**: Next.js 14, Tauri 2.0, Tailwind CSS v4, TypeScript
-- **APIs**: Modrinth (Labrinth v2), CurseForge (Eternal v1), VirusTotal v3
+- **Stack**: Next.js 15, Electron, Tailwind CSS v4, TypeScript
+- **APIs**: Modrinth (Labrinth v2), CurseForge (Eternal v1), VirusTotal v3, Supabase
 
 ---
 
@@ -301,7 +311,7 @@ git push origin feature/mi-feature
 
 **Hecho con ☕ por [Ian Franco](mailto:ian9franco@gmail.com).**
 
-No perdes mods. No rompes mundos. No sufres crashes.
+No pierdas mods. No rompas mundos. No sufras crashes.
 
 ### [⬇️ Descargar Última Versión](https://github.com/Ian9Franco/MIM/releases)
 

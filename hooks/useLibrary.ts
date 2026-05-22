@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Project, LibraryFile, PendingFile } from "@/lib/types";
+import { Project, LibraryFile, PendingFile } from "@/lib/core/types";
 import { useLibraryCore } from "./library/useLibraryCore";
 import { useLibraryUpdates } from "./library/useLibraryUpdates";
 import { useLibraryConflicts } from "./library/useLibraryConflicts";

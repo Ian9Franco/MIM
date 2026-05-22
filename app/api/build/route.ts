@@ -13,9 +13,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/builder";
-import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/constants";
-import type { Loader } from "@/lib/constants";
+import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/modding/builder";
+import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/core/constants";
+import type { Loader } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 

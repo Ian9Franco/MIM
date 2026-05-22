@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getPortableDir } from "@/lib/settings";
+import { getPortableDir } from "@/lib/core/settings";
 
 const DATA_DIR = path.join(getPortableDir(), "data");
 const USAGE_FILE = path.join(DATA_DIR, "showcase_usage.json");

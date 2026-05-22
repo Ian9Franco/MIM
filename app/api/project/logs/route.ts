@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 
 // Se eliminó getGlobalMcPath ya que ahora usamos globalSettings.minecraftPath
 

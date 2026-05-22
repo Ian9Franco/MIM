@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import path from "path";
 import fs from "fs";

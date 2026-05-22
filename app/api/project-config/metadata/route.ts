@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadProjectConfig, updateModOverride } from "@/lib/projectConfig";
+import { loadProjectConfig, updateModOverride } from "@/lib/modding/projectConfig";
 
 /**
  * Project Mod Metadata API

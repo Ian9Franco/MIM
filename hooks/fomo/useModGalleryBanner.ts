@@ -5,7 +5,7 @@ import {
   fetchFirstGalleryUrl,
   getCachedGalleryBanner,
   getFirstGalleryUrl,
-} from "@/lib/fomoModBanner";
+} from "@/lib/fomo/fomoModBanner";
 
 /** Primera imagen de galería: en el mod o vía API (con caché). */
 export function useModGalleryBanner(

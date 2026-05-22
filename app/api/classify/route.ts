@@ -21,11 +21,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE, isValidCategory } from "@/lib/constants";
+import { SOURCE_BASE, isValidCategory } from "@/lib/core/constants";
 import { MimClassifier } from "@/lib/classifier";
-import { getProjectSubcategories } from "@/lib/projectSubcategories";
+import { getProjectSubcategories } from "@/lib/modding/projectSubcategories";
 import { scanMod } from "@/lib/scanner";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";

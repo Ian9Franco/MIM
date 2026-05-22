@@ -18,14 +18,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/constants";
-import { getSettings } from "@/lib/settings";
+import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import os from "os";
 import crypto from "crypto";
-import { enrichUpdatesCache } from "@/lib/cache-enricher";
-import { watcherEmitter } from "@/lib/watcher";
+import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
+import { watcherEmitter } from "@/lib/core/watcher";
 
 function collectJarFiles(dir: string, bucket: string[]) {
   if (!fs.existsSync(dir)) return;

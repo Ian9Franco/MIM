@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE } from "@/lib/constants";
-import { loadProjectConfig } from "@/lib/projectConfig";
+import { SOURCE_BASE } from "@/lib/core/constants";
+import { loadProjectConfig } from "@/lib/modding/projectConfig";
 import { scanMod } from "@/lib/scanner";
 
 /**

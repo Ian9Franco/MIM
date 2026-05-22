@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getRawEnv } from "@/lib/env";
-import { getApiKey, getPortableDir } from "@/lib/settings";
+import { getRawEnv } from "@/lib/core/env";
+import { getApiKey, getPortableDir } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";

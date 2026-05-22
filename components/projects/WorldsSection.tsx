@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Globe, Loader2, Package, CheckCircle } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
-import { PendingFile } from "@/lib/types";
+import { PendingFile } from "@/lib/core/types";
 
 interface World {
   folderName: string;

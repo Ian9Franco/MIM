@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Project, TweakData, Keybind } from "@/lib/types";
+import type { Project, TweakData, Keybind } from "@/lib/core/types";
 
 export function useTweakManager(isOpen: boolean, activeProject: Project | null) {
   const [activeTab, setActiveTab] = useState<"optimize" | "keybinds" | "resourcepacks" | "profiles" | "config">("optimize");

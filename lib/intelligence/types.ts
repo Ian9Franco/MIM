@@ -1,4 +1,4 @@
-import { MimEventMap } from "../eventBus";
+import { MimEventMap } from "@/lib/events/eventBus";
 
 export interface EventPattern {
   id: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { eventDebugger } from "@/lib/eventDebugger";
-import { EventSource, EventName } from "@/lib/eventContract";
+import { eventDebugger } from "@/lib/events/eventDebugger";
+import { EventSource, EventName } from "@/lib/events/eventContract";
 
 export interface TimelineEvent {
   id: string;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, ArrowLeftRight, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/lib/core/types";
 
 interface TransferModalProps {
   onClose: () => void;

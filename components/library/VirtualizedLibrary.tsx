@@ -7,7 +7,7 @@ import { ModCard } from "@/components/library/ModCard";
 import { useLibraryUI } from "@/hooks/library/useLibraryUI";
 import { useLibraryConflictsInternal } from "@/hooks/library/useLibraryConflictsInternal";
 import { ModItem } from "./parts/ModItem";
-import type { LibraryFile, Project } from "@/lib/types";
+import type { LibraryFile, Project } from "@/lib/core/types";
 
 interface VirtualizedLibraryProps {
   library: LibraryFile[];

@@ -12,8 +12,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { LibraryFile, Project } from '@/lib/types';
-import { smartCache } from '@/lib/smart-cache';
+import type { LibraryFile, Project } from '@/lib/core/types';
+import { smartCache } from '@/lib/storage/smart-cache';
 
 interface UpdateInfo {
   fileName: string;

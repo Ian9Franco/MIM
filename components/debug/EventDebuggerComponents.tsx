@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronDown, RefreshCw,
   BarChart3, Zap, Target, Layers, Database
 } from "lucide-react";
-import { EventSource } from "@/lib/eventContract";
+import { EventSource } from "@/lib/events/eventContract";
 
 // ── DebuggerHeader ───────────────────────────────────────────────────────────
 

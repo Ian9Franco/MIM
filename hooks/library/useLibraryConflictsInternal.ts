@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LibraryFile } from "@/lib/types";
+import { LibraryFile } from "@/lib/core/types";
 
 /**
  * Hook para la detección visual de conflictos y duplicados en la UI de la librería.

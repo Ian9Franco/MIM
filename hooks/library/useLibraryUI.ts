@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { LibraryFile } from "@/lib/types";
+import { LibraryFile } from "@/lib/core/types";
 
 export function useLibraryUI(modrinthStatus: any, ignoredUpdates: Set<string>, handleDownloadUpdate: any) {
   const getBadge = useCallback((f: LibraryFile) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { ModHit } from "@/lib/types";
-import { mimDB } from "@/lib/indexeddb";
+import type { ModHit } from "@/lib/core/types";
+import { mimDB } from "@/lib/storage/indexeddb";
 
 export function useFomoFollowedManager() {
   const [subTab, setSubTab] = useState<"projects" | "authors" | "history" | "showcases">(

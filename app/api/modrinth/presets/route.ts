@@ -17,7 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 

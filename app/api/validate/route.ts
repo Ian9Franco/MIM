@@ -19,11 +19,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE, isValidLoader, SUBCATEGORIES } from "@/lib/constants";
-import type { Loader } from "@/lib/constants";
+import { SOURCE_BASE, isValidLoader, SUBCATEGORIES } from "@/lib/core/constants";
+import type { Loader } from "@/lib/core/constants";
 import { scanMod } from "@/lib/scanner";
-import { validatePack, type ValidatorMod } from "@/lib/packValidator";
-import { loadProjectConfig } from "@/lib/projectConfig";
+import { validatePack, type ValidatorMod } from "@/lib/modding/packValidator";
+import { loadProjectConfig } from "@/lib/modding/projectConfig";
 
 const BUILD_TARGETS = ["alluser", "allhost", "both"] as const;
 type BuildTarget = (typeof BUILD_TARGETS)[number];

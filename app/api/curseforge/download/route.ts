@@ -11,8 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
-import { enrichUpdatesCache } from "@/lib/cache-enricher";
+import { getSettings } from "@/lib/core/settings";
+import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";

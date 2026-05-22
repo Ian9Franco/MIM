@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Zap, ChevronRight, Package, Server, Trash2, X, Cpu, ChevronDown } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
 import { HotkeyCard } from "../ui/HotkeyCard";
-import type { PendingFile, LibraryFile, Project } from "@/lib/types";
+import type { PendingFile, LibraryFile, Project } from "@/lib/core/types";
 
 interface QuickCategorizeSectionProps {
   allSelected: (PendingFile | LibraryFile)[];

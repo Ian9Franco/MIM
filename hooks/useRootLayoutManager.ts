@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { Project, PackHealthReport } from "@/lib/types";
-import { incidentManager } from "@/lib/incidentManager";
+import type { Project, PackHealthReport } from "@/lib/core/types";
+import { incidentManager } from "@/lib/intelligence/incidentManager";
 import { useStaging } from "@/hooks/useStaging";
 
 export function useRootLayoutManager() {

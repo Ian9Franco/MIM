@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { ModHit } from "@/lib/types";
-import { eventBus } from "@/lib/eventBus";
+import { ModHit } from "@/lib/core/types";
+import { eventBus } from "@/lib/events/eventBus";
 
 export function useFomoSelection() {
   const [selectedMods, setSelectedMods] = useState<ModHit[]>([]);

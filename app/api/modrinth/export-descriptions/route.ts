@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mimDB, type ModDescription } from "@/lib/indexeddb";
-import { storageMigration } from "@/lib/storage-migration";
-import { getApiKey } from "@/lib/settings";
+import { mimDB, type ModDescription } from "@/lib/storage/indexeddb";
+import { storageMigration } from "@/lib/storage/storage-migration";
+import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const CONCURRENCY_LIMIT = 5;

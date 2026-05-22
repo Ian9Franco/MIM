@@ -1,5 +1,5 @@
 import { EventFlowTrace, DebugEvent } from "./types";
-import { EventSource } from "../eventContract";
+import { EventSource } from "@/lib/events/eventContract";
 
 export function analyzeFlow(trace: EventFlowTrace) {
   const summary = {

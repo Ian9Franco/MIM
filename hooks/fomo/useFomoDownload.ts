@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { ModHit, VersionEntry } from "@/lib/types";
-import { eventBus } from "@/lib/eventBus";
+import { ModHit, VersionEntry } from "@/lib/core/types";
+import { eventBus } from "@/lib/events/eventBus";
 import { DependencyPrompt, PendingDependency } from "./types";
 
 /**

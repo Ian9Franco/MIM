@@ -2,12 +2,19 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/core/supabaseClient";
 
 interface Profile {
   id: string;
   username: string;
   avatar_url: string | null;
+  banner_url?: string | null;
+  banner_meta?: {
+    zoom?: number;
+    x?: number;
+    y?: number;
+    blur?: number;
+  } | null;
   color?: string | null;
   club_data?: unknown;
   created_at: string;

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/constants";
-import { updateModOverride } from "@/lib/projectConfig";
+import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/core/constants";
+import { updateModOverride } from "@/lib/modding/projectConfig";
 
 export async function POST(req: NextRequest) {
   try {

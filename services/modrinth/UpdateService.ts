@@ -1,5 +1,5 @@
-import { SOURCE_BASE } from "@/lib/constants";
-import { getApiKey } from "@/lib/settings";
+import { SOURCE_BASE } from "@/lib/core/constants";
+import { getApiKey } from "@/lib/core/settings";
 import path from "path";
 import * as fsSync from "fs";
 

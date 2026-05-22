@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ModHit, VersionEntry } from "@/lib/types";
+import { ModHit, VersionEntry } from "@/lib/core/types";
 
 export function useFomoDetails(
   source: string,

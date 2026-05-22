@@ -1,5 +1,5 @@
 import React from "react";
-import { predictConnectorCompatibility } from "@/lib/sinytraUtils";
+import { predictConnectorCompatibility } from "@/lib/modding/sinytraUtils";
 
 /**
  * @fileoverview Indicador Visual de Compatibilidad Asistida (Sinytra Connector).

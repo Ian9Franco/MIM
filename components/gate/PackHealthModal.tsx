@@ -11,7 +11,7 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { XCircle, ShieldCheck, CheckCircle } from "lucide-react";
-import type { PackHealthReport } from "@/lib/types";
+import type { PackHealthReport } from "@/lib/core/types";
 import { IssueSection } from "./PackHealthComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { LibraryFile, Project } from "@/lib/types";
-import { mimDB } from "@/lib/indexeddb";
+import { LibraryFile, Project } from "@/lib/core/types";
+import { mimDB } from "@/lib/storage/indexeddb";
 import { modPersistence } from "@/services/modPersistenceService";
 
 /**

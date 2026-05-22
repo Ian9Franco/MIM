@@ -1,4 +1,4 @@
-import { EventName } from "../eventContract";
+import { EventName } from "@/lib/events/eventContract";
 
 export interface SchemaDefinition {
   type: "object" | "string" | "number" | "boolean" | "array";

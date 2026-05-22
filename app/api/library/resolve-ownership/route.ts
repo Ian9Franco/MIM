@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE, CATEGORIES, isValidLoader } from "@/lib/constants";
+import { SOURCE_BASE, CATEGORIES, isValidLoader } from "@/lib/core/constants";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
-import { isLibrary, resolveDependencyScopes } from "@/lib/dependencyResolver";
-import type { DependencyNode } from "@/lib/dependencyResolver";
+import { isLibrary, resolveDependencyScopes } from "@/lib/modding/dependencyResolver";
+import type { DependencyNode } from "@/lib/modding/dependencyResolver";
 import path from "path";
 import fs from "fs";
 

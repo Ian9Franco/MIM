@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
-import { readNBT } from "@/lib/nbt";
+import { getSettings } from "@/lib/core/settings";
+import { readNBT } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
 

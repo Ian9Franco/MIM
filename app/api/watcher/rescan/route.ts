@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scanExistingFiles } from "@/lib/watcher";
+import { scanExistingFiles } from "@/lib/core/watcher";
 import { scanMod } from "@/lib/scanner";
 import path from "path";
 import os from "os";

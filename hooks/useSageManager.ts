@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { analyzeMinecraftLog, type SageAnalysisResult } from "@/utils/sageAnalyzer";
-import type { Project } from "@/lib/types";
-import { eventBus } from "@/lib/eventBus";
+import type { Project } from "@/lib/core/types";
+import { eventBus } from "@/lib/events/eventBus";
 
 export interface LocalLogFile {
   name: string;

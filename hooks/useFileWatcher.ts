@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import type { PendingFile } from "@/lib/types";
-import { incidentManager } from "@/lib/incidentManager";
+import type { PendingFile } from "@/lib/core/types";
+import { incidentManager } from "@/lib/intelligence/incidentManager";
 
 /**
  * Genera un "fingerprint" o huella única para un archivo pendiente

@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { LibraryFile, Project } from '@/lib/types';
+import type { LibraryFile, Project } from '@/lib/core/types';
 
 interface DescriptionState {
   description: {

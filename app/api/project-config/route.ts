@@ -21,7 +21,7 @@ import {
   removeProjectSubcategory,
   resetProjectSubcategories,
   getProjectSubcategories,
-} from "@/lib/projectSubcategories";
+} from "@/lib/modding/projectSubcategories";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

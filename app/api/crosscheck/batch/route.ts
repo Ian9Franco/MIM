@@ -10,8 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getRawEnv } from "@/lib/env";
-import { getApiKey } from "@/lib/settings";
+import { getRawEnv } from "@/lib/core/env";
+import { getApiKey } from "@/lib/core/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";

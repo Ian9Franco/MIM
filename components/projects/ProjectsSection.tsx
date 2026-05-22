@@ -2,7 +2,7 @@ import React from "react";
 import { FolderOpen, Pencil, Trash2, Plus } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 import { ProjectEditor } from "./ProjectEditor";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/lib/core/types";
 
 interface ProjectsSectionProps {
   projects: Project[];

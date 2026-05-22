@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { SOURCE_BASE } from "@/lib/constants";
+import { SOURCE_BASE } from "@/lib/core/constants";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 

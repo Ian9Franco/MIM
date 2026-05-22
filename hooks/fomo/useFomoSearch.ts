@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ModHit } from "@/lib/types";
-import { eventBus } from "@/lib/eventBus";
+import { ModHit } from "@/lib/core/types";
+import { eventBus } from "@/lib/events/eventBus";
 
 /**
  * @fileoverview Hook de Búsqueda y Paginación de FOMO (Discover).

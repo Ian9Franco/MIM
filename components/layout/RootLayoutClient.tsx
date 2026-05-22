@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRootLayoutManager } from "@/hooks/useRootLayoutManager";
-import { FomoSidebar } from "@/components/fomo/FomoSidebar";
+import { FomoSidebar } from "@/components/fomo/sidebar/FomoSidebar";
 import { SageSidebar } from "@/components/sage/SageSidebar";
 import { TweakSidebar } from "@/components/layout/TweakSidebar";
 import { SettingsModal } from "@/components/layout/SettingsModal";
@@ -10,7 +10,7 @@ import { StagingModal } from "@/components/layout/StagingModal";
 import { PackHealthPanel } from "@/components/gate/PackHealthModal";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutFooter } from "./LayoutFooter";
-import { FomoFloatingPlayer } from "@/components/fomo/FomoFloatingPlayer";
+import { FomoFloatingPlayer } from "@/components/fomo/showcase/FomoFloatingPlayer";
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const {

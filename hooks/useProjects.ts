@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/lib/core/types";
 
 const STORAGE_KEY = "mim_projects";
 function loadProjects(): Project[] {

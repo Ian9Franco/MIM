@@ -23,7 +23,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

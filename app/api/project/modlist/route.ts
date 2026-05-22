@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { getSettings } from "@/lib/settings";
-import { collectJars } from "@/lib/builder";
+import { getSettings } from "@/lib/core/settings";
+import { collectJars } from "@/lib/modding/builder";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

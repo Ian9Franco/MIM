@@ -13,7 +13,7 @@ import { SageLogViewer } from "./SageLogViewer";
 import { SagePlayerRescue } from "./SagePlayerRescue";
 import { SageManualPaste } from "./SageManualPaste";
 import { SageDeleteModal } from "./SageDeleteModal";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/lib/core/types";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 export interface SageSidebarProps {

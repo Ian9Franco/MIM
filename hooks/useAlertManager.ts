@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { eventBus } from "@/lib/eventBus";
-import { incidentManager, Incident } from "@/lib/incidentManager";
-import { mimDB } from "@/lib/indexeddb";
+import { eventBus } from "@/lib/events/eventBus";
+import { incidentManager, Incident } from "@/lib/intelligence/incidentManager";
+import { mimDB } from "@/lib/storage/indexeddb";
 
 export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthStatus: Record<string, any>, followedMods: any[], followedAuthors: string[], ignoredUpdates: Set<string>) {
   const [activeTab, setActiveTab] = useState<"all" | "sage" | "updates" | "conflicts" | "config" | "bytecode">("all");

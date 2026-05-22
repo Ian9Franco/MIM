@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scanMod } from "@/lib/enhanced-mod-scanner";
+import { scanMod } from "@/lib/modding/enhanced-mod-scanner";
 import fs from "fs";
 import path from "path";
 

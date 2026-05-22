@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Project, LibraryFile } from "@/lib/types";
+import { Project, LibraryFile } from "@/lib/core/types";
 
 /**
  * Hook para la gestión de la lógica de la sección de librería.

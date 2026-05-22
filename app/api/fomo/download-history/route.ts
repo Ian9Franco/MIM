@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE } from "@/lib/constants";
+import { SOURCE_BASE } from "@/lib/core/constants";
 
 const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
 

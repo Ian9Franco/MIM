@@ -1,4 +1,4 @@
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const MODRINTH_API_V3 = "https://api.modrinth.com/v3";

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { fetchCollections, fetchCollectionMods, createCollection, addModToCollection, downloadCollection, fetchOfficialCollections } from "@/services/api";
-import type { CollectionEntry, ModHit } from "@/lib/types";
+import type { CollectionEntry, ModHit } from "@/lib/core/types";
 
 export function useFomoCollectionsManager(loader: string, gameVersion: string, onStatus: any) {
   const [collections, setCollections] = useState<any[]>([]);

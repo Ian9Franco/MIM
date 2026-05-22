@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 

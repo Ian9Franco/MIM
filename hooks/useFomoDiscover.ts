@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { ModHit, VersionEntry } from "@/lib/types";
+import { ModHit, VersionEntry } from "@/lib/core/types";
 import { SORT_OPTIONS } from "../constants/app";
 import { useFomoFilters } from "./fomo/useFomoFilters";
 import { useFomoSearch } from "./fomo/useFomoSearch";

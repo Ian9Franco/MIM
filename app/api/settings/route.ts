@@ -10,7 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getSettings, saveSettings, isSettingsValid } from "@/lib/settings";
+import { getSettings, saveSettings, isSettingsValid } from "@/lib/core/settings";
 
 export async function GET() {
   const settings = getSettings();

@@ -3,7 +3,7 @@ import YTDlpWrap from "yt-dlp-wrap";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { getPortableDir } from "@/lib/settings";
+import { getPortableDir } from "@/lib/core/settings";
 
 // Definimos la ruta del binario en la carpeta standalone del proyecto
 const binDir = path.join(process.cwd(), "standalone");

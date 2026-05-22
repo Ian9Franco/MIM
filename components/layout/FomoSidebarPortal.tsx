@@ -3,8 +3,8 @@
 import React from "react";
 import { Inbox } from "lucide-react";
 import { PendingFilesSection } from "@/components/library/PendingFilesSection";
-import type { PendingFile } from "@/lib/types";
-import { FOMO_DETAILS_RESERVE } from "@/lib/fomoLayout";
+import type { PendingFile } from "@/lib/core/types";
+import { FOMO_DETAILS_RESERVE } from "@/lib/fomo/fomoLayout";
 
 interface FomoSidebarPortalProps {
   fomoOpen: boolean;

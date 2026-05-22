@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
-import { scanMod } from "@/lib/enhanced-mod-scanner";
+import { scanMod } from "@/lib/modding/enhanced-mod-scanner";
 
 export async function GET(req: NextRequest) {
   try {

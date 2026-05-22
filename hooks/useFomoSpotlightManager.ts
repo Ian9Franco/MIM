@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
-import type { ModHit, CollectionEntry } from "@/lib/types";
-import { mimDB } from "@/lib/indexeddb";
+import type { ModHit, CollectionEntry } from "@/lib/core/types";
+import { mimDB } from "@/lib/storage/indexeddb";
 
 export function useFomoSpotlightManager(loader: string, gameVersion: string, sinytraActive: boolean) {
   const [loading, setLoading] = useState(true);

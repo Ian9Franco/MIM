@@ -8,9 +8,9 @@ import {
   X, Bell, CheckCircle, AlertTriangle, Shield, Package, RefreshCw, 
   FileWarning, Info, Settings, ShieldAlert, ShieldX, History, Activity, Binary, Sparkles
 } from "lucide-react";
-import { incidentManager } from "@/lib/incidentManager";
+import { incidentManager } from "@/lib/intelligence/incidentManager";
 import { useAlertManager } from "@/hooks/useAlertManager";
-import { mimDB } from "@/lib/indexeddb";
+import { mimDB } from "@/lib/storage/indexeddb";
 import { TabButton, AlertSection, ActionButton, UpdateCard, EmptyState, IncidentCard } from "./AlertSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 

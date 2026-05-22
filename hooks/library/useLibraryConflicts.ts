@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { LibraryFile, PendingFile } from "@/lib/types";
-import { detectBytecodeConflicts, ConflictSummary } from "@/lib/conflict-engine";
+import { LibraryFile, PendingFile } from "@/lib/core/types";
+import { detectBytecodeConflicts, ConflictSummary } from "@/lib/modding/conflict-engine";
 
 export function useLibraryConflicts(library: LibraryFile[], pendingFiles: PendingFile[]) {
   const [conflicts, setConflicts] = useState<any[]>([]);

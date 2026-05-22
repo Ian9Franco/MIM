@@ -1,0 +1,243 @@
+{
+  "summary": {
+    "totalLargeFiles": 25,
+    "totalRefactored": 33,
+    "threshold": 300
+  },
+  "largeFiles": [
+    {
+      "path": "components\\fomo\\spotlight\\FomoSpotlight.tsx",
+      "lines": 873
+    },
+    {
+      "path": "components\\fomo\\collections\\FomoCollections.tsx",
+      "lines": 692
+    },
+    {
+      "path": "components\\fomo\\sidebar\\FomoSidebarDiscoverBranch.tsx",
+      "lines": 691
+    },
+    {
+      "path": "components\\fomo\\core\\FomoOverlayComponents.tsx",
+      "lines": 687
+    },
+    {
+      "path": "components\\layout\\TweakSidebar.tsx",
+      "lines": 582
+    },
+    {
+      "path": "components\\fomo\\showcase\\FomoFloatingPlayer.tsx",
+      "lines": 535
+    },
+    {
+      "path": "components\\fomo\\showcase\\FomoYoutubeShowcase.tsx",
+      "lines": 530
+    },
+    {
+      "path": "components\\fomo\\followed\\FomoFollowedAuthors.tsx",
+      "lines": 480
+    },
+    {
+      "path": "app\\api\\tweak\\route.ts",
+      "lines": 479
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityModpacks.tsx",
+      "lines": 478
+    },
+    {
+      "path": "components\\fomo\\sidebar\\FomoSidebar.tsx",
+      "lines": 476
+    },
+    {
+      "path": "components\\tweak\\parts\\PackHierarchyManager.tsx",
+      "lines": 471
+    },
+    {
+      "path": "components\\fomo\\core\\FomoVersionOverlay.tsx",
+      "lines": 460
+    },
+    {
+      "path": "components\\fomo\\followed\\FomoFollowedShowcases.tsx",
+      "lines": 420
+    },
+    {
+      "path": "app\\page.tsx",
+      "lines": 413
+    },
+    {
+      "path": "components\\layout\\TweakSidebarComponents.tsx",
+      "lines": 390
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityPanel.tsx",
+      "lines": 386
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityClubCard.tsx",
+      "lines": 334
+    },
+    {
+      "path": "components\\library\\ModCard.tsx",
+      "lines": 334
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityModPool.tsx",
+      "lines": 326
+    },
+    {
+      "path": "app\\api\\tweak\\lib\\PackIntelligence.ts",
+      "lines": 318
+    },
+    {
+      "path": "lib\\packValidator.ts",
+      "lines": 318
+    },
+    {
+      "path": "components\\projects\\InstalledModsSection.tsx",
+      "lines": 315
+    },
+    {
+      "path": "components\\library\\QuickCategorizeSection.tsx",
+      "lines": 313
+    },
+    {
+      "path": "components\\tweak\\parts\\ConfigExplorer.tsx",
+      "lines": 303
+    }
+  ],
+  "refactoredFiles": [
+    {
+      "path": "app\\api\\curseforge\\discover\\route.ts",
+      "lines": 32
+    },
+    {
+      "path": "components\\fomo\\collections\\FomoCollections.tsx",
+      "lines": 692
+    },
+    {
+      "path": "components\\fomo\\parts\\FomoCompatibilityBadge.tsx",
+      "lines": 36
+    },
+    {
+      "path": "components\\fomo\\parts\\FomoPlatformIcons.tsx",
+      "lines": 12
+    },
+    {
+      "path": "components\\library\\parts\\LibraryToolbar.tsx",
+      "lines": 195
+    },
+    {
+      "path": "components\\library\\parts\\ModCardHeader.tsx",
+      "lines": 51
+    },
+    {
+      "path": "components\\library\\parts\\ModItem.tsx",
+      "lines": 40
+    },
+    {
+      "path": "components\\library\\parts\\PendingIncompatibleGroup.tsx",
+      "lines": 52
+    },
+    {
+      "path": "components\\library\\VirtualizedLibrary.tsx",
+      "lines": 123
+    },
+    {
+      "path": "components\\sage\\parts\\DiagnosisCard.tsx",
+      "lines": 69
+    },
+    {
+      "path": "components\\sage\\parts\\SageActionableFixes.tsx",
+      "lines": 54
+    },
+    {
+      "path": "components\\security\\parts\\SecurityHeader.tsx",
+      "lines": 62
+    },
+    {
+      "path": "components\\security\\parts\\SecurityOverview.tsx",
+      "lines": 54
+    },
+    {
+      "path": "components\\tweak\\parts\\ConfigExplorer.tsx",
+      "lines": 303
+    },
+    {
+      "path": "components\\tweak\\parts\\KeybindRow.tsx",
+      "lines": 65
+    },
+    {
+      "path": "components\\tweak\\parts\\OverviewTab.tsx",
+      "lines": 178
+    },
+    {
+      "path": "components\\tweak\\parts\\PackHierarchyManager.tsx",
+      "lines": 471
+    },
+    {
+      "path": "components\\tweak\\parts\\PackItem.tsx",
+      "lines": 58
+    },
+    {
+      "path": "lib\\classifier\\index.ts",
+      "lines": 69
+    },
+    {
+      "path": "lib\\classifier\\rules.ts",
+      "lines": 41
+    },
+    {
+      "path": "lib\\db\\schema.ts",
+      "lines": 112
+    },
+    {
+      "path": "lib\\db\\stores\\ModStore.ts",
+      "lines": 24
+    },
+    {
+      "path": "lib\\indexeddb.ts",
+      "lines": 70
+    },
+    {
+      "path": "lib\\scanner\\parsers.ts",
+      "lines": 40
+    },
+    {
+      "path": "lib\\scanner\\scoring.ts",
+      "lines": 54
+    },
+    {
+      "path": "lib\\scanner\\utils.ts",
+      "lines": 24
+    },
+    {
+      "path": "lib\\scanner.ts",
+      "lines": 149
+    },
+    {
+      "path": "services\\api.ts",
+      "lines": 203
+    },
+    {
+      "path": "services\\curseforge\\CurseForgeMapper.ts",
+      "lines": 131
+    },
+    {
+      "path": "services\\curseforge\\CurseForgeService.ts",
+      "lines": 83
+    },
+    {
+      "path": "services\\modPersistenceService.ts",
+      "lines": 51
+    },
+    {
+      "path": "services\\modrinth\\CollectionService.ts",
+      "lines": 44
+    },
+    {
+      "path": "services\\modrinth\\UpdateService.ts",
+      "lines": 107
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Project } from "@/lib/types";
+import { Project } from "@/lib/core/types";
 
 export function useLibraryUpdates(activeProject: Project | null) {
   const [modrinthStatus, setModrinthStatus] = useState<Record<string, any>>({});

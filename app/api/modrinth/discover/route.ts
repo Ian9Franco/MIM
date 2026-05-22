@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 import { MODRINTH_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS } from "@/constants/app";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";

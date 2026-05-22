@@ -5,7 +5,7 @@ import {
   XCircle, AlertTriangle, Info, ChevronDown,
   Search, FolderInput, Settings
 } from "lucide-react";
-import type { ValidationIssue, ValidationSeverity } from "@/lib/types";
+import type { ValidationIssue, ValidationSeverity } from "@/lib/core/types";
 
 // ── Severity Config ───────────────────────────────────────────────────────────
 

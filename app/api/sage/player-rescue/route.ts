@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPortableDir, getSettings } from "@/lib/settings";
-import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/nbt";
+import { getPortableDir, getSettings } from "@/lib/core/settings";
+import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
 

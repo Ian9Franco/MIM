@@ -1,4 +1,4 @@
-import type { CollectionEntry, ModHit } from "@/lib/types";
+import type { CollectionEntry, ModHit } from "@/lib/core/types";
 
 export async function fetchCollections(): Promise<{ collections: CollectionEntry[], error: string | null }> {
   try {

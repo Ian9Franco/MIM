@@ -16,7 +16,7 @@ import {
 } from "./TweakSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { FolderOpen } from "lucide-react";
-import type { Project } from "@/lib/types";
+import type { Project } from "@/lib/core/types";
 import { ConfigExplorer } from "../tweak/parts/ConfigExplorer";
 import PackHierarchyManager, { PackHierarchyManagerRef } from "../tweak/parts/PackHierarchyManager";
 

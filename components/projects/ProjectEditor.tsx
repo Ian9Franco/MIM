@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Check, X } from "lucide-react";
-import { LOADERS } from "@/lib/constants";
+import { LOADERS } from "@/lib/core/constants";
 import { LOADER_COLORS } from "@/constants/app";
-import type { Loader } from "@/lib/constants";
-import type { Project } from "@/lib/types";
+import type { Loader } from "@/lib/core/constants";
+import type { Project } from "@/lib/core/types";
 
 /**
  * Componente para crear o editar un proyecto.

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { ModHit, VersionEntry } from "@/lib/types";
-import { mimDB } from "@/lib/indexeddb";
+import type { ModHit, VersionEntry } from "@/lib/core/types";
+import { mimDB } from "@/lib/storage/indexeddb";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 

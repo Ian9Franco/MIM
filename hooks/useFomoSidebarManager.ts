@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { fetchCollections, createCollection, addModToCollection } from "@/services/api";
-import type { ModHit } from "@/lib/types";
-import type { FomoMode } from "@/components/fomo/fomoSidebarTypes";
+import type { ModHit } from "@/lib/core/types";
+import type { FomoMode } from "@/components/fomo/sidebar/fomoSidebarTypes";
 
 export function useFomoSidebarManager(
   discover: {

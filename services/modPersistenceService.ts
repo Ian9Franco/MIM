@@ -1,7 +1,7 @@
-import { mimDB } from "@/lib/indexeddb";
-import type { ModEntity } from "@/lib/indexeddb";
-import type { EnhancedModMeta } from "@/lib/enhanced-mod-scanner";
-import { CLIENT_KEYWORDS, SERVER_KEYWORDS } from "@/lib/classification-data";
+import { mimDB } from "@/lib/storage/indexeddb";
+import type { ModEntity } from "@/lib/storage/indexeddb";
+import type { EnhancedModMeta } from "@/lib/modding/enhanced-mod-scanner";
+import { CLIENT_KEYWORDS, SERVER_KEYWORDS } from "@/lib/intelligence/classification-data";
 
 /**
  * ModPersistenceService

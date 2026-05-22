@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/constants";
+import { SOURCE_BASE } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 

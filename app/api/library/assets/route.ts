@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
-import { SOURCE_BASE } from "@/lib/constants";
+import { getSettings } from "@/lib/core/settings";
+import { SOURCE_BASE } from "@/lib/core/constants";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
 import path from "path";

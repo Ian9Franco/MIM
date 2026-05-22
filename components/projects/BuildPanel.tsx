@@ -16,7 +16,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck, Pickaxe } from "lucide-react";
-import type { PackHealthReport } from "@/lib/types";
+import type { PackHealthReport } from "@/lib/core/types";
 
 type BuildType = "alluser" | "allhost";
 
@@ -79,7 +79,7 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
       const report: PackHealthReport = await res.json();
       
       // Emit event for ALRT/GATE integration
-      import("@/lib/eventBus").then(({ eventBus }) => {
+      import("@/lib/events/eventBus").then(({ eventBus }) => {
         eventBus.emit("builder:validation-completed", {
           buildId: report.validatedAt || Date.now().toString(),
           validationType: "compatibility",

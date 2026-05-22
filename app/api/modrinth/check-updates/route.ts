@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkModUpdate, updateCache } from "@/services/modrinth/UpdateService";
-import { getApiKey } from "@/lib/settings";
+import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const TTL_MS = 12 * 60 * 60 * 1000;

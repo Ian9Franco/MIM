@@ -1,8 +1,25 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v9.3.0 (Arquitectura Modular & Premium UI)  
+> **Versión Actual:** v9.6.0 (SAGE Sandboxing & TWEAK Overrides)  
 > **Última actualización:** 2026-05-23
+
+---
+
+## 🚀 Versión 9.6.0 — SAGE Sandboxing, NBT Inline & TWEAK Overrides (2026-05-23)
+
+### 🛡️ SAGE Player Rescue & NBT Editing
+- **Sandboxing Estricto de Mundos**: Reestructuración del flujo de selección (2 pasos) para garantizar que los archivos `.dat` de jugadores estén estrictamente contextualizados y vinculados a su mundo origen, evitando colisiones inter-mundos.
+- **NBT Inline Editing**: Eliminación de modales superpuestos en favor de una edición directa (`inline`) dentro del árbol de NBT. Los administradores pueden editar valores, tipos y eliminar claves directamente desde los nodos del inventario.
+- **Crash Fixes**: Resolución del crash de React (`NaN`) al castear de forma segura los NBT Bytes de los slots del inventario.
+
+### ⚙️ TWEAK Resource Pack Overrides
+- **Forzado de Packs Incompatibles**: Al compilar y guardar el orden de los Resource Packs en `options.txt`, MIM ahora registra automáticamente la lista exacta en el array `incompatibleResourcePacks`. Esto bypassa la seguridad de Vanilla y previene que Minecraft desactive texturas por formato antiguo.
+- **Layout y Drag & Drop**: Renovación de la vista de Packs Disponibles (Librería Global) a un grid de 2 columnas, y adición de lógica de "arrastrar hacia fuera" (Drag to Deactivate) desde la vista modal ampliada.
+
+### 🎨 UI & Rendering
+- **3D Profile Canvas (Skinview3d)**: Reescalado y optimización del render 3D del perfil del usuario en el `LayoutHeader` con desbordamiento (`overflow`) controlado, logrando un avatar más inmersivo sin expandir las dimensiones verticales de la barra superior.
+- **Corrección Minotar API**: Ajuste del endpoint de extracción de skins (de `/skins/` a `/skin/`) para prevenir fallos críticos y cuelgues del motor WebGL.
 
 ---
 

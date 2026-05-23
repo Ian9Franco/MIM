@@ -12,7 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.6.0-indigo.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-9.6.1-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -235,16 +235,12 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v9.6.0 (Actual — Mayo 2026)**
-- 🗂️ **Reorganización de componentes FOMO**: Subfolders por dominio (`community/`, `discover/`, `showcase/`, `sidebar/`, `core/`, etc.) con paths corregidos en todo el proyecto.
-- 🗂️ **Reorganización de lib/**: Subfolders por dominio (`fomo/`, `modding/`, `storage/`, `events/`, `intelligence/`, `security/`, `core/`).
-- 🎨 **Rediseño FOMO Cloud**: Header inmersivo con gradientes de perfil, glassmorfismo, avatar con glow y tabs de navegación premium.
-- 🛡️ **Showcase como feature secundaria**: La reproducción de video nunca es mission-critical. Fallback "Abrir en YouTube" siempre disponible.
-
-### ✅ **v9.6.0 (Mayo 2026)**
-- 💾 **Asynchronous Storage Architecture (IndexedDB)**: Migración completa de almacenamiento síncrono de FOMO a IndexedDB.
-- 📺 **Showcase Native Player**: Reproductor flotante PiP con controles premium y barra de progreso multicapa.
-- 🖼️ **Thumbnail Auto-Healing**: Cola de fallbacks de calidad para miniaturas de YouTube.
+### ✅ **v9.6.1 (Actual — Mayo 2026)**
+- 🗂️ **Arquitectura Modular**: Reorganización masiva en subdominios para `components/fomo/` y `lib/`.
+- 💾 **IndexedDB Storage**: Migración completa asíncrona de datos de FOMO.
+- 🎨 **Rediseño FOMO Cloud**: Header inmersivo 3D, navegación premium y reproductor PiP nativo.
+- 🛡️ **SAGE Player Rescue**: Sandboxing jerárquico de mundos y edición inline directa de NBT.
+- ⚙️ **TWEAK Overrides**: Forzado de resource packs incompatibles escribiendo `incompatibleResourcePacks` en options.txt para saltar restricciones de Vanilla.
 
 ### 🎯 **Futuro (2026+)**
 - 👥 Multiplayer pack sync

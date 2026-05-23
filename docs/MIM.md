@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 9.6.0 | **Última actualización:** 2026-05-23
+> **Versión:** 9.6.1 | **Última actualización:** 2026-05-23
 
 ---
 
@@ -242,11 +242,16 @@ El sistema interactivo de recuperación de crashes (SAGE) cuenta con las siguien
 * **Crash Log Interpreter**: Analizador heurístico de stack traces de Java de Minecraft para encontrar culpables y dependencias faltantes.
 * **SAGE ➔ FOMO Bridge**: Permite descargar e instalar dependencias faltantes identificadas en logs con un solo clic.
 * **NBT Player Rescue Editor**: Lógica binaria de lectura y escritura NBT (`lib/nbt.ts`) con soporte Gzip nativo para teletransportar jugadores en chunks corruptos, cambiar dimensiones o limpiar inventarios dañados, con copias de seguridad `.mim_bak` garantizadas.
+* **Aislamiento de Mundos (Sandboxing)**: Flujo de selección en dos pasos (Selección de mundo -> Selección de jugador) que asegura que la edición del archivo `.dat` se aplica rigurosamente al archivo de origen local sin riesgo de colisiones entre distintos mundos. Las modificaciones NBT se realizan ahora de forma totalmente *inline*, sin usar modales superpuestos, permitiendo modificar claves y tipos directamente en la vista del árbol.
 
 ### 9.2 Event Bus y Correlation Engine (`lib/events/`)
 El `eventBus.ts` desacopla los distintos módulos funcionales y procesa notificaciones en lote mediante `requestAnimationFrame`:
 * **Correlation Engine**: Evalúa relaciones causales entre eventos (ej: una descarga fallida en FOMO sumada a un warning de disco en ALRT gatilla un incidente de almacenamiento consistente).
 * **Fingerprinting**: Evita evaluaciones duplicadas de alertas en bucles cerrados mediante expiraciones TTL rápidas de 5 segundos.
+
+### 9.3 TWEAK Engine & Resource Management (`components/tweak/`)
+TWEAK es el módulo dedicado a la gestión a bajo nivel de las opciones y configuraciones del cliente de Minecraft sin necesidad de arrancar el juego.
+* **Incompatibility Overrides**: El sistema de ordenamiento jerárquico de *Resource Packs* permite a los usuarios agrupar y visualizar jerárquicamente las texturas. Al guardar, MIM fuerza el bypass de restricciones de Vanilla inyectando todos los packs en uso directamente sobre la directiva `incompatibleResourcePacks` en `options.txt`, asegurando que Minecraft cargue los packs incluso si reportan problemas de incompatibilidad de versión de formato (`pack_format`).
 
 ---
 

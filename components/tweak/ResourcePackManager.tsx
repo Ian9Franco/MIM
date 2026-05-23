@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * RESOURCE PACK MANAGER
+ * 
+ * ✓ Full Freedom: All discovered resource packs can be dragged, reordered, and activated freely.
+ * ✓ No Filtering: Incompatible, outdated, or mismatched packs are treated exactly like all others.
+ * ✓ Administrator Authority: The exact order you choose is forced into options.txt.
+ * 
+ * Warnings about pack compatibility are informational only and do not restrict your choices.
+ */
+
 import { useState, useMemo } from "react";
 import { Package, Layers, Save, Wand2, AlertTriangle } from "lucide-react";
 import { useResourcePackManager } from "@/hooks/tweak/useResourcePackManager";

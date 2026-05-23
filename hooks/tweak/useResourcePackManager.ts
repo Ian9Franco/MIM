@@ -1,3 +1,11 @@
+/**
+ * RESOURCE PACK MANAGER HOOK
+ * 
+ * Manages resource pack ordering without filtering or restrictions.
+ * All packs are treated equally regardless of version, compatibility, or format.
+ * No validation is performed on pack order — the user's choice is final.
+ */
+
 import { useState, useCallback, useEffect, useRef } from "react";
 
 export function useResourcePackManager(activePacks: string[], draftPacks: string[] | null, projectName: string, version: string, onUpdate: () => void) {

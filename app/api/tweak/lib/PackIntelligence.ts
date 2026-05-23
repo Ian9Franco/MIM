@@ -1,3 +1,19 @@
+/**
+ * RESOURCE PACK INTELLIGENCE SYSTEM
+ * 
+ * ⚠️ IMPORTANT: This system generates WARNINGS AND SUGGESTIONS ONLY.
+ * 
+ * NO PACKS ARE FILTERED, BLOCKED, OR PREVENTED FROM BEING ACTIVATED.
+ * The administrator has full authority to arrange packs in any order, regardless of warnings.
+ * 
+ * Warnings detected here (incompatibilities, priority issues, etc.) are for INFORMATIONAL purposes only.
+ * Users can ignore all warnings and stack packs in any configuration they choose.
+ * The "Auto-fix" button is OPTIONAL and respects the user's chosen order.
+ * 
+ * Version mismatches, pack_format differences, and other compatibility flags DO NOT restrict pack activation.
+ * SAGE forces the exact order chosen by the administrator into options.txt without validation.
+ */
+
 import { PackRule, PackAnalysis } from "./types";
 
 export const PACK_ALIASES: Record<string, string[]> = {

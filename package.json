@@ -1,6 +1,6 @@
 {
   "name": "temp_next",
-  "version": "9.5.0",
+  "version": "9.6.0",
   "private": true,
   "main": "standalone/main.js",
   "scripts": {
@@ -8,6 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:nbt": "ts-node --project tsconfig.json __tests__/nbt-integration.test.ts",
+    "test:api": "ts-node --project tsconfig.json __tests__/api-integration.test.ts",
+    "test": "node __tests__/run.js all",
+    "test:quick": "node __tests__/run.js nbt",
     "build:standalone": "next build && node standalone/prepare.js",
     "start:standalone": "electron standalone/main.js",
     "package:win": "npm run build:standalone && electron-builder build --win",
@@ -19,6 +23,7 @@
     "adm-zip": "^0.5.17",
     "chalk": "^4.1.2",
     "chokidar": "^4.0.3",
+    "framer-motion": "^11.0.0",
     "idb": "^8.0.3",
     "inquirer": "^8.2.7",
     "lucide-react": "^1.14.0",
@@ -27,8 +32,8 @@
     "react-dom": "19.2.4",
     "react-window": "^2.2.7",
     "react-window-infinite-loader": "^2.0.1",
-    "yt-dlp-wrap": "^2.3.12",
-    "framer-motion": "^11.0.0"
+    "skinview3d": "^3.4.2",
+    "yt-dlp-wrap": "^2.3.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -42,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   },
   "build": {

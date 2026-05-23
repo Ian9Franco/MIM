@@ -1,9 +1,13 @@
-import { GripVertical, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
-
 /**
  * @fileoverview Fila de Paquete de Recursos (ResourcePack) con Drag & Drop.
  * Rediseñado para ser más compacto y menos "tosco".
+ * 
+ * ⚠️ UNRESTRICTED: All packs can be freely dragged and reordered.
+ * No packs are disabled, filtered, or marked as non-moveable.
+ * Warnings are informational only and do not prevent any actions.
  */
+
+import { GripVertical, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 
 export function PackItem({ pack, visualIndex, total, onMove, isDragged, isOver, onDragStart, onDragOver, onDrop, onDragEnd }: any) {
   const cleanName = pack.displayName;

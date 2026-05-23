@@ -37,9 +37,20 @@ export function LayoutHeader({
 }: LayoutHeaderProps) {
   const [appMode, setAppMode] = React.useState<string>("MIMU");
   const [guidesActive, setGuidesActive] = React.useState(false);
+  const [profile, setProfile] = React.useState<any>(null);
 
   React.useEffect(() => {
     setGuidesActive(localStorage.getItem("guides_enabled") === "true");
+    
+    // Fetch profile for global header
+    fetch("/api/sage/profile")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.profile) {
+          setProfile(data.profile);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   React.useEffect(() => {
@@ -88,7 +99,7 @@ export function LayoutHeader({
                 <>
                   <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-15px", "--tw-translate-y": "-15px", animationDelay: "0s" } as any} />
                   <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
-                </>
+                </                >
               )}
               <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
               <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
@@ -150,6 +161,13 @@ export function LayoutHeader({
             </div>
           </div>
         </div>
+
+        {/* Center: Global Profile (Frameless 3D Canvas) */}
+        {profile ? (
+          <div className="flex items-center justify-center animate-fade-in mx-auto">
+            <ProfileCanvas username={profile.username} />
+          </div>
+        ) : null}
 
         {/* Right side: Global controls */}
         <div id="onboarding-header-tools" className="flex items-center gap-3 animate-fade-up stagger-2">
@@ -239,5 +257,123 @@ function HeaderButton({
         </span>
       )}
     </button>
+  );
+}
+
+function ProfileCanvas({ username }: { username: string }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [clickCount, setClickCount] = React.useState(0);
+  
+  // Refs para controlar las instancias de skinview3d
+  const viewerRef = React.useRef<any>(null);
+  const animsRef = React.useRef<any>(null);
+  const rotateLoopRef = React.useRef<any>(null);
+
+  // Refs para discriminar Click vs Drag
+  const mouseCoords = React.useRef({ x: 0, y: 0 });
+  const isDragging = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!canvasRef.current || !username) return;
+
+    let viewer: any = null;
+    
+    import("skinview3d").then((skinview3d) => {
+      viewer = new skinview3d.SkinViewer({
+        canvas: canvasRef.current!,
+        width: 120,
+        height: 150,
+        skin: `https://minotar.net/skin/${username}`
+      });
+      viewerRef.current = viewer;
+      animsRef.current = skinview3d;
+      
+      viewer.controls.enableRotate = true;
+      viewer.controls.enableZoom = false;
+      viewer.controls.enablePan = false;
+      viewer.camera.position.z = 65; 
+
+      // Loop de rotación automática inicial mapeado al hook nativo onRender
+      rotateLoopRef.current = () => {
+        if (viewer.controls && !viewer.controls.isDragging) {
+          viewer.playerObject.rotation.y += 0.015;
+        }
+      };
+      
+      viewer.onRender = rotateLoopRef.current;
+      
+      // Animación inicial por defecto
+      viewer.animation = new skinview3d.WalkingAnimation();
+      viewer.animation.speed = 0.8;
+    }).catch(e => console.error("Failed to load skinview3d", e));
+
+    return () => {
+      if (viewer) {
+        viewer.dispose();
+      }
+    };
+  }, [username]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = false;
+    mouseCoords.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const deltaX = Math.abs(e.clientX - mouseCoords.current.x);
+    const deltaY = Math.abs(e.clientY - mouseCoords.current.y);
+    if (deltaX > 5 || deltaY > 5) {
+      isDragging.current = true;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging.current) return;
+    if (!viewerRef.current || !animsRef.current) return;
+    
+    const viewer = viewerRef.current;
+    const skinview3d = animsRef.current;
+    
+    // Apagamos la rotación automática limpiando el callback nativo
+    if (rotateLoopRef.current) {
+      viewer.onRender = null;
+      rotateLoopRef.current = null;
+    }
+
+    const nextClick = clickCount + 1;
+    setClickCount(nextClick);
+    const state = nextClick % 4;
+
+    if (state === 0) {
+      viewer.animation = new skinview3d.WalkingAnimation();
+      viewer.animation.speed = 0.8;
+    } else if (state === 1) {
+      viewer.animation = new skinview3d.RunningAnimation();
+      viewer.animation.speed = 1.2;
+    } else if (state === 2) {
+      if (skinview3d.SneakingAnimation) {
+        viewer.animation = new skinview3d.SneakingAnimation();
+      } else if (skinview3d.FlyingAnimation) {
+        viewer.animation = new skinview3d.FlyingAnimation();
+      } else {
+        viewer.animation = new skinview3d.WalkingAnimation();
+      }
+      viewer.animation.speed = 0.5;
+    } else if (state === 3) {
+      viewer.animation = new skinview3d.IdleAnimation();
+    }
+  };
+
+  return (
+    <div className="w-[120px] h-9 flex items-center justify-center relative overflow-visible">
+      <canvas 
+        ref={canvasRef} 
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        className="absolute top-1/2 -translate-y-1/2 h-[130px] w-auto cursor-grab active:cursor-grabbing transition-transform hover:scale-105 drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] z-20" 
+        title="¡Arrastrá para rotar o clickeá para cambiar de animación!"
+      />
+    </div>
   );
 }

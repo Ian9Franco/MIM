@@ -424,11 +424,20 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
             className="absolute inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in"
             onClick={() => setActiveBlockView(null)}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onDrop={(e) => e.stopPropagation()}
+            onDrop={(e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               if (!draggedItem) return;
+               const packName = blocks[draggedItem.block][draggedItem.index];
+               handleTogglePack(packName);
+               setDraggedItem(null);
+            }}
           >
             <div 
               className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 w-full max-w-xl max-h-[85%] flex flex-col space-y-3 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
@@ -505,7 +514,18 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
             </div>
           </div>
 
-          <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar p-2 bg-black/10 rounded-2xl border border-white/[0.02]">
+          <div 
+            className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar p-2 bg-black/10 rounded-2xl border border-white/[0.02]"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               if (!draggedItem) return;
+               const packName = blocks[draggedItem.block][draggedItem.index];
+               handleTogglePack(packName);
+               setDraggedItem(null);
+            }}
+          >
             {availablePacks
               .filter(p => !activePacks.includes(p))
               .map(p => {

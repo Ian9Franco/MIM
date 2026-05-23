@@ -373,12 +373,21 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Update Resource Packs
+      // Update Resource Packs — FORCE SAVE WITHOUT FILTERING
+      // SAGE allows administrator to arrange packs in ANY order regardless of compatibility.
+      // No version checking, pack_format validation, or incompatibility filtering is applied.
+      // The exact order specified by the user is written directly to options.txt.
       if (resourcePacks) {
         const index = content.findIndex(line => line.startsWith("resourcePacks:"));
         const packsJson = JSON.stringify(resourcePacks);
         if (index !== -1) content[index] = `resourcePacks:${packsJson}`;
         else content.push(`resourcePacks:${packsJson}`);
+
+        // Hack to force Minecraft to accept "incompatible" packs without deactivating them:
+        // We inject the exact same list into incompatibleResourcePacks
+        const incompIndex = content.findIndex(line => line.startsWith("incompatibleResourcePacks:"));
+        if (incompIndex !== -1) content[incompIndex] = `incompatibleResourcePacks:${packsJson}`;
+        else content.push(`incompatibleResourcePacks:${packsJson}`);
       }
 
       // Update specific settings from recommendations
@@ -413,7 +422,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "initialize") {
       // Initialize always points to global minecraftPath now
-      fs.writeFileSync(optionsPath, "lang:en_us\nguiScale:0\nresourcePacks:[]\n");
+      fs.writeFileSync(optionsPath, "lang:en_us\nguiScale:0\nresourcePacks:[]\nincompatibleResourcePacks:[]\n");
       return NextResponse.json({ success: true, message: "Perfil inicializado" });
     }
 
@@ -547,6 +556,11 @@ export async function POST(req: NextRequest) {
         const packsLine = `resourcePacks:${JSON.stringify(snap.resourcePackStack)}`;
         if (rpIdx !== -1) lines[rpIdx] = packsLine;
         else lines.push(packsLine);
+        
+        const incompIdx = lines.findIndex(l => l.startsWith("incompatibleResourcePacks:"));
+        const incompLine = `incompatibleResourcePacks:${JSON.stringify(snap.resourcePackStack)}`;
+        if (incompIdx !== -1) lines[incompIdx] = incompLine;
+        else lines.push(incompLine);
       }
 
       // Apply servers.dat if present in snapshot
@@ -577,6 +591,12 @@ export async function POST(req: NextRequest) {
           try {
             const current = JSON.parse(line.slice("resourcePacks:".length));
             return `resourcePacks:${JSON.stringify(autoFixPackOrder(current))}`;
+          } catch { return line; }
+        }
+        if (line.startsWith("incompatibleResourcePacks:")) {
+          try {
+            const current = JSON.parse(line.slice("incompatibleResourcePacks:".length));
+            return `incompatibleResourcePacks:${JSON.stringify(autoFixPackOrder(current))}`;
           } catch { return line; }
         }
         return line;

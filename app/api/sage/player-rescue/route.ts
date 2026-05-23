@@ -3,6 +3,7 @@ import { getPortableDir, getSettings } from "@/lib/core/settings";
 import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
+import { loadUsercacheEntries } from "@/lib/minecraft/usercache";
 
 // Extract player compound tag from NBT tag depending on whether it's level.dat or UUID.dat
 function getPlayerCompound(rootTag: NBTTag): { compound: Record<string, NBTTag> | null, isLevelDat: boolean } {
@@ -27,8 +28,39 @@ function getPlayerCompound(rootTag: NBTTag): { compound: Record<string, NBTTag> 
   };
 }
 
+// Regex to detect files with long numeric suffixes (backups)
+const BACKUP_REGEX = /-[0-9]{10,}\.dat$/;
+
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const customFilePath = searchParams.get("filePath");
+    const includeNbt = searchParams.get("includeNbt") === "true";
+    const showBackups = searchParams.get("showBackups") === "true";
+
+    if (customFilePath && fs.existsSync(customFilePath)) {
+      try {
+        const buf = fs.readFileSync(customFilePath);
+        const root = await readNBT(buf);
+        const { compound: playerCompound, isLevelDat } = getPlayerCompound(root);
+        
+        return NextResponse.json({
+          players: [{
+            fileName: path.basename(customFilePath),
+            filePath: customFilePath,
+            isHost: isLevelDat,
+            worldName: "Archivo Externo",
+            coordinates: [0,0,0], // Will be filled below if compound exists
+            inventoryCount: 0,
+            dimension: "Overworld",
+            nbt: includeNbt ? root : undefined
+          }]
+        });
+      } catch (err: any) {
+        return NextResponse.json({ error: "No se pudo leer el archivo NBT: " + err.message }, { status: 400 });
+      }
+    }
+
     const portableDir = getPortableDir();
     const playerRescueDir = path.join(portableDir, "player-rescue");
 
@@ -49,12 +81,11 @@ export async function GET(req: NextRequest) {
       try {
         const files = fs.readdirSync(playerRescueDir);
         for (const file of files) {
-          if (file.endsWith(".dat")) {
-            const isLevelDat = file.toLowerCase().includes("level.dat");
+          if (file.endsWith(".dat") && !file.toLowerCase().includes("level.dat")) {
             playersList.push({
               fileName: file,
               filePath: path.join(playerRescueDir, file),
-              isHost: isLevelDat,
+              isHost: false,
               worldName: "Carpeta de Rescate"
             });
           }
@@ -69,27 +100,23 @@ export async function GET(req: NextRequest) {
         for (const world of worlds) {
           const worldPath = path.join(minecraftPath, "saves", world);
           if (fs.statSync(worldPath).isDirectory()) {
-            // Check level.dat (Host)
-            const levelDat = path.join(worldPath, "level.dat");
-            if (fs.existsSync(levelDat)) {
-              playersList.push({
-                fileName: "level.dat",
-                filePath: levelDat,
-                isHost: true,
-                worldName: world
-              });
-            }
+            // We ONLY want primary player <UUID>.dat files, so we ignore level.dat completely
+            
             // Check playerdata folder (UUIDs)
             const playerDataDir = path.join(worldPath, "playerdata");
             if (fs.existsSync(playerDataDir)) {
               const dataFiles = fs.readdirSync(playerDataDir);
               for (const df of dataFiles) {
-                if (df.endsWith(".dat")) {
+                if (df.endsWith(".dat") || df.endsWith(".dat_old")) {
+                  const isBackup = BACKUP_REGEX.test(df) || df.endsWith(".dat_old");
+                  if (isBackup && !showBackups) continue;
+
                   playersList.push({
                     fileName: df,
                     filePath: path.join(playerDataDir, df),
                     isHost: false,
-                    worldName: world
+                    worldName: world,
+                    isBackup
                   });
                 }
               }
@@ -100,6 +127,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Process details for each player file
+    let usercache: any[] = [];
+    try {
+      usercache = await loadUsercacheEntries(minecraftPath);
+    } catch (_) {}
+
     const activePlayers = [];
     for (const p of playersList) {
       try {
@@ -137,11 +169,22 @@ export async function GET(req: NextRequest) {
             dimension = dimId === -1 ? "minecraft:the_nether" : dimId === 1 ? "minecraft:the_end" : "minecraft:overworld";
           }
 
+          let displayName = p.fileName;
+          if (!p.isHost && p.fileName.endsWith(".dat")) {
+            const uuid = p.fileName.replace(".dat", "");
+            const cached = usercache.find(c => c.uuid === uuid);
+            if (cached) {
+              displayName = cached.name;
+            }
+          }
+
           activePlayers.push({
             ...p,
+            displayName,
             coordinates: coords,
             inventoryCount: invCount,
-            dimension
+            dimension,
+            nbt: includeNbt ? root : undefined
           });
         }
       } catch (err) {

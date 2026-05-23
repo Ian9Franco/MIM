@@ -68,9 +68,59 @@ export function SagePlayerRescue({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, we'll show a message that file upload needs to be implemented
-    // In a real scenario, you'd upload to a temp location then parse
-    alert("File upload feature requires backend implementation for binary file handling");
+    setLoadingParse(true);
+    setParsingError(null);
+    setParsedData(null);
+    setSaveLogs([]);
+
+    try {
+      // In Tauri or Electron, the file object contains the real absolute path
+      const realPath = (file as any).path;
+
+      if (realPath) {
+        // Trigger parsing by setting selected player directly using the real path
+        setSelectedPlayer({
+          fileName: file.name,
+          filePath: realPath,
+          isHost: false,
+          worldName: "Archivos Externos"
+        });
+        return;
+      }
+
+      // Fallback for normal browser mode: Upload the file to a temp location
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch("/api/sage/player-rescue/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const error = await uploadRes.json();
+        throw new Error(error.error || "Failed to upload file");
+      }
+
+      const { filePath } = await uploadRes.json();
+
+      // Trigger parsing by setting selected player
+      setSelectedPlayer({
+        fileName: file.name,
+        filePath: filePath,
+        isHost: false,
+        worldName: "Archivos Externos"
+      });
+
+    } catch (err: any) {
+      setParsingError(err.message);
+      setLoadingParse(false);
+    } finally {
+      // Reset input
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    }
   };
 
   // Save modified NBT

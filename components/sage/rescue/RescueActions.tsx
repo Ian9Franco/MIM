@@ -44,11 +44,10 @@ export function RescueActions({
   const [newDimension, setNewDimension] = useState(playerData.dimension);
   const [actionLogs, setActionLogs] = useState<string[]>([]);
 
-  const dimensions = [
+  const suggestedDimensions = [
     "minecraft:overworld",
     "minecraft:the_nether",
     "minecraft:the_end",
-    "minecraft:deep_dark",
   ];
 
   const handleTeleport = () => {
@@ -164,38 +163,70 @@ export function RescueActions({
       )}
 
       {/* Position Editor */}
-      <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-3">
+      <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-4">
         <div className="flex items-center gap-2 text-amber-400 mb-3">
           <MapPin className="w-4 h-4" />
           <span className="text-xs font-bold uppercase tracking-widest">Teletransportar</span>
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-xs text-white/40 uppercase tracking-tight">
-            X: <input
+        <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
+          <div className="p-3 rounded bg-black/20 border border-white/5">
+            <p className="text-white/40 font-bold uppercase mb-1">Posición Actual</p>
+            <p className="font-mono text-white/80">
+              X: {playerData.position[0].toFixed(1)} <br/>
+              Y: {playerData.position[1].toFixed(1)} <br/>
+              Z: {playerData.position[2].toFixed(1)}
+            </p>
+          </div>
+          <div className="p-3 rounded bg-black/20 border border-white/5">
+            <p className="text-white/40 font-bold uppercase mb-1">Spawn del Mundo</p>
+            <p className="font-mono text-white/80">
+              X: {playerData.spawn.x.toFixed(1)} <br/>
+              Y: {playerData.spawn.y.toFixed(1)} <br/>
+              Z: {playerData.spawn.z.toFixed(1)}
+            </p>
+            <button 
+              onClick={() => {
+                setNewX(String(playerData.spawn.x));
+                setNewY(String(playerData.spawn.y));
+                setNewZ(String(playerData.spawn.z));
+              }}
+              className="mt-2 text-[10px] uppercase font-bold text-amber-400 hover:text-amber-300"
+            >
+              Copiar Spawn
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <label className="flex-1 block text-xs text-white/40 uppercase tracking-tight">
+            X
+            <input
               type="number"
               value={newX}
               onChange={(e) => setNewX(e.target.value)}
               step="0.5"
-              className="ml-2 w-20 px-2 py-1 rounded bg-white/5 border border-white/10 text-white/90 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="mt-1 w-full px-3 py-2 rounded bg-black/40 border border-white/10 text-white/90 font-mono text-sm focus:outline-none focus:border-amber-500/50"
             />
           </label>
-          <label className="block text-xs text-white/40 uppercase tracking-tight">
-            Y: <input
+          <label className="flex-1 block text-xs text-white/40 uppercase tracking-tight">
+            Y
+            <input
               type="number"
               value={newY}
               onChange={(e) => setNewY(e.target.value)}
               step="0.5"
-              className="ml-2 w-20 px-2 py-1 rounded bg-white/5 border border-white/10 text-white/90 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="mt-1 w-full px-3 py-2 rounded bg-black/40 border border-white/10 text-white/90 font-mono text-sm focus:outline-none focus:border-amber-500/50"
             />
           </label>
-          <label className="block text-xs text-white/40 uppercase tracking-tight">
-            Z: <input
+          <label className="flex-1 block text-xs text-white/40 uppercase tracking-tight">
+            Z
+            <input
               type="number"
               value={newZ}
               onChange={(e) => setNewZ(e.target.value)}
               step="0.5"
-              className="ml-2 w-20 px-2 py-1 rounded bg-white/5 border border-white/10 text-white/90 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="mt-1 w-full px-3 py-2 rounded bg-black/40 border border-white/10 text-white/90 font-mono text-sm focus:outline-none focus:border-amber-500/50"
             />
           </label>
         </div>
@@ -208,17 +239,19 @@ export function RescueActions({
           <span className="text-xs font-bold uppercase tracking-widest">Dimensión</span>
         </div>
 
-        <select
+        <input
+          type="text"
+          list="dimensions-list"
           value={newDimension}
           onChange={(e) => setNewDimension(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-        >
-          {dimensions.map((dim) => (
-            <option key={dim} value={dim} className="bg-slate-900">
-              {dim.replace("minecraft:", "").replace(/_/g, " ").toUpperCase()}
-            </option>
+          placeholder="Ej: minecraft:overworld"
+          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white/90 text-sm focus:outline-none focus:border-purple-500/50"
+        />
+        <datalist id="dimensions-list">
+          {suggestedDimensions.map((dim) => (
+            <option key={dim} value={dim} />
           ))}
-        </select>
+        </datalist>
       </div>
 
       {/* Action Logs */}

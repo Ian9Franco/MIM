@@ -254,9 +254,9 @@ function ShowcaseVideoCardInner({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        const query = slug.replace(/-/g, " ");
-                        const targetType = typeToProjectType[type] || "mod";
-                        if (onSearchProject) onSearchProject(query, targetType, source, loader, version);
+                        window.dispatchEvent(new CustomEvent("fomo-open-project-details", { 
+                          detail: { id: slug, platform: source } 
+                        }));
                       }}
                     >
                       <div 

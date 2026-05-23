@@ -278,7 +278,8 @@ function CommunityPanelInner({
                   alt="Banner"
                   className="w-full h-full object-cover"
                   style={{
-                    transform: `translate(${profileBannerMeta.x}px, ${profileBannerMeta.y}px) scale(${profileBannerMeta.zoom})`,
+                    objectPosition: `calc(50% + ${profileBannerMeta.x}px) calc(50% + ${profileBannerMeta.y}px)`,
+                    transform: `scale(${profileBannerMeta.zoom})`,
                     filter: `blur(${profileBannerMeta.blur}px)`,
                     transformOrigin: "center center",
                   }}
@@ -439,6 +440,7 @@ function CommunityPanelInner({
                   setSelectedUserProfile(username);
                   setActiveSubTab("profile");
                 }}
+                onOpenProjectDetails={onOpenProjectDetails}
               />
             )}
 

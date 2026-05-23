@@ -120,7 +120,7 @@ function formatYoutubeDate(rawDate?: string): string {
   const year = rawDate.substring(0, 4);
   const monthIdx = parseInt(rawDate.substring(4, 6), 10) - 1;
   const day = parseInt(rawDate.substring(6, 8), 10);
-  
+
   const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   return `${day} ${months[monthIdx] || ""} ${year}`;
 }
@@ -163,7 +163,7 @@ function YoutubeTriggerCard({
   const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid rgba(255,255,255,0.08)";
   const cardShadow = isModern ? "0 4px 20px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
   const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid rgba(255,255,255,0.07)";
-  
+
   const labelColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 45%)";
   const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 90%)";
   const statColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "rgba(255,255,255,0.3)";
@@ -197,10 +197,10 @@ function YoutubeTriggerCard({
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
-               style={{
-                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-                 backgroundColor: cardBg
-               }}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+              backgroundColor: cardBg
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-red-950/20 via-transparent to-black/40 pointer-events-none" />
             <TvMinimalPlay className="w-10 h-10 text-red-500/50 group-hover:text-red-500/80 group-hover:scale-110 transition-all duration-500" />
@@ -284,7 +284,7 @@ function ShowcaseModCard({
   const isModern = theme === "modern";
   const isVampire = theme === "vampire";
   const num = String((index % 999) + 1).padStart(3, "0");
-  
+
   const cardBg = isModern ? "#f0ede3" : isVampire ? "#1a1525" : "hsl(220 14% 10%)";
   const cardBorder = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
   const cardShadow = isModern ? "0 10px 40px rgba(0,0,0,0.08)" : isVampire ? "0 4px 32px rgba(187, 150, 228, 0.1)" : "0 4px 32px rgba(0,0,0,0.5)";
@@ -292,12 +292,12 @@ function ShowcaseModCard({
   const sepColor = isModern ? "1px solid #d4cfc0" : isVampire ? "1px solid rgba(187, 150, 228, 0.15)" : "1px solid hsl(220 14% 18%)";
   const numColor = isModern ? "hsl(30 20% 40%)" : isVampire ? "rgba(187, 150, 228, 0.5)" : "hsl(220 14% 40%)";
   const sepColorThick = isModern ? "1.5px solid #d4cfc0" : isVampire ? "1.5px solid rgba(187, 150, 228, 0.15)" : "1.5px solid hsl(220 14% 18%)";
-  
+
   const bracketColor = isModern ? "rgba(0,0,0,0.25)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.2)";
   const iconBorder = isModern ? "rgba(0,0,0,0.12)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.1)";
   const iconBg = isModern ? "rgba(0,0,0,0.06)" : isVampire ? "rgba(187, 150, 228, 0.05)" : "rgba(255,255,255,0.05)";
   const iconFallback = isModern ? "rgba(0,0,0,0.3)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.3)";
-  
+
   const titleColor = isModern ? "hsl(30 20% 15%)" : isVampire ? "#DEDEDE" : "hsl(0 0% 92%)";
   const authorColor = isModern ? "hsl(30 20% 45%)" : isVampire ? "#BB96E4" : "hsl(220 14% 45%)";
   const statColor = isModern ? "hsl(30 20% 50%)" : isVampire ? "rgba(187, 150, 228, 0.6)" : "hsl(220 14% 40%)";
@@ -418,8 +418,8 @@ function ShowcaseModCard({
             {mod.downloads >= 1_000_000
               ? `${(mod.downloads / 1_000_000).toFixed(1)}M`
               : mod.downloads >= 1_000
-              ? `${Math.round(mod.downloads / 1_000)}K`
-              : mod.downloads} ↓
+                ? `${Math.round(mod.downloads / 1_000)}K`
+                : mod.downloads} ↓
           </span>
           <div className="flex gap-0.5">
             {[...Array(3)].map((_, i) => (
@@ -499,11 +499,11 @@ export function FomoYoutubeShowcase({
       }
 
       setShowcase(entry);
-      
+
       // Intentar cargar mods resueltos de cache para no re-calcular al movernos entre pestañas
       const cacheKey = `fomo_resolved_mods_${entry.videoId}`;
       const cachedModsEntry = await mimDB.getCache(cacheKey);
-      
+
       if (cachedModsEntry?.data) {
         setMods(cachedModsEntry.data);
         setStatus("done");
@@ -517,7 +517,7 @@ export function FomoYoutubeShowcase({
             setMods(parsed);
             setStatus("done");
             return;
-          } catch (e) {}
+          } catch (e) { }
         }
 
         setStatus("loading-mods");

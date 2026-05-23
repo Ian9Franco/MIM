@@ -259,7 +259,7 @@ export function FomoFollowedShowcases({
                   }}
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${url === activeChannel ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"}`}
                 >
-                  @{((url.split("@")[1] || url).split("/")[0])}
+                  @{url.includes("@") ? url.split("@")[1].split("/")[0] : url.split("/").pop()}
                 </button>
               ))}
             </div>
@@ -276,7 +276,9 @@ export function FomoFollowedShowcases({
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className={`w-full border rounded-xl px-3 py-2 text-xs flex items-center justify-between focus:border-primary/50 outline-none transition-all cursor-pointer ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
               >
-                <span className="truncate">{(activeChannel.split("@")[1] || activeChannel).split("/")[0]}</span>
+                <span className="truncate">
+                  {activeChannel.includes("@") ? activeChannel.split("@")[1].split("/")[0] : activeChannel.split("/").pop()}
+                </span>
                 <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
               </button>
               
@@ -292,7 +294,9 @@ export function FomoFollowedShowcases({
                         setDropdownOpen(false);
                       }}
                     >
-                      <span className={`truncate ${c === activeChannel ? "text-primary font-bold" : "opacity-80"}`}>{(c.split("@")[1] || c).split("/")[0]}</span>
+                      <span className={`truncate ${c === activeChannel ? "text-primary font-bold" : "opacity-80"}`}>
+                        {c.includes("@") ? c.split("@")[1].split("/")[0] : c.split("/").pop()}
+                      </span>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();

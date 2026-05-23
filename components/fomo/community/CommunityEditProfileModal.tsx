@@ -237,7 +237,8 @@ export function CommunityEditProfileModal({
                     alt="" 
                     className="w-full h-full object-cover pointer-events-none select-none" 
                     style={{
-                      transform: `translate(${posX}px, ${posY}px) scale(${zoom})`,
+                      objectPosition: `calc(50% + ${posX}px) calc(50% + ${posY}px)`,
+                      transform: `scale(${zoom})`,
                       transformOrigin: "center center"
                     }}
                   />
@@ -251,17 +252,17 @@ export function CommunityEditProfileModal({
                     {(editUsername || "U").charAt(0)}
                   </div>
                 )}
-                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer transition-opacity">
-                  Subir PNG
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer transition-opacity text-center px-2">
+                  Subir<br/>JPG / PNG
                   <input 
                     type="file" 
-                    accept="image/png" 
+                    accept="image/png, image/jpeg, image/webp" 
                     className="hidden" 
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (file.type !== "image/png") {
-                          onStatus("Solo se permiten imágenes PNG.", "error");
+                        if (!file.type.startsWith("image/")) {
+                          onStatus("Solo se permiten imágenes.", "error");
                           return;
                         }
                         const reader = new FileReader();
@@ -277,7 +278,7 @@ export function CommunityEditProfileModal({
                   />
                 </label>
               </div>
-              <span className={`text-[9px] ${isModern ? 'text-muted-foreground' : 'text-white/40'}`}>Haz click para subir un ícono PNG</span>
+              <span className={`text-[9px] ${isModern ? 'text-muted-foreground' : 'text-white/40'}`}>Haz click para subir un ícono JPG/PNG</span>
 
               {(editAvatarUrl || rawImage) && (
                 <button
@@ -346,7 +347,8 @@ export function CommunityEditProfileModal({
                     alt="Banner preview"
                     className="w-full h-full object-cover"
                     style={{
-                      transform: `translate(${bannerPosX}px, ${bannerPosY}px) scale(${bannerZoom})`,
+                      objectPosition: `calc(50% + ${bannerPosX}px) calc(50% + ${bannerPosY}px)`,
+                      transform: `scale(${bannerZoom})`,
                       filter: `blur(${bannerBlur}px)`,
                       transformOrigin: "center center",
                     }}
@@ -357,7 +359,8 @@ export function CommunityEditProfileModal({
                     alt="Banner Preview"
                     className="w-full h-full object-cover"
                     style={{
-                      transform: `translate(${bannerPosX}px, ${bannerPosY}px) scale(${bannerZoom})`,
+                      objectPosition: `calc(50% + ${bannerPosX}px) calc(50% + ${bannerPosY}px)`,
+                      transform: `scale(${bannerZoom})`,
                       filter: `blur(${bannerBlur}px)`,
                       transformOrigin: "center center",
                     }}
@@ -367,17 +370,17 @@ export function CommunityEditProfileModal({
                     Banner del perfil
                   </div>
                 )}
-                <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer transition-opacity">
-                  Subir banner PNG
+                <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer transition-opacity text-center px-2">
+                  Subir Banner<br/>(JPG / PNG)
                   <input
                     type="file"
-                    accept="image/png"
+                    accept="image/png, image/jpeg, image/webp"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (file.type !== "image/png") {
-                          onStatus("Solo se permiten imágenes PNG.", "error");
+                        if (!file.type.startsWith("image/")) {
+                          onStatus("Solo se permiten imágenes.", "error");
                           return;
                         }
                         const reader = new FileReader();

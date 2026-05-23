@@ -522,13 +522,14 @@
   align-items: center;
   gap: 0;
   width: 100%;
-  min-height: 52px;
+  min-height: 64px;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
   background: hsl(220 14% 10%);
   border: 1.5px solid hsl(220 14% 18%);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
 }
@@ -536,7 +537,7 @@
 .spotlight-ec-mini-card:hover {
   border-color: hsl(220 14% 30%);
   transform: translateX(3px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6);
 }
 
 /* bracket corner decorations */
@@ -564,9 +565,9 @@
 
 /* Left image zone */
 .spotlight-ec-mini-image-zone {
-  width: 52px;
-  min-width: 52px;
-  height: 52px;
+  width: 64px;
+  min-width: 64px;
+  height: 64px;
   position: relative;
   display: flex;
   align-items: center;
@@ -579,8 +580,8 @@
 }
 
 .spotlight-ec-mini-image-zone img {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 7px;
   object-fit: cover;
   position: relative;
@@ -599,7 +600,7 @@
   position: absolute;
   top: 3px;
   right: 4px;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 900;
   font-family: monospace;
   color: rgba(255,255,255,0.2);
@@ -620,7 +621,7 @@
 }
 
 .spotlight-ec-mini-title {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
   color: hsl(0 0% 88%);
@@ -638,7 +639,7 @@
 }
 
 .spotlight-ec-mini-badge {
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -649,7 +650,7 @@
 /* Three-dot decorative pattern */
 .spotlight-ec-mini-dots {
   width: 20px;
-  height: 52px;
+  height: 64px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -678,10 +679,12 @@
 [data-theme="vampire"] .spotlight-ec-mini-card {
   background: #1a1525;
   border-color: rgba(187, 150, 228, 0.15);
+  box-shadow: 0 4px 20px rgba(187, 150, 228, 0.1);
 }
 
 [data-theme="vampire"] .spotlight-ec-mini-card:hover {
   border-color: rgba(187, 150, 228, 0.35);
+  box-shadow: 0 6px 24px rgba(187, 150, 228, 0.25);
 }
 
 [data-theme="vampire"] .spotlight-ec-mini-image-zone {
@@ -755,11 +758,12 @@
 [data-theme="modern"] .spotlight-ec-mini-card {
   background: rgba(255,255,255,0.85);
   border-color: #d4cfc0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 
 [data-theme="modern"] .spotlight-ec-mini-card:hover {
   border-color: rgba(0,0,0,0.25);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
 }
 
 [data-theme="modern"] .spotlight-ec-mini-image-zone {

@@ -491,7 +491,7 @@ function SpotlightCollectionCard({
 
   return (
     <div
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -516,14 +516,14 @@ function SpotlightCollectionCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "160px", borderBottom: sepColorThick }}
+        style={{ height: "200px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
           <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: bracketColor }} />
         ))}
 
-        <div className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
+        <div className="relative w-32 h-32 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
           {!imgError && collection.iconUrl ? (
             <img src={collection.iconUrl} alt="" className="w-full h-full object-cover" onError={() => setImgError(true)} />
           ) : (
@@ -612,7 +612,7 @@ function SpotlightEditorialCard({
 
   return (
     <div
-      className="w-[min(210px,calc(100vw-4rem))10px,calc(100vw-4rem))] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -637,14 +637,14 @@ function SpotlightEditorialCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "160px", borderBottom: sepColorThick }}
+        style={{ height: "200px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
           <div key={i} className={`absolute ${pos} w-3 h-3 ${borders}`} style={{ borderColor: bracketColor }} />
         ))}
 
-        <div className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
+        <div className="relative w-32 h-32 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110" style={{ borderColor: iconBorder, background: iconBg }}>
           {mod.iconUrl ? (
             <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -909,7 +909,7 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-md 2xl:max-w-lg">
         {/* Editorial Header */}
-        <div className="mt-0 xl:mt-6 shrink-0">
+        <div className="mt-0 xl:mt-0 shrink-0">
           <p className="font-mono text-xs uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2">
             <Spotlight className="w-4 h-4" /> Editorial
           </p>
@@ -917,7 +917,7 @@ export function FomoSpotlight({
         </div>
 
         {/* Bottom Area: Vertical Tickers side-by-side */}
-        <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-[280px] gap-4 pb-2">
+        <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-[360px] gap-4 pb-2">
           
           {/* Recently Updated Ticker (Y) */}
           {cfRecent.length > 0 && (

@@ -1,8 +1,33 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/core/types";
 import { mimDB } from "@/lib/storage/indexeddb";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
+
+function normalizeGallery(rawGallery: any[] | undefined): any[] {
+  if (!rawGallery?.length) return [];
+  return rawGallery
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === "string") {
+        return { url: item, thumbnailUrl: item, title: "" };
+      }
+      if (typeof item === "object") {
+        const url = item.url || item.raw_url || item.image_url || item.imageUrl || item.value || "";
+        const thumbnailUrl =
+          item.thumbnailUrl || item.thumbnail_url || item.url || item.raw_url || item.image_url || item.imageUrl || item.value || "";
+        return {
+          url,
+          thumbnailUrl,
+          title: item.title || item.description || item.caption || "",
+          description: item.description || item.caption || "",
+          featured: item.featured || false,
+        };
+      }
+      return null;
+    })
+    .filter((g) => g && g.url);
+}
 
 export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hideVersions: boolean) {
   const [activeTab, setActiveTab] = useState<"description" | "versions" | "dependencies" | "gallery">(hideVersions ? "description" : "versions");
@@ -16,47 +41,71 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [followedMods, setFollowedMods] = useState<any[]>([]);
 
   // Gallery Logic
-  const [gallery, setGallery] = useState<any[]>([]);
+  const [gallery, setGallery] = useState<any[]>(normalizeGallery(mod.gallery));
   const [loadingGallery, setLoadingGallery] = useState(false);
-  const [lastFetchedId, setLastFetchedId] = useState<string | null>(null);
+  const lastFetchedKey = useRef<string | null>(null);
 
   // Reset states when switching mods
   useEffect(() => {
-    setGallery([]);
+    setGallery(normalizeGallery(mod.gallery));
     setLoadingGallery(false);
-    setLastFetchedId(null);
+    lastFetchedKey.current = null;
     setTranslatedBody(null);
     setFullBody(null);
     setDepSearchQuery("");
-  }, [mod.projectId]);
+  }, [mod.projectId, mod.gallery]);
 
   useEffect(() => {
-    if (lastFetchedId === mod.projectId || loadingGallery) return;
+    const gallerySource = mod._source === "curseforge" || mod.url?.includes("curseforge.com") ? "curseforge" : "modrinth";
+    const fetchKey = `${gallerySource}:${mod.projectId}`;
+    if (lastFetchedKey.current === fetchKey) return; // Ya se hizo fetch para este proyecto
+    
+    console.log(`[Gallery Hook] Starting fetch for ${fetchKey}, gallery init size: ${(mod.gallery || []).length}`);
+    
     setLoadingGallery(true);
-    setLastFetchedId(mod.projectId);
+    lastFetchedKey.current = fetchKey;
     const controller = new AbortController();
     
     const doFetch = async (retries = 2, delayMs = 400) => {
       try {
-        const r = await fetch(
-          `/api/mod-gallery?projectId=${mod.projectId}&source=${mod._source || "modrinth"}`,
-          { signal: controller.signal }
-        );
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const url = `/api/mod-gallery?projectId=${encodeURIComponent(mod.projectId)}&source=${gallerySource}&debug=true`;
+        console.log(`[Gallery Hook] Fetching: ${url}`);
+        
+        const r = await fetch(url, { signal: controller.signal });
+        
+        console.log(`[Gallery Hook] Response status: ${r.status}`);
+        
+        if (!r.ok) {
+          const text = await r.text();
+          console.warn(`[Gallery] HTTP ${r.status} - Response: ${text}`);
+          throw new Error(`HTTP ${r.status}`);
+        }
+        
         const d = await r.json();
-        const items = d.gallery || [];
+        console.log(`[Gallery Hook] Response data:`, d);
+        
+        const items = normalizeGallery(d.gallery || []);
+        console.log(`[Gallery Hook] Extracted ${items.length} images, first item:`, items[0]);
+        
         setGallery(items);
+        
         if (items.length > 0) {
-          const img = new Image();
-          img.src = items[0].url;
+          // NOTE: Disabled automatic preload for debugging render issues.
+          // Preloading can be re-enabled once root cause is identified.
+          console.log(`[Gallery Hook] Preload disabled for debugging. First image: ${items[0].url}`);
         }
       } catch (e: any) {
-        if (e?.name === "AbortError") return;
+        if (e?.name === "AbortError") {
+          console.log("[Gallery Hook] Fetch aborted");
+          return;
+        }
         if (retries > 0) {
+          console.warn(`[Gallery Hook] Fetch failed, retrying (${retries} left):`, e.message);
           await new Promise(res => setTimeout(res, delayMs));
           return doFetch(retries - 1, delayMs * 1.5);
         }
         console.error("[Gallery] Fetch failed after retries:", e);
+        setGallery([]); // Mostrar galería vacía en lugar de skeleton infinito
       } finally {
         setLoadingGallery(false);
       }
@@ -65,12 +114,12 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     // Small delay to avoid race with other fetches on mount
     const t = setTimeout(() => doFetch(), 150);
     return () => { controller.abort(); clearTimeout(t); };
-  }, [mod.projectId, mod._source, lastFetchedId, loadingGallery]);
+  }, [mod.projectId, mod._source]);
 
   useEffect(() => {
     if (mod.body) return;
     const controller = new AbortController();
-    const endpoint = mod._source === "curseforge" 
+    const endpoint = (mod._source === "curseforge" || mod.url?.includes("curseforge.com"))
       ? `/api/curseforge/project?projectId=${mod.projectId}`
       : `/api/modrinth/project?projectId=${mod.projectId}`;
     

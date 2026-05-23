@@ -82,9 +82,15 @@ export async function GET(req: NextRequest) {
             projectType: p.project_type ?? "mod",
             client_side: p.client_side,
             server_side: p.server_side,
-            gallery:     Array.from(new Set([
-              ...(p.gallery ?? []).map((img: any) => typeof img === "string" ? img : img.url)
-            ].filter(Boolean))),
+            gallery:     (p.gallery ?? []).map((img: any) => {
+              const urlStr = typeof img === "string" ? img : img.url;
+              return {
+                url: urlStr,
+                thumbnailUrl: urlStr, // Modrinth already provides optimized thumbnails
+                title: typeof img === "string" ? "" : img.title || "",
+                featured: typeof img === "string" ? false : img.featured || false
+              };
+            }).filter((g: any) => g.url),
           }));
           
           return NextResponse.json({
@@ -189,7 +195,20 @@ export async function GET(req: NextRequest) {
         projectType: h.project_type ?? "mod",
         client_side: h.client_side,
         server_side: h.server_side,
-        gallery:     Array.from(new Set([h.featured_gallery, ...(h.gallery ?? [])].filter(Boolean))),
+        gallery:     [
+          ...(h.featured_gallery ? [{
+            url: h.featured_gallery,
+            thumbnailUrl: h.featured_gallery,
+            title: "Featured",
+            featured: true
+          }] : []),
+          ...(h.gallery ?? []).map((g: any) => ({
+            url: g,
+            thumbnailUrl: g,
+            title: "",
+            featured: false
+          }))
+        ],
       }));
 
     return NextResponse.json({

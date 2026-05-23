@@ -29,7 +29,21 @@ export async function GET(req: NextRequest) {
       follows: m.followers,
       categories: m.categories,
       url: `https://modrinth.com/project/${m.slug}`,
-      projectType: m.project_type
+      projectType: m.project_type,
+      gallery: [
+        ...(m.featured_gallery ? [m.featured_gallery] : []),
+        ...(m.gallery || [])
+      ].map((g: any) => {
+        if (typeof g === 'string') {
+          return { url: g, thumbnailUrl: g, title: "" };
+        }
+        return {
+          url: g.raw_url || g.url,
+          thumbnailUrl: g.url || g.raw_url,
+          title: g.title || "",
+          featured: g.featured || false
+        };
+      }).filter((g: any) => g && g.url)
     })));
 
     return NextResponse.json({ mods });

@@ -62,7 +62,12 @@ export async function GET(req: NextRequest) {
       categories: m.categories?.map((c: any) => c.name) ?? [],
       dateCreated: m.dateCreated,
       url: m.links?.websiteUrl ?? "",
-      projectType: getClassIdToProjectType(m.classId)
+      projectType: getClassIdToProjectType(m.classId),
+      gallery: (m.screenshots || []).map((s: any) => ({
+        url: s.url,
+        thumbnailUrl: s.thumbnailUrl || s.url,
+        title: s.title || ""
+      }))
     });
 
     return NextResponse.json({

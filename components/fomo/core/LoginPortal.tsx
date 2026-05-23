@@ -100,32 +100,15 @@ export function LoginPortal({ onSuccess }: LoginPortalProps) {
 
     setResettingPassword(true);
     try {
-      const publicRedirect = process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_REDIRECT;
-      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
-      const isElectron = userAgent.includes("electron");
-      const localOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
-      const isLocalhost = localOrigin?.includes("localhost") || localOrigin?.includes("127.0.0.1");
-      const redirectTo = publicRedirect
-        ? publicRedirect
-        : isElectron
-        ? "mim://reset-password"
-        : isLocalhost
-        ? undefined
-        : localOrigin;
+      const publicRedirect = process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_REDIRECT || "https://recupero-mim-qbfb.vercel.app/reset-password.html";
 
       const { error } = await supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo ? { redirectTo } : undefined
+        { redirectTo: publicRedirect }
       );
       if (error) throw error;
 
-      setSuccessMsg(
-        publicRedirect
-          ? "Te enviamos un enlace de recuperación. Ábrelo desde cualquier dispositivo."
-          : isElectron
-          ? "Te enviamos un enlace de recuperación. Abrí el correo en el mismo equipo para que la app pueda capturar el enlace."
-          : "Te enviamos un enlace de recuperación. Revisa tu correo."
-      );
+      setSuccessMsg("Te enviamos un enlace de recuperación. Ábrelo desde cualquier dispositivo.");
     } catch (err: any) {
       const message = err?.message?.toString() || "No se pudo enviar el enlace de recuperación.";
       setErrorMsg(message);

@@ -9,13 +9,13 @@ export type FomoBannerProjectType =
   | "modpack";
 
 export function getFirstGalleryUrl(
-  gallery?: (string | { url?: string } | null)[] | null
+  gallery?: (string | { url?: string; raw_url?: string; image_url?: string; imageUrl?: string } | null)[] | null
 ): string | undefined {
   if (!gallery?.length) return undefined;
   const first = gallery[0];
   if (!first) return undefined;
   if (typeof first === "string") return first;
-  return first.url;
+  return first.url || first.raw_url || first.image_url || first.imageUrl;
 }
 
 export function resolveModBannerUrl(mod: {

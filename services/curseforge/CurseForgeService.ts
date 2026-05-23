@@ -101,7 +101,11 @@ export class CurseForgeService {
         latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
         projectType: projectType,
         allowModDistribution: m.allowModDistribution !== false,
-        gallery: (m.screenshots || []).map((s: any) => s.url),
+        gallery: (m.screenshots || []).map((s: any) => ({
+          url: s.url,
+          thumbnailUrl: s.thumbnailUrl || s.url,
+          title: s.title || ""
+        })).filter((g: any) => g.url),
         // Inferencia de entorno para CurseForge basada en categorías
         ...(() => {
           const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());

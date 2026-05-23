@@ -253,13 +253,29 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
+                    {(() => {
+                      try {
+                        console.log('[Gallery Render] activeTab, loadingGallery, gallery.length:', activeTab, loadingGallery, gallery.length);
+                        console.log('[Gallery Render] gallery URLs:', gallery.map(g => g.url));
+                      } catch (e) {
+                        console.warn('[Gallery Render] logging failed', e);
+                      }
+                      return null;
+                    })()}
                     {gallery.map((img, i) => (
                       <div key={i} onClick={() => setSelectedImageIndex(i)} className="group relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 aspect-video cursor-zoom-in hover:border-primary/50 transition-all">
                         <img 
                           src={img.thumbnailUrl || img.url} 
-                          alt="" 
+                          alt={img.title || ""} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                           loading="lazy"
+                          onError={(e) => {
+                            console.warn(`[Gallery] Failed to load image at index ${i}:`, img.url);
+                            (e.currentTarget as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23999' font-size='12'%3EImage Error%3C/text%3E%3C/svg%3E";
+                          }}
+                          onLoad={() => {
+                            console.log(`[Gallery] Loaded image at index ${i}:`, img.url);
+                          }}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                           <Maximize2 className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity scale-50 group-hover:scale-100 duration-300" />

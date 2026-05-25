@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 10.0.0 | **Última actualización:** 2026-05-25
+> **Versión:** 10.0.1 | **Última actualización:** 2026-05-25
 
 ---
 

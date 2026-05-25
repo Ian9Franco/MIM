@@ -127,7 +127,7 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
       fetchConfigAndSageAlerts(e.detail);
     };
     const handleRefresh = () => fetchConfigAndSageAlerts();
-    const handleIncidents = (e: any) => setIncidents([...e.detail]);
+    const handleIncidents = (e: any) => setIncidents([...e.detail].filter((i: Incident) => i.status === "active"));
     window.addEventListener("active-project-changed", handleActiveProject);
     window.addEventListener("refresh-system", handleRefresh);
     window.addEventListener("mim:incidents-updated", handleIncidents);

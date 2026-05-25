@@ -1,55 +1,52 @@
 # ¿Qué es MIM?
 
-MIM es el gestor de mods inteligentes para Minecraft. Está diseñado para ayudarte a organizar tu biblioteca de mods, construir modpacks limpios y resolver problemas sin tener que revisar archivos o configuraciones a mano.
+MIM es un gestor inteligente de mods para Minecraft pensado para organizar, analizar y construir modpacks sin el caos habitual de carpetas, versiones y crashes aleatorios.
 
-## ¿Qué hace?
+Está diseñado para jugadores y creadores que usan muchos mods y quieren una experiencia más estable, limpia y fácil de manejar.
 
-- Detecta tus mods y los clasifica automáticamente.
-- Te ayuda a crear builds listos para jugar sin errores.
-- Encuentra conflictos y te muestra qué mod está causando crashes.
-- Te permite seguir a creadores y usar contenido de la comunidad con FOMO Cloud.
-- Mantiene tus ajustes y proyectos organizados en un solo lugar.
+---
 
-## ¿Por qué usarlo?
+## Qué puede hacer
 
-- Ahorra tiempo: en lugar de buscar entre carpetas y versiones, MIM te ofrece una vista clara de tus mods.
-- Reduce errores: evita que instalar mods incompatibles rompa tu mundo.
-- Mejora el rendimiento: organiza los mods según su compatibilidad y evita duplicados.
-- Facilita la comunidad: puedes compartir favoritos, modpacks ligeros y perfiles de usuario.
+- Detectar y clasificar automáticamente tus mods.
+- Ayudarte a crear modpacks listos para jugar.
+- Identificar conflictos y posibles causas de crashes.
+- Organizar perfiles, builds y configuraciones en un solo lugar.
+- Descubrir contenido y creadores desde la comunidad con FOMO Cloud.
 
-## ¿Cómo funciona?
+---
 
-1. MIM escanea tu carpeta local con mods.
-2. Clasifica cada mod según tipo y plataforma.
-3. Crea un build con tu modpack y lo deja listo para usar.
-4. Si un mod da problemas, MIM te ayuda a identificarlo.
+## Por qué usar MIM
 
-## ¿Qué no hace?
+Administrar mods manualmente puede convertirse rápido en un desastre: versiones incompatibles, mods duplicados, errores difíciles de encontrar y carpetas imposibles de entender después de dos semanas.
 
-- No sube tus mods de Minecraft grandes a la nube.
-- No guarda tus archivos de juego pesados en Supabase.
-- No reemplaza tu carpeta local de mods: trabaja sobre tus datos, pero mantiene el control en tu PC.
+MIM simplifica todo eso.
 
-## Diferencias clave
+En lugar de revisar archivos manualmente o probar mods uno por uno, MIM te muestra una vista clara de tu setup y te ayuda a mantenerlo estable.
 
-- No es solo un launcher: es un gestor de modpacks y un analizador de problemas.
-- No depende de subir grandes archivos: usa la nube solo para datos ligeros de comunidad y configuración.
-- Diseñado para jugadores que usan muchos mods y necesitan evitar crashes.
+---
 
-## Para quién es ideal
+## Cómo funciona
 
-- Jugadores de Minecraft con colecciones grandes de mods.
-- Creadores de modpacks que quieren construir y compartir versiones ligeras.
-- Usuarios que buscan una experiencia más estable sin tocar archivos complicados.
+1. MIM analiza tu carpeta de mods.
+2. Clasifica automáticamente el contenido.
+3. Organiza builds y perfiles listos para usar.
+4. Detecta problemas y te ayuda a encontrar mods conflictivos.
 
-## Nota sobre la nube
+---
 
-MIM usa Supabase principalmente para:
+## Qué hace diferente a MIM
 
-- perfiles de usuario,
-- favoritos y contenido compartido,
-- metadatos ligeros de builds,
-- drafts colaborativos en tiempo real (para crear modpacks en grupo),
-- recuperación de contraseña.
+- No es solo un launcher.
+- Está enfocado en organización, estabilidad y análisis.
+- Está pensado para usuarios con bibliotecas grandes de mods.
+- Combina herramientas locales con funciones de comunidad y sincronización ligera.
 
-No envía archivos `.jar` grandes a la nube. Si sube algo a Supabase, está pensado para configuraciones pequeñas y datos de perfil, no para paquetes de mods completos.
+---
+
+## Ideal para
+
+- Jugadores con muchos mods instalados.
+- Creadores de modpacks.
+- Usuarios que quieren evitar crashes y conflictos.
+- Personas que quieren una experiencia más limpia y organizada sin tocar configuraciones complejas.

@@ -11,6 +11,7 @@ import { PackHealthPanel } from "@/components/gate/PackHealthModal";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutFooter } from "./LayoutFooter";
 import { FomoFloatingPlayer } from "@/components/fomo/showcase/FomoFloatingPlayer";
+import { useFomoBackgroundSync } from "@/hooks/fomo/useFomoBackgroundSync";
 
 export function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const {
@@ -20,6 +21,9 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
     isValidatingHealth, onForceBuildCallback, isRefreshing, handleToggleUI, handleRefresh,
     handleCheckHealth, handleFomoSearch, pendingFiles, handleOpenDownloads, watcherStatus
   } = useRootLayoutManager();
+
+  // Ejecutar verificación en background de nuevos videos y mods
+  useFomoBackgroundSync();
 
   // Atajos de teclado globales (Esc para cerrar sidebars)
   React.useEffect(() => {

@@ -33,8 +33,40 @@ export function CommunityResumenCard({
   defaultExpanded = false,
 }: CommunityResumenCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [unreadAuthors, setUnreadAuthors] = useState<string[]>([]);
+  const [unreadChannels, setUnreadChannels] = useState<string[]>([]);
   const expandedRef = useRef<HTMLDivElement | null>(null);
   const { resumen } = member;
+
+  useEffect(() => {
+    const updateUnreads = () => {
+      const a = localStorage.getItem("mim_fomo_unread_authors");
+      const c = localStorage.getItem("mim_fomo_unread_channels");
+      if (a) setUnreadAuthors(JSON.parse(a));
+      if (c) setUnreadChannels(JSON.parse(c));
+    };
+    updateUnreads();
+    window.addEventListener("fomo-unread-authors-updated", updateUnreads);
+    window.addEventListener("fomo-unread-channels-updated", updateUnreads);
+    return () => {
+      window.removeEventListener("fomo-unread-authors-updated", updateUnreads);
+      window.removeEventListener("fomo-unread-channels-updated", updateUnreads);
+    };
+  }, []);
+
+  const markAuthorRead = (author: string) => {
+    const next = unreadAuthors.filter(a => a !== author);
+    setUnreadAuthors(next);
+    localStorage.setItem("mim_fomo_unread_authors", JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("fomo-unread-authors-updated"));
+  };
+
+  const markChannelRead = (channel: string) => {
+    const next = unreadChannels.filter(c => c !== channel);
+    setUnreadChannels(next);
+    localStorage.setItem("mim_fomo_unread_channels", JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("fomo-unread-channels-updated"));
+  };
 
   const mods =
     typeFilter === "all"
@@ -175,20 +207,27 @@ export function CommunityResumenCard({
               <span className="text-white/25 font-bold normal-case">({resumen.authors.length})</span>
             </p>
             <div className="flex flex-wrap gap-1">
-              {previewAuthors.map((a) => (
-                <button
-                  key={a.name}
-                  type="button"
-                  title={`Buscar proyectos de ${a.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    searchAuthorInFomo(a.name);
-                  }}
-                  className="px-2 py-0.5 rounded-lg bg-white/10 border border-white/15 text-white/90 truncate max-w-full hover:bg-white/20 transition-colors"
-                >
-                  {a.name}
-                </button>
-              ))}
+              {previewAuthors.map((a) => {
+                const isNew = unreadAuthors.includes(a.name);
+                return (
+                  <button
+                    key={a.name}
+                    type="button"
+                    title={`Buscar proyectos de ${a.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAuthorRead(a.name);
+                      searchAuthorInFomo(a.name);
+                    }}
+                    className={`px-2 py-0.5 rounded-lg border ${
+                      isNew ? "bg-primary/20 border-primary/40 text-primary-content" : "bg-white/10 border-white/15 text-white/90"
+                    } truncate max-w-full hover:bg-white/20 transition-colors flex items-center gap-1`}
+                  >
+                    {a.name}
+                    {isNew && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 animate-pulse" />}
+                  </button>
+                );
+              })}
               {!expanded && resumen.authors.length > previewAuthors.length && (
                 <span className="text-white/30 self-center">
                   +{resumen.authors.length - previewAuthors.length}
@@ -207,19 +246,28 @@ export function CommunityResumenCard({
               </span>
             </p>
             <div className="flex flex-wrap gap-1">
-              {previewChannels.map((url) => (
-                <a
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-200/90 hover:bg-red-500/20 inline-flex items-center gap-1 max-w-full truncate text-[10px]"
-                >
-                  {youtubeChannelLabel(url)}
-                  <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
-                </a>
-              ))}
+              {previewChannels.map((url) => {
+                const isNew = unreadChannels.includes(url);
+                return (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markChannelRead(url);
+                    }}
+                    className={`px-2 py-0.5 rounded-lg border ${
+                      isNew ? "bg-red-500/30 border-red-500/50 text-white" : "bg-red-500/10 border-red-500/25 text-red-200/90"
+                    } hover:bg-red-500/20 inline-flex items-center gap-1 max-w-full truncate text-[10px]`}
+                  >
+                    {youtubeChannelLabel(url)}
+                    {isNew && <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0 animate-pulse" />}
+                    <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                  </a>
+                );
+              })}
             </div>
           </section>
         )}
@@ -311,17 +359,26 @@ export function CommunityResumenCard({
                   <UserRound className="w-4 h-4 text-primary/70" /> Autores <span className="text-white/25 font-bold normal-case">({resumen.authors.length})</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {resumen.authors.map((a) => (
-                    <button
-                      key={a.name}
-                      type="button"
-                      title={`Buscar proyectos de ${a.name}`}
-                      onClick={() => searchAuthorInFomo(a.name)}
-                      className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-white/90 hover:bg-white/20 transition-colors"
-                    >
-                      {a.name}
-                    </button>
-                  ))}
+                  {resumen.authors.map((a) => {
+                    const isNew = unreadAuthors.includes(a.name);
+                    return (
+                      <button
+                        key={a.name}
+                        type="button"
+                        title={`Buscar proyectos de ${a.name}`}
+                        onClick={() => {
+                          markAuthorRead(a.name);
+                          searchAuthorInFomo(a.name);
+                        }}
+                        className={`px-3 py-1 rounded-lg border flex items-center gap-2 ${
+                          isNew ? "bg-primary/20 border-primary/40 text-primary-content" : "bg-white/10 border-white/15 text-white/90"
+                        } hover:bg-white/20 transition-colors`}
+                      >
+                        {a.name}
+                        {isNew && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-primary/30 text-primary-content">NUEVO</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -332,9 +389,24 @@ export function CommunityResumenCard({
                   <TvMinimalPlay className="w-4 h-4 text-red-400/80" /> YouTube <span className="text-white/25 font-bold normal-case">({resumen.youtubeChannels.length})</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {resumen.youtubeChannels.map((url) => (
-                    <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-200/90 hover:bg-red-500/20">{youtubeChannelLabel(url)}</a>
-                  ))}
+                  {resumen.youtubeChannels.map((url) => {
+                    const isNew = unreadChannels.includes(url);
+                    return (
+                      <a 
+                        key={url} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        onClick={() => markChannelRead(url)}
+                        className={`px-3 py-1 rounded-lg border flex items-center gap-2 ${
+                          isNew ? "bg-red-500/30 border-red-500/50 text-white" : "bg-red-500/10 border-red-500/25 text-red-200/90"
+                        } hover:bg-red-500/20`}
+                      >
+                        {youtubeChannelLabel(url)}
+                        {isNew && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-red-500/40 text-red-100">NUEVO</span>}
+                      </a>
+                    );
+                  })}
                 </div>
               </section>
             )}

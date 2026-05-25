@@ -12,7 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-10.0.0-indigo.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-10.0.1-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -58,7 +58,7 @@ Logs en idiomas que no existen
 ## 🚀 Features Principales
 
 ### 🔥 **FOMO Cloud (Comunidad Online)** — Descubrimiento, Showcases y Red Social
-El valor central de FOMO no es la reproducción de video: es el **ecosistema integrado** de descubrimiento.
+El valor central de FOMO es el **ecosistema integrado** de descubrimiento.
 
 - **Descubrir mods a través de creadores**: Sigue creadores de YouTube, navega sus showcases y extrae mods automáticamente desde sus descripciones.
 - **Showcase Integration**: Cada video de un creador se convierte en un punto de acceso directo a los mods que muestra — sin salir de MIM.
@@ -111,35 +111,12 @@ El valor central de FOMO no es la reproducción de video: es el **ecosistema int
 
 ## 🎬 Instalación en 3 Pasos
 
-### 1️⃣ **Setup Inicial**
-```bash
-git clone https://github.com/tuuser/mim.git
-cd mim
-npm install
-
-# Ejecuta (elige uno)
-npm run dev              # Web (limitado)    # Desktop (completo) ⭐ RECOMENDADO
-```
-
-### 2️⃣ **Variables de Entorno (Opcional)**
-```env
-# .env.local — Todas son opcionales
-
-MODRINTH_API_KEY=mrp_tu_key          # 10x rate limits
-CURSEFORGE_API_KEY=tu_key             # Búsqueda extendida
-VIRUSTOTAL_API_KEY=tu_key             # Escaneo en nube
-
-# Para FOMO Cloud (Comunidad Online)
-NEXT_PUBLIC_SUPABASE_URL=https://tu_proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
-```
-
 ### 3️⃣ **Primeros Pasos**
 1. Abre MIM
 2. Click **🔥 FOMO** → busca tus mods favoritos
 3. Presiona **1, 2, 3** para clasificar
 4. Click **Build Project**
-5. **ZIP listo** → copia a `.minecraft/mods` → **¡Juega!**
+5. **ZIP listo** → copia a `.minecraft/mods` → **¡Juga!**
 
 ---
 
@@ -236,7 +213,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v10.0.0 (Actual — Mayo 2026)**
+### ✅ **v10.0.1 (Actual — Mayo 2026)**
 - 🗂️ **Arquitectura Modular**: Reorganización masiva en subdominios para `components/fomo/` y `lib/`.
 - 💾 **IndexedDB Storage**: Migración completa asíncrona de datos de FOMO.
 - 🎨 **Rediseño FOMO Cloud**: Header inmersivo 3D, navegación premium y reproductor PiP nativo.
@@ -244,12 +221,7 @@ D:\.mine\
 - ⚙️ **TWEAK Overrides**: Forzado de resource packs incompatibles escribiendo `incompatibleResourcePacks` en options.txt para saltar restricciones de Vanilla.
 
 ### 🎯 **Futuro (2026+)**
-- 👥 Multiplayer pack sync
-- ☁️ Cloud backup de proyectos
-- 🎪 Showcase Demo deployable
-- 💾 Perfiles personalizables guardables
-- 🔔 Notificaciones de nuevos videos de creadores seguidos
-
+- 🔔  ̶N̶o̶t̶i̶f̶i̶c̶a̶c̶i̶o̶n̶e̶s̶ ̶d̶e̶ ̶n̶u̶e̶v̶o̶s̶ ̶v̶i̶d̶e̶o̶s̶ ̶d̶e̶ ̶c̶r̶e̶a̶d̶o̶r̶e̶s̶ ̶s̶e̶g̶u̶i̶d̶o̶s̶
 ---
 
 ## 🤝 Comunidad & Contribuciones
@@ -290,7 +262,7 @@ git push origin feature/mi-feature
 → Sí, MIM detecta esto y muestra **"Abrir Externo"** en lugar de descargar directamente.
 
 ### ❓ **"¿Mi PC es muy lenta para escanear 500 mods?"**
-→ MIM soporta virtual scrolling. Carga solo lo que ves. También puedes usar Collections para menos mods.
+→ MIM soporta virtual scrolling. Carga solo lo que ves.
 
 ---
 

@@ -68,7 +68,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const [isFullView, setIsFullView] = useState(false);
   const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(gameVersions[0] || null);
   const [selectedLoaderFilter, setSelectedLoaderFilter] = useState<string | null>(loader || null);
-  const [selectedProjectType, setSelectedProjectType] = useState<string>(projectType);
+  const [selectedProjectType, setSelectedProjectType] = useState<string>(mod.projectType || projectType || "mod");
+
+  useEffect(() => {
+    setSelectedProjectType(mod.projectType || projectType || "mod");
+  }, [mod.projectId, mod.projectType, projectType]);
 
   // Sincronizar con cambios en el sidebar (Filtros externos)
   useEffect(() => {

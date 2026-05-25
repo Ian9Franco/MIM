@@ -10,6 +10,8 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [newAuthorMods, setNewAuthorMods] = useState<any[]>([]);
   const [scanningAuthors, setScanningAuthors] = useState(false);
+  const [newChannelVideos, setNewChannelVideos] = useState<any[]>([]);
+  const [scanningChannels, setScanningChannels] = useState(false);
   const [seenVersions, setSeenVersions] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem("mim_seen_collection_versions") || "{}"); } catch { return {}; }
   });
@@ -202,6 +204,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
       setScanningAuthors(true);
       const newMods: any[] = [];
       const installedIds = new Set(library.map(l => l.meta?.modId).filter(Boolean));
+      const notifiedMods = JSON.parse(localStorage.getItem("mim_notified_author_mods") || "{}");
+      let notifiedUpdated = false;
+
       for (const author of followedAuthors) {
         try {
           const res = await fetch(`https://api.modrinth.com/v2/user/${author}/projects`);
@@ -210,16 +215,126 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
             projects.forEach((proj: any) => {
               if ((Date.now() - new Date(proj.published).getTime()) < 30 * 24 * 60 * 60 * 1000 && !installedIds.has(proj.id)) {
                 newMods.push({ path: `author-new-mod:${proj.id}`, title: proj.title, slug: proj.slug, author, latestVersion: proj.latest_version || "Nuevo", published: proj.published, description: proj.description, iconUrl: proj.icon_url, _source: "modrinth", isNewAuthorMod: true });
+                
+                if (!notifiedMods[proj.id]) {
+                  incidentManager.createIncident({
+                    id: `new-author-mod-${proj.id}`,
+                    title: `Nuevo mod de ${author}`,
+                    detail: `${proj.title} ya está disponible.`,
+                    severity: "info",
+                    module: "FOMO"
+                  });
+                  notifiedMods[proj.id] = true;
+                  notifiedUpdated = true;
+                }
               }
             });
           }
         } catch {}
       }
+      
+      if (notifiedUpdated) {
+        localStorage.setItem("mim_notified_author_mods", JSON.stringify(notifiedMods));
+      }
+      
       setNewAuthorMods(newMods);
       setScanningAuthors(false);
     };
     checkAuthors();
   }, [sidebarOpen, followedAuthors, library]);
 
-  return { activeTab, setActiveTab, activeProject, incidents, setIncidents, modUpdates, collectionUpdates, shaderUpdates, resourcePackUpdates, newAuthorMods, scanningAuthors, handleMarkSeen };
+  // Escanear nuevos videos de canales
+  useEffect(() => {
+    if (!sidebarOpen) { setNewChannelVideos([]); return; }
+    const checkChannels = async () => {
+      setScanningChannels(true);
+      try {
+        const channelsRes = await fetch("/api/fomo/youtube-channels");
+        if (!channelsRes.ok) { setScanningChannels(false); return; }
+        
+        const channelsData = await channelsRes.json();
+        const channels: string[] = channelsData.channels || [];
+        
+        if (channels.length === 0) { setNewChannelVideos([]); setScanningChannels(false); return; }
+        
+        // Cargar estado de videos previos vistos
+        const lastVideosRaw = localStorage.getItem("mim_youtube_last_videos") || "{}";
+        const lastVideos: Record<string, string> = JSON.parse(lastVideosRaw);
+        const notifiedVideos = JSON.parse(localStorage.getItem("mim_notified_channel_videos") || "{}");
+        let notifiedUpdated = false;
+        
+        const newVideos: any[] = [];
+        
+        for (const channelUrl of channels) {
+          try {
+            const videoRes = await fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(channelUrl)}&limit=1`);
+            if (!videoRes.ok) continue;
+            
+            const videoData = await videoRes.json();
+            const latestVideo = videoData.showcases?.[0];
+            
+            if (latestVideo && latestVideo.videoId) {
+              const lastVideoId = lastVideos[channelUrl];
+              const isNew = lastVideoId && lastVideoId !== latestVideo.videoId;
+              
+              let isToday = false;
+              const d = new Date();
+              const todayStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+              if (latestVideo.publishedAt === todayStr) {
+                isToday = true;
+              } else if (new Date(latestVideo.publishedAt).toDateString() === d.toDateString()) {
+                isToday = true;
+              }
+              
+              // Agregar a la lista si es nuevo, es de hoy, o no hay registro previo
+              if (isNew || isToday || !lastVideoId) {
+                newVideos.push({
+                  path: `channel-new-video:${latestVideo.videoId}`,
+                  title: latestVideo.title,
+                  videoId: latestVideo.videoId,
+                  videoUrl: latestVideo.videoUrl,
+                  thumbnail: latestVideo.thumbnail,
+                  channelUrl,
+                  publishedAt: latestVideo.publishedAt,
+                  _source: "youtube",
+                  isNewChannelVideo: true
+                });
+              }
+              
+              if (isNew && !notifiedVideos[latestVideo.videoId]) {
+                incidentManager.createIncident({
+                  id: `new-channel-video-${latestVideo.videoId}`,
+                  title: `Nuevo video en Showcase`,
+                  detail: latestVideo.title,
+                  severity: "info",
+                  module: "FOMO"
+                });
+                notifiedVideos[latestVideo.videoId] = true;
+                notifiedUpdated = true;
+              }
+              
+              // Actualizar el último video visto
+              if (lastVideoId !== latestVideo.videoId) {
+                lastVideos[channelUrl] = latestVideo.videoId;
+              }
+            }
+          } catch {}
+        }
+        
+        // Guardar estado actualizado
+        localStorage.setItem("mim_youtube_last_videos", JSON.stringify(lastVideos));
+        if (notifiedUpdated) {
+          localStorage.setItem("mim_notified_channel_videos", JSON.stringify(notifiedVideos));
+        }
+        setNewChannelVideos(newVideos);
+      } catch (err) {
+        console.error("[useAlertManager] Error checking channels:", err);
+      } finally {
+        setScanningChannels(false);
+      }
+    };
+    checkChannels();
+  }, [sidebarOpen]);
+
+  return { activeTab, setActiveTab, activeProject, incidents, setIncidents, modUpdates, collectionUpdates, shaderUpdates, resourcePackUpdates, newAuthorMods, scanningAuthors, newChannelVideos, scanningChannels, handleMarkSeen };
 }

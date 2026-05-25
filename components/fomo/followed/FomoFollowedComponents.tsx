@@ -141,7 +141,7 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
 
 // ── FollowedAuthorCard ───────────────────────────────────────────────────────
 
-export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow, onShare, isSharedByMe, sharedByOthers, currentUserColor }: any) {
+export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow, onShare, isSharedByMe, sharedByOthers, currentUserColor, isNew }: any) {
   const authorName = typeof author === "string" ? author : author?.name || "Autor Desconocido";
   const [currentIconIdx, setCurrentIconIdx] = React.useState(0);
   const [isModern, setIsModern] = React.useState(false);
@@ -172,7 +172,10 @@ export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow, o
           )}
         </div>
         <div className="min-w-0">
-          <p className="font-headline text-sm font-bold truncate text-white">{authorName}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-headline text-sm font-bold truncate text-white">{authorName}</p>
+            {isNew && <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-pink-500/15 text-pink-500 border border-pink-500/25 uppercase shrink-0 animate-pulse">Nuevo</span>}
+          </div>
           <p className="text-[10px] text-white/40">Creador de Minecraft</p>
           
           {sharedByOthers && sharedByOthers.length > 0 && (

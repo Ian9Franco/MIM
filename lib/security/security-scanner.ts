@@ -17,7 +17,7 @@ import type { SecurityScanResult, SecurityFinding, ThreatCategory } from "@/lib/
 function getWhitelistedMods(): Set<string> {
   const modsSet = new Set<string>(TRUSTED_MODS.map(m => m.toLowerCase()));
   try {
-    const { getPortableDir } = require("./settings");
+    const { getPortableDir } = require("../core/settings");
     const portableDir = getPortableDir();
     if (portableDir) {
       const pFile = path.join(portableDir, "data", "whitelist.json");

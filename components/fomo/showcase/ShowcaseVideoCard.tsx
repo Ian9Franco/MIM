@@ -68,6 +68,7 @@ interface ShowcaseVideoCardProps {
   expandedVideo: string | null;
   setExpandedVideo: (id: string | null) => void;
   currentUserColor?: string | null;
+  isLatest?: boolean;
 }
 
 function ShowcaseVideoCardInner({
@@ -78,7 +79,8 @@ function ShowcaseVideoCardInner({
   onSearchProject,
   expandedVideo,
   setExpandedVideo,
-  currentUserColor
+  currentUserColor,
+  isLatest = false
 }: ShowcaseVideoCardProps) {
   const isSharedByMe = allSharedVideos.some(v => v.youtube_video_id === video.videoId && v.profile_id === currentUser?.id);
   const sharedOthers = allSharedVideos
@@ -153,16 +155,16 @@ function ShowcaseVideoCardInner({
   };
 
   return (
-    <div className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+    <div className={`p-3 rounded-2xl transition-all ${isLatest ? "p-4 border-primary/40 bg-white/10" : "bg-white/5 border-white/10"} border hover:bg-white/10`}>
       <div 
-        className="flex items-center gap-4"
+        className={`flex items-center gap-4 ${isLatest ? "flex-col sm:flex-row" : ""}`}
         onClick={() => setExpandedVideo(expandedVideo === video.videoId ? null : video.videoId)}
       >
-        <div className="w-20 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
+        <div className={`${isLatest ? "w-full sm:w-28 h-24 sm:h-16" : "w-20 h-14"} rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden`}>
           <ShowcaseVideoThumbnail video={video} />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm truncate">{video.title}</p>
+        <div className={`${isLatest ? "w-full" : "flex-1"} min-w-0`}>
+          <p className={`${isLatest ? "text-base font-black" : "text-sm font-bold"} truncate`}>{video.title}</p>
           <p className="font-caption text-[10px]" style={{ color: COLORS.muted }}>
             {video.publishedAt ? `${formatYoutubeDate(video.publishedAt)} • ` : ""}{video.modSlugs.length} mods detectados
           </p>
@@ -193,10 +195,10 @@ function ShowcaseVideoCardInner({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isLatest ? "w-full" : ""}`}>
           <button 
             onClick={handleShare}
-            className="text-[10px] font-black px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            className="text-[10px] font-black px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer flex-1"
             style={isSharedByMe ? {
               backgroundColor: currentUserColor ? `${currentUserColor}22` : 'rgba(249, 115, 22, 0.2)',
               color: currentUserColor || '#f97316',
@@ -215,7 +217,7 @@ function ShowcaseVideoCardInner({
               e.stopPropagation();
               window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
             }}
-            className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase hover:bg-red-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 uppercase hover:bg-red-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer flex-1"
             title="Reproducir video en la app"
           >
             Reproducir <TvMinimalPlay className="w-3.5 h-3.5" />

@@ -79,29 +79,33 @@ export function RootLayoutClient({ children }: { children: React.ReactNode }) {
         style={{ 
           transform: `translateX(${(fomoOpen || sageOpen) ? 550 : 0}px) scale(${(fomoOpen || sageOpen) ? 0.98 : 1})`,
           filter: (fomoOpen || sageOpen) ? "blur(10px) brightness(0.8)" : "none",
-          paddingRight: tweakOpen ? "935px" : (alertSidebarOpen || packHealthOpen) ? "400px" : "0px",
           width: "100%",
         }}
       >
-        <LayoutHeader 
-          fomoOpen={fomoOpen} onToggleFomo={(v) => handleToggleUI('fomo', v)} 
-          isRefreshing={isRefreshing} onRefresh={handleRefresh}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenStaging={() => setStagingOpen(true)}
-          hasStagingFiles={hasStagingFiles}
-          stagingOpen={stagingOpen}
-          alertSidebarOpen={alertSidebarOpen} onToggleAlerts={(v) => handleToggleUI('alerts', v)}
-          hasAlerts={hasAlerts} alertsSeen={alertsSeen}
-          sageOpen={sageOpen} onToggleSage={(v) => handleToggleUI('sage', v)}
-          tweakOpen={tweakOpen} onToggleTweak={(v) => handleToggleUI('tweak', v)}
-          packHealthOpen={packHealthOpen} onCheckHealth={handleCheckHealth}
-          activeProject={activeProject} isValidatingHealth={isValidatingHealth}
-          watcherStatus={watcherStatus}
-        />
+        <div 
+          className="flex flex-col flex-1 transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+          style={{ paddingRight: tweakOpen ? "935px" : (alertSidebarOpen || packHealthOpen) ? "400px" : "0px" }}
+        >
+          <LayoutHeader 
+            fomoOpen={fomoOpen} onToggleFomo={(v) => handleToggleUI('fomo', v)} 
+            isRefreshing={isRefreshing} onRefresh={handleRefresh}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenStaging={() => setStagingOpen(true)}
+            hasStagingFiles={hasStagingFiles}
+            stagingOpen={stagingOpen}
+            alertSidebarOpen={alertSidebarOpen} onToggleAlerts={(v) => handleToggleUI('alerts', v)}
+            hasAlerts={hasAlerts} alertsSeen={alertsSeen}
+            sageOpen={sageOpen} onToggleSage={(v) => handleToggleUI('sage', v)}
+            tweakOpen={tweakOpen} onToggleTweak={(v) => handleToggleUI('tweak', v)}
+            packHealthOpen={packHealthOpen} onCheckHealth={handleCheckHealth}
+            activeProject={activeProject} isValidatingHealth={isValidatingHealth}
+            watcherStatus={watcherStatus}
+          />
 
-        <main className="flex-1 w-full max-w-400 mx-auto px-4 sm:px-6 py-8 sm:py-10">
-          {children}
-        </main>
+          <main className="flex-1 w-full max-w-400 mx-auto px-4 sm:px-6 py-8 sm:py-10">
+            {children}
+          </main>
+        </div>
 
         <LayoutFooter />
       </div>

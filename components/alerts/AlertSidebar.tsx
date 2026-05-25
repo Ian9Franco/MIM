@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
   X, Bell, CheckCircle, AlertTriangle, Shield, Package, RefreshCw, 
-  FileWarning, Info, Settings, ShieldAlert, ShieldX, History, Activity, Binary, Sparkles
+  FileWarning, Info, Settings, ShieldAlert, ShieldX, History, Activity, Binary, Sparkles, MonitorPlay, Heart
 } from "lucide-react";
 import { incidentManager } from "@/lib/intelligence/incidentManager";
 import { useAlertManager } from "@/hooks/useAlertManager";
@@ -91,10 +91,10 @@ export function AlertSidebar({
   const { 
     activeTab, setActiveTab, activeProject, incidents, setIncidents, 
     modUpdates, collectionUpdates, shaderUpdates, resourcePackUpdates, 
-    newAuthorMods, handleMarkSeen 
+    newAuthorMods, newChannelVideos, handleMarkSeen 
   } = useAlertManager(sidebarOpen, library, modrinthStatus, followedMods, followedAuthors, ignoredUpdates);
 
-  const updates = [...modUpdates, ...collectionUpdates, ...shaderUpdates, ...resourcePackUpdates, ...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }])];
+  const updates = [...modUpdates, ...collectionUpdates, ...shaderUpdates, ...resourcePackUpdates, ...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }]), ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }])];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -118,7 +118,7 @@ export function AlertSidebar({
   const renderUpdates = (list: [string, any][], type: any) => (
     <div className="flex flex-col gap-2">
       {list.map(([path, s]) => (
-        <UpdateCard key={path} path={path} s={s} type={type} library={library} downloadingMods={downloadingMods} handleDownloadUpdate={handleDownloadUpdate} handleDismissUpdate={handleDismissUpdate} handleMarkSeen={handleMarkSeen} setSidebarOpen={setSidebarOpen} />
+        <UpdateCard key={path} path={path} s={s} type={type} library={library} followedMods={followedMods} downloadingMods={downloadingMods} handleDownloadUpdate={handleDownloadUpdate} handleDismissUpdate={handleDismissUpdate} handleMarkSeen={handleMarkSeen} setSidebarOpen={setSidebarOpen} />
       ))}
     </div>
   );
@@ -126,8 +126,9 @@ export function AlertSidebar({
   return (
     <aside 
       ref={sidebarRef} 
-      className={`fixed inset-y-0 right-0 w-[450px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0 ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`} 
+      className={`fixed top-0 right-0 w-[450px] z-[200] flex flex-col shadow-2xl transition-all duration-800 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0 overflow-hidden ${sidebarOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`} 
       style={{ 
+        height: "calc(100vh - 120px)",
         background: "var(--glass-bg)", 
         borderColor: "var(--color-border)", 
         borderLeftColor: "color-mix(in srgb, var(--color-primary) 22%, transparent)",
@@ -158,7 +159,22 @@ export function AlertSidebar({
               <CheckCircle className="w-3.5 h-3.5" /> <span>Limpiar Todo</span>
             </button>
           )}
-          {handleCheckUpdates && activeTab === "updates" && <button onClick={handleCheckUpdates} disabled={checkingUpdates} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50" style={{ background: "var(--color-accent-bg)", color: "var(--color-accent)", border: "1px solid var(--color-accent-border)" }}><RefreshCw className={`w-3.5 h-3.5 ${checkingUpdates ? "animate-spin" : ""}`} /> <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span></button>}
+          {handleCheckUpdates && activeTab === "updates" && (
+            <button 
+              onClick={handleCheckUpdates} 
+              disabled={checkingUpdates} 
+              className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ${checkingUpdates ? "animate-pulse" : ""}`}
+              style={{ 
+                background: checkingUpdates ? "var(--color-accent)" : "var(--color-accent-bg)", 
+                color: checkingUpdates ? "white" : "var(--color-accent)", 
+                border: `1px solid ${checkingUpdates ? "var(--color-accent)" : "var(--color-accent-border)"}`,
+                boxShadow: checkingUpdates ? "0 0 12px rgba(var(--color-accent-rgb), 0.4)" : "none",
+              }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-500 group-hover:rotate-180 ${checkingUpdates ? "animate-spin" : ""}`} /> 
+              <span>{checkingUpdates ? "Buscando..." : "Buscar Updates"}</span>
+            </button>
+          )}
           <button onClick={() => { setSidebarOpen(false); window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: false })); }} className="p-2 rounded-xl transition-colors hover:bg-white/5" style={{ color: "var(--color-muted)" }}><X className="w-5 h-5" /></button>
         </div>
       </div>
@@ -172,7 +188,7 @@ export function AlertSidebar({
         <TabButton active={activeTab === "bytecode"} onClick={() => setActiveTab("bytecode")} icon={<Binary className="w-3.5 h-3.5" />} label="Bytecode" count={bytecodeConflicts?.totalConflicts || 0} alert={(bytecodeConflicts?.highRiskConflicts || 0) > 0} />
       </div>
 
-      <div id="onboarding-alrt-content" className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-40 min-h-0">
+      <div id="onboarding-alrt-content" className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
         {activeTab === "all" && conflicts.length === 0 && updates.length === 0 && incidents.filter(i => i.status === "active").length === 0 && <EmptyState icon={CheckCircle} title="Todo al día" desc="No hay alertas de ningún tipo en tu sistema" />}
         {activeTab === "sage" && incidents.filter(i => i.status === "active" && i.module === "SAGE").length === 0 && <EmptyState icon={Activity} title="SAGE: Todo en Orden" desc="No se han detectado amenazas críticas." color="#66C8A0" />}
         {activeTab === "config" && incidents.filter(i => i.status === "active" && i.module === "CONFIG").length === 0 && <EmptyState icon={Settings} title="Ajustes Correctos" desc="Todas las rutas son funcionales." color="#BB96E4" />}
@@ -198,8 +214,9 @@ export function AlertSidebar({
 
         {(activeTab === "all" || activeTab === "updates") && (
           <>
+            {(newAuthorMods.length > 0 || newChannelVideos.length > 0) && <AlertSection icon={<MonitorPlay className="w-4 h-4" />} title="Showcases" count={newAuthorMods.length + newChannelVideos.length} color="#fb923c">{renderUpdates([...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }] as [string, any]), ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }] as [string, any])], "showcase")}</AlertSection>}
+            {collectionUpdates.length > 0 && <AlertSection icon={<Heart className="w-4 h-4" />} title="Seguidos" count={collectionUpdates.length} color="var(--color-primary)">{renderUpdates(collectionUpdates, "collection")}</AlertSection>}
             {modUpdates.length > 0 && <AlertSection icon={<RefreshCw className="w-4 h-4" />} title="Mods" count={modUpdates.length} color="var(--color-accent)">{renderUpdates(modUpdates, "mod")}</AlertSection>}
-            {collectionUpdates.length > 0 && <AlertSection icon={<RefreshCw className="w-4 h-4" />} title="Seguidos" count={collectionUpdates.length} color="var(--color-primary)">{renderUpdates(collectionUpdates, "collection")}</AlertSection>}
           </>
         )}
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, Heart, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses, CircleFadingPlus, Globe, X, FlaskConical, FlaskConicalOff, Package, Workflow, Loader2 } from "lucide-react";
+import { ExternalLink, Heart, HeartCrack, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses, CircleFadingPlus, Globe, X, FlaskConical, FlaskConicalOff, Package, Workflow, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
@@ -217,7 +217,7 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
               onClick={() => toggleFollowAuthor(mod.author)} 
               className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${followedAuthors.some((a: any) => a?.name === mod.author) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
             >
-              <Heart className={`w-3.5 h-3.5 ${followedAuthors.some((a: any) => a?.name === mod.author) ? "fill-current" : ""}`} /> {followedAuthors.some((a: any) => a?.name === mod.author) ? "Siguiendo" : "Seguir Autor"}
+              {followedAuthors.some((a: any) => a?.name === mod.author) ? <HeartCrack className="w-3.5 h-3.5 fill-current" /> : <Heart className="w-3.5 h-3.5" />} {followedAuthors.some((a: any) => a?.name === mod.author) ? "Dejar de Seguir" : "Seguir Autor"}
             </button>
             <button 
               onClick={() => onSearchMod?.(mod.title)} 
@@ -229,7 +229,7 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
               onClick={() => toggleFollowMod(mod)} 
               className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${followedMods.some((m: any) => m.projectId === mod.projectId) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
             >
-               <Heart className={`w-3.5 h-3.5 mr-1.5 ${followedMods.some((m: any) => m.projectId === mod.projectId) ? "fill-current" : ""}`} /> Favorito
+               {followedMods.some((m: any) => m.projectId === mod.projectId) ? <HeartCrack className="w-3.5 h-3.5 mr-1.5 fill-current" /> : <Heart className="w-3.5 h-3.5 mr-1.5" />} {followedMods.some((m: any) => m.projectId === mod.projectId) ? "Quitar Favorito" : "Favorito"}
             </button>
             {isProjectInDraft(mod.projectId || mod.id || mod.slug) ? (
               <button 

@@ -55,16 +55,15 @@ export function useFomoBackgroundSync() {
                     if (knownId && knownId !== latestVideo.videoId) {
                       const channelName = youtubeChannelLabel(channelUrl);
                       incidentManager.createIncident({
-                        id: `yt-${latestVideo.videoId}`,
-                        level: "info",
-                        title: "Nuevo Showcase Disponible",
-                        message: `El canal ${channelName} ha subido un nuevo video: "${latestVideo.title}".`,
-                        source: "TWEAK",
-                        code: "NEW_VIDEO",
-                        metadata: { url: latestVideo.videoUrl },
-                      } as any);
+                        id: `yt-new-video-${latestVideo.videoId}`,
+                        title: "Nuevo video en Showcase",
+                        detail: `El canal ${channelName} ha subido: "${latestVideo.title}".`,
+                        severity: "info",
+                        module: "FOMO",
+                        meta: { url: latestVideo.videoUrl, videoId: latestVideo.videoId, channelUrl }
+                      });
                       
-                      // Marcar como no leido para la UI (solo si NO es la primera vez que se carga)
+                      // Marcar como no leido para la UI
                       const unreadChRaw = localStorage.getItem("mim_fomo_unread_channels");
                       const unreadCh: string[] = unreadChRaw ? JSON.parse(unreadChRaw) : [];
                       if (!unreadCh.includes(channelUrl)) {
@@ -74,8 +73,8 @@ export function useFomoBackgroundSync() {
                       }
                     }
                     
-                    // Always update the state ID to the latest
-                    if (knownId !== latestVideo.videoId) {
+                    // Always update the state ID if it changed (first load or new video)
+                    if (!knownId || knownId !== latestVideo.videoId) {
                       state.lastVideoIds[channelUrl] = latestVideo.videoId;
                       stateChanged = true;
                     }
@@ -110,15 +109,16 @@ export function useFomoBackgroundSync() {
                   const knownDate = state.lastModDates[author];
                   
                   if (knownDate && new Date(latestMod.dateCreated) > new Date(knownDate)) {
-                    incidentManager.createIncident({
-                      id: `author-${author}-${latestMod.projectId}`,
-                      level: "info",
-                      title: "Nuevo Mod Disponible",
-                      message: `El autor ${author} ha publicado "${latestMod.title}".`,
-                      source: "TWEAK",
-                      code: "NEW_MOD",
-                      metadata: { projectId: latestMod.projectId },
-                    } as any);
+                    const isRecent = (Date.now() - new Date(latestMod.dateCreated).getTime()) < 30 * 24 * 60 * 60 * 1000;
+                    if (isRecent) {
+                      incidentManager.createIncident({
+                        id: `author-new-mod-${author}-${latestMod.projectId}`,
+                      title: "Nuevo mod disponible",
+                      detail: `${author} publicó "${latestMod.title}".`,
+                      severity: "info",
+                      module: "FOMO",
+                      meta: { projectId: latestMod.projectId, author, title: latestMod.title }
+                    });
 
                     // Marcar como no leido para la UI (solo si NO es la primera vez que se carga)
                     const unreadAuthRaw = localStorage.getItem("mim_fomo_unread_authors");
@@ -128,6 +128,7 @@ export function useFomoBackgroundSync() {
                       localStorage.setItem("mim_fomo_unread_authors", JSON.stringify(unreadAuth));
                       window.dispatchEvent(new CustomEvent("fomo-unread-authors-updated"));
                     }
+                  }
                   }
                   
                   // Always update the state date to the latest

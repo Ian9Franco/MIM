@@ -32,8 +32,77 @@ export function useLibrary(
   const [syncingDescriptions, setSyncingDescriptions] = useState(false);
 
   // Verificación explícita de actualizaciones (forzando petición a API)
-  const handleCheckUpdates = useCallback(() => {
+  const handleCheckUpdates = useCallback(async () => {
+    // 1. Chequear mods locales instalados
     updates.checkUpdates([...core.library, ...pendingFiles], true);
+
+    // 2. Chequear canales de YouTube seguidos
+    try {
+      const channelsRes = await fetch("/api/fomo/youtube-channels");
+      if (channelsRes.ok) {
+        const { channels } = await channelsRes.json();
+        for (const channelUrl of channels) {
+          try {
+            const scRes = await fetch(
+              `/api/fomo/youtube-showcase?channel=${encodeURIComponent(
+                channelUrl
+              )}&limit=1`
+            );
+            if (scRes.ok) {
+              const scData = await scRes.json();
+              const latestVideo = scData.showcases?.[0];
+              if (latestVideo?.videoId) {
+                const lastVideos = JSON.parse(localStorage.getItem("mim_youtube_last_videos") || "{}");
+                if (lastVideos[channelUrl] !== latestVideo.videoId) {
+                  lastVideos[channelUrl] = latestVideo.videoId;
+                  localStorage.setItem("mim_youtube_last_videos", JSON.stringify(lastVideos));
+                  window.dispatchEvent(new CustomEvent("fomo-unread-channels-updated"));
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("[handleCheckUpdates] Error checking channel", channelUrl, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[handleCheckUpdates] Error fetching YouTube channels", err);
+    }
+
+    // 3. Chequear autores seguidos
+    try {
+      const mimDB = (await import("@/lib/storage/indexeddb")).mimDB;
+      await mimDB.init();
+      const authors = await mimDB.getAllFollowedAuthors();
+      const authorNames = authors.map((a: any) => typeof a === "string" ? a : a.name).filter(Boolean);
+
+      for (const author of authorNames) {
+        try {
+          const res = await fetch(
+            `/api/modrinth/discover?q=author:${encodeURIComponent(
+              author
+            )}&sort=newest&pageSize=1`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const latestMod = data.mods?.[0];
+            if (latestMod?.dateCreated) {
+              const state = JSON.parse(localStorage.getItem("mim_fomo_last_sync_state") || "{}");
+              if (!state.lastModDates) state.lastModDates = {};
+              if (state.lastModDates[author] !== latestMod.dateCreated) {
+                state.lastModDates[author] = latestMod.dateCreated;
+                localStorage.setItem("mim_fomo_last_sync_state", JSON.stringify(state));
+                window.dispatchEvent(new CustomEvent("fomo-unread-authors-updated"));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("[handleCheckUpdates] Error checking author", author, err);
+        }
+      }
+    } catch (err) {
+      console.warn("[handleCheckUpdates] Error checking authors", err);
+    }
   }, [core.library, pendingFiles, updates]);
 
   // Carga automática de metadatos e iconos desde caché local (sin forzar API)

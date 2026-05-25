@@ -438,6 +438,7 @@ export function FomoFollowedShowcases({
               expandedVideo={expandedVideo}
               setExpandedVideo={setExpandedVideo}
               currentUserColor={currentUserColor}
+              isLatest={idx === 0}
             />
           ))}
           

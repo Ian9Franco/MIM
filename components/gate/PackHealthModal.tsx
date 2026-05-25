@@ -156,8 +156,9 @@ export function PackHealthPanel({
   const panel = (
       <aside
         ref={sidebarRef}
-        className="fixed inset-y-0 right-0 w-[400px] z-[200] flex flex-col transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0"
+        className="fixed top-0 right-0 w-[400px] z-[200] flex flex-col transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-r-0"
         style={{
+          height: "calc(100vh - 120px)",
           transform:  visible ? "translateX(0)" : "translateX(100%)",
           opacity:    visible ? 1 : 0,
           background: "var(--glass-bg)",

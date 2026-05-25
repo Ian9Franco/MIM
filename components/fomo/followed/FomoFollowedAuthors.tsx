@@ -58,6 +58,7 @@ export function FomoFollowedAuthors({
   const [allSharedVideos, setAllSharedVideos] = React.useState<any[]>([]);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [currentUserColor, setCurrentUserColor] = React.useState<string | null>(null);
+  const [unreadAuthors, setUnreadAuthors] = React.useState<Set<string>>(new Set());
 
   const fetchCommunitySharingInfo = React.useCallback(async () => {
     try {
@@ -211,6 +212,22 @@ export function FomoFollowedAuthors({
     const obs = new MutationObserver(update);
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => obs.disconnect();
+  }, []);
+
+  // Load unread authors from localStorage
+  React.useEffect(() => {
+    const unreadAuthRaw = localStorage.getItem("mim_fomo_unread_authors");
+    const unread: string[] = unreadAuthRaw ? JSON.parse(unreadAuthRaw) : [];
+    setUnreadAuthors(new Set(unread));
+    
+    const handleUpdate = () => {
+      const updated = localStorage.getItem("mim_fomo_unread_authors");
+      const unreadList: string[] = updated ? JSON.parse(updated) : [];
+      setUnreadAuthors(new Set(unreadList));
+    };
+    
+    window.addEventListener("fomo-unread-authors-updated", handleUpdate);
+    return () => window.removeEventListener("fomo-unread-authors-updated", handleUpdate);
   }, []);
 
   // Load community shared info on mount and tab changes
@@ -434,6 +451,7 @@ export function FomoFollowedAuthors({
                     const shareData = communityAuthorSharedMap.get(authorName) || { isSharedByMe: false, sharedByOthers: [] };
                     const isSharedByMe = shareData.isSharedByMe;
                     const sharedByOthers = shareData.sharedByOthers;
+                    const isNew = unreadAuthors.has(authorName);
                     return (
                       <FollowedAuthorCard 
                         key={authorName || `unknown-${idx}`} 
@@ -445,6 +463,7 @@ export function FomoFollowedAuthors({
                         isSharedByMe={isSharedByMe}
                         sharedByOthers={sharedByOthers}
                         currentUserColor={currentUserColor}
+                        isNew={isNew}
                       />
                     );
                   })}

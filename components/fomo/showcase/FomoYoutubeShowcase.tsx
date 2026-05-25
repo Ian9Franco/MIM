@@ -133,10 +133,18 @@ function YoutubeTriggerCard({
   showcase,
   modCount,
   theme,
+  isNew,
+  channelUrl,
+  onMarkSeen,
+  isLatest,
 }: {
   showcase: YoutubeShowcaseEntry;
   modCount: number;
   theme?: string;
+  isNew?: boolean;
+  channelUrl?: string;
+  onMarkSeen?: (channelUrl: string) => void;
+  isLatest?: boolean;
 }) {
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(showcase.thumbnail);
@@ -177,7 +185,7 @@ function YoutubeTriggerCard({
     <a
       href={showcase.videoUrl}
       onClick={handlePlay}
-      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+      className={`${isLatest ? "w-[280px] xl:w-[320px] h-[420px]" : "w-[190px] xl:w-[210px] h-[300px]"} shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}
       style={{
         border: cardBorder,
         background: cardBg,
@@ -186,7 +194,7 @@ function YoutubeTriggerCard({
       title={showcase.title}
     >
       {/* Thumbnail */}
-      <div className="relative h-[140px] overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40">
+      <div className={`relative ${isLatest ? "h-[200px]" : "h-[140px]"} overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40`}>
         {!imgError && showcase.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -230,13 +238,18 @@ function YoutubeTriggerCard({
       {/* Text zone */}
       <div className="flex flex-col gap-1 p-3 flex-1">
         {/* Label row */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span
             className="text-[7.5px] font-black uppercase tracking-widest"
             style={{ color: labelColor }}
           >
             ◇ Showcase {showcase.publishedAt ? `• ${formatYoutubeDate(showcase.publishedAt)}` : ""}
           </span>
+          {isNew && (
+            <span className="text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0 animate-pulse">
+              Nuevo
+            </span>
+          )}
         </div>
 
         <h3
@@ -478,6 +491,7 @@ export function FomoYoutubeShowcase({
   const [mods, setMods] = useState<ResolvedShowcaseMod[]>([]);
   const [status, setStatus] = useState<"idle" | "loading-showcase" | "loading-mods" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isChannelNew, setIsChannelNew] = useState(false);
   const isMounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -543,6 +557,29 @@ export function FomoYoutubeShowcase({
     return () => { isMounted.current = false; };
   }, [load]);
 
+  // Load unread channels from localStorage
+  useEffect(() => {
+    const checkChannelNew = () => {
+      const unreadChannelsRaw = localStorage.getItem("mim_fomo_unread_channels");
+      const unreadChannels: string[] = unreadChannelsRaw ? JSON.parse(unreadChannelsRaw) : [];
+      setIsChannelNew(unreadChannels.includes(channelUrl));
+    };
+    
+    checkChannelNew();
+    window.addEventListener("fomo-unread-channels-updated", checkChannelNew);
+    return () => window.removeEventListener("fomo-unread-channels-updated", checkChannelNew);
+  }, [channelUrl]);
+
+  // Mark channel as seen
+  const handleMarkChannelSeen = useCallback((url: string) => {
+    const unreadChannelsRaw = localStorage.getItem("mim_fomo_unread_channels");
+    const unreadChannels: string[] = unreadChannelsRaw ? JSON.parse(unreadChannelsRaw) : [];
+    const updated = unreadChannels.filter(ch => ch !== url);
+    localStorage.setItem("mim_fomo_unread_channels", JSON.stringify(updated));
+    setIsChannelNew(false);
+    window.dispatchEvent(new CustomEvent("fomo-unread-channels-updated"));
+  }, []);
+
   const isModern = theme === "modern";
 
   // ── Render: Error ──
@@ -597,6 +634,10 @@ export function FomoYoutubeShowcase({
           showcase={showcase}
           modCount={showcase.modSlugs.length}
           theme={theme}
+          isNew={isChannelNew}
+          channelUrl={channelUrl}
+          onMarkSeen={handleMarkChannelSeen}
+          isLatest={true}
         />
         {mods.map((mod, i) => (
           <ShowcaseModCard
@@ -615,6 +656,10 @@ export function FomoYoutubeShowcase({
           showcase={showcase}
           modCount={showcase.modSlugs.length}
           theme={theme}
+          isNew={isChannelNew}
+          channelUrl={channelUrl}
+          onMarkSeen={handleMarkChannelSeen}
+          isLatest={true}
         />
         {mods.map((mod, i) => (
           <ShowcaseModCard

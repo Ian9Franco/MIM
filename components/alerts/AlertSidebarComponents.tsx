@@ -22,7 +22,8 @@ import {
   Activity,
   Search,
   Sparkles,
-  Binary
+  Binary,
+  TvMinimalPlay
 } from "lucide-react";
 
 // ── TabButton ────────────────────────────────────────────────────────────────
@@ -137,8 +138,9 @@ export function ActionButton({ primary, danger, onClick, disabled, icon, label, 
 interface UpdateCardProps {
   path: string;
   s: any;
-  type: "mod" | "collection" | "shader" | "resourcepack";
+  type: "mod" | "collection" | "shader" | "resourcepack" | "showcase";
   library: any[];
+  followedMods?: any[];
   downloadingMods: Record<string, boolean>;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
   handleDismissUpdate: (path: string) => void;
@@ -147,39 +149,76 @@ interface UpdateCardProps {
 }
 
 export function UpdateCard({
-  path, s, type, library, downloadingMods,
+  path, s, type, library, followedMods, downloadingMods,
   handleDownloadUpdate, handleDismissUpdate, handleMarkSeen, setSidebarOpen
 }: UpdateCardProps) {
   const [expanded, setExpanded] = useState(false);
   const isCollection = type === "collection";
-  const mod = isCollection ? null : library.find(l => l.path === path);
+  const isNewVideo = s.isNewChannelVideo;
+  const mod = isCollection && !isNewVideo ? null : library.find(l => l.path === path);
   const rawFilename = path.split(/[\\/]/).pop()?.replace(/\.(zip|jar)$/i, "") || "unknown";
   
-  const displayName = s.title || s.slug || (isCollection ? (s.isNewAuthorMod ? s.title : "Mod Seguido") : (["shader", "resourcepack"].includes(type) ? rawFilename : (mod?.meta?.modName || mod?.fileName)));
+  const displayName = s.title || s.slug || (isNewVideo ? "Nuevo Video" : (isCollection ? (s.isNewAuthorMod ? s.title : "Mod Seguido") : (["shader", "resourcepack"].includes(type) ? rawFilename : (mod?.meta?.modName || mod?.fileName))));
   const currentVersion = isCollection ? null : mod?.meta?.modVersion;
+
+  let imageUrl = null;
+  if (isNewVideo && s.thumbnail) imageUrl = s.thumbnail;
+  else if (s.isNewAuthorMod && s.iconUrl) imageUrl = s.iconUrl;
+  else if (isCollection && followedMods) {
+    const fmod = followedMods.find(m => m.project_id === path.replace("collection:", ""));
+    if (fmod && fmod.icon_url) imageUrl = fmod.icon_url;
+  }
 
   return (
     <div className="p-3 rounded-xl border animate-fade-in transition-all duration-300 hover:border-[var(--color-border)]" style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}>
       <div className="flex items-start gap-2">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--color-secondary-bg)" }}>
-          <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ background: "var(--color-secondary-bg)" }}>
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : isNewVideo ? (
+            <TvMinimalPlay className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
+          ) : (
+            <Package className="w-4 h-4" style={{ color: "var(--color-accent)" }} />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-subhead text-sm truncate max-w-[70%]" style={{ color: "var(--color-foreground)" }}>{displayName}</p>
+            {isNewVideo && <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[9px] font-bold border border-blue-500/20 uppercase shrink-0 animate-pulse">Nuevo Video</span>}
             {s.isNewAuthorMod && <span className="px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-500 text-[9px] font-bold border border-pink-500/20 uppercase shrink-0 animate-pulse">Lanzamiento</span>}
             {isCollection && !s.isNewAuthorMod && <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 uppercase shrink-0">Seguido</span>}
             {type === "shader" && <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold border border-yellow-500/20 uppercase shrink-0">Shader</span>}
             {type === "resourcepack" && <span className="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-500 text-[10px] font-bold border border-teal-500/20 uppercase shrink-0">Textura</span>}
           </div>
           <div className="flex items-center gap-2 mt-1 text-xs">
-            {s.isNewAuthorMod ? <span style={{ color: "var(--color-muted)" }}>de <span className="text-pink-400 font-bold">{s.author}</span> • v{s.latestVersion}</span> : (currentVersion && currentVersion !== "unknown" ? <><span style={{ color: "var(--color-muted)" }}>v{currentVersion}</span><span style={{ color: "var(--color-accent)" }}>→</span><span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span></> : <span style={{ color: "var(--color-success)" }}>Nuevo: v{s.latestVersion}</span>)}
+            {isNewVideo ? <span style={{ color: "var(--color-muted)" }}>Nuevo video en Showcase</span> : (s.isNewAuthorMod ? <span style={{ color: "var(--color-muted)" }}>de <span className="text-pink-400 font-bold">{s.author}</span> • v{s.latestVersion}</span> : (currentVersion && currentVersion !== "unknown" ? <><span style={{ color: "var(--color-muted)" }}>v{currentVersion}</span><span style={{ color: "var(--color-accent)" }}>→</span><span style={{ color: "var(--color-success)" }}>v{s.latestVersion}</span></> : <span style={{ color: "var(--color-success)" }}>Nuevo: v{s.latestVersion}</span>))}
           </div>
         </div>
       </div>
       <div className="flex flex-wrap gap-2 mt-3">
-        {s.isNewAuthorMod ? (
+        {isNewVideo ? (
+          <><ActionButton primary onClick={() => {
+            // Mark channel as read
+            const unreadChannelsRaw = localStorage.getItem("mim_fomo_unread_channels");
+            const unreadChannels: string[] = unreadChannelsRaw ? JSON.parse(unreadChannelsRaw) : [];
+            const updated = unreadChannels.filter(ch => ch !== s.channelUrl);
+            localStorage.setItem("mim_fomo_unread_channels", JSON.stringify(updated));
+            window.dispatchEvent(new CustomEvent("fomo-unread-channels-updated"));
+            
+            // Open video
+            window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: s.videoId } }));
+            setSidebarOpen(false);
+          }} icon={<TvMinimalPlay className="w-3.5 h-3.5" />} label="Reproducir" /><ActionButton onClick={() => handleDismissUpdate(path)} label="Descartar" /></>
+        ) : (s.isNewAuthorMod ? (
           <ActionButton primary onClick={() => {
+            // Mark author as read
+            const unreadAuthorsRaw = localStorage.getItem("mim_fomo_unread_authors");
+            const unreadAuthors: string[] = unreadAuthorsRaw ? JSON.parse(unreadAuthorsRaw) : [];
+            const updated = unreadAuthors.filter(a => a !== s.author);
+            localStorage.setItem("mim_fomo_unread_authors", JSON.stringify(updated));
+            window.dispatchEvent(new CustomEvent("fomo-unread-authors-updated"));
+            
+            // Open FOMO details
             const modHit = { projectId: path.replace("author-new-mod:", ""), title: s.title, slug: s.slug || "", author: s.author, description: s.description || "", iconUrl: s.iconUrl, url: `https://modrinth.com/mod/${s.slug}`, downloads: 0, follows: 0, _source: "modrinth", projectType: "mod" };
             window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
             setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
@@ -194,10 +233,10 @@ export function UpdateCard({
             else { const ext = fn.substring(fn.lastIndexOf(".")); const base = fn.substring(0, fn.lastIndexOf(".")); fn = `${base}-${s.latestVersion}${ext}`; }
             handleDownloadUpdate(path, s.downloadUrl!, fn);
           }} disabled={downloadingMods[path]} icon={downloadingMods[path] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />} label={downloadingMods[path] ? "Descargando..." : (type === "mod" ? "Actualizar" : "Descargar")} /><ActionButton onClick={() => handleDismissUpdate(path)} label="Ignorar" /></>
-        )}
+        ))}
         <div className="w-full flex gap-2 mt-1">
-          <ActionButton onClick={() => window.open(s.isNewAuthorMod ? `https://modrinth.com/mod/${s.slug}` : `https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")} icon={<Globe className="w-3.5 h-3.5" />} label="Web" small />
-          {!s.isNewAuthorMod && <ActionButton onClick={() => setExpanded(!expanded)} icon={expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} label="Más Info" small />}
+          {!isNewVideo && !s.isNewAuthorMod && <ActionButton onClick={() => window.open(s.isNewAuthorMod ? `https://modrinth.com/mod/${s.slug}` : `https://modrinth.com/mod/${s.slug || s.projectId}`, "_blank")} icon={<Globe className="w-3.5 h-3.5" />} label="Web" small />}
+          {!s.isNewAuthorMod && !isNewVideo && <ActionButton onClick={() => setExpanded(!expanded)} icon={expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} label="Más Info" small />}
         </div>
       </div>
       {expanded && (

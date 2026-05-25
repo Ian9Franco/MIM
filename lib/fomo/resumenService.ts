@@ -5,9 +5,9 @@ import {
   EMPTY_CLUB,
   type ClubAuthorEntry,
   type ClubModEntry,
-  type CommunityClubMember,
-  type UserClubData,
-} from "@/lib/fomo/clubTypes";
+  type CommunityResumenMember,
+  type UserResumenData,
+} from "@/lib/fomo/resumenTypes";
 import { inferTypeFromModHit } from "@/lib/fomo/communityShareMeta";
 
 const AUTHOR_MARKERS = ["autor de minecraft", "¿querés agregar"];
@@ -18,9 +18,9 @@ function isAuthorFavorite(summary?: string | null): boolean {
   return AUTHOR_MARKERS.some((m) => s.includes(m));
 }
 
-export function parseClubData(raw: unknown): UserClubData {
+export function parseResumenData(raw: unknown): UserResumenData {
   if (!raw || typeof raw !== "object") return { ...EMPTY_CLUB };
-  const o = raw as UserClubData;
+  const o = raw as UserResumenData;
   return {
     mods: Array.isArray(o.mods) ? o.mods : [],
     authors: Array.isArray(o.authors) ? o.authors : [],
@@ -29,7 +29,7 @@ export function parseClubData(raw: unknown): UserClubData {
   };
 }
 
-export function clubFromFavoriteRows(
+export function resumenFromFavoriteRows(
   rows: {
     mod_id: string;
     platform: string;
@@ -37,7 +37,7 @@ export function clubFromFavoriteRows(
     icon_url?: string | null;
     summary?: string | null;
   }[]
-): UserClubData {
+): UserResumenData {
   const mods: ClubModEntry[] = [];
   const authors: ClubAuthorEntry[] = [];
   for (const r of rows) {
@@ -56,7 +56,7 @@ export function clubFromFavoriteRows(
   return { mods, authors, youtubeChannels: [] };
 }
 
-export async function buildLocalClubSnapshot(): Promise<UserClubData> {
+export async function buildLocalResumenSnapshot(): Promise<UserResumenData> {
   await mimDB.init();
   const [modRows, authorRows] = await Promise.all([
     mimDB.getAllFollowedMods(),
@@ -112,27 +112,18 @@ export async function buildLocalClubSnapshot(): Promise<UserClubData> {
   };
 }
 
-/** Publica el club local del usuario en profiles.club_data (si la columna existe). */
-export async function syncMyClubToCloud(userId: string): Promise<boolean> {
-  const club = await buildLocalClubSnapshot();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ club_data: club, updated_at: new Date().toISOString() })
-    .eq("id", userId);
-  if (error) {
-    console.warn("[club] sync skipped:", error.message);
-    return false;
-  }
+export async function syncMyResumenToCloud(userId: string): Promise<boolean> {
+  // Función desactivada: El resumen es ahora un resumen en vivo (no requiere sync manual)
   return true;
 }
 
-export async function fetchCommunityClubs(
+export async function fetchCommunityResumen(
   currentUserId?: string
-): Promise<CommunityClubMember[]> {
+): Promise<CommunityResumenMember[]> {
   const [profilesRes, favsRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, username, avatar_url, color, club_data")
+      .select("id, username, avatar_url, color")
       .order("username"),
     supabase
       .from("favorite_mods")
@@ -147,62 +138,62 @@ export async function fetchCommunityClubs(
     favsByProfile.get(pid)!.push(f);
   }
 
-  const members: CommunityClubMember[] = profiles.map((p) => {
-    let club = parseClubData(p.club_data);
-    const hasCloudClub = p.club_data != null;
-    const inferred = clubFromFavoriteRows(favsByProfile.get(p.id) || []);
-    if (club.mods.length === 0 && inferred.mods.length > 0) {
-      club = { ...club, mods: inferred.mods };
+  const members: CommunityResumenMember[] = profiles.map((p) => {
+    let resumen = parseResumenData(null);
+    const hasCloudResumen = false;
+    const inferred = resumenFromFavoriteRows(favsByProfile.get(p.id) || []);
+    if (resumen.mods.length === 0 && inferred.mods.length > 0) {
+      resumen = { ...resumen, mods: inferred.mods };
     }
-    if (club.authors.length === 0 && inferred.authors.length > 0) {
-      club = { ...club, authors: inferred.authors };
+    if (resumen.authors.length === 0 && inferred.authors.length > 0) {
+      resumen = { ...resumen, authors: inferred.authors };
     }
     return {
       id: p.id,
       username: p.username,
       avatar_url: p.avatar_url,
       color: p.color,
-      club,
-      hasCloudClub,
+      resumen,
+      hasCloudResumen,
     };
   });
 
   if (currentUserId) {
     const me = members.find((m) => m.id === currentUserId);
     if (me) {
-      const local = await buildLocalClubSnapshot();
+      const local = await buildLocalResumenSnapshot();
       const hasLocal =
         local.mods.length > 0 ||
         local.authors.length > 0 ||
         local.youtubeChannels.length > 0;
       if (
         hasLocal &&
-        local.mods.length >= me.club.mods.length &&
+        local.mods.length >= me.resumen.mods.length &&
         local.updatedAt
       ) {
-        me.club = local;
+        me.resumen = local;
       }
     } else {
       const prof = profiles.find((p) => p.id === currentUserId);
       if (prof) {
-        const local = await buildLocalClubSnapshot();
+        const local = await buildLocalResumenSnapshot();
         members.push({
           id: prof.id,
           username: prof.username,
           avatar_url: prof.avatar_url,
           color: prof.color,
-          club: local,
-          hasCloudClub: false,
+          resumen: local,
+          hasCloudResumen: false,
         });
       }
     }
   }
 
   return members.sort((a, b) => {
-    const score = (m: CommunityClubMember) =>
-      m.club.mods.length +
-      m.club.authors.length +
-      m.club.youtubeChannels.length;
+    const score = (m: CommunityResumenMember) =>
+      m.resumen.mods.length +
+      m.resumen.authors.length +
+      m.resumen.youtubeChannels.length;
     return score(b) - score(a) || a.username.localeCompare(b.username);
   });
 }
@@ -216,3 +207,4 @@ export function youtubeChannelLabel(url: string): string {
     return url.slice(0, 24);
   }
 }
+

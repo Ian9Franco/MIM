@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Puzzle, Search, Blocks } from "lucide-react";
+import { Puzzle, Search, Blocks, FlaskConical, FlaskConicalOff } from "lucide-react";
 import { parseShareMeta, stripShareMeta, type CommunityProjectType } from "@/lib/fomo/communityShareMeta";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
+import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { FomoModBannerStrip } from "@/components/fomo/discover/FomoModBannerStrip";
 import { communityTypeToBannerType } from "@/lib/fomo/fomoModBanner";
 
@@ -44,6 +45,8 @@ export function CommunityProfileModPool({
   const [typeFilter, setTypeFilter] = useState<CommunityProjectType | "all">("all");
   const [versionFilter, setVersionFilter] = useState<string>("all");
   const [loaderFilter, setLoaderFilter] = useState<string>("all");
+  
+  const { isProjectInDraft } = useActiveDraft();
 
   const poolMods = useMemo(
     () => favorites.filter((f) => !isAuthorRow(f.summary)),
@@ -194,27 +197,64 @@ export function CommunityProfileModPool({
                   <p className="text-[9px] text-white/45 line-clamp-1 mt-1">{summaryText}</p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onOpenProjectDetails) {
-                    onOpenProjectDetails(fav.mod_id, fav.platform);
-                  } else {
-                    openProjectDetailsInFomo(fav.mod_id, fav.platform, {
-                      title: fav.name,
-                      projectType: meta.projectType,
-                    });
-                    requestAnimationFrame(() => {
-                      window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
-                    });
-                  }
-                }}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white shrink-0 cursor-pointer border-none self-end"
-                title="Ver detalles del proyecto"
-              >
-                <Search className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex gap-1 shrink-0 self-end">
+                {isProjectInDraft(fav.mod_id) ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent("fomo-remove-from-draft", {
+                        detail: {
+                          projectId: fav.mod_id,
+                        }
+                      }));
+                    }}
+                    className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 shrink-0 cursor-pointer border-none"
+                    title="Quitar del Draft Activo"
+                  >
+                    <FlaskConicalOff className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", {
+                        detail: {
+                          projectId: fav.mod_id,
+                          platform: fav.platform,
+                          title: fav.name
+                        }
+                      }));
+                    }}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white shrink-0 cursor-pointer border-none"
+                    title="Añadir a Draft Activo"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onOpenProjectDetails) {
+                      onOpenProjectDetails(fav.mod_id, fav.platform);
+                    } else {
+                      openProjectDetailsInFomo(fav.mod_id, fav.platform, {
+                        title: fav.name,
+                        projectType: meta.projectType,
+                      });
+                      requestAnimationFrame(() => {
+                        window.dispatchEvent(new CustomEvent("fomo-apply-pending-discover"));
+                      });
+                    }
+                  }}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white shrink-0 cursor-pointer border-none"
+                  title="Ver detalles del proyecto"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              </div>
               </div>
             </div>
           );

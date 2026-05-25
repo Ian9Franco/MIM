@@ -350,3 +350,63 @@ Después de revisar el código y la configuración actual, se confirma que la ap
 
 El riesgo de exceder la cuota de Storage viene de subir archivos binarios grandes al bucket. En el estado actual del proyecto, esto no está ocurriendo en el código, y la arquitectura propuesta sigue la regla correcta: datos ligeros en Supabase, mods grandes solo localmente.
 ```
+
+---
+
+## 🤝 Parte 3: Drafts Colaborativos (Supabase Realtime)
+
+La función de Drafts en FOMO Cloud permite a un grupo de usuarios construir una lista de mods (modpack) de forma colaborativa y en tiempo real. 
+
+### 🗄️ Estructura de Tablas para Drafts
+
+Para soportar los Drafts, se utilizan las siguientes tablas (definidas en la carpeta `sql/`):
+
+1. **`drafts`**: Contiene la metadata del borrador.
+   - `id`: UUID (Primary Key)
+   - `owner_id`: UUID (Referencia a `profiles(id)`).
+   - `name`: Nombre del borrador.
+   - `game_version`: Versión de Minecraft.
+   - `loader`: Modloader (Forge, Fabric, etc.).
+
+2. **`draft_members`**: Gestiona quién tiene acceso a editar el borrador.
+   - `draft_id`: UUID (Referencia a `drafts(id)`).
+   - `profile_id`: UUID (Referencia a `profiles(id)`).
+   - `role`: Rol ('owner', 'editor', 'viewer').
+
+3. **`draft_projects`**: Los mods/texturas propuestos.
+   - `id`: UUID (Primary Key)
+   - `draft_id`: UUID (Referencia a `drafts(id)`).
+   - `project_id`: ID en Modrinth o CurseForge.
+   - `platform`: Plataforma ('modrinth' o 'curseforge').
+   - `status`: Estado del mod propuesto ('proposed', 'approved', 'rejected').
+   - `added_by`: UUID (Referencia a `profiles(id)`).
+
+4. **`draft_snapshots`**: Versiones guardadas (listas para jugar).
+   - `id`: UUID (Primary Key).
+   - `draft_id`: UUID (Referencia a `drafts(id)`).
+   - `snapshot_name`: Nombre (ej: "v1.0").
+   - `projects`: JSONB (Lista consolidada de los mods aprobados).
+   - `created_by`: UUID.
+
+### 🔐 Row-Level Security (RLS) para Drafts
+
+El acceso a los borradores está regulado mediante RLS para que solo los miembros invitados puedan verlos y modificarlos:
+- **Lectura**: Solo puedes ver los `drafts` y `draft_projects` si existe un registro tuyo en `draft_members`.
+- **Escritura (Proponer mods)**: Si tienes rol 'owner' o 'editor' en `draft_members`.
+- **Aprobación de mods / Snapshots**: Gestionadas mediante triggers de PostgreSQL y RLS.
+
+### ⚡ Integración de Supabase Realtime
+
+Desde React, utilizamos `supabase.channel()` para suscribirnos a cambios en las tablas del borrador:
+
+```typescript
+const channel = supabase
+  .channel(`draft-${draftId}`)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_projects', filter: `draft_id=eq.${draftId}` }, () => {
+    // Actualización instantánea en la UI
+    refreshDraftProjects();
+  })
+  .subscribe();
+```
+
+Cuando un grupo de amigos termina de agregar mods, el propietario hace clic en **"Crear Snapshot"**. Esto consolida todos los mods con estado `'approved'` en un archivo `JSONB` dentro de `draft_snapshots`. Luego, cualquier miembro puede descargar la Snapshot utilizando el sistema seguro de descargas por lotes (la cola descrita en la Parte 2) sin saturar las APIs.

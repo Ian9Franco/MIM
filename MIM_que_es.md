@@ -49,6 +49,7 @@ MIM usa Supabase principalmente para:
 - perfiles de usuario,
 - favoritos y contenido compartido,
 - metadatos ligeros de builds,
+- drafts colaborativos en tiempo real (para crear modpacks en grupo),
 - recuperación de contraseña.
 
 No envía archivos `.jar` grandes a la nube. Si sube algo a Supabase, está pensado para configuraciones pequeñas y datos de perfil, no para paquetes de mods completos.

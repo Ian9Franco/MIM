@@ -21,7 +21,7 @@ export class CurseForgeService {
    * @returns Resultados normalizados y total de coincidencias.
    */
   static async search(params: any, apiKey: string) {
-    const { loader, gameVersions, page, pageSize, sort, projectType, q, categories } = params;
+    const { loader, gameVersions, page, pageSize, sort, projectType, q, categories, environments } = params;
     
     // Traducción de términos MIM a IDs de CurseForge
     const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6; // 6 = Mods
@@ -72,12 +72,7 @@ export class CurseForgeService {
 
     const data = await res.json();
 
-    return {
-      /**
-       * Mapeo al formato estándar MIM.
-       * Esto permite que la UI no sepa si los datos vienen de Modrinth o CF.
-       */
-      mods: (data.data || []).map((m: any) => ({
+    let mods = (data.data || []).map((m: any) => ({
         projectId: m.id.toString(),
         externalProjectId: m.id.toString(),
         sourceProjectId: m.id.toString(),
@@ -118,8 +113,11 @@ export class CurseForgeService {
           if (isClient) return { client_side: "required", server_side: "unsupported" };
           return {}; // Fallback a Desconocido
         })()
-      })),
-      total: data.pagination.totalCount || 0
-    };
+      }));
+
+      return {
+        mods,
+        total: data.pagination.totalCount || 0
+      };
   }
 }

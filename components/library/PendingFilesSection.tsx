@@ -15,7 +15,7 @@ import { usePendingFiles } from "@/hooks/library/usePendingFiles";
  * Clasifica los archivos en compatibles e incompatibles y permite su eliminación o selección para clasificación.
  */
 export function PendingFilesSection({
-  pendingFiles, loading, selectedFiles, setSelectedFiles, activeProject, onDeleteFile, layout = "sidebar", modrinthStatus = {}, onCloseSidebar, detectedVersion
+  pendingFiles, loading, selectedFiles, setSelectedFiles, activeProject, onDeleteFile, layout = "sidebar", modrinthStatus = {}, onCloseSidebar, detectedVersion, availableVersions, setDetectedVersion
 }: any) {
   
   const [openingFolder, setOpeningFolder] = useState(false);
@@ -71,7 +71,23 @@ export function PendingFilesSection({
   return (
     <section className="animate-fade-up">
       <div className="flex items-start justify-between gap-4 mb-4">
-        <SectionHeading icon={<Inbox className="w-4 h-4" />} title="Descargas" sub="Detectados en Descargas" badge={pendingFiles.length} accentColor="var(--color-primary)" />
+        <div className="flex items-center gap-3">
+          <SectionHeading icon={<Inbox className="w-4 h-4" />} title="Descargas" sub="Detectados en Descargas" badge={pendingFiles.length} accentColor="var(--color-primary)" />
+          {!activeProject && availableVersions && availableVersions.length > 0 && setDetectedVersion && (
+            <select
+              value={detectedVersion || ""}
+              onChange={(e) => setDetectedVersion(e.target.value)}
+              className="mt-1 bg-[var(--fomo-secondary-bg,rgba(255,255,255,0.05))] border border-[var(--fomo-border,rgba(255,255,255,0.1))] text-foreground text-[11px] font-bold py-1 px-2.5 rounded-lg outline-none cursor-pointer hover:border-primary/50 transition-colors"
+              title="Versión de Minecraft base para chequear compatibilidad"
+            >
+              {availableVersions.map((v: string) => (
+                <option key={v} value={v} className="bg-[var(--color-card)] text-foreground">
+                  {v}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 mt-1">
           {layout !== "main" && (
             <button onClick={handleOpenDownloadsFolder} disabled={openingFolder} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-label text-[10px] uppercase font-bold border border-white/10 bg-white/5 hover:bg-white/10 transition-all">

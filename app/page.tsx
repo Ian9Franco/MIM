@@ -39,6 +39,7 @@ export default function Page() {
   const projects = useProjects();
   const { pendingFiles, setPendingFiles, loading } = useFileWatcher();
   const [detectedVersion, setDetectedVersion] = useState("1.20.1");
+  const [availableVersions, setAvailableVersions] = useState<string[]>(["1.20.1"]);
   const [isHoveredMimu, setIsHoveredMimu] = useState(false);
   const [keepOpenMimu, setKeepOpenMimu] = useState(false);
 
@@ -48,6 +49,7 @@ export default function Page() {
         .then(res => res.json())
         .then(data => {
           if (data.detectedVersion) setDetectedVersion(data.detectedVersion);
+          if (data.availableVersions?.length > 0) setAvailableVersions(data.availableVersions);
         })
         .catch(err => console.error("Failed to detect version:", err));
     };
@@ -225,6 +227,11 @@ export default function Page() {
     window.dispatchEvent(new CustomEvent("fomo-details-toggle", { detail: { open: detailsOpen } }));
   }, [detailsOpen]);
 
+  // ── Sync AutoClassify State ────────────────────────────────────────────────
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("auto-classify-changed", { detail: autoClassify }));
+  }, [autoClassify]);
+
   // ── Sync Pending Count with Global Events ──────────────────────────────────
   useEffect(() => {
     const dispatchCount = () => {
@@ -283,7 +290,9 @@ export default function Page() {
       pendingFiles.forEach(f => {
         if (autoProcessing.current.has(f.path)) return;
         
-        const isMedia = ["resourcepack", "datapack", "shader"].includes(f.meta?.projectType || "");
+        const pt = f.meta?.projectType?.toLowerCase() || "";
+        const isMedia = pt.includes("shader") || pt.includes("resourcepack") || pt.includes("datapack") || pt.includes("texture");
+        
         if (autoClassify && (isMedia || (isVersionCompatible(f.meta?.gameVersion || "unknown", projects.activeProject!.version) && isLoaderCompatible(f.meta?.loader || "unknown", projects.activeProject!.loader, projects.activeProject!.version)))) {
           autoProcessing.current.add(f.path);
           // Usamos "auto" para todo, el backend sabrá qué hacer según el tipo de proyecto real
@@ -425,7 +434,7 @@ export default function Page() {
 
               {/* Middle Card - Pending Files */}
               <div id="onboarding-mimu-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 p-6 rounded-[2rem] backdrop-blur-xl`} style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-                <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
+                <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={null} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />
               </div>
 
               {/* Right Card - Installed Mods (Tall) */}
@@ -442,7 +451,7 @@ export default function Page() {
         ) : (
           <div className="grid grid-cols-[1.2fr_320px_2fr] gap-6 items-start mt-6 animate-fade-up">
             <div id="onboarding-downloads" className={`${fomoOpen ? "opacity-0 pointer-events-none" : "opacity-100"} transition-opacity duration-700 p-6 rounded-[2rem] backdrop-blur-xl`} style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-              <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />
+              <PendingFilesSection pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} layout="main" modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />
             </div>
             <div id="onboarding-categorize" className="p-6 rounded-[2rem] backdrop-blur-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <QuickCategorizeSection allSelected={[...selectedFiles, ...selectedLibFiles]} activeProject={projects.activeProject} showSubcategories={showSubcategories} setShowSubcategories={setShowSubcategories} handleClassify={handleClassify} setSelectedFiles={setSelectedFiles} setSelectedLibFiles={setSelectedLibFiles} onDeleteSelected={() => setFilesToDelete(selectedFiles)} onUnclassifySelected={() => { lib.handleUnclassify(); setSelectedLibFiles([]); }} onAutoCategorize={handleAutoCategorize} autoClassify={autoClassify} setAutoClassify={setAutoClassify} />
@@ -456,7 +465,7 @@ export default function Page() {
         {lib.modDescription && <DescriptionModal modDescription={lib.modDescription} onClose={() => lib.setModDescription(null)} />}
         <AlertSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} conflicts={lib.conflicts} bytecodeConflicts={lib.bytecodeConflicts} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} library={lib.library} downloadingMods={lib.downloadingMods} handleResolveConflict={lib.handleResolveConflict} handleDownloadUpdate={lib.handleDownloadUpdate} handleDismissUpdate={lib.handleDismissUpdate} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} />
 
-        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} />, document.body)}
+        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />, document.body)}
       </div>
 
       <ConfirmModal isOpen={filesToDelete.length > 0} onClose={() => setFilesToDelete([])} onConfirm={handleBulkDelete} title={filesToDelete.length > 1 ? "¿Eliminar seleccionados?" : "¿Eliminar archivo?"} message={`¿Estás seguro? Esta acción no se puede deshacer.`} confirmLabel="Eliminar" cancelLabel="Cancelar" type="danger" />

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { UserCog, RefreshCw, ZoomIn, Move, Trash2, Eye, EyeOff } from "lucide-react";
+import { UserCog, Trash2, KeyRound, ZoomIn, Info, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ImageCropper } from "@/components/fomo/core/ImageCropper";
 import { supabase } from "@/lib/core/supabaseClient";
 
 type BannerMeta = {
@@ -33,50 +34,6 @@ interface CommunityEditProfileModalProps {
   ) => Promise<void>;
   onStatus: (msg: string, type: "success" | "error" | "warning" | "info") => void;
 }
-
-const cropAndResizeImage = (
-  base64Src: string,
-  zoom: number,
-  posX: number,
-  posY: number
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 128;
-      canvas.height = 128;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("No se pudo obtener el contexto del canvas"));
-        return;
-      }
-      
-      const imgWidth = img.width;
-      const imgHeight = img.height;
-      const ratio = Math.max(128 / imgWidth, 128 / imgHeight);
-      
-      const drawWidth = imgWidth * ratio * zoom;
-      const drawHeight = imgHeight * ratio * zoom;
-      
-      // Since preview circle is 64x64 and canvas is 128x128, multiply offsets by 2
-      const finalPosX = posX * 2;
-      const finalPosY = posY * 2;
-      
-      const drawX = (128 - drawWidth) / 2 + finalPosX;
-      const drawY = (128 - drawHeight) / 2 + finalPosY;
-      
-      ctx.clearRect(0, 0, 128, 128);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-      
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = (err) => reject(err);
-    img.src = base64Src;
-  });
-};
 
 export function CommunityEditProfileModal({
   showEditProfileModal,
@@ -111,13 +68,6 @@ export function CommunityEditProfileModal({
 
   const [rawImage, setRawImage] = useState<string | null>(null);
   const [rawBanner, setRawBanner] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [posX, setPosX] = useState(0);
-  const [posY, setPosY] = useState(0);
-  const [bannerZoom, setBannerZoom] = useState(1);
-  const [bannerPosX, setBannerPosX] = useState(0);
-  const [bannerPosY, setBannerPosY] = useState(0);
-  const [bannerBlur, setBannerBlur] = useState(0);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -138,20 +88,13 @@ export function CommunityEditProfileModal({
     if (showEditProfileModal) {
       setRawImage(null);
       setRawBanner(null);
-      setZoom(1);
-      setPosX(0);
-      setPosY(0);
-      setBannerZoom((editBannerMeta?.zoom ?? 1));
-      setBannerPosX((editBannerMeta?.x ?? 0));
-      setBannerPosY((editBannerMeta?.y ?? 0));
-      setBannerBlur((editBannerMeta?.blur ?? 0));
       setNewPassword("");
       setConfirmPassword("");
       setShowNewPassword(false);
       setShowConfirmPassword(false);
       setPasswordError(null);
     }
-  }, [showEditProfileModal, editBannerMeta]);
+  }, [showEditProfileModal]);
 
   const portalTarget = portalElement instanceof HTMLElement ? portalElement : null;
   if (!showEditProfileModal || !portalTarget) return null;
@@ -176,7 +119,7 @@ export function CommunityEditProfileModal({
 
     setLocalSaving(true);
     try {
-      if (newPassword) {
+      if (newPassword && newPassword.trim().length > 0) {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) {
           console.error("Password update error:", error);
@@ -185,20 +128,7 @@ export function CommunityEditProfileModal({
         }
       }
 
-      let finalAvatar = editAvatarUrl;
-      let finalBanner = editBannerUrl;
-      if (rawImage) {
-        finalAvatar = await cropAndResizeImage(rawImage, zoom, posX, posY);
-        setEditAvatarUrl(finalAvatar);
-      }
-      if (rawBanner) {
-        finalBanner = rawBanner;
-        setEditBannerUrl(finalBanner);
-      }
-      const finalBannerMeta: BannerMeta | null = finalBanner
-        ? { zoom: bannerZoom, x: bannerPosX, y: bannerPosY, blur: bannerBlur }
-        : null;
-      await handleSaveProfile(e, finalAvatar, finalBanner, finalBannerMeta);
+      await handleSaveProfile(e, editAvatarUrl, editBannerUrl, null);
       if (newPassword) {
         setNewPassword("");
         setConfirmPassword("");
@@ -206,7 +136,7 @@ export function CommunityEditProfileModal({
       }
     } catch (err) {
       console.error(err);
-      onStatus("Error al procesar la imagen de perfil.", "error");
+      onStatus("Error al guardar el perfil.", "error");
     } finally {
       setLocalSaving(false);
     }
@@ -231,18 +161,7 @@ export function CommunityEditProfileModal({
                   borderColor: editColor || 'var(--primary)' 
                 }}
               >
-                {rawImage ? (
-                  <img 
-                    src={rawImage} 
-                    alt="" 
-                    className="w-full h-full object-cover pointer-events-none select-none" 
-                    style={{
-                      objectPosition: `calc(50% + ${posX}px) calc(50% + ${posY}px)`,
-                      transform: `scale(${zoom})`,
-                      transformOrigin: "center center"
-                    }}
-                  />
-                ) : editAvatarUrl ? (
+                {editAvatarUrl ? (
                   <img src={editAvatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div 
@@ -261,17 +180,8 @@ export function CommunityEditProfileModal({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (!file.type.startsWith("image/")) {
-                          onStatus("Solo se permiten imágenes.", "error");
-                          return;
-                        }
                         const reader = new FileReader();
-                        reader.onload = () => {
-                          setRawImage(reader.result as string);
-                          setZoom(1);
-                          setPosX(0);
-                          setPosY(0);
-                        };
+                        reader.onload = () => setRawImage(reader.result as string);
                         reader.readAsDataURL(file);
                       }
                     }}
@@ -280,96 +190,36 @@ export function CommunityEditProfileModal({
               </div>
               <span className={`text-[9px] ${isModern ? 'text-muted-foreground' : 'text-white/40'}`}>Haz click para subir un ícono JPG/PNG</span>
 
-              {(editAvatarUrl || rawImage) && (
+              {(editAvatarUrl) && (
                 <button
                   type="button"
                   onClick={() => {
-                    setRawImage(null);
                     setEditAvatarUrl(null);
                   }}
                   className="text-[9px] text-red-400 hover:text-red-300 flex items-center gap-1 transition-all cursor-pointer bg-transparent border-none"
                 >
-                  <Trash2 className="w-3 h-3" /> Eliminar avatar
+                  <Trash2 className="w-3 h-3" />
+                  Eliminar
                 </button>
               )}
             </div>
-
-            {rawImage && (
-              <div className={`p-3 border rounded-xl space-y-2 animate-fade-in text-[10px] ${isModern ? 'bg-muted/40 border-border' : 'bg-white/5 border-white/10'}`}>
-                <div className={`flex items-center justify-between font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><ZoomIn className="w-3.5 h-3.5 text-primary" /> Zoom ({zoom.toFixed(1)}x)</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="3" 
-                  step="0.05"
-                  value={zoom} 
-                  onChange={e => setZoom(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-                
-                <div className={`flex items-center justify-between font-bold pt-1 ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><Move className="w-3.5 h-3.5 text-primary" /> Posición X ({posX}px)</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="-35" 
-                  max="35" 
-                  step="1"
-                  value={posX} 
-                  onChange={e => setPosX(parseInt(e.target.value, 10))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-
-                <div className={`flex items-center justify-between font-bold pt-1 ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><Move className="w-3.5 h-3.5 text-primary" /> Posición Y ({posY}px)</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="-35" 
-                  max="35" 
-                  step="1"
-                  value={posY} 
-                  onChange={e => setPosY(parseInt(e.target.value, 10))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-              </div>
-            )}
           </div>
 
           <div className="space-y-3">
             <div className="space-y-2">
               <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/10 h-24">
-                {rawBanner ? (
-                  <img
-                    src={rawBanner}
-                    alt="Banner preview"
-                    className="w-full h-full object-cover"
-                    style={{
-                      objectPosition: `calc(50% + ${bannerPosX}px) calc(50% + ${bannerPosY}px)`,
-                      transform: `scale(${bannerZoom})`,
-                      filter: `blur(${bannerBlur}px)`,
-                      transformOrigin: "center center",
-                    }}
-                  />
-                ) : editBannerUrl ? (
+                {editBannerUrl ? (
                   <img
                     src={editBannerUrl}
-                    alt="Banner Preview"
-                    className="w-full h-full object-cover"
-                    style={{
-                      objectPosition: `calc(50% + ${bannerPosX}px) calc(50% + ${bannerPosY}px)`,
-                      transform: `scale(${bannerZoom})`,
-                      filter: `blur(${bannerBlur}px)`,
-                      transformOrigin: "center center",
-                    }}
+                    alt="Banner preview"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-[0.2em] text-white/50">
-                    Banner del perfil
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Sin Banner</span>
                   </div>
                 )}
+                
                 <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer transition-opacity text-center px-2">
                   Subir Banner<br/>(JPG / PNG)
                   <input
@@ -379,10 +229,6 @@ export function CommunityEditProfileModal({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (!file.type.startsWith("image/")) {
-                          onStatus("Solo se permiten imágenes.", "error");
-                          return;
-                        }
                         const reader = new FileReader();
                         reader.onload = () => setRawBanner(reader.result as string);
                         reader.readAsDataURL(file);
@@ -391,75 +237,18 @@ export function CommunityEditProfileModal({
                   />
                 </label>
               </div>
-              {(editBannerUrl || rawBanner) && (
+              {(editBannerUrl) && (
                 <button
                   type="button"
                   onClick={() => {
-                    setRawBanner(null);
                     setEditBannerUrl(null);
                   }}
                   className="text-[9px] text-red-400 hover:text-red-300 flex items-center gap-1 transition-all cursor-pointer bg-transparent border-none"
                 >
-                  <Trash2 className="w-3 h-3" /> Eliminar banner
+                  <Trash2 className="w-3 h-3" /> Eliminar Banner
                 </button>
               )}
             </div>
-
-            {(editBannerUrl || rawBanner) && (
-              <div className={`p-3 border rounded-xl space-y-3 text-[10px] ${isModern ? 'bg-muted/40 border-border' : 'bg-white/5 border-white/10'}`}>
-                <div className={`flex items-center justify-between font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><ZoomIn className="w-3.5 h-3.5 text-primary" /> Zoom ({bannerZoom.toFixed(2)}x)</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="3"
-                  step="0.05"
-                  value={bannerZoom}
-                  onChange={(e) => setBannerZoom(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-
-                <div className={`flex items-center justify-between font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><Move className="w-3.5 h-3.5 text-primary" /> Posición X ({bannerPosX}px)</span>
-                </div>
-                <input
-                  type="range"
-                  min="-80"
-                  max="80"
-                  step="2"
-                  value={bannerPosX}
-                  onChange={(e) => setBannerPosX(parseInt(e.target.value, 10))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-
-                <div className={`flex items-center justify-between font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><Move className="w-3.5 h-3.5 text-primary" /> Posición Y ({bannerPosY}px)</span>
-                </div>
-                <input
-                  type="range"
-                  min="-80"
-                  max="80"
-                  step="2"
-                  value={bannerPosY}
-                  onChange={(e) => setBannerPosY(parseInt(e.target.value, 10))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-
-                <div className={`flex items-center justify-between font-bold ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>
-                  <span className="flex items-center gap-1"><RefreshCw className="w-3.5 h-3.5 text-primary" /> Desenfoque ({bannerBlur}px)</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="16"
-                  step="1"
-                  value={bannerBlur}
-                  onChange={(e) => setBannerBlur(parseInt(e.target.value, 10))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -529,6 +318,7 @@ export function CommunityEditProfileModal({
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
                     className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary transition-colors ${isModern ? 'bg-background border-border text-foreground placeholder:text-muted-foreground' : 'bg-black/20 border-white/10 text-white'}`}
                   />
                   <button
@@ -547,6 +337,7 @@ export function CommunityEditProfileModal({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repite la contraseña"
+                    autoComplete="new-password"
                     className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary transition-colors ${isModern ? 'bg-background border-border text-foreground placeholder:text-muted-foreground' : 'bg-black/20 border-white/10 text-white'}`}
                   />
                   <button
@@ -583,6 +374,34 @@ export function CommunityEditProfileModal({
           </button>
         </div>
       </form>
+      
+      {rawImage && (
+        <ImageCropper
+          imageUrl={rawImage}
+          aspectRatio={1}
+          shape="circle"
+          isModern={isModern}
+          onCancel={() => setRawImage(null)}
+          onSave={(croppedUrl) => {
+            setEditAvatarUrl(croppedUrl);
+            setRawImage(null);
+          }}
+        />
+      )}
+
+      {rawBanner && (
+        <ImageCropper
+          imageUrl={rawBanner}
+          aspectRatio={16/9}
+          shape="rect"
+          isModern={isModern}
+          onCancel={() => setRawBanner(null)}
+          onSave={(croppedUrl) => {
+            setEditBannerUrl(croppedUrl);
+            setRawBanner(null);
+          }}
+        />
+      )}
     </div>
   , portalTarget);
 }

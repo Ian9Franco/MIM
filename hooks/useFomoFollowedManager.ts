@@ -3,13 +3,20 @@ import type { ModHit } from "@/lib/core/types";
 import { mimDB } from "@/lib/storage/indexeddb";
 
 export function useFomoFollowedManager() {
-  const [subTab, setSubTab] = useState<"projects" | "authors" | "history" | "showcases">(
-    () => (typeof window !== "undefined" ? localStorage.getItem("fomo_active_subtab") as any : "projects") || "projects"
-  );
+  const [subTab, setSubTab] = useState<"projects" | "authors" | "history" | "showcases">("projects");
   const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
   const [followedMods, setFollowedMods] = useState<ModHit[]>([]);
   const [modrinthStatus, setModrinthStatus] = useState<Record<string, any>>({});
   const [showOnlyWithUpdates, setShowOnlyWithUpdates] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("fomo_active_subtab") as any;
+      if (saved) {
+        setSubTab(saved);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("fomo_active_subtab", subTab);

@@ -38,7 +38,7 @@ export function useLibrary(
 
   // Carga automática de metadatos e iconos desde caché local (sin forzar API)
   useEffect(() => {
-    if (activeProject && (core.library.length > 0 || pendingFiles.length > 0)) {
+    if (core.library.length > 0 || pendingFiles.length > 0) {
       updates.checkUpdates([...core.library, ...pendingFiles], false);
     }
   }, [activeProject, core.library, pendingFiles]);

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club } from "lucide-react";
-import { CommunityClubs } from "@/components/fomo/community/CommunityClubs";
+import { ArrowLeft, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club, FlaskConical } from "lucide-react";
+import { CommunityResumen } from "@/components/fomo/community/CommunityResumen";
 import { CommunityProfileModPool } from "@/components/fomo/community/CommunityProfileModPool";
 import { supabase } from "@/lib/core/supabaseClient";
 import { deleteCommunityContent } from "@/components/fomo/community/communityActions";
@@ -20,8 +20,9 @@ export function CommunityUserProfile({
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<
-    "pool" | "videos" | "clubs"
+    "pool" | "videos" | "resumen" | "drafts"
   >("pool");
   const [currentTheme, setCurrentTheme] = useState("official");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -67,16 +68,32 @@ export function CommunityUserProfile({
           // Resolve current user id + all content in parallel — single async wave
           const [
             { data: { session } },
-            { data: favs },
-            { data: vids }
+            favsRes,
+            vidsRes,
+            draftsOwnedRes,
+            draftsMemberRes
           ] = await Promise.all([
             supabase.auth.getSession(),
             supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
             supabase.from("showcase_videos").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
+            supabase.from("drafts").select("id, name, description, updated_at, visibility, owner_id, profiles!drafts_owner_id_fkey(username, avatar_url, color)").eq("owner_id", profile.id).order("updated_at", { ascending: false }),
+            supabase.from("draft_members").select("drafts(id, name, description, updated_at, visibility, owner_id, profiles!drafts_owner_id_fkey(username, avatar_url, color))").eq("user_id", profile.id)
           ]);
+          
+          const isOwn = session?.user?.id === profile.id;
+          
           setCurrentUserId(session?.user?.id || null);
-          setFavorites(favs || []);
-          setVideos(vids || []);
+          setFavorites(favsRes.data || []);
+          setVideos(vidsRes.data || []);
+          
+          const ownedDrafts = (draftsOwnedRes.data || []).filter(d => d.visibility === "public" || isOwn);
+          const memberDraftsRaw = (draftsMemberRes.data || []).map((m: any) => m.drafts).filter(Boolean);
+          const memberDrafts = memberDraftsRaw.filter(d => d.visibility === "public" || isOwn);
+          
+          // merge unique drafts
+          const allDraftsMap = new Map();
+          [...ownedDrafts, ...memberDrafts].forEach(d => allDraftsMap.set(d.id, d));
+          setDrafts(Array.from(allDraftsMap.values()));
         }
       } catch (err: any) {
         const errMsg = err?.message || err?.code || String(err);
@@ -161,7 +178,8 @@ export function CommunityUserProfile({
               alt="Banner"
               className="w-full h-full object-cover"
               style={{
-                transform: `translate(${profileBannerMeta.x}px, ${profileBannerMeta.y}px) scale(${profileBannerMeta.zoom})`,
+                objectPosition: `calc(50% + ${profileBannerMeta.x}px) calc(50% + ${profileBannerMeta.y}px)`,
+                transform: `scale(${profileBannerMeta.zoom})`,
                 filter: `blur(${profileBannerMeta.blur}px)`,
                 transformOrigin: "center center",
               }}
@@ -184,7 +202,7 @@ export function CommunityUserProfile({
         <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] bg-repeat opacity-[0.03]" />
         <button 
           onClick={onBack} 
-          className="absolute top-4 left-6 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-xs font-bold cursor-pointer border border-white/5 backdrop-blur-sm z-10"
+          className="absolute top-4 left-6 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 text-white/80 hover:text-white transition-all text-xs font-bold cursor-pointer border border-white/10 backdrop-blur-md z-10"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Volver
         </button>
@@ -201,8 +219,8 @@ export function CommunityUserProfile({
             )}
           </div>
           <div className="mb-1">
-            <h2 className={`text-2xl font-black ${isModern ? 'text-foreground' : 'text-white'}`}>{profileData.username}</h2>
-            <div className={`flex items-center gap-3 mt-1 text-[11px] font-medium ${isModern ? 'text-muted-foreground' : 'text-white/50'}`}>
+            <h2 className={`text-2xl font-black text-white drop-shadow-md`}>{profileData.username}</h2>
+            <div className={`flex items-center gap-3 mt-1 text-[11px] font-medium text-white/80 drop-shadow-sm`}>
               <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Unido en {formatDate(profileData.created_at)}</span>
             </div>
           </div>
@@ -224,10 +242,16 @@ export function CommunityUserProfile({
           Showcases ({videos.length})
         </button>
         <button
-          onClick={() => setActiveTab("clubs")}
-          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all flex items-center gap-1 ${activeTab === "clubs" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
+          onClick={() => setActiveTab('drafts')}
+          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all flex items-center gap-1 ${activeTab === 'drafts' ? (isModern ? 'text-foreground border-b-2 border-primary' : 'text-white border-b-2 border-primary') : (isModern ? 'text-muted-foreground hover:text-foreground' : 'text-white/40 hover:text-white/80')}`}
         >
-          <Club className="w-3 h-3" /> Club
+          <FlaskConical className="w-3 h-3" /> Drafts ({drafts.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("resumen")}
+          className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 transition-all flex items-center gap-1 ${activeTab === "resumen" ? (isModern ? "text-foreground border-b-2 border-primary" : "text-white border-b-2 border-primary") : isModern ? "text-muted-foreground hover:text-foreground" : "text-white/40 hover:text-white/80"}`}
+        >
+          <Club className="w-3 h-3" /> Resumen
         </button>
       </div>
 
@@ -279,11 +303,30 @@ export function CommunityUserProfile({
           )
         )}
 
+        {activeTab === "drafts" && (
+          drafts.length === 0 ? (
+            <div className={`py-12 text-center text-xs border border-dashed rounded-2xl ${isModern ? 'text-muted-foreground border-border' : 'text-white/40 border-white/10'}`}>
+              No tiene drafts públicos.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {drafts.map(draft => (
+                <div key={draft.id} className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all hover:scale-[1.01] ${isModern ? 'bg-card hover:bg-muted border-border shadow-sm' : 'bg-black/20 hover:bg-white/5 border-white/10'}`} onClick={() => window.dispatchEvent(new CustomEvent('fomo-open-draft', { detail: { draftId: draft.id } }))}>
+                  <div className="flex flex-col">
+                    <span className={`font-bold text-base ${isModern ? 'text-foreground' : 'text-white'}`}>{draft.name}</span>
+                    <span className={`text-xs mt-1 line-clamp-2 ${isModern ? 'text-muted-foreground' : 'text-white/60'}`}>{draft.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
 
-        {activeTab === "clubs" && profileData?.username && (
-          <CommunityClubs username={profileData.username} singleUser />
+        {activeTab === "resumen" && profileData?.username && (
+          <CommunityResumen username={profileData.username} singleUser />
         )}
       </div>
     </div>
   );
 }
+

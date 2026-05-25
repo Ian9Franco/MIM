@@ -68,7 +68,8 @@ export const Chip = React.memo(function Chip({ children, color, bg, className = 
 
 /* ── StatusBanner ───────────────────────────────────────────────────────────── */
 
-import { X } from "lucide-react";
+import { X, CheckCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface StatusBannerProps {
   text:    string;
@@ -90,17 +91,27 @@ export const StatusBanner = React.memo(function StatusBanner({
   text, type, onClose,
 }: StatusBannerProps) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="absolute bottom-0 left-0 right-0 py-2 px-4 flex items-center justify-between text-xs font-bold z-20 animate-slide-down"
-      style={{ background: STATUS_BG[type], color: "white" }}
-    >
-      <span className="truncate">{text}</span>
-      <button onClick={onClose} aria-label="Cerrar notificación">
-        <X className="w-3 h-3" />
-      </button>
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={text + type}
+        role="status"
+        aria-live="polite"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="absolute bottom-0 left-0 right-0 py-2 px-4 flex items-center justify-between text-xs font-bold z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.15)]"
+        style={{ background: STATUS_BG[type], color: "white" }}
+      >
+        <span className="truncate pr-4 flex items-center gap-2">
+          {type === "success" && <CheckCircle className="w-3.5 h-3.5" />}
+          {text}
+        </span>
+        <button onClick={onClose} aria-label="Cerrar notificación" className="shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+          <X className="w-3 h-3 text-white" />
+        </button>
+      </motion.div>
+    </AnimatePresence>
   );
 });
 

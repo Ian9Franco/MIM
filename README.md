@@ -12,7 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.7.0-indigo.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-10.0.0-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -64,6 +64,7 @@ El valor central de FOMO no es la reproducción de video: es el **ecosistema int
 - **Showcase Integration**: Cada video de un creador se convierte en un punto de acceso directo a los mods que muestra — sin salir de MIM.
 - **Instalación directa desde videos**: Un workflow completo desde el showcase hasta el mod instalado en tu librería.
 - **Pool Comunitario (FOMO Cloud)**: Perfiles públicos, clubs de usuario, favoritos compartidos y modpacks de la comunidad — todo sincronizado con Supabase.
+- **Drafts Colaborativos**: ¡Construye modpacks en tiempo real con amigos! Proponen mods, votan y crean "Snapshots" listas para jugar sin lidiar con los `.jar`.
 - **Modrinth + CurseForge unificado**: Búsqueda dual, filtros por versión/loader/categoría con smart matching SHA1 (100% exacto).
 
 > **Nota sobre el reproductor de video**: El reproductor integrado es una conveniencia secundaria, no la función principal. Si `yt-dlp` falla por cambios de YouTube, el botón **"Abrir en YouTube"** siempre está disponible como fallback. La app funciona perfectamente aunque el video no reproduzca directamente.
@@ -235,7 +236,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v9.7.0 (Actual — Mayo 2026)**
+### ✅ **v10.0.0 (Actual — Mayo 2026)**
 - 🗂️ **Arquitectura Modular**: Reorganización masiva en subdominios para `components/fomo/` y `lib/`.
 - 💾 **IndexedDB Storage**: Migración completa asíncrona de datos de FOMO.
 - 🎨 **Rediseño FOMO Cloud**: Header inmersivo 3D, navegación premium y reproductor PiP nativo.

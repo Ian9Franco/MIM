@@ -16,6 +16,7 @@
   - *Liquid Glass Tabs*: Sub-navegación premium con píldoras de transición fluida de desplazamiento y escala elástica al cambiar de sección (Pool ➔ Showcases ➔ Clubs).
   - *Immersive Header*: Fondos degradados dinámicos basados en la paleta del color de perfil del usuario, con desenfoques intensos en el fondo (`backdrop-blur-3xl`).
   - *Elevated Mod Cards*: Tarjetas con bordes ultra-delgados de cristal, sombras internas profundas y elevación activa en el eje Z mediante hover para una experiencia interactiva fluida.
+  - *Drafts Colaborativos*: Nueva capa social de "Collaborative Playlist Building", permitiendo crear listas de mods coordinadas con amigos en tiempo real antes de descargar.
 - **Showcase Player Decoupling**: Tratamiento estratégico del reproductor de video de showcases como una **característica secundaria de conveniencia** y no la identidad core de la aplicación.
   - Implementación de un botón robusto de fallback **"Abrir en YouTube"** cuando fallan las APIs de extracción de `yt-dlp`.
   - Aislamiento completo de fallas multimedia para que el descubrimiento de mods se mantenga operativo en todo momento.

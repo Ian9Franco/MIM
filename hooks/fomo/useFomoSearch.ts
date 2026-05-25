@@ -18,6 +18,12 @@ export function useFomoSearch(filters: any) {
   const [totalPages, setTotalPages] = useState(1);
   const [sourceError, setSourceError] = useState("");
   const skipNextRefetch = useRef(false);
+  
+  const intelligentPaginationResolver = useRef({
+    pool: [] as ModHit[],
+    cfOffset: 1,
+    queryKey: ""
+  });
 
   const { 
     source, loader, gameVersions, categories, environments, 
@@ -57,7 +63,7 @@ export function useFomoSearch(filters: any) {
         const data = await res.json();
         const allMods = data.mods || [];
         
-        const pageSize = 20;
+        const pageSize = 21;
         const start = (page - 1) * pageSize;
         fetchedMods = allMods.slice(start, start + pageSize).map((m: any) => ({ ...m, _source: source }));
         
@@ -96,10 +102,10 @@ export function useFomoSearch(filters: any) {
           curseforge: m._source === "curseforge"
         }
       }));
-      setMods(initialMods);
 
-      // Verificación batch asíncrona de disponibilidad cruzada
+      // Verificación batch asíncrona de disponibilidad cruzada normal (sin filtros estrictos de entorno)
       if (initialMods.length > 0) {
+        setMods(initialMods);
         fetch("/api/crosscheck/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -118,7 +124,9 @@ export function useFomoSearch(filters: any) {
                   checking: false,
                   modrinth: m._source === "modrinth" ? true : existsOpposite,
                   curseforge: m._source === "curseforge" ? true : existsOpposite
-                }
+                },
+                mr_client_side: checkResult?.client_side,
+                mr_server_side: checkResult?.server_side
               };
             }));
           }
@@ -132,6 +140,8 @@ export function useFomoSearch(filters: any) {
             }
           })));
         });
+      } else {
+        setMods([]);
       }
 
       if (qClean) eventBus.emit("fomo:search", { query: qClean, source });

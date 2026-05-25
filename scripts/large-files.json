@@ -1,25 +1,25 @@
 {
   "summary": {
-    "totalLargeFiles": 25,
-    "totalRefactored": 33,
+    "totalLargeFiles": 34,
+    "totalRefactored": 34,
     "threshold": 300
   },
   "largeFiles": [
     {
       "path": "components\\fomo\\spotlight\\FomoSpotlight.tsx",
-      "lines": 873
+      "lines": 908
+    },
+    {
+      "path": "components\\fomo\\core\\FomoOverlayComponents.tsx",
+      "lines": 726
+    },
+    {
+      "path": "components\\fomo\\sidebar\\FomoSidebarDiscoverBranch.tsx",
+      "lines": 701
     },
     {
       "path": "components\\fomo\\collections\\FomoCollections.tsx",
       "lines": 692
-    },
-    {
-      "path": "components\\fomo\\sidebar\\FomoSidebarDiscoverBranch.tsx",
-      "lines": 691
-    },
-    {
-      "path": "components\\fomo\\core\\FomoOverlayComponents.tsx",
-      "lines": 687
     },
     {
       "path": "components\\layout\\TweakSidebar.tsx",
@@ -34,32 +34,40 @@
       "lines": 530
     },
     {
+      "path": "components\\fomo\\community\\CommunityDraftDetails.tsx",
+      "lines": 523
+    },
+    {
+      "path": "app\\api\\tweak\\route.ts",
+      "lines": 492
+    },
+    {
+      "path": "components\\tweak\\parts\\PackHierarchyManager.tsx",
+      "lines": 491
+    },
+    {
       "path": "components\\fomo\\followed\\FomoFollowedAuthors.tsx",
       "lines": 480
     },
     {
-      "path": "app\\api\\tweak\\route.ts",
-      "lines": 479
-    },
-    {
-      "path": "components\\fomo\\community\\CommunityModpacks.tsx",
-      "lines": 478
-    },
-    {
       "path": "components\\fomo\\sidebar\\FomoSidebar.tsx",
-      "lines": 476
-    },
-    {
-      "path": "components\\tweak\\parts\\PackHierarchyManager.tsx",
-      "lines": 471
+      "lines": 477
     },
     {
       "path": "components\\fomo\\core\\FomoVersionOverlay.tsx",
-      "lines": 460
+      "lines": 476
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityPanel.tsx",
+      "lines": 450
+    },
+    {
+      "path": "components\\sage\\SagePlayerRescue.tsx",
+      "lines": 430
     },
     {
       "path": "components\\fomo\\followed\\FomoFollowedShowcases.tsx",
-      "lines": 420
+      "lines": 424
     },
     {
       "path": "app\\page.tsx",
@@ -70,28 +78,48 @@
       "lines": 390
     },
     {
-      "path": "components\\fomo\\community\\CommunityPanel.tsx",
-      "lines": 386
+      "path": "components\\fomo\\community\\CommunityEditProfileModal.tsx",
+      "lines": 378
     },
     {
-      "path": "components\\fomo\\community\\CommunityClubCard.tsx",
-      "lines": 334
+      "path": "components\\fomo\\community\\CommunityModPool.tsx",
+      "lines": 357
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityVideos.tsx",
+      "lines": 356
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityResumenCard.tsx",
+      "lines": 348
+    },
+    {
+      "path": "components\\sage\\rescue\\InventoryManager.tsx",
+      "lines": 339
     },
     {
       "path": "components\\library\\ModCard.tsx",
       "lines": 334
     },
     {
-      "path": "components\\fomo\\community\\CommunityModPool.tsx",
-      "lines": 326
+      "path": "components\\layout\\LayoutHeader.tsx",
+      "lines": 330
+    },
+    {
+      "path": "components\\fomo\\discover\\FomoModCardFixed.tsx",
+      "lines": 328
     },
     {
       "path": "app\\api\\tweak\\lib\\PackIntelligence.ts",
       "lines": 318
     },
     {
-      "path": "lib\\packValidator.ts",
+      "path": "lib\\modding\\packValidator.ts",
       "lines": 318
+    },
+    {
+      "path": "components\\fomo\\discover\\FomoModCard.tsx",
+      "lines": 317
     },
     {
       "path": "components\\projects\\InstalledModsSection.tsx",
@@ -102,14 +130,22 @@
       "lines": 313
     },
     {
+      "path": "components\\sage\\rescue\\NbtTreeViewer.tsx",
+      "lines": 309
+    },
+    {
       "path": "components\\tweak\\parts\\ConfigExplorer.tsx",
       "lines": 303
+    },
+    {
+      "path": "components\\fomo\\community\\CommunityUserProfile.tsx",
+      "lines": 302
     }
   ],
   "refactoredFiles": [
     {
       "path": "app\\api\\curseforge\\discover\\route.ts",
-      "lines": 32
+      "lines": 33
     },
     {
       "path": "components\\fomo\\collections\\FomoCollections.tsx",
@@ -173,7 +209,7 @@
     },
     {
       "path": "components\\tweak\\parts\\PackHierarchyManager.tsx",
-      "lines": 471
+      "lines": 491
     },
     {
       "path": "components\\tweak\\parts\\PackItem.tsx",
@@ -196,8 +232,8 @@
       "lines": 24
     },
     {
-      "path": "lib\\indexeddb.ts",
-      "lines": 70
+      "path": "lib\\downloads\\DraftDownloadBroker.ts",
+      "lines": 159
     },
     {
       "path": "lib\\scanner\\parsers.ts",
@@ -216,6 +252,10 @@
       "lines": 149
     },
     {
+      "path": "lib\\storage\\indexeddb.ts",
+      "lines": 70
+    },
+    {
       "path": "services\\api.ts",
       "lines": 203
     },
@@ -225,7 +265,7 @@
     },
     {
       "path": "services\\curseforge\\CurseForgeService.ts",
-      "lines": 83
+      "lines": 88
     },
     {
       "path": "services\\modPersistenceService.ts",

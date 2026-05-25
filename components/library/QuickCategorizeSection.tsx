@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Zap, ChevronRight, Package, Server, Trash2, X, Cpu, ChevronDown } from "lucide-react";
+import { Zap, ChevronRight, Package, Server, Trash2, X, Bot, ChevronDown, ChartColumnStacked, HandCoins, Birdhouse } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
 import { HotkeyCard } from "../ui/HotkeyCard";
 import type { PendingFile, LibraryFile, Project } from "@/lib/core/types";
@@ -72,14 +72,13 @@ export function QuickCategorizeSection({
   return (
     <section className="animate-fade-up stagger-3">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-5 pr-1">
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "var(--color-accent-bg)", border: "1px solid var(--color-accent-border)", color: "var(--color-accent)" }}
+          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-amber-500/10 border border-amber-500/20 text-amber-400"
         >
-          <Zap className="w-4 h-4" />
+          <ChartColumnStacked className="w-5 h-5" />
         </div>
-        <h2 className="font-headline text-base leading-none" style={{ color: "var(--color-foreground)" }}>
+        <h2 className="font-headline text-sm leading-tight flex-1" style={{ color: "var(--color-foreground)" }}>
           Categorización Rápida
         </h2>
         
@@ -93,7 +92,7 @@ export function QuickCategorizeSection({
                 if (onAutoCategorize && !autoClassify) onAutoCategorize();
               }
             }}
-            className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-2xl transition-all hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider shadow-lg border-2 ${
+            className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[9px] font-black uppercase tracking-wider shadow-md border ${
               allSelected.length > 0
                 ? "bg-primary border-primary/40 text-white shadow-primary/20"
                 : autoClassify 
@@ -102,11 +101,11 @@ export function QuickCategorizeSection({
             }`}
             title={allSelected.length > 0 ? "Clasificar automáticamente todos los mods seleccionados" : "Activar modo automático: organiza las descargas nuevas al instante"}
           >
-            <Cpu className={`w-4 h-4 ${autoClassify ? 'animate-pulse' : ''}`} />
+            <Bot className={`w-3.5 h-3.5 ${autoClassify ? 'animate-pulse' : ''}`} />
             <span>
               {allSelected.length > 0 
-                ? `Clasificar ${allSelected.length} ahora` 
-                : autoClassify ? "MODO AUTO: ON" : "ACTIVAR AUTO"}
+                ? `Clasificar ${allSelected.length}` 
+                : "AUTO"}
             </span>
           </button>
         )}
@@ -149,7 +148,7 @@ export function QuickCategorizeSection({
 
             {/* The Grid */}
             <div className="grid grid-cols-5 gap-3.5">
-              {allSelected.map((mod, idx) => {
+              {allSelected.slice(0, allSelected.length > 10 ? 9 : 10).map((mod, idx) => {
                 const isPending = 'path' in mod && !('category' in mod);
                 const meta = mod.meta;
                 
@@ -225,6 +224,20 @@ export function QuickCategorizeSection({
                   </div>
                 );
               })}
+              
+              {allSelected.length > 10 && (
+                <div 
+                  className="group relative aspect-square rounded-2xl flex items-center justify-center border transition-all animate-fade-up cursor-default"
+                  style={{ 
+                    background: "rgba(255,255,255,0.04)",
+                    borderColor: "var(--color-border)",
+                    animationDelay: `${9 * 0.04}s`,
+                  }}
+                  title={`${allSelected.length - 9} archivos más ocultos para ahorrar espacio`}
+                >
+                  <span className="text-[12px] font-black opacity-60">+{allSelected.length - 9}</span>
+                </div>
+              )}
             </div>
 
             {/* Instruction Footer & Bulk Actions */}
@@ -308,30 +321,43 @@ export function QuickCategorizeSection({
             (allSelected.length === 0 || !activeProject) ? "opacity-35 pointer-events-none grayscale-[0.5]" : ""
           }`}
         >
-          <HotkeyCard
-            num="1"
-            title=".essential"
-            desc="Fauna, Bosses, Arsenal, Dimensiones"
-            icon={<Package className="w-4 h-4" />}
-            color="wisteria"
-            onClick={() => setShowSubcategories(".essential")}
-          />
-          <HotkeyCard
-            num="2"
-            title=".local"
-            desc="Animaciones, Rendimiento, Partículas"
-            icon={<Zap className="w-4 h-4" />}
-            color="gold"
-            onClick={() => setShowSubcategories(".local")}
-          />
-          <HotkeyCard
-            num="3"
-            title=".server"
-            desc="Estructuras, Terreno, QoL servidor"
-            icon={<Server className="w-4 h-4" />}
-            color="wisteria"
-            onClick={() => setShowSubcategories(".server")}
-          />
+          {allSelected.length > 0 && allSelected.every(f => f.meta?.projectType && ["resourcepack", "shader", "datapack"].includes(f.meta.projectType)) ? (
+            <HotkeyCard
+              num="C"
+              title="Clasificación Automática"
+              desc="Texturas, shaders y datapacks se envían directo a sus carpetas base."
+              icon={<Bot className="w-4 h-4" />}
+              color="emerald"
+              onClick={() => handleClassify("auto", "")}
+            />
+          ) : (
+            <>
+              <HotkeyCard
+                num="1"
+                title=".essential"
+                desc="Fauna, Bosses, Arsenal, Dimensiones"
+                icon={<HandCoins className="w-4 h-4" />}
+                color="wisteria"
+                onClick={() => setShowSubcategories(".essential")}
+              />
+              <HotkeyCard
+                num="2"
+                title=".local"
+                desc="Animaciones, Rendimiento, Partículas"
+                icon={<Birdhouse className="w-4 h-4" />}
+                color="gold"
+                onClick={() => setShowSubcategories(".local")}
+              />
+              <HotkeyCard
+                num="3"
+                title=".server"
+                desc="Estructuras, Terreno, QoL servidor"
+                icon={<Server className="w-4 h-4" />}
+                color="wisteria"
+                onClick={() => setShowSubcategories(".server")}
+              />
+            </>
+          )}
         </div>
       )}
     </section>

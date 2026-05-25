@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { LogOut, TvMinimalPlay, RefreshCw, Blocks, Club } from "lucide-react";
+import { LogOut, TvMinimalPlay, RefreshCw, Blocks, Club, FlaskConical } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "@/components/fomo/core/LoginPortal";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -10,8 +10,11 @@ import { supabase } from "@/lib/core/supabaseClient";
 import { CommunityEditProfileModal } from "@/components/fomo/community/CommunityEditProfileModal";
 import { CommunityModPool } from "@/components/fomo/community/CommunityModPool";
 import { CommunityVideos } from "@/components/fomo/community/CommunityVideos";
-import { CommunityClubs } from "@/components/fomo/community/CommunityClubs";
+
+import { CommunityDrafts } from "@/components/fomo/community/CommunityDrafts";
 import { CommunityUserProfile } from "@/components/fomo/community/CommunityUserProfile";
+import { CommunityAddToDraftModal } from "@/components/fomo/community/CommunityAddToDraftModal";
+import { DraftDownloadProgress } from "@/components/fomo/community/DraftDownloadProgress";
 
 function CommunityPanelInner({
   activeProject,
@@ -26,10 +29,19 @@ function CommunityPanelInner({
 }) {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   
-  // Navigation Tabs: 'modpacks' (pool) | 'videos' | 'clubs' | 'profile'
+  // Navigation Tabs: 'modpacks' (pool) | 'drafts' | 'videos' | 'profile'
   const [activeSubTab, setActiveSubTab] = useState<
-    "modpacks" | "videos" | "clubs" | "profile"
-  >("modpacks");
+    "modpacks" | "drafts" | "videos" | "profile"
+  >(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("fomo_community_subtab") as any) || "modpacks";
+    }
+    return "modpacks";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("fomo_community_subtab", activeSubTab);
+  }, [activeSubTab]);
   
   // States for Videos
   const [videos, setVideos] = useState<any[]>([]);
@@ -58,7 +70,14 @@ function CommunityPanelInner({
 
   const [currentTheme, setCurrentTheme] = useState("official");
   const [tabIndex, setTabIndex] = useState(0);
-  const tabOrder = ["modpacks", "videos", "clubs"] as const;
+  const tabOrder = ["modpacks", "drafts", "videos"] as const;
+  const [insideDraft, setInsideDraft] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: any) => setInsideDraft(e.detail);
+    window.addEventListener("fomo-draft-selected", handler);
+    return () => window.removeEventListener("fomo-draft-selected", handler);
+  }, []);
 
   useEffect(() => {
     const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
@@ -105,12 +124,23 @@ function CommunityPanelInner({
         setSelectedUserProfile(username);
       }
     };
+    
+    const handleTab = (e: Event) => {
+      const tab = (e as CustomEvent).detail;
+      if (tab) {
+        const idx = ["modpacks", "drafts", "videos"].indexOf(tab);
+        if (idx !== -1) setTabIndex(idx);
+        setActiveSubTab(tab);
+      }
+    };
 
     window.addEventListener("fomo-community-apply-filter", handleApplyFilter);
     window.addEventListener("fomo-open-community-user", handleOpenUser);
+    window.addEventListener("fomo-community-tab", handleTab);
     return () => {
       window.removeEventListener("fomo-community-apply-filter", handleApplyFilter);
       window.removeEventListener("fomo-open-community-user", handleOpenUser);
+      window.removeEventListener("fomo-community-tab", handleTab);
     };
   }, []);
 
@@ -267,7 +297,7 @@ function CommunityPanelInner({
 
   return (
     <div className={`fomo-community flex-1 flex flex-col overflow-hidden animate-fade-in ${isModern ? 'bg-background text-foreground' : 'bg-[#09090b] text-white/90'}`}>
-      {!selectedUserProfile && (
+      {!selectedUserProfile && !insideDraft && (
         <>
           {/* Immersive Profile Header */}
           <div className="relative shrink-0 flex flex-col justify-end p-6 pb-6 overflow-hidden min-h-[160px] border-b border-white/5">
@@ -305,7 +335,7 @@ function CommunityPanelInner({
             <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] bg-repeat opacity-[0.03]" />
 
             <div className="relative z-10 flex flex-row justify-between items-end gap-4 mt-auto">
-              <div className="flex flex-row items-center gap-4">
+              <div id="onboarding-community-profile" className="flex flex-row items-center gap-4">
                 {/* Avatar with Glow */}
                 <div className="relative group cursor-pointer" onClick={handleOpenEditProfile}>
                   <div 
@@ -329,15 +359,15 @@ function CommunityPanelInner({
 
                 {/* User Info */}
                 <div className="flex flex-col">
-                  <h4 className={`text-xl font-black tracking-tight ${isModern ? 'text-foreground' : 'text-white'}`}>
+                  <h4 className={`text-xl font-black tracking-tight text-white drop-shadow-md`}>
                     {profile?.username || "Conectado"}
                   </h4>
-                  <p className={`text-xs font-medium ${isModern ? 'text-muted-foreground' : 'text-white/50'}`}>
+                  <p className={`text-xs font-medium text-white/80 drop-shadow-sm`}>
                     {user.email}
                   </p>
                   <button 
                     onClick={handleOpenEditProfile} 
-                    className="mt-1.5 text-[10px] font-black text-primary hover:underline uppercase cursor-pointer bg-transparent border-none text-left w-fit tracking-wider"
+                    className="mt-1.5 text-[10px] font-black text-purple-400 hover:text-purple-300 drop-shadow-sm hover:underline uppercase cursor-pointer bg-transparent border-none text-left w-fit tracking-wider"
                   >
                     Editar Perfil
                   </button>
@@ -381,8 +411,8 @@ function CommunityPanelInner({
 
           {[
             { id: "modpacks", icon: <Blocks className="w-4 h-4" />, label: "Pool" },
+            { id: "drafts", icon: <FlaskConical className="w-4 h-4" />, label: "Drafts" },
             { id: "videos", icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
-            { id: "clubs", icon: <Club className="w-4 h-4" />, label: "Clubs" },
           ].map((tab) => {
             const isActive = activeSubTab === tab.id;
             return (
@@ -410,7 +440,7 @@ function CommunityPanelInner({
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col relative z-10">
         {activeSubTab !== 'profile' && (
-          <div className="p-6 pt-2 flex-1 animate-fade-in">
+          <div className="p-6 pt-2 flex-1 animate-fade-in" id={activeSubTab === "modpacks" ? "onboarding-community-pool" : undefined}>
             {activeSubTab === "modpacks" && (
               <CommunityModPool
                 cloudFavorites={cloudFavorites}
@@ -428,23 +458,30 @@ function CommunityPanelInner({
               />
             )}
 
-            {activeSubTab === "videos" && (
-              <CommunityVideos
-                videos={videos}
-                loadingVideos={loadingVideos}
-                currentUserId={user.id}
-                onVideoDeleted={(id) =>
-                  setVideos((prev) => prev.filter((v) => v.id !== id))
-                }
-                onOpenProfile={(username) => {
-                  setSelectedUserProfile(username);
-                  setActiveSubTab("profile");
-                }}
-                onOpenProjectDetails={onOpenProjectDetails}
-              />
+            {activeSubTab === "drafts" && (
+              <div id="onboarding-community-drafts" className="flex-1 flex flex-col min-h-0 relative">
+                <div id="onboarding-community-drafts-detail" className="absolute inset-x-0 bottom-0 top-1/2 pointer-events-none" />
+                <CommunityDrafts />
+              </div>
             )}
 
-            {activeSubTab === "clubs" && <CommunityClubs />}
+            {activeSubTab === "videos" && (
+              <div id="onboarding-community-videos" className="flex-1 flex flex-col min-h-0">
+                <CommunityVideos
+                  videos={videos}
+                  loadingVideos={loadingVideos}
+                  currentUserId={user.id}
+                  onVideoDeleted={(id) =>
+                    setVideos((prev) => prev.filter((v) => v.id !== id))
+                  }
+                  onOpenProfile={(username) => {
+                    setSelectedUserProfile(username);
+                    setActiveSubTab("profile");
+                  }}
+                  onOpenProjectDetails={onOpenProjectDetails}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -481,6 +518,7 @@ function CommunityPanelInner({
           }
         }}
       />
+      <DraftDownloadProgress isModern={isModern} />
     </div>
   );
 }

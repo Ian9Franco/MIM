@@ -32,14 +32,26 @@ import { SOURCE_BASE } from "@/lib/core/constants";
 
 const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
 
-function readCachedMeta(filePath: string): { projectType?: string; title?: string } {
+function readCachedMeta(filePath: string): { 
+  projectType?: string; 
+  title?: string;
+  loader?: string;
+  gameVersion?: string;
+  iconUrl?: string;
+} {
   try {
     if (!fs.existsSync(REMOTE_CACHE_FILE)) return {};
     const cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
     // Try matching by filePath first
     for (const entry of Object.values(cache.entries || {}) as any[]) {
       if (entry?.result?.path === filePath) {
-        return { projectType: entry.result.projectType, title: entry.result.title };
+        return { 
+          projectType: entry.result.projectType, 
+          title: entry.result.title,
+          loader: entry.result.loader,
+          gameVersion: entry.result.gameVersion,
+          iconUrl: entry.result.iconUrl
+        };
       }
     }
     // Try matching by sha1
@@ -49,7 +61,13 @@ function readCachedMeta(filePath: string): { projectType?: string; title?: strin
       for (const [key, entry] of Object.entries(cache.entries || {}) as any[]) {
         if (key.startsWith(sha1) && (entry as any)?.result) {
           const r = (entry as any).result;
-          return { projectType: r.projectType, title: r.title };
+          return { 
+            projectType: r.projectType, 
+            title: r.title,
+            loader: r.loader,
+            gameVersion: r.gameVersion,
+            iconUrl: r.iconUrl
+          };
         }
       }
     } catch { /* ignore hash errors */ }
@@ -126,12 +144,22 @@ export async function GET(req: NextRequest) {
         if (cached.title && (!meta.modName || meta.modName === "unknown")) {
           meta.modName = cached.title;
         }
+        if (cached.gameVersion && (!meta.gameVersion || meta.gameVersion === "unknown")) {
+          meta.gameVersion = cached.gameVersion;
+        }
+        if (cached.loader && (!meta.loader || meta.loader === "unknown")) {
+          meta.loader = cached.loader;
+        }
+        if (cached.iconUrl && !meta.iconBase64) {
+          meta.iconBase64 = cached.iconUrl;
+        }
         // Last resort: clean up filename for display
         if (!meta.modName || meta.modName === "unknown") {
           meta.modName = cleanFilenameForDisplay(fileName);
         }
         send({ path: filePath, fileName, meta });
       };
+
 
       // ── 1. Flush existing files ───────────────────────────────────────────────
       // Process existing files sequentially without delay to avoid blocking the event loop or hammering Disk I/O

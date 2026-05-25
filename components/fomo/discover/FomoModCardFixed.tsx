@@ -12,12 +12,13 @@
 
 import React, { memo } from "react";
 import {
-  Flame, ExternalLink, Download, Loader2, Library, ListTree, CheckCircle2, Circle
+  Flame, ExternalLink, Download, Loader2, Library, ListTree, CheckCircle2, Circle, FlaskConical, FlaskConicalOff
 } from "lucide-react";
 import { formatNumber, openExternal, CATEGORY_TRANSLATIONS } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { Chip } from "@/components/ui/primitives";
 import type { ModHit } from "@/lib/core/types";
+import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 
 interface FomoModCardFixedProps {
   mod:              ModHit;
@@ -33,6 +34,7 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
   mod, isDownloading, onDownload, onOpenVersions, onAddToCollection,
   isSelected, onToggleSelect,
 }: FomoModCardFixedProps) {
+  const { isProjectInDraft } = useActiveDraft();
   const isCurseForge = mod._source === "curseforge";
   
   // Iconos de plataforma para exclusividad
@@ -311,6 +313,46 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
           >
             <Library className="w-4 h-4" />
           </button>
+
+          {isProjectInDraft(mod.projectId || mod.slug) ? (
+            <button
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                window.dispatchEvent(new CustomEvent("fomo-remove-from-draft", {
+                  detail: {
+                    projectId: mod.projectId || mod.slug,
+                  }
+                }));
+              }}
+              className={`px-3 py-2 rounded-lg font-label text-sm transition-all border border-red-500/40 text-red-500 hover:bg-red-500/20`}
+              title="Quitar del Draft"
+              style={{ height: "36px" }}
+            >
+              <FlaskConicalOff className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", {
+                  detail: {
+                    projectId: mod.projectId || mod.slug,
+                    platform: mod._source || "modrinth",
+                    title: mod.title
+                  }
+                }));
+              }}
+              className={`px-3 py-2 rounded-lg font-label text-sm transition-all ${
+                isCurseForge 
+                  ? 'border border-orange-900/40 text-orange-400 hover:bg-orange-900/20' 
+                  : 'border border-white/10 text-white/60 hover:bg-white/5'
+              }`}
+              title="Añadir a Draft"
+              style={{ height: "36px" }}
+            >
+              <FlaskConical className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </article>

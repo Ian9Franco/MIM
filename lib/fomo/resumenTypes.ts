@@ -1,4 +1,4 @@
-/** Snapshot público del club de un usuario en MIM Cloud. */
+/** Snapshot público del resumen de un usuario en MIM Cloud. */
 
 export interface ClubModEntry {
   projectId: string;
@@ -16,25 +16,26 @@ export interface ClubAuthorEntry {
   iconUrl?: string | null;
 }
 
-export interface UserClubData {
+export interface UserResumenData {
   mods: ClubModEntry[];
   authors: ClubAuthorEntry[];
   youtubeChannels: string[];
   updatedAt?: string;
 }
 
-export interface CommunityClubMember {
+export interface CommunityResumenMember {
   id: string;
   username: string;
   avatar_url?: string | null;
   color?: string | null;
-  club: UserClubData;
-  /** Tiene fila en profiles.club_data (aunque esté vacío). */
-  hasCloudClub?: boolean;
+  resumen: UserResumenData;
+  /** Tiene fila en profiles.resumen_data (aunque esté vacío). */
+  hasCloudResumen?: boolean;
 }
 
-export const EMPTY_CLUB: UserClubData = {
+export const EMPTY_CLUB: UserResumenData = {
   mods: [],
   authors: [],
   youtubeChannels: [],
 };
+

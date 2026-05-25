@@ -23,6 +23,8 @@ import { useAuth } from "@/components/security/AuthContext";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { FomoSidebarDiscoverBranch } from "@/components/fomo/sidebar/FomoSidebarDiscoverBranch";
 import { FomoSidebarCommunityBranch } from "@/components/fomo/sidebar/FomoSidebarCommunityBranch";
+import { FomoActiveDraftSelector } from "@/components/fomo/community/FomoActiveDraftSelector";
+import { CommunityAddToDraftModal } from "@/components/fomo/community/CommunityAddToDraftModal";
 import { queueFomoDiscoverAction } from "@/lib/fomo/fomoDiscoverPending";
 import {
   FOMO_DETAILS_RESERVE,
@@ -75,12 +77,21 @@ function FomoSidebarInner({
   const [isForcedHidden, setIsForcedHidden] = useState(false);
 
   const modeRef = useRef(mode);
+  
+  // Read initial mode from localStorage safely after mount
+  useEffect(() => {
+    const saved = localStorage.getItem("fomo_active_tab") as FomoMode;
+    if (saved && saved !== mode) {
+      setMode(saved);
+    }
+  }, []); // Only run once on mount
+
   useEffect(() => {
     modeRef.current = mode;
+    localStorage.setItem("fomo_active_tab", mode);
   }, [mode]);
 
-  const discoverMounted =
-    mode !== "community" || discoverKeepAlive || detailsOpen;
+  const discoverMounted = true;
 
   const fetchingRef = useRef(false);
   const sharedFetchedRef = useRef(false);
@@ -99,25 +110,17 @@ function FomoSidebarInner({
         .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
       if (vidsData) setAllSharedVideos(vidsData);
 
-      const { data: packsData } = await supabase
-        .from("modpack_builds")
-        .select("id, profile_id, profiles ( username )")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
       const uid = currentUser?.id;
       if (opts?.force) {
         checkNewCommunityShares(
           (modsData as ShareRow[]) || [],
           (vidsData as ShareRow[]) || [],
-          (packsData as ShareRow[]) || [],
           uid
         );
       } else if (!sharedFetchedRef.current) {
         seedCommunityShareSeen(
           (modsData as { id: string }[]) || [],
-          (vidsData as { id: string }[]) || [],
-          (packsData as { id: string }[]) || []
+          (vidsData as { id: string }[]) || []
         );
       }
 
@@ -170,37 +173,52 @@ function FomoSidebarInner({
 
   const onboardingSteps = [
     {
-      target: "#onboarding-fomo-spotlight",
+      target: "#onboarding-fomo-tabs",
+      title: "Secciones de FOMO",
+      content:
+        "Desde acá podés navegar entre las distintas secciones de descubrimiento.",
+    },
+    {
+      target: "#onboarding-spotlight-carousel",
       title: "Spotlight",
       content:
         "Acá ves los mods destacados del momento, selecciones de la comunidad y carruseles temáticos.",
     },
     {
-      target: "#onboarding-fomo-showcases",
-      title: "Showcases",
-      content:
-        "Explorá los mejores videos y showcases compartidos por la comunidad.",
-    },
-    {
-      target: "#onboarding-fomo-discover",
+      target: "#onboarding-discover-search",
       title: "Explorar Mods",
       content: "Acá podés buscar mods filtrando por versión, loader, categoría y más.",
     },
     {
-      target: "#onboarding-fomo-collections",
+      target: "#onboarding-collections-header",
       title: "Colecciones",
       content: "Acá podés crear y organizar tus propias listas de mods.",
     },
     {
-      target: "#onboarding-fomo-followed",
-      title: "Seguidos",
-      content: "Acá ves las novedades de los autores y mods que decidiste seguir.",
+      target: "#onboarding-community-pool",
+      title: "Pool de Mods",
+      content:
+        "Este es el Pool de la comunidad. Acá podés ver los mods y colecciones compartidas y votadas por otros usuarios.",
     },
     {
-      target: "#onboarding-fomo-community",
-      title: "FOMO Cloud",
-      content:
-        "Por último llegás a FOMO Cloud: pool, showcases y clubs de la comunidad.",
+      target: "#onboarding-community-drafts",
+      title: "Drafts Colaborativos",
+      content: "Acá podés crear 'Borradores' colaborativos con tus amigos. Todos proponen mods y se sincroniza en tiempo real.",
+    },
+    {
+      target: "#onboarding-community-drafts-detail",
+      title: "Listos para jugar",
+      content: "Cuando la lista está lista, se genera una 'Snapshot' y todos los miembros pueden descargar el pack completo con un solo clic.",
+    },
+    {
+      target: "#onboarding-community-videos",
+      title: "Videos y Showcases",
+      content: "Mirá y compartí reviews de mods de YouTube. La app lee la descripción y te permite instalar los mods que aparecen en el video sin salir.",
+    },
+    {
+      target: "#onboarding-community-profile",
+      title: "Tu Perfil",
+      content: "Por último, no te olvides de personalizar tu perfil. Podés cambiar tu nombre, color, avatar y banner desde acá. ¡Bienvenido a FOMO Cloud!",
     },
   ];
 
@@ -425,7 +443,7 @@ function FomoSidebarInner({
               />
               <div>
                 <h2 className="font-headline text-base text-white">FOMO</h2>
-                <p className="text-[8px] opacity-40 uppercase">{mode}</p>
+                <p suppressHydrationWarning className="text-[8px] opacity-40 uppercase">{mode}</p>
               </div>
             </div>
             <div
@@ -442,6 +460,7 @@ function FomoSidebarInner({
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <FomoActiveDraftSelector isModern={currentTheme === "modern"} />
             <button
               onClick={handleCloseAll}
               className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400"
@@ -455,14 +474,13 @@ function FomoSidebarInner({
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          {mode === "community" && (
-            <FomoSidebarCommunityBranch
-              activeProject={activeProject}
-              onClose={handleCloseAll}
-              onStatus={showStatus}
-              onOpenProjectDetails={handleOpenProjectFromCloud}
-            />
-          )}
+          <FomoSidebarCommunityBranch
+            activeProject={activeProject}
+            onClose={handleCloseAll}
+            onStatus={showStatus}
+            onOpenProjectDetails={handleOpenProjectFromCloud}
+            hidden={mode !== "community"}
+          />
           {discoverMounted && (
             <FomoSidebarDiscoverBranch
               open={open}
@@ -502,15 +520,20 @@ function FomoSidebarInner({
             }}
             onStepChange={(step) => {
               if (step === 0) setMode("spotlight");
-              if (step === 1) setMode("showcases");
+              if (step === 1) setMode("spotlight");
               if (step === 2) setMode("discover");
               if (step === 3) setMode("collections");
-              if (step === 4) setMode("followed");
-              if (step === 5) setMode("community");
+              if (step >= 4) setMode("community");
+
+              if (step === 4) window.dispatchEvent(new CustomEvent("fomo-community-tab", { detail: "modpacks" }));
+              if (step === 5 || step === 6) window.dispatchEvent(new CustomEvent("fomo-community-tab", { detail: "drafts" }));
+              if (step === 7) window.dispatchEvent(new CustomEvent("fomo-community-tab", { detail: "videos" }));
+              if (step === 8) window.dispatchEvent(new CustomEvent("fomo-community-tab", { detail: "videos" }));
             }}
           />
         )}
       </aside>
+      <CommunityAddToDraftModal />
     </>
   );
 }

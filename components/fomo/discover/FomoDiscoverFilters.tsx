@@ -143,6 +143,23 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
           <div className="flex flex-wrap gap-1.5">{GAME_VERSIONS.map(v => <button key={v} onClick={() => m.toggleFilter(props.gameVersions, props.onVersions, v)} className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${props.gameVersions.includes(v) ? "bg-primary text-white border-primary" : "bg-white/5 border-white/5 text-white/40"}`}>{v}</button>)}</div>
         </div>
 
+        {!m.isCurseForge && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Server className="w-3 h-3" /> Entorno</p>
+            <div className="flex flex-wrap gap-1.5">
+              {ENVIRONMENTS.map(e => (
+                <button 
+                  key={e.value} 
+                  onClick={() => props.onEnvironments((props.environments || []).includes(e.value) ? [] : [e.value])} 
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${(props.environments || []).includes(e.value) ? "bg-primary text-white border-primary" : "bg-white/5 border-white/5 text-white/40"}`}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {currentFilters.map(group => (
           <div key={group.title} className="flex flex-col gap-3">
             <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Tags className="w-3 h-3" /> {group.title}</p>

@@ -133,7 +133,7 @@ function scanModRaw(filePath: string): ModMeta {
   let iconBase64: string | undefined = undefined;
   try {
     const iconPath = (bestMatch as any)._logoFile || "icon.png";
-    const iconEntry = findEntry(iconPath) || findEntry("icon.png") || findEntry("logo.png");
+    const iconEntry = findEntry(iconPath) || findEntry("icon.png") || findEntry("logo.png") || findEntry("pack.png");
     if (iconEntry) {
       const buf = iconEntry.getData();
       if (buf && buf.length > 0) {

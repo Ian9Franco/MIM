@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Search, RefreshCw, Puzzle, Blocks, Filter } from "lucide-react";
+import { Search, RefreshCw, Puzzle, Blocks, Filter, FlaskConical, FlaskConicalOff } from "lucide-react";
 import { CommunityUserAvatar } from "@/components/fomo/community/CommunityUserAvatar";
 import { CommunityDeleteButton } from "@/components/fomo/community/CommunityDeleteButton";
+import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import {
   compareCommunityMods,
   parseShareMeta,
   stripShareMeta,
   type CommunityProjectType,
 } from "@/lib/fomo/communityShareMeta";
-import { CommunityModpacks } from "@/components/fomo/community/CommunityModpacks";
 import { FomoModBannerStrip } from "@/components/fomo/discover/FomoModBannerStrip";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { communityTypeToBannerType } from "@/lib/fomo/fomoModBanner";
@@ -78,6 +78,8 @@ export function CommunityModPool({
   const [typeFilter, setTypeFilter] = useState<CommunityProjectType | "all">("all");
   const [versionFilter, setVersionFilter] = useState<string>("all");
   const [loaderFilter, setLoaderFilter] = useState<string>("all");
+  
+  const { isProjectInDraft } = useActiveDraft();
 
   const poolItems = useMemo(() => {
     return cloudFavorites
@@ -141,13 +143,6 @@ export function CommunityModPool({
 
   return (
     <div className="space-y-6">
-      <CommunityModpacks
-        currentUserId={currentUserId}
-        onContentDeleted={onContentDeleted}
-        browseOnly
-        maxVisible={1}
-      />
-
       <div>
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
           <Blocks className="w-4 h-4 text-primary" />
@@ -322,6 +317,41 @@ export function CommunityModPool({
                               id={fav.id}
                               onDeleted={onFavoriteDeleted}
                             />
+                          )}
+                          {isProjectInDraft(fav.mod_id) ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent("fomo-remove-from-draft", {
+                                  detail: {
+                                    projectId: fav.mod_id,
+                                  }
+                                }));
+                              }}
+                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all cursor-pointer"
+                              title="Quitar del Draft Activo"
+                            >
+                              <FlaskConicalOff className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", {
+                                  detail: {
+                                    projectId: fav.mod_id,
+                                    platform: fav.platform,
+                                    title: fav.name
+                                  }
+                                }));
+                              }}
+                              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer"
+                              title="Añadir a Draft Activo"
+                            >
+                              <FlaskConical className="w-3.5 h-3.5" />
+                            </button>
                           )}
                           <button
                             type="button"

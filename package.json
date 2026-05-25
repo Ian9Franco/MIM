@@ -1,6 +1,6 @@
 {
   "name": "temp_next",
-  "version": "9.7.0",
+  "version": "10.0.0",
   "private": true,
   "main": "standalone/main.js",
   "scripts": {
@@ -23,6 +23,7 @@
     "adm-zip": "^0.5.17",
     "chalk": "^4.1.2",
     "chokidar": "^4.0.3",
+    "date-fns": "^4.3.0",
     "framer-motion": "^11.0.0",
     "idb": "^8.0.3",
     "inquirer": "^8.2.7",

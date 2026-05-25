@@ -1,8 +1,9 @@
 import React from "react";
-import { Search, ExternalLink, Trash2, ArrowRight, Download, Loader2, Globe } from "lucide-react";
+import { Search, ExternalLink, Trash2, ArrowRight, Download, Loader2, Globe, FlaskConical } from "lucide-react";
 import { openExternal } from "@/utils/format";
 import { FomoModBannerStrip } from "@/components/fomo/discover/FomoModBannerStrip";
 import { inferPrimaryProjectType, resolveModBannerUrl } from "@/lib/fomo/fomoModBanner";
+import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 
 // ── Helper ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,8 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => obs.disconnect();
   }, []);
+
+  const { activeDraft } = useActiveDraft();
 
   const bannerUrl = resolveModBannerUrl(mod);
   const projectType = inferPrimaryProjectType(mod);
@@ -107,6 +110,24 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
             <Globe className="w-3 h-3" />
             <span>{isSharedByMe ? "Compartido" : "Compartir"}</span>
           </button>
+          {activeDraft && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent("fomo-draft-add-mod", {
+                  detail: { mod: { ...mod, _source: mod._source || "modrinth" } }
+                }));
+              }} 
+              className={`p-1.5 rounded-lg border transition-all ${
+                isModern
+                  ? "bg-primary/5 border-primary/20 text-primary hover:bg-primary hover:text-white"
+                  : "bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-white"
+              }`}
+              title="Añadir al Draft Activo"
+            >
+               <FlaskConical className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button onClick={() => onSearchProject?.(mod.title, mod.projectType, mod._source || "all", "all", null)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40"><Search className="w-3.5 h-3.5" /></button>
           <button onClick={() => onOpenVersions?.(mod)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40"><ArrowRight className="w-3.5 h-3.5" /></button>
           <button onClick={() => openExternal(mod.url)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40"><ExternalLink className="w-3.5 h-3.5" /></button>

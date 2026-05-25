@@ -17,131 +17,137 @@ export function LibraryToolbar({
   onDeleteSelected, filterType, setFilterType, previewMode, setPreviewMode
 }: any) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {/* Acción 1: Apertura de Detalles en la Ventana Modal de FOMO (Solo 1 archivo) */}
-      {selectedLibFiles.length === 1 && selectedLibFiles[0].meta?.projectType !== "resourcepack" && (
-        <ActionButton
-          onClick={() => {
-            const f = selectedLibFiles[0];
-            const isResourcePack = f.meta?.projectType === "resourcepack" || f.fileName.endsWith(".zip");
-            const hasRealId = f.meta?.modId && f.meta.modId !== "unknown" && !f.meta.modId.endsWith(".zip");
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap xl:justify-end">
+      {/* Grupo de Acciones Principales */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Acción 1: Apertura de Detalles en la Ventana Modal de FOMO (Solo 1 archivo) */}
+        {selectedLibFiles.length === 1 && selectedLibFiles[0].meta?.projectType !== "resourcepack" && (
+          <ActionButton
+            onClick={() => {
+              const f = selectedLibFiles[0];
+              const isResourcePack = f.meta?.projectType === "resourcepack" || f.fileName.endsWith(".zip");
+              const hasRealId = f.meta?.modId && f.meta.modId !== "unknown" && !f.meta.modId.endsWith(".zip");
 
-            if (!hasRealId || isResourcePack) {
-              const baseName = f.meta?.modName && f.meta.modName !== "unknown" ? f.meta.modName : f.fileName;
-              const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "");
-              
-              // Intentamos buscar el proyecto en Modrinth para abrirlo directamente
-              fetch(`/api/modrinth/discover?query=${encodeURIComponent(query)}&projectType=resourcepack&page=1`)
-                .then(r => r.json())
-                .then(data => {
-                  const hits = data.hits || [];
-                  if (hits.length > 0) {
-                    const hit = hits[0];
-                    const modHit = {
-                      projectId: hit.project_id || hit.projectId,
-                      slug: hit.slug,
-                      title: hit.title,
-                      iconUrl: hit.icon_url || hit.iconUrl,
-                      author: hit.author,
-                      categories: hit.categories,
-                      projectType: "resourcepack",
-                      _source: "modrinth",
-                    };
-                    window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-                    setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
-                  } else {
-                    // Si no encuentra nada, fallback al buscador con el nombre limpio
+              if (!hasRealId || isResourcePack) {
+                const baseName = f.meta?.modName && f.meta.modName !== "unknown" ? f.meta.modName : f.fileName;
+                const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "");
+                
+                // Intentamos buscar el proyecto en Modrinth para abrirlo directamente
+                fetch(`/api/modrinth/discover?query=${encodeURIComponent(query)}&projectType=resourcepack&page=1`)
+                  .then(r => r.json())
+                  .then(data => {
+                    const hits = data.hits || [];
+                    if (hits.length > 0) {
+                      const hit = hits[0];
+                      const modHit = {
+                        projectId: hit.project_id || hit.projectId,
+                        slug: hit.slug,
+                        title: hit.title,
+                        iconUrl: hit.icon_url || hit.iconUrl,
+                        author: hit.author,
+                        categories: hit.categories,
+                        projectType: "resourcepack",
+                        _source: "modrinth",
+                      };
+                      window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                      setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+                    } else {
+                      // Si no encuentra nada, fallback al buscador con el nombre limpio
+                      window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                      window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                    }
+                  })
+                  .catch(() => {
+                    // Fallback al buscador
                     window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
                     window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
-                  }
-                })
-                .catch(() => {
-                  // Fallback al buscador
-                  window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-                  window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
-                });
-            } else {
-              // Si tiene ID real, abrimos detalles directamente
-              const modHit = { 
-                projectId: f.meta.modId, 
-                title: f.meta?.modName || f.fileName, 
-                _source: (f.meta as any)?.source || "modrinth" 
-              };
-              window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-              setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
-            }
-          }}
-          disabled={loadingDescription}
-          icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
-          label="Detalles" color="success"
-        />
-      )}
-
-      {/* Acción 2: Menú Desplegable para Duplicar a otra Capa (.local, .essential, .server) */}
-      {selectedLibFiles.length === 1 && (
-        <div className="relative">
-          <ActionButton 
-            onClick={() => setShowDupOptions(!showDupOptions)} 
-            icon={<Copy className="w-3.5 h-3.5" />} 
-            label="Duplicar" 
-            color="primary" 
-            highlighted={showDupOptions} 
+                  });
+              } else {
+                // Si tiene ID real, abrimos detalles directamente
+                const modHit = { 
+                  projectId: f.meta.modId, 
+                  title: f.meta?.modName || f.fileName, 
+                  _source: (f.meta as any)?.source || "modrinth" 
+                };
+                window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+              }
+            }}
+            disabled={loadingDescription}
+            icon={loadingDescription ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
+            label="Detalles" color="success"
           />
-          {showDupOptions && (
-            <div className="absolute top-full right-0 mt-2 p-2 rounded-2xl glass border border-white/10 z-50 min-w-[160px] flex flex-col gap-1 shadow-2xl">
-              <p className="text-[9px] opacity-40 px-2 font-bold uppercase">Copia a:</p>
-              {[".local", ".essential", ".server"].filter(c => c !== selectedLibFiles[0].category).map(cat => (
-                <button 
-                  key={cat} 
-                  onClick={() => handleDuplicateTo(cat)} 
-                  className="text-left text-[11px] px-3 py-2 rounded-lg hover:bg-white/5 font-bold transition-all"
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
+        )}
+
+        {/* Acción 2: Menú Desplegable para Duplicar a otra Capa (.local, .essential, .server) */}
+        {selectedLibFiles.length === 1 && (
+          <div className="relative">
+            <ActionButton 
+              onClick={() => setShowDupOptions(!showDupOptions)} 
+              icon={<Copy className="w-3.5 h-3.5" />} 
+              label="Duplicar" 
+              color="primary" 
+              highlighted={showDupOptions} 
+            />
+            {showDupOptions && (
+              <div className="absolute top-full right-0 mt-2 p-2 rounded-2xl glass border border-white/10 z-50 min-w-[160px] flex flex-col gap-1 shadow-2xl">
+                <p className="text-[9px] opacity-40 px-2 font-bold uppercase">Copia a:</p>
+                {[".local", ".essential", ".server"].filter(c => c !== selectedLibFiles[0].category).map(cat => (
+                  <button 
+                    key={cat} 
+                    onClick={() => handleDuplicateTo(cat)} 
+                    className="text-left text-[11px] px-3 py-2 rounded-lg hover:bg-white/5 font-bold transition-all"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Acción 3: Des-clasificar (Mover archivos a la sección de pendientes) */}
+        {selectedLibFiles.length > 0 && (
+          <ActionButton 
+            onClick={handleUnclassify} 
+            icon={<FolderOpen className="w-3.5 h-3.5" />} 
+            label="Des-clasificar" 
+            color="neutral" 
+          />
+        )}
+
+        {/* Acción 4: Eliminar (Eliminar permanentemente de la librería) */}
+        {selectedLibFiles.length > 0 && onDeleteSelected && (
+          <ActionButton 
+            onClick={onDeleteSelected} 
+            icon={<Trash2 className="w-3.5 h-3.5" />} 
+            label="Eliminar" 
+            color="danger" 
+          />
+        )}
+
+        {/* Grupo de Herramientas del Sistema Local */}
+        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/5">
+          <ActionButton 
+            onClick={() => setTransferOpen(true)} 
+            icon={<ArrowLeftRight className="w-3.5 h-3.5" />} 
+            label="Transferir" 
+            color="primary" 
+          />
         </div>
-      )}
 
-      {/* Acción 3: Des-clasificar (Mover archivos a la sección de pendientes) */}
-      {selectedLibFiles.length > 0 && (
+        {/* Acción Directa: Abrir carpeta física en el Explorador de Windows */}
         <ActionButton 
-          onClick={handleUnclassify} 
-          icon={<FolderOpen className="w-3.5 h-3.5" />} 
-          label="Des-clasificar" 
+          onClick={handleOpenFolder} 
+          disabled={openingFolder || libraryCount === 0} 
+          icon={openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />} 
+          label="Carpeta" 
           color="neutral" 
-        />
-      )}
-
-      {/* Acción 4: Eliminar (Eliminar permanentemente de la librería) */}
-      {selectedLibFiles.length > 0 && onDeleteSelected && (
-        <ActionButton 
-          onClick={onDeleteSelected} 
-          icon={<Trash2 className="w-3.5 h-3.5" />} 
-          label="Eliminar" 
-          color="danger" 
-        />
-      )}
-
-      {/* Grupo de Herramientas del Sistema Local */}
-      <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/5">
-        <ActionButton 
-          onClick={() => setTransferOpen(true)} 
-          icon={<ArrowLeftRight className="w-3.5 h-3.5" />} 
-          label="Transferir" 
-          color="primary" 
         />
       </div>
 
-      {/* Acción Directa: Abrir carpeta física en el Explorador de Windows */}
-      <ActionButton 
-        onClick={handleOpenFolder} 
-        disabled={openingFolder || libraryCount === 0} 
-        icon={openingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FolderOpen className="w-3.5 h-3.5" />} 
-        label="Carpeta" 
-        color="neutral" 
-      />
+      {/* Grupo de Filtros */}
+      <div className="flex flex-wrap items-center gap-2">
 
       {/* Previsualización de Entorno */}
       <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
@@ -195,6 +201,7 @@ export function LibraryToolbar({
           <Glasses className="w-3.5 h-3.5" />
           Shaders
         </button>
+      </div>
       </div>
     </div>
   );

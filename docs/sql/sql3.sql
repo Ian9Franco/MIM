@@ -1,2 +1,0 @@
-ALTER TABLE public.profiles 
-ADD COLUMN IF NOT EXISTS color text DEFAULT '#F05A28';

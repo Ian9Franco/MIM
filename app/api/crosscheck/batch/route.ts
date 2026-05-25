@@ -16,6 +16,9 @@ import { getApiKey } from "@/lib/core/settings";
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
+const modrinthCompatibilityCache = new Map<string, { exists: boolean, client_side?: string, server_side?: string, timestamp: number }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+
 interface BatchRequest {
   mods: Array<{
     title: string;
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing or empty mods array" }, { status: 400 });
     }
 
-    const results: Record<string, { exists: boolean }> = {};
+    const results: Record<string, { exists: boolean; client_side?: string; server_side?: string }> = {};
 
     // Procesar mods de CurseForge buscando en Modrinth
     const curseforgeMods = mods.filter(m => m.source === "curseforge");
@@ -40,64 +43,95 @@ export async function POST(req: NextRequest) {
       try {
         // Intentar búsqueda por slugs primero (más preciso)
         const slugs = curseforgeMods.map(m => m.slug).filter(Boolean);
-        const slugResults: Record<string, boolean> = {};
+        const slugResults: Record<string, { exists: boolean; client_side?: string; server_side?: string }> = {};
         
         if (slugs.length > 0) {
-          // Batch request por slugs
+          // Batch request por slugs (checking cache first)
+          const now = Date.now();
           const slugPromises = slugs.map(async (slug) => {
+            if (!slug) return { slug, exists: false };
+            
+            const cacheKey = `mr_slug_${slug}`;
+            const cached = modrinthCompatibilityCache.get(cacheKey);
+            if (cached && now - cached.timestamp < CACHE_TTL) {
+              return { slug, ...cached };
+            }
+
             try {
-              const res = await fetch(`${MODRINTH_API}/project/${encodeURIComponent(slug!)}`);
-              return { slug, exists: res.ok };
+              const res = await fetch(`${MODRINTH_API}/project/${encodeURIComponent(slug)}`);
+              if (res.ok) {
+                const data = await res.json();
+                const result = { exists: true, client_side: data.client_side, server_side: data.server_side };
+                modrinthCompatibilityCache.set(cacheKey, { ...result, timestamp: now });
+                return { slug, ...result };
+              }
+              modrinthCompatibilityCache.set(cacheKey, { exists: false, timestamp: now });
+              return { slug, exists: false };
             } catch {
               return { slug, exists: false };
             }
           });
           
           const slugResponses = await Promise.all(slugPromises);
-          slugResponses.forEach(({ slug, exists }) => {
-            slugResults[slug!] = exists;
+          slugResponses.forEach((res: any) => {
+            slugResults[res.slug!] = { exists: res.exists, client_side: res.client_side, server_side: res.server_side };
           });
         }
 
         // Para los que no tienen slug o no se encontraron, buscar por título
         const titleSearchMods = curseforgeMods.filter(m => 
-          !m.slug || !slugResults[m.slug]
+          !m.slug || !slugResults[m.slug]?.exists
         );
         
         if (titleSearchMods.length > 0) {
           // Búsqueda batch por títulos - usar límite mayor para cubrir todos
-          const queries = titleSearchMods.map(m => encodeURIComponent(m.title));
-          const searchPromises = queries.map(async (query, index) => {
+          const now = Date.now();
+          const searchPromises = titleSearchMods.map(async (mod) => {
+            const query = encodeURIComponent(mod.title);
+            const cacheKey = `mr_search_${query}`;
+            const cached = modrinthCompatibilityCache.get(cacheKey);
+            
+            if (cached && now - cached.timestamp < CACHE_TTL) {
+              return { key: mod.title + (mod.slug || ""), ...cached };
+            }
+
             try {
-              const res = await fetch(`${MODRINTH_API}/search?query=${query}&limit=10`);
+              const res = await fetch(`${MODRINTH_API}/search?query=${query}&limit=5`);
               if (res.ok) {
                 const data = await res.json();
-                const currentMod = titleSearchMods[index];
-                const normalizedTitle = currentMod.title.toLowerCase().replace(/[^a-z0-9]/g, "");
-                const exists = data.hits?.some((h: any) => {
-                  const hTitle = h.title.toLowerCase().replace(/[^a-z0-9]/g, "");
-                  return hTitle === normalizedTitle || 
-                         h.slug.toLowerCase() === currentMod.slug?.toLowerCase();
+                const matchedMod = data.hits?.find((h: any) => {
+                  const hName = (h.title || h.slug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                  const modName = mod.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+                  return hName === modName || hName.includes(modName) || modName.includes(hName);
                 });
-                return { key: currentMod.title + (currentMod.slug || ""), exists };
+                
+                const result = { 
+                  exists: !!matchedMod, 
+                  client_side: matchedMod?.client_side, 
+                  server_side: matchedMod?.server_side 
+                };
+                
+                modrinthCompatibilityCache.set(cacheKey, { ...result, timestamp: now });
+                return { key: mod.title + (mod.slug || ""), ...result };
               }
-              return { key: titleSearchMods[index].title + (titleSearchMods[index].slug || ""), exists: false };
+              modrinthCompatibilityCache.set(cacheKey, { exists: false, timestamp: now });
+              return { key: mod.title + (mod.slug || ""), exists: false };
             } catch {
-              return { key: titleSearchMods[index].title + (titleSearchMods[index].slug || ""), exists: false };
+              return { key: mod.title + (mod.slug || ""), exists: false };
             }
           });
           
-          const titleResponses = await Promise.all(searchPromises);
-          titleResponses.forEach(({ key, exists }) => {
-            results[key] = { exists };
+          const searchResponses = await Promise.all(searchPromises);
+          searchResponses.forEach((res: any) => {
+            results[res.key] = { exists: res.exists, client_side: res.client_side, server_side: res.server_side };
           });
         }
 
         // Combinar resultados de slug
         curseforgeMods.forEach(mod => {
           const key = mod.title + (mod.slug || "");
-          if (mod.slug && slugResults[mod.slug] !== undefined) {
-            results[key] = { exists: slugResults[mod.slug] };
+          if (mod.slug && slugResults[mod.slug]?.exists) {
+            results[key] = { exists: true, client_side: slugResults[mod.slug].client_side, server_side: slugResults[mod.slug].server_side };
           } else if (!results[key]) {
             results[key] = { exists: false };
           }

@@ -77,37 +77,56 @@ export async function GET(req: NextRequest) {
     ? path.join(SOURCE_BASE, "_projects", project, "mods")
     : path.join(SOURCE_BASE, version, loader!);
 
-  // Version+loader combination doesn't exist yet — not an error, just empty
-  if (!fs.existsSync(loaderPath)) {
-    return NextResponse.json({ library: [] });
+  // Helper to enrich meta from history
+  function enrichMetaFromHistory(meta: ModMeta, fileName: string, history: any[]) {
+    const hEntry = history.find((h: any) => h.fileName === fileName);
+    if (hEntry) {
+      if (!meta.iconBase64 && hEntry.iconUrl) meta.iconBase64 = hEntry.iconUrl;
+      if (meta.modName === "unknown" && hEntry.title) meta.modName = hEntry.title;
+      if (meta.gameVersion === "unknown" && hEntry.gameVersion) meta.gameVersion = hEntry.gameVersion;
+      if (meta.loader === "unknown" && hEntry.loader) meta.loader = hEntry.loader;
+      if (meta.projectType === "unknown" && hEntry.projectType) meta.projectType = hEntry.projectType;
+      // Also enrich modId if it's unknown or just the filename, to allow Modrinth API to find it
+      if ((meta.modId === "unknown" || meta.modId === fileName) && hEntry.projectId) meta.modId = hEntry.projectId;
+    }
   }
 
-  // ── Walk the category tree ────────────────────────────────────────────────────
+  const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
+  let history = [];
+  if (fs.existsSync(HISTORY_FILE)) {
+    try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8")); } catch {}
+  }
+
   const library: LibraryEntry[] = [];
 
-  for (const category of CATEGORIES) {
-    const catPath = path.join(loaderPath, category);
-    if (!fs.existsSync(catPath)) continue;
+  // Version+loader combination doesn't exist yet — not an error, just empty
+  if (fs.existsSync(loaderPath)) {
+    // ── Walk the category tree ────────────────────────────────────────────────────
+    for (const category of CATEGORIES) {
+      const catPath = path.join(loaderPath, category);
+      if (!fs.existsSync(catPath)) continue;
 
-    for (const sub of fs.readdirSync(catPath)) {
-      const subPath = path.join(catPath, sub);
-      if (!fs.statSync(subPath).isDirectory()) continue;
+      for (const sub of fs.readdirSync(catPath)) {
+        const subPath = path.join(catPath, sub);
+        if (!fs.statSync(subPath).isDirectory()) continue;
 
-      for (const file of fs.readdirSync(subPath)) {
-        if (!file.endsWith(".jar")) continue;
+        for (const file of fs.readdirSync(subPath)) {
+          if (!file.endsWith(".jar")) continue;
 
-        const filePath = path.join(subPath, file);
-        let meta: ModMeta = UNKNOWN_META;
+          const filePath = path.join(subPath, file);
+          let meta: ModMeta = { ...UNKNOWN_META };
 
-        try {
-          meta = scanMod(filePath);
-        } catch {
-          // JAR may be corrupted or locked — include the entry with fallback meta
-          // so the library still shows the file exists.
-          console.warn(`[/api/library] scanMod failed for: ${file}`);
+          try {
+            meta = scanMod(filePath);
+          } catch {
+            // JAR may be corrupted or locked — include the entry with fallback meta
+            // so the library still shows the file exists.
+            console.warn(`[/api/library] scanMod failed for: ${file}`);
+          }
+
+          enrichMetaFromHistory(meta, file, history);
+          library.push({ path: filePath, fileName: file, category, sub, meta });
         }
-
-        library.push({ path: filePath, fileName: file, category, sub, meta });
       }
     }
   }
@@ -146,6 +165,8 @@ export async function GET(req: NextRequest) {
         iconBase64,
       };
 
+      enrichMetaFromHistory(meta, file, history);
+
       library.push({ 
         path: filePath, 
         fileName: file, 
@@ -182,6 +203,8 @@ export async function GET(req: NextRequest) {
         };
       }
 
+      enrichMetaFromHistory(meta, file, history);
+
       library.push({ 
         path: filePath, 
         fileName: file, 
@@ -211,6 +234,8 @@ export async function GET(req: NextRequest) {
         projectType: "shader",
         isCompatibleWithConnector: false,
       };
+
+      enrichMetaFromHistory(meta, file, history);
 
       library.push({ 
         path: filePath, 

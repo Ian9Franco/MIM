@@ -7,7 +7,7 @@ export function useLibraryUpdates(activeProject: Project | null) {
   const [downloadingMods, setDownloadingMods] = useState<Record<string, boolean>>({});
 
   const checkUpdates = useCallback(async (localMods: any[], force = false) => {
-    if (!activeProject || localMods.length === 0) return;
+    if (localMods.length === 0) return;
     setCheckingUpdates(true);
     try {
       const res = await fetch("/api/modrinth/check-updates", {
@@ -15,8 +15,8 @@ export function useLibraryUpdates(activeProject: Project | null) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           mods: localMods, 
-          loader: activeProject.loader, 
-          gameVersion: activeProject.version,
+          loader: activeProject?.loader || "any", 
+          gameVersion: activeProject?.version || "any",
           forceRefresh: force
         }),
       });

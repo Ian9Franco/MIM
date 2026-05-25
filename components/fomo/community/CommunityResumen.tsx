@@ -4,12 +4,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Club, RefreshCw, CloudUpload } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import {
-  fetchCommunityClubs,
-  syncMyClubToCloud,
-} from "@/lib/fomo/clubService";
-import type { CommunityClubMember } from "@/lib/fomo/clubTypes";
-import { CommunityClubCard } from "@/components/fomo/community/CommunityClubCard";
-import styles from "@/components/fomo/community/community-clubs.module.css";
+  fetchCommunityResumen,
+  syncMyResumenToCloud,
+} from "@/lib/fomo/resumenService";
+import type { CommunityResumenMember } from "@/lib/fomo/resumenTypes";
+import { CommunityResumenCard } from "@/components/fomo/community/CommunityResumenCard";
+import styles from "@/components/fomo/community/community-resumen.module.css";
 
 type ClubTypeFilter = "all" | "mod" | "textura" | "shader" | "datapack";
 
@@ -21,15 +21,15 @@ const TYPE_TABS: { id: ClubTypeFilter; label: string }[] = [
   { id: "datapack", label: "Datapacks" },
 ];
 
-interface CommunityClubsProps {
+interface CommunityResumenProps {
   /** Vista de un solo usuario (perfil). */
   username?: string;
   singleUser?: boolean;
 }
 
-export function CommunityClubs({ username, singleUser = false }: CommunityClubsProps) {
+export function CommunityResumen({ username, singleUser = false }: CommunityResumenProps) {
   const { user } = useAuth();
-  const [members, setMembers] = useState<CommunityClubMember[]>([]);
+  const [members, setMembers] = useState<CommunityResumenMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [typeFilter, setTypeFilter] = useState<ClubTypeFilter>("all");
@@ -37,14 +37,14 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await fetchCommunityClubs(user?.id);
+      const list = await fetchCommunityResumen(user?.id);
       if (singleUser && username) {
         setMembers(list.filter((m) => m.username === username));
       } else {
         setMembers(list);
       }
     } catch (e) {
-      console.error("[CommunityClubs]", e);
+      console.error("[CommunityResumen]", e);
     } finally {
       setLoading(false);
     }
@@ -56,12 +56,12 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
     window.addEventListener("mim-followed-mods-changed", onChange);
     window.addEventListener("mim-followed-authors-changed", onChange);
     window.addEventListener("fomo-refresh-sharing", onChange);
-    window.addEventListener("fomo-club-changed", onChange);
+    window.addEventListener("fomo-resumen-changed", onChange);
     return () => {
       window.removeEventListener("mim-followed-mods-changed", onChange);
       window.removeEventListener("mim-followed-authors-changed", onChange);
       window.removeEventListener("fomo-refresh-sharing", onChange);
-      window.removeEventListener("fomo-club-changed", onChange);
+      window.removeEventListener("fomo-resumen-changed", onChange);
     };
   }, [load]);
 
@@ -69,7 +69,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
     if (!user?.id || singleUser) return;
     let cancelled = false;
     (async () => {
-      const ok = await syncMyClubToCloud(user.id);
+      const ok = await syncMyResumenToCloud(user.id);
       if (!cancelled && ok) load();
     })();
     return () => {
@@ -82,28 +82,28 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
     return members
       .map((m) => ({
         ...m,
-        club: {
-          ...m.club,
-          mods: m.club.mods.filter((mod) => (mod.projectType || "mod") === typeFilter),
+        resumen: {
+          ...m.resumen,
+          mods: m.resumen.mods.filter((mod) => (mod.projectType || "mod") === typeFilter),
         },
       }))
       .filter(
         (m) =>
-          m.club.mods.length > 0 ||
-          m.club.authors.length > 0 ||
-          m.club.youtubeChannels.length > 0
+          m.resumen.mods.length > 0 ||
+          m.resumen.authors.length > 0 ||
+          m.resumen.youtubeChannels.length > 0
       );
   }, [members, typeFilter]);
 
   const handleSync = async () => {
     if (!user?.id) return;
     setSyncing(true);
-    await syncMyClubToCloud(user.id);
+    await syncMyResumenToCloud(user.id);
     await load();
     setSyncing(false);
     window.dispatchEvent(
       new CustomEvent("fomo-show-status", {
-        detail: { text: "Club publicado en MIM Cloud.", type: "success" },
+        detail: { text: "Resumen publicado en MIM Cloud.", type: "success" },
       })
     );
   };
@@ -111,7 +111,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
   if (singleUser && !loading && filteredMembers.length === 0) {
     return (
       <div className="py-8 text-center text-white/40 text-xs border border-dashed border-white/10 rounded-2xl">
-        Este usuario aún no publicó su club.
+        Este usuario aún no publicó su resumen.
       </div>
     );
   }
@@ -125,10 +125,10 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
               <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-primary/15 border border-primary/25">
                 <Club className="w-3.5 h-3.5 text-primary" />
               </span>
-              Clubs de la comunidad
+              Resumen de la comunidad
             </h3>
             <p className="text-xs text-white/45 mt-1 max-w-md leading-relaxed">
-              Cada usuario publica su club: proyectos y autores de Seguidos, más canales de
+              Cada usuario publica su resumen: proyectos y autores de Seguidos, más canales de
               YouTube para showcases.
             </p>
           </div>
@@ -145,7 +145,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
               ) : (
                 <CloudUpload className="w-3.5 h-3.5" />
               )}
-              Publicar mi club
+              Publicar mi resumen
             </button>
           )}
         </div>
@@ -173,13 +173,13 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
       {loading ? (
         <div className="py-16 text-center text-white/40">
           <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-          Cargando clubs...
+          Cargando resumen...
         </div>
       ) : filteredMembers.length === 0 ? (
         <div className="py-12 border border-dashed border-white/10 rounded-2xl text-center text-white/40 text-xs">
           {user ? (
             <>
-              Publicá tu club para aparecer acá junto al resto de la comunidad.
+              Publicá tu resumen para aparecer acá junto al resto de la comunidad.
             </>
           ) : (
             <>Iniciá sesión y seguí proyectos en Seguidos.</>
@@ -194,7 +194,7 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
           }
         >
           {filteredMembers.map((member) => (
-            <CommunityClubCard
+            <CommunityResumenCard
               key={member.id}
               member={member}
               typeFilter={typeFilter}
@@ -207,3 +207,4 @@ export function CommunityClubs({ username, singleUser = false }: CommunityClubsP
     </div>
   );
 }
+

@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 9.7.0 | **Última actualización:** 2026-05-23
+> **Versión:** 10.0.0 | **Última actualización:** 2026-05-25
 
 ---
 
@@ -169,6 +169,7 @@ FOMO Cloud es la capa social integrada dentro de MIM. Usa Supabase para unir el 
 * **`CommunityUserProfile.tsx`** — Vista de perfil público y banner de usuario.
 * **`CommunityVideos.tsx`** — Listado de showcases compartidos por usuarios.
 * **`CommunityEditProfileModal.tsx`** — Modal de edición de perfil con avatar y banner PNG.
+* **`CommunityDrafts.tsx`** — Vista principal de FOMO Drafts para crear proyectos colaborativos asíncronos.
 
 #### 6.3.2 Servicios backend de FOMO
 * **`lib/fomo/clubService.ts`** — Sincroniza clubs y listas de seguimiento con Supabase.

@@ -19,6 +19,8 @@ interface FomoSidebarPortalProps {
   onDeleteFile: (f: PendingFile) => Promise<void>;
   modrinthStatus: any;
   detectedVersion?: string;
+  availableVersions?: string[];
+  setDetectedVersion?: (v: string) => void;
 }
 
 export function FomoSidebarPortal({
@@ -34,6 +36,8 @@ export function FomoSidebarPortal({
   onDeleteFile,
   modrinthStatus,
   detectedVersion,
+  availableVersions,
+  setDetectedVersion,
 }: FomoSidebarPortalProps) {
   // Downloads is visible when FOMO is open, details are NOT open, and not collapsed
   const showDownloads = fomoOpen && !detailsOpen && !downloadsSidebarCollapsed;
@@ -67,6 +71,8 @@ export function FomoSidebarPortal({
             modrinthStatus={modrinthStatus}
             onCloseSidebar={() => setDownloadsSidebarCollapsed(true)}
             detectedVersion={detectedVersion}
+            availableVersions={availableVersions}
+            setDetectedVersion={setDetectedVersion}
           />
         </div>
       </aside>

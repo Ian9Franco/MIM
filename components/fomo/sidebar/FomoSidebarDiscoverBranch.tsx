@@ -322,207 +322,201 @@ function FomoSidebarDiscoverBranchInner({
   return (
     <FomoDiscoverProvider discover={discover as import("@/components/fomo/discover/FomoDiscoverContext").FomoDiscoverApi}>
       {!hidden && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {mode === "spotlight" && (
-            <div id="onboarding-fomo-spotlight" className="flex-1 flex flex-col overflow-hidden">
-              <FomoSpotlight
-                onOpenVersions={discover.handleOpenVersionSelector}
-                onOpenCollection={async (coll) => {
-                  const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as
-                    | "modrinth"
-                    | "curseforge";
-                  discover.setSource(sourceKey);
-                  discover.setCollectionId(coll.id);
-                  discover.setPage(1);
-                  setMode("discover");
-                  showStatus(`Mostrando mods de "${coll.name}"`, "success");
-                }}
-                onDownloadMod={discover.handleDownload}
-                downloading={discover.downloading}
-                loader={discover.loader}
-                gameVersion={discover.gameVersions[0]}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          <div id="onboarding-fomo-spotlight" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "spotlight" ? "flex" : "none" }}>
+            <FomoSpotlight
+              onOpenVersions={discover.handleOpenVersionSelector}
+              onOpenCollection={async (coll) => {
+                const sourceKey = (coll.source === "curseforge" ? "curseforge" : "modrinth") as
+                  | "modrinth"
+                  | "curseforge";
+                discover.setSource(sourceKey);
+                discover.setCollectionId(coll.id);
+                discover.setPage(1);
+                setMode("discover");
+                showStatus(`Mostrando mods de "${coll.name}"`, "success");
+              }}
+              onDownloadMod={discover.handleDownload}
+              downloading={discover.downloading}
+              loader={discover.loader}
+              gameVersion={discover.gameVersions[0]}
+            />
+          </div>
+
+          <div id="onboarding-fomo-discover" className="absolute inset-0 flex overflow-hidden" style={{ display: mode === "discover" ? "flex" : "none" }}>
+            <div className="w-65 p-4 border-r border-white/5 overflow-y-auto">
+              <FomoDiscoverFilters
+                {...discover}
+                onLoader={discover.setLoader}
+                onVersions={discover.setGameVersions}
+                onProjectType={discover.setProjectType}
+                onSort={discover.setSortOrder}
+                onCategories={discover.setCategories}
+                onEnvironments={discover.setEnvironments}
+                onOnlyExclusives={discover.setOnlyExclusives}
+                onQuery={discover.setQuery}
+                onRefresh={discover.refetch}
               />
             </div>
-          )}
-          {mode === "discover" && (
-            <div id="onboarding-fomo-discover" className="flex-1 flex overflow-hidden">
-              <div className="w-65 p-4 border-r border-white/5 overflow-y-auto">
-                <FomoDiscoverFilters
-                  {...discover}
-                  onLoader={discover.setLoader}
-                  onVersions={discover.setGameVersions}
-                  onProjectType={discover.setProjectType}
-                  onSort={discover.setSortOrder}
-                  onCategories={discover.setCategories}
-                  onEnvironments={discover.setEnvironments}
-                  onOnlyExclusives={discover.setOnlyExclusives}
-                  onQuery={discover.setQuery}
-                  onRefresh={discover.refetch}
-                />
-              </div>
               <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="px-6 py-4 flex items-center gap-4 border-b border-white/5 flex-wrap">
+                <div id="onboarding-discover-search" className="px-6 py-4 flex items-center gap-4 border-b border-white/5 flex-wrap relative z-10 bg-[var(--fomo-secondary-bg)]/50 backdrop-blur-md rounded-t-xl mx-4 mt-4 border">
                   <FomoDiscoverSourceBar
                     discover={discover as import("@/components/fomo/discover/FomoDiscoverContext").FomoDiscoverApi}
                   />
                   <Search className="w-5 h-5 opacity-40 shrink-0" />
                   {discover.collectionId && (
-                    <div className="flex items-center gap-1.5 bg-primary/20 text-primary text-[11px] font-bold px-2 py-1 rounded-lg border border-primary/30 animate-fade-in shrink-0">
-                      <span>Colección</span>
-                      <button
-                        onClick={() => discover.setCollectionId(null)}
-                        className="hover:text-white transition-colors"
-                        title="Quitar filtro de colección"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                  {discover.query.startsWith("author:") && (
-                    <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-500 text-[11px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 animate-fade-in shrink-0">
-                      <span>Autor: {discover.query.replace("author:", "")}</span>
-                      <button
-                        onClick={() => discover.setQuery("")}
-                        className="hover:text-white transition-colors"
-                        title="Quitar filtro de autor"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                  <input
-                    type="search"
-                    value={discover.query.startsWith("author:") ? "" : discover.query}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      discover.setQuery(val);
-                      if (val === "" && discover.source === "all") {
+                  <div className="flex items-center gap-1.5 bg-primary/20 text-primary text-[11px] font-bold px-2 py-1 rounded-lg border border-primary/30 animate-fade-in shrink-0">
+                    <span>Colección</span>
+                    <button
+                      onClick={() => discover.setCollectionId(null)}
+                      className="hover:text-white transition-colors"
+                      title="Quitar filtro de colección"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {discover.query.startsWith("author:") && (
+                  <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-500 text-[11px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 animate-fade-in shrink-0">
+                    <span>Autor: {discover.query.replace("author:", "")}</span>
+                    <button
+                      onClick={() => discover.setQuery("")}
+                      className="hover:text-white transition-colors"
+                      title="Quitar filtro de autor"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="search"
+                  value={discover.query.startsWith("author:") ? "" : discover.query}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    discover.setQuery(val);
+                    if (val === "" && discover.source === "all") {
+                      discover.setSource("modrinth");
+                    }
+                  }}
+                  onFocus={() => {
+                    if (discover.query !== "") {
+                      discover.setQuery("");
+                      if (discover.source === "all") {
                         discover.setSource("modrinth");
                       }
-                    }}
-                    onFocus={() => {
-                      if (discover.query !== "") {
-                        discover.setQuery("");
-                        if (discover.source === "all") {
-                          discover.setSource("modrinth");
-                        }
-                      }
-                    }}
-                    placeholder="Buscar mods..."
-                    className="flex-1 bg-transparent border-none outline-none text-sm text-white"
-                  />
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {discover.loading ? (
-                    <FomoSkeleton
-                      count={9}
-                      variant="card"
-                      isCurseForge={discover.source === "curseforge"}
-                    />
-                  ) : (
-                    discover.mods.map((mod) => {
-                      const platformKey =
-                        mod._source === "curseforge" ? "curseforge" : "modrinth";
-                      const communitySharers =
-                        sharersByMod.get(`${platformKey}:${mod.projectId}`) || [];
-                      return (
-                        <FomoModCard
-                          key={`${platformKey}:${mod.projectId}`}
-                          mod={mod}
-                          isDownloading={!!discover.downloading[mod.projectId]}
-                          onDownload={discover.handleDownload}
-                          onOpenVersions={discover.handleOpenLiveProject}
-                          isSelected={discover.selectedMods.some(
-                            (s) => s.projectId === mod.projectId
-                          )}
-                          onToggleSelect={discover.toggleModSelection}
-                          sinytraActive={discover.sinytraActive}
-                          onAddToCollection={() => {
-                            m.setAddingToCollectionFor(mod);
-                            m.loadCollections();
-                          }}
-                          followedByUsers={communitySharers}
-                        />
-                      );
-                    })
-                  )}
-                </div>
-                {discover.selectedMods.length > 0 && (
-                  <BulkActionsBar
-                    mods={discover.selectedMods}
-                    isModern={isModern}
-                    onCancel={discover.clearSelection}
-                    onAdd={() => {
-                      m.setBulkAdding(true);
-                      m.loadCollections();
-                    }}
-                    onDownload={() =>
-                      discover.selectedMods.forEach((mod) => discover.handleDownload(mod))
                     }
-                  />
-                )}
-                <FomoPagination
-                  page={discover.page}
-                  totalPages={discover.totalPages}
-                  onPage={discover.setPage}
-                  loading={discover.loading}
+                  }}
+                  placeholder="Buscar mods..."
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-white"
                 />
               </div>
-            </div>
-          )}
-          {mode === "collections" && (
-            <div id="onboarding-fomo-collections" className="flex-1 flex flex-col overflow-hidden">
-              <FomoCollections
-                {...discover}
-                onStatus={showStatus}
-                gameVersion={discover.gameVersions[0]}
-                addingForMod={m.addingToCollectionFor}
-                onClearAddingFor={() => m.setAddingToCollectionFor(null)}
-                onDownloadMod={discover.handleDownload}
-                onOpenVersions={discover.handleOpenLiveProject}
-                onClearSelection={discover.clearSelection}
+              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {discover.loading ? (
+                  <FomoSkeleton
+                    count={9}
+                    variant="card"
+                    isCurseForge={discover.source === "curseforge"}
+                  />
+                ) : (
+                  discover.mods.map((mod) => {
+                    const platformKey =
+                      mod._source === "curseforge" ? "curseforge" : "modrinth";
+                    const communitySharers =
+                      sharersByMod.get(`${platformKey}:${mod.projectId}`) || [];
+                    return (
+                      <FomoModCard
+                        key={`${platformKey}:${mod.projectId}`}
+                        mod={mod}
+                        isDownloading={!!discover.downloading[mod.projectId]}
+                        onDownload={discover.handleDownload}
+                        onOpenVersions={discover.handleOpenLiveProject}
+                        isSelected={discover.selectedMods.some(
+                          (s) => s.projectId === mod.projectId
+                        )}
+                        onToggleSelect={discover.toggleModSelection}
+                        sinytraActive={discover.sinytraActive}
+                        onAddToCollection={() => {
+                          m.setAddingToCollectionFor(mod);
+                          m.loadCollections();
+                        }}
+                        followedByUsers={communitySharers}
+                      />
+                    );
+                  })
+                )}
+              </div>
+              {discover.selectedMods.length > 0 && (
+                <BulkActionsBar
+                  mods={discover.selectedMods}
+                  isModern={isModern}
+                  onCancel={discover.clearSelection}
+                  onAdd={() => {
+                    m.setBulkAdding(true);
+                    m.loadCollections();
+                  }}
+                  onDownload={() =>
+                    discover.selectedMods.forEach((mod) => discover.handleDownload(mod))
+                  }
+                />
+              )}
+              <FomoPagination
+                page={discover.page}
+                totalPages={discover.totalPages}
+                onPage={discover.setPage}
+                loading={discover.loading}
               />
             </div>
-          )}
-          {mode === "showcases" && (
-            <div id="onboarding-fomo-showcases" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
-                <FomoFollowedShowcases
-                  currentUser={currentUser}
-                  allSharedVideos={allSharedVideos}
-                  fetchCommunitySharingInfo={refreshSharing}
-                  animationClass="animate-fade-in"
-                  currentUserColor={currentUserColor}
-                />
-              </div>
+          </div>
+
+          <div id="onboarding-fomo-collections" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "collections" ? "flex" : "none" }}>
+            <FomoCollections
+              {...discover}
+              onStatus={showStatus}
+              gameVersion={discover.gameVersions[0]}
+              addingForMod={m.addingToCollectionFor}
+              onClearAddingFor={() => m.setAddingToCollectionFor(null)}
+              onDownloadMod={discover.handleDownload}
+              onOpenVersions={discover.handleOpenLiveProject}
+              onClearSelection={discover.clearSelection}
+            />
+          </div>
+
+          <div id="onboarding-fomo-showcases" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "showcases" ? "flex" : "none" }}>
+            <div className="flex-1 overflow-y-auto p-6">
+              <FomoFollowedShowcases
+                currentUser={currentUser}
+                allSharedVideos={allSharedVideos}
+                fetchCommunitySharingInfo={refreshSharing}
+                animationClass="animate-fade-in"
+                currentUserColor={currentUserColor}
+              />
             </div>
-          )}
-          {mode === "followed" && (
-            <div id="onboarding-fomo-followed" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto">
-                <FomoFollowedAuthors
-                  onSearchAuthor={(a) => {
-                    setMode("discover");
-                    discover.setSource("all");
-                    discover.setQuery(`author:${a}`);
-                    discover.setLoader("all");
-                    discover.setGameVersions([]);
-                  }}
-                  onSearchProject={(p, type, source, loader, version) => {
-                    setMode("discover");
-                    discover.setSource((source as "modrinth" | "curseforge" | "all") || "all");
-                    discover.setProjectType(type || "mod");
-                    discover.setLoader(loader || "all");
-                    discover.setGameVersions(version ? [version] : []);
-                    discover.setQuery(p);
-                  }}
-                  onOpenVersions={discover.handleOpenLiveProject}
-                  onDownloadMod={discover.handleDownload}
-                  downloading={discover.downloading}
-                />
-              </div>
+          </div>
+
+          <div id="onboarding-fomo-followed" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "followed" ? "flex" : "none" }}>
+            <div className="flex-1 overflow-y-auto">
+              <FomoFollowedAuthors
+                onSearchAuthor={(a) => {
+                  setMode("discover");
+                  discover.setSource("all");
+                  discover.setQuery(`author:${a}`);
+                  discover.setLoader("all");
+                  discover.setGameVersions([]);
+                }}
+                onSearchProject={(p, type, source, loader, version) => {
+                  setMode("discover");
+                  discover.setSource((source as "modrinth" | "curseforge" | "all") || "all");
+                  discover.setProjectType(type || "mod");
+                  discover.setLoader(loader || "all");
+                  discover.setGameVersions(version ? [version] : []);
+                  discover.setQuery(p);
+                }}
+                onOpenVersions={discover.handleOpenLiveProject}
+                onDownloadMod={discover.handleDownload}
+                downloading={discover.downloading}
+              />
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -589,11 +583,19 @@ function FomoSidebarDiscoverBranchInner({
                   setMode("discover");
                   discover.setSource("all");
                   discover.setQuery(`author:${a}`);
+                  discover.setCollectionId(null);
+                  discover.setCategories([]);
+                  discover.setEnvironments([]);
+                  discover.setPage(1);
                 }}
                 onSearchMod={(title: string) => {
                   setMode("discover");
                   discover.setSource("all");
                   discover.setQuery(title);
+                  discover.setCollectionId(null);
+                  discover.setCategories([]);
+                  discover.setEnvironments([]);
+                  discover.setPage(1);
                 }}
                 pendingFilesCount={(pendingFiles as unknown[]).length}
                 onOpenDownloads={onOpenDownloads}

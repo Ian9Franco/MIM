@@ -16,7 +16,7 @@ import { getApiKey } from "@/lib/core/settings";
 import { MODRINTH_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS } from "@/constants/app";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 21;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -140,13 +140,15 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Environments (OR within environments group)
+  // Environments (Strict Client-Only / Server-Only logic)
   if (environments.length > 0) {
     environments.forEach((env: string) => {
       if (env === "client") {
         facetsArray.push(["client_side:required", "client_side:optional"]);
+        facetsArray.push(["server_side:unsupported"]);
       } else if (env === "server") {
         facetsArray.push(["server_side:required", "server_side:optional"]);
+        facetsArray.push(["client_side:unsupported"]);
       } else if (env === "both") {
         facetsArray.push(["client_side:required", "client_side:optional"]);
         facetsArray.push(["server_side:required", "server_side:optional"]);

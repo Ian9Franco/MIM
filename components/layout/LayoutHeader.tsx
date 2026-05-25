@@ -38,6 +38,7 @@ export function LayoutHeader({
   const [appMode, setAppMode] = React.useState<string>("MIMU");
   const [guidesActive, setGuidesActive] = React.useState(false);
   const [profile, setProfile] = React.useState<any>(null);
+  const [isAutoClassify, setIsAutoClassify] = React.useState(false);
 
   React.useEffect(() => {
     setGuidesActive(localStorage.getItem("guides_enabled") === "true");
@@ -67,18 +68,33 @@ export function LayoutHeader({
       if (e.detail) setAppMode(e.detail);
     };
 
+    const handleAutoClassify = (e: any) => {
+      setIsAutoClassify(e.detail);
+    };
+
     window.addEventListener("storage", handleStorage);
     window.addEventListener("mim-mode-changed", handleModeChange as any);
+    window.addEventListener("auto-classify-changed", handleAutoClassify);
     
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("mim-mode-changed", handleModeChange as any);
+      window.removeEventListener("auto-classify-changed", handleAutoClassify);
     };
   }, []);
 
   return (
-    <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl">
-      <div className="max-w-400 mx-auto px-6 py-4 flex items-center justify-between gap-6">
+    <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl transition-all duration-700 relative">
+      {/* Auto Classify Glow */}
+      <div 
+        className={`absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000 ${isAutoClassify ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          background: "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 100%)",
+          boxShadow: isAutoClassify ? "inset 0 10px 40px -10px rgba(16, 185, 129, 0.2)" : "none",
+        }}
+      />
+      
+      <div className="max-w-400 mx-auto px-6 py-4 flex items-center justify-between gap-6 relative z-10">
         
         {/* Left side: FOMO toggle + App Title */}
         <div className="flex items-center gap-6 animate-fade-up">

@@ -46,6 +46,37 @@ export async function GET(req: NextRequest) {
     const descRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}/description`, { headers });
     const descData = await descRes.json().catch(() => ({ data: "" }));
 
+    // 3. Crosscheck con Modrinth para obtener el entorno preciso (client/server)
+    try {
+      if (modData.data && modData.data.slug) {
+        // Fetch a Modrinth usando el slug
+        const mrRes = await fetch(`https://api.modrinth.com/v2/project/${modData.data.slug}`);
+        if (mrRes.ok) {
+          const mrData = await mrRes.json();
+          modData.data.client_side = mrData.client_side;
+          modData.data.server_side = mrData.server_side;
+        } else {
+          // Fallback a búsqueda por título si el slug exacto falla
+          const query = encodeURIComponent(modData.data.name);
+          const mrSearch = await fetch(`https://api.modrinth.com/v2/search?query=${query}&limit=5`);
+          if (mrSearch.ok) {
+            const searchData = await mrSearch.json();
+            const matchedMod = searchData.hits?.find((h: any) => {
+              const hName = (h.title || h.slug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const modName = modData.data.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+              return hName === modName || hName.includes(modName) || modName.includes(hName);
+            });
+            if (matchedMod) {
+              modData.data.client_side = matchedMod.client_side;
+              modData.data.server_side = matchedMod.server_side;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[/api/curseforge/project] Error en crosscheck de entorno:", e);
+    }
+
     return NextResponse.json({
       ...modData.data,
       body: descData.data || "", // CurseForge usa HTML en la descripción

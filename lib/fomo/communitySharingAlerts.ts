@@ -57,11 +57,10 @@ function notifyNew(
 /** Marca el snapshot actual como visto (primera carga sin alertas). */
 export function seedCommunityShareSeen(
   mods: ShareRow[],
-  videos: ShareRow[],
-  modpacks: ShareRow[]
+  videos: ShareRow[]
 ) {
   const seen = loadSeen();
-  [...mods, ...videos, ...modpacks].forEach((r) => {
+  [...mods, ...videos].forEach((r) => {
     if (r.id) seen.add(r.id);
   });
   saveSeen(seen);
@@ -70,7 +69,6 @@ export function seedCommunityShareSeen(
 export function checkNewCommunityShares(
   mods: ShareRow[],
   videos: ShareRow[],
-  modpacks: ShareRow[],
   currentUserId?: string
 ) {
   notifyNew(

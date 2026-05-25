@@ -121,9 +121,9 @@ export function LibrarySection({
 
   return (
     <section className="animate-fade-up relative">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-5 mb-6">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
             <Layers className="w-5 h-5" />
           </div>
           <div>

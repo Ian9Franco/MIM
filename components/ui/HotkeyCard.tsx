@@ -8,15 +8,17 @@ interface HotkeyCardProps {
   desc: string;
   icon: React.ReactNode;
   onClick: () => void;
-  color?: "wisteria" | "gold";
+  color?: "wisteria" | "gold" | "emerald";
 }
 
 export function HotkeyCard({ num, title, desc, icon, onClick, color = "wisteria" }: HotkeyCardProps) {
   const isGold   = color === "gold";
-  const accent   = isGold ? "var(--color-accent)"  : "var(--color-primary)";
-  const accentBg = isGold ? "var(--color-accent-bg)" : "rgba(187,150,228,0.07)";
-  const accentBorder = isGold ? "var(--color-accent-border)" : "rgba(187,150,228,0.22)";
-  const hoverBorder  = isGold ? "var(--color-accent)" : "rgba(187,150,228,0.45)";
+  const isEmerald = color === "emerald";
+  
+  const accent   = isGold ? "var(--color-accent)" : isEmerald ? "#10b981" : "var(--color-primary)";
+  const accentBg = isGold ? "var(--color-accent-bg)" : isEmerald ? "rgba(16, 185, 129, 0.07)" : "rgba(187,150,228,0.07)";
+  const accentBorder = isGold ? "var(--color-accent-border)" : isEmerald ? "rgba(16, 185, 129, 0.22)" : "rgba(187,150,228,0.22)";
+  const hoverBorder  = isGold ? "var(--color-accent)" : isEmerald ? "rgba(16, 185, 129, 0.45)" : "rgba(187,150,228,0.45)";
 
   return (
     <div
@@ -34,7 +36,9 @@ export function HotkeyCard({ num, title, desc, icon, onClick, color = "wisteria"
         el.style.transform = "translateY(-3px)";
         el.style.boxShadow = isGold
           ? "0 12px 32px var(--glow-accent), 0 4px 16px rgba(0,0,0,0.1)"
-          : "0 12px 32px rgba(187,150,228,0.12), 0 4px 16px rgba(0,0,0,0.15)";
+          : isEmerald 
+            ? "0 12px 32px rgba(16, 185, 129, 0.12), 0 4px 16px rgba(0,0,0,0.15)"
+            : "0 12px 32px rgba(187,150,228,0.12), 0 4px 16px rgba(0,0,0,0.15)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
@@ -55,7 +59,7 @@ export function HotkeyCard({ num, title, desc, icon, onClick, color = "wisteria"
       <div
         className="w-8 h-8 rounded-xl mb-3 flex items-center justify-center font-black-it text-base transition-all duration-200 group-hover:scale-105"
         style={{
-          background: isGold ? "var(--color-accent-bg)" : "rgba(187,150,228,0.14)",
+          background: isGold ? "var(--color-accent-bg)" : isEmerald ? "rgba(16, 185, 129, 0.14)" : "rgba(187,150,228,0.14)",
           border: `1px solid ${accentBorder}`,
           color: accent,
         }}
@@ -86,7 +90,9 @@ export function HotkeyCard({ num, title, desc, icon, onClick, color = "wisteria"
         style={{
           background: isGold
             ? "linear-gradient(90deg, var(--color-accent) 0%, transparent 100%)"
-            : "linear-gradient(90deg, rgba(187,150,228,0.6) 0%, transparent 100%)",
+            : isEmerald 
+              ? "linear-gradient(90deg, rgba(16, 185, 129, 0.6) 0%, transparent 100%)"
+              : "linear-gradient(90deg, rgba(187,150,228,0.6) 0%, transparent 100%)",
         }}
       />
     </div>

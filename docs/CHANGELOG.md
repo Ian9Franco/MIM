@@ -1,8 +1,9 @@
+
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
 > **Versión Actual:** v9.6.0 (SAGE Sandboxing & TWEAK Overrides)  
-> **Última actualización:** 2026-05-23
+> **Última actualización:** 2026-05-25
 
 ---
 
@@ -48,6 +49,7 @@
 - **Liquid Glass sub-navigation**: Implementación de una barra de navegación interna con píldoras de desplazamiento fluido y escala elástica al alternar entre tabs (Pool ➔ Showcases ➔ Clubs).
 - **Immersive Header Background**: Desenfoques masivos de cristal (`backdrop-blur-3xl`) acompañados por gradientes radiales interactivos calculados según el color de perfil activo del usuario.
 - **Upgraded Card Layouts**: Elevación tridimensional activa en el eje Z al hacer hover sobre las tarjetas de la comunidad, con sombras internas profundas y bordes semi-transparentes de vidrio.
+- **Drafts Colaborativos (Supabase Realtime)**: Sistema de creación de modpacks colaborativo que permite a múltiples usuarios compartir, proponer y votar modificaciones de manera asíncrona, finalizando en "Snapshots" consolidables.
 
 ### 📺 Showcases — Estrategia y Resiliencia en Video
 - **Showcases como Canal de Descubrimiento**: Filosofía de diseño que reposiciona la reproducción de video como una característica secundaria de conveniencia, evitando catalogar a MIM como un "ad-free YouTube alternative".

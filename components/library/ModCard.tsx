@@ -220,12 +220,15 @@ export const ModCard = memo(function ModCard({
                   </div>
                 )}
               </div>
-            ) : isError ? (
-              <AlertTriangle className="w-5 h-5 text-red-400" />
-            ) : conflict ? (
-              <AlertTriangle className="w-5 h-5 text-orange-400" />
             ) : (
-              <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />
+              <div className="relative w-full h-full flex items-center justify-center">
+                <Folder className="w-5 h-5" style={{ color: isSelected ? COLORS.accent : COLORS.primary }} />
+                {(isError || conflict) && (
+                  <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border border-white/20 ${isError ? "bg-red-500" : "bg-orange-500"}`}>
+                    <AlertTriangle className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -293,7 +296,9 @@ export const ModCard = memo(function ModCard({
               {modVersion && modVersion !== "unknown" && (
                 <span className="font-label rounded-full px-2 py-0.5 truncate max-w-[120px]" style={{ background: "rgba(187,150,228,0.12)", border: "1px solid rgba(187,150,228,0.25)", color: "var(--color-primary)", fontSize: "0.55rem" }}>v{modVersion}</span>
               )}
-              <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.55rem" }}>{ls.label}</span>
+              {!(projectType && projectType !== "mod" && projectType !== "unknown" && ls.label === "Mod") && (
+                <span className="font-label rounded-full px-2 py-0.5 shrink-0" style={{ background: ls.bg, color: ls.color, fontSize: "0.55rem" }}>{ls.label}</span>
+              )}
               
               {(isVersionError || isLoaderError || conflict) && (
                 <div className="flex flex-wrap items-center gap-1 shrink-0">

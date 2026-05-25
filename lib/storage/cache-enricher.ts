@@ -46,6 +46,9 @@ export function enrichUpdatesCache(options: {
       cache.entries = {};
     }
 
+    const activeLoader = loader || "forge";
+    const activeVersion = gameVersion || "1.20.1";
+
     // 3. Prepare the result object
     const result = {
       path: filePath,
@@ -55,11 +58,11 @@ export function enrichUpdatesCache(options: {
       iconUrl: iconUrl || undefined,
       projectType: projectType || undefined,
       title: title || undefined,
+      loader: activeLoader || undefined,
+      gameVersion: activeVersion || undefined,
     };
 
     const cachedAt = Date.now();
-    const activeLoader = loader || "forge";
-    const activeVersion = gameVersion || "1.20.1";
 
     // 4. Inject entries under combinations of keys to ensure high-hit probability
     const keysToUpdate: string[] = [];

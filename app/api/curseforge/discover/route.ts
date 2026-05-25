@@ -17,12 +17,13 @@ export async function GET(req: NextRequest) {
   const params = {
     loader: searchParams.get("loader") || "forge",
     page: parseInt(searchParams.get("page") || "1"),
-    pageSize: parseInt(searchParams.get("pageSize") || "20"),
+    pageSize: parseInt(searchParams.get("pageSize") || "21"),
     sort: searchParams.get("sort") || "featured",
     projectType: searchParams.get("projectType") || "mod",
     q: searchParams.get("q")?.trim() || "",
     gameVersions: searchParams.get("gameVersions") ? JSON.parse(searchParams.get("gameVersions")!) : [],
-    categories: searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : []
+    categories: searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [],
+    environments: searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : []
   };
 
   try {

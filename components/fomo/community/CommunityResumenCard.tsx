@@ -15,38 +15,38 @@ import {
 import { CommunityUserAvatar } from "@/components/fomo/community/CommunityUserAvatar";
 import { openCommunityUserProfile } from "@/components/fomo/community/communityActions";
 import { searchAuthorInFomo, searchProjectInFomo } from "@/lib/fomo/fomoProjectNavigation";
-import type { CommunityClubMember } from "@/lib/fomo/clubTypes";
-import { youtubeChannelLabel } from "@/lib/fomo/clubService";
-import styles from "@/components/fomo/community/community-clubs.module.css";
+import type { CommunityResumenMember } from "@/lib/fomo/resumenTypes";
+import { youtubeChannelLabel } from "@/lib/fomo/resumenService";
+import styles from "@/components/fomo/community/community-resumen.module.css";
 
-interface CommunityClubCardProps {
-  member: CommunityClubMember;
+interface CommunityResumenCardProps {
+  member: CommunityResumenMember;
   typeFilter: string;
   compact?: boolean;
   defaultExpanded?: boolean;
 }
 
-export function CommunityClubCard({
+export function CommunityResumenCard({
   member,
   typeFilter,
   compact = true,
   defaultExpanded = false,
-}: CommunityClubCardProps) {
+}: CommunityResumenCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const expandedRef = useRef<HTMLDivElement | null>(null);
-  const { club } = member;
+  const { resumen } = member;
 
   const mods =
     typeFilter === "all"
-      ? club.mods
-      : club.mods.filter((m) => (m.projectType || "mod") === typeFilter);
+      ? resumen.mods
+      : resumen.mods.filter((m) => (m.projectType || "mod") === typeFilter);
 
   const previewMods = mods.slice(0, compact && !expanded ? 2 : 6);
-  const previewAuthors = club.authors.slice(0, compact && !expanded ? 2 : 5);
-  const previewChannels = club.youtubeChannels.slice(0, compact && !expanded ? 2 : 4);
+  const previewAuthors = resumen.authors.slice(0, compact && !expanded ? 2 : 5);
+  const previewChannels = resumen.youtubeChannels.slice(0, compact && !expanded ? 2 : 4);
 
   const totalItems =
-    mods.length + club.authors.length + club.youtubeChannels.length;
+    mods.length + resumen.authors.length + resumen.youtubeChannels.length;
 
   const accent = member.color || "var(--color-primary)";
 
@@ -144,9 +144,9 @@ export function CommunityClubCard({
           <span className="text-sm font-bold text-white block truncate group-hover:text-primary transition-colors">
             @{member.username}
           </span>
-          <span title="Club = intereses — todo lo que sigas irá al club" className="text-[10px] text-white/45 flex items-center gap-1 mt-0.5">
+          <span title="Resumen = intereses — todo lo que sigas irá al resumen" className="text-[10px] text-white/45 flex items-center gap-1 mt-0.5">
             <Club className="w-3 h-3 text-primary shrink-0" />
-            {totalItems === 0 ? "Club vacío" : `${totalItems} en el club`}
+            {totalItems === 0 ? "Resumen vacío" : `${totalItems} en el resumen`}
           </span>
         </div>
         {compact && totalItems > 4 && (
@@ -172,7 +172,7 @@ export function CommunityClubCard({
           <section>
             <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
               <UserRound className="w-3 h-3 text-primary/70" /> Autores
-              <span className="text-white/25 font-bold normal-case">({club.authors.length})</span>
+              <span className="text-white/25 font-bold normal-case">({resumen.authors.length})</span>
             </p>
             <div className="flex flex-wrap gap-1">
               {previewAuthors.map((a) => (
@@ -189,9 +189,9 @@ export function CommunityClubCard({
                   {a.name}
                 </button>
               ))}
-              {!expanded && club.authors.length > previewAuthors.length && (
+              {!expanded && resumen.authors.length > previewAuthors.length && (
                 <span className="text-white/30 self-center">
-                  +{club.authors.length - previewAuthors.length}
+                  +{resumen.authors.length - previewAuthors.length}
                 </span>
               )}
             </div>
@@ -203,7 +203,7 @@ export function CommunityClubCard({
             <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1.5 flex items-center gap-1">
               <TvMinimalPlay className="w-3 h-3 text-red-400/80" /> YouTube
               <span className="text-white/25 font-bold normal-case">
-                ({club.youtubeChannels.length})
+                ({resumen.youtubeChannels.length})
               </span>
             </p>
             <div className="flex flex-wrap gap-1">
@@ -305,13 +305,13 @@ export function CommunityClubCard({
           className={`${styles.inlineExpanded} p-3 border-t border-white/5`}
         >
           <div className="space-y-4">
-            {club.authors.length > 0 && (
+            {resumen.authors.length > 0 && (
               <section>
                 <p className="text-[12px] font-black uppercase tracking-wider text-white/40 mb-2 flex items-center gap-2">
-                  <UserRound className="w-4 h-4 text-primary/70" /> Autores <span className="text-white/25 font-bold normal-case">({club.authors.length})</span>
+                  <UserRound className="w-4 h-4 text-primary/70" /> Autores <span className="text-white/25 font-bold normal-case">({resumen.authors.length})</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {club.authors.map((a) => (
+                  {resumen.authors.map((a) => (
                     <button
                       key={a.name}
                       type="button"
@@ -326,26 +326,26 @@ export function CommunityClubCard({
               </section>
             )}
 
-            {club.youtubeChannels.length > 0 && (
+            {resumen.youtubeChannels.length > 0 && (
               <section>
                 <p className="text-[12px] font-black uppercase tracking-wider text-white/40 mb-2 flex items-center gap-2">
-                  <TvMinimalPlay className="w-4 h-4 text-red-400/80" /> YouTube <span className="text-white/25 font-bold normal-case">({club.youtubeChannels.length})</span>
+                  <TvMinimalPlay className="w-4 h-4 text-red-400/80" /> YouTube <span className="text-white/25 font-bold normal-case">({resumen.youtubeChannels.length})</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {club.youtubeChannels.map((url) => (
+                  {resumen.youtubeChannels.map((url) => (
                     <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-200/90 hover:bg-red-500/20">{youtubeChannelLabel(url)}</a>
                   ))}
                 </div>
               </section>
             )}
 
-            {club.mods.length > 0 && (
+            {resumen.mods.length > 0 && (
               <section>
                 <p className="text-[12px] font-black uppercase tracking-wider text-white/40 mb-2 flex items-center gap-2">
-                  <Puzzle className="w-4 h-4 text-primary/70" /> Proyectos <span className="text-white/25 font-bold normal-case">({club.mods.length})</span>
+                  <Puzzle className="w-4 h-4 text-primary/70" /> Proyectos <span className="text-white/25 font-bold normal-case">({resumen.mods.length})</span>
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {club.mods.map((m) => (
+                  {resumen.mods.map((m) => (
                     <div key={`${m.platform}:${m.projectId}`} className="flex items-center gap-3 p-2 rounded-xl bg-white/3">
                       {m.iconUrl ? (
                         <img src={m.iconUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0 ring-1 ring-white/10" />
@@ -368,3 +368,4 @@ export function CommunityClubCard({
     </motion.article>
   );
 }
+

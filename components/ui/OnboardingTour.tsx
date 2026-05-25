@@ -27,27 +27,48 @@ export function OnboardingTour({ steps, onComplete, onStepChange }: OnboardingTo
   }, []);
 
   useEffect(() => {
-    const updatePosition = () => {
+    let animationFrameId: number;
+
+    const trackPosition = () => {
       const step = steps[currentStep];
       if (!step) return;
       const element = document.querySelector(step.target);
       if (element) {
-        setTargetRect(element.getBoundingClientRect());
-        // Scroll to element if not in view (use nearest to avoid unwanted jumps)
-        element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        const rect = element.getBoundingClientRect();
+        setTargetRect((prev) => {
+          // Only update state if position/size actually changed to avoid unnecessary re-renders
+          if (
+            !prev ||
+            prev.x !== rect.x ||
+            prev.y !== rect.y ||
+            prev.width !== rect.width ||
+            prev.height !== rect.height
+          ) {
+            return rect;
+          }
+          return prev;
+        });
       } else {
         setTargetRect(null);
       }
+      animationFrameId = requestAnimationFrame(trackPosition);
     };
 
-    updatePosition();
-    // Update on resize or scroll
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition);
+    animationFrameId = requestAnimationFrame(trackPosition);
+
+    // Scroll once when step changes
+    const step = steps[currentStep];
+    if (step) {
+      setTimeout(() => {
+        const element = document.querySelector(step.target);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }, 100);
+    }
 
     return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition);
+      cancelAnimationFrame(animationFrameId);
     };
   }, [currentStep, steps]);
 

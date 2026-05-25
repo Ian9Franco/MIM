@@ -47,7 +47,8 @@ export function PendingIncompatibleGroup({
                 name={(() => { const raw = f.meta?.modName; if (raw && raw !== "unknown") return raw; return f.fileName.replace(/\.(jar|zip|mrpack)$/i, "").replace(/[-_]/g, " ").replace(/\s+v?\d[\d.]*[\w.-]*$/i, "").replace(/\s+/g, " ").trim() || f.fileName; })()}
                 version={f.meta?.gameVersion || "unknown"}
                 iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
-                loader={f.meta?.loader || "unknown"} 
+                loader={f.meta?.loader || "unknown"}
+                projectType={f.meta?.projectType}
                 isSelected={selectedFiles?.some((p: any) => p.path === f.path)}
                 onClick={() => onSelect(f)} 
                 activeVersion={activeProject?.version} 

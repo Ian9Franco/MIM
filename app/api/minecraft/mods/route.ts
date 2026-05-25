@@ -8,9 +8,37 @@ export async function GET(req: NextRequest) {
   try {
     const settings = getSettings();
     const modsPath = path.join(settings.minecraftPath, "mods");
+    const versionsPath = path.join(settings.minecraftPath, "versions");
+    let availableVersions: string[] = [];
+    let fallbackVersion = "1.20.1";
+
+    if (fs.existsSync(versionsPath)) {
+      try {
+        const vDirs = fs.readdirSync(versionsPath, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => {
+            const stat = fs.statSync(path.join(versionsPath, dirent.name));
+            return { name: dirent.name, mtime: stat.mtime };
+          })
+          .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+
+        // Extraer versiones numéricas de los nombres (ej: "1.20.1-Forge", "Fabric 1.19.4", "1.18.2")
+        const versionSet = new Set<string>();
+        for (const dir of vDirs) {
+          const match = dir.name.match(/1\.\d+(\.\d+)?/);
+          if (match) versionSet.add(match[0]);
+        }
+        availableVersions = Array.from(versionSet);
+        if (availableVersions.length > 0) {
+          fallbackVersion = availableVersions[0];
+        }
+      } catch (e) {
+        console.warn("Failed to read versions directory:", e);
+      }
+    }
 
     if (!fs.existsSync(modsPath)) {
-      return NextResponse.json({ mods: [] });
+      return NextResponse.json({ mods: [], detectedVersion: fallbackVersion, availableVersions });
     }
 
     const entries = fs.readdirSync(modsPath, { withFileTypes: true });
@@ -56,11 +84,15 @@ export async function GET(req: NextRequest) {
       if (versions.length > 0) {
         const counts: Record<string, number> = {};
         versions.forEach(v => counts[v] = (counts[v] || 0) + 1);
-        detectedVersion = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, "1.20.1");
+        detectedVersion = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, fallbackVersion);
+      } else {
+        detectedVersion = fallbackVersion;
       }
+    } else {
+      detectedVersion = fallbackVersion;
     }
 
-    return NextResponse.json({ mods, detectedVersion });
+    return NextResponse.json({ mods, detectedVersion, availableVersions });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/minecraft/mods] Unhandled error:", message);

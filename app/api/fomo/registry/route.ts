@@ -6,7 +6,7 @@ import fs from "fs";
 function getRegistryPath(projectName?: string) {
   const settings = getSettings();
   if (projectName) {
-    const projectPath = path.join(settings.libraryPath, ".projects", projectName);
+    const projectPath = path.join(settings.sourceBase, ".projects", projectName);
     return path.join(projectPath, ".fomo-registry.json");
   } else {
     // MIMU (Contenido Instalado) -> .minecraft

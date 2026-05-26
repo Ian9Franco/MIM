@@ -12,7 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-10.2.0-indigo.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-10.2.1-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -213,7 +213,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v10.2.0 (Actual — Mayo 2026)**
+### ✅ **v10.2.1 (Actual — Mayo 2026)**
 - 🗂️ **Arquitectura Modular**: Reorganización masiva en subdominios para `components/fomo/` y `lib/`.
 - 💾 **IndexedDB Storage**: Migración completa asíncrona de datos de FOMO.
 - 🎨 **Rediseño FOMO Cloud**: Header inmersivo 3D, navegación premium y reproductor PiP nativo.

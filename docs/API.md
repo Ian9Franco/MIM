@@ -2,8 +2,8 @@
 
 > Guía completa de integraciones API de Minecraft Intelligent Manager.  
 > Modrinth, CurseForge, VirusTotal, y Supabase Cloud.  
-> **Versión Actual:** v9.3.0 (Arquitectura Modular & Premium UI)  
-> **Última actualización:** 2026-05-21
+> **Versión Actual:** v10.2.2 (FOMO Dependency & API Hardening)  
+> **Última actualización:** 2026-05-26
 
 ---
 
@@ -70,6 +70,7 @@ https://api.curseforge.com/v1
 ### Particularidades Técnicas
 - **Búsqueda Heurística**: Dado que CurseForge no admite consultas por SHA1 directo para todos los proyectos, MIM extrae `projectID` o hashes `Murmur2` de los metadatos JAR y busca concordancia.
 - **Picks Curados**: El endpoint `/api/curseforge/picks` resuelve conteos dinámicos en caliente de mods CurseForge mediante diccionarios pre-calculados en el backend para evitar respuestas vacías de API.
+- **Slug Resolution Engine**: Puesto que CurseForge no admite consultas por "slug" en sus endpoints detallados (projects, files, gallery), MIM intercepta solicitudes que contienen slugs (ej: de YouTube Showcases) y las traduce automáticamente al ID numérico correspondiente consultando el motor de búsqueda en segundo plano.
 
 ---
 
@@ -116,6 +117,7 @@ CREATE TABLE public.profiles (
 `GET /api/fomo/youtube-showcase?channel={url}&limit={n}&type={videos|shorts}`
 
 * **Heurísticas**: Analiza el canal especificado utilizando `yt-dlp` en local, extrae los enlaces de descarga de mods y mapea los slugs para enriquecer los showcases.
+* **Auto-Actualización**: MIM cuenta con un updater integrado para el binario de `yt-dlp`, garantizando compatibilidad con los cambios constantes de la plataforma directamente desde los releases de GitHub.
 * **Caché Física**: Almacena las consultas locales en la ruta portable `.MIM/source/.mim-index/` indexando por hash MD5 para evitar peticiones repetitivas.
 * **Filosofía de Resiliencia**: El backend y frontend tratan la reproducción multimedia como una **característica secundaria de conveniencia**. Si `yt-dlp` falla o se desactualiza debido a cambios del reproductor de YouTube:
   - El endpoint devuelve un flag de error controlado.

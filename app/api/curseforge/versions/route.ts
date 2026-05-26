@@ -100,9 +100,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
-  // CurseForge IDs are strictly numeric. If a non-numeric ID is passed, return empty versions list gracefully
-  if (!/^\d+$/.test(projectId)) {
-    return NextResponse.json({ versions: [] });
+  let resolvedId = projectId;
+  // CurseForge IDs are strictly numeric. If a non-numeric ID is passed, try resolving it as a slug
+  if (!/^\d+$/.test(resolvedId)) {
+    const searchRes = await fetch(`${CURSEFORGE_API}/mods/search?gameId=432&slug=${encodeURIComponent(resolvedId)}`, {
+      headers: { "x-api-key": apiKey, "Accept": "application/json" }
+    });
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      if (searchData.data && searchData.data.length > 0) {
+        resolvedId = searchData.data[0].id.toString();
+      } else {
+        return NextResponse.json({ versions: [] });
+      }
+    } else {
+      return NextResponse.json({ versions: [] });
+    }
   }
 
   if (!apiKey) {
@@ -115,7 +128,7 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    const res = await fetch(`${CURSEFORGE_API}/mods/${projectId}/files`, { headers });
+    const res = await fetch(`${CURSEFORGE_API}/mods/${resolvedId}/files`, { headers });
     if (!res.ok) {
       return NextResponse.json({ error: "Failed to fetch versions" }, { status: 500 });
     }

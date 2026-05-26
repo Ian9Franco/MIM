@@ -164,10 +164,18 @@ function FomoSidebarDiscoverBranchInner({
     };
     const handleSearchAuthor = (e: Event) => {
       const { author } = (e as CustomEvent).detail || {};
-      if (author) {
+      const authorClean = (author || "").trim();
+      if (authorClean) {
         setMode("discover");
         discover.setSource("all");
-        discover.setQuery(`author:${author}`);
+        discover.setProjectType("mod");
+        discover.setLoader("all");
+        discover.setGameVersions([]);
+        discover.setCategories([]);
+        discover.setEnvironments([]);
+        discover.setCollectionId(null);
+        discover.setPage(1);
+        discover.setQuery(`author:${authorClean}`);
       }
     };
     const handleOpenProjectDetails = (e: Event) => {
@@ -499,11 +507,18 @@ function FomoSidebarDiscoverBranchInner({
             <div className="flex-1 overflow-y-auto">
               <FomoFollowedAuthors
                 onSearchAuthor={(a) => {
+                  const authorClean = (a || "").trim();
+                  if (!authorClean) return;
                   setMode("discover");
                   discover.setSource("all");
-                  discover.setQuery(`author:${a}`);
+                  discover.setProjectType("mod");
                   discover.setLoader("all");
                   discover.setGameVersions([]);
+                  discover.setCategories([]);
+                  discover.setEnvironments([]);
+                  discover.setCollectionId(null);
+                  discover.setPage(1);
+                  discover.setQuery(`author:${authorClean}`);
                 }}
                 onSearchProject={(p, type, source, loader, version) => {
                   setMode("discover");
@@ -582,13 +597,18 @@ function FomoSidebarDiscoverBranchInner({
                 onClose={() => discover.setSelectingVersionFor(null)}
                 onDownload={discover.handleDownload}
                 onSearchAuthor={(a: string) => {
+                  const authorClean = (a || "").trim();
+                  if (!authorClean) return;
                   setMode("discover");
                   discover.setSource("all");
-                  discover.setQuery(`author:${a}`);
-                  discover.setCollectionId(null);
+                  discover.setProjectType("mod");
+                  discover.setLoader("all");
+                  discover.setGameVersions([]);
                   discover.setCategories([]);
                   discover.setEnvironments([]);
+                  discover.setCollectionId(null);
                   discover.setPage(1);
+                  discover.setQuery(`author:${authorClean}`);
                 }}
                 onSearchMod={(title: string) => {
                   setMode("discover");

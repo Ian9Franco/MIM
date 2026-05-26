@@ -55,7 +55,7 @@ export function runPendingDiscoverAction(
     case "author":
       setMode("discover");
       discover.setSource("all");
-      discover.setQuery(`author:${action.author}`);
+      discover.setQuery(`author:${(action.author || "").trim()}`);
       break;
     case "projectId":
       discover.handleOpenProjectById(action.id, action.platform);

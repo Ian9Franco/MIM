@@ -18,54 +18,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/core/constants";
 import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import crypto from "crypto";
 import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import { watcherEmitter } from "@/lib/core/watcher";
-
-function collectJarFiles(dir: string, bucket: string[]) {
-  if (!fs.existsSync(dir)) return;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      collectJarFiles(fullPath, bucket);
-      continue;
-    }
-    if (/\.(jar|zip)$/i.test(entry.name)) {
-      bucket.push(fullPath);
-    }
-  }
-}
-
-function findExistingByHash(downloadsDir: string, hashes?: Record<string, string>) {
-  if (!hashes?.sha1 && !hashes?.sha512) return null;
-
-  const candidates: string[] = [];
-  collectJarFiles(downloadsDir, candidates);
-  collectJarFiles(SOURCE_BASE, candidates);
-
-  for (const filePath of candidates) {
-    try {
-      const buffer = fs.readFileSync(filePath);
-      if (hashes.sha512) {
-        const sha512 = crypto.createHash("sha512").update(buffer).digest("hex");
-        if (sha512 === hashes.sha512) return filePath;
-      }
-      if (hashes.sha1) {
-        const sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
-        if (sha1 === hashes.sha1) return filePath;
-      }
-    } catch {
-      // Ignore unreadable files while scanning for duplicates.
-    }
-  }
-
-  return null;
-}
+import { findExistingByHash } from "@/lib/fomo/aduana";
 
 export async function POST(req: NextRequest) {
   try {
@@ -116,7 +75,7 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }
 
-    const existingPath = findExistingByHash(downloadsDir, hashes);
+    const existingPath = findExistingByHash(downloadsDir, settings.sourceBase, hashes);
     if (existingPath) {
       // Si el archivo ya existe pero está en SOURCE_BASE (la librería) y NO en Downloads,
       // lo copiamos localmente a la carpeta Downloads para que el watcher lo detecte

@@ -35,11 +35,30 @@ export async function GET(req: NextRequest) {
       const apiKey = getApiKey("curseforge");
       if (!apiKey) return NextResponse.json({ error: "CF API Key missing" }, { status: 503 });
 
-      const cfUrl = `https://api.curseforge.com/v1/mods/${projectId}`;
+      let resolvedId = projectId;
+      // Si el projectId recibido es un slug (no numérico), resolvemos el ID real primero
+      if (!/^\d+$/.test(resolvedId)) {
+        if (debug) console.log(`[Gallery] Resolving slug to ID: ${resolvedId}`);
+        const searchRes = await fetch(`https://api.curseforge.com/v1/mods/search?gameId=432&slug=${encodeURIComponent(resolvedId)}`, {
+          headers: { "x-api-key": apiKey, "Accept": "application/json" }
+        });
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          if (searchData.data && searchData.data.length > 0) {
+            resolvedId = searchData.data[0].id.toString();
+          } else {
+            throw new Error("Project not found by slug");
+          }
+        } else {
+          throw new Error("Failed to resolve slug");
+        }
+      }
+
+      const cfUrl = `https://api.curseforge.com/v1/mods/${resolvedId}`;
       if (debug) console.log(`[Gallery] CF Fetching: ${cfUrl}`);
 
       const res = await fetch(cfUrl, {
-        headers: { "x-api-key": apiKey }
+        headers: { "x-api-key": apiKey, "Accept": "application/json" }
       });
       
       if (!res.ok) {

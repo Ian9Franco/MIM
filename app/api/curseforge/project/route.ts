@@ -12,17 +12,21 @@ const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get("projectId");
+  let projectId = searchParams.get("projectId");
+  let slug = searchParams.get("slug");
+  
+  // Si projectId está presente pero NO es un número, asumimos que es un slug
+  // Esto arregla los clicks desde el Showcase que pasan el slug en la prop projectId
+  if (projectId && !/^\d+$/.test(projectId)) {
+    slug = projectId;
+    projectId = null;
+  }
+  
   // Carga Manual (Bypass Next.js)
   const apiKey = getApiKey("curseforge");
 
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
-  }
-
-  // CurseForge IDs are strictly numeric. If a non-numeric ID is passed, return 404 gracefully
-  if (!/^\d+$/.test(projectId)) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  if (!projectId && !slug) {
+    return NextResponse.json({ error: "Missing projectId or slug" }, { status: 400 });
   }
 
   if (!apiKey) {
@@ -35,6 +39,26 @@ export async function GET(req: NextRequest) {
   };
 
   try {
+    // Si se provee slug, resolvemos el projectId usando el endpoint de búsqueda
+    if (!projectId && slug) {
+      const searchRes = await fetch(`${CURSEFORGE_API}/mods/search?gameId=432&slug=${encodeURIComponent(slug)}`, { headers });
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.data && searchData.data.length > 0) {
+          projectId = searchData.data[0].id.toString();
+        } else {
+          return NextResponse.json({ error: "Project not found by slug" }, { status: 404 });
+        }
+      } else {
+        return NextResponse.json({ error: "Failed to resolve slug" }, { status: 404 });
+      }
+    }
+
+    // CurseForge IDs are strictly numeric. If a non-numeric ID is passed, return 404 gracefully
+    if (!projectId || !/^\d+$/.test(projectId)) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     // 1. Obtener detalles del mod
     const modRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}`, { headers });
     if (!modRes.ok) {

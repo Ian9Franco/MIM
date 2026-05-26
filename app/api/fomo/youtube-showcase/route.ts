@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { getPortableDir } from "@/lib/core/settings";
+import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
 
 // Definimos la ruta del binario en la carpeta standalone del proyecto
 const binDir = path.join(process.cwd(), "standalone");
@@ -247,8 +248,23 @@ export async function GET(request: Request) {
     return NextResponse.json(responseData);
   } catch (err: any) {
     console.error("[youtube-showcase] Error:", err.message);
+
+    // Before failing, check if a yt-dlp update might fix the issue
+    let updateInfo = { needsUpdate: false, latest: "", current: "" };
+    try {
+      const info = await checkYtdlpUpdate();
+      updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
+    } catch {
+      // Non-critical — don't let update check failure mask the original error
+    }
+
     return NextResponse.json(
-      { error: "No se pudo obtener el showcase de YouTube. Verificá que yt-dlp-wrap funcione correctamente." },
+      {
+        error: "No se pudo obtener el showcase de YouTube. Verificá que yt-dlp-wrap funcione correctamente.",
+        updateAvailable: updateInfo.needsUpdate,
+        latestVersion: updateInfo.latest,
+        currentVersion: updateInfo.current,
+      },
       { status: 500 }
     );
   }

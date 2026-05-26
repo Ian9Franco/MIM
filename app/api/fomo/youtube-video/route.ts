@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import YTDlpWrap from "yt-dlp-wrap";
 import path from "path";
 import fs from "fs";
+import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
 
 const binDir = path.join(process.cwd(), "standalone");
 const binPath = path.join(binDir, "yt-dlp.exe");
@@ -80,6 +81,24 @@ export async function GET(request: Request) {
     });
   } catch (err: any) {
     console.error("[youtube-video] Error:", err.message);
-    return NextResponse.json({ error: "Failed to fetch video details" }, { status: 500 });
+
+    // Check if a yt-dlp update might fix the issue
+    let updateInfo = { needsUpdate: false, latest: "", current: "" };
+    try {
+      const info = await checkYtdlpUpdate();
+      updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
+    } catch {
+      // Non-critical
+    }
+
+    return NextResponse.json(
+      {
+        error: "Failed to fetch video details",
+        updateAvailable: updateInfo.needsUpdate,
+        latestVersion: updateInfo.latest,
+        currentVersion: updateInfo.current,
+      },
+      { status: 500 }
+    );
   }
 }

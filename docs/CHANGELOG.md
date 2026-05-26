@@ -2,8 +2,24 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v9.6.0 (SAGE Sandboxing & TWEAK Overrides)  
+> **Versión Actual:** v10.2.2 (FOMO Dependency & API Hardening)  
 > **Última actualización:** 2026-05-26
+
+---
+
+## 🚀 Versión 10.2.2 — FOMO Dependency & API Hardening (2026-05-26)
+
+### 📦 Gestión de Dependencias (yt-dlp)
+- **Instalador Integrado**: Implementación de un gestor de binarios independiente (`lib/ytdlp/updater.ts`) que actualiza `yt-dlp` directamente desde los releases de GitHub para garantizar la estabilidad de los showcases.
+- **Tools UI**: Añadida nueva pestaña de "Herramientas" en el modal de Settings para auditar y actualizar dependencias externas con un solo clic.
+
+### 🛂 Aduana Centralizada (Deduplicación)
+- **Módulo Compartido**: Unificación de la lógica de "Aduana" (`lib/fomo/aduana.ts`) para evitar descargas redundantes. Ahora tanto Modrinth como CurseForge comparten el mismo escaneo rápido por hash (SHA1/SHA512).
+- **Copias Locales Dinámicas**: Si un mod ya existe en la librería global (`sourceBase`), la Aduana cancela la conexión HTTP y hace una copia en milisegundos hacia la carpeta de descargas del usuario, tolerando cambios dinámicos de rutas.
+
+### 🌐 Paridad de APIs (Slugs en CurseForge)
+- **Traductor Inteligente de Slugs**: Modificadas las rutas de CurseForge (`project`, `versions`, `mod-gallery`) para soportar búsquedas por `slug`. Si se provee un texto en lugar de un ID numérico, MIM consulta a escondidas la API de búsqueda de CurseForge, recupera el ID numérico y procesa la petición de manera transparente, logrando paridad total con la API nativa de Modrinth.
+- **Gallery Fixes**: Mapeo arreglado del campo `icon_url` en la API de Modrinth para prevenir la falta de íconos en los proyectos de FOMO.
 
 ---
 

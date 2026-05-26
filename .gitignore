@@ -56,3 +56,12 @@ dist/
 # static recovery web
 /recuperoMIM/
 
+
+
+#IDE
+
+/.cursor/
+/.vscode/
+
+
+curseforge_picks_cache.json

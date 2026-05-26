@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 10.2.1 | **Última actualización:** 2026-05-26
+> **Versión:** 10.2.2 | **Última actualización:** 2026-05-26
 
 ---
 
@@ -119,8 +119,9 @@ Las bibliotecas del sistema se estructuran en carpetas especializadas de control
 ## 4. Flujos de Datos
 
 ### 4.1 Flujo de Ingesta de Descargas
-1. **Detección**: `chokidar` en el backend detecta un archivo `.jar` en la carpeta `Downloads`.
-2. **Escaneo Técnico**: `enhanced-mod-scanner` extrae loaders, dependencias y genera el hash SHA1.
+1. **Aduana (Deduplicación)**: Antes de iniciar una descarga de red (Modrinth/CurseForge), el módulo `aduana.ts` verifica por hash SHA1/SHA512 si el archivo ya existe en la librería local (`sourceBase`). Si existe, se aborta la petición HTTP y se realiza una copia local instantánea a la carpeta `Downloads`.
+2. **Detección**: `chokidar` en el backend detecta el nuevo archivo `.jar` en la carpeta `Downloads`.
+3. **Escaneo Técnico**: `enhanced-mod-scanner` extrae loaders, dependencias y genera el hash SHA1.
 3. **Escaneo de Seguridad**: El archivo pasa por el motor estático local en `lib/security/` y, opcionalmente, consulta VirusTotal por hash SHA256.
 4. **Notificación SSE**: Un evento se transmite en tiempo real vía Server-Sent Events (`/api/watcher`) al cliente React.
 5. **Visualización**: El mod aparece en la bandeja "Pending Files" listo para ser clasificado con un solo clic o hotkeys (1-9).
@@ -230,6 +231,7 @@ Las rutas de API en Next.js actúan como orquestadores de procesos locales y pas
 
 ### 8.2 CurseForge API (Eternal v1)
 * Conector secundario. Resuelve metadatos para mods con descargas bloqueadas a terceros, forzando fallbacks a Modrinth o exponiendo botones de descarga externa de forma elegante.
+* **Traductor de Slugs**: Capa de compatibilidad que intercepta consultas nominales (slugs extraídos de YouTube) y las resuelve a IDs numéricos mediante búsquedas invisibles, logrando paridad con Modrinth.
 
 ### 8.3 Supabase (Database & Storage)
 * Capa comunitaria persistente. Utiliza Row Level Security (RLS) para proteger los perfiles de usuario y almacenamiento de configuraciones de modpacks de forma segura desde el cliente.

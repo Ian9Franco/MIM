@@ -16,6 +16,8 @@ import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { watcherEmitter } from "@/lib/core/watcher";
+import { findExistingByHash } from "@/lib/fomo/aduana";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +39,60 @@ export async function POST(req: NextRequest) {
 
     if (!fs.existsSync(downloadsDir)) {
       fs.mkdirSync(downloadsDir, { recursive: true });
+    }
+
+    const existingPath = findExistingByHash(downloadsDir, settings.sourceBase, hashes);
+    if (existingPath) {
+      const isInDownloads = existingPath.toLowerCase().startsWith(downloadsDir.toLowerCase());
+      if (!isInDownloads) {
+        const ext = path.extname(safeFilename);
+        const base = path.basename(safeFilename, ext);
+        let targetPath = path.join(downloadsDir, safeFilename);
+
+        if (fs.existsSync(targetPath)) {
+          targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+        }
+
+        try {
+          fs.copyFileSync(existingPath, targetPath);
+          console.log(`[/api/curseforge/download] Copied locally from library to Downloads: ${path.basename(targetPath)}`);
+          
+          enrichUpdatesCache({
+            filePath: targetPath,
+            projectId,
+            iconUrl,
+            loader,
+            gameVersion,
+            projectType,
+            title,
+            sha1: hashes?.sha1
+          });
+
+          return NextResponse.json({ success: true, path: targetPath, copiedLocally: true });
+        } catch (copyErr) {
+          console.error("[/api/curseforge/download] Failed to copy locally, proceeding to download:", copyErr);
+        }
+      } else {
+        enrichUpdatesCache({
+          filePath: existingPath,
+          projectId,
+          iconUrl,
+          loader,
+          gameVersion,
+          projectType,
+          title,
+          sha1: hashes?.sha1
+        });
+
+        watcherEmitter.emit("new_file", existingPath);
+
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          existingPath,
+          reason: "already_exists",
+        });
+      }
     }
 
     let destPath = path.join(downloadsDir, safeFilename);

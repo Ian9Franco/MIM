@@ -16,7 +16,7 @@ export function useSettingsManager(onClose: () => void) {
   const [showModrinth, setShowModrinth] = useState(false);
   const [showCurseforge, setShowCurseforge] = useState(false);
   const [showVirusTotal, setShowVirusTotal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"paths" | "apiKeys">("paths");
+  const [activeTab, setActiveTab] = useState<"paths" | "apiKeys" | "tools">("paths");
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

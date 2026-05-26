@@ -5,7 +5,7 @@ import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSe
 import { useSettingsManager } from "@/hooks/useSettingsManager";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
-  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, OverlayDialog, SettingsFooter 
+  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, OverlayDialog, SettingsFooter, YtDlpUpdaterCard 
 } from "./SettingsComponents";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -141,7 +141,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 <SettingsTabNav activeTab={activeTab} setActiveTab={setActiveTab} />
               </div>
               <div className="max-h-[350px] overflow-y-auto pr-2 space-y-6 scrollbar-thin">
-                {activeTab === "paths" ? (
+                {activeTab === "paths" && (
                   <div id="onboarding-settings-paths" className="space-y-5">
                     <PathInputGroup label="Carpeta Descargas" value={downloadsPath} onChange={setDownloadsPath} onPick={() => handlePickFolder(setDownloadsPath, false, downloadsPath)} canEdit={canEdit} isValid={pathValidation[downloadsPath]} saving={saving} placeholder="C:\Users\...\Downloads" />
                     <PathInputGroup label="Carpeta del Juego (.minecraft)" value={minecraftPath} onChange={setMinecraftPath} onPick={() => handlePickFolder(setMinecraftPath, true, minecraftPath)} canEdit={canEdit} isValid={pathValidation[minecraftPath]} saving={saving} placeholder="C:\Users\...\AppData\Roaming\.minecraft" />
@@ -149,11 +149,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <PathInputGroup label="Carpeta Source (Proyectos)" value={sourceBase} onChange={setSourceBase} onPick={() => handlePickFolder(setSourceBase, false, sourceBase)} canEdit={canEdit} isValid={pathValidation[sourceBase]} saving={saving} placeholder="d:\.mine\source" />
                     <PathInputGroup label="Carpeta Builds (Compilados)" value={buildsBase} onChange={setBuildsBase} onPick={() => handlePickFolder(setBuildsBase, false, buildsBase)} canEdit={canEdit} isValid={pathValidation[buildsBase]} saving={saving} placeholder="d:\.mine\builds" />
                   </div>
-                ) : (
+                )}
+                {activeTab === "apiKeys" && (
                   <div id="onboarding-settings-keys" className="space-y-5">
                     <ApiKeyInputGroup label="CurseForge API Key" value={curseforgeApiKey} onChange={setCurseforgeApiKey} show={showCurseforge} onToggleShow={() => setShowCurseforge(!showCurseforge)} canEdit={canEdit} isValid={keyValidation.curseforge} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave de CurseForge..." badge="Requerida" link="https://console.curseforge.com/" />
                     <ApiKeyInputGroup label="Modrinth Token" value={modrinthApiKey} onChange={setModrinthApiKey} show={showModrinth} onToggleShow={() => setShowModrinth(!showModrinth)} canEdit={canEdit} isValid={keyValidation.modrinth} isValidating={isValidatingKeys} saving={saving} placeholder="mrp_..." badge="Opcional" color="emerald" link="https://modrinth.com/settings/pats" />
                     <ApiKeyInputGroup label="VirusTotal API Key" value={virusTotalApiKey} onChange={setVirusTotalApiKey} show={showVirusTotal} onToggleShow={() => setShowVirusTotal(!showVirusTotal)} canEdit={canEdit} isValid={keyValidation.virusTotal} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave API..." badge="Opcional" color="blue" link="https://www.virustotal.com/gui/user/join" />
+                  </div>
+                )}
+                {activeTab === "tools" && (
+                  <div id="onboarding-settings-tools" className="space-y-5">
+                    <YtDlpUpdaterCard />
                   </div>
                 )}
               </div>

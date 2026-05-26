@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { CirclePlay, ExternalLink, Loader2, AlertTriangle, Download, TvMinimalPlay } from "lucide-react";
+import { CirclePlay, ExternalLink, Loader2, AlertTriangle, Download, TvMinimalPlay, RefreshCw } from "lucide-react";
 import { useSmoothMarquee } from "@/hooks/useSmoothMarquee";
 import { cachedYoutubeShowcase } from "@/lib/storage/smart-cache";
 import type { ModHit } from "@/lib/core/types";
@@ -491,6 +491,8 @@ export function FomoYoutubeShowcase({
   const [mods, setMods] = useState<ResolvedShowcaseMod[]>([]);
   const [status, setStatus] = useState<"idle" | "loading-showcase" | "loading-mods" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [updateAvailable, setUpdateAvailable] = useState<{ available: boolean; latest: string; current: string } | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isChannelNew, setIsChannelNew] = useState(false);
   const isMounted = useRef(true);
 
@@ -500,7 +502,19 @@ export function FomoYoutubeShowcase({
       // Usamos stale-while-revalidate: si hay cache, viene ya y se refresca en bg
       const data = await cachedYoutubeShowcase(channelUrl, 1, async () => {
         const res = await fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(channelUrl)}&limit=1`);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          // Try to parse the error body for update info
+          try {
+            const errBody = await res.json();
+            if (errBody.updateAvailable) {
+              setUpdateAvailable({ available: true, latest: errBody.latestVersion, current: errBody.currentVersion });
+            }
+            throw new Error(errBody.error || `HTTP ${res.status}`);
+          } catch (parseErr: any) {
+            if (parseErr.message && !parseErr.message.startsWith("Unexpected")) throw parseErr;
+            throw new Error(await res.text());
+          }
+        }
         return res.json();
       });
 
@@ -583,11 +597,53 @@ export function FomoYoutubeShowcase({
   const isModern = theme === "modern";
 
   // ── Render: Error ──
+  const handleUpdateYtdlp = useCallback(async () => {
+    setIsUpdating(true);
+    try {
+      const res = await fetch("/api/fomo/ytdlp-update", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setUpdateAvailable(null);
+        setErrorMsg("");
+        setStatus("idle");
+        // Retry loading after update
+        setTimeout(() => load(), 500);
+      } else {
+        setErrorMsg(`Error al actualizar: ${data.error}`);
+      }
+    } catch (err: any) {
+      setErrorMsg(`Error al actualizar yt-dlp: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [load]);
+
+  // ── Render: Error ──
   if (status === "error") {
     return (
-      <div className="w-full px-8 py-3 flex items-center gap-2 text-red-400/70">
-        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-        <span className="text-[10px] font-mono">{errorMsg || "No se pudo cargar el showcase de YouTube"}</span>
+      <div className="w-full px-8 py-3 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-red-400/70">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-[10px] font-mono">{errorMsg || "No se pudo cargar el showcase de YouTube"}</span>
+        </div>
+        {updateAvailable?.available && (
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-amber-400">yt-dlp desactualizado — actualizar puede resolver esto</p>
+              <p className="text-[9px] text-amber-400/60 mt-0.5">
+                {updateAvailable.current} → {updateAvailable.latest}
+              </p>
+            </div>
+            <button
+              onClick={handleUpdateYtdlp}
+              disabled={isUpdating}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              {isUpdating ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
+        )}
       </div>
     );
   }

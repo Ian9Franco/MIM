@@ -1,11 +1,11 @@
 import React from "react";
-import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen } from "lucide-react";
+import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench } from "lucide-react";
 
 // ── SettingsTabNav ───────────────────────────────────────────────────────────
 
 interface SettingsTabNavProps {
   activeTab: string;
-  setActiveTab: (t: "paths" | "apiKeys") => void;
+  setActiveTab: (t: "paths" | "apiKeys" | "tools") => void;
 }
 
 export function SettingsTabNav({ activeTab, setActiveTab }: SettingsTabNavProps) {
@@ -34,6 +34,18 @@ export function SettingsTabNav({ activeTab, setActiveTab }: SettingsTabNavProps)
       >
         <KeyRound className="w-3.5 h-3.5" />
         CONECTIVIDAD (KEYS)
+      </button>
+      <button
+        type="button"
+        onClick={() => setActiveTab("tools")}
+        className={`pb-2.5 px-4 text-xs font-headline tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+          activeTab === "tools"
+            ? "border-primary text-primary font-bold"
+            : "border-transparent text-muted hover:text-foreground"
+        }`}
+      >
+        <Wrench className="w-3.5 h-3.5" />
+        HERRAMIENTAS
       </button>
     </div>
   );
@@ -307,6 +319,134 @@ export function SettingsFooter({
           <Check className="w-4 h-4" /> Guardar y Recargar
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── YtDlpUpdaterCard ─────────────────────────────────────────────────────────
+
+export function YtDlpUpdaterCard() {
+  const [status, setStatus] = React.useState<"idle" | "checking" | "update-available" | "up-to-date" | "updating" | "error">("idle");
+  const [versionInfo, setVersionInfo] = React.useState<{ current: string; latest: string } | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState("");
+
+  React.useEffect(() => {
+    checkUpdate();
+  }, []);
+
+  const checkUpdate = async () => {
+    setStatus("checking");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/fomo/ytdlp-update");
+      if (!res.ok) throw new Error("Error al verificar actualizaciones");
+      const data = await res.json();
+      setVersionInfo({ current: data.current, latest: data.latest });
+      if (data.needsUpdate) {
+        setStatus("update-available");
+      } else {
+        setStatus("up-to-date");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStatus("error");
+      setErrorMsg(err.message || "No se pudo verificar la versión.");
+    }
+  };
+
+  const handleUpdate = async () => {
+    setStatus("updating");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/fomo/ytdlp-update", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setVersionInfo((prev) => prev ? { ...prev, current: data.newVersion } : null);
+        setStatus("up-to-date");
+      } else {
+        throw new Error(data.error || "Update failed");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStatus("error");
+      setErrorMsg(err.message || "Fallo al actualizar el binario.");
+    }
+  };
+
+  return (
+    <div className="group">
+      <div className="flex items-center justify-between mb-2">
+        <label className="font-label text-muted text-[0.65rem] tracking-wider uppercase">
+          Gestor de yt-dlp
+        </label>
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-subhead border bg-primary/10 border-primary/20 text-primary">
+          Showcase Engine
+        </span>
+      </div>
+      
+      <div className="w-full rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-subhead text-foreground">yt-dlp Binary</h4>
+            <p className="text-[11px] text-muted mt-0.5">
+              Utilizado para obtener metadatos de YouTube para los Showcases.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {status === "checking" && <span className="text-[10px] text-muted flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verificando...</span>}
+            {status === "up-to-date" && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Actualizado</span>}
+            {status === "error" && <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Error</span>}
+            
+            <button
+              onClick={checkUpdate}
+              disabled={status === "checking" || status === "updating"}
+              className="p-2 rounded-lg border border-white/5 hover:bg-white/10 text-muted hover:text-foreground transition-all disabled:opacity-50"
+              title="Volver a comprobar"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${status === "checking" ? "animate-spin" : ""}`} />
+            </button>
+            
+            {(status === "update-available" || status === "updating") && (
+              <button
+                onClick={handleUpdate}
+                disabled={status === "updating"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 border border-primary/30 text-primary text-[11px] font-bold hover:bg-primary/30 transition-all disabled:opacity-50"
+              >
+                {status === "updating" ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Package className="w-3.5 h-3.5" />}
+                {status === "updating" ? "Actualizando..." : "Actualizar Binario"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {(versionInfo || errorMsg) && (
+          <div className="mt-1 pt-3 border-t border-white/5 flex flex-col gap-1.5">
+            {versionInfo && (
+              <div className="flex items-center gap-4 text-[11px] font-mono">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted">Versión local:</span>
+                  <span className={versionInfo.current === "unknown" || versionInfo.current === "not-installed" ? "text-red-400" : "text-foreground"}>
+                    {versionInfo.current}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted">Última versión:</span>
+                  <span className="text-emerald-400">{versionInfo.latest}</span>
+                </div>
+              </div>
+            )}
+            {errorMsg && (
+              <p className="text-[10px] text-red-400 font-mono mt-1 flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3" /> {errorMsg}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+      <p className="mt-2 text-[10px] text-muted leading-relaxed">
+        yt-dlp es gestionado de manera independiente al launcher. Actualizalo si notás que la carga de videos en YouTube Showcase falla frecuentemente.
+      </p>
     </div>
   );
 }

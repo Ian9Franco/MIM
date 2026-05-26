@@ -31,9 +31,11 @@ export function searchProjectInFomo(detail: FomoSearchProjectDetail) {
 
 /** Busca proyectos por autor en el panel de FOMO. */
 export function searchAuthorInFomo(author: string) {
+  const clean = (author || "").trim();
+  if (!clean) return;
   window.dispatchEvent(
     new CustomEvent("fomo-search-author", {
-      detail: { author },
+      detail: { author: clean },
     })
   );
 }

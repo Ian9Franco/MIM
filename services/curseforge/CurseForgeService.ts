@@ -23,6 +23,14 @@ export class CurseForgeService {
   static async search(params: any, apiKey: string) {
     const { loader, gameVersions, page, pageSize, sort, projectType, q, categories, environments } = params;
     
+    // ── Author search: buscar todos los proyectos de un autor ──
+    const isAuthorQuery = q && q.startsWith("author:");
+    const authorName = isAuthorQuery ? q.replace(/^author:/i, "").trim() : "";
+
+    if (isAuthorQuery && authorName) {
+      return this.searchByAuthor(authorName, page, pageSize, apiKey);
+    }
+    
     // Traducción de términos MIM a IDs de CurseForge
     const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6; // 6 = Mods
     const sortField = SORT_TO_CF_FIELD[sort] || 1; // 1 = Featured
@@ -119,5 +127,93 @@ export class CurseForgeService {
         mods,
         total: data.pagination.totalCount || 0
       };
+  }
+
+  /**
+   * Búsqueda por autor en CurseForge.
+   * CurseForge no tiene endpoint de perfil por username, así que buscamos
+   * por nombre de autor como texto libre en TODOS los classIds para obtener
+   * el catálogo completo del creador (mods, texturas, shaders, datapacks, modpacks).
+   */
+  private static async searchByAuthor(authorName: string, page: number, pageSize: number, apiKey: string) {
+    const CLASS_IDS = Object.values(PROJECT_TYPE_TO_CLASS_ID);
+    const CLASS_ID_TO_TYPE: Record<number, string> = {};
+    for (const [type, id] of Object.entries(PROJECT_TYPE_TO_CLASS_ID)) {
+      CLASS_ID_TO_TYPE[id] = type;
+    }
+
+    // Buscar en paralelo en todas las categorías de proyecto
+    const fetches = CLASS_IDS.map(async (classId) => {
+      const query = new URLSearchParams({
+        gameId: "432",
+        sortField: "2", // Popularidad
+        sortOrder: "desc",
+        index: "0",
+        pageSize: "50", // Máximo permitido por CF
+        classId: classId.toString(),
+        searchFilter: authorName,
+      });
+
+      try {
+        const res = await fetch(`${this.API_URL}/mods/search?${query.toString()}`, {
+          headers: { "Accept": "application/json", "x-api-key": apiKey }
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.data || []).map((m: any) => ({ ...m, _classId: classId }));
+      } catch {
+        return [];
+      }
+    });
+
+    const results = await Promise.all(fetches);
+    const allMods = results.flat();
+
+    // Filtrar SOLO los proyectos cuyo autor coincide exactamente
+    const authorLower = authorName.toLowerCase();
+    const authorMods = allMods.filter((m: any) =>
+      (m.authors || []).some((a: any) => a.name?.toLowerCase() === authorLower)
+    );
+
+    // Paginar
+    const totalHits = authorMods.length;
+    const start = (page - 1) * pageSize;
+    const paginated = authorMods.slice(start, start + pageSize);
+
+    const mods = paginated.map((m: any) => {
+      const pType = CLASS_ID_TO_TYPE[m._classId] || "mod";
+      return {
+        projectId: m.id.toString(),
+        externalProjectId: m.id.toString(),
+        sourceProjectId: m.id.toString(),
+        platformId: m.id.toString(),
+        title: m.name,
+        description: m.summary || "",
+        iconUrl: m.logo?.url || null,
+        author: m.authors?.[0]?.name || "Desconocido",
+        downloads: m.downloadCount,
+        url: m.links?.websiteUrl || "",
+        categories: Array.from(new Set([
+          ...(m.categories || []).map((c: any) => c.name),
+          ...((m.latestFilesIndexes || []).map((idx: any) => {
+            if (idx.modLoaderType === 1) return "forge";
+            if (idx.modLoaderType === 2) return "fabric";
+            if (idx.modLoaderType === 4) return "quilt";
+            if (idx.modLoaderType === 5) return "neoforge";
+            return null;
+          }).filter(Boolean) as string[])
+        ])),
+        latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
+        projectType: pType,
+        allowModDistribution: m.allowModDistribution !== false,
+        gallery: (m.screenshots || []).map((s: any) => ({
+          url: s.url,
+          thumbnailUrl: s.thumbnailUrl || s.url,
+          title: s.title || ""
+        })).filter((g: any) => g.url),
+      };
+    });
+
+    return { mods, total: totalHits };
   }
 }

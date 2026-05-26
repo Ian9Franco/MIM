@@ -352,6 +352,9 @@ function FomoSidebarInner({
   const handleCloseAll = useCallback(() => {
     setDiscoverKeepAlive(false);
     onClose();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fomo-close-details"));
+    }
   }, [onClose]);
 
   const handleDetailsOpenChange = useCallback((openDetails: boolean) => {
@@ -395,7 +398,7 @@ function FomoSidebarInner({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-500 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-500 ${open || detailsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={handleCloseAll}
       />
 

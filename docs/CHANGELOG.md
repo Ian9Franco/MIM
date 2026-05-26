@@ -3,7 +3,7 @@
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
 > **Versión Actual:** v9.6.0 (SAGE Sandboxing & TWEAK Overrides)  
-> **Última actualización:** 2026-05-25
+> **Última actualización:** 2026-05-26
 
 ---
 

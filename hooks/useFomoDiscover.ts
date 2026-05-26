@@ -7,10 +7,10 @@ import { useFomoDownload } from "./fomo/useFomoDownload";
 import { useFomoSelection } from "./fomo/useFomoSelection";
 import { useFomoDetails } from "./fomo/useFomoDetails";
 
-export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any) {
+export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any, projectName?: string) {
   const filters = useFomoFilters(defaultLoader, defaultGameVersion);
   const search = useFomoSearch(filters);
-  const download = useFomoDownload(showStatus, filters.loader, filters.gameVersions);
+  const download = useFomoDownload(showStatus, filters.loader, filters.gameVersions, projectName);
   const selection = useFomoSelection();
   const details = useFomoDetails(filters.source, filters.loader, filters.projectType, filters.sinytraActive);
 

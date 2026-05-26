@@ -24,10 +24,10 @@ export function useLibraryUI(modrinthStatus: any, ignoredUpdates: Set<string>, h
 
     if (!hasRealId || isResourcePack) {
       const baseName = f.meta?.modName && f.meta.modName !== "unknown" ? f.meta.modName : f.fileName;
-      const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "");
+      const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "").replace(/[-_]+/g, " ").trim();
       
       // Intentamos buscar el proyecto en Modrinth para abrirlo directamente
-      fetch(`/api/modrinth/discover?query=${encodeURIComponent(query)}&projectType=resourcepack&page=1`)
+      fetch(`/api/modrinth/discover?q=${encodeURIComponent(query)}&projectType=${f.meta?.projectType || 'mod'}&loader=${f.meta?.loader || 'unknown'}&page=1`)
         .then(r => r.json())
         .then(data => {
           const hits = data.hits || [];
@@ -40,11 +40,10 @@ export function useLibraryUI(modrinthStatus: any, ignoredUpdates: Set<string>, h
               iconUrl: hit.icon_url || hit.iconUrl,
               author: hit.author,
               categories: hit.categories,
-              projectType: "resourcepack",
+              projectType: f.meta?.projectType || "mod",
               _source: "modrinth",
             };
-            window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-            setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+            window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
           } else {
             // Si no encuentra nada, fallback al buscador con el nombre limpio
             window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
@@ -69,8 +68,7 @@ export function useLibraryUI(modrinthStatus: any, ignoredUpdates: Set<string>, h
         _source: (f.meta as any)?.source || "modrinth",
         body: s?.description || ""
       };
-      window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-      setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+      window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
     }
   }, [modrinthStatus]);
 

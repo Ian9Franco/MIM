@@ -78,10 +78,13 @@ function FomoSidebarDiscoverBranchInner({
   currentTheme,
   isForcedHidden,
 }: FomoSidebarDiscoverBranchProps) {
+  const projectName = activeProject && typeof activeProject === "object" ? (activeProject as any).name : undefined;
+
   const discover = useFomoDiscover(
     defaultLoader,
     defaultVersion,
-    showStatus as (text: string, type?: string) => void
+    showStatus as (text: string, type?: string) => void,
+    projectName
   );
   const m = useFomoSidebarManager(
     discover,
@@ -212,7 +215,6 @@ function FomoSidebarDiscoverBranchInner({
   useEffect(() => setDetailsPortalReady(true), []);
 
   const detailsOpen =
-    open &&
     !isForcedHidden &&
     (!!discover.selectingVersionFor || discover.versLoading);
 
@@ -555,7 +557,7 @@ function FomoSidebarDiscoverBranchInner({
               bottom: `${FOMO_DETAILS_VISUAL_GAP}px`,
               width: `${FOMO_DETAILS_PANEL_WIDTH}px`,
               maxWidth: `min(${FOMO_DETAILS_PANEL_WIDTH}px, calc(100vw - 300px))`,
-              left: layoutDetailsOpen ? fomoDetailsPanelLeft() : "100vw",
+              left: layoutDetailsOpen ? fomoDetailsPanelLeft() : detailsOpen ? `calc(50vw - ${FOMO_DETAILS_PANEL_WIDTH / 2}px)` : "100vw",
               opacity: detailsOpen ? 1 : 0,
               pointerEvents: detailsOpen ? "auto" : "none",
               visibility: detailsOpen ? "visible" : "hidden",

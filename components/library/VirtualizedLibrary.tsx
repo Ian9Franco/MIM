@@ -115,7 +115,7 @@ export function VirtualizedLibrary({
                           onClick={() => setSelectedLibFiles(prev => prev.find(s => s.path === f.path) ? prev.filter(s => s.path !== f.path) : [...prev, f])}
                           activeVersion={activeProject?.version ?? ""} activeLoader={activeProject?.loader ?? ""}
                           isDownloading={downloadingMods[f.path]} conflict={conflicts[f.path]} 
-                          onOpenDetails={f.meta?.projectType === "resourcepack" ? undefined : () => onOpenDetails(f)}
+                          onOpenDetails={() => onOpenDetails(f)}
                           environment={f.meta?.environment}
                         />
                       ))}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Zap, ChevronRight, Package, Server, Trash2, X, Bot, ChevronDown, ChartColumnStacked, HandCoins, Birdhouse } from "lucide-react";
+import { Zap, ChevronRight, Package, Server, Trash2, X, Bot, ChevronDown, ChartColumnStacked, HandCoins, Birdhouse, BookOpen } from "lucide-react";
 import { SubcategoryPanel } from "./SubcategoryPanel";
 import { HotkeyCard } from "../ui/HotkeyCard";
 import type { PendingFile, LibraryFile, Project } from "@/lib/core/types";
@@ -82,31 +82,21 @@ export function QuickCategorizeSection({
           Categorización Rápida
         </h2>
         
-        {activeProject && (
+        {activeProject && allSelected.length === 0 && (
           <button
             onClick={() => {
-              if (allSelected.length > 0) {
-                handleClassify("auto", "");
-              } else {
-                setAutoClassify?.(!autoClassify);
-                if (onAutoCategorize && !autoClassify) onAutoCategorize();
-              }
+              setAutoClassify?.(!autoClassify);
+              if (onAutoCategorize && !autoClassify) onAutoCategorize();
             }}
             className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[9px] font-black uppercase tracking-wider shadow-md border ${
-              allSelected.length > 0
-                ? "bg-primary border-primary/40 text-white shadow-primary/20"
-                : autoClassify 
-                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-4 ring-emerald-500/10' 
-                  : 'bg-white/5 border-white/10 text-muted'
+              autoClassify 
+                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-4 ring-emerald-500/10' 
+                : 'bg-white/5 border-white/10 text-muted'
             }`}
-            title={allSelected.length > 0 ? "Clasificar automáticamente todos los mods seleccionados" : "Activar modo automático: organiza las descargas nuevas al instante"}
+            title="Activar modo automático: organiza las descargas nuevas al instante"
           >
             <Bot className={`w-3.5 h-3.5 ${autoClassify ? 'animate-pulse' : ''}`} />
-            <span>
-              {allSelected.length > 0 
-                ? `Clasificar ${allSelected.length}` 
-                : "AUTO"}
-            </span>
+            <span>AUTO</span>
           </button>
         )}
       </div>
@@ -249,6 +239,56 @@ export function QuickCategorizeSection({
                  
                  <div className="flex items-center gap-2">
                    {/* Unclassify Selected (Mover a Descargas) */}
+                   {allSelected.length === 1 && (
+                     <button
+                       onClick={() => {
+                          const f = allSelected[0];
+                          const baseName = f.meta?.modName && f.meta.modName !== "unknown" ? f.meta.modName : f.fileName;
+                          const query = baseName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "").replace(/[-_]+/g, " ").trim();
+                          if (f.meta?.modId && f.meta.modId !== "unknown" && !f.meta.modId.endsWith(".zip")) {
+                             const modHit = { 
+                               projectId: f.meta.modId, 
+                               title: f.meta?.modName || f.fileName, 
+                               projectType: f.meta?.projectType || "mod",
+                               _source: (f.meta as any)?.source || "modrinth" 
+                             };
+                             window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                          } else {
+                             fetch(`/api/modrinth/discover?q=${encodeURIComponent(query)}&projectType=${f.meta?.projectType || 'mod'}&loader=${f.meta?.loader || 'unknown'}&page=1`)
+                               .then(r => r.json())
+                               .then(data => {
+                                 const hits = data.hits || [];
+                                 if (hits.length > 0) {
+                                   const hit = hits[0];
+                                   const modHit = {
+                                     projectId: hit.project_id || hit.projectId,
+                                     slug: hit.slug,
+                                     title: hit.title,
+                                     iconUrl: hit.icon_url || hit.iconUrl,
+                                     author: hit.author,
+                                     categories: hit.categories,
+                                     projectType: f.meta?.projectType || "mod",
+                                     _source: "modrinth",
+                                   };
+                                   window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                                 } else {
+                                   window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                                   window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                                 }
+                               })
+                               .catch(() => {
+                                 window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                                 window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                               });
+                          }
+                       }}
+                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] font-bold uppercase tracking-wider"
+                       style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", color: "#34d399" }}
+                       title="Ver detalles del archivo"
+                     >
+                       <BookOpen className="w-3.5 h-3.5" /> Detalles
+                     </button>
+                   )}
                    {allSelected.length > 0 && onUnclassifySelected && (
                      <button
                        onClick={onUnclassifySelected}
@@ -355,6 +395,14 @@ export function QuickCategorizeSection({
                 icon={<Server className="w-4 h-4" />}
                 color="wisteria"
                 onClick={() => setShowSubcategories(".server")}
+              />
+              <HotkeyCard
+                num="C"
+                title="Clasificación Automática"
+                desc="MIM analizará los mods y decidirá la mejor categoría."
+                icon={<Bot className="w-4 h-4" />}
+                color="emerald"
+                onClick={() => handleClassify("auto", "")}
               />
             </>
           )}

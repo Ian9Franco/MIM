@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Layers, ArrowLeftRight } from "lucide-react";
 import { VirtualizedLibrary } from "@/components/library/VirtualizedLibrary";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
+import { ConfirmModal } from "../ui/ConfirmModal";
 import { TransferModal } from "./TransferModal";
 import { LibraryToolbar } from "./parts/LibraryToolbar";
 import { useLibrarySection } from "@/hooks/library/useLibrarySection";
@@ -24,6 +25,7 @@ export function LibrarySection({
   const [openingFolder, setOpeningFolder] = useState(false);
   const [filterType, setFilterType] = useState<"mod" | "resourcepack" | "datapack" | "shader">("mod");
   const [previewMode, setPreviewMode] = useState<"all" | "user" | "host">("all");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { handleDuplicateTo } = useLibrarySection(
     activeProject, selectedLibFiles, setSelectedLibFiles, 
@@ -100,16 +102,19 @@ export function LibrarySection({
     return true;
   });
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedLibFiles.length === 0 || !onDeleteFile) return;
-    if (confirm(`¿Estás seguro de que querés eliminar ${selectedLibFiles.length} archivos de la librería?`)) {
-      for (const file of selectedLibFiles) {
-        await onDeleteFile(file);
-      }
-      setSelectedLibFiles([]);
-      // Force refresh library
-      window.dispatchEvent(new CustomEvent("refresh-system"));
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    for (const file of selectedLibFiles) {
+      await onDeleteFile(file);
     }
+    setSelectedLibFiles([]);
+    setShowDeleteModal(false);
+    // Force refresh library
+    window.dispatchEvent(new CustomEvent("refresh-system"));
   };
 
   const typeLabels: Record<string, string> = {
@@ -175,6 +180,16 @@ export function LibrarySection({
       {activeProject && transferOpen && (
         <TransferModal activeProject={activeProject} projects={projects} onClose={() => setTransferOpen(false)} />
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title={selectedLibFiles.length > 1 ? "¿Eliminar archivos?" : "¿Eliminar archivo?"}
+        message={`¿Estás seguro de que querés eliminar ${selectedLibFiles.length > 1 ? "los archivos seleccionados" : `"${selectedLibFiles[0]?.fileName}"`} de la librería?`}
+        confirmLabel="Eliminar"
+        type="danger"
+      />
     </section>
   );
 }

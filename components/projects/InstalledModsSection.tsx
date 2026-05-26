@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database, Layers2, Puzzle, Glasses } from "lucide-react";
+import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database, Layers2, Puzzle, Glasses, Info } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 
 interface ContentItem {
@@ -274,12 +274,52 @@ export function InstalledModsSection() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); setItemsToDelete([item]); }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--color-secondary-bg)] border border-[var(--color-border)] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const query = item.fileName.replace(/\.(zip|jar)$/i, "").replace(/[_\-][vV]?\d+[\.\d]*.*$/, "").replace(/[-_]+/g, " ").trim();
+                    const pType = activeTab === 'textures' ? 'resourcepack' : activeTab === 'shaders' ? 'shader' : activeTab === 'datapacks' ? 'datapack' : 'mod';
+                    fetch(`/api/modrinth/discover?q=${encodeURIComponent(query)}&projectType=${pType}&loader=unknown&page=1`)
+                      .then(r => r.json())
+                      .then(data => {
+                        const hits = data.hits || [];
+                        if (hits.length > 0) {
+                          const hit = hits[0];
+                          const modHit = {
+                            projectId: hit.project_id || hit.projectId,
+                            slug: hit.slug,
+                            title: hit.title,
+                            iconUrl: hit.icon_url || hit.iconUrl,
+                            author: hit.author,
+                            categories: hit.categories,
+                            projectType: pType,
+                            _source: "modrinth",
+                          };
+                          window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
+                        } else {
+                          window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                          window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                        }
+                      })
+                      .catch(() => {
+                        window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
+                        window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
+                      });
+                  }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--color-secondary-bg)] border border-[var(--color-border)] hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors"
+                  title="Ver detalles"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setItemsToDelete([item]); }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--color-secondary-bg)] border border-[var(--color-border)] hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-colors"
+                  title="Eliminar archivo"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           ))
         )}

@@ -12,20 +12,35 @@ import { DependencyPrompt, PendingDependency } from "./types";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function useFomoDownload(showStatus: any, loader: string, gameVersions: string[]) {
+export function useFomoDownload(showStatus: any, loader: string, gameVersions: string[], projectName?: string) {
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const [dependencyPrompt, setDependencyPrompt] = useState<DependencyPrompt | null>(null);
 
   const executeDownload = useCallback(async (mod: ModHit, url: string, filename: string, hashes?: any, deps?: PendingDependency[], projectTypeOverride?: string) => {
-    setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
-    showStatus(`Descargando ${mod.title}...`, "info");
-    
     let safeFilename = filename;
     if (!/\.(jar|zip|mrpack)$/i.test(safeFilename)) {
       const pType = mod.projectType || (mod as any).project_type || "mod";
       const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
       safeFilename = `${safeFilename}${ext}`;
     }
+
+    const versionId = hashes?.sha1 || hashes?.sha512 || url;
+
+    try {
+      const checkRes = await fetch(`/api/fomo/registry?projectId=${encodeURIComponent(mod.projectId)}&versionId=${encodeURIComponent(versionId)}&projectName=${encodeURIComponent(projectName || '')}&fileName=${encodeURIComponent(safeFilename)}`);
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists) {
+          showStatus(`Ya está descargado en tu entorno`, "success");
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Error checking registry", e);
+    }
+    
+    setDownloading(prev => ({ ...prev, [mod.projectId]: true }));
+    showStatus(`Descargando ${mod.title}...`, "info");
     
     try {
       const res = await fetch(`/api/${mod._source || 'modrinth'}/download`, {
@@ -47,6 +62,16 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
       if (res.ok) {
         showStatus(`${mod.title} descargado`, "success");
         eventBus.emit("fomo:mod-downloaded", { modId: mod.projectId, fileName: filename, source: mod._source as any });
+
+        try {
+          fetch("/api/fomo/registry", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId: mod.projectId, versionId, projectName })
+          }).catch(e => console.error("Error saving registry", e));
+        } catch (e) {
+          console.error("Error saving registry block", e);
+        }
         
         // Guardar en el historial de descargas (archivo físico en disco)
         try {
@@ -78,7 +103,7 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
     } finally {
       setDownloading(prev => ({ ...prev, [mod.projectId]: false }));
     }
-  }, [showStatus, loader, gameVersions]);
+  }, [showStatus, loader, gameVersions, projectName]);
 
   const handleDownloadDependency = useCallback(async (dep: any) => {
     showStatus(`Descargando dependencia ${dep.title || dep.projectId}`, "info");

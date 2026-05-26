@@ -21,7 +21,7 @@ export function LibraryToolbar({
       {/* Grupo de Acciones Principales */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Acción 1: Apertura de Detalles en la Ventana Modal de FOMO (Solo 1 archivo) */}
-        {selectedLibFiles.length === 1 && selectedLibFiles[0].meta?.projectType !== "resourcepack" && (
+        {selectedLibFiles.length === 1 && (
           <ActionButton
             onClick={() => {
               const f = selectedLibFiles[0];
@@ -49,8 +49,7 @@ export function LibraryToolbar({
                         projectType: "resourcepack",
                         _source: "modrinth",
                       };
-                      window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-                      setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+                      window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
                     } else {
                       // Si no encuentra nada, fallback al buscador con el nombre limpio
                       window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
@@ -69,8 +68,7 @@ export function LibraryToolbar({
                   title: f.meta?.modName || f.fileName, 
                   _source: (f.meta as any)?.source || "modrinth" 
                 };
-                window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
-                setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
+                window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit }));
               }
             }}
             disabled={loadingDescription}

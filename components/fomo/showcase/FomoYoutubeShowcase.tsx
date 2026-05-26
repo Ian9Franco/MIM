@@ -42,6 +42,7 @@ interface FomoYoutubeShowcaseProps {
   globalLoader?: string;
   /** Tema visual heredado de Spotlight */
   theme?: string;
+  isSpotlight?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -486,6 +487,7 @@ export function FomoYoutubeShowcase({
   downloading,
   globalLoader,
   theme = "dark",
+  isSpotlight = false,
 }: FomoYoutubeShowcaseProps) {
   const [showcase, setShowcase] = useState<YoutubeShowcaseEntry | null>(null);
   const [mods, setMods] = useState<ResolvedShowcaseMod[]>([]);
@@ -693,7 +695,7 @@ export function FomoYoutubeShowcase({
           isNew={isChannelNew}
           channelUrl={channelUrl}
           onMarkSeen={handleMarkChannelSeen}
-          isLatest={true}
+          isLatest={!isSpotlight}
         />
         {mods.map((mod, i) => (
           <ShowcaseModCard
@@ -715,7 +717,7 @@ export function FomoYoutubeShowcase({
           isNew={isChannelNew}
           channelUrl={channelUrl}
           onMarkSeen={handleMarkChannelSeen}
-          isLatest={true}
+          isLatest={!isSpotlight}
         />
         {mods.map((mod, i) => (
           <ShowcaseModCard

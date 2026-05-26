@@ -12,7 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-10.2.3-indigo.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-10.2.4-indigo.svg)](docs/CHANGELOG.md)
 
 **[📖 Documentación](#-documentación-completa)** • **[🚀 Quick Start](#-instalación-rápida)** • **[⭐ Features](#-features-principales)** • **[💬 Comunidad](#-comunidad--contribuciones)**
 
@@ -213,7 +213,7 @@ D:\.mine\
 
 ## 🗺️ Roadmap
 
-### ✅ **v10.2.3 (Actual — Mayo 2026)**
+### ✅ **v10.2.4 (Actual — Mayo 2026)**
 - 🛂 **Aduana & Dependencias**: Deduplicación global compartida para Modrinth/CurseForge con copias locales instantáneas, y gestor automático del binario de `yt-dlp`.
 - 🗂️ **Arquitectura Modular**: Reorganización masiva en subdominios para `components/fomo/` y `lib/`.
 - 💾 **IndexedDB Storage**: Migración completa asíncrona de datos de FOMO.

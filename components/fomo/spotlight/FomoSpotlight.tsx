@@ -384,6 +384,7 @@ export function FomoSpotlight({
             downloading={downloading}
             globalLoader={loader}
             theme={currentTheme}
+            isSpotlight={true}
           />
         </div>
       </div>

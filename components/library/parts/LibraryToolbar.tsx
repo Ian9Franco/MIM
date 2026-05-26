@@ -148,7 +148,7 @@ export function LibraryToolbar({
       <div className="flex flex-wrap items-center gap-2">
 
       {/* Previsualización de Entorno */}
-      <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
+      <div className="flex flex-wrap items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 ml-auto">
         <button
           onClick={() => setPreviewMode("all")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === "all" ? "bg-emerald-500 text-white" : "text-white/40 hover:text-white"}`}
@@ -170,7 +170,7 @@ export function LibraryToolbar({
       </div>
 
       {/* Filtro: Mods / Texturas / Datapacks / Shaders */}
-      <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+      <div className="flex flex-wrap items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
         <button
           onClick={() => setFilterType("mod")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterType === "mod" ? "bg-primary text-white" : "text-white/40 hover:text-white"}`}

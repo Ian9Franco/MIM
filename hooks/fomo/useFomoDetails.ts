@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ModHit, VersionEntry } from "@/lib/core/types";
 
 export function useFomoDetails(
@@ -10,6 +10,16 @@ export function useFomoDetails(
   const [selectingVersionFor, setSelectingVersionFor] = useState<ModHit | null>(null);
   const [projectVersions, setProjectVersions] = useState<VersionEntry[]>([]);
   const [versLoading, setVersLoading] = useState(false);
+
+  // Global listener to close details when clicking the backdrop
+  useEffect(() => {
+    const handleCloseDetails = () => {
+      setSelectingVersionFor(null);
+      setVersLoading(false);
+    };
+    window.addEventListener("fomo-close-details", handleCloseDetails);
+    return () => window.removeEventListener("fomo-close-details", handleCloseDetails);
+  }, []);
 
   const loadVersionsForMod = useCallback(
     async (modHit: ModHit) => {

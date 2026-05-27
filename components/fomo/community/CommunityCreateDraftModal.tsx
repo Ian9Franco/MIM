@@ -21,7 +21,7 @@ export function CommunityCreateDraftModal({
   const [mounted, setMounted] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [minecraftVersion, setMinecraftVersion] = useState("1.20.1");
+  const [minecraftVersion, setMinecraftVersion] = useState("1.21.1");
   const [loader, setLoader] = useState("fabric");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +134,9 @@ export function CommunityCreateDraftModal({
                 onChange={(e) => setMinecraftVersion(e.target.value)}
                 className={`p-2 rounded-lg border text-sm focus:ring-2 outline-none transition-all ${inputClass}`}
               >
+                <option value="1.21.4">1.21.4</option>
+                <option value="1.21.1">1.21.1</option>
+                <option value="1.20.6">1.20.6</option>
                 <option value="1.20.4">1.20.4</option>
                 <option value="1.20.1">1.20.1</option>
                 <option value="1.19.4">1.19.4</option>

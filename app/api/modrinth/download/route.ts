@@ -24,7 +24,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import { watcherEmitter } from "@/lib/core/watcher";
-import { findExistingByHash } from "@/lib/fomo/aduana";
+import { findExisting, AduanaDirs } from "@/lib/fomo/aduana";
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,61 +75,63 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }
 
-    const existingPath = findExistingByHash(downloadsDir, settings.sourceBase, hashes);
-    if (existingPath) {
-      // Si el archivo ya existe pero está en SOURCE_BASE (la librería) y NO en Downloads,
-      // lo copiamos localmente a la carpeta Downloads para que el watcher lo detecte
-      // y lo asigne/copie al proyecto activo. ¡Esto ahorra internet y soluciona la duplicidad!
-      const isInDownloads = existingPath.toLowerCase().startsWith(downloadsDir.toLowerCase());
-      if (!isInDownloads) {
-        const ext = path.extname(safeFilename);
-        const base = path.basename(safeFilename, ext);
-        let targetPath = path.join(downloadsDir, safeFilename);
+    // ── Aduana: deduplicación inteligente por hash ─────────────────────────
+    // La comparación es SIEMPRE por hash. Versiones distintas del mismo mod
+    // tienen hashes distintos y NUNCA se bloquean entre sí.
+    const aduanaDirs: AduanaDirs = {
+      downloadsDir,
+      sourceBase:   settings.sourceBase,
+      buildsBase:   settings.buildsBase,
+      stagingPath:  settings.stagingPath,
+      minecraftPath: settings.minecraftPath, // MIMu: detecta mods ya instalados
+    };
 
-        if (fs.existsSync(targetPath)) {
-          targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+    const dedup = findExisting(aduanaDirs, hashes, safeFilename);
+
+    if (dedup.found && dedup.filePath && dedup.matchedByHash) {
+      const existingPath = dedup.filePath;
+      const cacheArgs = { filePath: existingPath, projectId, iconUrl, loader, gameVersion, projectType, title, sha1: hashes?.sha1 };
+
+      switch (dedup.location) {
+        case "downloads": {
+          // El archivo exacto ya está en Downloads.
+          // Re-emitimos al watcher para que lo asigne al proyecto activo
+          // (permite que el mismo mod esté en múltiples proyectos).
+          enrichUpdatesCache(cacheArgs);
+          watcherEmitter.emit("new_file", existingPath);
+          return NextResponse.json({ success: true, skipped: true, existingPath, reason: "already_in_downloads" });
         }
 
-        try {
-          fs.copyFileSync(existingPath, targetPath);
-          console.log(`[/api/modrinth/download] Copied locally from library to Downloads: ${path.basename(targetPath)}`);
-          
-          enrichUpdatesCache({
-            filePath: targetPath,
-            projectId,
-            iconUrl,
-            loader,
-            gameVersion,
-            projectType,
-            title,
-            sha1: hashes?.sha1
-          });
-
-          return NextResponse.json({ success: true, targetPath, copiedLocally: true });
-        } catch (copyErr) {
-          console.error("[/api/modrinth/download] Failed to copy locally, proceeding to download:", copyErr);
-          // Si falla, continúa para descargar normalmente
+        case "minecraft_mods":
+        case "minecraft_rp":
+        case "minecraft_sp": {
+          // Ya está instalado en .minecraft (MIMu). Notificamos sin re-descargar.
+          enrichUpdatesCache(cacheArgs);
+          return NextResponse.json({ success: true, skipped: true, existingPath, reason: "already_installed_minecraft", location: dedup.location });
         }
-      } else {
-        enrichUpdatesCache({
-          filePath: existingPath,
-          projectId,
-          iconUrl,
-          loader,
-          gameVersion,
-          projectType,
-          title,
-          sha1: hashes?.sha1
-        });
 
-        watcherEmitter.emit("new_file", existingPath);
-
-        return NextResponse.json({
-          success: true,
-          skipped: true,
-          existingPath,
-          reason: "already_exists",
-        });
+        case "library":
+        case "builds":
+        case "staging":
+        default: {
+          // Existe en la librería/builds. Copiamos a Downloads para que el
+          // watcher lo detecte y lo asigne al proyecto activo.
+          const ext = path.extname(safeFilename);
+          const base = path.basename(safeFilename, ext);
+          let targetPath = path.join(downloadsDir, safeFilename);
+          if (fs.existsSync(targetPath)) {
+            targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+          }
+          try {
+            fs.copyFileSync(existingPath, targetPath);
+            console.log(`[/api/modrinth/download] Dedup (${dedup.location}): ${path.basename(existingPath)} → ${path.basename(targetPath)}`);
+            enrichUpdatesCache({ ...cacheArgs, filePath: targetPath });
+            return NextResponse.json({ success: true, targetPath, copiedFromLibrary: true, location: dedup.location });
+          } catch (copyErr) {
+            console.error("[/api/modrinth/download] Copy failed, proceeding to fresh download:", copyErr);
+            // Fall-through: descargar de internet
+          }
+        }
       }
     }
 

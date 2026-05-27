@@ -1,0 +1,8 @@
+-- Agregar la columna 'category' a draft_items
+ALTER TABLE public.draft_items 
+ADD COLUMN IF NOT EXISTS category text DEFAULT 'other';
+
+-- (Opcional) Si en el futuro quieres asegurarte de que solo se usen 
+-- las categorías válidas que definimos en la UI, puedes añadir un constraint:
+-- ALTER TABLE public.draft_items ADD CONSTRAINT valid_categories 
+-- CHECK (category IN ('core', 'performance', 'utility', 'world', 'mobs', 'tech', 'building', 'other'));

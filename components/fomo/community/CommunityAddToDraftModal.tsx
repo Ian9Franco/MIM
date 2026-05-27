@@ -47,6 +47,7 @@ export function CommunityAddToDraftModal() {
           return;
         }
 
+        // 1. FAST INSERT: Insert the main mod instantly
         const { error: insertErr } = await supabase
           .from("draft_items")
           .insert({
@@ -56,6 +57,7 @@ export function CommunityAddToDraftModal() {
             mod_name: detail.title || detail.projectId,
             content_type: detail.contentType || "mod",
             added_by: user.id,
+            dependencies: []
           });
 
         if (insertErr) throw insertErr;
@@ -63,6 +65,76 @@ export function CommunityAddToDraftModal() {
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
           detail: { text: "Añadido al Draft Activo", type: "success" }
         }));
+        window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
+
+        // 2. BACKGROUND RESOLUTION: Fetch and insert dependencies silently
+        if (detail.platform !== "curseforge") {
+          (async () => {
+            try {
+               let fetchedDependencies: any[] = [];
+               let versionIdToSave = null;
+               
+               const loaderStr = activeDraft.loader.toLowerCase() === "fabric" ? "fabric" : (activeDraft.loader.toLowerCase() === "neoforge" ? "neoforge" : "forge");
+               const res = await fetch(`https://api.modrinth.com/v2/project/${detail.projectId}/version?game_versions=[%22${activeDraft.version}%22]&loaders=[%22${loaderStr}%22]`);
+               if (res.ok) {
+                 const data = await res.json();
+                 if (data && data.length > 0) {
+                   fetchedDependencies = data[0].dependencies || [];
+                   versionIdToSave = data[0].id;
+                 }
+               }
+
+               // Update main item with its versionId and dependencies
+               await supabase
+                 .from("draft_items")
+                 .update({ version_id: versionIdToSave, dependencies: fetchedDependencies })
+                 .eq("draft_id", activeDraft.id)
+                 .eq("project_id", detail.projectId);
+
+               // Auto-add missing required dependencies
+               const existingDraftProjectIds = new Set(activeDraft.items.map(i => i.projectId));
+               existingDraftProjectIds.add(detail.projectId);
+
+               const requiredDeps = fetchedDependencies.filter(d => d.dependency_type === "required" && d.project_id);
+               const missingDepsIds = requiredDeps.map(d => d.project_id).filter(id => !existingDraftProjectIds.has(id));
+
+               if (missingDepsIds.length > 0) {
+                 const queryIds = encodeURIComponent(JSON.stringify(missingDepsIds));
+                 const projectsRes = await fetch(`https://api.modrinth.com/v2/projects?ids=${queryIds}`);
+                 if (projectsRes.ok) {
+                   const projectsData = await projectsRes.json();
+                   const itemsToInsert: any[] = [];
+                   
+                   projectsData.forEach((proj: any) => {
+                     itemsToInsert.push({
+                       draft_id: activeDraft.id,
+                       source: "modrinth",
+                       project_id: proj.id,
+                       version_id: null,
+                       mod_name: proj.title || proj.id,
+                       content_type: proj.project_type === "modpack" ? "mod" : (proj.project_type || "mod"),
+                       added_by: user.id,
+                       dependencies: []
+                     });
+                     activeDraftManager.addItem({
+                       projectId: proj.id,
+                       source: "modrinth",
+                       addedBy: user.id
+                     });
+                   });
+
+                   await supabase.from("draft_items").insert(itemsToInsert);
+                   window.dispatchEvent(new CustomEvent("fomo-show-status", {
+                     detail: { text: `Autocompletado con ${itemsToInsert.length} dependencia(s)`, type: "info" }
+                   }));
+                   window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
+                 }
+               }
+            } catch (e) {
+              console.error("Failed background dependency resolution", e);
+            }
+          })();
+        }
       } catch (err: any) {
         console.error(err);
         // Revert optimistic update

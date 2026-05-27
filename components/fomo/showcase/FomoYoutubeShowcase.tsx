@@ -491,15 +491,24 @@ export function FomoYoutubeShowcase({
 }: FomoYoutubeShowcaseProps) {
   const [showcase, setShowcase] = useState<YoutubeShowcaseEntry | null>(null);
   const [mods, setMods] = useState<ResolvedShowcaseMod[]>([]);
+  // Modo fallback: lista de últimos N videos cuando el canal no tiene mods
+  const [fallbackVideos, setFallbackVideos] = useState<YoutubeShowcaseEntry[]>([]);
+  const [isFallback, setIsFallback] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading-showcase" | "loading-mods" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [updateAvailable, setUpdateAvailable] = useState<{ available: boolean; latest: string; current: string } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChannelNew, setIsChannelNew] = useState(false);
+  // Nombre legible del canal (extraído de la URL)
+  const channelDisplayName = channelUrl.includes("@")
+    ? channelUrl.split("@")[1].split("/")[0]
+    : channelUrl.split("/").pop() ?? "Canal";
   const isMounted = useRef(true);
 
   const load = useCallback(async () => {
     setStatus("loading-showcase");
+    setIsFallback(false);
+    setFallbackVideos([]);
     try {
       // Usamos stale-while-revalidate: si hay cache, viene ya y se refresca en bg
       const data = await cachedYoutubeShowcase(channelUrl, 1, async () => {
@@ -529,6 +538,35 @@ export function FomoYoutubeShowcase({
       }
 
       setShowcase(entry);
+
+      // ── MODO FALLBACK: el video no tiene mods ──────────────────────────────
+      if (!entry.modSlugs || entry.modSlugs.length === 0) {
+        setIsFallback(true);
+        setStatus("loading-mods"); // reutilizamos para indicar que cargamos más videos
+
+        const fallbackCacheKey = `fomo_fallback_videos_${channelUrl}`;
+        const fallbackCached = await mimDB.getCache(fallbackCacheKey);
+        if (fallbackCached?.data) {
+          setFallbackVideos(fallbackCached.data);
+          setStatus("done");
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(channelUrl)}&limit=10&cursor=1`);
+          if (res.ok) {
+            const d = await res.json();
+            const videos: YoutubeShowcaseEntry[] = d.showcases || [];
+            await mimDB.setCache(fallbackCacheKey, videos, 6 * 60 * 60 * 1000);
+            if (isMounted.current) setFallbackVideos(videos);
+          }
+        } catch (e) {
+          console.error("[FomoYoutubeShowcase] Error fetching fallback videos:", e);
+        }
+        if (isMounted.current) setStatus("done");
+        return;
+      }
+      // ── FIN FALLBACK ───────────────────────────────────────────────────────
 
       // Intentar cargar mods resueltos de cache para no re-calcular al movernos entre pestañas
       const cacheKey = `fomo_resolved_mods_${entry.videoId}`;
@@ -663,6 +701,64 @@ export function FomoYoutubeShowcase({
   // Sin datos (puede pasar si el canal no tiene videos con links de mods)
   if (!showcase) return null;
 
+  // ── RENDER: Modo fallback — lista de últimos 10 videos sin mods ──────────────
+  if (isFallback) {
+    const itemsToShow = fallbackVideos.length > 0 ? fallbackVideos : [showcase];
+    return (
+      <div className="w-full flex flex-col gap-2">
+        {/* Header */}
+        <div className="px-8 mb-1 flex items-center gap-3">
+          <span
+            className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase flex items-center gap-1.5"
+            style={{
+              background: "rgba(239,68,68,0.12)",
+              color: "#f87171",
+              border: "1px solid rgba(239,68,68,0.25)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            <TvMinimalPlay className="w-2.5 h-2.5" />
+            Showcase · @{channelDisplayName}
+          </span>
+          {status === "loading-mods" && (
+            <Loader2 className="w-3 h-3 animate-spin opacity-30" />
+          )}
+        </div>
+
+        {/* Scrollable marquee row */}
+        <ShowcaseRow speed={0.45} reverse={false}>
+          {/* Set 1 */}
+          {itemsToShow.map((video, i) => (
+            <YoutubeTriggerCard
+              key={`fb-1-${video.videoId}-${i}`}
+              showcase={video}
+              modCount={0}
+              theme={theme}
+              isNew={i === 0 && isChannelNew}
+              channelUrl={channelUrl}
+              onMarkSeen={handleMarkChannelSeen}
+              isLatest={i === 0 && !isSpotlight}
+            />
+          ))}
+          {/* Set 2 (duplicado para marquee continuo) */}
+          {itemsToShow.map((video, i) => (
+            <YoutubeTriggerCard
+              key={`fb-2-${video.videoId}-${i}`}
+              showcase={video}
+              modCount={0}
+              theme={theme}
+              isNew={false}
+              channelUrl={channelUrl}
+              onMarkSeen={handleMarkChannelSeen}
+              isLatest={false}
+            />
+          ))}
+        </ShowcaseRow>
+      </div>
+    );
+  }
+
+  // ── RENDER: Modo normal — video + mods ──────────────────────────────────────
   return (
     <div className="w-full flex flex-col gap-2">
       {/* Section header */}
@@ -677,7 +773,7 @@ export function FomoYoutubeShowcase({
           }}
         >
           <TvMinimalPlay className="w-2.5 h-2.5" />
-          Showcase · EnderVerse
+          Showcase · @{channelDisplayName}
         </span>
         {/* Subtle refresh indicator when resolving mods in bg */}
         {status === "loading-mods" && (

@@ -60,7 +60,21 @@ export function useFomoDownload(showStatus: any, loader: string, gameVersions: s
       });
 
       if (res.ok) {
-        showStatus(`${mod.title} descargado`, "success");
+        const resData = await res.json();
+
+        // El archivo fue encontrado por la aduana en el sistema
+        if (resData.skipped) {
+          if (resData.reason === "already_installed_minecraft") {
+            // Ya está instalado en .minecraft (MIMu)
+            showStatus(`${mod.title} ya está instalado en Minecraft`, "success");
+          } else {
+            // already_in_downloads: ya estaba en Downloads, el watcher lo reasignó al proyecto activo
+            showStatus(`${mod.title} reasignado al proyecto activo`, "success");
+          }
+        } else {
+          showStatus(`${mod.title} descargado`, "success");
+        }
+
         eventBus.emit("fomo:mod-downloaded", { modId: mod.projectId, fileName: filename, source: mod._source as any });
 
         try {

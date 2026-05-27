@@ -12,12 +12,12 @@ export function CommunityDrafts() {
   const { user, profile } = useAuth();
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("fomo_community_draft_id") || null;
-    }
-    return null;
-  });
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("fomo_community_draft_id");
+    if (saved) setSelectedDraftId(saved);
+  }, []);
 
   useEffect(() => {
     if (selectedDraftId) {
@@ -208,9 +208,7 @@ export function CommunityDrafts() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <div className="bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2 py-1 rounded-md border border-white/10">
-                      v{version}
-                    </div>
+                    {/* Version pill removed since snapshots are disabled */}
                   </div>
                   <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2 py-1 rounded-md border border-white/10 capitalize flex items-center gap-1">
                     <Box className="w-3 h-3" />

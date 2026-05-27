@@ -17,7 +17,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { watcherEmitter } from "@/lib/core/watcher";
-import { findExistingByHash } from "@/lib/fomo/aduana";
+import { findExisting, AduanaDirs } from "@/lib/fomo/aduana";
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,57 +41,54 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }
 
-    const existingPath = findExistingByHash(downloadsDir, settings.sourceBase, hashes);
-    if (existingPath) {
-      const isInDownloads = existingPath.toLowerCase().startsWith(downloadsDir.toLowerCase());
-      if (!isInDownloads) {
-        const ext = path.extname(safeFilename);
-        const base = path.basename(safeFilename, ext);
-        let targetPath = path.join(downloadsDir, safeFilename);
+    // ── Aduana: deduplicación inteligente por hash ─────────────────────────
+    const aduanaDirs: AduanaDirs = {
+      downloadsDir,
+      sourceBase:    settings.sourceBase,
+      buildsBase:    settings.buildsBase,
+      stagingPath:   settings.stagingPath,
+      minecraftPath: settings.minecraftPath, // MIMu
+    };
 
-        if (fs.existsSync(targetPath)) {
-          targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+    const dedup = findExisting(aduanaDirs, hashes, safeFilename);
+
+    if (dedup.found && dedup.filePath && dedup.matchedByHash) {
+      const existingPath = dedup.filePath;
+      const cacheArgs = { filePath: existingPath, projectId, iconUrl, loader, gameVersion, projectType, title, sha1: hashes?.sha1 };
+
+      switch (dedup.location) {
+        case "downloads": {
+          enrichUpdatesCache(cacheArgs);
+          watcherEmitter.emit("new_file", existingPath);
+          return NextResponse.json({ success: true, skipped: true, existingPath, reason: "already_in_downloads" });
         }
 
-        try {
-          fs.copyFileSync(existingPath, targetPath);
-          console.log(`[/api/curseforge/download] Copied locally from library to Downloads: ${path.basename(targetPath)}`);
-          
-          enrichUpdatesCache({
-            filePath: targetPath,
-            projectId,
-            iconUrl,
-            loader,
-            gameVersion,
-            projectType,
-            title,
-            sha1: hashes?.sha1
-          });
-
-          return NextResponse.json({ success: true, path: targetPath, copiedLocally: true });
-        } catch (copyErr) {
-          console.error("[/api/curseforge/download] Failed to copy locally, proceeding to download:", copyErr);
+        case "minecraft_mods":
+        case "minecraft_rp":
+        case "minecraft_sp": {
+          enrichUpdatesCache(cacheArgs);
+          return NextResponse.json({ success: true, skipped: true, existingPath, reason: "already_installed_minecraft", location: dedup.location });
         }
-      } else {
-        enrichUpdatesCache({
-          filePath: existingPath,
-          projectId,
-          iconUrl,
-          loader,
-          gameVersion,
-          projectType,
-          title,
-          sha1: hashes?.sha1
-        });
 
-        watcherEmitter.emit("new_file", existingPath);
-
-        return NextResponse.json({
-          success: true,
-          skipped: true,
-          existingPath,
-          reason: "already_exists",
-        });
+        case "library":
+        case "builds":
+        case "staging":
+        default: {
+          const ext = path.extname(safeFilename);
+          const base = path.basename(safeFilename, ext);
+          let targetPath = path.join(downloadsDir, safeFilename);
+          if (fs.existsSync(targetPath)) {
+            targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
+          }
+          try {
+            fs.copyFileSync(existingPath, targetPath);
+            console.log(`[/api/curseforge/download] Dedup (${dedup.location}): ${path.basename(existingPath)} → ${path.basename(targetPath)}`);
+            enrichUpdatesCache({ ...cacheArgs, filePath: targetPath });
+            return NextResponse.json({ success: true, path: targetPath, copiedFromLibrary: true, location: dedup.location });
+          } catch (copyErr) {
+            console.error("[/api/curseforge/download] Copy failed, proceeding to fresh download:", copyErr);
+          }
+        }
       }
     }
 
@@ -115,10 +112,25 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync(destPath, buffer);
 
-    // Calcular hash sha1 local para enriquecer la caché
-    const sha1 = hashes?.sha1 || crypto.createHash("sha1").update(buffer).digest("hex");
+    // ── Verificación de integridad post-descarga ───────────────────────
+    let sha1: string;
+    if (hashes?.sha1) {
+      sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
+      if (sha1 !== hashes.sha1) {
+        throw new Error(`SHA1 integrity check failed (expected: ${hashes.sha1}, got: ${sha1})`);
+      }
+    } else {
+      sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
+    }
+    if (hashes?.sha512) {
+      const sha512 = crypto.createHash("sha512").update(buffer).digest("hex");
+      if (sha512 !== hashes.sha512) {
+        throw new Error(`SHA512 integrity check failed`);
+      }
+    }
+
+    fs.writeFileSync(destPath, buffer);
 
     enrichUpdatesCache({
       filePath: destPath,

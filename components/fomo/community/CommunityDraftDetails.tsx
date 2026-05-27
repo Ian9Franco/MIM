@@ -17,6 +17,7 @@ import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 import { DraftMembersTab } from "./draft-tabs/DraftMembersTab";
 import { DraftSnapshotsTab } from "./draft-tabs/DraftSnapshotsTab";
 import { DraftItemsTab } from "./draft-tabs/DraftItemsTab";
+import { DraftValidationTab } from "./draft-tabs/DraftValidationTab";
 
 export function CommunityDraftDetails({
   draftId,
@@ -46,6 +47,15 @@ export function CommunityDraftDetails({
 
   useEffect(() => {
     fetchDraftInfo();
+
+    const handleItemsChanged = () => {
+      fetchDraftInfo(true); // Silent reload
+    };
+
+    window.addEventListener("fomo-draft-items-changed", handleItemsChanged);
+    return () => {
+      window.removeEventListener("fomo-draft-items-changed", handleItemsChanged);
+    };
   }, [draftId]);
 
   const fetchDraftInfo = async (silent = false) => {
@@ -117,7 +127,11 @@ export function CommunityDraftDetails({
           versionId: item.version_id,
           side: item.side,
           required: item.required,
-          contentType: item.content_type || "mod"
+          contentType: item.content_type || "mod",
+          dependencies: item.dependencies || [],
+          // Persistimos metadatos legibles para el preview del snapshot
+          mod_name: item.mod_name || item.project_id,
+          icon_url: item.icon_url || null,
         }))
       };
 
@@ -222,6 +236,37 @@ export function CommunityDraftDetails({
       return;
     }
 
+    const snapshotProjectIds = new Set(snap.manifest.mods.map((m: any) => String(m.projectId)));
+    const missingDeps = new Map<string, string>();
+
+    // Calculate missing dependencies from the snapshot manifest
+    snap.manifest.mods.forEach((m: any) => {
+      if (m.dependencies && Array.isArray(m.dependencies)) {
+        m.dependencies.forEach((dep: any) => {
+          if (dep.dependency_type === "required" && dep.project_id) {
+            const depId = String(dep.project_id);
+            if (!snapshotProjectIds.has(depId)) {
+              missingDeps.set(depId, depId);
+            }
+          }
+        });
+      }
+    });
+
+    let additionalIntents: DownloadIntent[] = [];
+    if (missingDeps.size > 0) {
+      const confirmDownload = window.confirm(`El Snapshot no incluye ${missingDeps.size} dependencia(s) requerida(s).\n¿Deseas intentar descargarlas automáticamente también?`);
+      if (confirmDownload) {
+        additionalIntents = Array.from(missingDeps.values()).map(depId => ({
+          id: crypto.randomUUID(),
+          projectId: depId,
+          versionId: undefined, // Let the broker resolve the best version
+          platform: "modrinth",
+          projectType: "mod"
+        }));
+      }
+    }
+
     const intents: DownloadIntent[] = snap.manifest.mods.map((m: any) => ({
       id: crypto.randomUUID(),
       projectId: m.projectId,
@@ -230,11 +275,12 @@ export function CommunityDraftDetails({
       projectType: m.contentType,
     }));
     
+    const finalIntents = [...intents, ...additionalIntents];
     const sessionId = `draft_${draftId}_v${snap.version_number}_${Date.now()}`;
-    downloadBroker.enqueueSession(sessionId, intents);
+    downloadBroker.enqueueSession(sessionId, finalIntents);
     
     window.dispatchEvent(new CustomEvent("fomo-show-status", {
-      detail: { text: `Descarga de la v${snap.version_number} iniciada en segundo plano. (${intents.length} mods encolados)`, type: "success" }
+      detail: { text: `Descarga de la v${snap.version_number} iniciada. (${finalIntents.length} mods encolados)`, type: "success" }
     }));
   };
 
@@ -264,15 +310,14 @@ export function CommunityDraftDetails({
     { id: "overview", label: "Resumen", icon: <Info className="w-4 h-4" /> },
     { id: "mods", label: "Items", icon: <Blend className="w-4 h-4" /> },
     { id: "activity", label: "Actividad", icon: <Clock className="w-4 h-4" /> },
-    { id: "snapshots", label: "Snapshots", icon: <HardDrive className="w-4 h-4" /> },
     { id: "members", label: "Miembros", icon: <Users className="w-4 h-4" /> },
     { id: "validation", label: "Validación", icon: <CheckCircle className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in w-full max-w-[1400px] mx-auto pb-12">
+    <div className="flex flex-col gap-4 animate-fade-in w-full h-full min-h-0 max-w-[1400px] mx-auto pb-4">
       {/* Header */}
-      <div className={`relative w-full min-h-[160px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
+      <div className={`shrink-0 relative w-full min-h-[140px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
         {draft.cover_image && (
           <div className="absolute inset-0 z-0">
             <img src={draft.cover_image} alt="Cover" className="w-full h-full object-cover" />
@@ -361,14 +406,16 @@ export function CommunityDraftDetails({
                 {activeDraft?.id === draft.id ? "Desactivar" : "Activar"}
               </button>
 
-              <button 
-                onClick={handleCreateSnapshot}
-                disabled={creatingSnapshot}
-                className="px-5 py-2.5 bg-primary/90 text-white font-bold rounded-xl shadow-lg border border-primary/50 hover:bg-primary transition-colors flex items-center gap-2 backdrop-blur-md"
-              >
-                {creatingSnapshot ? <RefreshCw className="w-4 h-4 animate-spin" /> : <SwitchCamera className="w-4 h-4" />}
-                Draft Snapshot
-              </button>
+              {false && (
+                <button 
+                  onClick={handleCreateSnapshot}
+                  disabled={creatingSnapshot}
+                  className="px-5 py-2.5 bg-primary/90 text-white font-bold rounded-xl shadow-lg border border-primary/50 hover:bg-primary transition-colors flex items-center gap-2 backdrop-blur-md"
+                >
+                  {creatingSnapshot ? <RefreshCw className="w-4 h-4 animate-spin" /> : <SwitchCamera className="w-4 h-4" />}
+                  Draft Snapshot
+                </button>
+              )}
             </div>
         </div>
       </div>
@@ -421,7 +468,7 @@ export function CommunityDraftDetails({
       </div>
 
       {/* Tab Content */}
-      <div className={`p-6 rounded-3xl border overflow-hidden relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
+      <div className={`flex flex-col flex-1 min-h-0 p-5 md:p-6 rounded-3xl border overflow-hidden relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -429,6 +476,7 @@ export function CommunityDraftDetails({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
+            className="flex flex-col flex-1 min-h-0 w-full h-full"
           >
         {activeTab === "overview" && (
           <DraftOverviewTab draftId={draftId} isModern={isModern} />
@@ -469,14 +517,13 @@ export function CommunityDraftDetails({
           <DraftActivityTab draftId={draftId} isModern={isModern} />
         )}
 
-        {/* Other tabs placeholders */}
-        {["validation"].includes(activeTab) && (
-          <div className="flex flex-col gap-4">
-            <h3 className={`text-lg font-bold capitalize ${isModern ? "text-foreground" : "text-white"}`}>{activeTab}</h3>
-            <p className={`text-sm ${isModern ? "text-muted-foreground" : "text-white/60"}`}>
-              El contenido de {activeTab} estará disponible pronto.
-            </p>
-          </div>
+        {activeTab === "validation" && (
+          <DraftValidationTab
+            draftId={draftId}
+            isModern={isModern}
+            draft={draft}
+            draftItems={draftItems}
+          />
         )}
         </motion.div>
         </AnimatePresence>

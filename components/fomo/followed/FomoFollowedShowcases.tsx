@@ -3,11 +3,14 @@
 import React from "react";
 import { 
   TvMinimalPlay, RefreshCw, Trash2, ChevronDown, 
-  MonitorCheck, MonitorUp 
+  MonitorCheck, MonitorUp, Sparkles, Pin
 } from "lucide-react";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 import { ShowcaseVideoCard } from "@/components/fomo/showcase/ShowcaseVideoCard";
+
+const SPOTLIGHT_CHANNEL_KEY = "mim_spotlight_channel";
+const ENDERVERSE_DEFAULT = "https://www.youtube.com/@EnderVerseMC";
 
 interface FomoFollowedShowcasesProps {
   currentUser: any;
@@ -86,6 +89,21 @@ export function FomoFollowedShowcases({
   const [activeChannel, setActiveChannel] = React.useState("https://www.youtube.com/@EnderVerseMC");
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [channelUsage, setChannelUsage] = React.useState<Record<string, number>>({});
+  // Canal que actualmente está anclado al Spotlight
+  const [spotlightChannel, setSpotlightChannel] = React.useState<string>(ENDERVERSE_DEFAULT);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem(SPOTLIGHT_CHANNEL_KEY);
+    if (saved) {
+      setSpotlightChannel(saved);
+    }
+  }, []);
+
+  const handleSetSpotlightChannel = React.useCallback((url: string) => {
+    localStorage.setItem(SPOTLIGHT_CHANNEL_KEY, url);
+    setSpotlightChannel(url);
+    window.dispatchEvent(new CustomEvent("fomo-spotlight-channel-changed", { detail: { channelUrl: url } }));
+  }, []);
 
   React.useEffect(() => {
     fetch(`/api/fomo/youtube-usage`)
@@ -296,28 +314,54 @@ export function FomoFollowedShowcases({
                     >
                       <span className={`truncate ${c === activeChannel ? "text-primary font-bold" : "opacity-80"}`}>
                         {c.includes("@") ? c.split("@")[1].split("/")[0] : c.split("/").pop()}
+                        {c === spotlightChannel && (
+                          <span className="ml-1.5 text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black uppercase tracking-wider align-middle">Spotlight</span>
+                        )}
                       </span>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const next = channels.filter(chan => chan !== c);
-                          setChannels(next);
-                          if (activeChannel === c) {
-                            setActiveChannel(next[0] || "");
-                          }
-                          fetch(`/api/fomo/youtube-channels`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ channels: next }),
-                          }).then(() => {
-                            window.dispatchEvent(new CustomEvent("fomo-club-changed"));
-                          });
-                        }}
-                        className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-2 cursor-pointer bg-transparent border-none"
-                        title="Eliminar canal"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        {/* Botón Spotlight */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSetSpotlightChannel(c);
+                            setDropdownOpen(false);
+                          }}
+                          title={c === spotlightChannel ? "Ya es el canal del Spotlight" : "Usar como Spotlight"}
+                          className={`transition-all cursor-pointer bg-transparent border-none p-0.5 rounded ${
+                            c === spotlightChannel
+                              ? "text-amber-400 opacity-100"
+                              : "opacity-30 hover:opacity-100 hover:text-amber-400"
+                          }`}
+                        >
+                          <Pin className="w-3 h-3" />
+                        </button>
+                        {/* Botón Eliminar */}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = channels.filter(chan => chan !== c);
+                            setChannels(next);
+                            if (activeChannel === c) {
+                              setActiveChannel(next[0] || "");
+                            }
+                            // Si era el canal del Spotlight, volver al default
+                            if (spotlightChannel === c) {
+                              handleSetSpotlightChannel(next[0] || ENDERVERSE_DEFAULT);
+                            }
+                            fetch(`/api/fomo/youtube-channels`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ channels: next }),
+                            }).then(() => {
+                              window.dispatchEvent(new CustomEvent("fomo-club-changed"));
+                            });
+                          }}
+                          className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-1 cursor-pointer bg-transparent border-none"
+                          title="Eliminar canal"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -377,6 +421,26 @@ export function FomoFollowedShowcases({
               }}
             />
           </div>
+        </div>
+
+        {/* Spotlight activo */}
+        <div className="flex items-center gap-2 pt-1">
+          <Sparkles className="w-3 h-3 text-amber-400" />
+          <span className="text-[10px] text-amber-400/80 font-bold">
+            Spotlight activo:
+          </span>
+          <span className="text-[10px] text-amber-300 font-mono truncate">
+            @{spotlightChannel.includes("@") ? spotlightChannel.split("@")[1].split("/")[0] : spotlightChannel.split("/").pop()}
+          </span>
+          {activeChannel && activeChannel !== spotlightChannel && (
+            <button
+              onClick={() => handleSetSpotlightChannel(activeChannel)}
+              className="ml-auto flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition-all cursor-pointer shrink-0"
+            >
+              <Pin className="w-2.5 h-2.5" />
+              Usar canal activo
+            </button>
+          )}
         </div>
       </div>
 

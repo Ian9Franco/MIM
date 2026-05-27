@@ -9,6 +9,9 @@ import type { ModHit, CollectionEntry } from "@/lib/core/types";
 import { FomoYoutubeShowcase } from "@/components/fomo/showcase/FomoYoutubeShowcase";
 import { mimDB } from "@/lib/storage/indexeddb";
 
+const ENDERVERSE_DEFAULT = "https://www.youtube.com/@EnderVerseMC";
+const SPOTLIGHT_CHANNEL_KEY = "mim_spotlight_channel";
+
 interface FomoSpotlightProps {
   onOpenVersions: (mod: ModHit) => void;
   onOpenCollection?: (collection: CollectionEntry) => void;
@@ -38,8 +41,31 @@ export function FomoSpotlight({
   loader = "forge",
   gameVersion = "1.20.1",
   sinytraActive = false,
-  showcaseChannelUrl = "https://www.youtube.com/@EnderVerseMC",
+  showcaseChannelUrl,
 }: FomoSpotlightProps) {
+  // Canal activo del Spotlight — se lee de localStorage, default EnderVerse
+  const [activeSpotlightChannel, setActiveSpotlightChannel] = useState<string>(showcaseChannelUrl || ENDERVERSE_DEFAULT);
+
+  // Leer de localStorage al montar
+  useEffect(() => {
+    const saved = localStorage.getItem(SPOTLIGHT_CHANNEL_KEY);
+    if (saved) setActiveSpotlightChannel(saved);
+  }, []);
+
+  // Escuchar cambios en el canal del Spotlight desde la UI de Showcases
+  useEffect(() => {
+    const handleChannelChange = (e: Event) => {
+      const { channelUrl } = (e as CustomEvent).detail || {};
+      if (channelUrl) setActiveSpotlightChannel(channelUrl);
+    };
+    window.addEventListener("fomo-spotlight-channel-changed", handleChannelChange);
+    return () => window.removeEventListener("fomo-spotlight-channel-changed", handleChannelChange);
+  }, []);
+
+  // Si showcaseChannelUrl prop cambia externamente, sincronizar
+  useEffect(() => {
+    if (showcaseChannelUrl) setActiveSpotlightChannel(showcaseChannelUrl);
+  }, [showcaseChannelUrl]);
   const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
   const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
@@ -375,10 +401,10 @@ export function FomoSpotlight({
           </div>
         </div>
 
-        {/* Row 3: YouTube Showcase — solo el último video de EnderVerse */}
+        {/* Row 3: YouTube Showcase — canal configurable */}
         <div className="w-full shrink-0 pb-2">
           <FomoYoutubeShowcase
-            channelUrl={showcaseChannelUrl}
+            channelUrl={activeSpotlightChannel}
             onOpenVersions={onOpenVersions}
             onDownloadMod={onDownloadMod}
             downloading={downloading}

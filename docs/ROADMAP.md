@@ -52,6 +52,10 @@
 - [ ] **Métricas Anónimas**: Implementación de telemetría de rendimiento y errores en la carga de showcases para alertar sobre fallos en `yt-dlp`.
 - [ ] **Updater de yt-dlp**: Panel de utilidades de administración para que el usuario pueda reinstalar o actualizar `yt-dlp` localmente en 1 clic.
 
+### 🌟 Integración Bedrock & Canales de Comunidad (Plan Diseñado)
+- [ ] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para `@Wero_lovernite` y `@EnderVerseMC` (ver plan en [todo_bedrock_addons_y_posts_youtube.md](file:///d:/.mine/manager/docs/todo_bedrock_addons_y_posts_youtube.md)).
+- [ ] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit` (ver plan en [todo_bedrock_addons_y_posts_youtube.md](file:///d:/.mine/manager/docs/todo_bedrock_addons_y_posts_youtube.md)).
+
 ### Fase 5: Posicionamiento Profesional e Integración en Portfolio
 - [ ] **Technical Case Study**: Redacción de un documento técnico de alto nivel sobre los trade-offs de rendimiento resueltos al migrar de localStorage a IndexedDB y desacoplar el Event Bus.
 - [ ] **Video Demo**: Clip de 1 minuto mostrando la fluidez de clasificación (1-9), el diagnóstico de crashes de SAGE y la inmersión visual de FOMO Cloud.

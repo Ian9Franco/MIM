@@ -15,6 +15,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
   const details = useFomoDetails(filters.source, filters.loader, filters.projectType, filters.sinytraActive);
 
   const handleDownload = useCallback(async (mod: ModHit, version?: VersionEntry) => {
+    // ── Bedrock Marketplace: redirigir al navegador externo ──────────────────
+    if ((mod as any)._source === "chunk") {
+      showStatus("Redirigiendo al Minecraft Marketplace para obtener el addon...", "info");
+      window.open((mod as any).url || `https://chunk.gg`, "_blank");
+      return;
+    }
     let url = version?.primaryFile?.url || (mod as any).downloadUrl || mod.url;
     let filename = version?.primaryFile?.filename || mod.title;
     let targetVer = version;

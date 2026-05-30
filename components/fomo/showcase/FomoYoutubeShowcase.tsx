@@ -186,7 +186,7 @@ function YoutubeTriggerCard({
     <a
       href={showcase.videoUrl}
       onClick={handlePlay}
-      className={`${isLatest ? "w-[280px] xl:w-[320px] h-[420px]" : "w-[190px] xl:w-[210px] h-[300px]"} shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}
+      className={`${isLatest ? "w-[280px] xl:w-[320px] h-[420px]" : "w-[190px] xl:w-[210px] h-[240px]"} shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}
       style={{
         border: cardBorder,
         background: cardBg,
@@ -195,7 +195,7 @@ function YoutubeTriggerCard({
       title={showcase.title}
     >
       {/* Thumbnail */}
-      <div className={`relative ${isLatest ? "h-[200px]" : "h-[140px]"} overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40`}>
+      <div className={`relative ${isLatest ? "h-[200px]" : "h-[120px]"} overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40`}>
         {!imgError && showcase.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -230,8 +230,8 @@ function YoutubeTriggerCard({
         </div>
         {/* Hover Play Button Overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-          <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300">
-            <CirclePlay className="w-5 h-5 ml-0.5 fill-white" />
+          <div className="w-12 h-12 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-lg shadow-primary/30 transform scale-90 group-hover:scale-100 transition-all duration-300">
+            <TvMinimalPlay className="w-6 h-6 ml-0.5" />
           </div>
         </div>
       </div>
@@ -325,7 +325,7 @@ function ShowcaseModCard({
 
   return (
     <div
-      className="w-[190px] xl:w-[210px] h-[300px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[190px] xl:w-[210px] h-[240px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -356,7 +356,7 @@ function ShowcaseModCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ ...dotGridStyle, height: "160px", borderBottom: sepColorThick }}
+        style={{ ...dotGridStyle, height: "130px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[
@@ -373,7 +373,7 @@ function ShowcaseModCard({
         ))}
 
         <div
-          className="relative w-28 h-28 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110"
+          className="relative w-20 h-20 rounded-2xl overflow-hidden border flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110"
           style={{
             borderColor: iconBorder,
             background: iconBg,

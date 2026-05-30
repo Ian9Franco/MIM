@@ -27,3 +27,23 @@ export const CurseForgeIcon = memo(() => (
     <path d="M18.326 9.2145S23.2261 8.4418 24 6.1882h-7.5066V4.4H0l2.0318 2.3576V9.173s5.1267 -0.2665 7.1098 1.2372c2.7146 2.516 -3.053 5.917 -3.053 5.917L5.0995 19.6c1.5465 -1.4726 4.494 -3.3775 9.8983 -3.2857 -2.0565 0.65 -4.1245 1.6651 -5.7344 3.2857h10.9248l-1.0288 -3.2726s-7.918 -4.6688 -0.8336 -7.1127z" fill="currentColor" />
   </svg>
 ));
+
+/**
+ * BedrockIcon: Diamante pixelado de Minecraft representando Bedrock Edition.
+ * Color verde vibrante (#00AA00) — referencia al mundo de Bedrock.
+ */
+export const BedrockIcon = memo(() => (
+  <svg
+    role="img"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+    height="14"
+    width="14"
+    className="shrink-0"
+    style={{ color: "#00CC44" }}
+    fill="currentColor"
+  >
+    {/* Diamante pixelado al estilo Minecraft */}
+    <path d="M12 2L6 7l-4 5 4 5 6 5 6-5 4-5-4-5-6-5zm0 2.8l4.5 3.7L12 12 7.5 8.5 12 4.8zM6.8 9l4.2 3.4L7 16.2 3.8 12 6.8 9zm10.4 0L20.2 12 17 16.2l-4-3.8L17.2 9zM12 13.6l4 3.8-4 3.4-4-3.4 4-3.8z" />
+  </svg>
+));

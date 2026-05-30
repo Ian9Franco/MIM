@@ -8,7 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { COLORS } from "@/theme/tokens";
 import { Chip } from "@/components/ui/primitives";
-import { ModrinthIcon, CurseForgeIcon } from "@/components/fomo/parts/FomoPlatformIcons";
+import { ModrinthIcon, CurseForgeIcon, BedrockIcon } from "@/components/fomo/parts/FomoPlatformIcons";
 import { FomoCompatibilityBadge } from "@/components/fomo/parts/FomoCompatibilityBadge";
 import {
   getBannerFallbackStyle,
@@ -48,6 +48,7 @@ export const FomoModCard = memo(function FomoModCard({
 
   // Identificación del proveedor y exclusividad de loader
   const isCF = mod._source === "curseforge";
+  const isBedrock = mod._source === "chunk";
   const isFabricOnly = categories.includes("fabric") && !categories.includes("forge");
 
   // Disponibilidad en ambas plataformas
@@ -101,7 +102,7 @@ export const FomoModCard = memo(function FomoModCard({
     <article 
       onClick={() => onToggleSelect?.(mod)}
       className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-[340px] border border-white/5 overflow-hidden ${
-        isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
+        isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : isBedrock ? 'hover:shadow-[0_20px_50px_rgba(0,204,68,0.2)] hover:-translate-y-1' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
       } ${isCF ? 'rounded-none' : 'rounded-3xl'}`}
       style={{ 
         background: isCF ? "var(--color-cf-bg)" : "rgba(255, 255, 255, 0.03)", 
@@ -128,7 +129,12 @@ export const FomoModCard = memo(function FomoModCard({
         <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
           {/* Brand / Platform Badge */}
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border backdrop-blur-md bg-black/60 border-white/10 shadow-lg select-none">
-            {isOnBoth ? (
+            {isBedrock ? (
+              <div className="flex items-center gap-1" title="Bedrock Addon — Minecraft Marketplace">
+                <BedrockIcon />
+                <span className="text-[8px] font-black uppercase tracking-wider" style={{ color: "#00CC44" }}>Bedrock</span>
+              </div>
+            ) : isOnBoth ? (
               <div className="flex items-center gap-1" title="Disponible en ambas plataformas">
                 <ModrinthIcon />
                 <CurseForgeIcon />
@@ -239,10 +245,14 @@ export const FomoModCard = memo(function FomoModCard({
           <button 
             onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
             disabled={isDownloading} 
-            className="fomo-action-btn fomo-action-btn--download w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500 transition-all shadow-xl hover:scale-110 active:scale-95"
-            title="Descargar"
+            className={`fomo-action-btn fomo-action-btn--download w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
+              isBedrock
+                ? "bg-[#00CC44]/80 border-[#00CC44] text-white hover:bg-[#00CC44]"
+                : "bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500"
+            }`}
+            title={isBedrock ? "Ver en Minecraft Marketplace" : "Descargar"}
           >
-            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : isBedrock ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -287,6 +297,12 @@ export const FomoModCard = memo(function FomoModCard({
 
         {/* Badges / Tags (Scrollable/Hidden if overflowing) */}
         <div className="flex flex-wrap gap-1.5 mb-2 overflow-hidden h-[36px] content-start">
+          {/* Badge especial para Bedrock */}
+          {isBedrock && (
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border shrink-0 bg-green-900/40 text-green-300 border-green-700/50">
+              {(mod as any)._bedrockCost || "Bedrock"}
+            </span>
+          )}
           {/* Etiquetas de Tipo (Siempre primero, en mayúsculas y con color) */}
           {sortedTypes.map((type: string) => {
             const t = type.toLowerCase();

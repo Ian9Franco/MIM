@@ -6,7 +6,9 @@ export type FomoBannerProjectType =
   | "textura"
   | "resourcepack"
   | "datapack"
-  | "modpack";
+  | "modpack"
+  | "bedrock"
+  | "addon";
 
 export function getFirstGalleryUrl(
   gallery?: (string | { url?: string; raw_url?: string; image_url?: string; imageUrl?: string } | null)[] | null
@@ -64,7 +66,9 @@ export function inferPrimaryProjectType(mod: {
     t === "shader" ||
     t === "datapack" ||
     t === "modpack" ||
-    t === "textura"
+    t === "textura" ||
+    t === "bedrock" ||
+    t === "addon"
   ) {
     return t as FomoBannerProjectType;
   }
@@ -111,6 +115,11 @@ export function getBannerFallbackStyle(
     bannerBgColor = "#172554";
     fallbackTexture = {
       backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='100' viewBox='0 0 60 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 50L0 67.5V100l30-17.5V50zm0-50L0 17.5V50l30-17.5V0zm30 17.5L30 35v33.25l30-17.5V17.5zM30 67.5L0 85v33.25l30-17.5V67.5z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "bedrock" || primaryType === "addon") {
+    bannerBgColor = "#064e3b"; // emerald-900 oscuro
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300cc44' fill-opacity='0.15' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")`,
     };
   } else {
     bannerBgColor = "#500724";

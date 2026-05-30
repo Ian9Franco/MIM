@@ -416,7 +416,7 @@ function FomoSidebarDiscoverBranchInner({
                       }
                     }
                   }}
-                  placeholder="Buscar mods..."
+                  placeholder={discover.source === "chunk" ? "Buscar addons en Marketplace..." : "Buscar mods..."}
                   className="flex-1 bg-transparent border-none outline-none text-sm text-white"
                 />
               </div>

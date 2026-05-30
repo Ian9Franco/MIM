@@ -56,6 +56,10 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, [mod.projectId, mod.gallery]);
 
   useEffect(() => {
+    if (mod._source === "chunk") {
+      setLoadingGallery(false);
+      return;
+    }
     const gallerySource = mod._source === "curseforge" || mod.url?.includes("curseforge.com") ? "curseforge" : "modrinth";
     const fetchKey = `${gallerySource}:${mod.projectId}`;
     if (lastFetchedKey.current === fetchKey) return; // Ya se hizo fetch para este proyecto
@@ -117,7 +121,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, [mod.projectId, mod._source]);
 
   useEffect(() => {
-    if (mod.body) return;
+    if (mod.body || mod._source === "chunk") return;
     const controller = new AbortController();
     const endpoint = (mod._source === "curseforge" || mod.url?.includes("curseforge.com"))
       ? `/api/curseforge/project?projectId=${mod.projectId}`

@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Loader2, Download, ChevronRight, Clock, TrendingUp, Spotlight, Calendar, Library, CirclePlay } from "lucide-react";
+import { Loader2, ChevronRight, Clock, Spotlight, Calendar } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 import { fetchCurseForgeFeatured, fetchOfficialCollections, fetchCollectionMods } from "@/services/api";
 import type { ModHit, CollectionEntry } from "@/lib/core/types";
-import { FomoYoutubeShowcase } from "@/components/fomo/showcase/FomoYoutubeShowcase";
+import { SpotlightShowcaseRow } from "./SpotlightShowcaseRow";
 import { mimDB } from "@/lib/storage/indexeddb";
 
-const ENDERVERSE_DEFAULT = "https://www.youtube.com/@EnderVerseMC";
-const SPOTLIGHT_CHANNEL_KEY = "mim_spotlight_channel";
+
 
 interface FomoSpotlightProps {
   onOpenVersions: (mod: ModHit) => void;
@@ -22,8 +21,7 @@ interface FomoSpotlightProps {
   sinytraActive?: boolean;
   loader?: string;
   gameVersion?: string;
-  /** Canal de YouTube para el Showcase (default: EnderVerse) */
-  showcaseChannelUrl?: string;
+
 }
 
 import { AnimatedHeadline } from "./AnimatedHeadline";
@@ -41,31 +39,8 @@ export function FomoSpotlight({
   loader = "forge",
   gameVersion = "1.20.1",
   sinytraActive = false,
-  showcaseChannelUrl,
 }: FomoSpotlightProps) {
-  // Canal activo del Spotlight — se lee de localStorage, default EnderVerse
-  const [activeSpotlightChannel, setActiveSpotlightChannel] = useState<string>(showcaseChannelUrl || ENDERVERSE_DEFAULT);
 
-  // Leer de localStorage al montar
-  useEffect(() => {
-    const saved = localStorage.getItem(SPOTLIGHT_CHANNEL_KEY);
-    if (saved) setActiveSpotlightChannel(saved);
-  }, []);
-
-  // Escuchar cambios en el canal del Spotlight desde la UI de Showcases
-  useEffect(() => {
-    const handleChannelChange = (e: Event) => {
-      const { channelUrl } = (e as CustomEvent).detail || {};
-      if (channelUrl) setActiveSpotlightChannel(channelUrl);
-    };
-    window.addEventListener("fomo-spotlight-channel-changed", handleChannelChange);
-    return () => window.removeEventListener("fomo-spotlight-channel-changed", handleChannelChange);
-  }, []);
-
-  // Si showcaseChannelUrl prop cambia externamente, sincronizar
-  useEffect(() => {
-    if (showcaseChannelUrl) setActiveSpotlightChannel(showcaseChannelUrl);
-  }, [showcaseChannelUrl]);
   const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
   const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
@@ -102,10 +77,10 @@ export function FomoSpotlight({
     : "1px solid rgba(255,255,255,0.08)";
 
   const paneShadow = isModern 
-    ? "0 30px 60px rgba(0,0,0,0.08), inset 0 2px 5px rgba(255,255,255,1), inset 0 -5px 20px rgba(0,0,0,0.03)" 
+    ? "0 30px 60px rgba(0,0,0,0.08)" 
     : isVampire 
-    ? "0 30px 60px rgba(0,0,0,0.6), inset 0 2px 4px rgba(187,150,228,0.4), inset 0 -5px 20px rgba(0,0,0,0.5)" 
-    : "0 30px 60px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.15), inset 0 -5px 20px rgba(0,0,0,0.5)";
+    ? "0 30px 60px rgba(0,0,0,0.6)" 
+    : "0 30px 60px rgba(0,0,0,0.6)";
 
   // El cache se carga sincrónicamente en el useState para evitar flickeos de UI
 
@@ -328,7 +303,7 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div 
         id="onboarding-spotlight-carousel"
-        className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col gap-6 py-6" 
+        className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col py-6 gap-6" 
         style={{ 
           background: paneBg,
           border: paneBorder,
@@ -354,9 +329,9 @@ export function FomoSpotlight({
         />
         
         {/* Row 1 & 2 Toggled: Modrinth / CurseForge */}
-        <div className="flex-1 w-full min-h-0 flex flex-col relative z-10">
+        <div className="flex-1 w-full min-h-0 flex flex-col gap-3 relative z-10 overflow-hidden">
           {/* Header with Toggle */}
-          <div className="px-8 mb-3 flex items-center justify-between">
+          <div className="px-8 shrink-0 flex items-center justify-between">
             <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
               {activePlatform === "modrinth" 
                 ? (latestCollection?.name || "Modrinth Picks")
@@ -373,8 +348,8 @@ export function FomoSpotlight({
             </button>
           </div>
 
-          {/* Marquee Content */}
-          <div className="flex-1 w-full min-h-0">
+          {/* Marquee Content — takes remaining space, cards NOT clipped */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             {activePlatform === "modrinth" ? (
               <HorizontalEditorialMarquee 
                 items={modrinthMods} 
@@ -401,17 +376,9 @@ export function FomoSpotlight({
           </div>
         </div>
 
-        {/* Row 3: YouTube Showcase — canal configurable */}
-        <div className="w-full shrink-0 pb-2">
-          <FomoYoutubeShowcase
-            channelUrl={activeSpotlightChannel}
-            onOpenVersions={onOpenVersions}
-            onDownloadMod={onDownloadMod}
-            downloading={downloading}
-            globalLoader={loader}
-            theme={currentTheme}
-            isSpotlight={true}
-          />
+        {/* Row 3: Multi-channel Showcase */}
+        <div className="w-full shrink-0">
+          <SpotlightShowcaseRow theme={currentTheme} />
         </div>
       </div>
 

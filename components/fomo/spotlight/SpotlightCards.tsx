@@ -42,7 +42,7 @@ export function SpotlightCollectionCard({
 
   return (
     <div
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[320px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -67,7 +67,7 @@ export function SpotlightCollectionCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "200px", borderBottom: sepColorThick }}
+        style={{ height: "175px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (
@@ -185,7 +185,7 @@ export function SpotlightEditorialCard({
       {/* Visual area */}
       <div
         className="relative flex items-center justify-center"
-        style={{ height: "200px", borderBottom: sepColorThick }}
+        style={{ height: "175px", borderBottom: sepColorThick }}
       >
         {/* Bracket corners */}
         {[["top-2 left-2", "border-t-2 border-l-2"], ["top-2 right-2", "border-t-2 border-r-2"], ["bottom-2 left-2", "border-b-2 border-l-2"], ["bottom-2 right-2", "border-b-2 border-r-2"]].map(([pos, borders], i) => (

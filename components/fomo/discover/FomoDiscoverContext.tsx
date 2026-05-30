@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext } from "react";
 import { PillToggleGroup } from "@/components/ui/primitives";
-import { ModrinthIcon, CurseForgeIcon } from "@/components/fomo/parts/FomoPlatformIcons";
+import { ModrinthIcon, CurseForgeIcon, BedrockIcon } from "@/components/fomo/parts/FomoPlatformIcons";
 
 export type FomoDiscoverApi = Record<string, unknown> & {
   query: string;
   source: string;
-  setSource: (v: "modrinth" | "curseforge" | "all") => void;
+  setSource: (v: "modrinth" | "curseforge" | "all" | "chunk") => void;
 };
 
 const FomoDiscoverContext = createContext<FomoDiscoverApi | null>(null);
@@ -30,6 +30,7 @@ const SOURCE_OPTIONS = [
   { value: "all", label: "Ambos" },
   { value: "modrinth", label: "Modrinth", icon: <ModrinthIcon /> },
   { value: "curseforge", label: "CurseForge", icon: <CurseForgeIcon /> },
+  { value: "chunk", label: "Bedrock", icon: <BedrockIcon /> },
 ];
 
 function sourceOptionsFor(discover: FomoDiscoverApi) {
@@ -48,7 +49,7 @@ export function FomoDiscoverSourceBar({ discover }: { discover: FomoDiscoverApi 
       options={sourceOptionsFor(discover)}
       value={discover.source}
       onChange={(v: string) =>
-        discover.setSource(v as "modrinth" | "curseforge" | "all")
+        discover.setSource(v as "modrinth" | "curseforge" | "all" | "chunk")
       }
       className="p-1.5 shrink-0"
       ariaLabel="Seleccionar fuente Modrinth o CurseForge"

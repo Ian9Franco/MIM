@@ -3,7 +3,7 @@
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
 > **Versión Actual:** v10.2.2 (FOMO Dependency & API Hardening)  
-> **Última actualización:** 2026-05-27
+> **Última actualización:** 2026-05-30
 
 ---
 

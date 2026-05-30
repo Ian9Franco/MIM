@@ -49,7 +49,7 @@ export function FomoSidebarPortal({
     <>
       {/* Downloads Sidebar — collapses when details open */}
       <aside
-        className={`fomo-sidebar fomo-sidebar-container fixed top-0 right-0 h-screen z-[80] w-[380px] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.4)] transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
+        className={`fomo-sidebar fomo-sidebar-container fixed top-0 right-0 h-screen z-[80] w-[320px] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.4)] transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
           showDownloads
             ? "translate-x-0 opacity-100"
             : "translate-x-full opacity-0 pointer-events-none"

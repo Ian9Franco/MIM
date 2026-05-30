@@ -84,6 +84,24 @@ export function useFomoSearch(filters: any) {
         }
         setTotal(fetchedMods.length);
         setTotalPages(1);
+      } else if (source === "chunk") {
+        // Fuente Bedrock — chunk.gg proxy
+        const res = await fetch(`/api/bedrock/discover?${params}`);
+        if (!res.ok) throw new Error("Error en la API de Bedrock (chunk.gg)");
+        const data = await res.json();
+        fetchedMods = (data.mods || []).map((m: any) => ({ ...m, _source: "chunk" }));
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+
+        // Para Bedrock no hacemos crosscheck — no aplica cruce Modrinth/CurseForge
+        if (fetchedMods.length > 0) {
+          setMods(fetchedMods.map(m => ({ ...m, availability: { checking: false, modrinth: false, curseforge: false } })));
+        } else {
+          setMods([]);
+        }
+        if (qClean) eventBus.emit("fomo:search", { query: qClean, source });
+        setLoading(false);
+        return;
       } else {
         const res = await fetch(`/api/${source}/discover?${params}`);
         if (!res.ok) throw new Error("Error en la API de búsqueda");

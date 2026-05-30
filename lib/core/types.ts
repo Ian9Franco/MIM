@@ -25,7 +25,7 @@ export interface ModHit {
   server_side?:  string;
   allowModDistribution?: boolean;
   members?:      any[];
-  _source?:      "modrinth" | "curseforge";
+  _source?:      "modrinth" | "curseforge" | "chunk";
   availability?: {
     modrinth: boolean;
     curseforge: boolean;

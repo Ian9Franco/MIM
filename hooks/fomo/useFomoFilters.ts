@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { SortOrder } from "../../constants/app";
 
 export function useFomoFilters(defaultLoader: string, defaultGameVersion: string) {
-  const [source, setSource] = useState<"modrinth" | "curseforge" | "all">("modrinth");
+  const [source, setSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("modrinth");
   const [loader, setLoader] = useState(defaultLoader);
   const [gameVersions, setGameVersions] = useState<string[]>([defaultGameVersion]);
   const [projectType, setProjectType] = useState("mod");

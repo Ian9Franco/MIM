@@ -14,6 +14,7 @@ import { CATEGORY_ICONS, SORT_ICONS } from "@/components/fomo/discover/FomoFilte
 export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any) {
   const m = useFomoFiltersManager(props);
   const isAuthorSearch = props.query.startsWith("author:");
+  const isBedrockSource = props.source === "chunk";
   const [projectTypeOpen, setProjectTypeOpen] = useState(false);
   const [loaderOpen, setLoaderOpen] = useState(false);
   
@@ -39,6 +40,51 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
 
   return (
     <div className="flex flex-col gap-6 h-full overflow-hidden">
+      {/* Panel especial para Bedrock Addons (chunk.gg) */}
+      {isBedrockSource ? (
+        <div className="flex-1 flex flex-col gap-4">
+          <div className="rounded-2xl border border-[#00CC44]/20 bg-[#00CC44]/5 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#00CC44]/20 flex items-center justify-center">
+                <span className="text-base">💎</span>
+              </div>
+              <div>
+                <p className="text-[11px] font-black text-[#00CC44] uppercase tracking-widest">Bedrock Addons</p>
+                <p className="text-[9px] text-white/40">Marketplace · chunk.gg</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Explorando add-ons del Minecraft Bedrock Marketplace. Usa la barra de búsqueda para filtrar.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Sparkles className="w-3 h-3" /> Tipo de precio</p>
+            {["gratis", "premium"].map(cat => (
+              <button
+                key={cat}
+                onClick={() => {
+                  const active = props.categories.includes(cat);
+                  props.onCategories(active ? [] : [cat]);
+                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${
+                  props.categories.includes(cat)
+                    ? "bg-[#00CC44]/20 text-[#00CC44] border-[#00CC44]/30"
+                    : "bg-white/5 border-white/5 text-white/40"
+                }`}
+              >
+                {cat === "gratis" ? "🆓" : "💰"} {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="mt-auto pt-4 border-t border-white/5">
+            <button onClick={props.onRefresh} disabled={props.loading} className="w-full py-2.5 rounded-xl bg-[#00CC44] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              {props.loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {props.loading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
+        </div>
+      ) : (
+      <div className="flex-1 flex flex-col gap-6 overflow-hidden">
       <div className="flex flex-col gap-3 shrink-0">
         {/* Project Type Dropdown */}
         <div className="relative">
@@ -237,6 +283,8 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         </div>
         <button onClick={props.onRefresh} disabled={props.loading} className="w-full py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">{props.loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{props.loading ? "Actualizando..." : "Actualizar"}</button>
       </div>
+      </div>
+      )}
     </div>
   );
 });

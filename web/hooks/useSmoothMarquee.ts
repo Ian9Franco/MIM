@@ -62,35 +62,58 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
     animationFrame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(animationFrame);
-  }, [speed, reverse, isVertical]);
+  });
 
   const isDragging = useRef(false);
+  const hasDragged = useRef(false);
+  const suppressClick = useRef(false);
   const startPos = useRef(0);
   const startOffset = useRef(0);
 
   const handlers = {
     onWheel: (e: React.WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       const delta = isVertical ? e.deltaY : (e.deltaX || e.deltaY);
       targetOffset.current += delta * 0.5;
     },
     onPointerDown: (e: React.PointerEvent) => {
+      e.stopPropagation();
       isDragging.current = true;
+      hasDragged.current = false;
       startPos.current = isVertical ? e.clientY : e.clientX;
       startOffset.current = offset.current;
-      e.currentTarget.setPointerCapture(e.pointerId);
     },
     onPointerMove: (e: React.PointerEvent) => {
       if (!isDragging.current) return;
       const currentPos = isVertical ? e.clientY : e.clientX;
       const diff = startPos.current - currentPos;
+      if (Math.abs(diff) < 5 && !hasDragged.current) return;
+      hasDragged.current = true;
+      e.preventDefault();
+      e.stopPropagation();
       targetOffset.current = startOffset.current + diff;
     },
     onPointerUp: (e: React.PointerEvent) => {
+      if (hasDragged.current) {
+        e.stopPropagation();
+        suppressClick.current = true;
+        window.setTimeout(() => {
+          suppressClick.current = false;
+        }, 0);
+      }
       isDragging.current = false;
-      e.currentTarget.releasePointerCapture(e.pointerId);
+      hasDragged.current = false;
     },
-    onPointerCancel: () => {
+    onPointerCancel: (e: React.PointerEvent) => {
+      e.stopPropagation();
       isDragging.current = false;
+      hasDragged.current = false;
+    },
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!suppressClick.current) return;
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 

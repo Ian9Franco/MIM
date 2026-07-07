@@ -145,7 +145,7 @@ export default function ChannelPickerModal({
                         onClick={() => {
                           handleSaveShowcaseChannels(showcaseChannels.filter((c) => c !== ch));
                         }}
-                        className="p-1 rounded-lg hover:bg-white/5 text-red-550 hover:text-red-400 transition-colors shrink-0"
+                        className="p-1 rounded-lg hover:bg-white/5 text-red-500 hover:text-red-400 transition-colors shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

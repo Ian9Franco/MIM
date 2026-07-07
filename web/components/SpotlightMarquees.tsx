@@ -5,6 +5,7 @@ import { TvMinimalPlay } from "lucide-react";
 import { useSmoothMarquee } from "../hooks/useSmoothMarquee";
 
 export interface ModHit {
+  itemId?: string;
   projectId: string;
   title: string;
   author: string;
@@ -15,6 +16,10 @@ export interface ModHit {
   url?: string;
   _source?: string;
   downloads?: number;
+  gameVersions?: string[];
+  loaders?: string[];
+  side?: string;
+  versionId?: string | null;
 }
 
 interface VerticalTickerProps {
@@ -36,7 +41,7 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
+      className="mim-marquee-isolated absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
       {...handlers}
     >
       <div ref={innerRef} className="flex flex-col gap-3.5 w-full px-1 pb-4">
@@ -157,7 +162,7 @@ export function HorizontalEditorialMarquee({
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden mask-horizontal-edges cursor-pointer select-none py-1.5"
+      className="mim-marquee-isolated relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
       {...handlers}
     >
       <div ref={innerRef} className="flex gap-4 w-max px-1">
@@ -167,7 +172,7 @@ export function HorizontalEditorialMarquee({
               <div
                 key={`${item.id}-${i}`}
                 onClick={() => onSelectCollection?.(item)}
-                className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.98] transition-all shadow-sm"
+                className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.98] transition-all shadow-sm"
               >
                 <div className="h-24 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
                   {item.iconUrl ? (
@@ -192,22 +197,26 @@ export function HorizontalEditorialMarquee({
               <div
                 key={`${item.projectId}-${i}`}
                 onClick={() => onSelectMod?.(item)}
-                className="bg-surface/95 border border-border rounded-2xl p-4 flex flex-col gap-3.5 min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.97] transition-all shadow-md"
+                className="mim-themed-card border rounded-2xl overflow-hidden flex flex-col min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.97] transition-all shadow-md"
               >
-                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
                   {item.iconUrl ? (
-                    <img src={item.iconUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={item.iconUrl} alt="" className="w-full h-full object-cover scale-110 opacity-90" />
                   ) : (
                     <span className="text-white/40 font-bold uppercase">{item.title?.substring(0, 2) || "MD"}</span>
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+                  <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70 capitalize">
+                    {item.projectType || "mod"}
+                  </span>
                 </div>
-                <div>
+                <div className="p-4 flex flex-col gap-3.5">
                   <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
                   <p className="text-[9px] text-white/40 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-white/[0.04] mt-0.5">
-                  <span className="text-[9px] text-orange-400 capitalize">{item._source || "modrinth"}</span>
-                  <span className="text-[9px] text-white/30 font-mono">#{String((i % items.length) + 1).padStart(2, "0")}</span>
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.04] mt-0.5">
+                    <span className="text-[9px] text-orange-400 capitalize">{item._source || "modrinth"}</span>
+                    <span className="text-[9px] text-white/30 font-mono">#{String((i % items.length) + 1).padStart(2, "0")}</span>
+                  </div>
                 </div>
               </div>
             );
@@ -238,6 +247,27 @@ const DEFAULT_SHOWCASE_CHANNELS = [
   "https://www.youtube.com/@NoxusMods",
   "https://www.youtube.com/@sir_color",
   "https://www.youtube.com/@Wero_lovernite",
+];
+
+const FALLBACK_SHOWCASES: ShowcaseVideo[] = [
+  {
+    videoId: "M7lc1UVf-VE",
+    title: "Showcase de mods detectado por FOMO",
+    thumbnail: "https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg",
+    videoUrl: "https://www.youtube.com/results?search_query=minecraft+mod+showcase",
+    channelName: "Fallback",
+    publishedAt: "20260707",
+    modSlugs: ["modrinth:mod:appleskin", "modrinth:mod:moonlight"],
+  },
+  {
+    videoId: "aqz-KE-bpKQ",
+    title: "Ideas rápidas para armar un modpack mobile first",
+    thumbnail: "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg",
+    videoUrl: "https://www.youtube.com/results?search_query=minecraft+modpack+showcase",
+    channelName: "Fallback",
+    publishedAt: "20260625",
+    modSlugs: ["modrinth:mod:immediatelyfast"],
+  },
 ];
 
 function getHandle(url: string): string {
@@ -308,7 +338,7 @@ export function HorizontalShowcaseMarquee({
       if (!cancelled) {
         // Sort newest first using publishedAt YYYYMMDD string
         results.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-        setVideos(results);
+        setVideos(results.length ? results : FALLBACK_SHOWCASES);
         setLoading(false);
       }
     }
@@ -354,18 +384,19 @@ export function HorizontalShowcaseMarquee({
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden mask-horizontal-edges cursor-pointer select-none py-1.5"
+      className="mim-marquee-isolated relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
       {...handlers}
     >
       <div ref={innerRef} className="flex gap-4 w-max px-1">
         {displayVideos.map((video, i) => (
-          <a
+          <button
             key={`${video.videoId}-${i}`}
-            href={video.videoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
+            }}
             style={{ width: "180px", height: "255px" }}
-            className="shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl bg-surface/90 border border-border"
+            className="mim-themed-card shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl border text-left"
           >
             {/* Thumbnail */}
             <div style={{ height: "125px" }} className="relative overflow-hidden rounded-t-[calc(1rem-1px)] bg-black/40 shrink-0">
@@ -442,10 +473,9 @@ export function HorizontalShowcaseMarquee({
                 </div>
               )}
             </div>
-          </a>
+          </button>
         ))}
       </div>
     </div>
   );
 }
-

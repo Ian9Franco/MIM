@@ -142,6 +142,182 @@ html, body {
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
+.mim-marquee-isolated {
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.mim-hub-word {
+  color: var(--color-primary);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--color-primary) 32%, transparent);
+}
+
+[data-theme="vampire"] .mim-hub-word {
+  color: #d8c2ff;
+}
+
+[data-theme="modern"] .mim-hub-word {
+  color: #4c1d95;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.mim-web-logo {
+  position: relative;
+  isolation: isolate;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.mim-web-logo::after {
+  display: none;
+}
+
+.mim-web-logo img {
+  position: relative;
+  z-index: 1;
+}
+
+.mim-web-logo-mim {
+  border-radius: 0.75rem;
+}
+
+.mim-spotlight-nav-icon[data-active="true"] {
+  animation: float 3.2s ease-in-out infinite, pulseRing 2.8s ease-in-out infinite;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+.mim-theme-toggle {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 22px rgba(0, 0, 0, 0.16);
+}
+
+.mim-theme-option {
+  transform-origin: center;
+}
+
+.mim-theme-option[data-active="true"] svg {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--color-primary) 35%, transparent));
+}
+
+.mim-themed-card {
+  background: color-mix(in srgb, var(--color-card) 96%, transparent);
+  border-color: var(--color-border);
+  color: var(--color-foreground);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.mim-themed-card h4,
+.mim-themed-card .mim-card-title {
+  color: var(--color-foreground) !important;
+}
+
+.mim-themed-card p,
+.mim-themed-card .mim-card-muted {
+  color: var(--color-muted) !important;
+}
+
+.mim-rich-description {
+  color: color-mix(in srgb, var(--color-foreground) 78%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.mim-rich-description h1,
+.mim-rich-description h2,
+.mim-rich-description h3,
+.mim-rich-description h4 {
+  color: var(--color-foreground);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 1rem 0 0.45rem;
+}
+
+.mim-rich-description h1,
+.mim-rich-description h2 { font-size: 0.95rem; }
+.mim-rich-description h3 { font-size: 0.86rem; }
+.mim-rich-description h4 { font-size: 0.8rem; }
+
+.mim-rich-description p,
+.mim-rich-description ul,
+.mim-rich-description ol,
+.mim-rich-description blockquote {
+  margin: 0.65rem 0;
+}
+
+.mim-rich-description ul,
+.mim-rich-description ol {
+  padding-left: 1rem;
+}
+
+.mim-rich-description li {
+  margin: 0.25rem 0;
+}
+
+.mim-rich-description a {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mim-rich-description img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-border);
+  margin: 0.75rem 0;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.mim-rich-description .mim-rich-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-border-strong);
+  margin: 0.75rem 0;
+  background: #000;
+}
+
+.mim-rich-description .mim-rich-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.mim-rich-description .mim-translation-block {
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-card) 72%, transparent);
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+  margin: 0 0 0.8rem;
+}
+
+.mim-rich-description .mim-translation-original {
+  color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  font-size: 0.72rem;
+}
+
+.mim-rich-description .mim-translation-result {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+[data-theme="modern"] .mim-themed-card {
+  background: linear-gradient(145deg, #f8fafc, var(--color-card));
+  border-color: rgba(13, 39, 80, 0.1);
+  box-shadow: 12px 12px 24px rgba(13, 39, 80, 0.12), -10px -10px 22px rgba(255, 255, 255, 0.8);
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-primary) 40%, transparent) transparent;

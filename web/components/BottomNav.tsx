@@ -47,7 +47,10 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
               className="flex-1 min-w-0 flex flex-col items-center justify-center text-center focus:outline-none select-none group"
             >
               <div
-                className="p-1.5 rounded-full transition-all duration-300 flex items-center justify-center"
+                data-active={tab.id === "spotlight" && isActive}
+                className={`p-1.5 rounded-full transition-all duration-300 flex items-center justify-center ${
+                  tab.id === "spotlight" ? "mim-spotlight-nav-icon" : ""
+                }`}
                 style={
                   isActive
                     ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)" }

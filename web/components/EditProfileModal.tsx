@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, Pencil, User, Upload, Trash2, Loader2, Check } from "lucide-react";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { ImageCropper } from "./ImageCropper";
 
 interface EditProfileModalProps {
   show: boolean;
@@ -21,7 +22,6 @@ export default function EditProfileModal({
   profile,
   setProfile,
   supabase,
-  resizeAndCompressImage,
 }: EditProfileModalProps) {
   const [editUsername, setEditUsername] = useState(profile?.username || "");
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile?.avatar_url || "");
@@ -29,6 +29,17 @@ export default function EditProfileModal({
   const [editColor, setEditColor] = useState(profile?.color || "#F05A28");
   const [savingProfile, setSavingProfile] = useState(false);
   const [editProfileStatus, setEditProfileStatus] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [rawAvatar, setRawAvatar] = useState<string | null>(null);
+  const [rawBanner, setRawBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!show) return;
+    setEditUsername(profile?.username || "");
+    setEditAvatarUrl(profile?.avatar_url || "");
+    setEditBannerUrl(profile?.banner_url || "");
+    setEditColor(profile?.color || "#F05A28");
+    setEditProfileStatus(null);
+  }, [show, profile]);
 
   if (!show || !session) return null;
 
@@ -150,15 +161,12 @@ export default function EditProfileModal({
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          try {
-                            const compressed = await resizeAndCompressImage(file, 160, 160);
-                            setEditAvatarUrl(compressed);
-                          } catch (err) {
-                            console.error(err);
+                            const reader = new FileReader();
+                            reader.onload = () => setRawAvatar(reader.result as string);
+                            reader.readAsDataURL(file);
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
                   </label>
                   {editAvatarUrl && (
                     <button
@@ -205,15 +213,12 @@ export default function EditProfileModal({
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        try {
-                          const compressed = await resizeAndCompressImage(file, 800, 300);
-                          setEditBannerUrl(compressed);
-                        } catch (err) {
-                          console.error(err);
-                        }
-                      }
-                    }}
-                  />
+                            const reader = new FileReader();
+                            reader.onload = () => setRawBanner(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
                 </label>
                 {editBannerUrl && (
                   <button
@@ -298,6 +303,30 @@ export default function EditProfileModal({
           </button>
         </form>
       </div>
+      {rawAvatar && (
+        <ImageCropper
+          imageUrl={rawAvatar}
+          aspectRatio={1}
+          shape="circle"
+          onCancel={() => setRawAvatar(null)}
+          onSave={(croppedUrl) => {
+            setEditAvatarUrl(croppedUrl);
+            setRawAvatar(null);
+          }}
+        />
+      )}
+      {rawBanner && (
+        <ImageCropper
+          imageUrl={rawBanner}
+          aspectRatio={8 / 3}
+          shape="rect"
+          onCancel={() => setRawBanner(null)}
+          onSave={(croppedUrl) => {
+            setEditBannerUrl(croppedUrl);
+            setRawBanner(null);
+          }}
+        />
+      )}
     </div>
   );
 }

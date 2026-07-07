@@ -3,7 +3,7 @@ import { UNKNOWN } from "./types";
 
 export function normalizeVersion(version: string): string {
   if (!version || version === "unknown") return version;
-  let clean = version.trim()
+  const clean = version.trim()
     .replace(/^v/i, "")
     .replace(/[-+]?(fabric|forge|neoforge|quilt|snapshot|alpha|beta|dev|local|all|release|final|pre)/gi, "")
     .replace(/[-+]?(mc)?1\.(1[6-9]|2\d)(\.\d+)?/gi, "")

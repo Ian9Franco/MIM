@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     headers["Authorization"] = apiKey;
   }
 
-  let queryText = q;
+  const queryText = q;
   const facetsArray: string[][] = [
     [`project_type:${projectType}`],
   ];
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
           const projects = await userProjectsRes.json();
           
           // Show the complete catalog of the creator without any restriction
-          let filtered = [...(projects ?? [])];
+          const filtered = [...(projects ?? [])];
           
           // 5. Paginate
           const totalHits = filtered.length;

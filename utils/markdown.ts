@@ -1,5 +1,5 @@
 function cleanEmbeddedUrl(url: string, defaultDomain = "https://modrinth.com"): string {
-  let cleaned = url
+  const cleaned = url
     .replace(/&amp;/g, "&")
     .replace(/[`"' ]+/g, "")
     .trim();

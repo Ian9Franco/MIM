@@ -80,7 +80,7 @@ export class CurseForgeService {
 
     const data = await res.json();
 
-    let mods = (data.data || []).map((m: any) => ({
+    const mods = (data.data || []).map((m: any) => ({
         projectId: m.id.toString(),
         externalProjectId: m.id.toString(),
         sourceProjectId: m.id.toString(),

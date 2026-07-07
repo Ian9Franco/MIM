@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execSync } from "child_process";
 import { getSettings } from "@/lib/core/settings";
 import { Keybind, SnapshotMetadata } from "./lib/types";
 import { 
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
     // Detect installations from official launcher (Scanning versions folder)
     const versionsDir = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "versions");
     const launcherProfilesPath = path.join(os.homedir(), "AppData", "Roaming", ".minecraft", "launcher_profiles.json");
-    let installations: any[] = [];
+    const installations: any[] = [];
     
     let profilesMap: Record<string, any> = {};
     if (fs.existsSync(launcherProfilesPath)) {
@@ -187,7 +188,6 @@ export async function GET(req: NextRequest) {
     
     let detectedGpu = "Auto-detected";
     try {
-      const { execSync } = require("child_process");
       const gpuInfo = execSync("wmic path win32_VideoController get name", { encoding: "utf-8" });
       const lines = gpuInfo.split("\n").map((l: string) => l.trim()).filter((l: string) => l && l !== "Name");
       if (lines.length > 0) {
@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
         fs.writeFileSync(optionsPath, ""); // Create if missing
       }
       
-      let content = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
+      const content = fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/);
       
       if (keybinds) {
         // Use global draft for locked keys if available, otherwise no locks
@@ -470,7 +470,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "create-snapshot") {
       // Read CURRENT options.txt to capture real state
-      let currentKeybinds: Array<{id: string; key: string}> = [];
+      const currentKeybinds: Array<{id: string; key: string}> = [];
       let currentPacks: string[] = [];
       let currentServers: string = "";
 
@@ -539,7 +539,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Build merged options.txt: read existing → apply snapshot keybinds + packs
-      let lines: string[] = fs.existsSync(optionsPath)
+      const lines: string[] = fs.existsSync(optionsPath)
         ? fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/).filter(l => l.trim())
         : ["lang:en_us", "guiScale:0"];
 

@@ -21,7 +21,7 @@ const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.jso
  */
 export function normalizeVersion(v: string): string {
   if (!v) return "";
-  let clean = v.toLowerCase().replace(/^v/, "")
+  const clean = v.toLowerCase().replace(/^v/, "")
     .replace(/[-+](fabric|forge|neoforge|quilt|snapshot|alpha|beta|dev|local|all)/gi, "")
     .replace(/[-+](mc)?1\.(1[6-9]|2\d)(\.\d+)?/gi, "")
     .replace(/[_-]/g, ".").replace(/[^0-9.]/g, "");

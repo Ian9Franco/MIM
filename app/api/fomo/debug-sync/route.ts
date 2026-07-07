@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { getPortableDir } from "@/lib/core/settings";
 
 const DATA_DIR = path.join(getPortableDir(), "data");
@@ -83,7 +84,6 @@ export async function GET(request: Request) {
     }
 
     try {
-      const crypto = require("crypto");
       const cacheDir = path.join(getPortableDir(), "cache");
       const channelHash = crypto.createHash("md5").update(channelUrl).digest("hex").substring(0, 10);
 
@@ -119,7 +119,6 @@ export async function GET(request: Request) {
       for (const channelUrl of channels) {
         try {
           // Limpiamos caché antes de testear
-          const crypto = require("crypto");
           const cacheDir = path.join(getPortableDir(), "cache");
           const channelHash = crypto.createHash("md5").update(channelUrl).digest("hex").substring(0, 10);
 

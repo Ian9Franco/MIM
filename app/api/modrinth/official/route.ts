@@ -28,7 +28,7 @@ export async function GET() {
     
     // Fetch project details for all preview IDs
     const idArray = Array.from(allProjectIds);
-    let projectsMap: Record<string, any> = {};
+    const projectsMap: Record<string, any> = {};
     
     if (idArray.length > 0) {
       const resProjects = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(idArray)}`, {

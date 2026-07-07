@@ -66,11 +66,11 @@ export default function Page() {
   useEffect(() => {
     const seen = localStorage.getItem(appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main");
     const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (!seen || guidesEnabled) {
-      setShowOnboarding(true);
-    } else {
-      setShowOnboarding(false);
-    }
+    const shouldShow = !seen || guidesEnabled;
+    const timer = setTimeout(() => {
+      setShowOnboarding(shouldShow);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [appMode]);
 
   useEffect(() => {

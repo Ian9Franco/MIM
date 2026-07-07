@@ -30,7 +30,7 @@ export function predictConnectorCompatibility(title: string, categories: string[
 
   // Sistema de puntuación dinámico
   let score = 98; // Empezamos casi perfecto
-  let reasons: string[] = [];
+  const reasons: string[] = [];
 
   // 2. Penalizaciones por Renderizado y Optimización (Altísimo riesgo)
   if (t.includes("render") || t.includes("lighting") || t.includes("shader") || t.includes("embeddium") || cats.some(c => c.includes("rendering"))) {

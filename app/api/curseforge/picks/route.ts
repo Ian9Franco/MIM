@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Map discovered picks to assign their correct projectCount instead of a generic 0
-  let allPicks = discovered.map((p: any) => ({
+  const allPicks = discovered.map((p: any) => ({
     ...p,
     projectCount: p.projectCount || CURSEFORGE_PROJECT_COUNTS[p.slug] || 5
   }));

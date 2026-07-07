@@ -65,7 +65,7 @@ export function gameVersionFromFilename(filePath: string): string | null {
 export function normalizeModVersion(version: string): string {
   if (!version || version === "unknown") return version;
   
-  let clean = version
+  const clean = version
     .trim()
     .replace(/^v/i, "") // Elimina 'v' inicial (v1.0 -> 1.0)
     .replace(/[-+]?(fabric|forge|snapshot|beta)/gi, "") // Elimina tags de entorno

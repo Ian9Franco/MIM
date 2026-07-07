@@ -204,7 +204,7 @@ export function FomoSpotlight({
         setLatestCollection(latestColl);
         
         const modsData = await fetchCollectionMods(latestColl.id);
-        let allMods = modsData.mods ? [...modsData.mods] : [];
+        const allMods = modsData.mods ? [...modsData.mods] : [];
 
         // Añadimos otras 3 colecciones aleatorias para que el carrusel sea muy largo
         const otherColls = collsData.collections.slice(1);

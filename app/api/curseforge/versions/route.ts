@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
     const projectType = searchParams.get("projectType") ?? "mod";
 
     // Mapear al formato VersionEntry unificado
-    let versions = (data.data || []).map((v: any) => ({
+    const versions = (data.data || []).map((v: any) => ({
       id: String(v.id),
       versionNumber: v.displayName,
       name: v.fileName,

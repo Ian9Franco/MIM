@@ -711,14 +711,14 @@ select:focus {
     to bottom,
     transparent 0px,
     black 20px,
-    black calc(100% - 20px),
+    black 92%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0px,
     black 20px,
-    black calc(100% - 20px),
+    black 92%,
     transparent 100%
   );
 }

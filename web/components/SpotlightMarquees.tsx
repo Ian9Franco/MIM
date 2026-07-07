@@ -12,6 +12,8 @@ export interface ModHit {
   categories?: string[];
   description?: string;
   url?: string;
+  _source?: string;
+  downloads?: number;
 }
 
 interface VerticalTickerProps {

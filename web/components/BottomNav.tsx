@@ -48,10 +48,6 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
               >
                 {tab.label}
               </span>
-              
-              {isActive && (
-                <span className="absolute bottom-0 w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-              )}
             </button>
           );
         })}

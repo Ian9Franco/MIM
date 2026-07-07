@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Compass, Film, Award, Heart } from "lucide-react";
+import { Compass, Film, Award, User } from "lucide-react";
 
 interface BottomNavProps {
   activeTab: string;
@@ -10,10 +10,10 @@ interface BottomNavProps {
 
 export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const tabs = [
+    { id: "profile", label: "Perfil", icon: User, color: "text-rose-500" },
     { id: "spotlight", label: "Spotlight", icon: Compass, color: "text-orange-500" },
     { id: "feed", label: "Canales", icon: Film, color: "text-blue-400" },
     { id: "rankings", label: "Ránkings", icon: Award, color: "text-purple-400" },
-    { id: "saved", label: "Guardados", icon: Heart, color: "text-rose-500" },
   ];
 
   return (

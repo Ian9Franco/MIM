@@ -27,12 +27,13 @@ interface VerticalTickerProps {
 export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-orange-500", reverse = false }: VerticalTickerProps) {
   // Multiply array to guarantee continuous seamless marquee loop
   const duplicatedMods = [...mods, ...mods, ...mods, ...mods];
-  const { containerRef, innerRef } = useSmoothMarquee(speed, reverse, true);
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, true);
 
   return (
     <div 
       ref={containerRef}
       className="absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
+      {...handlers}
     >
       <div ref={innerRef} className="flex flex-col gap-3.5 w-full px-1 pb-4">
         {duplicatedMods.map((mod, i) => {

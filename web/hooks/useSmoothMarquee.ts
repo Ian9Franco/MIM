@@ -45,5 +45,12 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
     return () => cancelAnimationFrame(animationFrame);
   }, [speed, reverse, isVertical]);
 
-  return { containerRef, innerRef };
+  const handlers = {
+    onWheel: (e: React.WheelEvent) => {
+      const delta = isVertical ? e.deltaY : (e.deltaX || e.deltaY);
+      targetOffset.current += delta * 0.5;
+    }
+  };
+
+  return { containerRef, innerRef, handlers };
 }

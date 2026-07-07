@@ -70,8 +70,8 @@ export function PendingFilesSection({
 
   return (
     <section className="animate-fade-up">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-2.5 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           <SectionHeading icon={<Inbox className="w-4 h-4" />} title="Descargas" sub="Detectados en Descargas" badge={pendingFiles.length} accentColor="var(--color-primary)" />
           {!activeProject && availableVersions && availableVersions.length > 0 && setDetectedVersion && (
             <select

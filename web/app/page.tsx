@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X } from "lucide-react";
+import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X, ArrowLeft, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BottomNav } from "../components/BottomNav";
 import { VerticalTicker, ModHit } from "../components/SpotlightMarquees";
@@ -16,6 +16,7 @@ interface CollectionItem {
   iconUrl?: string;
   source: "modrinth" | "curseforge";
   previewIcons?: string[];
+  mods?: ModHit[]; // Loaded for static/CurseForge picks, or dynamically fetched
 }
 
 export default function Home() {
@@ -41,10 +42,20 @@ export default function Home() {
   const [newestMods, setNewestMods] = useState<ModHit[]>(mockNewestMods);
   const [loadingSpotlight, setLoadingSpotlight] = useState(false);
 
-  // Featured Collections State (Desktop Spotlight Style)
+  // Featured Collections & Latest Collection Mods (Desktop Spotlight style)
   const [modrinthFeatured, setModrinthFeatured] = useState<CollectionItem[]>([]);
   const [curseForgeFeatured, setCurseForgeFeatured] = useState<CollectionItem[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(false);
+  
+  // Mods inside the latest collection for Spotlight hero row
+  const [latestFeaturedMods, setLatestFeaturedMods] = useState<ModHit[]>([]);
+  const [latestCollectionName, setLatestCollectionName] = useState("");
+  const [loadingLatestMods, setLoadingLatestMods] = useState(false);
+
+  // Active Collection View state (for "entering" collections in mobile)
+  const [activeCollection, setActiveCollection] = useState<CollectionItem | null>(null);
+  const [activeCollectionMods, setActiveCollectionMods] = useState<ModHit[]>([]);
+  const [loadingActiveMods, setLoadingActiveMods] = useState(false);
 
   // YouTube Live Data State
   const [youtubePosts, setYoutubePosts] = useState<any[]>([]);
@@ -55,24 +66,14 @@ export default function Home() {
   const [rankings, setRankings] = useState<ModHit[]>([]);
   const [loadingRankings, setLoadingRankings] = useState(false);
 
-  const handleOpenModDetails = (mod: ModHit) => {
-    setSelectedMod(mod);
-  };
-
-  const handleCloseModDetails = () => {
-    setSelectedMod(null);
-  };
-
   // ─────────────────────────────────────────────────────────────────────────────
   // AUTHENTICATION LOGIC (Supabase)
   // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Read initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
@@ -80,12 +81,10 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch profile and user specific data when logged in
   const loadUserData = useCallback(async (userId: string) => {
     try {
       setLoadingUserData(true);
       
-      // 1. Fetch Profile
       const { data: profData } = await supabase
         .from("profiles")
         .select("*")
@@ -94,7 +93,6 @@ export default function Home() {
       
       if (profData) setProfile(profData);
 
-      // 2. Fetch User Favorite Mods
       const { data: favs } = await supabase
         .from("favorite_mods")
         .select("*")
@@ -102,7 +100,6 @@ export default function Home() {
       
       if (favs) setUserFavorites(favs);
 
-      // 3. Fetch User Collaborative Drafts
       const { data: drafts } = await supabase
         .from("drafts")
         .select("*")
@@ -133,7 +130,6 @@ export default function Home() {
     try {
       setAuthLoading(true);
       if (isRegistering) {
-        // Sign up
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -144,7 +140,6 @@ export default function Home() {
         if (error) throw error;
         alert("¡Registro exitoso! Iniciando sesión...");
       } else {
-        // Sign in
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -163,26 +158,104 @@ export default function Home() {
   // DATA FETCHING LOGIC
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // Fetch Modrinth & CurseForge Featured Editorial rows (desktop style)
+  // Fetch official collections
   const loadCollections = useCallback(async () => {
     try {
       setLoadingCollections(true);
-      // Fetch Modrinth collections proxy
       const mrPromise = fetch("/api/modrinth/official").then(r => r.json());
-      // Fetch CurseForge picks proxy
       const cfPromise = fetch("/api/curseforge/picks").then(r => r.json());
 
       const [mrRes, cfRes] = await Promise.all([mrPromise, cfPromise]);
-      if (mrRes.collections) setModrinthFeatured(mrRes.collections.slice(0, 5));
-      if (cfRes.picks) setCurseForgeFeatured(cfRes.picks);
+      const mrColls = mrRes.collections || [];
+      const cfPicks = cfRes.picks || [];
+
+      setModrinthFeatured(mrColls);
+      setCurseForgeFeatured(cfPicks);
+
+      // Grab the latest featured collection to show its mods inside Spotlight (similar to desktop)
+      if (mrColls.length > 0) {
+        const latest = mrColls[0];
+        setLatestCollectionName(latest.name);
+        loadCollectionMods(latest, true);
+      }
     } catch (e) {
-      console.error("Error loading editorial collections:", e);
+      console.error("Error loading collections:", e);
     } finally {
       setLoadingCollections(false);
     }
   }, []);
 
-  // Fetch Tickers from Modrinth Live API
+  // Fetch mods for a specific collection
+  const loadCollectionMods = async (collection: CollectionItem, isSpotlightHero = false) => {
+    try {
+      if (isSpotlightHero) setLoadingLatestMods(true);
+      else setLoadingActiveMods(true);
+
+      // If it's CurseForge, they are pre-packaged statically
+      if (collection.source === "curseforge" && collection.mods) {
+        if (isSpotlightHero) setLatestFeaturedMods(collection.mods);
+        else setActiveCollectionMods(collection.mods);
+        return;
+      }
+
+      // If Modrinth, fetch the projects from their API proxy
+      // Let's call the official Modrinth v2 API using the preview IDs or project list
+      // In Modrinth official route, we list the collections. 
+      // We can fetch mod projects in batch.
+      const collRes = await fetch(`https://api.modrinth.com/v3/user/modrinth/collections`);
+      if (collRes.ok) {
+        const colls = await collRes.json();
+        const found = colls.find((c: any) => c.id === collection.id);
+        const projectIds = found?.projects || [];
+        
+        if (projectIds.length > 0) {
+          const limitIds = projectIds.slice(0, 15);
+          const pRes = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(limitIds)}`);
+          if (pRes.ok) {
+            const projects = await pRes.json();
+            const mappedMods = projects.map((m: any) => ({
+              projectId: m.id,
+              title: m.title,
+              description: m.description,
+              iconUrl: m.icon_url,
+              author: m.author || "Creador",
+              projectType: m.project_type,
+              categories: m.categories,
+              url: `https://modrinth.com/${m.project_type}/${m.slug}`,
+              _source: "modrinth"
+            }));
+
+            if (isSpotlightHero) setLatestFeaturedMods(mappedMods);
+            else setActiveCollectionMods(mappedMods);
+            return;
+          }
+        }
+      }
+
+      // Fallback
+      if (isSpotlightHero) setLatestFeaturedMods(mockUpdatedMods.slice(0, 5));
+      else setActiveCollectionMods(mockUpdatedMods.slice(0, 6));
+    } catch (e) {
+      console.error("Failed to load collection mods:", e);
+    } finally {
+      if (isSpotlightHero) setLoadingLatestMods(false);
+      else setLoadingActiveMods(false);
+    }
+  };
+
+  // Click on a collection card -> open detailed collection subview
+  const handleEnterCollection = (collection: CollectionItem) => {
+    setActiveCollection(collection);
+    setActiveCollectionMods([]);
+    loadCollectionMods(collection, false);
+  };
+
+  const handleExitCollection = () => {
+    setActiveCollection(null);
+    setActiveCollectionMods([]);
+  };
+
+  // Fetch Spotlight (tickers data)
   const loadSpotlightData = useCallback(async () => {
     try {
       setLoadingSpotlight(true);
@@ -254,6 +327,8 @@ export default function Home() {
     if (activeTab === "spotlight") {
       loadSpotlightData();
       loadCollections();
+    } else if (activeTab === "collections") {
+      loadCollections();
     } else if (activeTab === "rankings") {
       loadRankingsData();
     } else if (activeTab === "feed") {
@@ -261,17 +336,25 @@ export default function Home() {
     }
   }, [activeTab, currentChannel, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData]);
 
+  const handleOpenModDetails = (mod: ModHit) => {
+    setSelectedMod(mod);
+  };
+
+  const handleCloseModDetails = () => {
+    setSelectedMod(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden px-4 pt-6">
       
       {/* Header Bar */}
-      <header className="flex justify-between items-center mb-6 px-1">
+      <header className="flex justify-between items-center mb-6 px-1 shrink-0">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-widest text-orange-500 font-bold">MIM Hub</span>
           <h1 className="text-lg font-bold text-white tracking-tight mt-0.5">FOMO Cloud</h1>
         </div>
         <button 
-          onClick={() => alert("MIM FOMO Web v1.2.0")}
+          onClick={() => alert("MIM FOMO Web v1.3.0")}
           className="bg-white/5 hover:bg-white/10 border border-white/[0.08] rounded-full p-2 text-white/70 active:scale-95 transition-all"
         >
           <Share2 className="w-4 h-4" />
@@ -287,7 +370,6 @@ export default function Home() {
         {activeTab === "profile" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none animate-fade-in">
             {!session ? (
-              // Login / Register Form (Glassmorphism)
               <div className="my-auto bg-[#151518]/80 border border-white/[0.06] rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mx-auto mb-3">
@@ -362,14 +444,12 @@ export default function Home() {
                     onClick={() => setIsRegistering(!isRegistering)}
                     className="text-[11px] text-orange-400 font-semibold hover:underline"
                   >
-                    {isRegistering ? "¿Ya tenés cuenta? Iniciá sesión" : "¿No tenés cuenta? Registrate gratis"}
+                    {isRegistering ? "@Ya tenés cuenta? Iniciá sesión" : "@No tenés cuenta? Registrate gratis"}
                   </button>
                 </div>
               </div>
             ) : (
-              // Connected Profile (Real Cloud Data Dashboard)
               <div className="flex flex-col gap-6">
-                {/* Profile banner block */}
                 <div className="bg-[#151518]/90 border border-white/[0.06] rounded-3xl p-5 flex items-center gap-4 relative overflow-hidden">
                   <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/[0.08] flex items-center justify-center text-rose-400 text-lg font-black uppercase">
                     {profile?.username?.substring(0, 2) || session.user.email.substring(0, 2)}
@@ -387,7 +467,6 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Borradores/Drafts colaborativos */}
                 <div className="flex flex-col gap-3">
                   <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
                     <Bookmark className="w-4 h-4 text-orange-500" /> Borradores Modpacks (Drafts)
@@ -417,7 +496,6 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Mis Favoritos */}
                 <div className="flex flex-col gap-3">
                   <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-emerald-400" /> Mis Mods Favoritos
@@ -456,78 +534,63 @@ export default function Home() {
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
-            TAB 2: SPOTLIGHT (Desktop Style With Collections)
+            TAB 2: SPOTLIGHT (Desktop Style Mods Carousel + Tickers)
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "spotlight" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none animate-fade-in">
-            {/* Spotlight mini headline */}
             <div className="bg-gradient-to-r from-orange-500/10 to-transparent border-l-2 border-orange-500 rounded-r-lg p-3 mb-6 shrink-0">
               <p className="text-[10px] font-mono text-orange-400 uppercase tracking-wider font-bold">Trending Live</p>
               <h2 className="text-xs font-semibold text-white/95 mt-1">Minecraft Mods e ideas editoriales en vivo.</h2>
             </div>
 
-            {/* CurseForge Picks (Editorial collections slider) */}
-            {curseForgeFeatured.length > 0 && (
-              <div className="flex flex-col gap-3 mb-6 shrink-0">
-                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1 flex items-center gap-1.5">
-                  CurseForge Picks
+            {/* Desktop Style: Mods INSIDE the latest featured collection */}
+            <div className="flex flex-col gap-3 mb-6 shrink-0">
+              <div className="flex justify-between items-center px-1">
+                <h3 className="text-xs font-bold text-white/80 tracking-wide flex items-center gap-1.5">
+                  Destacados: {latestCollectionName || "Modrinth Featured"}
                 </h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                  {curseForgeFeatured.map(pick => (
-                    <div 
-                      key={pick.id}
-                      onClick={() => alert(`Colección CurseForge: ${pick.name}`)}
-                      className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
-                    >
-                      <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative">
-                        <img src={pick.iconUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white truncate">{pick.name}</h4>
-                        <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{pick.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-[9px] font-mono text-orange-400 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-md font-semibold">Hero Pick</span>
               </div>
-            )}
 
-            {/* Modrinth Featured Collections Slider */}
-            {modrinthFeatured.length > 0 && (
-              <div className="flex flex-col gap-3 mb-6 shrink-0">
-                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1 flex items-center gap-1.5">
-                  Colecciones de Modrinth
-                </h3>
+              {loadingLatestMods ? (
+                <div className="h-40 bg-white/[0.02] rounded-2xl border border-white/[0.04] flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+                </div>
+              ) : latestFeaturedMods.length > 0 ? (
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                  {modrinthFeatured.map(coll => (
+                  {latestFeaturedMods.map(mod => (
                     <div 
-                      key={coll.id}
-                      onClick={() => alert(`Colección Modrinth: ${coll.name}`)}
-                      className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
+                      key={mod.projectId}
+                      onClick={() => handleOpenModDetails(mod)}
+                      className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3.5 min-w-[200px] max-w-[200px] snap-center hover:border-white/10 active:scale-[0.97] transition-all cursor-pointer shadow-md"
                     >
-                      <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
-                        {coll.iconUrl ? (
-                          <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" />
+                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {mod.iconUrl ? (
+                          <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <Compass className="w-12 h-12 text-white/20" />
+                          <span className="text-white/40 font-bold uppercase">{mod.title.substring(0, 2)}</span>
                         )}
-                        <span className="absolute bottom-2.5 right-2.5 bg-black/60 border border-white/[0.05] rounded-md px-2 py-0.5 text-[9px] font-mono text-white/70">
-                          {coll.projectCount} mods
-                        </span>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-white truncate">{coll.name}</h4>
-                        <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{coll.description}</p>
+                        <h4 className="text-xs font-bold text-white truncate">{mod.title}</h4>
+                        <p className="text-[9px] text-white/40 mt-1 line-clamp-2 leading-relaxed">{mod.description}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+                        <span className="text-[9px] text-orange-400 capitalize">{mod._source || "modrinth"}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-white/30" />
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="h-40 bg-white/[0.02] border border-white/[0.04] rounded-2xl flex items-center justify-center">
+                  <p className="text-xs text-white/45">No se pudieron cargar los destacados en este momento.</p>
+                </div>
+              )}
+            </div>
 
             {/* Vertical Tickers side-by-side (300px bound) */}
             <div className="flex gap-4 h-[300px] min-h-[300px] mb-4">
-              {/* Column 1: Recently Updated */}
               <div className="flex-1 flex flex-col min-h-0">
                 <h3 className="text-[11px] font-bold text-white/80 tracking-wide mb-3 flex items-center gap-1.5 shrink-0">
                   <Clock className="w-3.5 h-3.5 text-blue-400" /> Actualizados
@@ -543,7 +606,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Column 2: Newest Created */}
               <div className="flex-1 flex flex-col min-h-0">
                 <h3 className="text-[11px] font-bold text-white/80 tracking-wide mb-3 flex items-center gap-1.5 shrink-0">
                   <Calendar className="w-3.5 h-3.5 text-purple-400" /> Creados
@@ -562,11 +624,202 @@ export default function Home() {
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
-            TAB 3: CANALES DE YOUTUBE FEED
+            TAB 3: COLLECTIONS (CurseForge Picks, Modrinth Official, Personal Drafts)
+        ───────────────────────────────────────────────────────────────────────────── */}
+        {activeTab === "collections" && (
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            <AnimatePresence mode="wait">
+              {!activeCollection ? (
+                // Colecciones List View
+                <motion.div 
+                  key="list"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none"
+                >
+                  <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border-l-2 border-emerald-500 rounded-r-lg p-3 mb-6 shrink-0">
+                    <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">Explorador de Packs</p>
+                    <h2 className="text-xs font-semibold text-white/95 mt-1">Colecciones editoriales y modpacks colaborativos.</h2>
+                  </div>
+
+                  {/* Modrinth Official Collections Slider */}
+                  {modrinthFeatured.length > 0 && (
+                    <div className="flex flex-col gap-3 mb-6 shrink-0">
+                      <h3 className="text-xs font-bold text-white/80 tracking-wide px-1 flex items-center gap-1.5">
+                        Colecciones Oficiales de Modrinth
+                      </h3>
+                      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+                        {modrinthFeatured.map(coll => (
+                          <div 
+                            key={coll.id}
+                            onClick={() => handleEnterCollection(coll)}
+                            className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
+                          >
+                            <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
+                              {coll.iconUrl ? (
+                                <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Compass className="w-12 h-12 text-white/20" />
+                              )}
+                              <span className="absolute bottom-2.5 right-2.5 bg-black/60 border border-white/[0.05] rounded-md px-2 py-0.5 text-[9px] font-mono text-white/70">
+                                {coll.projectCount} mods
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-white truncate">{coll.name}</h4>
+                              <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{coll.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CurseForge Picks */}
+                  {curseForgeFeatured.length > 0 && (
+                    <div className="flex flex-col gap-3 mb-6 shrink-0">
+                      <h3 className="text-xs font-bold text-white/80 tracking-wide px-1 flex items-center gap-1.5">
+                        CurseForge Picks
+                      </h3>
+                      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+                        {curseForgeFeatured.map(pick => (
+                          <div 
+                            key={pick.id}
+                            onClick={() => handleEnterCollection(pick)}
+                            className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
+                          >
+                            <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative">
+                              <img src={pick.iconUrl} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-white truncate">{pick.name}</h4>
+                              <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{pick.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Personal/Supabase user packs (Drafts) */}
+                  <div className="flex flex-col gap-3 mb-6 shrink-0">
+                    <h3 className="text-xs font-bold text-white/80 tracking-wide px-1 flex items-center gap-1.5">
+                      Tus Modpacks Colaborativos (Supabase)
+                    </h3>
+                    {session ? (
+                      userDrafts.length > 0 ? (
+                        <div className="grid gap-3 px-1">
+                          {userDrafts.map(draft => (
+                            <div 
+                              key={draft.id}
+                              onClick={() => handleEnterCollection({
+                                id: draft.id,
+                                name: draft.name,
+                                description: draft.description || "Modpack colaborativo",
+                                projectCount: 0,
+                                source: "modrinth"
+                              })}
+                              className="bg-[#151518]/80 border border-white/[0.05] rounded-2xl p-4 flex justify-between items-center active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                  <Layers className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-bold text-white">{draft.name}</h4>
+                                  <p className="text-[10px] text-white/45 mt-0.5">Versión: {draft.minecraft_version} • Loader: {draft.loader}</p>
+                                </div>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-white/30" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-2xl p-6 text-center text-xs text-white/40">
+                          No tienes modpacks creados.
+                        </div>
+                      )
+                    ) : (
+                      <div className="bg-[#151518]/60 border border-white/[0.05] rounded-2xl p-6 text-center">
+                        <p className="text-xs text-white/40">Iniciá sesión en la pestaña Perfil para sincronizar y ver tus modpacks.</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                // entered / opened collection details subview
+                <motion.div 
+                  key="detail"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="flex-1 flex flex-col min-h-0"
+                >
+                  {/* Sub Header / back trigger */}
+                  <div className="flex items-center gap-3 mb-5 shrink-0">
+                    <button 
+                      onClick={handleExitCollection}
+                      className="p-2 bg-white/5 hover:bg-white/10 border border-white/[0.08] rounded-xl text-white/70 active:scale-95 transition-all"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Colección abierta</span>
+                      <h2 className="text-xs font-bold text-white truncate leading-tight mt-0.5">{activeCollection.name}</h2>
+                    </div>
+                  </div>
+
+                  {/* List of Mods inside the collection */}
+                  {loadingActiveMods ? (
+                    <div className="flex-1 flex flex-col justify-center items-center">
+                      <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+                      <span className="text-xs text-white/40 mt-3 font-mono">Leyendo mods de la colección...</span>
+                    </div>
+                  ) : activeCollectionMods.length > 0 ? (
+                    <div className="flex-1 overflow-y-auto space-y-3 pb-24 pr-1 scrollbar-none">
+                      <p className="text-[10px] text-white/40 italic px-1 mb-2">{activeCollection.description}</p>
+                      {activeCollectionMods.map(mod => (
+                        <div 
+                          key={mod.projectId} 
+                          onClick={() => handleOpenModDetails(mod)}
+                          className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {mod.iconUrl ? (
+                              <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                            ) : (
+                              <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0,2)}</span>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
+                            <p className="text-[9px] text-white/40 mt-0.5 capitalize">{mod.author || "Comunidad"}</p>
+                          </div>
+                          
+                          <ChevronRight className="w-4 h-4 text-white/30" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
+                      <Compass className="w-12 h-12 text-emerald-400 mb-4 opacity-50" />
+                      <h2 className="text-sm font-semibold text-white">Sin mods</h2>
+                      <p className="text-xs text-white/40 mt-1">Esta colección no tiene proyectos asociados.</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ─────────────────────────────────────────────────────────────────────────────
+            TAB 4: CANALES DE YOUTUBE FEED
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "feed" && (
           <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
-            {/* Channel Selector */}
             <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-1 scrollbar-none">
               {[
                 { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite" },
@@ -586,7 +839,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Posts feed */}
             {loadingYoutube ? (
               <div className="flex-1 flex flex-col justify-center items-center">
                 <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
@@ -629,11 +881,10 @@ export default function Home() {
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
-            TAB 4: COMMUNITY RANKINGS (Supabase)
+            TAB 5: COMMUNITY RANKINGS (Supabase)
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "rankings" && (
           <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
-            {/* Top votes title */}
             <div className="bg-gradient-to-r from-purple-500/10 to-transparent border-l-2 border-purple-500 rounded-r-lg p-3 mb-6 shrink-0">
               <p className="text-[10px] font-mono text-purple-400 uppercase tracking-wider font-bold">Supabase Rankings</p>
               <h2 className="text-xs font-semibold text-white/90 mt-1">Mods más votados por la comunidad de MIM en la nube.</h2>
@@ -650,7 +901,7 @@ export default function Home() {
                   <div 
                     key={mod.projectId} 
                     onClick={() => handleOpenModDetails(mod)}
-                    className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer"
+                    className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
                   >
                     <div className="w-6 text-center font-mono font-black text-sm text-purple-400/80">
                       #{i + 1}
@@ -689,25 +940,23 @@ export default function Home() {
       {/* Bottom Nav Bar */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Mod Details Sheet / Modal (AnimatePresence + Motion.div with bounce) */}
+      {/* Mod Details Sheet / Modal */}
       <AnimatePresence>
         {selectedMod && (
           <div 
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-end justify-center z-50" 
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in" 
             onClick={handleCloseModDetails}
           >
             <motion.div 
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 280, damping: 24 }} // Spring transition bounce physics
+              transition={{ type: "spring", stiffness: 280, damping: 24 }}
               className="bg-[#151518] border-t border-white/[0.08] rounded-t-3xl w-full max-w-md p-6 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5 relative"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Drag indicator line */}
               <div className="w-12 h-1 rounded-full bg-white/10 mx-auto -mt-2 mb-2" />
 
-              {/* Header block details */}
               <div className="flex gap-4">
                 <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
                   {selectedMod.iconUrl ? (
@@ -729,7 +978,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Extra Metadata row details (similar to desktop) */}
               <div className="flex gap-3 text-[10px] border-y border-white/[0.04] py-3 flex-wrap">
                 <div className="flex-1 min-w-[70px]">
                   <span className="text-white/30 block uppercase font-mono tracking-wider">Origen</span>
@@ -751,14 +999,12 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Description */}
               <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
                 <p className="text-xs text-white/75 leading-relaxed max-h-40 overflow-y-auto scrollbar-none">
                   {selectedMod.description || "Este mod expande las opciones de automatización, optimiza de forma ligera el juego y es totalmente compatible con la versión activa."}
                 </p>
               </div>
 
-              {/* Action buttons (only desktop invitation) */}
               <div className="flex flex-col gap-2 mt-1">
                 <button
                   onClick={() => alert(`Copiá el link para tu PC: mim://project/${selectedMod.projectId}`)}

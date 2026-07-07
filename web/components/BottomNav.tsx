@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Compass, Film, Award, User } from "lucide-react";
+import { Compass, Film, Award, User, Flame } from "lucide-react";
 
 interface BottomNavProps {
   activeTab: string;
@@ -11,7 +11,8 @@ interface BottomNavProps {
 export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const tabs = [
     { id: "profile", label: "Perfil", icon: User, color: "text-rose-500" },
-    { id: "spotlight", label: "Spotlight", icon: Compass, color: "text-orange-500" },
+    { id: "spotlight", label: "Spotlight", icon: Flame, color: "text-orange-500" },
+    { id: "collections", label: "Colecciones", icon: Compass, color: "text-emerald-400" },
     { id: "feed", label: "Canales", icon: Film, color: "text-blue-400" },
     { id: "rankings", label: "Ránkings", icon: Award, color: "text-purple-400" },
   ];
@@ -27,8 +28,7 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="flex flex-col items-center justify-center relative py-1 focus:outline-none transition-all"
-              style={{ width: "22%" }}
+              style={{ width: "19%" }}
             >
               <div
                 className={`p-1.5 rounded-full transition-all duration-300 ${

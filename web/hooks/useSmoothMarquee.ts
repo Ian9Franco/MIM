@@ -21,14 +21,28 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
 
       // Natural speed scroll
       const step = speed * (reverse ? -1 : 1);
+      
+      const size = isVertical ? inner.scrollHeight / 2 : inner.scrollWidth / 2;
+
+      // Handle initial load reverse starting point
+      if (reverse && offset.current === 0 && targetOffset.current === 0) {
+        offset.current = size;
+        targetOffset.current = size;
+      }
+
       offset.current += step;
       targetOffset.current += step;
 
-      const size = isVertical ? inner.scrollHeight / 2 : inner.scrollWidth / 2;
-
-      if (Math.abs(offset.current) >= size) {
-        offset.current = 0;
-        targetOffset.current = 0;
+      if (reverse) {
+        if (offset.current <= 0) {
+          offset.current = size;
+          targetOffset.current = size;
+        }
+      } else {
+        if (Math.abs(offset.current) >= size) {
+          offset.current = 0;
+          targetOffset.current = 0;
+        }
       }
 
       if (isVertical) {

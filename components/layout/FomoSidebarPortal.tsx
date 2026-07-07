@@ -60,7 +60,7 @@ export function FomoSidebarPortal({
           backdropFilter: "blur(20px)",
         }}
       >
-        <div className="flex-1 flex flex-col min-h-0 p-6 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col min-h-0 p-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <PendingFilesSection
             pendingFiles={pendingFiles}
             loading={loading}

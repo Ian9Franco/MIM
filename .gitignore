@@ -65,3 +65,11 @@ dist/
 
 
 curseforge_picks_cache.json
+
+# Web subproject ignores
+/web/node_modules/
+/web/.next/
+/web/out/
+/web/build/
+/web/.env*.local
+/web/.vercel/

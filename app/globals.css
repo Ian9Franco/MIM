@@ -704,3 +704,21 @@ select:focus {
 .animate-led-flicker {
   animation: led-flicker 6s ease-in-out infinite;
 }
+
+/* Fade effect mask for vertical scrolling containers (tickers) */
+.mask-vertical-edges {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+}

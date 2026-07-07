@@ -158,6 +158,8 @@ export function useHomeController() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverTotal, setDiscoverTotal] = useState(0);
+  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge">("modrinth");
+  const [discoverError, setDiscoverError] = useState("");
 
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState("");
@@ -577,35 +579,65 @@ export function useHomeController() {
   const runDiscoverSearch = useCallback(async (pageNumber = 1) => {
     try {
       setDiscoverLoading(true);
-      const facetsArray = [[`project_type:${discoverType}`]];
-      if (discoverType !== "datapack" && discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
-      if (discoverType === "mod" && discoverLoader !== "any") facetsArray.push([`categories:${discoverLoader}`]);
+      setDiscoverError("");
       const offset = (pageNumber - 1) * 15;
-      const url = `https://api.modrinth.com/v2/search?facets=${encodeURIComponent(JSON.stringify(facetsArray))}&index=downloads${discoverQuery ? `&query=${encodeURIComponent(discoverQuery)}` : ""}&limit=15&offset=${offset}`;
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const data = await res.json();
-      const mapped = (data.hits || []).map((h: any) => ({
-        projectId: h.project_id,
-        title: h.title,
-        description: h.description,
-        iconUrl: h.icon_url,
-        author: h.author,
-        projectType: h.project_type || "mod",
-        categories: h.categories || [],
-        url: `https://modrinth.com/${h.project_type || "mod"}/${h.slug}`,
-        downloads: h.downloads,
-        _source: "modrinth",
-      }));
+      
+      let mapped: ModHit[] = [];
+      let totalHits = 0;
+      
+      if (discoverSource === "curseforge") {
+        const url = `/api/curseforge/discover?projectType=${discoverType}&loader=${discoverLoader}&gameVersion=${discoverVersion}&q=${encodeURIComponent(discoverQuery)}&page=${pageNumber}&pageSize=15`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Error en la API de CurseForge");
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        mapped = data.mods || [];
+        totalHits = data.total || 0;
+      } else {
+        const facetsArray = [[`project_type:${discoverType}`]];
+        if (discoverType !== "datapack" && discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
+        if (discoverType === "mod" && discoverLoader !== "any") facetsArray.push([`categories:${discoverLoader}`]);
+        const url = `https://api.modrinth.com/v2/search?facets=${encodeURIComponent(JSON.stringify(facetsArray))}&index=downloads${discoverQuery ? `&query=${encodeURIComponent(discoverQuery)}` : ""}&limit=15&offset=${offset}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`La API de Modrinth no respondió correctamente (HTTP ${res.status})`);
+        }
+        const data = await res.json();
+        mapped = (data.hits || []).map((h: any) => ({
+          projectId: h.project_id,
+          title: h.title,
+          description: h.description,
+          iconUrl: h.icon_url,
+          author: h.author,
+          projectType: h.project_type || "mod",
+          categories: h.categories || [],
+          url: `https://modrinth.com/${h.project_type || "mod"}/${h.slug}`,
+          downloads: h.downloads,
+          _source: "modrinth",
+        }));
+        totalHits = data.total_hits || 0;
+        
+        if (mapped.length === 0 && totalHits > 0) {
+          throw new Error("El índice de búsqueda de Modrinth está caído o en mantenimiento.");
+        }
+      }
+      
       setDiscoverResults((prev) => pageNumber === 1 ? mapped : [...prev, ...mapped]);
-      setDiscoverTotal(data.total_hits || 0);
+      setDiscoverTotal(totalHits);
       setDiscoverPage(pageNumber);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Discover search error:", err);
+      setDiscoverError(err.message || "Error al buscar mods");
+      if (pageNumber === 1) {
+        setDiscoverResults([]);
+      }
     } finally {
       setDiscoverLoading(false);
     }
-  }, [discoverQuery, discoverType, discoverVersion, discoverLoader]);
+  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource]);
 
   useEffect(() => {
     if (activeTab === "spotlight") {
@@ -633,17 +665,28 @@ export function useHomeController() {
     let details = null;
     let depsData: any[] = [];
     try {
-      const [pRes, dRes] = await Promise.all([
-        fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}`),
-        fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
-      ]);
-      if (pRes.ok) {
-        details = await pRes.json();
-        setSelectedModDetails(details);
-      }
-      if (dRes.ok) {
-        depsData = (await dRes.json()).projects || [];
-        setSelectedModDeps(depsData);
+      if (normalizedMod._source === "curseforge") {
+        const res = await fetch(`/api/curseforge/project?projectId=${normalizedMod.projectId}`);
+        if (res.ok) {
+          const data = await res.json();
+          details = data.details;
+          depsData = data.dependencies || [];
+          setSelectedModDetails(details);
+          setSelectedModDeps(depsData);
+        }
+      } else {
+        const [pRes, dRes] = await Promise.all([
+          fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}`),
+          fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
+        ]);
+        if (pRes.ok) {
+          details = await pRes.json();
+          setSelectedModDetails(details);
+        }
+        if (dRes.ok) {
+          depsData = (await dRes.json()).projects || [];
+          setSelectedModDeps(depsData);
+        }
       }
     } catch (err) {
       console.error("Failed to load mod detailed metadata:", err);
@@ -857,7 +900,7 @@ export function useHomeController() {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
     setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverResults, setDiscoverResults, discoverLoading,
-    discoverPage, setDiscoverPage, discoverTotal, session, email, setEmail, password, setPassword, username,
+    discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
     showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userDrafts, loadingUserData,
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, latestFeaturedMods, latestCollectionName,

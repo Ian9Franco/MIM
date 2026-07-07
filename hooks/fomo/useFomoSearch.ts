@@ -104,11 +104,20 @@ export function useFomoSearch(filters: any) {
         return;
       } else {
         const res = await fetch(`/api/${source}/discover?${params}`);
-        if (!res.ok) throw new Error("Error en la API de búsqueda");
+        if (!res.ok) {
+          throw new Error(source === "modrinth"
+            ? "El índice de búsqueda de Modrinth está caído o en mantenimiento."
+            : "Error en la API de búsqueda"
+          );
+        }
         const data = await res.json();
         fetchedMods = (data.mods || []).map((m: any) => ({ ...m, _source: source }));
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
+        
+        if (source === "modrinth" && fetchedMods.length === 0 && (data.total || 0) > 0) {
+          throw new Error("El índice de búsqueda de Modrinth está caído o en mantenimiento.");
+        }
       }
 
       // Inicializar con estado de verificación

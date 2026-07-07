@@ -242,6 +242,9 @@ export default function Home() {
               setDiscoverPage={c.setDiscoverPage}
               runDiscoverSearch={c.runDiscoverSearch}
               handleOpenModDetails={c.handleOpenModDetails}
+              discoverSource={c.discoverSource}
+              setDiscoverSource={c.setDiscoverSource}
+              discoverError={c.discoverError}
             />
           )}
         </AnimatePresence>

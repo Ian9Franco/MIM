@@ -420,39 +420,72 @@ function FomoSidebarDiscoverBranchInner({
                   className="flex-1 bg-transparent border-none outline-none text-sm text-white"
                 />
               </div>
-              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                {discover.sourceError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-xs flex flex-col gap-2 shrink-0">
+                    <div className="flex items-center gap-2 text-red-400 font-semibold">
+                      <span>⚠️ {discover.sourceError}</span>
+                    </div>
+                    {discover.source === "modrinth" && (
+                      <div className="text-white/60">
+                        Parece que los servidores de búsqueda de Modrinth están experimentando problemas en este momento. 
+                        Te recomendamos cambiar a **CurseForge** para continuar explorando.
+                        <button
+                          onClick={() => {
+                            discover.setSource("curseforge");
+                            discover.setPage(1);
+                          }}
+                          className="mt-2.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 transition-all text-white font-bold rounded-lg block w-max"
+                        >
+                          Cambiar a CurseForge
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {discover.loading ? (
-                  <FomoSkeleton
-                    count={9}
-                    variant="card"
-                    isCurseForge={discover.source === "curseforge"}
-                  />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <FomoSkeleton
+                      count={9}
+                      variant="card"
+                      isCurseForge={discover.source === "curseforge"}
+                    />
+                  </div>
+                ) : discover.mods.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {discover.mods.map((mod) => {
+                      const platformKey =
+                        mod._source === "curseforge" ? "curseforge" : "modrinth";
+                      const communitySharers =
+                        sharersByMod.get(`${platformKey}:${mod.projectId}`) || [];
+                      return (
+                        <FomoModCard
+                          key={`${platformKey}:${mod.projectId}`}
+                          mod={mod}
+                          isDownloading={!!discover.downloading[mod.projectId]}
+                          onDownload={discover.handleDownload}
+                          onOpenVersions={discover.handleOpenLiveProject}
+                          isSelected={discover.selectedMods.some(
+                            (s) => s.projectId === mod.projectId
+                          )}
+                          onToggleSelect={discover.toggleModSelection}
+                          sinytraActive={discover.sinytraActive}
+                          onAddToCollection={() => {
+                            m.setAddingToCollectionFor(mod);
+                            m.loadCollections();
+                          }}
+                          followedByUsers={communitySharers}
+                        />
+                      );
+                    })}
+                  </div>
                 ) : (
-                  discover.mods.map((mod) => {
-                    const platformKey =
-                      mod._source === "curseforge" ? "curseforge" : "modrinth";
-                    const communitySharers =
-                      sharersByMod.get(`${platformKey}:${mod.projectId}`) || [];
-                    return (
-                      <FomoModCard
-                        key={`${platformKey}:${mod.projectId}`}
-                        mod={mod}
-                        isDownloading={!!discover.downloading[mod.projectId]}
-                        onDownload={discover.handleDownload}
-                        onOpenVersions={discover.handleOpenLiveProject}
-                        isSelected={discover.selectedMods.some(
-                          (s) => s.projectId === mod.projectId
-                        )}
-                        onToggleSelect={discover.toggleModSelection}
-                        sinytraActive={discover.sinytraActive}
-                        onAddToCollection={() => {
-                          m.setAddingToCollectionFor(mod);
-                          m.loadCollections();
-                        }}
-                        followedByUsers={communitySharers}
-                      />
-                    );
-                  })
+                  <div className="flex-1 flex flex-col justify-center items-center text-center p-6 min-h-[300px]">
+                    <Search className="w-12 h-12 text-white/20 mb-4" />
+                    <h2 className="text-sm font-semibold text-white/60">Sin resultados</h2>
+                    <p className="text-xs text-white/40 mt-1">No se encontraron mods que coincidan con la búsqueda o filtros aplicados.</p>
+                  </div>
                 )}
               </div>
               {discover.selectedMods.length > 0 && (

@@ -22,6 +22,9 @@ interface DiscoverTabProps {
   setDiscoverPage: (p: number) => void;
   runDiscoverSearch: (page?: number) => void;
   handleOpenModDetails: (mod: ModHit) => void;
+  discoverSource: "modrinth" | "curseforge";
+  setDiscoverSource: (s: "modrinth" | "curseforge") => void;
+  discoverError: string;
 }
 
 const MC_VERSIONS = ["1.21.1", "1.20.4", "1.20.1", "1.19.4", "1.19.2", "1.18.2", "1.16.5", "1.12.2"];
@@ -54,6 +57,7 @@ export function DiscoverTab({
   discoverVersion, setDiscoverVersion, discoverLoader, setDiscoverLoader,
   discoverResults, discoverLoading, discoverPage, discoverTotal,
   setDiscoverResults, setDiscoverPage, runDiscoverSearch, handleOpenModDetails,
+  discoverSource, setDiscoverSource, discoverError,
 }: DiscoverTabProps) {
   const handleTypeChange = (val: string) => {
     setDiscoverType(val);
@@ -82,9 +86,68 @@ export function DiscoverTab({
           Explorar
         </p>
         <h2 className="text-xs font-semibold text-white/90 mt-1">
-          Explorá y buscá mods, texturas y shaders de Modrinth.
+          {discoverSource === "curseforge"
+            ? "Explorá y buscá mods, texturas y shaders de CurseForge."
+            : "Explorá y buscá mods, texturas y shaders de Modrinth."}
         </h2>
       </div>
+
+      {/* Source selector */}
+      <div className="flex gap-2 mb-3 shrink-0">
+        <button
+          onClick={() => {
+            setDiscoverSource("modrinth");
+            setDiscoverResults([]);
+            setDiscoverPage(1);
+          }}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            discoverSource === "modrinth"
+              ? "bg-[#1bd672]/20 text-[#1bd672] border-[#1bd672]/30"
+              : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
+          }`}
+        >
+          Modrinth
+        </button>
+        <button
+          onClick={() => {
+            setDiscoverSource("curseforge");
+            setDiscoverResults([]);
+            setDiscoverPage(1);
+          }}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            discoverSource === "curseforge"
+              ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+              : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
+          }`}
+        >
+          CurseForge
+        </button>
+      </div>
+
+      {/* Error banner */}
+      {discoverError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 text-xs flex flex-col gap-2 shrink-0">
+          <div className="flex items-center gap-2 text-red-400 font-semibold">
+            <span>⚠️ {discoverError}</span>
+          </div>
+          {discoverSource === "modrinth" && (
+            <div className="text-white/60">
+              Parece que los servidores de búsqueda de Modrinth están experimentando problemas en este momento. 
+              Te recomendamos cambiar a **CurseForge** para continuar explorando.
+              <button
+                onClick={() => {
+                  setDiscoverSource("curseforge");
+                  setDiscoverResults([]);
+                  setDiscoverPage(1);
+                }}
+                className="mt-2.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 transition-all text-white font-bold rounded-lg block w-max"
+              >
+                Cambiar a CurseForge
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Type selector */}
       <div className="flex gap-1.5 mb-3 shrink-0 overflow-x-auto pb-1 scrollbar-none">
@@ -162,7 +225,7 @@ export function DiscoverTab({
       {discoverLoading && discoverPage === 1 ? (
         <div className="flex-1 flex flex-col justify-center items-center">
           <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-          <span className="text-xs text-white/40 mt-3 font-mono">Buscando en Modrinth...</span>
+          <span className="text-xs text-white/40 mt-3 font-mono">Buscando en {discoverSource === "curseforge" ? "CurseForge" : "Modrinth"}...</span>
         </div>
       ) : discoverResults.length > 0 ? (
         <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-none">

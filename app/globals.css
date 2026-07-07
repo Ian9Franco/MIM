@@ -709,16 +709,16 @@ select:focus {
 .mask-vertical-edges {
   mask-image: linear-gradient(
     to bottom,
-    transparent 0%,
-    black 8%,
-    black 92%,
+    transparent 0px,
+    black 20px,
+    black calc(100% - 20px),
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to bottom,
-    transparent 0%,
-    black 8%,
-    black 92%,
+    transparent 0px,
+    black 20px,
+    black calc(100% - 20px),
     transparent 100%
   );
 }

@@ -66,6 +66,8 @@ El valor central de FOMO es el **ecosistema integrado** de descubrimiento.
 - **Pool Comunitario (FOMO Cloud)**: Perfiles públicos, clubs de usuario, favoritos compartidos y modpacks de la comunidad — todo sincronizado con Supabase.
 - **Drafts Colaborativos**: ¡Construye modpacks en tiempo real con amigos! Proponen mods, votan y crean "Snapshots" listas para jugar sin lidiar con los `.jar`.
 - **Modrinth + CurseForge unificado**: Búsqueda dual, filtros por versión/loader/categoría con smart matching SHA1 (100% exacto).
+- **FOMO Hub (Web Mobile-First)**: Versión web responsiva adaptada para dispositivos móviles. Soporta navegación táctil, búsqueda de mods en Modrinth y CurseForge (vía proxy seguro backend) y gestión de borradores.
+- **Reproductor Flotante Adaptativo**: Reproductor picture-in-picture nativo en web móvil con controles multimedia avanzados (tiempo real, play/pause, saltos de 15s, velocidad y volumen) y aislamiento de gestos táctiles (`touch-action: none`) para arrastrar el reproductor sin interferir con el scroll del sitio.
 
 > **Nota sobre el reproductor de video**: El reproductor integrado es una conveniencia secundaria, no la función principal. Si `yt-dlp` falla por cambios de YouTube, el botón **"Abrir en YouTube"** siempre está disponible como fallback. La app funciona perfectamente aunque el video no reproduzca directamente.
 

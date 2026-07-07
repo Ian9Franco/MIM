@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink, Maximize2, Minimize2, Move, X, Play, Pause, FastForward, Volume1, Volume2, VolumeX, RotateCcw, RotateCw } from "lucide-react";
 
-type PlayerSize = "large" | "mini";
+type PlayerSize = "large" | "mini" | "micro";
 
 interface PlayerState {
   isOpen: boolean;
@@ -16,20 +16,24 @@ const EDGE = 10;
 function getSizes() {
   if (typeof window === "undefined") {
     return {
-      large: { w: 420, h: 236 },
-      mini: { w: 240, h: 135 },
+      large: { w: 400, h: 225 },
+      mini: { w: 200, h: 113 },
+      micro: { w: 140, h: 79 },
     };
   }
 
-  const largeW = Math.min(440, window.innerWidth - 16);
-  const miniW = Math.min(260, window.innerWidth - 24);
+  const largeW = Math.min(400, window.innerWidth - 16);
+  const miniW = Math.min(200, window.innerWidth - 24);
+  const microW = Math.min(140, window.innerWidth - 32);
   return {
     large: { w: largeW, h: Math.round(largeW * 9 / 16) },
     mini: { w: miniW, h: Math.round(miniW * 9 / 16) },
+    micro: { w: microW, h: Math.round(microW * 9 / 16) },
   };
 }
 
 function fullHeight(size: PlayerSize) {
+  if (size === "micro") return getSizes().micro.h + 36; // 36px header only
   return getSizes()[size].h + 36 + 60; // 36px header + 20px seek bar + 40px controls
 }
 
@@ -323,7 +327,7 @@ export function MobileFloatingPlayer() {
   };
 
   const toggleSize = () => {
-    const next = size === "large" ? "mini" : "large";
+    const next = size === "large" ? "mini" : size === "mini" ? "micro" : "large";
     setSize(next);
     setPosition((prev) => clampPosition(prev.x, prev.y, next));
   };
@@ -474,11 +478,11 @@ export function MobileFloatingPlayer() {
           <div className="pointer-events-none flex min-w-0 items-center gap-2">
             <Move className="w-3.5 h-3.5" style={{ color: "var(--color-foreground)", opacity: 0.5 }} />
             <span className="truncate text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--color-primary)" }}>
-              Showcase Player
+              {size === "micro" ? "Player" : "Showcase Player"}
             </span>
           </div>
           <div className="flex items-center gap-1" style={{ color: "var(--color-foreground)" }}>
-            {/* Reduce button — only visible in large mode */}
+            {/* Cycle button — Large Mode */}
             {size === "large" && (
               <button
                 type="button"
@@ -490,8 +494,20 @@ export function MobileFloatingPlayer() {
                 <Minimize2 className="w-3.5 h-3.5" />
               </button>
             )}
-            {/* Expand button — only visible in mini mode */}
+            {/* Cycle button — Mini Mode */}
             {size === "mini" && (
+              <button
+                type="button"
+                onClick={toggleSize}
+                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
+                style={{ color: "var(--color-foreground)" }}
+                title="Modo micro"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Cycle button — Micro Mode */}
+            {size === "micro" && (
               <button
                 type="button"
                 onClick={toggleSize}
@@ -502,16 +518,18 @@ export function MobileFloatingPlayer() {
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             )}
-            <a
-              href={`https://www.youtube.com/watch?v=${state.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:bg-foreground/10 flex items-center justify-center"
-              style={{ color: "var(--color-foreground)" }}
-              title="Abrir en YouTube"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            {size !== "micro" && (
+              <a
+                href={`https://www.youtube.com/watch?v=${state.videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:bg-foreground/10 flex items-center justify-center"
+                style={{ color: "var(--color-foreground)" }}
+                title="Abrir en YouTube"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
             <button
               type="button"
               onClick={close}
@@ -539,148 +557,152 @@ export function MobileFloatingPlayer() {
         </div>
 
         {/* Seek Bar & Telemetry Display */}
-        <div 
-          className="px-4 py-1.5 flex items-center gap-3 select-none border-b"
-          style={{ 
-            height: 20, 
-            background: "color-mix(in srgb, var(--color-surface) 95%, black)", 
-            borderColor: "var(--color-border)" 
-          }}
-        >
-          {/* Current Time Indicator */}
-          <span 
-            className="text-[9px] font-mono tracking-wider tabular-nums min-w-[30px] text-right"
-            style={{ color: "var(--color-foreground)", opacity: 0.6 }}
-          >
-            {formatTime(currentTime)}
-          </span>
-          
-          {/* Custom Draggable Progress Track */}
+        {size !== "micro" && (
           <div 
-            className="flex-1 relative h-3 flex items-center cursor-pointer group"
-            onPointerDown={handleSeekStart}
-            onPointerMove={handleSeekMove}
-            onPointerUp={handleSeekEnd}
-            onPointerLeave={handleSeekLeave}
+            className="px-4 py-1.5 flex items-center gap-3 select-none border-b"
+            style={{ 
+              height: 20, 
+              background: "color-mix(in srgb, var(--color-surface) 95%, black)", 
+              borderColor: "var(--color-border)" 
+            }}
           >
-            {/* Layer 1: Background Track */}
-            <div className="w-full h-1 rounded-full bg-foreground/10 group-hover:bg-foreground/15 group-hover:h-1.5 transition-all duration-200" />
+            {/* Current Time Indicator */}
+            <span 
+              className="text-[9px] font-mono tracking-wider tabular-nums min-w-[30px] text-right"
+              style={{ color: "var(--color-foreground)", opacity: 0.6 }}
+            >
+              {formatTime(currentTime)}
+            </span>
             
-            {/* Layer 2: Hover Preview Bar */}
-            {hoverLeft !== null && !isSeeking && (
+            {/* Custom Draggable Progress Track */}
+            <div 
+              className="flex-1 relative h-3 flex items-center cursor-pointer group"
+              onPointerDown={handleSeekStart}
+              onPointerMove={handleSeekMove}
+              onPointerUp={handleSeekEnd}
+              onPointerLeave={handleSeekLeave}
+            >
+              {/* Layer 1: Background Track */}
+              <div className="w-full h-1 rounded-full bg-foreground/10 group-hover:bg-foreground/15 group-hover:h-1.5 transition-all duration-200" />
+              
+              {/* Layer 2: Hover Preview Bar */}
+              {hoverLeft !== null && !isSeeking && (
+                <div 
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-foreground/25 group-hover:h-1.5 transition-all duration-200 pointer-events-none"
+                  style={{ width: `${hoverLeft}%` }}
+                />
+              )}
+              
+              {/* Layer 3: Progress Fill */}
               <div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-foreground/25 group-hover:h-1.5 transition-all duration-200 pointer-events-none"
-                style={{ width: `${hoverLeft}%` }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-gradient-to-r from-red-600 to-rose-500 group-hover:h-1.5 transition-all duration-200 pointer-events-none"
+                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
               />
-            )}
-            
-            {/* Layer 3: Progress Fill */}
-            <div 
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-gradient-to-r from-red-600 to-rose-500 group-hover:h-1.5 transition-all duration-200 pointer-events-none"
-              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            />
-            
-            {/* Layer 4: Draggable Thumb Indicator */}
-            <div 
-              className={`absolute top-1/2 -translate-y-1/2 -ml-1.5 w-3 h-3 rounded-full bg-white border border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-200 pointer-events-none ${isSeeking ? "scale-100" : "scale-0 group-hover:scale-100"}`}
-              style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            />
-          </div>
+              
+              {/* Layer 4: Draggable Thumb Indicator */}
+              <div 
+                className={`absolute top-1/2 -translate-y-1/2 -ml-1.5 w-3 h-3 rounded-full bg-white border border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-200 pointer-events-none ${isSeeking ? "scale-100" : "scale-0 group-hover:scale-100"}`}
+                style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
 
-          {/* Total Duration Indicator */}
-          <span 
-            className="text-[9px] font-mono tracking-wider tabular-nums min-w-[30px]"
-            style={{ color: "var(--color-foreground)", opacity: 0.6 }}
-          >
-            {formatTime(duration)}
-          </span>
-        </div>
+            {/* Total Duration Indicator */}
+            <span 
+              className="text-[9px] font-mono tracking-wider tabular-nums min-w-[30px]"
+              style={{ color: "var(--color-foreground)", opacity: 0.6 }}
+            >
+              {formatTime(duration)}
+            </span>
+          </div>
+        )}
 
         {/* Playback Controls */}
-        <div 
-          className="h-10 shrink-0 flex items-center justify-between px-4" 
-          style={{ background: "color-mix(in srgb, var(--color-surface) 93%, black)" }}
-        >
-          {/* Play/Pause & Speed & Navigation buttons */}
-          <div className="flex items-center gap-2">
-            {/* Skip Backward 15s */}
-            <button 
-              onClick={handleRewind}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-90 cursor-pointer"
-              style={{ color: "var(--color-foreground)" }}
-              title="Retroceder 15 segundos"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Play / Pause Toggle */}
-            <button 
-              onClick={togglePlay}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer"
-              style={{ color: "var(--color-foreground)" }}
-              title={isPlaying ? "Pausar" : "Reproducir"}
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
-            </button>
-
-            {/* Skip Forward 15s */}
-            <button 
-              onClick={handleForward}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-90 cursor-pointer"
-              style={{ color: "var(--color-foreground)" }}
-              title="Adelantar 15 segundos"
-            >
-              <RotateCw className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Speed Selector (Hidden in mini mode) */}
-            {size !== "mini" && (
+        {size !== "micro" && (
+          <div 
+            className="h-10 shrink-0 flex items-center justify-between px-4" 
+            style={{ background: "color-mix(in srgb, var(--color-surface) 93%, black)" }}
+          >
+            {/* Play/Pause & Speed & Navigation buttons */}
+            <div className="flex items-center gap-2">
+              {/* Skip Backward 15s */}
               <button 
-                onClick={changeSpeed}
-                className="px-2 py-1 h-7 rounded-lg text-[9px] font-bold flex items-center gap-1 bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer ml-1"
+                onClick={handleRewind}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-90 cursor-pointer"
                 style={{ color: "var(--color-foreground)" }}
-                title="Velocidad de reproducción"
+                title="Retroceder 15 segundos"
               >
-                <FastForward className="w-3 h-3" />
-                {speed}x
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
-            )}
-          </div>
 
-          {/* Volume Controls */}
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={toggleMute}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer"
-              style={{ color: "var(--color-foreground)" }}
-              title={volume === 0 ? "Activar sonido" : "Silenciar"}
-            >
-              {volume === 0 ? (
-                <VolumeX className="w-3.5 h-3.5 text-red-500" />
-              ) : volume < 50 ? (
-                <Volume1 className="w-3.5 h-3.5" />
-              ) : (
-                <Volume2 className="w-3.5 h-3.5" />
+              {/* Play / Pause Toggle */}
+              <button 
+                onClick={togglePlay}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer"
+                style={{ color: "var(--color-foreground)" }}
+                title={isPlaying ? "Pausar" : "Reproducir"}
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
+              </button>
+
+              {/* Skip Forward 15s */}
+              <button 
+                onClick={handleForward}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-90 cursor-pointer"
+                style={{ color: "var(--color-foreground)" }}
+                title="Adelantar 15 segundos"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Speed Selector (Hidden in mini mode) */}
+              {size !== "mini" && (
+                <button 
+                  onClick={changeSpeed}
+                  className="px-2 py-1 h-7 rounded-lg text-[9px] font-bold flex items-center gap-1 bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer ml-1"
+                  style={{ color: "var(--color-foreground)" }}
+                  title="Velocidad de reproducción"
+                >
+                  <FastForward className="w-3 h-3" />
+                  {speed}x
+                </button>
               )}
-            </button>
-            
-            {/* Volume slider (Hidden in mini mode to prevent overflow) */}
-            {size !== "mini" && (
-              <input 
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  changeVolume(val);
-                }}
-                className="w-16 sm:w-20 h-1 rounded-lg appearance-none cursor-pointer bg-foreground/15 accent-red-500 hover:accent-red-400 outline-none transition-all"
-                title={`Volumen: ${volume}%`}
-              />
-            )}
+            </div>
+
+            {/* Volume Controls */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={toggleMute}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-foreground/5 hover:bg-foreground/15 border border-foreground/10 transition-all active:scale-95 cursor-pointer"
+                style={{ color: "var(--color-foreground)" }}
+                title={volume === 0 ? "Activar sonido" : "Silenciar"}
+              >
+                {volume === 0 ? (
+                  <VolumeX className="w-3.5 h-3.5 text-red-500" />
+                ) : volume < 50 ? (
+                  <Volume1 className="w-3.5 h-3.5" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+              
+              {/* Volume slider (Hidden in mini mode to prevent overflow) */}
+              {size !== "mini" && (
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    changeVolume(val);
+                  }}
+                  className="w-16 sm:w-20 h-1 rounded-lg appearance-none cursor-pointer bg-foreground/15 accent-red-500 hover:accent-red-400 outline-none transition-all"
+                  title={`Volumen: ${volume}%`}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

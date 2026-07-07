@@ -193,9 +193,10 @@ export function useHomeController() {
   const [youtubePosts, setYoutubePosts] = useState<any[]>([]);
   const [loadingYoutube, setLoadingYoutube] = useState(false);
   const [currentChannel, setCurrentChannel] = useState("https://www.youtube.com/@EnderVerseMC");
-  const [followedChannels, setFollowedChannels] = useState([
-    { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite" },
-    { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC" },
+  const [youtubeFeedType, setYoutubeFeedType] = useState<"posts" | "videos" | "shorts">("posts");
+  const [followedChannels, setFollowedChannels] = useState<any[]>([
+    { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite", visible: true },
+    { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC", visible: true },
   ]);
   const [showChannelManager, setShowChannelManager] = useState(false);
   const [newChannelInput, setNewChannelInput] = useState("");
@@ -205,6 +206,23 @@ export function useHomeController() {
   const [pendingMod, setPendingMod] = useState<ModHit | null>(null);
 
   const showAlert = useCallback((title: string, message: string) => setCustomAlert({ title, message }), []);
+
+  const ensureMaxThreeVisible = useCallback((channels: any[]) => {
+    if (!Array.isArray(channels)) return [];
+    const hasVisible = channels.some(c => c.visible === true);
+    if (!hasVisible && channels.length > 0) {
+      return channels.map((c, idx) => ({ ...c, visible: idx < 3 }));
+    }
+    let count = 0;
+    return channels.map(c => {
+      if (c.visible === true) {
+        count++;
+        if (count > 3) return { ...c, visible: false };
+        return c;
+      }
+      return { ...c, visible: false };
+    });
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("mim-theme") as any;
@@ -243,7 +261,9 @@ export function useHomeController() {
 
       if (profData) {
         setProfile(profData);
-        if (Array.isArray(profData.banner_meta?.youtube_channels)) setFollowedChannels(profData.banner_meta.youtube_channels);
+        if (Array.isArray(profData.banner_meta?.youtube_channels)) {
+          setFollowedChannels(ensureMaxThreeVisible(profData.banner_meta.youtube_channels));
+        }
         if (["official", "vampire", "modern"].includes(profData.banner_meta?.theme)) {
           const cloudTheme = profData.banner_meta.theme;
           setTheme(cloudTheme);
@@ -300,7 +320,9 @@ export function useHomeController() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length) setFollowedChannels(parsed);
+        if (Array.isArray(parsed) && parsed.length) {
+          setFollowedChannels(ensureMaxThreeVisible(parsed));
+        }
       } catch {}
     }
   }, [session, loadUserData]);
@@ -312,8 +334,9 @@ export function useHomeController() {
   }, [session, loadUserData]);
 
   useEffect(() => {
-    if (followedChannels.length && !followedChannels.some((c) => c.url === currentChannel)) {
-      setCurrentChannel(followedChannels[0].url);
+    const visible = followedChannels.filter(c => c.visible === true);
+    if (visible.length && !visible.some((c) => c.url === currentChannel)) {
+      setCurrentChannel(visible[0].url);
     }
   }, [followedChannels, currentChannel]);
 
@@ -376,10 +399,14 @@ export function useHomeController() {
       showAlert("Canal ya existe", "Este canal ya está en tu lista.");
       return;
     }
-    const updated = [...followedChannels, { name: handle, url }];
+    const currentlyVisibleCount = followedChannels.filter(c => c.visible === true).length;
+    const newChan = { name: handle, url, visible: currentlyVisibleCount < 3 };
+    const updated = [...followedChannels, newChan];
     setFollowedChannels(updated);
     setNewChannelInput("");
-    setCurrentChannel(url);
+    if (newChan.visible) {
+      setCurrentChannel(url);
+    }
     await syncFollowedChannels(updated);
   };
 
@@ -389,8 +416,43 @@ export function useHomeController() {
       return;
     }
     const updated = followedChannels.filter((c) => c.url !== urlToRemove);
+    const corrected = ensureMaxThreeVisible(updated);
+    setFollowedChannels(corrected);
+    if (currentChannel === urlToRemove) {
+      const active = corrected.find(c => c.visible === true) || corrected[0];
+      if (active) setCurrentChannel(active.url);
+    }
+    await syncFollowedChannels(corrected);
+  };
+
+  const handleToggleChannelVisibility = async (url: string) => {
+    const isVisible = followedChannels.some(c => c.url === url && c.visible === true);
+    const currentlyVisibleCount = followedChannels.filter(c => c.visible === true).length;
+
+    if (!isVisible && currentlyVisibleCount >= 3) {
+      showAlert("Límite alcanzado", "Puedes tener un máximo de 3 canales visibles.");
+      return;
+    }
+
+    if (isVisible && currentlyVisibleCount <= 1) {
+      showAlert("Mínimo requerido", "Debes tener al menos 1 canal visible.");
+      return;
+    }
+
+    const updated = followedChannels.map(c => {
+      if (c.url === url) {
+        return { ...c, visible: !isVisible };
+      }
+      return c;
+    });
+
     setFollowedChannels(updated);
-    if (currentChannel === urlToRemove) setCurrentChannel(updated[0].url);
+
+    if (isVisible && currentChannel === url) {
+      const nextVisible = updated.find(c => c.visible === true);
+      if (nextVisible) setCurrentChannel(nextVisible.url);
+    }
+
     await syncFollowedChannels(updated);
   };
 
@@ -564,10 +626,10 @@ export function useHomeController() {
     }
   }, []);
 
-  const loadYoutubeData = useCallback(async (channel: string) => {
+  const loadYoutubeData = useCallback(async (channel: string, type = "posts") => {
     try {
       setLoadingYoutube(true);
-      const res = await fetch(`/api/fomo/youtube-posts?channel=${encodeURIComponent(channel)}`);
+      const res = await fetch(`/api/fomo/youtube-posts?channel=${encodeURIComponent(channel)}&type=${type}`);
       if (res.ok) setYoutubePosts((await res.json()).showcases || []);
     } catch (err) {
       console.error("Error loading YouTube posts:", err);
@@ -648,11 +710,11 @@ export function useHomeController() {
     } else if (activeTab === "rankings") {
       void loadRankingsData();
     } else if (activeTab === "feed") {
-      void loadYoutubeData(currentChannel);
+      void loadYoutubeData(currentChannel, youtubeFeedType);
     } else if (activeTab === "discover") {
       void runDiscoverSearch(1);
     }
-  }, [activeTab, currentChannel, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData, runDiscoverSearch]);
+  }, [activeTab, currentChannel, youtubeFeedType, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData, runDiscoverSearch]);
 
   const handleOpenModDetails = async (mod: ModHit, isDependency = false) => {
     const normalizedMod = mod.projectId ? mod : normalizeFavorite(mod);
@@ -906,7 +968,7 @@ export function useHomeController() {
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, latestFeaturedMods, latestCollectionName,
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
     loadingActiveMods, theme, customAlert, setCustomAlert, youtubePosts, loadingYoutube, currentChannel,
-    setCurrentChannel, followedChannels, showChannelManager, setShowChannelManager, newChannelInput, setNewChannelInput,
+    setCurrentChannel, youtubeFeedType, setYoutubeFeedType, followedChannels, showChannelManager, setShowChannelManager, newChannelInput, setNewChannelInput,
     rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,
     handleRemoveChannel, handleEnterCollection, handleExitCollection: () => { setActiveCollection(null); setActiveCollectionMods([]); },
@@ -914,6 +976,7 @@ export function useHomeController() {
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, onToggleFavorite,
+    handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
   };
 }

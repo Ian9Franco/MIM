@@ -217,6 +217,9 @@ export default function Home() {
               loadingYoutube={c.loadingYoutube}
               handleAddChannel={c.handleAddChannel}
               handleRemoveChannel={c.handleRemoveChannel}
+              youtubeFeedType={c.youtubeFeedType}
+              setYoutubeFeedType={c.setYoutubeFeedType}
+              handleToggleChannelVisibility={c.handleToggleChannelVisibility}
             />
           )}
 

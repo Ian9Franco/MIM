@@ -5,7 +5,7 @@ export function playFomoSound(kind: "on" | "off" = "on") {
 
   try {
     const audio = new Audio(kind === "off" ? "/fomoff.mp3" : "/fomo_sound.mp3");
-    audio.volume = 0.17; // Reduced by half
+    audio.volume = 0.08; // Reduced by half again as requested
     audio.play().catch(() => {});
   } catch {
     // Audio is ornamental; never block the interaction.

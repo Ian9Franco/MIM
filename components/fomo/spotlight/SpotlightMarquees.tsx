@@ -113,7 +113,7 @@ export function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse
   return (
     <div 
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden mask-vertical-edges cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 overflow-hidden mask-vertical-edges cursor-grab active:cursor-grabbing"
       {...handlers}
     >
       <div ref={innerRef} className="flex flex-col gap-3 w-full px-2 pb-2">

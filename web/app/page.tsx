@@ -84,7 +84,7 @@ export default function Home() {
                 </AnimatePresence>
               </span>
             </h1>
-            <p className="text-[10px] font-mono text-white/30 mt-1 uppercase tracking-widest">Mobile Community Hub</p>
+            <p className="text-[10px] font-mono text-white/30 mt-1 uppercase tracking-widest">Mobile</p>
           </div>
         </div>
 
@@ -248,6 +248,8 @@ export default function Home() {
               discoverSource={c.discoverSource}
               setDiscoverSource={c.setDiscoverSource}
               discoverError={c.discoverError}
+              discoverEnvironment={c.discoverEnvironment}
+              setDiscoverEnvironment={c.setDiscoverEnvironment}
             />
           )}
         </AnimatePresence>

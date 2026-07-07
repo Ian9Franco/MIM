@@ -14,6 +14,8 @@ interface DiscoverTabProps {
   setDiscoverVersion: (v: string) => void;
   discoverLoader: string;
   setDiscoverLoader: (v: string) => void;
+  discoverEnvironment: string;
+  setDiscoverEnvironment: (v: string) => void;
   discoverResults: ModHit[];
   discoverLoading: boolean;
   discoverPage: number;
@@ -41,6 +43,12 @@ const MOD_TYPES = [
   { value: "shader", label: "Shaders" },
   { value: "datapack", label: "Datapacks" },
 ];
+const ENVIRONMENTS = [
+  { value: "any", label: "Cualquiera" },
+  { value: "client", label: "Cliente" },
+  { value: "server", label: "Servidor" },
+  { value: "both", label: "Ambos" },
+];
 
 /** Formatea números de descarga a K/M */
 function formatDownloads(n: number): string {
@@ -55,6 +63,7 @@ function formatDownloads(n: number): string {
 export function DiscoverTab({
   discoverQuery, setDiscoverQuery, discoverType, setDiscoverType,
   discoverVersion, setDiscoverVersion, discoverLoader, setDiscoverLoader,
+  discoverEnvironment, setDiscoverEnvironment,
   discoverResults, discoverLoading, discoverPage, discoverTotal,
   setDiscoverResults, setDiscoverPage, runDiscoverSearch, handleOpenModDetails,
   discoverSource, setDiscoverSource, discoverError,
@@ -192,6 +201,20 @@ export function DiscoverTab({
             >
               {MOD_LOADERS.map(l => (
                 <option key={l.value} value={l.value} className="bg-surface text-white">{l.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {discoverSource === "modrinth" && (
+          <div className={`flex flex-col gap-1 ${discoverType === "mod" ? "col-span-2" : ""}`}>
+            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Entorno</label>
+            <select
+              value={discoverEnvironment}
+              onChange={(e) => { setDiscoverEnvironment(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+            >
+              {ENVIRONMENTS.map(env => (
+                <option key={env.value} value={env.value} className="bg-surface text-white">{env.label}</option>
               ))}
             </select>
           </div>

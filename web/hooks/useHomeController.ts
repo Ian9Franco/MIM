@@ -154,6 +154,7 @@ export function useHomeController() {
   const [discoverType, setDiscoverType] = useState("mod");
   const [discoverVersion, setDiscoverVersion] = useState("1.20.1");
   const [discoverLoader, setDiscoverLoader] = useState("fabric");
+  const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
   const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -652,7 +653,14 @@ export function useHomeController() {
         const res = await fetch(url);
         if (!res.ok) {
           const errText = await res.text();
-          throw new Error(errText || "Error en la API de CurseForge");
+          let cleanMsg = "Error en la API de CurseForge";
+          try {
+            const parsed = JSON.parse(errText);
+            cleanMsg = parsed.error || cleanMsg;
+          } catch {
+            if (errText) cleanMsg = errText;
+          }
+          throw new Error(cleanMsg);
         }
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -662,6 +670,18 @@ export function useHomeController() {
         const facetsArray = [[`project_type:${discoverType}`]];
         if (discoverType !== "datapack" && discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
         if (discoverType === "mod" && discoverLoader !== "any") facetsArray.push([`categories:${discoverLoader}`]);
+        if (discoverEnvironment !== "any") {
+          if (discoverEnvironment === "client") {
+            facetsArray.push(["client_side:required", "client_side:optional"]);
+            facetsArray.push(["server_side:unsupported"]);
+          } else if (discoverEnvironment === "server") {
+            facetsArray.push(["server_side:required", "server_side:optional"]);
+            facetsArray.push(["client_side:unsupported"]);
+          } else if (discoverEnvironment === "both") {
+            facetsArray.push(["client_side:required", "client_side:optional"]);
+            facetsArray.push(["server_side:required", "server_side:optional"]);
+          }
+        }
         const url = `https://api.modrinth.com/v2/search?facets=${encodeURIComponent(JSON.stringify(facetsArray))}&index=downloads${discoverQuery ? `&query=${encodeURIComponent(discoverQuery)}` : ""}&limit=15&offset=${offset}`;
         const res = await fetch(url);
         if (!res.ok) {
@@ -699,7 +719,7 @@ export function useHomeController() {
     } finally {
       setDiscoverLoading(false);
     }
-  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource]);
+  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment]);
 
   useEffect(() => {
     if (activeTab === "spotlight") {
@@ -961,7 +981,7 @@ export function useHomeController() {
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
-    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverResults, setDiscoverResults, discoverLoading,
+    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverResults, setDiscoverResults, discoverLoading,
     discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
     showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userDrafts, loadingUserData,

@@ -246,10 +246,15 @@ export function ModDetailsSheet({
               exit={{ y: "108%", scale: 0.98, opacity: 0 }}
               transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 26,
-                mass: 0.9,
-                bounce: 0.15
+                stiffness: 150,
+                damping: 24,
+                mass: 1.0,
+                layout: {
+                  type: "spring",
+                  stiffness: 160,
+                  damping: 26,
+                  mass: 1.0,
+                }
               }}
               className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh]"
               onClick={(e) => e.stopPropagation()}
@@ -347,10 +352,18 @@ export function ModDetailsSheet({
                 </div>
 
                 {/* Scrollable content */}
-                <div className="overflow-y-auto flex-1 pr-1 scrollbar-none min-h-0">
-                  <AnimatePresence mode="wait">
+                <motion.div
+                  layout="size"
+                  className="overflow-y-auto flex-1 pr-1 scrollbar-none min-h-0 relative w-full"
+                  transition={{
+                    type: "spring",
+                    stiffness: 180,
+                    damping: 28,
+                  }}
+                >
+                  <AnimatePresence mode="popLayout">
                     {modalTab === "summary" && (
-                      <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4">
+                      <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4 w-full">
                         {/* Stats row */}
                         <div className="flex gap-3 text-[10px] border-b border-white/[0.04] pb-3 flex-wrap">
                           <div className="flex-1 min-w-[70px]">
@@ -443,7 +456,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "desc" && (
-                      <motion.div key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px]">
+                      <motion.div key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px] w-full">
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Descripción</span>
                           <button
@@ -470,7 +483,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "versions" && (
-                      <motion.div key="versions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5">
+                      <motion.div key="versions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -491,7 +504,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "deps" && (
-                      <motion.div key="deps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5">
+                      <motion.div key="deps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -529,7 +542,7 @@ export function ModDetailsSheet({
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                </motion.div>
 
                 {/* Footer action buttons */}
                 <div className="flex gap-2 mt-auto pt-2 border-t border-white/[0.04] shrink-0">

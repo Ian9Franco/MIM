@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X, ArrowLeft, Layers } from "lucide-react";
+import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X, ArrowLeft, Layers, Search, SlidersHorizontal, Heart, Download, Coffee, Ghost, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BottomNav } from "../components/BottomNav";
-import { VerticalTicker, ModHit } from "../components/SpotlightMarquees";
+import { VerticalTicker, HorizontalEditorialMarquee, HorizontalShowcaseMarquee, ModHit } from "../components/SpotlightMarquees";
 import { mockUpdatedMods, mockNewestMods } from "../lib/mockData";
 import { supabase } from "../lib/supabaseClient";
 
@@ -22,6 +22,21 @@ interface CollectionItem {
 export default function Home() {
   const [activeTab, setActiveTab] = useState("profile"); // Default to Profile/Login first
   const [selectedMod, setSelectedMod] = useState<ModHit | null>(null);
+
+  // Mod Details Fetch State
+  const [selectedModDetails, setSelectedModDetails] = useState<any>(null);
+  const [selectedModDeps, setSelectedModDeps] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Discover Tab State
+  const [discoverQuery, setDiscoverQuery] = useState("");
+  const [discoverType, setDiscoverType] = useState("mod"); // 'mod' | 'resourcepack' | 'datapack' | 'shader'
+  const [discoverVersion, setDiscoverVersion] = useState("1.20.1"); // Default to 1.20.1
+  const [discoverLoader, setDiscoverLoader] = useState("fabric"); // fabric | forge | neoforge | quilt | any
+  const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [discoverPage, setDiscoverPage] = useState(1);
+  const [discoverTotal, setDiscoverTotal] = useState(0);
 
   // Auth State
   const [session, setSession] = useState<any>(null);
@@ -51,16 +66,34 @@ export default function Home() {
   const [latestFeaturedMods, setLatestFeaturedMods] = useState<ModHit[]>([]);
   const [latestCollectionName, setLatestCollectionName] = useState("");
   const [loadingLatestMods, setLoadingLatestMods] = useState(false);
+  const [activeSpotlightPlatform, setActiveSpotlightPlatform] = useState<"modrinth" | "curseforge">("modrinth");
 
   // Active Collection View state (for "entering" collections in mobile)
   const [activeCollection, setActiveCollection] = useState<CollectionItem | null>(null);
   const [activeCollectionMods, setActiveCollectionMods] = useState<ModHit[]>([]);
   const [loadingActiveMods, setLoadingActiveMods] = useState(false);
 
+  // Theme State
+  const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
+  const [modStack, setModStack] = useState<any[]>([]);
+  const [activeStackIndex, setActiveStackIndex] = useState<number>(-1);
+
+  // Custom Alert Modal State
+  const [customAlert, setCustomAlert] = useState<{ title: string; message: string } | null>(null);
+
+  // Tab inside Mod Details Modal
+  const [modalTab, setModalTab] = useState<"summary" | "desc" | "versions" | "deps">("summary");
+
   // YouTube Live Data State
   const [youtubePosts, setYoutubePosts] = useState<any[]>([]);
   const [loadingYoutube, setLoadingYoutube] = useState(false);
   const [currentChannel, setCurrentChannel] = useState("https://www.youtube.com/@EnderVerseMC");
+  const [followedChannels, setFollowedChannels] = useState<{ name: string; url: string }[]>([
+    { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite" },
+    { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC" }
+  ]);
+  const [showChannelManager, setShowChannelManager] = useState(false);
+  const [newChannelInput, setNewChannelInput] = useState("");
 
   // Rankings Live Data State
   const [rankings, setRankings] = useState<ModHit[]>([]);
@@ -69,6 +102,49 @@ export default function Home() {
   // ─────────────────────────────────────────────────────────────────────────────
   // AUTHENTICATION LOGIC (Supabase)
   // ─────────────────────────────────────────────────────────────────────────────
+  const showAlert = (title: string, message: string) => {
+    setCustomAlert({ title, message });
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mim-theme") as any;
+    if (saved && ["official", "vampire", "modern"].includes(saved)) {
+      setTheme(saved);
+      document.documentElement.setAttribute("data-theme", saved);
+    }
+  }, []);
+
+  const handleThemeChange = async (newTheme: "official" | "vampire" | "modern") => {
+    setTheme(newTheme);
+    localStorage.setItem("mim-theme", newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
+
+    if (session?.user?.id) {
+      try {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("banner_meta")
+          .eq("id", session.user.id)
+          .single();
+
+        const updatedBannerMeta = {
+          ...(currentProfile?.banner_meta || {}),
+          theme: newTheme
+        };
+
+        await supabase
+          .from("profiles")
+          .update({
+            banner_meta: updatedBannerMeta,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", session.user.id);
+      } catch (err) {
+        console.error("Error syncing theme to Supabase:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -91,7 +167,18 @@ export default function Home() {
         .eq("id", userId)
         .single();
       
-      if (profData) setProfile(profData);
+      if (profData) {
+        setProfile(profData);
+        if (profData.banner_meta?.youtube_channels && Array.isArray(profData.banner_meta.youtube_channels)) {
+          setFollowedChannels(profData.banner_meta.youtube_channels);
+        }
+        if (profData.banner_meta?.theme && ["official", "vampire", "modern"].includes(profData.banner_meta.theme)) {
+          const cloudTheme = profData.banner_meta.theme;
+          setTheme(cloudTheme);
+          localStorage.setItem("mim-theme", cloudTheme);
+          document.documentElement.setAttribute("data-theme", cloudTheme);
+        }
+      }
 
       const { data: favs } = await supabase
         .from("favorite_mods")
@@ -120,8 +207,128 @@ export default function Home() {
       setProfile(null);
       setUserFavorites([]);
       setUserDrafts([]);
+      
+      const saved = localStorage.getItem("mim_web_youtube_channels");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setFollowedChannels(parsed);
+          }
+        } catch {}
+      } else {
+        setFollowedChannels([
+          { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite" },
+          { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC" }
+        ]);
+      }
     }
   }, [session, loadUserData]);
+
+  useEffect(() => {
+    if (followedChannels.length > 0) {
+      const urls = followedChannels.map(c => c.url);
+      if (!urls.includes(currentChannel)) {
+        setCurrentChannel(followedChannels[0].url);
+      }
+    }
+  }, [followedChannels, currentChannel]);
+
+  const handleAddChannel = async () => {
+    const raw = newChannelInput.trim();
+    if (!raw) return;
+    
+    let handle = raw;
+    if (handle.startsWith("http")) {
+      const parts = handle.split("@");
+      if (parts.length > 1) {
+        handle = "@" + parts[1].split("/")[0];
+      } else {
+        handle = handle.split("/").pop() || handle;
+      }
+    }
+    if (!handle.startsWith("@") && !handle.startsWith("http")) {
+      handle = "@" + handle;
+    }
+    
+    let url = raw.startsWith("http") ? raw : `https://www.youtube.com/${handle}`;
+    url = url.replace(/\/$/, "");
+    
+    if (followedChannels.some((c) => c.url.toLowerCase() === url.toLowerCase())) {
+      showAlert("Canal Ya Existe", "Este canal ya está en tu lista.");
+      return;
+    }
+
+    const newChan = { name: handle, url: url };
+    const updated = [...followedChannels, newChan];
+    setFollowedChannels(updated);
+    setNewChannelInput("");
+    setCurrentChannel(url);
+
+    if (session?.user?.id) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          banner_meta: {
+            ...profile?.banner_meta,
+            youtube_channels: updated
+          }
+        })
+        .eq("id", session.user.id);
+      if (error) {
+        console.error("Error updating profile channels:", error);
+      } else {
+        setProfile((prev: any) => ({
+          ...prev,
+          banner_meta: {
+            ...prev?.banner_meta,
+            youtube_channels: updated
+          }
+        }));
+      }
+    } else {
+      localStorage.setItem("mim_web_youtube_channels", JSON.stringify(updated));
+    }
+  };
+
+  const handleRemoveChannel = async (urlToRemove: string) => {
+    if (followedChannels.length <= 1) {
+      showAlert("Mínimo Requerido", "Debes tener al menos un canal en tu lista.");
+      return;
+    }
+
+    const updated = followedChannels.filter((c) => c.url !== urlToRemove);
+    setFollowedChannels(updated);
+
+    if (currentChannel === urlToRemove && updated.length > 0) {
+      setCurrentChannel(updated[0].url);
+    }
+
+    if (session?.user?.id) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          banner_meta: {
+            ...profile?.banner_meta,
+            youtube_channels: updated
+          }
+        })
+        .eq("id", session.user.id);
+      if (error) {
+        console.error("Error updating profile channels:", error);
+      } else {
+        setProfile((prev: any) => ({
+          ...prev,
+          banner_meta: {
+            ...prev?.banner_meta,
+            youtube_channels: updated
+          }
+        }));
+      }
+    } else {
+      localStorage.setItem("mim_web_youtube_channels", JSON.stringify(updated));
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,13 +345,13 @@ export default function Home() {
           }
         });
         if (error) throw error;
-        alert("¡Registro exitoso! Iniciando sesión...");
+        showAlert("Registro Exitoso", "¡Registro exitoso! Iniciando sesión...");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
     } catch (err: any) {
-      alert(err.message || "Error en la autenticación");
+      showAlert("Error de Autenticación", err.message || "Error en la autenticación");
     } finally {
       setAuthLoading(false);
     }
@@ -322,6 +529,69 @@ export default function Home() {
     }
   }, []);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DISCOVER / SEARCH LOGIC
+  // ─────────────────────────────────────────────────────────────────────────────
+  const runDiscoverSearch = useCallback(async (pageNumber = 1) => {
+    try {
+      setDiscoverLoading(true);
+      
+      const facetsArray: string[][] = [
+        [`project_type:${discoverType}`]
+      ];
+
+      // Version filter (only if not datapack)
+      if (discoverType !== "datapack" && discoverVersion) {
+        facetsArray.push([`versions:${discoverVersion}`]);
+      }
+
+      // Loader filter (only for mods and if not "any")
+      if (discoverType === "mod" && discoverLoader !== "any") {
+        facetsArray.push([`categories:${discoverLoader}`]);
+      }
+
+      const facets = JSON.stringify(facetsArray);
+      const limit = 15;
+      const offset = (pageNumber - 1) * limit;
+      
+      const url = `https://api.modrinth.com/v2/search` +
+        `?facets=${encodeURIComponent(facets)}` +
+        `&index=downloads` + // Sort by downloads to show popular things first
+        (discoverQuery ? `&query=${encodeURIComponent(discoverQuery)}` : "") +
+        `&limit=${limit}` +
+        `&offset=${offset}`;
+
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = (data.hits ?? []).map((h: any) => ({
+          projectId: h.project_id,
+          title: h.title,
+          description: h.description,
+          iconUrl: h.icon_url,
+          author: h.author,
+          projectType: h.project_type || "mod",
+          categories: h.categories || [],
+          url: `https://modrinth.com/${h.project_type || "mod"}/${h.slug}`,
+          downloads: h.downloads,
+          _source: "modrinth"
+        }));
+
+        if (pageNumber === 1) {
+          setDiscoverResults(mapped);
+        } else {
+          setDiscoverResults(prev => [...prev, ...mapped]);
+        }
+        setDiscoverTotal(data.total_hits || 0);
+        setDiscoverPage(pageNumber);
+      }
+    } catch (e) {
+      console.error("Discover search error:", e);
+    } finally {
+      setDiscoverLoading(false);
+    }
+  }, [discoverQuery, discoverType, discoverVersion, discoverLoader]);
+
   // Sync state between tabs
   useEffect(() => {
     if (activeTab === "spotlight") {
@@ -333,15 +603,81 @@ export default function Home() {
       loadRankingsData();
     } else if (activeTab === "feed") {
       loadYoutubeData(currentChannel);
+    } else if (activeTab === "discover") {
+      runDiscoverSearch(1);
     }
-  }, [activeTab, currentChannel, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData]);
+  }, [activeTab, currentChannel, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData, runDiscoverSearch]);
 
-  const handleOpenModDetails = (mod: ModHit) => {
+  const handleOpenModDetails = async (mod: ModHit, isDependency = false) => {
     setSelectedMod(mod);
+    setSelectedModDetails(null);
+    setSelectedModDeps([]);
+    setLoadingDetails(true);
+    setModalTab("summary");
+
+    let details = null;
+    let depsData = [];
+
+    try {
+      // Try to fetch project details (contains gallery, game_versions, loaders)
+      const pRes = await fetch(`https://api.modrinth.com/v2/project/${mod.projectId}`);
+      if (pRes.ok) {
+        details = await pRes.json();
+        setSelectedModDetails(details);
+      }
+
+      // Try to fetch project dependencies
+      const dRes = await fetch(`https://api.modrinth.com/v2/project/${mod.projectId}/dependencies`);
+      if (dRes.ok) {
+        const dJson = await dRes.json();
+        depsData = dJson.projects || [];
+        setSelectedModDeps(depsData);
+      }
+    } catch (e) {
+      console.error("Failed to load mod detailed metadata:", e);
+    } finally {
+      const newStackItem = {
+        mod,
+        details,
+        deps: depsData,
+        tab: "summary" as const
+      };
+
+      if (isDependency) {
+        const newStack = [...modStack.slice(0, activeStackIndex + 1), newStackItem];
+        setModStack(newStack);
+        setActiveStackIndex(newStack.length - 1);
+      } else {
+        setModStack([newStackItem]);
+        setActiveStackIndex(0);
+      }
+
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleSwitchStackIndex = (index: number) => {
+    if (index < 0 || index >= modStack.length) return;
+    setActiveStackIndex(index);
+    const item = modStack[index];
+    setSelectedMod(item.mod);
+    setSelectedModDetails(item.details);
+    setSelectedModDeps(item.deps);
+    setModalTab(item.tab);
+  };
+
+  const handleGoBackInStack = () => {
+    if (activeStackIndex > 0) {
+      handleSwitchStackIndex(activeStackIndex - 1);
+    }
   };
 
   const handleCloseModDetails = () => {
     setSelectedMod(null);
+    setSelectedModDetails(null);
+    setSelectedModDeps([]);
+    setModStack([]);
+    setActiveStackIndex(-1);
   };
 
   return (
@@ -349,28 +685,107 @@ export default function Home() {
       
       {/* Header Bar */}
       <header className="flex justify-between items-center mb-6 px-1 shrink-0">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-orange-500 font-bold">MIM Hub</span>
-          <h1 className="text-lg font-bold text-white tracking-tight mt-0.5">FOMO Cloud</h1>
+        <div className="flex items-center gap-3">
+          <div className="relative w-9 h-9 shrink-0">
+            <img
+              src="/fomoico.png"
+              alt="FOMO Logo"
+              className="w-9 h-9 object-contain animate-fomo-blink"
+            />
+          </div>
+          <div className="flex flex-col">
+            <span
+              className="text-[9px] font-mono uppercase tracking-widest font-bold"
+              style={{ color: "var(--color-primary)" }}
+            >MIM Hub</span>
+            <h1
+              className="text-sm font-bold tracking-tight leading-none font-headline"
+              style={{ color: "var(--color-foreground)" }}
+            >FOMO Cloud</h1>
+          </div>
         </div>
-        <button 
-          onClick={() => alert("MIM FOMO Web v1.3.0")}
-          className="bg-white/5 hover:bg-white/10 border border-white/[0.08] rounded-full p-2 text-white/70 active:scale-95 transition-all"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle Pill — uses CSS vars */}
+          <div
+            className="relative flex items-center h-8 w-[92px] p-0.5 rounded-xl transition-all"
+            style={{
+              background: "color-mix(in srgb, var(--color-surface) 80%, transparent)",
+              border: "1px solid var(--color-border-strong)",
+            }}
+          >
+            {/* Sliding active indicator */}
+            <div
+              className="absolute transition-all duration-300 ease-out rounded-lg pointer-events-none"
+              style={{
+                width: "26px",
+                height: "26px",
+                transform: `translateX(${["official", "vampire", "modern"].indexOf(theme) * 28}px)`,
+                background: "color-mix(in srgb, var(--color-primary) 20%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)",
+                left: "2px",
+              }}
+            />
+            {[
+              { id: "official", icon: <Coffee className="w-3.5 h-3.5" />, label: "Oficial" },
+              { id: "vampire",  icon: <Ghost  className="w-3.5 h-3.5" />, label: "Vampire" },
+              { id: "modern",   icon: <Sun    className="w-3.5 h-3.5" />, label: "Modern" },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => handleThemeChange(opt.id as any)}
+                title={opt.label}
+                className="relative z-10 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-300"
+                style={{
+                  color: theme === opt.id ? "var(--color-primary)" : "var(--color-muted)",
+                }}
+              >
+                {opt.icon}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => showAlert("MIM FOMO Web", "FOMO Cloud Sync Web App\nVersión 1.3.0\nDiseñado por la comunidad de MIM.")}
+            className="rounded-full p-2 active:scale-95 transition-all"
+            style={{
+              background: "color-mix(in srgb, var(--color-surface) 80%, transparent)",
+              border: "1px solid var(--color-border-strong)",
+              color: "var(--color-muted)",
+            }}
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+
+          {/* MIM Logo on the far right */}
+          <div className="relative w-8 h-8 shrink-0 ml-1">
+            <img
+              src="/icon.png"
+              alt="MIM Logo"
+              className="w-8 h-8 rounded-lg shadow-md animate-slime object-contain"
+            />
+          </div>
+        </div>
       </header>
 
       {/* Main Container */}
       <main className="flex-1 flex flex-col min-h-0 relative">
+        <AnimatePresence mode="wait">
         
         {/* ─────────────────────────────────────────────────────────────────────────────
             TAB 1: PROFILE / LOGIN
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "profile" && (
-          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none animate-fade-in">
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none"
+          >
             {!session ? (
-              <div className="my-auto bg-[#151518]/80 border border-white/[0.06] rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
+              <div className="my-auto bg-surface/80 border border-border rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mx-auto mb-3">
                     <User className="w-6 h-6 text-orange-500" />
@@ -444,27 +859,65 @@ export default function Home() {
                     onClick={() => setIsRegistering(!isRegistering)}
                     className="text-[11px] text-orange-400 font-semibold hover:underline"
                   >
-                    {isRegistering ? "@Ya tenés cuenta? Iniciá sesión" : "@No tenés cuenta? Registrate gratis"}
+                    {isRegistering ? "¿Ya tenés cuenta? Iniciá sesión" : "¿No tenés cuenta? Registrate gratis"}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                <div className="bg-[#151518]/90 border border-white/[0.06] rounded-3xl p-5 flex items-center gap-4 relative overflow-hidden">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/[0.08] flex items-center justify-center text-rose-400 text-lg font-black uppercase">
-                    {profile?.username?.substring(0, 2) || session.user.email.substring(0, 2)}
+                <div className="bg-surface/90 border border-border rounded-3xl overflow-hidden flex flex-col relative shadow-xl">
+                  {/* Banner */}
+                  <div className="h-28 w-full relative overflow-hidden bg-gradient-to-r from-orange-600/30 to-rose-600/30 border-b border-white/[0.04]">
+                    {profile?.banner_url ? (
+                      <img src={profile.banner_url} alt="User Banner" className="w-full h-full object-cover" />
+                    ) : (
+                      <div 
+                        className="w-full h-full opacity-60 transition-all duration-300"
+                        style={{
+                          background: `linear-gradient(135deg, ${profile?.color || '#F05A28'}44 0%, var(--color-surface) 100%)`
+                        }}
+                      />
+                    )}
+                    {/* Logout Button */}
+                    <button
+                      onClick={handleLogout}
+                      className="absolute top-3 right-3 bg-black/40 hover:bg-red-500/20 hover:text-red-400 border border-white/[0.08] backdrop-blur-md rounded-full p-2 text-white/70 active:scale-95 transition-all z-10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[8px] font-bold font-mono px-2 py-0.5 rounded-full uppercase">FOMO Member</span>
-                    <h2 className="text-sm font-bold text-white truncate mt-1.5">@{profile?.username || "Usuario"}</h2>
-                    <p className="text-[10px] text-white/40 truncate mt-0.5">{session.user.email}</p>
+
+                  {/* Profile Info & Avatar */}
+                  <div className="px-5 pb-5 pt-0 relative flex flex-col items-start">
+                    {/* Avatar Container */}
+                    <div 
+                      className="w-16 h-16 rounded-2xl bg-surface border-2 border-border flex items-center justify-center text-rose-400 text-xl font-black uppercase overflow-hidden -mt-8 shadow-lg z-10"
+                      style={{ borderColor: profile?.color || 'rgba(255,255,255,0.08)' }}
+                    >
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="User Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span style={{ color: profile?.color || '#E11D48' }}>
+                          {profile?.username?.substring(0, 2) || session.user.email.substring(0, 2)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 w-full">
+                      <span 
+                        className="border text-[8px] font-bold font-mono px-2 py-0.5 rounded-full uppercase"
+                        style={{
+                          backgroundColor: `${profile?.color || '#F05A28'}15`,
+                          borderColor: `${profile?.color || '#F05A28'}30`,
+                          color: profile?.color || '#F05A28'
+                        }}
+                      >
+                        FOMO Member
+                      </span>
+                      <h2 className="text-sm font-bold text-white truncate mt-2">@{profile?.username || "Usuario"}</h2>
+                      <p className="text-[10px] text-white/40 truncate mt-0.5">{session.user.email}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/[0.08] rounded-full p-2 text-white/50 active:scale-95 transition-all"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -478,7 +931,7 @@ export default function Home() {
                   ) : userDrafts.length > 0 ? (
                     <div className="grid gap-3">
                       {userDrafts.map(draft => (
-                        <div key={draft.id} className="bg-[#151518]/80 border border-white/[0.05] rounded-2xl p-4 flex justify-between items-center">
+                        <div key={draft.id} className="bg-surface/80 border border-border rounded-2xl p-4 flex justify-between items-center">
                           <div>
                             <h4 className="text-xs font-bold text-white">{draft.name}</h4>
                             <p className="text-[10px] text-white/40 mt-1">Versión: {draft.minecraft_version} • Loader: {draft.loader}</p>
@@ -507,7 +960,7 @@ export default function Home() {
                   ) : userFavorites.length > 0 ? (
                     <div className="grid gap-3">
                       {userFavorites.map(fav => (
-                        <div key={fav.id} className="bg-[#151518]/80 border border-white/[0.05] rounded-2xl p-3.5 flex items-center gap-3">
+                        <div key={fav.id} className="bg-surface/80 border border-border rounded-2xl p-3.5 flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {fav.icon_url ? (
                               <img src={fav.icon_url} alt="" className="object-cover w-full h-full" />
@@ -530,16 +983,29 @@ export default function Home() {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
             TAB 2: SPOTLIGHT (Desktop Style Mods Carousel + Tickers)
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "spotlight" && (
-          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none animate-fade-in">
-            <div className="bg-gradient-to-r from-orange-500/10 to-transparent border-l-2 border-orange-500 rounded-r-lg p-3 mb-6 shrink-0">
-              <p className="text-[10px] font-mono text-orange-400 uppercase tracking-wider font-bold">Trending Live</p>
+          <motion.div
+            key="spotlight"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none"
+          >
+            <div 
+              className="border-l-2 rounded-r-lg p-3 mb-6 shrink-0"
+              style={{
+                background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
+                borderColor: "var(--color-primary)"
+              }}
+            >
+              <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>Showcases Spotlight</p>
               <h2 className="text-xs font-semibold text-white/95 mt-1">Minecraft Mods e ideas editoriales en vivo.</h2>
             </div>
 
@@ -547,46 +1013,64 @@ export default function Home() {
             <div className="flex flex-col gap-3 mb-6 shrink-0">
               <div className="flex justify-between items-center px-1">
                 <h3 className="text-xs font-bold text-white/80 tracking-wide flex items-center gap-1.5">
-                  Destacados: {latestCollectionName || "Modrinth Featured"}
+                  {activeSpotlightPlatform === "modrinth" 
+                    ? `Destacados: ${latestCollectionName || "Modrinth Featured"}`
+                    : `Destacados: ${curseForgeFeatured[0]?.name || "CurseForge Community Picks"}`}
                 </h3>
-                <span className="text-[9px] font-mono text-orange-400 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-md font-semibold">Hero Pick</span>
+                
+                {/* Toggle Button */}
+                <button
+                  onClick={() => setActiveSpotlightPlatform(activeSpotlightPlatform === "modrinth" ? "curseforge" : "modrinth")}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md hover:bg-white/10 transition-colors"
+                  style={{ color: "var(--color-foreground)", borderColor: "var(--color-border)" }}
+                >
+                  <span>{activeSpotlightPlatform === "modrinth" ? "Ver CurseForge" : "Ver Modrinth"}</span>
+                  <ChevronRight className={`w-3 h-3 transform transition-transform ${activeSpotlightPlatform === "curseforge" ? "rotate-180" : ""}`} />
+                </button>
               </div>
 
               {loadingLatestMods ? (
                 <div className="h-40 bg-white/[0.02] rounded-2xl border border-white/[0.04] flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-                </div>
-              ) : latestFeaturedMods.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                  {latestFeaturedMods.map(mod => (
-                    <div 
-                      key={mod.projectId}
-                      onClick={() => handleOpenModDetails(mod)}
-                      className="bg-[#151518]/95 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3.5 min-w-[200px] max-w-[200px] snap-center hover:border-white/10 active:scale-[0.97] transition-all cursor-pointer shadow-md"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {mod.iconUrl ? (
-                          <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-white/40 font-bold uppercase">{mod.title.substring(0, 2)}</span>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white truncate">{mod.title}</h4>
-                        <p className="text-[9px] text-white/40 mt-1 line-clamp-2 leading-relaxed">{mod.description}</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
-                        <span className="text-[9px] text-orange-400 capitalize">{mod._source || "modrinth"}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-white/30" />
-                      </div>
-                    </div>
-                  ))}
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--color-primary)" }} />
                 </div>
               ) : (
-                <div className="h-40 bg-white/[0.02] border border-white/[0.04] rounded-2xl flex items-center justify-center">
-                  <p className="text-xs text-white/45">No se pudieron cargar los destacados en este momento.</p>
+                <div className="w-full">
+                  {activeSpotlightPlatform === "modrinth" ? (
+                    <HorizontalEditorialMarquee 
+                      items={latestFeaturedMods}
+                      type="mod"
+                      onSelectMod={handleOpenModDetails}
+                      speed={0.6}
+                      reverse={false}
+                    />
+                  ) : (
+                    <HorizontalEditorialMarquee 
+                      items={curseForgeFeatured}
+                      type="collection"
+                      onSelectCollection={handleEnterCollection}
+                      speed={0.5}
+                      reverse={false}
+                    />
+                  )}
                 </div>
               )}
+            </div>
+
+            {/* Row 3: Multi-channel Showcase */}
+            <div className="flex flex-col gap-3 mb-6 shrink-0">
+              <div className="px-1 flex items-center">
+                <span 
+                  className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border shadow-sm backdrop-blur-md"
+                  style={{
+                    backgroundColor: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                    color: "var(--color-primary)",
+                    borderColor: "color-mix(in srgb, var(--color-primary) 25%, transparent)"
+                  }}
+                >
+                  Showcase · 5 canales
+                </span>
+              </div>
+              <HorizontalShowcaseMarquee speed={0.5} reverse={true} />
             </div>
 
             {/* Vertical Tickers side-by-side (300px bound) */}
@@ -620,14 +1104,21 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
             TAB 3: COLLECTIONS (CurseForge Picks, Modrinth Official, Personal Drafts)
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "collections" && (
-          <div className="flex-1 flex flex-col min-h-0 relative">
+          <motion.div
+            key="collections"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0 relative"
+          >
             <AnimatePresence mode="wait">
               {!activeCollection ? (
                 // Colecciones List View
@@ -638,8 +1129,14 @@ export default function Home() {
                   exit={{ opacity: 0, x: -20 }}
                   className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 scrollbar-none"
                 >
-                  <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border-l-2 border-emerald-500 rounded-r-lg p-3 mb-6 shrink-0">
-                    <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">Explorador de Packs</p>
+                  <div 
+                    className="border-l-2 rounded-r-lg p-3 mb-6 shrink-0"
+                    style={{
+                      background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
+                      borderColor: "var(--color-primary)"
+                    }}
+                  >
+                    <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>Colecciones</p>
                     <h2 className="text-xs font-semibold text-white/95 mt-1">Colecciones editoriales y modpacks colaborativos.</h2>
                   </div>
 
@@ -741,7 +1238,7 @@ export default function Home() {
                         </div>
                       )
                     ) : (
-                      <div className="bg-[#151518]/60 border border-white/[0.05] rounded-2xl p-6 text-center">
+                      <div className="bg-surface/60 border border-border rounded-2xl p-6 text-center">
                         <p className="text-xs text-white/40">Iniciá sesión en la pestaña Perfil para sincronizar y ver tus modpacks.</p>
                       </div>
                     )}
@@ -783,7 +1280,7 @@ export default function Home() {
                         <div 
                           key={mod.projectId} 
                           onClick={() => handleOpenModDetails(mod)}
-                          className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
+                          className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border"
                         >
                           <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {mod.iconUrl ? (
@@ -812,25 +1309,77 @@ export default function Home() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </motion.div>
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
             TAB 4: CANALES DE YOUTUBE FEED
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "feed" && (
-          <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
+          <motion.div
+            key="feed"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            {/* Dynamic channel header / manage toggle */}
+            <div className="flex justify-between items-center mb-3 shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/30">Canales Seguidos</span>
+              <button
+                onClick={() => setShowChannelManager(!showChannelManager)}
+                className="text-[10.5px] font-bold text-orange-500 hover:text-orange-400 flex items-center gap-1.5 transition-colors"
+              >
+                {showChannelManager ? "Ocultar Ajustes" : "Administrar Canales"}
+              </button>
+            </div>
+
+            {showChannelManager && (
+              <div className="bg-white/5 border border-white/[0.06] rounded-2xl p-3.5 mb-4 flex flex-col gap-3 shrink-0">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newChannelInput}
+                    onChange={(e) => setNewChannelInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddChannel()}
+                    placeholder="User o URL (ej. @ElRichMC)"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-orange-500/50"
+                  />
+                  <button
+                    onClick={handleAddChannel}
+                    className="px-3.5 py-2 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 text-orange-400 text-xs font-bold transition-all"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                
+                {/* List of followed channels to remove */}
+                <div className="max-h-28 overflow-y-auto space-y-1.5 scrollbar-none pr-1">
+                  {followedChannels.map((chan) => (
+                    <div key={chan.url} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-1.5">
+                      <span className="text-[11px] font-semibold text-white/70 truncate">{chan.name}</span>
+                      <button
+                        onClick={() => handleRemoveChannel(chan.url)}
+                        className="p-1 rounded-lg hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all active:scale-95"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Channels horizontal filter */}
             <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-1 scrollbar-none">
-              {[
-                { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite" },
-                { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC" }
-              ].map(chan => (
+              {followedChannels.map(chan => (
                 <button
                   key={chan.url}
                   onClick={() => setCurrentChannel(chan.url)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                     currentChannel === chan.url 
-                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" 
+                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" 
                       : "bg-white/5 text-white/50 border border-white/[0.05]"
                   }`}
                 >
@@ -847,7 +1396,7 @@ export default function Home() {
             ) : youtubePosts.length > 0 ? (
               <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
                 {youtubePosts.map((post) => (
-                  <div key={post.postId} className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                  <div key={post.postId} className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
                     <p className="text-xs text-white/95 leading-relaxed whitespace-pre-wrap">{post.description}</p>
                     
                     {post.thumbnail && (
@@ -877,16 +1426,29 @@ export default function Home() {
                 <p className="text-xs text-white/40 mt-1">No se encontraron posteos de mods recientes en este canal.</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* ─────────────────────────────────────────────────────────────────────────────
             TAB 5: COMMUNITY RANKINGS (Supabase)
         ───────────────────────────────────────────────────────────────────────────── */}
         {activeTab === "rankings" && (
-          <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
-            <div className="bg-gradient-to-r from-purple-500/10 to-transparent border-l-2 border-purple-500 rounded-r-lg p-3 mb-6 shrink-0">
-              <p className="text-[10px] font-mono text-purple-400 uppercase tracking-wider font-bold">Supabase Rankings</p>
+          <motion.div
+            key="rankings"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <div 
+              className="border-l-2 rounded-r-lg p-3 mb-6 shrink-0"
+              style={{
+                background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
+                borderColor: "var(--color-primary)"
+              }}
+            >
+              <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>Ránkings</p>
               <h2 className="text-xs font-semibold text-white/90 mt-1">Mods más votados por la comunidad de MIM en la nube.</h2>
             </div>
 
@@ -901,7 +1463,7 @@ export default function Home() {
                   <div 
                     key={mod.projectId} 
                     onClick={() => handleOpenModDetails(mod)}
-                    className="bg-[#151518]/90 border border-white/[0.05] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
+                    className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border"
                   >
                     <div className="w-6 text-center font-mono font-black text-sm text-purple-400/80">
                       #{i + 1}
@@ -933,8 +1495,200 @@ export default function Home() {
                 <p className="text-xs text-white/40 mt-1">No hay votos registrados en Supabase todavía.</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
+        {/* ─────────────────────────────────────────────────────────────────────────────
+            TAB 6: DISCOVER / BUSCADOR
+        ───────────────────────────────────────────────────────────────────────────── */}
+        {activeTab === "discover" && (
+          <motion.div
+            key="discover"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex-1 flex flex-col min-h-0 pb-24"
+          >
+            {/* Header / Intro */}
+            <div 
+              className="border-l-2 rounded-r-lg p-3 mb-4 shrink-0"
+              style={{
+                background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
+                borderColor: "var(--color-primary)"
+              }}
+            >
+              <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>Explorar</p>
+              <h2 className="text-xs font-semibold text-white/90 mt-1">Explorá y buscá mods, texturas y shaders de Modrinth.</h2>
+            </div>
+
+            {/* Type selector tabs */}
+            <div className="flex gap-1.5 mb-3 shrink-0 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { value: "mod", label: "Mods" },
+                { value: "resourcepack", label: "Texturas" },
+                { value: "shader", label: "Shaders" },
+                { value: "datapack", label: "Datapacks" }
+              ].map(type => (
+                <button
+                  key={type.value}
+                  onClick={() => {
+                    setDiscoverType(type.value);
+                    setDiscoverResults([]);
+                    setDiscoverPage(1);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 ${
+                    discoverType === type.value 
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/35 shadow-sm" 
+                      : "bg-white/5 text-white/50 border border-white/[0.04] hover:bg-white/10"
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filters Bar: Version & Loader */}
+            <div className="grid grid-cols-2 gap-3 mb-4 shrink-0">
+              {/* Version filter dropdown */}
+              {discoverType !== "datapack" && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Versión de Minecraft</label>
+                  <select
+                    value={discoverVersion}
+                    onChange={(e) => {
+                      setDiscoverVersion(e.target.value);
+                      setDiscoverResults([]);
+                      setDiscoverPage(1);
+                    }}
+                    className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+                  >
+                    {["1.21.1", "1.20.4", "1.20.1", "1.19.4", "1.19.2", "1.18.2", "1.16.5", "1.12.2"].map(ver => (
+                      <option key={ver} value={ver} className="bg-surface text-white">{ver}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Loader filter dropdown (only for Mods) */}
+              {discoverType === "mod" && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Mod Loader</label>
+                  <select
+                    value={discoverLoader}
+                    onChange={(e) => {
+                      setDiscoverLoader(e.target.value);
+                      setDiscoverResults([]);
+                      setDiscoverPage(1);
+                    }}
+                    className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+                  >
+                    {[
+                      { value: "fabric", label: "Fabric" },
+                      { value: "forge", label: "Forge" },
+                      { value: "neoforge", label: "NeoForge" },
+                      { value: "quilt", label: "Quilt" },
+                      { value: "any", label: "Cualquiera" }
+                    ].map(loader => (
+                      <option key={loader.value} value={loader.value} className="bg-surface text-white">{loader.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Search Bar Input */}
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                runDiscoverSearch(1);
+              }}
+              className="flex gap-2 mb-4 shrink-0"
+            >
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-white/30 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar proyectos..."
+                  value={discoverQuery}
+                  onChange={(e) => setDiscoverQuery(e.target.value)}
+                  className="w-full bg-white/5 border border-white/[0.08] rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-white/20 focus:border-amber-500/55 outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs px-4 rounded-xl active:scale-95 transition-all shadow-md"
+              >
+                Buscar
+              </button>
+            </form>
+
+            {/* Results list */}
+            {discoverLoading && discoverPage === 1 ? (
+              <div className="flex-1 flex flex-col justify-center items-center">
+                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                <span className="text-xs text-white/40 mt-3 font-mono">Buscando en Modrinth...</span>
+              </div>
+            ) : discoverResults.length > 0 ? (
+              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-none">
+                {discoverResults.map((mod) => (
+                  <div 
+                    key={mod.projectId} 
+                    onClick={() => handleOpenModDetails(mod)}
+                    className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {mod.iconUrl ? (
+                        <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                      ) : (
+                        <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
+                      <p className="text-[9px] text-white/40 mt-0.5 truncate leading-tight">{mod.description || `Creador: ${mod.author}`}</p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {mod.downloads !== undefined && (
+                        <span className="text-[9.5px] font-mono text-white/30">
+                          {mod.downloads >= 1_000_000 
+                            ? `${(mod.downloads / 1_000_000).toFixed(1)}M` 
+                            : mod.downloads >= 1_000 
+                            ? `${Math.round(mod.downloads / 1_000)}K` 
+                            : mod.downloads} ↓
+                        </span>
+                      )}
+                      <ChevronRight className="w-3.5 h-3.5 text-white/20" />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Load More Button */}
+                {discoverResults.length < discoverTotal && (
+                  <button
+                    onClick={() => runDiscoverSearch(discoverPage + 1)}
+                    disabled={discoverLoading}
+                    className="w-full bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-xl py-3 text-xs font-semibold text-white/70 active:scale-95 transition-all flex items-center justify-center gap-2 mt-4"
+                  >
+                    {discoverLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                    ) : (
+                      "Cargar más"
+                    )}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
+                <Search className="w-12 h-12 text-amber-500/50 mb-4 animate-pulse" />
+                <h2 className="text-sm font-semibold text-white">Sin resultados</h2>
+                <p className="text-xs text-white/40 mt-1">No se encontraron mods que coincidan con la búsqueda o filtros aplicados.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+        </AnimatePresence>
       </main>
 
       {/* Bottom Nav Bar */}
@@ -952,10 +1706,38 @@ export default function Home() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 24 }}
-              className="bg-[#151518] border-t border-white/[0.08] rounded-t-3xl w-full max-w-md p-6 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5 relative"
+              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md p-6 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5 relative max-h-[85vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-12 h-1 rounded-full bg-white/10 mx-auto -mt-2 mb-2" />
+
+              {/* Stack / Solapas header */}
+              {modStack.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06] shrink-0">
+                  <button 
+                    onClick={handleGoBackInStack}
+                    className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/[0.08] rounded-xl text-white/70 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                    title="Volver"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                    {modStack.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSwitchStackIndex(idx)}
+                        className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all whitespace-nowrap border ${
+                          activeStackIndex === idx
+                            ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                            : "bg-white/5 text-white/50 hover:text-white/80 border-transparent"
+                        }`}
+                      >
+                        {item.mod.title.length > 15 ? `${item.mod.title.slice(0, 12)}...` : item.mod.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-4">
                 <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -978,48 +1760,297 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="flex gap-3 text-[10px] border-y border-white/[0.04] py-3 flex-wrap">
-                <div className="flex-1 min-w-[70px]">
-                  <span className="text-white/30 block uppercase font-mono tracking-wider">Origen</span>
-                  <span className="text-white/70 font-semibold mt-0.5 block capitalize">{selectedMod._source || "Modrinth"}</span>
-                </div>
-                {selectedMod.categories && selectedMod.categories.length > 0 && (
-                  <div className="flex-1 min-w-[120px]">
-                    <span className="text-white/30 block uppercase font-mono tracking-wider">Etiquetas</span>
-                    <span className="text-white/70 font-semibold mt-0.5 block truncate capitalize">
-                      {selectedMod.categories.join(", ")}
-                    </span>
-                  </div>
-                )}
-                {selectedMod.downloads && (
-                  <div className="min-w-[50px]">
-                    <span className="text-white/30 block uppercase font-mono tracking-wider">Votos</span>
-                    <span className="text-orange-400 font-bold mt-0.5 block font-mono">{selectedMod.downloads}</span>
-                  </div>
-                )}
+              {/* Modal Tabs */}
+              <div className="flex gap-1 border-b border-white/[0.06] pb-1 shrink-0 overflow-x-auto scrollbar-none">
+                {[
+                  { id: "summary", label: "Resumen" },
+                  { id: "desc", label: "Descripción" },
+                  { id: "versions", label: "Versiones" },
+                  { id: "deps", label: "Dependencias" }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setModalTab(t.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
+                      modalTab === t.id
+                        ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                        : "text-white/50 hover:text-white/80"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-                <p className="text-xs text-white/75 leading-relaxed max-h-40 overflow-y-auto scrollbar-none">
-                  {selectedMod.description || "Este mod expande las opciones de automatización, optimiza de forma ligera el juego y es totalmente compatible con la versión activa."}
-                </p>
+              {/* Scrollable container for details */}
+              <div className="overflow-y-auto max-h-[45vh] pr-1 flex-1 scrollbar-none relative min-h-0">
+                <AnimatePresence mode="wait">
+                  {modalTab === "summary" && (
+                    <motion.div
+                      key="summary"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex flex-col gap-4"
+                    >
+                      <div className="flex gap-3 text-[10px] border-b border-white/[0.04] pb-3 flex-wrap">
+                        <div className="flex-1 min-w-[70px]">
+                          <span className="text-white/30 block uppercase font-mono tracking-wider">Origen</span>
+                          <span className="text-white/70 font-semibold mt-0.5 block capitalize">{selectedMod._source || "Modrinth"}</span>
+                        </div>
+                        {selectedMod.categories && selectedMod.categories.length > 0 && (
+                          <div className="flex-1 min-w-[120px]">
+                            <span className="text-white/30 block uppercase font-mono tracking-wider">Etiquetas</span>
+                            <span className="text-white/70 font-semibold mt-0.5 block truncate capitalize">
+                              {selectedMod.categories.join(", ")}
+                            </span>
+                          </div>
+                        )}
+                        {selectedMod.downloads !== undefined && (
+                          <div className="min-w-[50px]">
+                            <span className="text-white/30 block uppercase font-mono tracking-wider">Votos / DLs</span>
+                            <span className="text-orange-400 font-bold mt-0.5 block font-mono">
+                              {selectedMod.downloads >= 1_000_000 
+                                ? `${(selectedMod.downloads / 1_000_000).toFixed(1)}M` 
+                                : selectedMod.downloads >= 1_000 
+                                ? `${Math.round(selectedMod.downloads / 1_000)}K` 
+                                : selectedMod.downloads}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+                        <p className="text-xs text-white/75 leading-relaxed">
+                          {selectedMod.description || "Este mod expande las opciones de automatización, optimiza de forma ligera el juego y es totalmente compatible con la versión activa."}
+                        </p>
+                      </div>
+
+                      {/* Compatibility Side Details */}
+                      <div className="grid grid-cols-2 gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 text-[11px] text-white/70">
+                        <div>
+                          <span className="text-[9px] text-white/30 uppercase font-mono block">Lado Cliente</span>
+                          <span className="font-semibold block capitalize mt-0.5">{selectedModDetails?.client_side || "Desconocido"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-white/30 uppercase font-mono block">Lado Servidor</span>
+                          <span className="font-semibold block capitalize mt-0.5">{selectedModDetails?.server_side || "Desconocido"}</span>
+                        </div>
+                        {selectedModDetails?.license && (
+                          <div className="col-span-2">
+                            <span className="text-[9px] text-white/30 uppercase font-mono block">Licencia</span>
+                            <span className="font-semibold block mt-0.5">{selectedModDetails.license.name || selectedModDetails.license.id}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* External links */}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {selectedModDetails?.wiki_url && (
+                          <a href={selectedModDetails.wiki_url} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/[0.06] px-3 py-1.5 rounded-xl text-[10px] font-semibold text-white/80 flex items-center gap-1.5 transition-all">
+                            <ExternalLink className="w-3 h-3" /> Wiki
+                          </a>
+                        )}
+                        {selectedModDetails?.source_url && (
+                          <a href={selectedModDetails.source_url} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/[0.06] px-3 py-1.5 rounded-xl text-[10px] font-semibold text-white/80 flex items-center gap-1.5 transition-all">
+                            <ExternalLink className="w-3 h-3" /> Código Fuente
+                          </a>
+                        )}
+                        {selectedModDetails?.issues_url && (
+                          <a href={selectedModDetails.issues_url} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/[0.06] px-3 py-1.5 rounded-xl text-[10px] font-semibold text-white/80 flex items-center gap-1.5 transition-all">
+                            <ExternalLink className="w-3 h-3" /> Reportes
+                          </a>
+                        )}
+                        {selectedModDetails?.discord_url && (
+                          <a href={selectedModDetails.discord_url} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/[0.06] px-3 py-1.5 rounded-xl text-[10px] font-semibold text-white/80 flex items-center gap-1.5 transition-all">
+                            <ExternalLink className="w-3 h-3" /> Discord
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Gallery / Capturas */}
+                      {selectedModDetails?.gallery && selectedModDetails.gallery.length > 0 && (
+                        <div className="flex flex-col gap-2 border-t border-white/[0.04] pt-3">
+                          <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block">Galería</span>
+                          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x">
+                            {selectedModDetails.gallery.map((img: any, i: number) => (
+                              <div key={i} className="relative aspect-video h-20 rounded-xl overflow-hidden bg-white/5 border border-white/[0.05] flex-shrink-0 snap-center">
+                                <img src={img.url} alt={img.title || "Screenshot"} className="object-cover w-full h-full" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {modalTab === "desc" && (
+                    <motion.div
+                      key="desc"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px]"
+                    >
+                      {renderBodyText(selectedModDetails?.body || selectedMod.description)}
+                    </motion.div>
+                  )}
+
+                  {modalTab === "versions" && (
+                    <motion.div
+                      key="versions"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex flex-col gap-2.5"
+                    >
+                      {loadingDetails ? (
+                        <div className="flex flex-col items-center justify-center py-6">
+                          <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+                          <span className="text-[10px] text-white/40 mt-2 font-mono">Buscando versiones...</span>
+                        </div>
+                      ) : selectedModDetails?.game_versions && selectedModDetails.game_versions.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones de Minecraft Compatibles</span>
+                          <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-none">
+                            {selectedModDetails.game_versions.map((ver: string) => (
+                              <span key={ver} className="bg-white/5 border border-white/[0.08] text-white/70 text-[9px] px-2.5 py-0.5 rounded-full font-mono">
+                                {ver}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-white/40 italic">No se listaron versiones compatibles.</p>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {modalTab === "deps" && (
+                    <motion.div
+                      key="deps"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex flex-col gap-2.5"
+                    >
+                      {loadingDetails ? (
+                        <div className="flex flex-col items-center justify-center py-6">
+                          <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+                          <span className="text-[10px] text-white/40 mt-2 font-mono">Buscando dependencias...</span>
+                        </div>
+                      ) : selectedModDeps && selectedModDeps.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Dependencias ({selectedModDeps.length})</span>
+                          <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 scrollbar-none">
+                            {selectedModDeps.map((dep: any) => (
+                              <div 
+                                key={dep.id} 
+                                onClick={() => {
+                                  handleOpenModDetails({
+                                    projectId: dep.id,
+                                    title: dep.title,
+                                    description: dep.description || "",
+                                    iconUrl: dep.icon_url,
+                                    author: dep.author || "Comunidad",
+                                    projectType: dep.project_type || "mod",
+                                    categories: dep.categories || [],
+                                    url: `https://modrinth.com/${dep.project_type || "mod"}/${dep.slug}`,
+                                    _source: "modrinth"
+                                  }, true);
+                                }}
+                                className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] rounded-xl p-2 flex items-center gap-3 transition-colors cursor-pointer"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {dep.icon_url ? (
+                                    <img src={dep.icon_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-white/40 text-xs font-bold uppercase">{dep.title.substring(0, 2)}</span>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-bold text-white truncate block">{dep.title}</span>
+                                  <span className="text-[9px] text-white/45 block capitalize">{dep.project_type || "mod"}</span>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-white/20" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-white/40 italic">Este proyecto no requiere ninguna dependencia.</p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="flex flex-col gap-2 mt-1">
+              <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-white/[0.04] shrink-0">
                 <button
-                  onClick={() => alert(`Copiá el link para tu PC: mim://project/${selectedMod.projectId}`)}
+                  onClick={() => {
+                    if (modalTab === "summary") {
+                      setModalTab("desc");
+                    } else {
+                      setModalTab("summary");
+                    }
+                  }}
                   className="w-full bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs rounded-xl py-3.5 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
-                  <ExternalLink className="w-4 h-4" /> Abrir en MIM Desktop
+                  {modalTab === "summary" ? (
+                    <>
+                      <Layers className="w-4 h-4" /> Ver Detalles Completos
+                    </>
+                  ) : (
+                    <>
+                      <ArrowLeft className="w-4 h-4" /> Volver al Resumen
+                    </>
+                  )}
                 </button>
-                <p className="text-[9px] text-center text-white/30">
-                  Para instalar automáticamente con 1-click, necesitás tener abierta la app en tu PC.
-                </p>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Custom Alert Overlay */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setCustomAlert(null)} />
+          <div className="relative z-10 w-full max-w-sm rounded-3xl border border-border bg-surface p-6 shadow-2xl flex flex-col gap-4 animate-scale-in">
+            <h3 className="text-base font-bold text-white tracking-tight">{customAlert.title}</h3>
+            <p className="text-xs text-white/60 whitespace-pre-line leading-relaxed">{customAlert.message}</p>
+            <button
+              onClick={() => setCustomAlert(null)}
+              className="mt-2 w-full bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs rounded-xl py-3 transition-all active:scale-[0.98]"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function renderBodyText(body: string) {
+  if (!body) return <p className="text-xs text-white/40 italic">Sin descripción detallada disponible.</p>;
+  
+  // Clean markdown basic tags
+  let clean = body
+    .replace(/^#+\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, "")
+    .replace(/\[([^\]]+)\]\(([^)]*)\)/g, "$1")
+    .replace(/\n{3,}/g, "\n\n");
+    
+  return (
+    <p className="whitespace-pre-wrap text-xs text-white/70 leading-relaxed pr-1 font-sans">
+      {clean}
+    </p>
   );
 }

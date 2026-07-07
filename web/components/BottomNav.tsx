@@ -1,25 +1,41 @@
 "use client";
 
 import React from "react";
-import { Compass, Film, Award, User, Flame } from "lucide-react";
+import { Compass, Film, Award, User, Flame, Search } from "lucide-react";
 
 interface BottomNavProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
+/**
+ * Bottom navigation bar that fully inherits the active theme palette.
+ * Uses CSS variables (--color-surface, --color-primary, --color-border) so
+ * every theme (official, vampire, modern) is reflected automatically.
+ */
 export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const tabs = [
-    { id: "profile", label: "Perfil", icon: User, color: "text-rose-500" },
-    { id: "spotlight", label: "Spotlight", icon: Flame, color: "text-orange-500" },
-    { id: "collections", label: "Colecciones", icon: Compass, color: "text-emerald-400" },
-    { id: "feed", label: "Canales", icon: Film, color: "text-blue-400" },
-    { id: "rankings", label: "Ránkings", icon: Award, color: "text-purple-400" },
+    { id: "profile",     label: "Perfil",      icon: User    },
+    { id: "spotlight",   label: "Spotlight",   icon: Flame   },
+    { id: "discover",    label: "Explorar",    icon: Search  },
+    { id: "collections", label: "Colecciones", icon: Compass },
+    { id: "feed",        label: "Canales",     icon: Film    },
+    { id: "rankings",    label: "Ránkings",    icon: Award   },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 px-6 pb-5 pt-3">
-      <div className="bg-[#151518]/85 backdrop-blur-xl border border-white/[0.08] rounded-full py-3 px-6 flex justify-between items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 px-4 pb-5 pt-3"
+      style={{ pointerEvents: "none" }}
+    >
+      <div
+        className="flex justify-between items-center rounded-full py-2.5 px-4 gap-1 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
+        style={{
+          background: "color-mix(in srgb, var(--color-surface) 90%, transparent)",
+          border: "1px solid var(--color-border-strong)",
+          pointerEvents: "auto",
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -28,23 +44,31 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{ width: "19%" }}
+              className="flex-1 min-w-0 flex flex-col items-center justify-center text-center focus:outline-none select-none group"
             >
               <div
-                className={`p-1.5 rounded-full transition-all duration-300 ${
-                  isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.02]"
-                }`}
+                className="p-1.5 rounded-full transition-all duration-300 flex items-center justify-center"
+                style={
+                  isActive
+                    ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)" }
+                    : {}
+                }
               >
                 <Icon
-                  className={`w-5 h-5 transition-transform duration-300 ${
-                    isActive ? `scale-110 ${tab.color}` : "text-white/40"
-                  }`}
+                  className="w-4 h-4 transition-all duration-300"
+                  style={{
+                    color: isActive ? "var(--color-primary)" : "var(--color-muted)",
+                    transform: isActive ? "scale(1.15)" : "scale(1)",
+                  }}
                 />
               </div>
               <span
-                className={`text-[9px] font-medium tracking-wide mt-1 transition-colors duration-300 ${
-                  isActive ? "text-white" : "text-white/40"
-                }`}
+                className="text-[8.5px] font-medium tracking-wide mt-0.5 transition-colors duration-300 block truncate w-full"
+                style={{
+                  color: isActive ? "var(--color-foreground)" : "var(--color-muted)",
+                  fontWeight: isActive ? 700 : 500,
+                  opacity: isActive ? 1 : 0.7,
+                }}
               >
                 {tab.label}
               </span>

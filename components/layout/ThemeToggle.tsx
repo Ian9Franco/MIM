@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { Coffee, Ghost, Sun } from "lucide-react";
+import { useAuth } from "@/components/security/AuthContext";
+import { supabase } from "@/lib/core/supabaseClient";
 
 type Theme = "official" | "vampire" | "modern";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("official");
   const [mounted, setMounted] = useState(false);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -17,10 +20,45 @@ export function ThemeToggle() {
     document.documentElement.setAttribute("data-theme", resolved);
   }, []);
 
-  const setThemeValue = (newTheme: Theme) => {
+  useEffect(() => {
+    const bannerMeta = profile?.banner_meta as any;
+    if (bannerMeta?.theme && ["official", "vampire", "modern"].includes(bannerMeta.theme)) {
+      const cloudTheme = bannerMeta.theme as Theme;
+      setTheme(cloudTheme);
+      localStorage.setItem("mim-theme", cloudTheme);
+      document.documentElement.setAttribute("data-theme", cloudTheme);
+    }
+  }, [profile]);
+
+  const setThemeValue = async (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem("mim-theme", newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
+
+    if (user?.id) {
+      try {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("banner_meta")
+          .eq("id", user.id)
+          .single();
+
+        const updatedBannerMeta = {
+          ...(currentProfile?.banner_meta || {}),
+          theme: newTheme
+        };
+
+        await supabase
+          .from("profiles")
+          .update({
+            banner_meta: updatedBannerMeta,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", user.id);
+      } catch (err) {
+        console.error("Error syncing theme to Supabase:", err);
+      }
+    }
   };
 
   if (!mounted) return <div className="w-[104px] h-8 rounded-xl" />;

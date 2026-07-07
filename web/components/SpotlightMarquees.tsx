@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { TvMinimalPlay } from "lucide-react";
 import { useSmoothMarquee } from "../hooks/useSmoothMarquee";
 
@@ -225,60 +225,131 @@ export interface ShowcaseVideo {
   videoUrl: string;
   channelName: string;
   publishedAt?: string;
+  modSlugs?: string[];
 }
 
-export const mockShowcaseVideos: ShowcaseVideo[] = [
-  {
-    videoId: "qX1tGg_FfL4",
-    title: "10 Increíbles Mods que Cambiarán tu Minecraft 1.20.1",
-    thumbnail: "https://i.ytimg.com/vi/qX1tGg_FfL4/hqdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=qX1tGg_FfL4",
-    channelName: "@EnderVerseMC",
-    publishedAt: "Hace 2 días"
-  },
-  {
-    videoId: "UjQ9R_oEskc",
-    title: "Minecraft pero con Gráficos Ultrarrealistas de Siguiente Gen",
-    thumbnail: "https://i.ytimg.com/vi/UjQ9R_oEskc/hqdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=UjQ9R_oEskc",
-    channelName: "@KreksuMinecraft",
-    publishedAt: "Hace 1 semana"
-  },
-  {
-    videoId: "N6eW21XpI7g",
-    title: "Este mod añade jefes gigantescos a tu Survival",
-    thumbnail: "https://i.ytimg.com/vi/N6eW21XpI7g/hqdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=N6eW21XpI7g",
-    channelName: "@NoxusMods",
-    publishedAt: "Hace 3 días"
-  },
-  {
-    videoId: "gX_b1dKqHjA",
-    title: "15 Trucos de Decoración Increíbles sin usar Mods",
-    thumbnail: "https://i.ytimg.com/vi/gX_b1dKqHjA/hqdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=gX_b1dKqHjA",
-    channelName: "@sir_color",
-    publishedAt: "Hace 5 días"
-  },
-  {
-    videoId: "p8Lscg2n6vQ",
-    title: "Sobreviví 100 Días en el Mundo de Fantasía de Minecraft",
-    thumbnail: "https://i.ytimg.com/vi/p8Lscg2n6vQ/hqdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=p8Lscg2n6vQ",
-    channelName: "@Wero_lovernite",
-    publishedAt: "Hace 2 semanas"
-  }
+/**
+ * Default channels used if none are provided from the parent.
+ * Mirrors DEFAULT_SHOWCASE_CHANNELS in the desktop SpotlightShowcaseRow.
+ */
+const DEFAULT_SHOWCASE_CHANNELS = [
+  "https://www.youtube.com/@EnderVerseMC",
+  "https://www.youtube.com/@KreksuMinecraft",
+  "https://www.youtube.com/@NoxusMods",
+  "https://www.youtube.com/@sir_color",
+  "https://www.youtube.com/@Wero_lovernite",
 ];
 
+function getHandle(url: string): string {
+  return url.includes("@")
+    ? "@" + url.split("@")[1]?.split("/")[0]
+    : url.split("/").pop() ?? url;
+}
+
+/** Compact YYYYMMDD → human-readable date like "25 jun 2026" */
+function formatDate(raw?: string): string {
+  if (!raw || raw.length !== 8) return raw ?? "";
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const y = raw.substring(0, 4);
+  const m = parseInt(raw.substring(4, 6), 10) - 1;
+  const d = parseInt(raw.substring(6, 8), 10);
+  return `${d} ${months[m] ?? ""} ${y}`;
+}
+
+/**
+ * HorizontalShowcaseMarquee — fetches real YouTube videos from
+ * /api/fomo/youtube-showcase for each channel and scrolls them.
+ */
 export function HorizontalShowcaseMarquee({
+  channels = DEFAULT_SHOWCASE_CHANNELS,
   speed = 0.5,
-  reverse = true
+  reverse = true,
 }: {
+  channels?: string[];
   speed?: number;
   reverse?: boolean;
 }) {
-  const duplicatedVideos = [...mockShowcaseVideos, ...mockShowcaseVideos, ...mockShowcaseVideos, ...mockShowcaseVideos];
+  const [videos, setVideos] = useState<ShowcaseVideo[]>([]);
+  const [loading, setLoading] = useState(true);
   const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const videosPerChannel = channels.length >= 4 ? 3 : channels.length === 3 ? 4 : 5;
+
+    async function fetchAll() {
+      setLoading(true);
+      const results: ShowcaseVideo[] = [];
+
+      await Promise.allSettled(
+        channels.map(async (channelUrl) => {
+          try {
+            const res = await fetch(
+              `/api/fomo/youtube-showcase?channel=${encodeURIComponent(channelUrl)}&limit=${videosPerChannel}`
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            const entries: ShowcaseVideo[] = (data.showcases || []).map((v: any) => ({
+              videoId: v.videoId,
+              title: v.title,
+              thumbnail: v.thumbnail,
+              videoUrl: v.videoUrl,
+              channelName: v.channelName || getHandle(channelUrl),
+              publishedAt: v.publishedAt,
+              modSlugs: v.modSlugs || [],
+            }));
+            results.push(...entries);
+          } catch {
+            // silently skip failed channels
+          }
+        })
+      );
+
+      if (!cancelled) {
+        // Sort newest first using publishedAt YYYYMMDD string
+        results.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+        setVideos(results);
+        setLoading(false);
+      }
+    }
+
+    void fetchAll();
+    return () => { cancelled = true; };
+  }, [channels.join(",")]);
+
+  // Skeleton cards while loading
+  if (loading) {
+    return (
+      <div className="w-full overflow-hidden py-1.5">
+        <div className="flex gap-4 px-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              style={{ width: "180px", height: "255px" }}
+              className="shrink-0 rounded-2xl bg-surface/90 border border-border animate-pulse"
+            >
+              <div style={{ height: "125px" }} className="w-full bg-white/5 rounded-t-2xl" />
+              <div className="p-3 flex flex-col gap-2">
+                <div className="h-2 w-16 rounded-full bg-white/10" />
+                <div className="h-2 w-full rounded-full bg-white/10" />
+                <div className="h-2 w-4/5 rounded-full bg-white/10" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (videos.length === 0) {
+    return (
+      <div className="py-4 text-center text-xs opacity-40" style={{ color: "var(--color-muted)" }}>
+        No se encontraron videos
+      </div>
+    );
+  }
+
+  const displayVideos = [...videos, ...videos, ...videos];
 
   return (
     <div
@@ -287,14 +358,14 @@ export function HorizontalShowcaseMarquee({
       {...handlers}
     >
       <div ref={innerRef} className="flex gap-4 w-max px-1">
-        {duplicatedVideos.map((video, i) => (
+        {displayVideos.map((video, i) => (
           <a
             key={`${video.videoId}-${i}`}
             href={video.videoUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{ width: "180px", height: "255px" }}
-            className="shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:shadow-xl bg-surface/90 border border-border"
+            className="shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl bg-surface/90 border border-border"
           >
             {/* Thumbnail */}
             <div style={{ height: "125px" }} className="relative overflow-hidden rounded-t-[calc(1rem-1px)] bg-black/40 shrink-0">
@@ -302,8 +373,20 @@ export function HorizontalShowcaseMarquee({
                 src={video.thumbnail}
                 alt={video.title}
                 referrerPolicy="no-referrer"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                className="opacity-75 group-hover:opacity-95 transition-opacity duration-300"
+                crossOrigin="anonymous"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                className="opacity-70 group-hover:opacity-90 transition-opacity duration-300"
+                onError={(e) => {
+                  // Try sddefault as fallback before giving up
+                  const img = e.currentTarget;
+                  if (img.src.includes("hqdefault")) {
+                    img.src = `https://i.ytimg.com/vi/${video.videoId}/sddefault.jpg`;
+                  } else if (img.src.includes("sddefault")) {
+                    img.src = `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
+                  } else {
+                    img.style.display = "none";
+                  }
+                }}
               />
 
               {/* Gradient overlay */}
@@ -317,6 +400,13 @@ export function HorizontalShowcaseMarquee({
                 <TvMinimalPlay className="w-2 h-2 text-white" />
                 <span className="text-[7px] font-black text-white uppercase tracking-wider">YouTube</span>
               </div>
+
+              {/* Mod count badge */}
+              {video.modSlugs && video.modSlugs.length > 0 && (
+                <div className="absolute top-2 right-2 bg-orange-600/80 backdrop-blur-sm text-[7px] font-black text-white px-1.5 py-0.5 rounded-full z-10">
+                  {video.modSlugs.length}
+                </div>
+              )}
 
               {/* Play overlay */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 z-20">
@@ -333,14 +423,24 @@ export function HorizontalShowcaseMarquee({
                   ◇ {video.channelName}
                 </span>
                 {video.publishedAt && (
-                  <span className="text-[7.5px] text-white/30 truncate">
-                    · {video.publishedAt}
+                  <span className="text-[7px] shrink-0" style={{ color: "var(--color-muted)", opacity: 0.5 }}>
+                    · {formatDate(video.publishedAt)}
                   </span>
                 )}
               </div>
-              <h3 className="font-semibold text-[10px] leading-tight line-clamp-4 mt-0.5 flex-1" style={{ color: "var(--color-foreground)" }}>
+              <h3
+                className="font-semibold text-[10px] leading-tight line-clamp-4 mt-0.5 flex-1"
+                style={{ color: "var(--color-foreground)" }}
+              >
                 {video.title}
               </h3>
+              {video.modSlugs !== undefined && (
+                <div className="mt-auto pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
+                  <span className="text-[8px] font-bold uppercase tracking-wide" style={{ color: "var(--color-muted)" }}>
+                    {video.modSlugs.length} mods detectados
+                  </span>
+                </div>
+              )}
             </div>
           </a>
         ))}

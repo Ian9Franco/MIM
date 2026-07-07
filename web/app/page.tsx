@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X, ArrowLeft, Layers, Search, SlidersHorizontal, Heart, Download, Coffee, Ghost, Sun } from "lucide-react";
+import { Clock, Calendar, Compass, Share2, Award, Film, Loader2, User, Key, Mail, LogOut, Check, ChevronRight, Bookmark, ExternalLink, X, ArrowLeft, Layers, Search, SlidersHorizontal, Heart, Download, Coffee, Ghost, Sun, Pencil, Palette, Plus, Trash2, Settings2, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BottomNav } from "../components/BottomNav";
 import { VerticalTicker, HorizontalEditorialMarquee, HorizontalShowcaseMarquee, ModHit } from "../components/SpotlightMarquees";
@@ -18,6 +18,47 @@ interface CollectionItem {
   previewIcons?: string[];
   mods?: ModHit[]; // Loaded for static/CurseForge picks, or dynamically fetched
 }
+
+const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress as JPEG at 0.75 quality
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.onerror = (err) => reject(err);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("profile"); // Default to Profile/Login first
@@ -46,6 +87,20 @@ export default function Home() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+
+  // Profile Edit State
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string>("")
+  const [editBannerUrl, setEditBannerUrl] = useState<string>("");
+  const [editColor, setEditColor] = useState("#F05A28");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editProfileStatus, setEditProfileStatus] = useState<{msg: string; ok: boolean} | null>(null);
+
+  // Showcase Customization State
+  const [showcaseChannels, setShowcaseChannels] = useState<string[]>([]);
+  const [showChannelPicker, setShowChannelPicker] = useState(false);
+  const [newShowcaseChannelInput, setNewShowcaseChannelInput] = useState("");
 
   // User Profile Data Cloud State
   const [userFavorites, setUserFavorites] = useState<any[]>([]);
@@ -112,6 +167,26 @@ export default function Home() {
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
     }
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mim_spotlight_showcase_channels");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setShowcaseChannels(parsed);
+          return;
+        }
+      } catch {}
+    }
+    setShowcaseChannels([
+      "https://www.youtube.com/@EnderVerseMC",
+      "https://www.youtube.com/@KreksuMinecraft",
+      "https://www.youtube.com/@NoxusMods",
+      "https://www.youtube.com/@sir_color",
+      "https://www.youtube.com/@Wero_lovernite",
+    ]);
   }, []);
 
   const handleThemeChange = async (newTheme: "official" | "vampire" | "modern") => {
@@ -359,6 +434,55 @@ export default function Home() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  /** Open the edit profile modal, pre-filling current values */
+  const handleOpenEditProfile = () => {
+    setEditUsername(profile?.username || "");
+    setEditAvatarUrl(profile?.avatar_url || "");
+    setEditBannerUrl(profile?.banner_url || "");
+    setEditColor(profile?.color || "#F05A28");
+    setEditProfileStatus(null);
+    setShowEditProfile(true);
+  };
+
+  /** Save updated profile fields to Supabase */
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session?.user?.id) return;
+    setSavingProfile(true);
+    setEditProfileStatus(null);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          username: editUsername.trim() || profile?.username,
+          avatar_url: editAvatarUrl.trim() || null,
+          banner_url: editBannerUrl.trim() || null,
+          color: editColor,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", session.user.id);
+      if (error) throw error;
+      // Re-fetch updated profile
+      const { data: updatedProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      if (updatedProfile) setProfile(updatedProfile);
+      setEditProfileStatus({ msg: "¡Perfil actualizado con éxito!", ok: true });
+      setTimeout(() => setShowEditProfile(false), 1200);
+    } catch (err: any) {
+      setEditProfileStatus({ msg: err.message || "Error al guardar", ok: false });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSaveShowcaseChannels = (newChannels: string[]) => {
+    setShowcaseChannels(newChannels);
+    localStorage.setItem("mim_spotlight_showcase_channels", JSON.stringify(newChannels));
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -903,19 +1027,34 @@ export default function Home() {
                       )}
                     </div>
 
-                    <div className="mt-3 w-full">
-                      <span 
-                        className="border text-[8px] font-bold font-mono px-2 py-0.5 rounded-full uppercase"
+                    <div className="mt-3 w-full flex items-end justify-between gap-2">
+                      <div className="min-w-0">
+                        <span 
+                          className="border text-[8px] font-bold font-mono px-2 py-0.5 rounded-full uppercase"
+                          style={{
+                            backgroundColor: `${profile?.color || '#F05A28'}15`,
+                            borderColor: `${profile?.color || '#F05A28'}30`,
+                            color: profile?.color || '#F05A28'
+                          }}
+                        >
+                          FOMO Member
+                        </span>
+                        <h2 className="text-sm font-bold text-white truncate mt-2">@{profile?.username || "Usuario"}</h2>
+                        <p className="text-[10px] text-white/40 truncate mt-0.5">{session.user.email}</p>
+                      </div>
+                      {/* Edit Profile Button */}
+                      <button
+                        onClick={handleOpenEditProfile}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold active:scale-95 transition-all"
                         style={{
-                          backgroundColor: `${profile?.color || '#F05A28'}15`,
-                          borderColor: `${profile?.color || '#F05A28'}30`,
-                          color: profile?.color || '#F05A28'
+                          background: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)",
+                          color: "var(--color-primary)",
                         }}
                       >
-                        FOMO Member
-                      </span>
-                      <h2 className="text-sm font-bold text-white truncate mt-2">@{profile?.username || "Usuario"}</h2>
-                      <p className="text-[10px] text-white/40 truncate mt-0.5">{session.user.email}</p>
+                        <Pencil className="w-3 h-3" />
+                        Editar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1058,7 +1197,7 @@ export default function Home() {
 
             {/* Row 3: Multi-channel Showcase */}
             <div className="flex flex-col gap-3 mb-6 shrink-0">
-              <div className="px-1 flex items-center">
+              <div className="px-1 flex items-center justify-between">
                 <span 
                   className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border shadow-sm backdrop-blur-md"
                   style={{
@@ -1067,10 +1206,17 @@ export default function Home() {
                     borderColor: "color-mix(in srgb, var(--color-primary) 25%, transparent)"
                   }}
                 >
-                  Showcase · 5 canales
+                  Showcase · {showcaseChannels.length} canal{showcaseChannels.length !== 1 ? "es" : ""}
                 </span>
+                <button
+                  onClick={() => setShowChannelPicker(true)}
+                  className="p-1.5 rounded-xl hover:bg-white/5 active:scale-95 text-white/35 hover:text-white/80 transition-all"
+                  title="Configurar canales"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <HorizontalShowcaseMarquee speed={0.5} reverse={true} />
+              <HorizontalShowcaseMarquee channels={showcaseChannels} speed={0.5} reverse={true} />
             </div>
 
             {/* Vertical Tickers side-by-side (300px bound) */}
@@ -2029,6 +2175,461 @@ export default function Home() {
             >
               Aceptar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Edit Profile Modal ─────────────────────────────────────────────── */}
+      {showEditProfile && session && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowEditProfile(false)}
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-3xl border shadow-2xl flex flex-col gap-0 animate-scale-in overflow-hidden"
+            style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Pencil className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
+                <h3 className="text-sm font-bold" style={{ color: "var(--color-foreground)" }}>
+                  Editar Perfil
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowEditProfile(false)}
+                className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                style={{ color: "var(--color-muted)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 p-5">
+              {/* Username */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>
+                  Nombre de usuario
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--color-muted)" }} />
+                  <input
+                    type="text"
+                    placeholder="Tu nombre visible"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    className="w-full rounded-xl py-3 pl-10 pr-4 text-xs outline-none transition-all"
+                    style={{
+                      background: "color-mix(in srgb, var(--color-surface) 60%, var(--color-card))",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-foreground)",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Avatar Upload */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>
+                  Avatar (Seleccionar imagen)
+                </label>
+                <div className="flex gap-3 items-center">
+                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center shrink-0 border bg-black/20" style={{ borderColor: "var(--color-border)" }}>
+                    {editAvatarUrl ? (
+                      <img src={editAvatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-6 h-6" style={{ color: "var(--color-muted)" }} />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="flex gap-2">
+                      <label
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
+                        style={{ background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", color: "var(--color-primary)" }}
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        Elegir foto
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const compressed = await resizeAndCompressImage(file, 160, 160);
+                                setEditAvatarUrl(compressed);
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                      {editAvatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEditAvatarUrl("")}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold hover:bg-red-500/10 text-red-500 border border-red-500/20 active:scale-95 transition-all flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>
+                      JPG, PNG o WEBP. Redimensionado automáticamente.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner Upload */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>
+                  Banner (Seleccionar imagen)
+                </label>
+                <div className="flex flex-col gap-2">
+                  <div className="relative w-full h-24 rounded-2xl overflow-hidden flex items-center justify-center border bg-black/20" style={{ borderColor: "var(--color-border)" }}>
+                    {editBannerUrl ? (
+                      <img src={editBannerUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] uppercase font-mono tracking-wider" style={{ color: "var(--color-muted)" }}>Sin Banner</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <label
+                      className="px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
+                      style={{ background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", color: "var(--color-primary)" }}
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Elegir banner
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const compressed = await resizeAndCompressImage(file, 800, 300);
+                              setEditBannerUrl(compressed);
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                    {editBannerUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditBannerUrl("")}
+                        className="px-3 py-2 rounded-xl text-xs font-semibold hover:bg-red-500/10 text-red-500 border border-red-500/20 active:scale-95 transition-all flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Profile Color */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>
+                  Color de perfil
+                </label>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl border shrink-0"
+                    style={{ background: editColor, borderColor: "var(--color-border)" }}
+                  />
+                  <input
+                    type="color"
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                    className="w-full h-9 rounded-xl border cursor-pointer"
+                    style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}
+                  />
+                  {/* Quick color presets */}
+                  <div className="flex gap-1.5 shrink-0">
+                    {["#F05A28", "#E11D48", "#7C3AED", "#0EA5E9", "#10B981"].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setEditColor(c)}
+                        className="w-5 h-5 rounded-full border-2 transition-all active:scale-95"
+                        style={{
+                          background: c,
+                          borderColor: editColor === c ? "white" : "transparent",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status feedback */}
+              {editProfileStatus && (
+                <div
+                  className="text-xs rounded-xl px-4 py-2.5 text-center font-semibold"
+                  style={{
+                    background: editProfileStatus.ok
+                      ? "color-mix(in srgb, #10B981 12%, transparent)"
+                      : "color-mix(in srgb, #EF4444 12%, transparent)",
+                    color: editProfileStatus.ok ? "#10B981" : "#EF4444",
+                    border: `1px solid ${editProfileStatus.ok ? "#10B98130" : "#EF444430"}`,
+                  }}
+                >
+                  {editProfileStatus.msg}
+                </div>
+              )}
+
+              {/* Save Button */}
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="w-full text-white font-semibold text-xs rounded-xl py-3.5 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 mt-2"
+                style={{ background: "var(--color-primary)" }}
+              >
+                {savingProfile ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Guardar cambios
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Channel Picker Modal ─────────────────────────────────────────── */}
+      {showChannelPicker && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowChannelPicker(false)}
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-3xl border shadow-2xl flex flex-col gap-0 animate-scale-in overflow-hidden"
+            style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
+                <h3 className="text-sm font-bold" style={{ color: "var(--color-foreground)" }}>
+                  Canales del Showcase
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowChannelPicker(false)}
+                className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                style={{ color: "var(--color-muted)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex flex-col gap-4 p-5 max-h-[60vh] overflow-y-auto scrollbar-thin">
+              {/* Suggested Channels List */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold uppercase font-mono tracking-widest mb-1" style={{ color: "var(--color-muted)" }}>
+                  Canales sugeridos
+                </span>
+                {[
+                  "https://www.youtube.com/@EnderVerseMC",
+                  "https://www.youtube.com/@KreksuMinecraft",
+                  "https://www.youtube.com/@NoxusMods",
+                  "https://www.youtube.com/@sir_color",
+                  "https://www.youtube.com/@Wero_lovernite",
+                ].map((ch) => {
+                  const active = showcaseChannels.includes(ch);
+                  const handle = ch.includes("@") ? "@" + ch.split("@")[1] : ch.split("/").pop();
+                  return (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => {
+                        if (active) {
+                          handleSaveShowcaseChannels(showcaseChannels.filter((c) => c !== ch));
+                        } else {
+                          handleSaveShowcaseChannels([...showcaseChannels, ch]);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left"
+                      style={{
+                        background: active
+                          ? "color-mix(in srgb, var(--color-primary) 10%, transparent)"
+                          : "color-mix(in srgb, var(--color-surface) 60%, var(--color-card))",
+                        borderColor: active ? "var(--color-primary)" : "var(--color-border)",
+                        color: active ? "var(--color-primary)" : "var(--color-foreground)",
+                      }}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-md border flex items-center justify-center shrink-0"
+                        style={{
+                          borderColor: active ? "var(--color-primary)" : "var(--color-border)",
+                          background: active ? "var(--color-primary)" : "transparent",
+                        }}
+                      >
+                        {active && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="truncate">{handle}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom channels list */}
+              {showcaseChannels.filter(
+                (c) =>
+                  ![
+                    "https://www.youtube.com/@EnderVerseMC",
+                    "https://www.youtube.com/@KreksuMinecraft",
+                    "https://www.youtube.com/@NoxusMods",
+                    "https://www.youtube.com/@sir_color",
+                    "https://www.youtube.com/@Wero_lovernite",
+                  ].includes(c)
+              ).length > 0 && (
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <span className="text-[10px] font-bold uppercase font-mono tracking-widest mb-1" style={{ color: "var(--color-muted)" }}>
+                    Canales agregados
+                  </span>
+                  {showcaseChannels
+                    .filter(
+                      (c) =>
+                        ![
+                          "https://www.youtube.com/@EnderVerseMC",
+                          "https://www.youtube.com/@KreksuMinecraft",
+                          "https://www.youtube.com/@NoxusMods",
+                          "https://www.youtube.com/@sir_color",
+                          "https://www.youtube.com/@Wero_lovernite",
+                        ].includes(c)
+                    )
+                    .map((ch) => {
+                      const handle = ch.includes("@") ? "@" + ch.split("@")[1] : ch.split("/").pop();
+                      return (
+                        <div
+                          key={ch}
+                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold border"
+                          style={{
+                            background: "color-mix(in srgb, var(--color-surface) 60%, var(--color-card))",
+                            borderColor: "var(--color-border)",
+                            color: "var(--color-foreground)",
+                          }}
+                        >
+                          <span className="truncate flex-1">{handle}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleSaveShowcaseChannels(showcaseChannels.filter((c) => c !== ch));
+                            }}
+                            className="p-1 rounded-lg hover:bg-white/5 text-red-500 hover:text-red-400 transition-colors shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* Add custom channel form */}
+              <div className="flex flex-col gap-1.5 mt-2">
+                <span className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>
+                  Agregar canal personalizado
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="@Handle o URL"
+                    value={newShowcaseChannelInput}
+                    onChange={(e) => setNewShowcaseChannelInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const raw = newShowcaseChannelInput.trim();
+                        if (raw) {
+                          let finalUrl = raw.startsWith("http") ? raw : `https://www.youtube.com/@${raw.replace(/^@/, "")}`;
+                          finalUrl = finalUrl.replace(/\/$/, "");
+                          if (!showcaseChannels.includes(finalUrl)) {
+                            handleSaveShowcaseChannels([...showcaseChannels, finalUrl]);
+                          }
+                          setNewShowcaseChannelInput("");
+                        }
+                      }
+                    }}
+                    className="flex-1 rounded-xl py-2 px-3 text-xs outline-none transition-all"
+                    style={{
+                      background: "color-mix(in srgb, var(--color-surface) 60%, var(--color-card))",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-foreground)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const raw = newShowcaseChannelInput.trim();
+                      if (raw) {
+                        let finalUrl = raw.startsWith("http") ? raw : `https://www.youtube.com/@${raw.replace(/^@/, "")}`;
+                        finalUrl = finalUrl.replace(/\/$/, "");
+                        if (!showcaseChannels.includes(finalUrl)) {
+                          handleSaveShowcaseChannels([...showcaseChannels, finalUrl]);
+                        }
+                        setNewShowcaseChannelInput("");
+                      }
+                    }}
+                    className="p-2 rounded-xl text-white active:scale-95 transition-all shrink-0 flex items-center justify-center"
+                    style={{ background: "var(--color-primary)" }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 flex items-center justify-between border-t gap-3" style={{ borderColor: "var(--color-border)" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const defaults = [
+                    "https://www.youtube.com/@EnderVerseMC",
+                    "https://www.youtube.com/@KreksuMinecraft",
+                    "https://www.youtube.com/@NoxusMods",
+                    "https://www.youtube.com/@sir_color",
+                    "https://www.youtube.com/@Wero_lovernite",
+                  ];
+                  handleSaveShowcaseChannels(defaults);
+                }}
+                className="text-[10px] font-bold uppercase transition-colors"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Restaurar sugeridos
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowChannelPicker(false)}
+                className="px-4 py-2 rounded-xl text-white font-bold text-xs active:scale-[0.98] transition-all"
+                style={{ background: "var(--color-primary)" }}
+              >
+                Aceptar
+              </button>
+            </div>
           </div>
         </div>
       )}

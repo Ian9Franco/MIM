@@ -272,6 +272,8 @@ export default function Home() {
               setDiscoverEnvironment={c.setDiscoverEnvironment}
               discoverCategory={c.discoverCategory}
               setDiscoverCategory={c.setDiscoverCategory}
+              discoverSort={c.discoverSort}
+              setDiscoverSort={c.setDiscoverSort}
             />
           )}
         </AnimatePresence>

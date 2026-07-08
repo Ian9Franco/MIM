@@ -164,7 +164,8 @@ export function useHomeController() {
   const [discoverVersion, setDiscoverVersion] = useState("1.20.1");
   const [discoverLoader, setDiscoverLoader] = useState("fabric");
   const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
-  const [discoverCategory, setDiscoverCategory] = useState("");
+  const [discoverCategory, setDiscoverCategory] = useState<string[]>([]);
+  const [discoverSort, setDiscoverSort] = useState<string>("relevance");
   const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -691,7 +692,7 @@ export function useHomeController() {
       const activeQuery = overrideQuery !== undefined ? overrideQuery : discoverQuery;
       
       const gameVersions = discoverVersion ? [discoverVersion] : [];
-      const categories = discoverCategory ? [discoverCategory] : [];
+      const categories = discoverCategory.length > 0 ? discoverCategory : [];
       const environments = discoverEnvironment && discoverEnvironment !== "any" ? [discoverEnvironment] : [];
 
       const queryParams = new URLSearchParams({
@@ -700,14 +701,11 @@ export function useHomeController() {
         page: String(pageNumber),
         pageSize: "10",
         q: activeQuery,
+        sort: discoverSort,
         gameVersions: JSON.stringify(gameVersions),
         categories: JSON.stringify(categories),
         environments: JSON.stringify(environments)
       });
-
-      if (discoverCategory) {
-        queryParams.set("category", discoverCategory);
-      }
 
       let mapped: ModHit[] = [];
       let totalHits = 0;
@@ -772,14 +770,14 @@ export function useHomeController() {
     } finally {
       setDiscoverLoading(false);
     }
-  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment, discoverCategory]);
+  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment, discoverCategory, discoverSort]);
 
   const handleSearchAuthor = useCallback((authorName: string, platform: string) => {
     const cleanPlatform = (platform === "curseforge" || platform === "all" || platform === "modrinth") ? platform : "modrinth";
     const authorQuery = `author:${authorName}`;
     setDiscoverQuery(authorQuery);
     setDiscoverSource(cleanPlatform);
-    setDiscoverCategory("");
+    setDiscoverCategory([]);
     setDiscoverResults([]);
     setDiscoverPage(1);
     setActiveTab("discover");
@@ -798,7 +796,7 @@ export function useHomeController() {
   const handleSearchMod = useCallback((title: string) => {
     setDiscoverQuery(title);
     setDiscoverSource("all");
-    setDiscoverCategory("");
+    setDiscoverCategory([]);
     setDiscoverResults([]);
     setDiscoverPage(1);
     setActiveTab("discover");
@@ -1183,7 +1181,7 @@ export function useHomeController() {
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
-    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory, discoverResults, setDiscoverResults, discoverLoading,
+    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory, discoverSort, setDiscoverSort, discoverResults, setDiscoverResults, discoverLoading,
     discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
     showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts, userFollowedAuthors, loadingUserData,

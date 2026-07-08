@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, Loader2, ChevronRight, ExternalLink } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronRight, ExternalLink, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
 interface DiscoverTabProps {
@@ -16,8 +16,10 @@ interface DiscoverTabProps {
   setDiscoverLoader: (v: string) => void;
   discoverEnvironment: string;
   setDiscoverEnvironment: (v: string) => void;
-  discoverCategory: string;
-  setDiscoverCategory: (v: string) => void;
+  discoverCategory: string[];
+  setDiscoverCategory: (v: string[]) => void;
+  discoverSort: string;
+  setDiscoverSort: (v: string) => void;
   discoverResults: ModHit[];
   discoverLoading: boolean;
   discoverPage: number;
@@ -30,6 +32,14 @@ interface DiscoverTabProps {
   setDiscoverSource: (s: "modrinth" | "curseforge" | "all") => void;
   discoverError: string;
 }
+
+const SORT_OPTIONS = [
+  { value: "relevance", label: "Relevancia" },
+  { value: "downloads", label: "Más Descargas" },
+  { value: "follows", label: "Más Seguidos" },
+  { value: "newest", label: "Más Recientes" },
+  { value: "updated", label: "Última Actualización" }
+];
 
 const MC_VERSIONS = ["1.21.1", "1.20.4", "1.20.1", "1.19.4", "1.19.2", "1.18.2", "1.16.5", "1.12.2"];
 const MOD_LOADERS = [
@@ -230,13 +240,33 @@ export function DiscoverTab({
   discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory,
   discoverResults, discoverLoading, discoverPage, discoverTotal,
   setDiscoverResults, setDiscoverPage, runDiscoverSearch, handleOpenModDetails,
-  discoverSource, setDiscoverSource, discoverError,
+  discoverSource, setDiscoverSource, discoverError, discoverSort, setDiscoverSort,
 }: DiscoverTabProps) {
+  const [showFilters, setShowFilters] = React.useState(false);
+
+  // Calcular cantidad de filtros activos
+  const activeFiltersCount =
+    (discoverVersion !== "1.20.1" ? 1 : 0) +
+    (discoverType === "mod" && discoverLoader !== "fabric" ? 1 : 0) +
+    (discoverType === "mod" && discoverSource === "modrinth" && discoverEnvironment !== "any" ? 1 : 0) +
+    (discoverSort !== "relevance" ? 1 : 0) +
+    discoverCategory.length;
+
+  const handleClearFilters = () => {
+    setDiscoverVersion("1.20.1");
+    setDiscoverLoader("fabric");
+    setDiscoverEnvironment("any");
+    setDiscoverSort("relevance");
+    setDiscoverCategory([]);
+    setDiscoverResults([]);
+    setDiscoverPage(1);
+  };
+
   const handleTypeChange = (val: string) => {
     setDiscoverType(val);
     setDiscoverResults([]);
     setDiscoverPage(1);
-    setDiscoverCategory("");
+    setDiscoverCategory([]);
   };
 
   const getCategories = () => {
@@ -291,7 +321,7 @@ export function DiscoverTab({
             setDiscoverSource("all");
             setDiscoverResults([]);
             setDiscoverPage(1);
-            setDiscoverCategory("");
+            setDiscoverCategory([]);
           }}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
             discoverSource === "all"
@@ -306,7 +336,7 @@ export function DiscoverTab({
             setDiscoverSource("modrinth");
             setDiscoverResults([]);
             setDiscoverPage(1);
-            setDiscoverCategory("");
+            setDiscoverCategory([]);
           }}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
             discoverSource === "modrinth"
@@ -321,7 +351,7 @@ export function DiscoverTab({
             setDiscoverSource("curseforge");
             setDiscoverResults([]);
             setDiscoverPage(1);
-            setDiscoverCategory("");
+            setDiscoverCategory([]);
           }}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
             discoverSource === "curseforge"
@@ -375,75 +405,150 @@ export function DiscoverTab({
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-2 gap-3 mb-4 shrink-0">
-        {/* Minecraft Version: shown for all project types */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Versión de Minecraft</label>
-          <select
-            value={discoverVersion}
-            onChange={(e) => { setDiscoverVersion(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
-            className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+      {/* Filtros y Categorías - Cabecera Colapsable */}
+      <div className="flex items-center justify-between mb-3 shrink-0 bg-white/5 border border-white/[0.04] p-2 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-white/80 hover:text-white hover:bg-white/5 transition-all"
+        >
+          <SlidersHorizontal className={`w-3.5 h-3.5 transition-transform duration-300 ${showFilters ? "rotate-90 text-amber-400" : "text-white/40"}`} />
+          <span>Filtros y Categorías</span>
+          {activeFiltersCount > 0 && (
+            <span className="flex items-center justify-center w-5 h-5 text-[10px] font-black rounded-full bg-amber-500 text-black shadow-sm">
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
+
+        <div className="flex items-center gap-2">
+          {activeFiltersCount > 0 && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all uppercase tracking-wider font-mono"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Limpiar</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="p-1 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
           >
-            {MC_VERSIONS.map(ver => (
-              <option key={ver} value={ver} className="bg-surface text-white">{ver}</option>
-            ))}
-          </select>
+            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
-
-        {/* Mod Loader: shown only for mods */}
-        {discoverType === "mod" && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Mod Loader</label>
-            <select
-              value={discoverLoader}
-              onChange={(e) => { setDiscoverLoader(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
-              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
-            >
-              {MOD_LOADERS.map(l => (
-                <option key={l.value} value={l.value} className="bg-surface text-white">{l.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Entorno: shown only for Modrinth mods */}
-        {discoverSource === "modrinth" && discoverType === "mod" && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Entorno</label>
-            <select
-              value={discoverEnvironment}
-              onChange={(e) => { setDiscoverEnvironment(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
-              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
-            >
-              {ENVIRONMENTS.map(env => (
-                <option key={env.value} value={env.value} className="bg-surface text-white">{env.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Category: shown for all types */}
-        {activeCategories.length > 0 && (
-          <div className={`flex flex-col gap-1 ${
-            (discoverType === "mod" && discoverSource === "curseforge") || (discoverType === "datapack" && discoverSource === "curseforge")
-              ? "col-span-2"
-              : ""
-          }`}>
-            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Categoría</label>
-            <select
-              value={discoverCategory}
-              onChange={(e) => { setDiscoverCategory(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
-              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
-            >
-              <option value="" className="bg-surface text-white">Cualquiera</option>
-              {activeCategories.map(cat => (
-                <option key={cat.value} value={cat.value} className="bg-surface text-white">{cat.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
+
+      {/* Contenedor Animado de Filtros */}
+      <motion.div
+        initial={false}
+        animate={{
+          height: showFilters ? "auto" : 0,
+          opacity: showFilters ? 1 : 0,
+          marginBottom: showFilters ? 16 : 0,
+        }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        className="overflow-hidden shrink-0"
+      >
+        <div className="grid grid-cols-2 gap-3 p-1">
+          {/* Minecraft Version: shown for all project types */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Versión de Minecraft</label>
+            <select
+              value={discoverVersion}
+              onChange={(e) => { setDiscoverVersion(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+            >
+              {MC_VERSIONS.map(ver => (
+                <option key={ver} value={ver} className="bg-surface text-white">{ver}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mod Loader: shown only for mods */}
+          {discoverType === "mod" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Mod Loader</label>
+              <select
+                value={discoverLoader}
+                onChange={(e) => { setDiscoverLoader(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+                className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+              >
+                {MOD_LOADERS.map(l => (
+                  <option key={l.value} value={l.value} className="bg-surface text-white">{l.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Entorno: shown only for Modrinth mods */}
+          {discoverSource === "modrinth" && discoverType === "mod" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Entorno</label>
+              <select
+                value={discoverEnvironment}
+                onChange={(e) => { setDiscoverEnvironment(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+                className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+              >
+                {ENVIRONMENTS.map(env => (
+                  <option key={env.value} value={env.value} className="bg-surface text-white">{env.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Category: shown for all types */}
+          {activeCategories.length > 0 && (
+            <div className="flex flex-col gap-1 col-span-2">
+              <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider flex justify-between">
+                <span>Categorías</span>
+                {discoverCategory.length > 0 && <span className="text-amber-500/80">{discoverCategory.length} seleccionada{discoverCategory.length > 1 ? 's' : ''}</span>}
+              </label>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1.5 bg-surface/50 border border-border rounded-xl scrollbar-thin scrollbar-thumb-white/10">
+                {activeCategories.map(cat => {
+                  const isSelected = discoverCategory.includes(cat.value);
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (isSelected) setDiscoverCategory(discoverCategory.filter(c => c !== cat.value));
+                        else setDiscoverCategory([...discoverCategory, cat.value]);
+                        setDiscoverResults([]); setDiscoverPage(1);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                        isSelected 
+                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/35" 
+                          : "bg-white/5 text-white/50 border border-white/[0.04] hover:bg-white/10"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Sort: shown mainly for Modrinth, or applied as fallback */}
+          <div className="flex flex-col gap-1 col-span-2">
+            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Ordenar por</label>
+            <select
+              value={discoverSort}
+              onChange={(e) => { setDiscoverSort(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+            >
+              {SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value} className="bg-surface text-white">{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Search bar */}
       <form

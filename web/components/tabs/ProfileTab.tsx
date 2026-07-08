@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight,
+  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
@@ -22,6 +22,7 @@ interface ProfileTabProps {
   loadingUserData: boolean;
   userDrafts: any[];
   userFavorites: any[];
+  userFollowedAuthors?: any[];
   handleAuth: (e: React.FormEvent) => void;
   handleLogout: () => void;
   handleOpenEditProfile: () => void;
@@ -38,7 +39,7 @@ interface ProfileTabProps {
 export function ProfileTab({
   session, profile, email, setEmail, password, setPassword, username,
   setUsername, isRegistering, setIsRegistering, authLoading, loadingUserData,
-  userDrafts, userFavorites, handleAuth, handleLogout, handleOpenEditProfile,
+  userDrafts, userFavorites, userFollowedAuthors = [], handleAuth, handleLogout, handleOpenEditProfile,
   handleOpenModDetails, handleEnterDraftCollection, onCreateDraft, onEditDraft,
 }: ProfileTabProps) {
   const readFavoriteMeta = (fav: any) => {
@@ -340,6 +341,39 @@ export function ProfileTab({
             ) : (
               <div className="bg-white/[0.02] border border-dashed border-white/[0.08] rounded-2xl p-6 text-center">
                 <p className="text-xs text-white/40">No guardaste ningún mod favorito todavía.</p>
+              </div>
+            )}
+          </div>
+          {/* Autores Seguidos */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-blue-400" /> Autores Seguidos
+            </h3>
+            {userFollowedAuthors.length > 0 ? (
+              <div className="grid gap-3">
+                {userFollowedAuthors.map(a => (
+                  <div
+                    key={a.id}
+                    className="bg-surface/80 border border-border rounded-2xl p-3.5 flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {a.icon_url ? (
+                        <img src={a.icon_url} alt="" className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        <span className="text-blue-400 text-[10px] font-bold uppercase">{a.author_name?.substring(0, 2)}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-bold text-white truncate">{a.author_name}</h4>
+                      <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
+                    </div>
+                    <UserCheck className="w-3.5 h-3.5 text-blue-400/50 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white/[0.02] border border-dashed border-white/[0.08] rounded-2xl p-6 text-center">
+                <p className="text-xs text-white/40">No seguís a ningún autor todavía.</p>
               </div>
             )}
           </div>

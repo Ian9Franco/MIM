@@ -219,7 +219,7 @@ export default function ChannelPickerModal({
                 "https://www.youtube.com/@KreksuMinecraft",
                 "https://www.youtube.com/@NoxusMods",
                 "https://www.youtube.com/@sir_color",
-                "https://www.youtube.com/@Wero_lovernite",
+                "https://www.youtube.com/@emiliomoreira9920",
               ];
               handleSaveShowcaseChannels(defaults);
             }}

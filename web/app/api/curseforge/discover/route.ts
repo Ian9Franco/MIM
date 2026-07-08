@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID } from "./CurseForgeMapper";
+import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, CF_CATEGORY_MAPS } from "./CurseForgeMapper";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const projectType = searchParams.get("projectType") || "mod";
   const q = searchParams.get("q")?.trim() || "";
   const gameVersion = searchParams.get("gameVersion") || "";
+  const category = searchParams.get("category") || "";
 
   const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6;
   const index = (page - 1) * pageSize;
@@ -35,6 +36,14 @@ export async function GET(req: NextRequest) {
 
   if (q) query.set("searchFilter", q);
   if (gameVersion) query.set("gameVersion", gameVersion);
+
+  if (category) {
+    const map = CF_CATEGORY_MAPS[projectType] || {};
+    const catId = map[category.toLowerCase()];
+    if (catId) {
+      query.set("categoryId", catId.toString());
+    }
+  }
 
   if (classId === 6 && loader && loader !== "any") {
     // 1: Forge, 4: Fabric, 6: NeoForge

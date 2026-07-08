@@ -13,7 +13,7 @@ import { CollectionsTab } from "../components/tabs/CollectionsTab";
 import { DiscoverTab } from "../components/tabs/DiscoverTab";
 import { FeedTab } from "../components/tabs/FeedTab";
 import { ProfileTab } from "../components/tabs/ProfileTab";
-import { RankingsTab } from "../components/tabs/RankingsTab";
+import { ComunidadTab } from "../components/tabs/ComunidadTab";
 import { SpotlightTab } from "../components/tabs/SpotlightTab";
 import { supabase } from "../lib/supabaseClient";
 import { playFomoSound } from "../lib/sounds";
@@ -154,6 +154,7 @@ export default function Home() {
               loadingUserData={c.loadingUserData}
               userDrafts={c.userDrafts}
               userFavorites={c.userFavorites}
+              userFollowedAuthors={c.userFollowedAuthors}
               handleAuth={c.handleAuth}
               handleLogout={c.handleLogout}
               handleOpenEditProfile={() => c.setShowEditProfile(true)}
@@ -194,6 +195,7 @@ export default function Home() {
               loadingActiveMods={c.loadingActiveMods}
               session={c.session}
               userDrafts={c.userDrafts}
+              activeDraft={c.activeDraft}
               handleEnterCollection={c.handleEnterCollection}
               handleExitCollection={c.handleExitCollection}
               handleOpenModDetails={c.handleOpenModDetails}
@@ -201,6 +203,16 @@ export default function Home() {
               onRemoveModFromDraft={c.removeModFromDraft}
               onRefreshDrafts={() => c.refreshUserData()}
               onEditDraft={handleOpenDraftEditor}
+              onCreateDraft={() => {
+                setEditingDraftId(null);
+                c.setPendingMod(null);
+                c.setShowDraftPicker(true);
+              }}
+              onUpdateDraftMetadata={c.updateDraftMetadata}
+              onRecategorizeDraftItem={c.recategorizeDraftItem}
+              onUpdateDraftItemSide={c.updateDraftItemSide}
+              userFavorites={c.userFavorites}
+              userFollowedAuthors={c.userFollowedAuthors}
             />
           )}
 
@@ -224,7 +236,12 @@ export default function Home() {
           )}
 
           {c.activeTab === "rankings" && (
-            <RankingsTab rankings={c.rankings} loadingRankings={c.loadingRankings} handleOpenModDetails={c.handleOpenModDetails} />
+            <ComunidadTab
+              rankings={c.rankings}
+              loadingRankings={c.loadingRankings}
+              handleOpenModDetails={c.handleOpenModDetails}
+              session={c.session}
+            />
           )}
 
           {c.activeTab === "discover" && (
@@ -250,6 +267,8 @@ export default function Home() {
               discoverError={c.discoverError}
               discoverEnvironment={c.discoverEnvironment}
               setDiscoverEnvironment={c.setDiscoverEnvironment}
+              discoverCategory={c.discoverCategory}
+              setDiscoverCategory={c.setDiscoverCategory}
             />
           )}
         </AnimatePresence>
@@ -280,6 +299,10 @@ export default function Home() {
         }}
         userFavorites={c.userFavorites}
         onToggleFavorite={c.onToggleFavorite}
+        userShares={c.userShares}
+        refreshUserData={c.refreshUserData}
+        userFollowedAuthors={c.userFollowedAuthors}
+        onToggleFollowAuthor={c.onToggleFollowAuthor}
       />
 
       <DraftPickerModal

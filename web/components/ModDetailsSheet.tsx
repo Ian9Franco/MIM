@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 import {
-  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronRight, Plus, Heart, Languages,
+  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck,
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
 import { playFomoSound } from "../lib/sounds";
+import { supabase } from "../lib/supabaseClient";
 
 interface ModDetailsSheetProps {
   selectedMod: ModHit | null;
@@ -26,9 +27,15 @@ interface ModDetailsSheetProps {
   session: any;
   onAddToDraft: (mod: ModHit, draftId: string) => void;
   onOpenDraftPicker: (mod: ModHit) => void;
-  /* Favorite */
+  /* Favorite (followed_mods) */
   userFavorites: any[];
   onToggleFavorite: (mod: ModHit) => void;
+  /* Followed Authors */
+  userFollowedAuthors?: any[];
+  onToggleFollowAuthor?: (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => void;
+  /* Community shares (favorite_mods) */
+  userShares?: any[];
+  refreshUserData?: () => void;
 }
 
 const descriptionTranslationCache: Record<string, string> = {};
@@ -174,6 +181,178 @@ async function translateDescription(projectId: string, markdown: string): Promis
   return html;
 }
 
+type FomoBannerProjectType =
+  | "mod"
+  | "shader"
+  | "textura"
+  | "resourcepack"
+  | "datapack"
+  | "modpack"
+  | "bedrock"
+  | "addon";
+
+function communityTypeToBannerType(
+  type?: string | null
+): FomoBannerProjectType {
+  if (!type) return "mod";
+  const t = type.toLowerCase();
+  if (t === "resourcepack" || t === "textura") return "textura";
+  if (t === "shader" || t === "datapack" || t === "modpack") return t as FomoBannerProjectType;
+  return "mod";
+}
+
+interface BannerFallbackStyle {
+  bannerBgColor: string;
+  fallbackTexture: Record<string, string>;
+}
+
+function getBannerFallbackStyle(
+  primaryType: FomoBannerProjectType | string
+): BannerFallbackStyle {
+  let bannerBgColor = "#18181b";
+  let fallbackTexture: Record<string, string> = {};
+
+  if (primaryType === "datapack") {
+    bannerBgColor = "#022c22";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H8v-2h12V9.5h-2V7h2V5H8v-2h12V.5h-2V-2h2v2h2v2h2v-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2.5H20zm0 0V23h20v2H20v2h12v2H20v2h12v2H20v2h12v2H20v2.5h2V42h-2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2.5H20z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "shader") {
+    bannerBgColor = "#2e1065";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.392-5.351-2.352-10.051-6.102-13.799C11.332 2.453 6.136.634 0 0h100c-6.136.634-11.332 2.453-15.082 6.201C81.168 9.949 78.424 14.649 78.816 20h-57.632z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "textura" || primaryType === "resourcepack") {
+    bannerBgColor = "#451a03";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "modpack") {
+    bannerBgColor = "#172554";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='100' viewBox='0 0 60 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 50L0 67.5V100l30-17.5V50zm0-50L0 17.5V50l30-17.5V0zm30 17.5L30 35v33.25l30-17.5V17.5zM30 67.5L0 85v33.25l30-17.5V67.5z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "bedrock" || primaryType === "addon") {
+    bannerBgColor = "#064e3b";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300cc44' fill-opacity='0.15' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else {
+    bannerBgColor = "#500724";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.65V49h-2z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  }
+
+  return { bannerBgColor, fallbackTexture };
+}
+
+type CommunityProjectType =
+  | "mod"
+  | "textura"
+  | "shader"
+  | "datapack"
+  | "modpack"
+  | "autor";
+
+interface CommunityShareMeta {
+  gameVersion?: string;
+  modloader?: string;
+  projectType?: CommunityProjectType;
+}
+
+const META_RE = /<!--mim:([\s\S]*?)-->/;
+
+function encodeShareMeta(
+  summary: string,
+  meta: CommunityShareMeta
+): string {
+  const clean = stripShareMeta(summary);
+  const payload = JSON.stringify(meta);
+  return clean ? `${clean} <!--mim:${payload}-->` : `<!--mim:${payload}-->`;
+}
+
+function stripShareMeta(summary?: string | null): string {
+  if (!summary) return "";
+  return summary.replace(META_RE, "").trim();
+}
+
+const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
+
+function buildShareMetaFromMod(
+  mod: {
+    description?: string;
+    summary?: string;
+    categories?: unknown[];
+    loader?: string;
+    gameVersions?: string[];
+    gameVersion?: string;
+    mcVersion?: string;
+    projectType?: string;
+  },
+  opts?: {
+    comment?: string;
+    gameVersion?: string;
+    modloader?: string;
+  }
+): string {
+  const cats = (mod.categories || []).map((c) =>
+    typeof c === "string" ? c.toLowerCase() : ""
+  );
+  const modloader =
+    opts?.modloader ||
+    cats.find((c) => KNOWN_LOADERS.includes(c as (typeof KNOWN_LOADERS)[number])) ||
+    (typeof mod.loader === "string" ? mod.loader : undefined);
+  const gameVersion =
+    opts?.gameVersion ||
+    mod.gameVersions?.[0] ||
+    mod.gameVersion ||
+    mod.mcVersion ||
+    undefined;
+  const base =
+    (opts?.comment ?? "").trim() ||
+    mod.description ||
+    mod.summary ||
+    "";
+  return encodeShareMeta(base, {
+    gameVersion,
+    modloader,
+    projectType: inferTypeFromModHit(mod),
+  });
+}
+
+function inferTypeFromModHit(mod: {
+  projectType?: string;
+  categories?: unknown[];
+  url?: string;
+  slug?: string;
+  title?: string;
+}): CommunityProjectType {
+  const cats = (mod.categories || []).map((c) =>
+    typeof c === "string" ? c.toLowerCase() : ""
+  );
+  const rawUrl = (mod.url || "").toLowerCase();
+  const rawSlug = (mod.slug || "").toLowerCase();
+  const rawTitle = (mod.title || "").toLowerCase();
+
+  if (cats.some((c) => c.includes("shader"))) return "shader";
+  if (
+    rawUrl.includes("/datapack/") ||
+    rawSlug.includes("datapack") ||
+    rawTitle.includes("datapack") ||
+    cats.some((c) => c.includes("datapack"))
+  )
+    return "datapack";
+  if (cats.some((c) => c.includes("resourcepack") || c === "textura"))
+    return "textura";
+  const pt = (mod.projectType || "").toLowerCase();
+  if (pt === "shader") return "shader";
+  if (pt === "datapack") return "datapack";
+  if (pt === "resourcepack") return "textura";
+  if (pt === "modpack") return "modpack";
+  return "mod";
+}
+
 /**
  * ModDetailsSheet — bottom sheet que muestra detalles de un mod.
  * - Drag-to-close: arrastrar hacia abajo cierra el sheet.
@@ -185,14 +364,40 @@ export function ModDetailsSheet({
   modStack, activeStackIndex, modalTab, setModalTab,
   handleCloseModDetails, handleGoBackInStack, handleSwitchStackIndex,
   handleOpenModDetails, userDrafts, session, onOpenDraftPicker,
-  userFavorites, onToggleFavorite,
+  userFavorites, onToggleFavorite, userShares = [], refreshUserData,
+  userFollowedAuthors = [], onToggleFollowAuthor,
 }: ModDetailsSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null); // Gallery Lightbox
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareComment, setShareComment] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
+
+  // Animated tab content height
+  const tabContentRef = useRef<HTMLDivElement>(null);
+  const [tabContentHeight, setTabContentHeight] = useState<number | "auto">("auto");
+  const animatedHeight = useSpring(0, { stiffness: 100, damping: 22, mass: 1.2 });
 
   const descriptionBody = selectedModDetails?.body || selectedMod?.description || "";
+
+  /**
+   * Observes real rendered content height inside the tab panel.
+   * On every tab change, updates animatedHeight so the wrapper
+   * smoothly resizes rather than jumping.
+   */
+  useEffect(() => {
+    const el = tabContentRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      animatedHeight.set(el.scrollHeight);
+    });
+    obs.observe(el);
+    // Set immediately for initial render
+    animatedHeight.set(el.scrollHeight);
+    return () => obs.disconnect();
+  }, [modalTab, animatedHeight]);
 
   /** Play open sound and reset translation state when a new mod is opened */
   useEffect(() => {
@@ -211,6 +416,64 @@ export function ModDetailsSheet({
     f => (f.mod_id || f.project_id || f.id) === selectedMod?.projectId
   );
 
+  const handleShareClick = useCallback(() => {
+    if (!session?.user?.id) {
+      alert("Debes iniciar sesión para compartir en la Comunidad.");
+      return;
+    }
+    setShowShareModal(true);
+    setShareComment("");
+  }, [session]);
+
+  const handleConfirmShare = useCallback(async () => {
+    if (!selectedMod || !session?.user?.id) return;
+    setIsSharing(true);
+    try {
+      const summaryText = buildShareMetaFromMod(selectedMod, {
+        comment: shareComment.trim() || selectedMod.description || "",
+      });
+      const platform = selectedMod._source === "curseforge" ? "curseforge" : "modrinth";
+
+      // Use userShares (favorite_mods) to check prior shares, independent of userFavorites (followed_mods)
+      const alreadyShared = userShares.some(
+        f => (f.mod_id || f.project_id || f.id) === selectedMod.projectId
+      );
+
+      const request = alreadyShared
+        ? supabase.from("favorite_mods").update({
+            summary: summaryText,
+            name: selectedMod.title,
+            icon_url: selectedMod.iconUrl || null,
+          }).eq("profile_id", session.user.id).eq("mod_id", selectedMod.projectId)
+        : supabase.from("favorite_mods").insert({
+            profile_id: session.user.id,
+            mod_id: selectedMod.projectId,
+            platform,
+            name: selectedMod.title,
+            icon_url: selectedMod.iconUrl || null,
+            summary: summaryText,
+          });
+
+      const { error } = await request;
+
+      if (error) throw error;
+
+      if (refreshUserData) refreshUserData();
+      setShowShareModal(false);
+    } catch (err: any) {
+      alert(`Error al compartir: ${err.message}`);
+    } finally {
+      setIsSharing(false);
+    }
+  }, [selectedMod, session, shareComment, userShares, refreshUserData]);
+
+  const handleGalleryWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      e.currentTarget.scrollLeft += e.deltaY;
+    }
+  }, []);
+
   const handleTranslate = useCallback(async () => {
     if (!selectedMod || !descriptionBody || isTranslating) return;
     if (translatedBody) {
@@ -225,6 +488,19 @@ export function ModDetailsSheet({
       setIsTranslating(false);
     }
   }, [descriptionBody, isTranslating, selectedMod, translatedBody]);
+
+  const bannerUrl = selectedModDetails?.gallery?.[0]?.url || undefined;
+  const projectType = selectedMod?.projectType || "mod";
+  const bannerType = communityTypeToBannerType(projectType);
+  const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(bannerType);
+  const communitySharedByMe = userShares.some(
+    f => (f.mod_id || f.project_id || f.id) === selectedMod?.projectId
+  );
+  const authorName = selectedMod?.author || "";
+  const authorPlatform = selectedMod?._source || "modrinth";
+  const isFollowingAuthor = !!authorName && userFollowedAuthors.some(
+    a => a.author_name === authorName && a.platform === authorPlatform
+  );
 
   return (
     <>
@@ -256,23 +532,47 @@ export function ModDetailsSheet({
                   mass: 1.0,
                 }
               }}
-              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh]"
+              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={{ top: 0, bottom: 0.4 }}
               onDragEnd={(_e, info) => { if (info.offset.y > 80) closeWithSound(); }}
             >
-              {/* Drag handle */}
-              <div className="w-12 h-1 rounded-full bg-white/10 mx-auto mt-3 mb-1 shrink-0 cursor-grab" />
+              {/* Header Banner Area */}
+              <div className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0">
+                {/* Banner Image or Fallback */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ backgroundColor: bannerBgColor }}>
+                  {bannerUrl ? (
+                    <img
+                      src={bannerUrl}
+                      alt=""
+                      className="w-full h-full object-cover opacity-35 scale-110 transition-opacity duration-1000 blur-[2px]"
+                      style={{ filter: "brightness(0.55)" }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 opacity-15" style={fallbackTexture} />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent" />
+                </div>
 
-              <div className="flex flex-col gap-5 p-6 flex-1 min-h-0">
+                {/* Drag handle */}
+                <div className="relative z-10 w-12 h-1 rounded-full bg-white/25 mx-auto mb-3 cursor-grab" />
+
+                {/* Close Button */}
+                <button
+                  onClick={closeWithSound}
+                  className="absolute right-5 top-4 z-20 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Stack breadcrumb */}
                 {modStack.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06] shrink-0">
+                  <div className="relative z-10 flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06] mb-3">
                     <button
                       onClick={handleGoBackInStack}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/[0.08] rounded-xl text-white/70 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                      className="p-1.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-white/70 active:scale-95 transition-all flex items-center justify-center shrink-0"
                       title="Volver"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
@@ -285,7 +585,7 @@ export function ModDetailsSheet({
                           className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all whitespace-nowrap border ${
                             activeStackIndex === idx
                               ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                              : "bg-white/5 text-white/50 hover:text-white/80 border-transparent"
+                              : "bg-black/40 text-white/50 hover:text-white/80 border-white/10"
                           }`}
                         >
                           {item.mod.title.length > 15 ? `${item.mod.title.slice(0, 12)}...` : item.mod.title}
@@ -295,9 +595,9 @@ export function ModDetailsSheet({
                   </div>
                 )}
 
-                {/* Mod header */}
-                <div className="flex gap-4 shrink-0">
-                  <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                {/* Mod info */}
+                <div className="relative z-10 flex gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md">
                     {selectedMod.iconUrl ? (
                       <img src={selectedMod.iconUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -305,30 +605,70 @@ export function ModDetailsSheet({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">MIM Mod Details</span>
-                    <h3 className="text-sm font-bold text-white mt-0.5 pr-6 leading-tight">{selectedMod.title}</h3>
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">Detalles del Proyecto</span>
+                    <h3 className="text-sm font-bold text-white mt-0.5 pr-6 leading-tight drop-shadow-md">{selectedMod.title}</h3>
                     <p className="text-[10px] text-white/40 mt-1">Autor: <span className="text-white/60">{selectedMod.author || "Comunidad"}</span></p>
-                  </div>
-                  <div className="flex flex-col gap-1.5 absolute right-5 top-5">
-                    {/* Favorite button */}
-                    {session && (
-                      <button
-                        onClick={() => onToggleFavorite(selectedMod)}
-                        className={`bg-white/5 hover:bg-white/10 rounded-full p-1.5 text-white/60 active:scale-95 transition-all ${isFavorited ? "text-red-400" : ""}`}
-                        title="Favorito"
-                      >
-                        <Heart className={`w-4 h-4 ${isFavorited ? "fill-red-400 text-red-400" : ""}`} />
-                      </button>
-                    )}
-                    <button
-                      onClick={closeWithSound}
-                      className="bg-white/5 hover:bg-white/10 rounded-full p-1.5 text-white/60 active:scale-95 flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
 
+                {/* Actions row: Share & Favorite */}
+                {session && (
+                  <div className="relative z-10 flex flex-col gap-1.5 mt-4">
+                    {/* Row 1: Share + Favorite */}
+                    <div className="flex gap-2">
+                      {/* Share button */}
+                      <button
+                        onClick={handleShareClick}
+                        className={`flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                          communitySharedByMe
+                            ? "bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+                            : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
+                        }`}
+                        title={communitySharedByMe ? "Ya compartido en la Comunidad" : "Compartir en la Comunidad"}
+                        type="button"
+                      >
+                        {communitySharedByMe ? <Globe className="w-3.5 h-3.5 shrink-0" /> : <CircleFadingPlus className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{communitySharedByMe ? "Compartido" : "Compartir"}</span>
+                      </button>
+
+                      {/* Favorite button */}
+                      <button
+                        onClick={() => onToggleFavorite(selectedMod)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                          isFavorited
+                            ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.15)]"
+                            : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
+                        }`}
+                        type="button"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-red-400 text-red-400" : ""}`} />
+                        <span>{isFavorited ? "Guardado" : "Favorito"}</span>
+                      </button>
+                    </div>
+
+                    {/* Row 2: Follow Author */}
+                    {onToggleFollowAuthor && authorName && authorName !== "Comunidad" && (
+                      <button
+                        onClick={() => onToggleFollowAuthor(authorName, `https://modrinth.com/user/${authorName}`, undefined, authorPlatform)}
+                        className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                          isFollowingAuthor
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                            : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
+                        }`}
+                        type="button"
+                      >
+                        {isFollowingAuthor
+                          ? <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                          : <UserPlus className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Body Content Area (Tabs + Scrollable Content) */}
+              <div className="flex flex-col gap-4 p-6 pt-4 flex-1 min-h-0">
                 {/* Modal tabs */}
                 <div className="flex gap-1 border-b border-white/[0.06] pb-1 shrink-0 overflow-x-auto scrollbar-none">
                   {[
@@ -351,19 +691,15 @@ export function ModDetailsSheet({
                   ))}
                 </div>
 
-                {/* Scrollable content */}
+                {/* Scrollable content — height animates smoothly via spring */}
                 <motion.div
-                  layout="size"
-                  className="overflow-y-auto flex-1 pr-1 scrollbar-none min-h-0 relative w-full"
-                  transition={{
-                    type: "spring",
-                    stiffness: 180,
-                    damping: 28,
-                  }}
+                  style={{ height: animatedHeight, overflow: "hidden" }}
+                  className="relative w-full"
                 >
-                  <AnimatePresence mode="popLayout">
-                    {modalTab === "summary" && (
-                      <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4 w-full">
+                  <div ref={tabContentRef} className="overflow-y-auto max-h-[55vh] pr-1 scrollbar-none w-full">
+                    <AnimatePresence mode="popLayout">
+                      {modalTab === "summary" && (
+                        <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4 w-full pb-2">
                         {/* Stats row */}
                         <div className="flex gap-3 text-[10px] border-b border-white/[0.04] pb-3 flex-wrap">
                           <div className="flex-1 min-w-[70px]">
@@ -439,7 +775,10 @@ export function ModDetailsSheet({
                         {selectedModDetails?.gallery && selectedModDetails.gallery.length > 0 && (
                           <div className="flex flex-col gap-2 border-t border-white/[0.04] pt-3">
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block">Galería</span>
-                            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x">
+                            <div
+                              onWheel={handleGalleryWheel}
+                              className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x cursor-grab active:cursor-grabbing"
+                            >
                               {selectedModDetails.gallery.map((img: any, i: number) => (
                                 <div
                                   key={i}
@@ -541,7 +880,8 @@ export function ModDetailsSheet({
                         )}
                       </motion.div>
                     )}
-                  </AnimatePresence>
+                    </AnimatePresence>
+                  </div>
                 </motion.div>
 
                 {/* Footer action buttons */}
@@ -610,6 +950,78 @@ export function ModDetailsSheet({
               >
                 <X className="w-5 h-5" />
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Share Opinion Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[700] p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              className="bg-card/95 border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative flex flex-col gap-4 overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: "spring", damping: 24, stiffness: 220 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="text-sm font-extrabold text-white">Compartir en Comunidad</h4>
+                  <p className="text-[10px] text-white/40 mt-1">Escribí tu reseña u opinión sobre este proyecto para la comunidad.</p>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-white/40 hover:text-white/70 transition-colors p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Textarea */}
+              <textarea
+                value={shareComment}
+                onChange={(e) => setShareComment(e.target.value)}
+                placeholder="Ej: ¡Este mod es increíble para automatización! Totalmente recomendado."
+                rows={4}
+                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white/80 focus:border-orange-500/50 focus:outline-none resize-none transition-all placeholder:text-white/20"
+              />
+
+              {/* Actions */}
+              <div className="flex gap-2.5 mt-2">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 font-semibold text-xs rounded-xl py-3 transition-all active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmShare}
+                  disabled={isSharing}
+                  className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl py-3 flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+                >
+                  {isSharing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Compartiendo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Compartir</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

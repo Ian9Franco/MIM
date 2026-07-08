@@ -155,6 +155,7 @@ export function useHomeController() {
   const [discoverVersion, setDiscoverVersion] = useState("1.20.1");
   const [discoverLoader, setDiscoverLoader] = useState("fabric");
   const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
+  const [discoverCategory, setDiscoverCategory] = useState("");
   const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -174,7 +175,9 @@ export function useHomeController() {
   const [showcaseChannels, setShowcaseChannels] = useState<string[]>([]);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [userFavorites, setUserFavorites] = useState<any[]>([]);
+  const [userShares, setUserShares] = useState<any[]>([]);
   const [userDrafts, setUserDrafts] = useState<any[]>([]);
+  const [userFollowedAuthors, setUserFollowedAuthors] = useState<any[]>([]);
   const [loadingUserData, setLoadingUserData] = useState(false);
 
   const [updatedMods, setUpdatedMods] = useState<ModHit[]>(mockUpdatedMods);
@@ -188,6 +191,7 @@ export function useHomeController() {
   const [activeCollection, setActiveCollection] = useState<CollectionItem | null>(null);
   const [activeCollectionMods, setActiveCollectionMods] = useState<ModHit[]>([]);
   const [loadingActiveMods, setLoadingActiveMods] = useState(false);
+  const [activeDraft, setActiveDraft] = useState<any | null>(null);
 
   const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
   const [customAlert, setCustomAlert] = useState<{ title: string; message: string } | null>(null);
@@ -254,10 +258,12 @@ export function useHomeController() {
   const loadUserData = useCallback(async (userId: string) => {
     try {
       setLoadingUserData(true);
-      const [{ data: profData }, { data: favs }, { data: drafts }] = await Promise.all([
+      const [{ data: profData }, { data: follows }, { data: shares }, { data: drafts }, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
+        supabase.from("followed_mods").select("*").eq("profile_id", userId),
         supabase.from("favorite_mods").select("*").eq("profile_id", userId),
         supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
+        supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
       ]);
 
       if (profData) {
@@ -273,7 +279,9 @@ export function useHomeController() {
         }
       }
 
-      setUserFavorites(favs || []);
+      setUserFavorites(follows || []);
+      setUserShares(shares || []);
+      setUserFollowedAuthors(followedAuthors || []);
 
       if (drafts) {
         const allItemIds = drafts.flatMap((draft: any) => (draft.draft_items || []).map((item: any) => item.project_id));
@@ -316,6 +324,7 @@ export function useHomeController() {
 
     setProfile(null);
     setUserFavorites([]);
+    setUserShares([]);
     setUserDrafts([]);
     const saved = localStorage.getItem("mim_web_youtube_channels");
     if (saved) {
@@ -527,6 +536,7 @@ export function useHomeController() {
   };
 
   const handleEnterDraftCollection = async (draft: any) => {
+    setActiveDraft(draft);
     setActiveCollection({
       id: draft.id,
       name: draft.name,
@@ -551,37 +561,61 @@ export function useHomeController() {
           side: item.side || "both",
           version_id: item.version_id,
           dependencies: item.dependencies || [],
-          game_versions: [draft.minecraft_version].filter(Boolean),
-          loaders: [draft.loader].filter(Boolean),
+          game_versions: null,
+          loaders: null,
         }));
       } else {
-        const missingIconIds = items.filter((item: any) => item.project_id && !item.icon_url).map((item: any) => item.project_id);
+        const missingIconIds = items
+          .filter((item: any) => item.project_id && !item.icon_url && !item.iconUrl)
+          .map((item: any) => item.project_id);
         if (missingIconIds.length) {
           const icons = await fetchDraftIcons(missingIconIds);
           items = items.map((item: any) => ({
             ...item,
-            icon_url: item.icon_url || icons[item.project_id],
-            game_versions: item.game_versions || [draft.minecraft_version].filter(Boolean),
-            loaders: item.loaders || [draft.loader].filter(Boolean),
+            icon_url: item.icon_url || item.iconUrl || icons[item.project_id],
           }));
         }
       }
-      setActiveCollectionMods((items || []).map((item: any) => ({
-        itemId: item.id,
-        projectId: item.project_id,
-        title: item.name || item.project_id,
-        description: "",
-        iconUrl: item.icon_url,
-        author: "Comunidad",
-        projectType: item.content_type || item.category || "mod",
-        categories: [item.category || item.content_type].filter(Boolean),
-        url: `https://modrinth.com/${item.content_type || item.category || "mod"}/${item.project_id}`,
-        _source: "modrinth",
-        gameVersions: item.game_versions || [draft.minecraft_version].filter(Boolean),
-        loaders: item.loaders || [draft.loader].filter(Boolean),
-        side: item.side || "both",
-        versionId: item.version_id || null,
-      })));
+
+      // Fetch actual game versions and loaders from Modrinth in batch if versions are set
+      const versionIds = items.map((item: any) => item.version_id).filter(Boolean);
+      let versionsMap: Record<string, { game_versions: string[]; loaders: string[] }> = {};
+      if (versionIds.length) {
+        try {
+          const res = await fetch(`https://api.modrinth.com/v2/versions?ids=${encodeURIComponent(JSON.stringify(versionIds))}`);
+          if (res.ok) {
+            const versionsData = await res.json();
+            versionsData.forEach((v: any) => {
+              versionsMap[v.id] = {
+                game_versions: v.game_versions || [],
+                loaders: v.loaders || [],
+              };
+            });
+          }
+        } catch (vErr) {
+          console.error("Error fetching version metadata from Modrinth:", vErr);
+        }
+      }
+
+      setActiveCollectionMods((items || []).map((item: any) => {
+        const actualVersionInfo = item.version_id ? versionsMap[item.version_id] : null;
+        return {
+          itemId: item.id,
+          projectId: item.project_id,
+          title: item.name || item.mod_name || item.project_id,
+          description: "",
+          iconUrl: item.icon_url || item.iconUrl || undefined,
+          author: "Comunidad",
+          projectType: item.content_type || item.category || "mod",
+          categories: [item.category || item.content_type].filter(Boolean),
+          url: `https://modrinth.com/${item.content_type || item.category || "mod"}/${item.project_id}`,
+          _source: "modrinth",
+          gameVersions: actualVersionInfo?.game_versions || item.game_versions || [draft.minecraft_version].filter(Boolean),
+          loaders: actualVersionInfo?.loaders || item.loaders || [draft.loader].filter(Boolean),
+          side: item.side || "both",
+          versionId: item.version_id || null,
+        };
+      }));
     } catch (err) {
       console.error(err);
     } finally {
@@ -649,7 +683,10 @@ export function useHomeController() {
       let totalHits = 0;
       
       if (discoverSource === "curseforge") {
-        const url = `/api/curseforge/discover?projectType=${discoverType}&loader=${discoverLoader}&gameVersion=${discoverVersion}&q=${encodeURIComponent(discoverQuery)}&page=${pageNumber}&pageSize=15`;
+        let url = `/api/curseforge/discover?projectType=${discoverType}&loader=${discoverLoader}&gameVersion=${discoverVersion}&q=${encodeURIComponent(discoverQuery)}&page=${pageNumber}&pageSize=15`;
+        if (discoverCategory) {
+          url += `&category=${encodeURIComponent(discoverCategory)}`;
+        }
         const res = await fetch(url);
         if (!res.ok) {
           const errText = await res.text();
@@ -668,9 +705,10 @@ export function useHomeController() {
         totalHits = data.total || 0;
       } else {
         const facetsArray = [[`project_type:${discoverType}`]];
-        if (discoverType !== "datapack" && discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
+        if (discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
         if (discoverType === "mod" && discoverLoader !== "any") facetsArray.push([`categories:${discoverLoader}`]);
-        if (discoverEnvironment !== "any") {
+        if (discoverCategory) facetsArray.push([`categories:${discoverCategory}`]);
+        if (discoverType === "mod" && discoverEnvironment !== "any") {
           if (discoverEnvironment === "client") {
             facetsArray.push(["client_side:required", "client_side:optional"]);
             facetsArray.push(["server_side:unsupported"]);
@@ -719,7 +757,7 @@ export function useHomeController() {
     } finally {
       setDiscoverLoading(false);
     }
-  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment]);
+  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment, discoverCategory]);
 
   useEffect(() => {
     if (activeTab === "spotlight") {
@@ -866,6 +904,14 @@ export function useHomeController() {
       });
       if (error) throw error;
 
+      // Log activity
+      await supabase.from("draft_activity").insert({
+        draft_id: draftId,
+        profile_id: session.user.id,
+        action: `añadió ${contentType === "resourcepack" ? "una textura" : contentType === "shader" ? "un shader" : contentType === "datapack" ? "un datapack" : "un mod"}`,
+        payload: { name: mod.title || mod.projectId, type: contentType, project_id: mod.projectId },
+      });
+
       const requiredDeps = dependencies.filter((dep: any) => dep.dependency_type === "required" && dep.project_id);
       const knownIds = new Set([mod.projectId, ...(draft?.items || []).map((item: any) => item.project_id)]);
       const missingIds = requiredDeps.map((dep: any) => dep.project_id).filter((id: string) => !knownIds.has(id));
@@ -908,11 +954,30 @@ export function useHomeController() {
 
   const removeModFromDraft = async (draftId: string, projectId: string, itemId?: string) => {
     if (!session?.user?.id) return;
+    // Capture the mod name before deleting for activity log
+    const draftObj = userDrafts.find((d) => d.id === draftId);
+    const itemMeta = (draftObj?.items || []).find(
+      (i: any) => (itemId && i.id === itemId) || i.project_id === projectId
+    );
     const query = supabase.from("draft_items").delete();
     const { error } = itemId
       ? await query.eq("id", itemId)
       : await query.eq("draft_id", draftId).eq("project_id", projectId);
-    if (error) showAlert("Error", `Error al eliminar del draft: ${error.message}`);
+    if (error) {
+      showAlert("Error", `Error al eliminar del draft: ${error.message}`);
+    } else {
+      // Log activity
+      await supabase.from("draft_activity").insert({
+        draft_id: draftId,
+        profile_id: session.user.id,
+        action: "eliminó un ítem",
+        payload: {
+          name: itemMeta?.name || itemMeta?.mod_name || projectId,
+          type: itemMeta?.content_type || itemMeta?.category || "mod",
+          project_id: projectId,
+        },
+      });
+    }
     window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
     await loadUserData(session.user.id);
   };
@@ -951,24 +1016,55 @@ export function useHomeController() {
     await loadUserData(session.user.id);
   };
 
+  /** Update draft details (name, version, loader, visibility) and log activity */
+  const updateDraftMetadata = async (
+    draftId: string,
+    updates: { name?: string; minecraft_version?: string; loader?: string; visibility?: string }
+  ): Promise<boolean> => {
+    if (!session?.user?.id) return false;
+    const { error } = await supabase
+      .from("drafts")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", draftId);
+    if (error) {
+      showAlert("Error", `No se pudo guardar la configuración: ${error.message}`);
+      return false;
+    }
+
+    // Construct a list of what changed for the activity log
+    const changedFields: string[] = [];
+    if (updates.name) changedFields.push("nombre");
+    if (updates.minecraft_version) changedFields.push("versión");
+    if (updates.loader) changedFields.push("loader");
+    if (updates.visibility) changedFields.push("visibilidad");
+
+    const actionText = changedFields.length
+      ? `actualizó la configuración (${changedFields.join(", ")})`
+      : "actualizó el draft";
+
+    await supabase.from("draft_activity").insert({
+      draft_id: draftId,
+      profile_id: session.user.id,
+      action: actionText,
+      payload: updates,
+    });
+    
+    await loadUserData(session.user.id);
+    return true;
+  };
+
   const onToggleFavorite = async (mod: ModHit) => {
     if (!session?.user?.id) return;
     try {
       const isFav = userFavorites.some((f) => (f.mod_id || f.project_id || f.id) === mod.projectId);
       const request = isFav
-        ? supabase.from("favorite_mods").delete().eq("profile_id", session.user.id).eq("mod_id", mod.projectId)
-        : supabase.from("favorite_mods").insert({
+        ? supabase.from("followed_mods").delete().eq("profile_id", session.user.id).eq("mod_id", mod.projectId)
+        : supabase.from("followed_mods").insert({
           profile_id: session.user.id,
           mod_id: mod.projectId,
           name: mod.title,
-          icon_url: mod.iconUrl,
+          icon_url: mod.iconUrl || null,
           platform: mod._source || "modrinth",
-          summary: JSON.stringify({
-            description: mod.description,
-            project_type: mod.projectType || "mod",
-            categories: mod.categories || [],
-            url: mod.url,
-          }),
         });
       const { error } = await request;
       if (error) throw error;
@@ -978,13 +1074,41 @@ export function useHomeController() {
     }
   };
 
+  /** Follow or unfollow an author by name, saving to followed_authors table */
+  const onToggleFollowAuthor = async (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => {
+    if (!session?.user?.id || !authorName) return;
+    try {
+      const pl = platform || "modrinth";
+      const isFollowing = userFollowedAuthors.some(
+        (a) => a.author_name === authorName && a.platform === pl
+      );
+      const request = isFollowing
+        ? supabase.from("followed_authors").delete()
+            .eq("profile_id", session.user.id)
+            .eq("author_name", authorName)
+            .eq("platform", pl)
+        : supabase.from("followed_authors").insert({
+            profile_id: session.user.id,
+            author_name: authorName,
+            author_url: authorUrl || null,
+            icon_url: iconUrl || null,
+            platform: pl,
+          });
+      const { error } = await request;
+      if (error) throw error;
+      await loadUserData(session.user.id);
+    } catch (err: any) {
+      showAlert("Error", `Error al seguir autor: ${err.message}`);
+    }
+  };
+
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
-    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverResults, setDiscoverResults, discoverLoading,
+    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory, discoverResults, setDiscoverResults, discoverLoading,
     discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
-    showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userDrafts, loadingUserData,
+    showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts, userFollowedAuthors, loadingUserData,
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, latestFeaturedMods, latestCollectionName,
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
     loadingActiveMods, theme, customAlert, setCustomAlert, youtubePosts, loadingYoutube, currentChannel,
@@ -995,8 +1119,9 @@ export function useHomeController() {
     handleEnterDraftCollection, runDiscoverSearch, handleOpenModDetails, handleSwitchStackIndex,
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
-    createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, onToggleFavorite,
+    createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
+    activeDraft, setActiveDraft,
   };
 }

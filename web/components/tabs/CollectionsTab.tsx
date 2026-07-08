@@ -2,9 +2,10 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Compass, Loader2, ArrowLeft, ChevronRight, Layers, Trash2, Pencil } from "lucide-react";
+import { Compass, Loader2, ArrowLeft, ChevronRight, UserCheck } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
+import { DraftDetailView } from "../DraftDetailView";
 
 interface CollectionsTabProps {
   activeCollection: CollectionItem | null;
@@ -14,6 +15,7 @@ interface CollectionsTabProps {
   loadingActiveMods: boolean;
   session: any;
   userDrafts: any[];
+  activeDraft?: any;
   handleEnterCollection: (coll: CollectionItem) => void;
   handleExitCollection: () => void;
   handleOpenModDetails: (mod: ModHit) => void;
@@ -21,43 +23,28 @@ interface CollectionsTabProps {
   onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRefreshDrafts?: () => void;
   onEditDraft?: (draft: any) => void;
+  onCreateDraft?: () => void;
+  onUpdateDraftMetadata?: (draftId: string, updates: any) => Promise<boolean>;
+  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
+  onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
+  userFavorites?: any[];
+  userFollowedAuthors?: any[];
 }
 
 /**
  * CollectionsTab — lista de colecciones Modrinth/CurseForge y Drafts del usuario.
- * Al entrar en una colección muestra sus mods.
+ * Al entrar en un draft muestra DraftDetailView con banner y sub-tabs.
+ * Al entrar en una colección editorial muestra la vista estándar de ítems.
  */
 export function CollectionsTab({
   activeCollection, modrinthFeatured, curseForgeFeatured, activeCollectionMods,
-  loadingActiveMods, session, userDrafts, handleEnterCollection, handleExitCollection,
-  handleOpenModDetails, handleEnterDraftCollection, onRemoveModFromDraft, onRefreshDrafts, onEditDraft,
+  loadingActiveMods, session, userDrafts, activeDraft, handleEnterCollection, handleExitCollection,
+  handleOpenModDetails, handleEnterDraftCollection, onRemoveModFromDraft, onRefreshDrafts,
+  onEditDraft, onCreateDraft, onUpdateDraftMetadata, onRecategorizeDraftItem, onUpdateDraftItemSide,
+  userFavorites = [],
+  userFollowedAuthors = [],
 }: CollectionsTabProps) {
-  const [draftTypeFilter, setDraftTypeFilter] = React.useState("all");
-  const [removedDraftItemIds, setRemovedDraftItemIds] = React.useState<Set<string>>(new Set());
   const isDraftCollection = activeCollection?.source === "draft";
-  const draftTypeFilters = [
-    { id: "all", label: "Todo" },
-    { id: "mod", label: "Mods" },
-    { id: "resourcepack", label: "Texturas" },
-    { id: "shader", label: "Shaders" },
-    { id: "datapack", label: "Datapacks" },
-  ];
-  React.useEffect(() => {
-    setDraftTypeFilter("all");
-    setRemovedDraftItemIds(new Set());
-  }, [activeCollection?.id]);
-  const typeLabel = (type?: string) => {
-    if (type === "resourcepack") return "Textura";
-    if (type === "shader") return "Shader";
-    if (type === "datapack") return "Datapack";
-    return "Mod";
-  };
-  const visibleCollectionMods = activeCollectionMods.filter((mod: any) => {
-    const key = mod.itemId || mod.id || mod.projectId;
-    if (removedDraftItemIds.has(key)) return false;
-    if (!isDraftCollection || draftTypeFilter === "all") return true;
-    return (mod.projectType || "mod") === draftTypeFilter;
-  });
 
   return (
     <motion.div
@@ -96,9 +83,7 @@ export function CollectionsTab({
             {/* Modrinth Official */}
             {modrinthFeatured.length > 0 && (
               <div className="flex flex-col gap-3 mb-6 shrink-0">
-                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">
-                  Colecciones Oficiales de Modrinth
-                </h3>
+                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Colecciones Oficiales de Modrinth</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
                   {modrinthFeatured.map(coll => (
                     <div
@@ -150,71 +135,111 @@ export function CollectionsTab({
               </div>
             )}
 
-            {/* User Drafts */}
-            <div className="flex flex-col gap-3 mb-6 shrink-0">
-              <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">
-                Tus Modpacks Colaborativos (Supabase)
-              </h3>
-              {session ? (
-                userDrafts.length > 0 ? (
-                  <div className="grid gap-3 px-1">
-                    {userDrafts.map(draft => (
-                      <div
-                        key={draft.id}
-                        onClick={() => handleEnterDraftCollection(draft)}
-                        className="mim-themed-card border rounded-2xl overflow-hidden active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
-                      >
-                        {draft.cover_image && (
-                          <div className="h-20 w-full">
-                            <img src={draft.cover_image} alt="" className="w-full h-full object-cover" />
-                          </div>
-                        )}
-                        <div className="p-4 flex justify-between items-center">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                              <Layers className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-bold text-white truncate">{draft.name}</h4>
-                              <p className="text-[10px] text-white/45 mt-0.5">Versión: {draft.minecraft_version} • Loader: {draft.loader}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {onEditDraft && (
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  onEditDraft(draft);
-                                }}
-                                className="p-1.5 rounded-lg text-white/35 hover:text-orange-300 hover:bg-white/5 transition-all active:scale-90"
-                                title="Editar draft"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
+
+            {/* Mis Mods Favoritos */}
+            {session && (
+              <div className="flex flex-col gap-3 mb-6 shrink-0 mt-2">
+                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Mis Mods Favoritos</h3>
+                {userFavorites.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
+                    {userFavorites.map((fav: any) => {
+                      const projectId = fav.mod_id || fav.project_id || fav.id;
+                      const projectType = fav.project_type || "mod";
+                      return (
+                        <div
+                          key={fav.id}
+                          onClick={() => handleOpenModDetails({
+                            projectId,
+                            title: fav.name,
+                            description: fav.description || "",
+                            iconUrl: fav.icon_url,
+                            author: fav.author || "Comunidad",
+                            projectType,
+                            categories: fav.categories || [],
+                            url: fav.url || `https://modrinth.com/${projectType}/${projectId}`,
+                            _source: fav.platform || "modrinth",
+                          })}
+                          className="bg-surface/60 border border-border hover:border-white/10 rounded-2xl p-3.5 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {fav.icon_url ? (
+                              <img src={fav.icon_url} alt="" className="object-cover w-full h-full" />
+                            ) : (
+                              <span className="text-white/40 text-xs font-bold uppercase">{fav.name.substring(0, 2)}</span>
                             )}
-                            <ChevronRight className="w-4 h-4 text-white/30" />
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-white truncate">{fav.name}</h4>
+                            <p className="text-[9px] text-white/35 mt-0.5 capitalize">{fav.platform}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
                         </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-2xl p-6 text-center">
+                    <p className="text-xs text-white/40">No tienes mods favoritos guardados.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Autores Seguidos */}
+            {session && (
+              <div className="flex flex-col gap-3 mb-6 shrink-0">
+                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Autores Seguidos</h3>
+                {userFollowedAuthors.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
+                    {userFollowedAuthors.map((a: any) => (
+                      <div
+                        key={a.id}
+                        className="bg-surface/60 border border-border rounded-2xl p-3.5 flex items-center gap-3"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {a.icon_url ? (
+                            <img src={a.icon_url} alt="" className="object-cover w-full h-full rounded-full" />
+                          ) : (
+                            <span className="text-blue-400 text-[10px] font-bold uppercase">{a.author_name?.substring(0, 2)}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-white truncate">{a.author_name}</h4>
+                          <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
+                        </div>
+                        <UserCheck className="w-3.5 h-3.5 text-blue-400/60 shrink-0" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-2xl p-6 text-center text-xs text-white/40">
-                    No tienes modpacks creados.
+                  <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-2xl p-6 text-center">
+                    <p className="text-xs text-white/40">No seguís a ningún autor todavía.</p>
                   </div>
-                )
-              ) : (
-                <div className="bg-surface/60 border border-border rounded-2xl p-6 text-center">
-                  <p className="text-xs text-white/40">
-                    Iniciá sesión en la pestaña Perfil para sincronizar y ver tus modpacks.
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </motion.div>
+
+        ) : isDraftCollection && activeDraft ? (
+          /* ── Draft detail: banner + tabs (Resumen, Ítems, Miembros, Actividad) ── */
+          <DraftDetailView
+            key={`draft-${activeCollection.id}`}
+            draft={activeDraft}
+            activeCollectionMods={activeCollectionMods}
+            loadingActiveMods={loadingActiveMods}
+            session={session}
+            onBack={handleExitCollection}
+            onEditDraft={onEditDraft}
+            handleOpenModDetails={handleOpenModDetails}
+            onRemoveModFromDraft={onRemoveModFromDraft}
+            onRefreshDrafts={onRefreshDrafts}
+            onUpdateDraftMetadata={onUpdateDraftMetadata}
+            onRecategorizeDraftItem={onRecategorizeDraftItem}
+            onUpdateDraftItemSide={onUpdateDraftItemSide}
+          />
+
         ) : (
-          /* ── Collection detail view ── */
+          /* ── Standard Modrinth/CurseForge collection detail ── */
           <motion.div
             key="detail"
             initial={{ opacity: 0, x: 20 }}
@@ -243,32 +268,7 @@ export function CollectionsTab({
             ) : activeCollectionMods.length > 0 ? (
               <div className="flex-1 overflow-y-auto space-y-3 pb-24 pr-1 scrollbar-none">
                 <p className="text-[10px] text-white/40 italic px-1 mb-2">{activeCollection.description}</p>
-                {isDraftCollection && (
-                  <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 px-1">
-                    {draftTypeFilters.map((filter) => {
-                      const active = draftTypeFilter === filter.id;
-                      return (
-                        <button
-                          key={filter.id}
-                          onClick={() => setDraftTypeFilter(filter.id)}
-                          className="shrink-0 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all active:scale-95"
-                          style={{
-                            background: active ? "color-mix(in srgb, var(--color-primary) 16%, transparent)" : "color-mix(in srgb, var(--color-card) 70%, transparent)",
-                            borderColor: active ? "color-mix(in srgb, var(--color-primary) 35%, transparent)" : "var(--color-border)",
-                            color: active ? "var(--color-primary)" : "var(--color-muted)",
-                          }}
-                        >
-                          {filter.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {visibleCollectionMods.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center text-xs text-white/40">
-                    No hay items de este tipo.
-                  </div>
-                ) : visibleCollectionMods.map((mod: any) => (
+                {activeCollectionMods.map((mod: any) => (
                   <div
                     key={mod.itemId || mod.id || mod.projectId}
                     onClick={() => handleOpenModDetails(mod)}
@@ -283,53 +283,8 @@ export function CollectionsTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-300 border border-orange-500/20">
-                          {typeLabel(mod.projectType)}
-                        </span>
-                        {mod.loaders?.[0] && (
-                          <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                            {mod.loaders[0]}
-                          </span>
-                        )}
-                        {mod.gameVersions?.[0] && (
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-md bg-white/5 text-white/55 border border-white/[0.06]">
-                            {mod.gameVersions[0]}
-                          </span>
-                        )}
-                        {mod.side && (
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                            {mod.side}
-                          </span>
-                        )}
-                        {mod.versionId ? (
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-300 border border-green-500/20">
-                            OK
-                          </span>
-                        ) : (
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-md bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">
-                            revisar
-                          </span>
-                        )}
-                      </div>
                     </div>
-                    {isDraftCollection && onRemoveModFromDraft ? (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const itemId = mod.itemId || mod.id;
-                          await onRemoveModFromDraft(activeCollection.id, mod.projectId, itemId);
-                          setRemovedDraftItemIds((prev) => new Set(prev).add(itemId || mod.projectId));
-                          onRefreshDrafts?.();
-                        }}
-                        className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"
-                        title="Eliminar del draft"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-white/30" />
-                    )}
+                    <ChevronRight className="w-4 h-4 text-white/30" />
                   </div>
                 ))}
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Compass, Film, Award, User, Flame, Search } from "lucide-react";
+import { Compass, Film, Users, User, Flame, Search } from "lucide-react";
 
 interface BottomNavProps {
   activeTab: string;
@@ -20,7 +20,7 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
     { id: "discover",    label: "Explorar",    icon: Search  },
     { id: "collections", label: "Colecciones", icon: Compass },
     { id: "feed",        label: "Canales",     icon: Film    },
-    { id: "rankings",    label: "Ránkings",    icon: Award   },
+    { id: "rankings",    label: "Comunidad",   icon: Users   },
   ];
 
   return (

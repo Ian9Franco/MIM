@@ -16,6 +16,8 @@ interface DiscoverTabProps {
   setDiscoverLoader: (v: string) => void;
   discoverEnvironment: string;
   setDiscoverEnvironment: (v: string) => void;
+  discoverCategory: string;
+  setDiscoverCategory: (v: string) => void;
   discoverResults: ModHit[];
   discoverLoading: boolean;
   discoverPage: number;
@@ -50,6 +52,112 @@ const ENVIRONMENTS = [
   { value: "both", label: "Ambos" },
 ];
 
+const MODRINTH_MOD_CATEGORIES = [
+  { value: "adventure", label: "Aventura" },
+  { value: "cursed", label: "Cursed (Bizarro)" },
+  { value: "decoration", label: "Decoración" },
+  { value: "economy", label: "Economía" },
+  { value: "equipment", label: "Equipamiento" },
+  { value: "food", label: "Comida" },
+  { value: "game_mechanics", label: "Mecánicas" },
+  { value: "library", label: "Librerías / APIs" },
+  { value: "magic", label: "Magia" },
+  { value: "management", label: "Gestión" },
+  { value: "minigame", label: "Minijuegos" },
+  { value: "mobs", label: "Criaturas" },
+  { value: "optimization", label: "Optimización" },
+  { value: "social", label: "Social" },
+  { value: "storage", label: "Almacenamiento" },
+  { value: "technology", label: "Tecnología" },
+  { value: "transportation", label: "Transporte" },
+  { value: "utility", label: "Utilidad / QoL" },
+  { value: "world_generation", label: "Generación de Mundo" }
+];
+
+const MODRINTH_RESOURCEPACK_CATEGORIES = [
+  { value: "combat", label: "Combate" },
+  { value: "cursed", label: "Cursed" },
+  { value: "decoration", label: "Decoración" },
+  { value: "modded", label: "Soporte de Mods" },
+  { value: "realistic", label: "Realista" },
+  { value: "simplistic", label: "Simplista" },
+  { value: "themed", label: "Temático" },
+  { value: "tweaks", label: "Ajustes / Tweaks" },
+  { value: "utility", label: "Utilidad" },
+  { value: "vanilla-like", label: "Estilo Vanilla" }
+];
+
+const MODRINTH_SHADER_CATEGORIES = [
+  { value: "cartoon", label: "Cartoon" },
+  { value: "cursed", label: "Cursed" },
+  { value: "fantasy", label: "Fantasía" },
+  { value: "realistic", label: "Realista" },
+  { value: "semi-realistic", label: "Semi-realista" },
+  { value: "vanilla-like", label: "Estilo Vanilla" }
+];
+
+const CURSEFORGE_MOD_CATEGORIES = [
+  { value: "addons", label: "Addons" },
+  { value: "twilight forest", label: "Twilight Forest" },
+  { value: "adventure and rpg", label: "Aventura y RPG" },
+  { value: "api and library", label: "API y Librerías" },
+  { value: "armor, tools, and weapons", label: "Armas y Armaduras" },
+  { value: "bug fixes", label: "Corrección de Errores" },
+  { value: "cosmetic", label: "Cosmético" },
+  { value: "creativemode", label: "Modo Creativo" },
+  { value: "education", label: "Educación" },
+  { value: "food", label: "Comida" },
+  { value: "horror", label: "Terror (Horror)" },
+  { value: "magic", label: "Magia" },
+  { value: "map and information", label: "Mapa e Información" },
+  { value: "mcreator", label: "MCreator" },
+  { value: "miscellaneous", label: "Misceláneo" },
+  { value: "performance", label: "Rendimiento" },
+  { value: "redstone", label: "Redstone" },
+  { value: "server utility", label: "Utilidad de Servidor" },
+  { value: "storage", label: "Almacenamiento" },
+  { value: "technology", label: "Tecnología" },
+  { value: "twitch integration", label: "Integración de Twitch" },
+  { value: "utility & qol", label: "Utilidad y QoL" },
+  { value: "world-gen", label: "Generación de Mundo" }
+];
+
+const CURSEFORGE_DATAPACK_CATEGORIES = [
+  { value: "mod support", label: "Soporte de Mods" },
+  { value: "tech", label: "Tecnología" },
+  { value: "magic", label: "Magia" },
+  { value: "adventure", label: "Aventura" },
+  { value: "library", label: "Librería" },
+  { value: "utility", label: "Utilidad" },
+  { value: "miscellaneous", label: "Misceláneo" },
+  { value: "fantasy", label: "Fantasía" }
+];
+
+const CURSEFORGE_RESOURCEPACK_CATEGORIES = [
+  { value: "miscellaneous", label: "Misceláneo" },
+  { value: "16x", label: "16x" },
+  { value: "32x", label: "32x" },
+  { value: "photo realistic", label: "Fotorrealista" },
+  { value: "512x and higher", label: "512x o Superior" },
+  { value: "traditional", label: "Tradicional" },
+  { value: "128x", label: "128x" },
+  { value: "256x", label: "256x" },
+  { value: "font packs", label: "Fuentes" },
+  { value: "64x", label: "64x" },
+  { value: "mod support", label: "Soporte de Mods" },
+  { value: "medieval", label: "Medieval" },
+  { value: "data packs", label: "Data Packs" },
+  { value: "animated", label: "Animado" },
+  { value: "modern", label: "Moderno" },
+  { value: "steampunk", label: "Steampunk" }
+];
+
+const CURSEFORGE_SHADER_CATEGORIES = [
+  { value: "fantasy", label: "Fantasía" },
+  { value: "realistic", label: "Realista" },
+  { value: "vanilla", label: "Vanilla" }
+];
+
 /** Formatea números de descarga a K/M */
 function formatDownloads(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -63,7 +171,7 @@ function formatDownloads(n: number): string {
 export function DiscoverTab({
   discoverQuery, setDiscoverQuery, discoverType, setDiscoverType,
   discoverVersion, setDiscoverVersion, discoverLoader, setDiscoverLoader,
-  discoverEnvironment, setDiscoverEnvironment,
+  discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory,
   discoverResults, discoverLoading, discoverPage, discoverTotal,
   setDiscoverResults, setDiscoverPage, runDiscoverSearch, handleOpenModDetails,
   discoverSource, setDiscoverSource, discoverError,
@@ -72,7 +180,24 @@ export function DiscoverTab({
     setDiscoverType(val);
     setDiscoverResults([]);
     setDiscoverPage(1);
+    setDiscoverCategory("");
   };
+
+  const getCategories = () => {
+    if (discoverSource === "modrinth") {
+      if (discoverType === "mod" || discoverType === "datapack") return MODRINTH_MOD_CATEGORIES;
+      if (discoverType === "resourcepack") return MODRINTH_RESOURCEPACK_CATEGORIES;
+      if (discoverType === "shader") return MODRINTH_SHADER_CATEGORIES;
+    } else {
+      if (discoverType === "mod") return CURSEFORGE_MOD_CATEGORIES;
+      if (discoverType === "datapack") return CURSEFORGE_DATAPACK_CATEGORIES;
+      if (discoverType === "resourcepack") return CURSEFORGE_RESOURCEPACK_CATEGORIES;
+      if (discoverType === "shader") return CURSEFORGE_SHADER_CATEGORIES;
+    }
+    return [];
+  };
+
+  const activeCategories = getCategories();
 
   return (
     <motion.div
@@ -108,6 +233,7 @@ export function DiscoverTab({
             setDiscoverSource("modrinth");
             setDiscoverResults([]);
             setDiscoverPage(1);
+            setDiscoverCategory("");
           }}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
             discoverSource === "modrinth"
@@ -122,6 +248,7 @@ export function DiscoverTab({
             setDiscoverSource("curseforge");
             setDiscoverResults([]);
             setDiscoverPage(1);
+            setDiscoverCategory("");
           }}
           className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
             discoverSource === "curseforge"
@@ -177,20 +304,21 @@ export function DiscoverTab({
 
       {/* Filters */}
       <div className="grid grid-cols-2 gap-3 mb-4 shrink-0">
-        {discoverType !== "datapack" && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Versión de Minecraft</label>
-            <select
-              value={discoverVersion}
-              onChange={(e) => { setDiscoverVersion(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
-              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
-            >
-              {MC_VERSIONS.map(ver => (
-                <option key={ver} value={ver} className="bg-surface text-white">{ver}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Minecraft Version: shown for all project types */}
+        <div className="flex flex-col gap-1">
+          <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Versión de Minecraft</label>
+          <select
+            value={discoverVersion}
+            onChange={(e) => { setDiscoverVersion(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+            className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+          >
+            {MC_VERSIONS.map(ver => (
+              <option key={ver} value={ver} className="bg-surface text-white">{ver}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Mod Loader: shown only for mods */}
         {discoverType === "mod" && (
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Mod Loader</label>
@@ -205,8 +333,10 @@ export function DiscoverTab({
             </select>
           </div>
         )}
-        {discoverSource === "modrinth" && (
-          <div className={`flex flex-col gap-1 ${discoverType === "mod" ? "col-span-2" : ""}`}>
+
+        {/* Entorno: shown only for Modrinth mods */}
+        {discoverSource === "modrinth" && discoverType === "mod" && (
+          <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Entorno</label>
             <select
               value={discoverEnvironment}
@@ -215,6 +345,27 @@ export function DiscoverTab({
             >
               {ENVIRONMENTS.map(env => (
                 <option key={env.value} value={env.value} className="bg-surface text-white">{env.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Category: shown for all types */}
+        {activeCategories.length > 0 && (
+          <div className={`flex flex-col gap-1 ${
+            (discoverType === "mod" && discoverSource === "curseforge") || (discoverType === "datapack" && discoverSource === "curseforge")
+              ? "col-span-2"
+              : ""
+          }`}>
+            <label className="text-[9px] font-bold text-white/30 uppercase font-mono tracking-wider">Categoría</label>
+            <select
+              value={discoverCategory}
+              onChange={(e) => { setDiscoverCategory(e.target.value); setDiscoverResults([]); setDiscoverPage(1); }}
+              className="w-full bg-surface/90 border border-border rounded-xl py-2 px-3 text-xs text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
+            >
+              <option value="" className="bg-surface text-white">Cualquiera</option>
+              {activeCategories.map(cat => (
+                <option key={cat.value} value={cat.value} className="bg-surface text-white">{cat.label}</option>
               ))}
             </select>
           </div>

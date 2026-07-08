@@ -98,9 +98,14 @@ async function scrapeVideoDetail(videoUrl: string): Promise<{
   const detail = JSON.parse(detailOut.trim());
   const description: string = detail.description || "";
 
+  let thumbnail = detail.thumbnail || `https://i.ytimg.com/vi/${detail.id}/mqdefault.jpg`;
+  if (thumbnail.startsWith("//")) {
+    thumbnail = "https:" + thumbnail;
+  }
+
   return {
     title: detail.title,
-    thumbnail: detail.thumbnail,
+    thumbnail,
     videoUrl,
     videoId: detail.id,
     modSlugs: extractModSlugs(description),

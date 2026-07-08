@@ -119,7 +119,10 @@ export async function GET(request: Request) {
 
         const title = item.title?.runs?.[0]?.text || item.title?.accessibility?.accessibilityData?.label || "";
         const thumbs = item.thumbnail?.thumbnails || [];
-        const thumbnail = thumbs[thumbs.length - 1]?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        if (thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
+        }
         const publishedAt = item.publishedTimeText?.simpleText || item.publishedTimeText?.runs?.[0]?.text || "";
         const description = item.descriptionSnippet?.runs?.map((r: any) => r.text).join("") || "";
         
@@ -156,7 +159,10 @@ export async function GET(request: Request) {
 
         const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
         const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
-        const thumbnail = thumbs[thumbs.length - 1]?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        if (thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
+        }
         
         const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
         let publishedAt = "";
@@ -191,7 +197,10 @@ export async function GET(request: Request) {
 
         const title = item.headline?.simpleText || item.headline?.runs?.[0]?.text || "";
         const thumbs = item.thumbnail?.thumbnails || [];
-        const thumbnail = thumbs[thumbs.length - 1]?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        if (thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
+        }
         const publishedAt = item.viewsText?.simpleText || "";
 
         posts.push({
@@ -216,7 +225,10 @@ export async function GET(request: Request) {
 
         const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
         const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
-        const thumbnail = thumbs[thumbs.length - 1]?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        if (thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
+        }
         
         const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
         let publishedAt = "";
@@ -251,7 +263,10 @@ export async function GET(request: Request) {
 
         const title = item.overlayMetadata?.primaryText?.content || "";
         const thumbs = item.thumbnailViewModel?.thumbnailViewModel?.image?.sources || [];
-        const thumbnail = thumbs[thumbs.length - 1]?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        if (thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
+        }
         const publishedAt = item.overlayMetadata?.secondaryText?.content || "";
 
         posts.push({
@@ -318,6 +333,9 @@ export async function GET(request: Request) {
             const thumbs = videoAttachment.thumbnail.thumbnails;
             thumbnail = thumbs[thumbs.length - 1]?.url || thumbs[0]?.url || "";
           }
+        }
+        if (thumbnail && thumbnail.startsWith("//")) {
+          thumbnail = "https:" + thumbnail;
         }
 
         const modSlugs: string[] = [];

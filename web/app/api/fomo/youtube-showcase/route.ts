@@ -106,7 +106,10 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
 
     const title = item.title?.runs?.[0]?.text || item.title?.accessibility?.accessibilityData?.label || "";
     const thumbs = item.thumbnail?.thumbnails || [];
-    const thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    if (thumbnail.startsWith("//")) {
+      thumbnail = "https:" + thumbnail;
+    }
     
     const publishedAtRaw = item.publishedTimeText?.simpleText || item.publishedTimeText?.runs?.[0]?.text || "";
     const publishedAt = parseRelativeDate(publishedAtRaw);
@@ -138,7 +141,10 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
 
       const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
       const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
-      const thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      if (thumbnail.startsWith("//")) {
+        thumbnail = "https:" + thumbnail;
+      }
       
       const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
       let publishedAtRaw = "";

@@ -154,6 +154,10 @@ export async function GET(request: Request) {
         }
       }
 
+      if (thumbnail && thumbnail.startsWith("//")) {
+        thumbnail = "https:" + thumbnail;
+      }
+
       // Detectar slugs de plataformas en el texto
       const modSlugs: string[] = [];
       MODRINTH_REGEX.lastIndex = 0;

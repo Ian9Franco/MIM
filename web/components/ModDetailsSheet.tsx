@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useSpring, useTransform, useDragControls } from "framer-motion";
 import {
   X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck,
 } from "lucide-react";
@@ -354,6 +354,7 @@ export function ModDetailsSheet({
   const [shareComment, setShareComment] = useState("");
   const [isSharing, setIsSharing] = useState(false);
   const [dragEnabled, setDragEnabled] = useState(true);
+  const dragControls = useDragControls();
 
   // Animated tab content height
   const tabContentRef = useRef<HTMLDivElement>(null);
@@ -520,13 +521,18 @@ export function ModDetailsSheet({
               }}
               className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              drag={dragEnabled ? "y" : false}
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={{ top: 0, bottom: 0.4 }}
               onDragEnd={(_e, info) => { if (info.offset.y > 80) closeWithSound(); }}
             >
               {/* Header Banner Area */}
-              <div className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0">
+              <div 
+                className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0 cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={(e) => dragControls.start(e)}
+              >
                 {/* Banner Image or Fallback */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ backgroundColor: bannerBgColor }}>
                   {bannerUrl ? (
@@ -548,6 +554,7 @@ export function ModDetailsSheet({
                 {/* Close Button */}
                 <button
                   onClick={closeWithSound}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className="absolute right-5 top-4 z-20 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -555,7 +562,10 @@ export function ModDetailsSheet({
 
                 {/* Stack breadcrumb */}
                 {modStack.length > 1 && (
-                  <div className="relative z-10 flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06] mb-3">
+                  <div 
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="relative z-10 flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06] mb-3"
+                  >
                     <button
                       onClick={handleGoBackInStack}
                       className="p-1.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-white/70 active:scale-95 transition-all flex items-center justify-center shrink-0"
@@ -598,6 +608,7 @@ export function ModDetailsSheet({
                       {onSearchAuthor && selectedMod.author && selectedMod.author !== "Comunidad" ? (
                         <button
                           onClick={() => onSearchAuthor(selectedMod.author, selectedMod._source || "modrinth")}
+                          onPointerDown={(e) => e.stopPropagation()}
                           className="text-orange-400 hover:underline hover:text-orange-300 font-bold transition-all text-left inline-block"
                         >
                           {selectedMod.author}
@@ -610,7 +621,10 @@ export function ModDetailsSheet({
                 </div>
 
                 {/* Actions row: Share, Favorite, Follow and External Platform link */}
-                <div className="relative z-10 flex flex-col gap-1.5 mt-4">
+                <div 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="relative z-10 flex flex-col gap-1.5 mt-4"
+                >
                   {session && (
                     <div className="flex gap-2">
                       {/* Share button */}

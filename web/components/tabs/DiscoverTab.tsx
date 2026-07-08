@@ -488,11 +488,15 @@ export function DiscoverTab({
               const bannerUrl = mod.gallery?.[0]?.url || undefined;
               const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(pType);
               
+              const platformBorderClass = isCurse 
+                ? "border-orange-500/15 hover:border-orange-500/40 hover:shadow-[0_4px_20px_rgba(249,115,22,0.08)]" 
+                : "border-emerald-500/15 hover:border-emerald-500/40 hover:shadow-[0_4px_20px_rgba(16,185,129,0.08)]";
+
               return (
                 <div
                   key={mod.projectId}
                   onClick={() => handleOpenModDetails(mod)}
-                  className={`bg-surface/60 border border-border/80 flex flex-col overflow-hidden active:scale-[0.98] transition-all cursor-pointer hover:border-white/10 ${cardRoundedClass}`}
+                  className={`bg-surface/60 border flex flex-col overflow-hidden active:scale-[0.98] transition-all cursor-pointer ${cardRoundedClass} ${platformBorderClass}`}
                 >
                   {/* Banner/Header of the card */}
                   <div 
@@ -510,6 +514,17 @@ export function DiscoverTab({
                     <div className="absolute top-2 left-2.5 flex items-center gap-1 z-10">
                       <span className="text-[7.5px] font-black uppercase tracking-wider bg-black/75 text-white px-1.5 py-0.5 rounded">
                         {pType}
+                      </span>
+                    </div>
+
+                    {/* Platform Badge Tag */}
+                    <div className="absolute top-2 right-2.5 z-10">
+                      <span className={`text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm ${
+                        isCurse 
+                          ? "bg-orange-600 text-white border border-orange-500/20" 
+                          : "bg-emerald-600 text-white border border-emerald-500/20"
+                      }`}>
+                        {isCurse ? "CurseForge" : "Modrinth"}
                       </span>
                     </div>
                   </div>

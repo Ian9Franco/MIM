@@ -121,6 +121,11 @@ export function MobileFloatingPlayer() {
     setTimeout(() => {
       sendCommand("playVideo");
       sendCommand("setVolume", [volume]);
+      if (volume > 0) {
+        sendCommand("unMute");
+      } else {
+        sendCommand("mute");
+      }
       sendListening();
     }, 600);
   }, [sendCommand, sendListening, volume]);
@@ -204,6 +209,11 @@ export function MobileFloatingPlayer() {
     if (state.isOpen && state.videoId) {
       const t = setTimeout(() => {
         sendCommand("setVolume", [volume]);
+        if (volume > 0) {
+          sendCommand("unMute");
+        } else {
+          sendCommand("mute");
+        }
         sendListening();
       }, 600);
       return () => clearTimeout(t);
@@ -357,6 +367,11 @@ export function MobileFloatingPlayer() {
   const changeVolume = (newVol: number) => {
     setVolume(newVol);
     sendCommand("setVolume", [newVol]);
+    if (newVol > 0) {
+      sendCommand("unMute");
+    } else {
+      sendCommand("mute");
+    }
   };
 
   const toggleMute = () => {

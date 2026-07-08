@@ -356,29 +356,7 @@ export function ModDetailsSheet({
   const [dragEnabled, setDragEnabled] = useState(true);
   const dragControls = useDragControls();
 
-  // Animated tab content height
-  const tabContentRef = useRef<HTMLDivElement>(null);
-  const [tabContentHeight, setTabContentHeight] = useState<number | "auto">("auto");
-  const animatedHeight = useSpring(0, { stiffness: 100, damping: 22, mass: 1.2 });
-
   const descriptionBody = selectedModDetails?.body || selectedMod?.description || "";
-
-  /**
-   * Observes real rendered content height inside the tab panel.
-   * On every tab change, updates animatedHeight so the wrapper
-   * smoothly resizes rather than jumping.
-   */
-  useEffect(() => {
-    const el = tabContentRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(() => {
-      animatedHeight.set(el.scrollHeight);
-    });
-    obs.observe(el);
-    // Set immediately for initial render
-    animatedHeight.set(el.scrollHeight);
-    return () => obs.disconnect();
-  }, [modalTab, animatedHeight]);
 
   /** Play open sound and reset translation state when a new mod is opened */
   useEffect(() => {
@@ -730,12 +708,11 @@ export function ModDetailsSheet({
                   ))}
                 </div>
 
-                {/* Scrollable content — height animates smoothly via spring */}
-                <motion.div
-                  style={{ height: animatedHeight, overflow: "hidden" }}
-                  className="relative w-full"
+                {/* Scrollable content */}
+                <div 
+                  className="relative w-full overflow-y-auto max-h-[55vh] pr-1 scrollbar-none"
+                  style={{ overscrollBehaviorY: "contain" }}
                 >
-                  <div ref={tabContentRef} className="overflow-y-auto max-h-[55vh] pr-1 scrollbar-none w-full">
                     <AnimatePresence mode="popLayout">
                       {modalTab === "summary" && (
                         <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4 w-full pb-2">
@@ -958,8 +935,7 @@ export function ModDetailsSheet({
                       </motion.div>
                     )}
                     </AnimatePresence>
-                  </div>
-                </motion.div>
+                </div>
 
                 {/* Footer action buttons */}
                 <div className="flex gap-2 mt-auto pt-2 border-t border-white/[0.04] shrink-0">

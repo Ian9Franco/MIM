@@ -192,9 +192,18 @@ export function FeedTab({
                   className="relative aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/[0.05] cursor-pointer group/thumb"
                 >
                   <img
-                    src={post.thumbnail || `https://img.youtube.com/vi/${post.embeddedVideoId}/mqdefault.jpg`}
+                    src={post.thumbnail || `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg`}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="object-cover w-full h-full transition-transform duration-300 group-hover/thumb:scale-105"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (!img.src.includes("mqdefault.jpg")) {
+                        img.src = `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg`;
+                      } else {
+                        img.style.display = "none";
+                      }
+                    }}
                   />
                   <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-opacity hover:bg-black/35">
                     <div className="w-10 h-10 rounded-full bg-orange-600/90 flex items-center justify-center shadow-lg text-white border border-white/20 transition-transform active:scale-90">
@@ -205,7 +214,7 @@ export function FeedTab({
               ) : post.thumbnail ? (
                 /* Non-video post image */
                 <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/[0.05]">
-                  <img src={post.thumbnail} alt="" className="object-cover w-full h-full" />
+                  <img src={post.thumbnail} alt="" referrerPolicy="no-referrer" className="object-cover w-full h-full" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 </div>
               ) : null}
 

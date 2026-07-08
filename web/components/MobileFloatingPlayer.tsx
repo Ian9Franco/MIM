@@ -700,21 +700,19 @@ export function MobileFloatingPlayer() {
                 )}
               </button>
               
-              {/* Volume slider (Hidden in mini mode to prevent overflow) */}
-              {size !== "mini" && (
-                <input 
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    changeVolume(val);
-                  }}
-                  className="w-16 sm:w-20 h-1 rounded-lg appearance-none cursor-pointer bg-foreground/15 accent-red-500 hover:accent-red-400 outline-none transition-all"
-                  title={`Volumen: ${volume}%`}
-                />
-              )}
+              {/* Volume slider */}
+              <input 
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  changeVolume(val);
+                }}
+                className="w-12 sm:w-20 cursor-pointer accent-red-500 hover:accent-red-400 outline-none transition-all"
+                title={`Volumen: ${volume}%`}
+              />
             </div>
           </div>
         )}

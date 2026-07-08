@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, Loader2, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronRight, ExternalLink } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
 interface DiscoverTabProps {
@@ -26,8 +26,8 @@ interface DiscoverTabProps {
   setDiscoverPage: (p: number) => void;
   runDiscoverSearch: (page?: number) => void;
   handleOpenModDetails: (mod: ModHit) => void;
-  discoverSource: "modrinth" | "curseforge";
-  setDiscoverSource: (s: "modrinth" | "curseforge") => void;
+  discoverSource: "modrinth" | "curseforge" | "all";
+  setDiscoverSource: (s: "modrinth" | "curseforge" | "all") => void;
   discoverError: string;
 }
 
@@ -165,6 +165,62 @@ function formatDownloads(n: number): string {
   return String(n);
 }
 
+type FomoBannerProjectType =
+  | "mod"
+  | "shader"
+  | "textura"
+  | "resourcepack"
+  | "datapack"
+  | "modpack"
+  | "bedrock"
+  | "addon";
+
+interface BannerFallbackStyle {
+  bannerBgColor: string;
+  fallbackTexture: Record<string, string>;
+}
+
+function getBannerFallbackStyle(
+  primaryType: FomoBannerProjectType | string
+): BannerFallbackStyle {
+  let bannerBgColor = "#18181b";
+  let fallbackTexture: Record<string, string> = {};
+
+  if (primaryType === "datapack") {
+    bannerBgColor = "#022c22";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H8v-2h12V9.5h-2V7h2V5H8v-2h12V.5h-2V-2h2v2h2v2h2v-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2h2v2h-2v2.5H20zm0 0V23h20v2H20v2h12v2H20v2h12v2H20v2h12v2H20v2.5h2V42h-2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2v-2.5H20z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "shader") {
+    bannerBgColor = "#2e1065";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.392-5.351-2.352-10.051-6.102-13.799C11.332 2.453 6.136.634 0 0h100c-6.136.634-11.332 2.453-15.082 6.201C81.168 9.949 78.424 14.649 78.816 20h-57.632z' fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "textura" || primaryType === "resourcepack") {
+    bannerBgColor = "#451a03";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l20-20v20L20 40V20zM0 40l20-20v20L0 40zm0-20L20 0v20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "modpack") {
+    bannerBgColor = "#172554";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='100' viewBox='0 0 60 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 50L0 67.5V100l30-17.5V50zm0-50L0 17.5V50l30-17.5V0zm30 17.5L30 35v33.25l30-17.5V17.5zM30 67.5L0 85v33.25l30-17.5V67.5z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else if (primaryType === "bedrock" || primaryType === "addon") {
+    bannerBgColor = "#064e3b";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300cc44' fill-opacity='0.15' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  } else {
+    bannerBgColor = "#500724";
+    fallbackTexture = {
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.65V49h-2z'/%3E%3C/g%3E%3C/svg%3E")`,
+    };
+  }
+
+  return { bannerBgColor, fallbackTexture };
+}
+
 /**
  * DiscoverTab — buscador de mods/texturas/shaders/datapacks desde Modrinth API.
  */
@@ -184,7 +240,7 @@ export function DiscoverTab({
   };
 
   const getCategories = () => {
-    if (discoverSource === "modrinth") {
+    if (discoverSource === "modrinth" || discoverSource === "all") {
       if (discoverType === "mod" || discoverType === "datapack") return MODRINTH_MOD_CATEGORIES;
       if (discoverType === "resourcepack") return MODRINTH_RESOURCEPACK_CATEGORIES;
       if (discoverType === "shader") return MODRINTH_SHADER_CATEGORIES;
@@ -220,7 +276,9 @@ export function DiscoverTab({
           Explorar
         </p>
         <h2 className="text-xs font-semibold text-white/90 mt-1">
-          {discoverSource === "curseforge"
+          {discoverSource === "all"
+            ? "Explorá y buscá mods, texturas y shaders en Modrinth y CurseForge simultáneamente."
+            : discoverSource === "curseforge"
             ? "Explorá y buscá mods, texturas y shaders de CurseForge."
             : "Explorá y buscá mods, texturas y shaders de Modrinth."}
         </h2>
@@ -228,6 +286,21 @@ export function DiscoverTab({
 
       {/* Source selector */}
       <div className="flex gap-2 mb-3 shrink-0">
+        <button
+          onClick={() => {
+            setDiscoverSource("all");
+            setDiscoverResults([]);
+            setDiscoverPage(1);
+            setDiscoverCategory("");
+          }}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            discoverSource === "all"
+              ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+              : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
+          }`}
+        >
+          Ambos
+        </button>
         <button
           onClick={() => {
             setDiscoverSource("modrinth");
@@ -399,48 +472,133 @@ export function DiscoverTab({
       {discoverLoading && discoverPage === 1 ? (
         <div className="flex-1 flex flex-col justify-center items-center">
           <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-          <span className="text-xs text-white/40 mt-3 font-mono">Buscando en {discoverSource === "curseforge" ? "CurseForge" : "Modrinth"}...</span>
+          <span className="text-xs text-white/40 mt-3 font-mono">
+            Buscando en {discoverSource === "all" ? "Ambos Catálogos" : discoverSource === "curseforge" ? "CurseForge" : "Modrinth"}...
+          </span>
         </div>
       ) : discoverResults.length > 0 ? (
-        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-none">
-          {discoverResults.map((mod) => (
-            <div
-              key={mod.projectId}
-              onClick={() => handleOpenModDetails(mod)}
-              className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border"
-            >
-              <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
-                {mod.iconUrl ? (
-                  <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
-                ) : (
-                  <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
-                <p className="text-[9px] text-white/40 mt-0.5 truncate leading-tight">
-                  {mod.description || `Creador: ${mod.author}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {mod.downloads !== undefined && (
-                  <span className="text-[9.5px] font-mono text-white/30">
-                    {formatDownloads(mod.downloads)} ↓
-                  </span>
-                )}
-                <ChevronRight className="w-3.5 h-3.5 text-white/20" />
-              </div>
-            </div>
-          ))}
+        <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3.5 w-full">
+            {discoverResults.map((mod) => {
+              const isCurse = mod._source === "curseforge";
+              const cardRoundedClass = isCurse ? "rounded-xl" : "rounded-3xl";
+              const iconRoundedClass = isCurse ? "rounded-lg" : "rounded-2xl";
+              
+              const pType = mod.projectType || "mod";
+              const bannerUrl = mod.gallery?.[0]?.url || undefined;
+              const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(pType);
+              
+              return (
+                <div
+                  key={mod.projectId}
+                  onClick={() => handleOpenModDetails(mod)}
+                  className={`bg-surface/60 border border-border/80 flex flex-col overflow-hidden active:scale-[0.98] transition-all cursor-pointer hover:border-white/10 ${cardRoundedClass}`}
+                >
+                  {/* Banner/Header of the card */}
+                  <div 
+                    className="h-12 w-full relative shrink-0 overflow-hidden" 
+                    style={bannerUrl ? {
+                      backgroundImage: `url(${bannerUrl})`,
+                      backgroundPosition: "center",
+                      backgroundSize: "cover"
+                    } : {
+                      backgroundColor: bannerBgColor,
+                      ...fallbackTexture
+                    }}
+                  >
+                    {/* Small tag/badge on the banner */}
+                    <div className="absolute top-2 left-2.5 flex items-center gap-1 z-10">
+                      <span className="text-[7.5px] font-black uppercase tracking-wider bg-black/75 text-white px-1.5 py-0.5 rounded">
+                        {pType}
+                      </span>
+                    </div>
+                  </div>
 
-          {discoverResults.length < discoverTotal && (
-            <button
-              onClick={() => runDiscoverSearch(discoverPage + 1)}
-              disabled={discoverLoading}
-              className="w-full bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-xl py-3 text-xs font-semibold text-white/70 active:scale-95 transition-all flex items-center justify-center gap-2 mt-4"
-            >
-              {discoverLoading ? <Loader2 className="w-4 h-4 animate-spin text-amber-500" /> : "Cargar más"}
-            </button>
+                  {/* Body Content */}
+                  <div className="p-3 pt-6 relative flex-grow flex flex-col justify-between">
+                    {/* Floating Icon Container */}
+                    <div className={`absolute -top-6 left-3 w-10 h-10 bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shadow-md ${iconRoundedClass}`}>
+                      {mod.iconUrl ? (
+                        <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                      ) : (
+                        <span className="text-white/40 text-[10px] font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                      )}
+                    </div>
+
+                    <div className="flex-grow min-w-0 mt-1">
+                      <h4 className="text-[11px] font-bold text-white leading-tight line-clamp-2 pr-1">{mod.title}</h4>
+                      <p className="text-[9px] text-white/40 mt-1 truncate">
+                        por <span className="text-white/60 font-semibold">{mod.author || "Comunidad"}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-white/[0.04] pt-2 mt-2.5">
+                      {mod.downloads !== undefined ? (
+                        <span className="text-[9px] font-mono text-white/30 font-semibold">
+                          {formatDownloads(mod.downloads)} ↓
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={mod.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all flex items-center justify-center"
+                          title={`Abrir en ${isCurse ? "CurseForge" : "Modrinth"}`}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <span className="text-[9px] font-bold text-orange-400/90 flex items-center gap-0.5">
+                          Ver <ChevronRight className="w-2.5 h-2.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {discoverTotal > 0 && (
+            <div className="flex items-center justify-between border-t border-white/[0.06] pt-4 mt-2 mb-6 px-1 shrink-0">
+              <button
+                onClick={() => {
+                  if (discoverPage > 1) {
+                    runDiscoverSearch(discoverPage - 1);
+                  }
+                }}
+                disabled={discoverPage <= 1 || discoverLoading}
+                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
+              >
+                &larr; Anterior
+              </button>
+
+              <div className="flex flex-col items-center">
+                <span className="text-[11px] font-bold text-white/90">
+                  Página {discoverPage} de {Math.max(1, Math.ceil(discoverTotal / 10))}
+                </span>
+                <span className="text-[9px] text-white/40 font-semibold font-mono mt-0.5">
+                  {discoverTotal} resultados
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  const totalPages = Math.ceil(discoverTotal / 10);
+                  if (discoverPage < totalPages) {
+                    runDiscoverSearch(discoverPage + 1);
+                  }
+                }}
+                disabled={discoverPage >= Math.ceil(discoverTotal / 10) || discoverLoading}
+                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
+              >
+                Siguiente &rarr;
+              </button>
+            </div>
           )}
         </div>
       ) : (

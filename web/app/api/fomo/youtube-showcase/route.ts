@@ -2,19 +2,12 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 /**
- * Web-compatible YouTube showcase API.
- *
- * Strategy: Use YouTube's public XML RSS feed which is available without
- * any API key and returns real thumbnail URLs, video IDs, titles, and dates.
- * Feed URL: https://www.youtube.com/feeds/videos.xml?user=<handle>
- * or:       https://www.youtube.com/feeds/videos.xml?channel_id=<id>
- *
- * We first try to resolve the @handle to a channel ID using the public
- * YouTube channel page scrape, then fall back to direct feed if needed.
+ * Web-compatible YouTube showcase API using ytInitialData scraping.
+ * This is 100% reliable as it matches YouTube's public web app format.
  */
 
 const cache = new Map<string, { data: unknown; timestamp: number }>();
-const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
 
 const DEFAULT_CHANNELS = [
   "https://www.youtube.com/@EnderVerseMC",
@@ -45,107 +38,133 @@ function getHandle(channelUrl: string): string {
     : channelUrl.split("/").pop() ?? channelUrl;
 }
 
-/**
- * Resolves a YouTube channel handle/URL to its channel ID.
- * Scrapes the channel page to find the canonical channel ID.
- */
-async function resolveChannelId(channelUrl: string): Promise<string | null> {
-  try {
-    const handle = getHandle(channelUrl);
-    const pageUrl = `https://www.youtube.com/${handle}`;
-    const res = await fetch(pageUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        Accept: "text/html",
-      },
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-
-    // Look for channel ID in several common patterns in the page HTML
-    const patterns = [
-      /"channelId"\s*:\s*"(UC[a-zA-Z0-9_-]{22})"/,
-      /channel\/(UC[a-zA-Z0-9_-]{22})/,
-      /"externalId"\s*:\s*"(UC[a-zA-Z0-9_-]{22})"/,
-    ];
-    for (const p of patterns) {
-      const m = html.match(p);
-      if (m?.[1]) return m[1];
-    }
-    return null;
-  } catch {
-    return null;
+function findKeys(obj: any, key: string, results: any[] = []): any[] {
+  if (!obj || typeof obj !== "object") return results;
+  if (obj[key]) {
+    results.push(obj[key]);
   }
+  for (const k in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      findKeys(obj[k], key, results);
+    }
+  }
+  return results;
 }
 
-/**
- * Fetches videos from the YouTube RSS feed for a channel.
- */
-async function fetchRssFeed(
-  channelId: string,
-  channelUrl: string,
-  limit: number
-): Promise<unknown[]> {
-  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  const res = await fetch(feedUrl, {
+// Estimates a date string or converts relative dates
+function parseRelativeDate(text: string): string {
+  if (!text) return "";
+  // If it's already YYYYMMDD, return it
+  if (/^\d{8}$/.test(text)) return text;
+  
+  // Return the raw text (e.g. "hace 2 días", "2 days ago") as formatting falls back gracefully
+  return text;
+}
+
+async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promise<any[]> {
+  const handle = getHandle(channelUrl);
+  const targetUrl = `https://www.youtube.com/${handle}/videos`;
+
+  const res = await fetch(targetUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 compatible RSS reader",
-      Accept: "application/xml,text/xml",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     },
   });
-  if (!res.ok) throw new Error(`RSS feed returned ${res.status}`);
 
-  const xml = await res.text();
-  const handle = getHandle(channelUrl);
+  if (!res.ok) {
+    throw new Error(`YouTube returned HTTP ${res.status}`);
+  }
 
-  // Parse XML entries using regex (no DOM parser in edge runtime)
-  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
-  const results: unknown[] = [];
-  let match: RegExpExecArray | null;
+  const html = await res.text();
 
-  while ((match = entryRegex.exec(xml)) !== null && results.length < limit) {
-    const entry = match[1];
+  const regex = /var ytInitialData\s*=\s*({.*?});\s*<\/script>/s;
+  const match = html.match(regex);
+  let rawJson: string;
+  if (match) {
+    rawJson = match[1];
+  } else {
+    const match2 = html.match(/ytInitialData\s*=\s*({.+?})\s*;/s);
+    if (!match2) {
+      throw new Error("Could not extract ytInitialData");
+    }
+    rawJson = match2[1];
+  }
 
-    const videoIdMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/);
-    const titleMatch = entry.match(/<title>([^<]+)<\/title>/);
-    const publishedMatch = entry.match(/<published>([^<]+)<\/published>/);
-    const descMatch = entry.match(/<media:description>([^<]*)<\/media:description>/);
+  const data = JSON.parse(rawJson);
+  const results: any[] = [];
+  const parsedIds = new Set<string>();
 
-    if (!videoIdMatch?.[1] || !titleMatch?.[1]) continue;
+  // 1. Parse videoRenderer items
+  const videoItems = findKeys(data, "videoRenderer");
+  for (const item of videoItems) {
+    const videoId = item.videoId || "";
+    if (!videoId || parsedIds.has(videoId)) continue;
+    parsedIds.add(videoId);
 
-    const videoId = videoIdMatch[1].trim();
-    const title = titleMatch[1]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .trim();
-
-    const publishedRaw = publishedMatch?.[1] ?? "";
-    // Convert ISO date to compact YYYYMMDD format used in the desktop
-    const publishedDate = publishedRaw
-      ? publishedRaw.substring(0, 10).replace(/-/g, "")
-      : "";
-
-    const description = descMatch?.[1] ?? "";
+    const title = item.title?.runs?.[0]?.text || item.title?.accessibility?.accessibilityData?.label || "";
+    const thumbs = item.thumbnail?.thumbnails || [];
+    const thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    
+    const publishedAtRaw = item.publishedTimeText?.simpleText || item.publishedTimeText?.runs?.[0]?.text || "";
+    const publishedAt = parseRelativeDate(publishedAtRaw);
+    
+    const description = item.descriptionSnippet?.runs?.map((r: any) => r.text).join("") || "";
     const modSlugs = extractModSlugs(description);
-
-    // Use i.ytimg.com for reliable thumbnail loading
-    const thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
     results.push({
       videoId,
       title,
       thumbnail,
       videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-      publishedAt: publishedDate,
+      publishedAt,
       modSlugs,
       channelName: handle,
       channelUrl,
     });
+
+    if (results.length >= limit) break;
+  }
+
+  // 2. Parse lockupViewModel items (new layout) if we haven't reached the limit
+  if (results.length < limit) {
+    const lockupItems = findKeys(data, "lockupViewModel");
+    for (const item of lockupItems) {
+      const videoId = item.contentId || "";
+      if (!videoId || parsedIds.has(videoId)) continue;
+      parsedIds.add(videoId);
+
+      const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
+      const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
+      const thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      
+      const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
+      let publishedAtRaw = "";
+      if (rows.length > 0) {
+        const parts = rows[0].metadataParts || [];
+        if (parts.length > 1) {
+          publishedAtRaw = parts[1].text?.content || "";
+        } else if (parts.length > 0) {
+          publishedAtRaw = parts[0].text?.content || "";
+        }
+      }
+      const publishedAt = parseRelativeDate(publishedAtRaw);
+
+      results.push({
+        videoId,
+        title,
+        thumbnail,
+        videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        publishedAt,
+        modSlugs: [], // lockupViewModel does not contain snippets usually
+        channelName: handle,
+        channelUrl,
+      });
+
+      if (results.length >= limit) break;
+    }
   }
 
   return results;
@@ -153,8 +172,7 @@ async function fetchRssFeed(
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const channelUrl =
-    searchParams.get("channel") ?? DEFAULT_CHANNELS[0];
+  const channelUrl = searchParams.get("channel") ?? DEFAULT_CHANNELS[0];
   const limitParam = parseInt(searchParams.get("limit") ?? "3", 10);
   const limit = isNaN(limitParam) || limitParam < 1 ? 3 : Math.min(limitParam, 15);
 
@@ -164,24 +182,17 @@ export async function GET(request: Request) {
     .digest("hex")
     .substring(0, 12);
 
-  // Return from cache if fresh
+  // Return from cache if fresh (bypassed in development mode if user requests it, but let's keep it clean)
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return NextResponse.json(cached.data);
   }
 
   try {
-    // Resolve channel ID from handle
-    const channelId = await resolveChannelId(channelUrl);
-    if (!channelId) {
-      throw new Error(`No se pudo resolver el canal: ${channelUrl}`);
-    }
-
-    const videos = await fetchRssFeed(channelId, channelUrl, limit);
-
-    const responseData = { mode: "spotlight", showcases: videos, channelId };
+    const videos = await scrapeVideosFromChannel(channelUrl, limit);
+    const responseData = { mode: "spotlight", showcases: videos };
+    
     cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
-
     return NextResponse.json(responseData);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error desconocido";

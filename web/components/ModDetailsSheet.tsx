@@ -8,6 +8,7 @@ import {
 import type { ModHit } from "./SpotlightMarquees";
 import { playFomoSound } from "../lib/sounds";
 import { supabase } from "../lib/supabaseClient";
+import { markdownToHtml, formatCurseForgeHtml } from "../lib/markdown";
 
 interface ModDetailsSheetProps {
   selectedMod: ModHit | null;
@@ -16,12 +17,14 @@ interface ModDetailsSheetProps {
   loadingDetails: boolean;
   modStack: any[];
   activeStackIndex: number;
-  modalTab: "summary" | "desc" | "versions" | "deps";
-  setModalTab: (t: "summary" | "desc" | "versions" | "deps") => void;
+  modalTab: "summary" | "gallery" | "desc" | "versions" | "deps";
+  setModalTab: (t: "summary" | "gallery" | "desc" | "versions" | "deps") => void;
   handleCloseModDetails: () => void;
   handleGoBackInStack: () => void;
   handleSwitchStackIndex: (i: number) => void;
   handleOpenModDetails: (mod: ModHit, isDep?: boolean) => void;
+  onSearchAuthor?: (name: string, platform: string) => void;
+  onSearchMod?: (title: string) => void;
   /* Draft */
   userDrafts: any[];
   session: any;
@@ -103,46 +106,22 @@ function richDescriptionHtml(body: string) {
   return html;
 }
 
-function renderBodyText(body: string) {
+function renderBodyText(body: string, source = "modrinth") {
   if (!body) return <p className="text-xs text-white/40 italic">Sin descripción detallada disponible.</p>;
 
-  // Detect and isolate raw markdown images
-  const parts: React.ReactNode[] = [];
-  const lines = body.split("\n");
-  let currentTextParagraph: string[] = [];
+  let formattedHtml = "";
+  if (source === "curseforge") {
+    formattedHtml = formatCurseForgeHtml(body);
+  } else {
+    formattedHtml = markdownToHtml(body);
+  }
 
-  const flushText = (keyIndex: number) => {
-    if (currentTextParagraph.length > 0) {
-      parts.push(
-        <p key={`txt-${keyIndex}`} className="text-[11.5px] text-white/70 leading-relaxed mb-3 whitespace-pre-wrap">
-          {currentTextParagraph.join("\n")}
-        </p>
-      );
-      currentTextParagraph = [];
-    }
-  };
-
-  lines.forEach((line, idx) => {
-    const trimmed = line.trim();
-    // Image Markdown matcher: ![alt](url)
-    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (imgMatch) {
-      flushText(idx);
-      const url = safeUrl(imgMatch[2]);
-      if (url) {
-        parts.push(
-          <div key={`img-${idx}`} className="my-4 rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] aspect-video relative flex items-center justify-center">
-            <img src={url} alt={imgMatch[1] || "Imagen del mod"} className="object-contain w-full h-full max-h-[220px]" loading="lazy" />
-          </div>
-        );
-      }
-    } else {
-      currentTextParagraph.push(line);
-    }
-  });
-  flushText(lines.length);
-
-  return <div className="space-y-1">{parts}</div>;
+  return (
+    <div
+      className="mim-rich-description text-xs text-white/70 leading-relaxed space-y-2.5 break-words"
+      dangerouslySetInnerHTML={{ __html: formattedHtml }}
+    />
+  );
 }
 
 async function translateDescription(projectId: string, markdown: string): Promise<string> {
@@ -365,7 +344,7 @@ export function ModDetailsSheet({
   handleCloseModDetails, handleGoBackInStack, handleSwitchStackIndex,
   handleOpenModDetails, userDrafts, session, onOpenDraftPicker,
   userFavorites, onToggleFavorite, userShares = [], refreshUserData,
-  userFollowedAuthors = [], onToggleFollowAuthor,
+  userFollowedAuthors = [], onToggleFollowAuthor, onSearchAuthor, onSearchMod,
 }: ModDetailsSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
@@ -374,6 +353,7 @@ export function ModDetailsSheet({
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareComment, setShareComment] = useState("");
   const [isSharing, setIsSharing] = useState(false);
+  const [dragEnabled, setDragEnabled] = useState(true);
 
   // Animated tab content height
   const tabContentRef = useRef<HTMLDivElement>(null);
@@ -501,6 +481,12 @@ export function ModDetailsSheet({
   const isFollowingAuthor = !!authorName && userFollowedAuthors.some(
     a => a.author_name === authorName && a.platform === authorPlatform
   );
+  
+  const projectPlatformUrl = selectedMod
+    ? selectedMod._source === "curseforge"
+      ? `https://www.curseforge.com/projects/${selectedMod.projectId}`
+      : `https://modrinth.com/project/${selectedMod.projectId}`
+    : "#";
 
   return (
     <>
@@ -534,7 +520,7 @@ export function ModDetailsSheet({
               }}
               className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              drag="y"
+              drag={dragEnabled ? "y" : false}
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={{ top: 0, bottom: 0.4 }}
               onDragEnd={(_e, info) => { if (info.offset.y > 80) closeWithSound(); }}
@@ -607,14 +593,25 @@ export function ModDetailsSheet({
                   <div className="flex-1 min-w-0">
                     <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">Detalles del Proyecto</span>
                     <h3 className="text-sm font-bold text-white mt-0.5 pr-6 leading-tight drop-shadow-md">{selectedMod.title}</h3>
-                    <p className="text-[10px] text-white/40 mt-1">Autor: <span className="text-white/60">{selectedMod.author || "Comunidad"}</span></p>
+                    <p className="text-[10px] text-white/40 mt-1">
+                      Autor:{" "}
+                      {onSearchAuthor && selectedMod.author && selectedMod.author !== "Comunidad" ? (
+                        <button
+                          onClick={() => onSearchAuthor(selectedMod.author, selectedMod._source || "modrinth")}
+                          className="text-orange-400 hover:underline hover:text-orange-300 font-bold transition-all text-left inline-block"
+                        >
+                          {selectedMod.author}
+                        </button>
+                      ) : (
+                        <span className="text-white/60">{selectedMod.author || "Comunidad"}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
-                {/* Actions row: Share & Favorite */}
-                {session && (
-                  <div className="relative z-10 flex flex-col gap-1.5 mt-4">
-                    {/* Row 1: Share + Favorite */}
+                {/* Actions row: Share, Favorite, Follow and External Platform link */}
+                <div className="relative z-10 flex flex-col gap-1.5 mt-4">
+                  {session && (
                     <div className="flex gap-2">
                       {/* Share button */}
                       <button
@@ -645,26 +642,53 @@ export function ModDetailsSheet({
                         <span>{isFavorited ? "Guardado" : "Favorito"}</span>
                       </button>
                     </div>
+                  )}
 
-                    {/* Row 2: Follow Author */}
-                    {onToggleFollowAuthor && authorName && authorName !== "Comunidad" && (
+                  {/* Platform link & Compare button */}
+                  <div className="flex gap-2">
+                    <a
+                      href={projectPlatformUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      <span>Ver en {selectedMod?._source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
+                    </a>
+
+                    {onSearchMod && (
                       <button
-                        onClick={() => onToggleFollowAuthor(authorName, `https://modrinth.com/user/${authorName}`, undefined, authorPlatform)}
-                        className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                          isFollowingAuthor
-                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
-                            : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
-                        }`}
+                        onClick={() => {
+                          onSearchMod(selectedMod.title);
+                          closeWithSound();
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white"
                         type="button"
                       >
-                        {isFollowingAuthor
-                          ? <UserCheck className="w-3.5 h-3.5 shrink-0" />
-                          : <UserPlus className="w-3.5 h-3.5 shrink-0" />}
-                        <span>{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
+                        <Layers className="w-3.5 h-3.5 shrink-0" />
+                        <span>Comparar (Ambos)</span>
                       </button>
                     )}
                   </div>
-                )}
+
+                  {/* Follow Author (visible to logged-in users) */}
+                  {session && onToggleFollowAuthor && authorName && authorName !== "Comunidad" && (
+                    <button
+                      onClick={() => onToggleFollowAuthor(authorName, `https://modrinth.com/user/${authorName}`, undefined, authorPlatform)}
+                      className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                        isFollowingAuthor
+                          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                          : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
+                      }`}
+                      type="button"
+                    >
+                      {isFollowingAuthor
+                        ? <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                        : <UserPlus className="w-3.5 h-3.5 shrink-0" />}
+                      <span>{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Body Content Area (Tabs + Scrollable Content) */}
@@ -673,6 +697,7 @@ export function ModDetailsSheet({
                 <div className="flex gap-1 border-b border-white/[0.06] pb-1 shrink-0 overflow-x-auto scrollbar-none">
                   {[
                     { id: "summary", label: "Resumen" },
+                    ...(selectedModDetails?.gallery?.length > 0 ? [{ id: "gallery", label: "Galería" }] : []),
                     { id: "desc", label: "Descripción" },
                     { id: "versions", label: "Versiones" },
                     { id: "deps", label: "Dependencias" },
@@ -725,7 +750,7 @@ export function ModDetailsSheet({
                         {/* Description */}
                         <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
                           <p className="text-xs text-white/75 leading-relaxed">
-                            {selectedMod.description || "Este mod expande las opciones de automatización y es totalmente compatible con la versión activa."}
+                            {stripHtml(selectedMod.description || "") || "Este mod expande las opciones de automatización y es totalmente compatible con la versión activa."}
                           </p>
                         </div>
 
@@ -777,6 +802,9 @@ export function ModDetailsSheet({
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block">Galería</span>
                             <div
                               onWheel={handleGalleryWheel}
+                              onTouchStart={(e) => { e.stopPropagation(); setDragEnabled(false); }}
+                              onTouchEnd={() => setDragEnabled(true)}
+                              onTouchCancel={() => setDragEnabled(true)}
                               className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x cursor-grab active:cursor-grabbing"
                             >
                               {selectedModDetails.gallery.map((img: any, i: number) => (
@@ -790,6 +818,41 @@ export function ModDetailsSheet({
                               ))}
                             </div>
                           </div>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {modalTab === "gallery" && (
+                      <motion.div
+                        key="gallery"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.15 }}
+                        className="flex flex-col gap-3.5 w-full pb-2"
+                      >
+                        <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">
+                          Galería de Imágenes ({selectedModDetails?.gallery?.length || 0})
+                        </span>
+                        {selectedModDetails?.gallery && selectedModDetails.gallery.length > 0 ? (
+                          <div
+                            onTouchStart={(e) => { e.stopPropagation(); setDragEnabled(false); }}
+                            onTouchEnd={() => setDragEnabled(true)}
+                            onTouchCancel={() => setDragEnabled(true)}
+                            className="grid grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-none"
+                          >
+                            {selectedModDetails.gallery.map((img: any, i: number) => (
+                              <div
+                                key={i}
+                                onClick={() => setActiveImageUrl(img.url)}
+                                className="relative aspect-video rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] cursor-pointer hover:border-white/20 transition-all hover:scale-[1.02]"
+                              >
+                                <img src={img.url} alt={img.title || "Screenshot"} className="object-cover w-full h-full" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-white/40 italic font-mono">Este mod no tiene imágenes asociadas.</p>
                         )}
                       </motion.div>
                     )}
@@ -816,7 +879,7 @@ export function ModDetailsSheet({
                         {translatedBody ? (
                           <div className="mim-rich-description" dangerouslySetInnerHTML={{ __html: translatedBody }} />
                         ) : (
-                          renderBodyText(descriptionBody)
+                          renderBodyText(descriptionBody, selectedMod?._source)
                         )}
                       </motion.div>
                     )}

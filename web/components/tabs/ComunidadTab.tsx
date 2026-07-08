@@ -14,6 +14,7 @@ interface ComunidadTabProps {
   loadingRankings: boolean;
   handleOpenModDetails: (mod: ModHit) => void;
   session: any;
+  onSearchAuthor?: (name: string, platform: string) => void;
 }
 
 type ComunidadView = "list" | "profile";
@@ -23,7 +24,7 @@ type ComunidadView = "list" | "profile";
  * Permite ver el perfil público de cualquier miembro: favoritos, autores seguidos,
  * canales de showcase, drafts creados, avatar, banner y fecha de registro.
  */
-export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session }: ComunidadTabProps) {
+export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, onSearchAuthor }: ComunidadTabProps) {
   const [subTab, setSubTab] = useState<"rankings" | "miembros">("rankings");
   const [view, setView] = useState<ComunidadView>("list");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
@@ -364,7 +365,13 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                     empty="No sigue a ningún autor todavía."
                   >
                     {pubAuthors.map((a) => (
-                      <div key={a.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 flex items-center gap-3">
+                      <div
+                        key={a.id}
+                        onClick={() => onSearchAuthor && onSearchAuthor(a.author_name, a.platform || "modrinth")}
+                        className={`bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 flex items-center gap-3 ${
+                          onSearchAuthor ? "cursor-pointer hover:border-white/20 active:scale-[0.98] transition-all" : ""
+                        }`}
+                      >
                         <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                           {a.icon_url
                             ? <img src={a.icon_url} alt="" className="w-full h-full object-cover rounded-full" />
@@ -375,6 +382,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                           <p className="text-xs font-semibold text-white truncate">{a.author_name}</p>
                           <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
                         </div>
+                        {onSearchAuthor && <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0 ml-auto" />}
                       </div>
                     ))}
                   </ProfileSection>

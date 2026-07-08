@@ -100,12 +100,21 @@ function normalizeFavorite(fav: any): ModHit {
   } catch {}
   const projectId = fav.project_id || fav.mod_id || fav.id;
   const projectType = fav.project_type || meta.project_type || fav.content_type || "mod";
+  
+  let title = fav.name || fav.mod_name || projectId;
+  let author = fav.author || "Comunidad";
+  if (fav.name && fav.name.includes(" ::: ")) {
+    const parts = fav.name.split(" ::: ");
+    title = parts[0];
+    author = parts[1];
+  }
+
   return {
     projectId,
-    title: fav.name || fav.mod_name || projectId,
+    title,
     description: fav.description || meta.description || fav.summary || "",
     iconUrl: fav.icon_url,
-    author: fav.author || "Comunidad",
+    author,
     projectType,
     categories: fav.categories || meta.categories || [],
     url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
@@ -146,7 +155,7 @@ export function useHomeController() {
   const [selectedModDetails, setSelectedModDetails] = useState<any>(null);
   const [selectedModDeps, setSelectedModDeps] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [modalTab, setModalTab] = useState<"summary" | "desc" | "versions" | "deps">("summary");
+  const [modalTab, setModalTab] = useState<"summary" | "gallery" | "desc" | "versions" | "deps">("summary");
   const [modStack, setModStack] = useState<any[]>([]);
   const [activeStackIndex, setActiveStackIndex] = useState(-1);
 
@@ -160,7 +169,7 @@ export function useHomeController() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverTotal, setDiscoverTotal] = useState(0);
-  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge">("modrinth");
+  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all">("all");
   const [discoverError, setDiscoverError] = useState("");
 
   const [session, setSession] = useState<any>(null);
@@ -673,79 +682,85 @@ export function useHomeController() {
     }
   }, []);
 
-  const runDiscoverSearch = useCallback(async (pageNumber = 1) => {
+  const runDiscoverSearch = useCallback(async (pageNumber = 1, overrideQuery?: string, overrideSource?: "modrinth" | "curseforge" | "all") => {
     try {
       setDiscoverLoading(true);
       setDiscoverError("");
-      const offset = (pageNumber - 1) * 15;
       
+      const activeSource = overrideSource || discoverSource;
+      const activeQuery = overrideQuery !== undefined ? overrideQuery : discoverQuery;
+      
+      const gameVersions = discoverVersion ? [discoverVersion] : [];
+      const categories = discoverCategory ? [discoverCategory] : [];
+      const environments = discoverEnvironment && discoverEnvironment !== "any" ? [discoverEnvironment] : [];
+
+      const queryParams = new URLSearchParams({
+        projectType: discoverType,
+        loader: discoverLoader,
+        page: String(pageNumber),
+        pageSize: "10",
+        q: activeQuery,
+        gameVersions: JSON.stringify(gameVersions),
+        categories: JSON.stringify(categories),
+        environments: JSON.stringify(environments)
+      });
+
+      if (discoverCategory) {
+        queryParams.set("category", discoverCategory);
+      }
+
       let mapped: ModHit[] = [];
       let totalHits = 0;
-      
-      if (discoverSource === "curseforge") {
-        let url = `/api/curseforge/discover?projectType=${discoverType}&loader=${discoverLoader}&gameVersion=${discoverVersion}&q=${encodeURIComponent(discoverQuery)}&page=${pageNumber}&pageSize=15`;
-        if (discoverCategory) {
-          url += `&category=${encodeURIComponent(discoverCategory)}`;
+
+      if (activeSource === "all") {
+        const [mRes, cRes] = await Promise.allSettled([
+          fetch(`/api/modrinth/discover?${queryParams.toString()}`),
+          fetch(`/api/curseforge/discover?${queryParams.toString()}`)
+        ]);
+
+        let mMods: ModHit[] = [];
+        let cMods: ModHit[] = [];
+        let mTotal = 0;
+        let cTotal = 0;
+
+        if (mRes.status === "fulfilled" && mRes.value.ok) {
+          const d = await mRes.value.json();
+          mMods = (d.mods || []).map((m: any) => ({ ...m, _source: "modrinth" }));
+          mTotal = d.total || 0;
         }
-        const res = await fetch(url);
+        if (cRes.status === "fulfilled" && cRes.value.ok) {
+          const d = await cRes.value.json();
+          cMods = (d.mods || []).map((m: any) => ({ ...m, _source: "curseforge" }));
+          cTotal = d.total || 0;
+        }
+
+        // Interleave the results for a unified discovery experience
+        const maxLength = Math.max(mMods.length, cMods.length);
+        for (let i = 0; i < maxLength; i++) {
+          if (i < mMods.length) mapped.push(mMods[i]);
+          if (i < cMods.length) mapped.push(cMods[i]);
+        }
+        totalHits = mTotal + cTotal;
+      } else if (activeSource === "curseforge") {
+        const res = await fetch(`/api/curseforge/discover?${queryParams.toString()}`);
         if (!res.ok) {
-          const errText = await res.text();
-          let cleanMsg = "Error en la API de CurseForge";
-          try {
-            const parsed = JSON.parse(errText);
-            cleanMsg = parsed.error || cleanMsg;
-          } catch {
-            if (errText) cleanMsg = errText;
-          }
-          throw new Error(cleanMsg);
+          throw new Error("Error en la API de CurseForge");
         }
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        mapped = data.mods || [];
+        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "curseforge" }));
         totalHits = data.total || 0;
       } else {
-        const facetsArray = [[`project_type:${discoverType}`]];
-        if (discoverVersion) facetsArray.push([`versions:${discoverVersion}`]);
-        if (discoverType === "mod" && discoverLoader !== "any") facetsArray.push([`categories:${discoverLoader}`]);
-        if (discoverCategory) facetsArray.push([`categories:${discoverCategory}`]);
-        if (discoverType === "mod" && discoverEnvironment !== "any") {
-          if (discoverEnvironment === "client") {
-            facetsArray.push(["client_side:required", "client_side:optional"]);
-            facetsArray.push(["server_side:unsupported"]);
-          } else if (discoverEnvironment === "server") {
-            facetsArray.push(["server_side:required", "server_side:optional"]);
-            facetsArray.push(["client_side:unsupported"]);
-          } else if (discoverEnvironment === "both") {
-            facetsArray.push(["client_side:required", "client_side:optional"]);
-            facetsArray.push(["server_side:required", "server_side:optional"]);
-          }
-        }
-        const url = `https://api.modrinth.com/v2/search?facets=${encodeURIComponent(JSON.stringify(facetsArray))}&index=downloads${discoverQuery ? `&query=${encodeURIComponent(discoverQuery)}` : ""}&limit=15&offset=${offset}`;
-        const res = await fetch(url);
+        // Modrinth
+        const res = await fetch(`/api/modrinth/discover?${queryParams.toString()}`);
         if (!res.ok) {
-          throw new Error(`La API de Modrinth no respondió correctamente (HTTP ${res.status})`);
+          throw new Error("Error en la API de Modrinth");
         }
         const data = await res.json();
-        mapped = (data.hits || []).map((h: any) => ({
-          projectId: h.project_id,
-          title: h.title,
-          description: h.description,
-          iconUrl: h.icon_url,
-          author: h.author,
-          projectType: h.project_type || "mod",
-          categories: h.categories || [],
-          url: `https://modrinth.com/${h.project_type || "mod"}/${h.slug}`,
-          downloads: h.downloads,
-          _source: "modrinth",
-        }));
-        totalHits = data.total_hits || 0;
-        
-        if (mapped.length === 0 && totalHits > 0) {
-          throw new Error("El índice de búsqueda de Modrinth está caído o en mantenimiento.");
-        }
+        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "modrinth" }));
+        totalHits = data.total || 0;
       }
-      
-      setDiscoverResults((prev) => pageNumber === 1 ? mapped : [...prev, ...mapped]);
+
+      setDiscoverResults(mapped);
       setDiscoverTotal(totalHits);
       setDiscoverPage(pageNumber);
     } catch (err: any) {
@@ -758,6 +773,46 @@ export function useHomeController() {
       setDiscoverLoading(false);
     }
   }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment, discoverCategory]);
+
+  const handleSearchAuthor = useCallback((authorName: string, platform: string) => {
+    const cleanPlatform = (platform === "curseforge" || platform === "all" || platform === "modrinth") ? platform : "modrinth";
+    const authorQuery = `author:${authorName}`;
+    setDiscoverQuery(authorQuery);
+    setDiscoverSource(cleanPlatform);
+    setDiscoverCategory("");
+    setDiscoverResults([]);
+    setDiscoverPage(1);
+    setActiveTab("discover");
+    
+    // Close modal
+    setSelectedMod(null);
+    setSelectedModDetails(null);
+    setSelectedModDeps([]);
+    setModStack([]);
+    setActiveStackIndex(-1);
+
+    // Run search immediately
+    void runDiscoverSearch(1, authorQuery, cleanPlatform);
+  }, [runDiscoverSearch]);
+
+  const handleSearchMod = useCallback((title: string) => {
+    setDiscoverQuery(title);
+    setDiscoverSource("all");
+    setDiscoverCategory("");
+    setDiscoverResults([]);
+    setDiscoverPage(1);
+    setActiveTab("discover");
+
+    // Close modal
+    setSelectedMod(null);
+    setSelectedModDetails(null);
+    setSelectedModDeps([]);
+    setModStack([]);
+    setActiveStackIndex(-1);
+
+    // Run search immediately
+    void runDiscoverSearch(1, title, "all");
+  }, [runDiscoverSearch]);
 
   useEffect(() => {
     if (activeTab === "spotlight") {
@@ -784,6 +839,8 @@ export function useHomeController() {
 
     let details = null;
     let depsData: any[] = [];
+    let realAuthor: string | null = null;
+
     try {
       if (normalizedMod._source === "curseforge") {
         const res = await fetch(`/api/curseforge/project?projectId=${normalizedMod.projectId}`);
@@ -793,6 +850,9 @@ export function useHomeController() {
           depsData = data.dependencies || [];
           setSelectedModDetails(details);
           setSelectedModDeps(depsData);
+          if (details?.authors && details.authors.length > 0) {
+            realAuthor = details.authors[0].name;
+          }
         }
       } else {
         const [pRes, dRes] = await Promise.all([
@@ -802,6 +862,20 @@ export function useHomeController() {
         if (pRes.ok) {
           details = await pRes.json();
           setSelectedModDetails(details);
+          if (details?.team) {
+            try {
+              const teamRes = await fetch(`https://api.modrinth.com/v2/team/${details.team}/members`);
+              if (teamRes.ok) {
+                const members = await teamRes.json();
+                const owner = members.find((m: any) => m.role?.toLowerCase() === "owner" || m.is_owner) || members[0];
+                if (owner?.user?.username) {
+                  realAuthor = owner.user.username;
+                }
+              }
+            } catch (e) {
+              console.error("Error resolving Modrinth team members:", e);
+            }
+          }
         }
         if (dRes.ok) {
           depsData = (await dRes.json()).projects || [];
@@ -811,6 +885,10 @@ export function useHomeController() {
     } catch (err) {
       console.error("Failed to load mod detailed metadata:", err);
     } finally {
+      if (realAuthor) {
+        normalizedMod.author = realAuthor;
+        setSelectedMod({ ...normalizedMod });
+      }
       const stackItem = { mod: normalizedMod, details, deps: depsData, tab: "summary" as const };
       if (isDependency) {
         const nextStack = [...modStack.slice(0, activeStackIndex + 1), stackItem];
@@ -1062,7 +1140,7 @@ export function useHomeController() {
         : supabase.from("followed_mods").insert({
           profile_id: session.user.id,
           mod_id: mod.projectId,
-          name: mod.title,
+          name: mod.author ? `${mod.title} ::: ${mod.author}` : mod.title,
           icon_url: mod.iconUrl || null,
           platform: mod._source || "modrinth",
         });
@@ -1122,6 +1200,6 @@ export function useHomeController() {
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
-    activeDraft, setActiveDraft,
+    activeDraft, setActiveDraft, handleSearchAuthor, handleSearchMod,
   };
 }

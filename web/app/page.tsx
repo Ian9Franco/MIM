@@ -160,6 +160,7 @@ export default function Home() {
               handleOpenEditProfile={() => c.setShowEditProfile(true)}
               handleOpenModDetails={c.handleOpenModDetails}
               handleEnterDraftCollection={c.handleEnterDraftCollection}
+              onSearchAuthor={c.handleSearchAuthor}
               onCreateDraft={() => {
                 setEditingDraftId(null);
                 c.setPendingMod(null);
@@ -213,6 +214,7 @@ export default function Home() {
               onUpdateDraftItemSide={c.updateDraftItemSide}
               userFavorites={c.userFavorites}
               userFollowedAuthors={c.userFollowedAuthors}
+              onSearchAuthor={c.handleSearchAuthor}
             />
           )}
 
@@ -241,6 +243,7 @@ export default function Home() {
               loadingRankings={c.loadingRankings}
               handleOpenModDetails={c.handleOpenModDetails}
               session={c.session}
+              onSearchAuthor={c.handleSearchAuthor}
             />
           )}
 
@@ -303,6 +306,8 @@ export default function Home() {
         refreshUserData={c.refreshUserData}
         userFollowedAuthors={c.userFollowedAuthors}
         onToggleFollowAuthor={c.onToggleFollowAuthor}
+        onSearchAuthor={c.handleSearchAuthor}
+        onSearchMod={c.handleSearchMod}
       />
 
       <DraftPickerModal

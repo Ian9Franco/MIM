@@ -480,6 +480,36 @@ select:focus { border-color: var(--color-primary) !important; }
 /* Dashed/ghost borders */
 [data-theme="modern"] .border-dashed { border-color: rgba(13, 39, 80, 0.15) !important; }
 
+/* Type badge overrides for modern theme (light mode) to prevent low-contrast text */
+[data-theme="modern"] .bg-rose-900\/40 { background-color: #FEF2F2 !important; border-color: #FECACA !important; }
+[data-theme="modern"] .bg-amber-900\/40 { background-color: #FEF3C7 !important; border-color: #FDE68A !important; }
+[data-theme="modern"] .bg-emerald-900\/40 { background-color: #ECFDF5 !important; border-color: #A7F3D0 !important; }
+[data-theme="modern"] .bg-purple-900\/40 { background-color: #F5F3FF !important; border-color: #DDD6FE !important; }
+[data-theme="modern"] .bg-blue-900\/20 { background-color: #EFF6FF !important; border-color: #BFDBFE !important; }
+[data-theme="modern"] .bg-rose-900\/40,
+[data-theme="modern"] .bg-amber-900\/40,
+[data-theme="modern"] .bg-emerald-900\/40,
+[data-theme="modern"] .bg-purple-900\/40,
+[data-theme="modern"] .bg-blue-900\/20 {
+  border-width: 1px !important;
+}
+
+/* Mod details sheet and general modern theme contrast improvements */
+[data-theme="modern"] .bg-orange-500\/10 { background-color: #FFF7ED !important; }
+[data-theme="modern"] .border-orange-500\/20 { border-color: #FED7AA !important; }
+[data-theme="modern"] .text-orange-400 { color: #C2410C !important; }
+
+[data-theme="modern"] .bg-orange-500\/20 { background-color: #FFEDD5 !important; border-color: #FDBA74 !important; }
+[data-theme="modern"] .bg-red-500\/20 { background-color: #FEE2E2 !important; border-color: #FCA5A5 !important; }
+[data-theme="modern"] .text-red-400 { color: #DC2626 !important; }
+[data-theme="modern"] .bg-emerald-500\/15 { background-color: #ECFDF5 !important; border-color: #A7F3D0 !important; }
+[data-theme="modern"] .text-emerald-400 { color: #047857 !important; }
+
+[data-theme="modern"] .text-white\/40 { color: rgba(13, 39, 80, 0.6) !important; font-weight: 500; }
+[data-theme="modern"] .text-white\/50 { color: rgba(13, 39, 80, 0.7) !important; font-weight: 500; }
+[data-theme="modern"] .text-white\/60 { color: rgba(13, 39, 80, 0.75) !important; font-weight: 600; }
+[data-theme="modern"] .text-white\/80 { color: rgba(13, 39, 80, 0.85) !important; font-weight: 600; }
+
 .mask-vertical-edges {
   mask-image: linear-gradient(
     to bottom,
@@ -496,6 +526,69 @@ select:focus { border-color: var(--color-primary) !important; }
     transparent 100%
   );
 }
+
+/* Further improvements for modern theme (light mode) details sheet contrast (solid buttons) */
+[data-theme="modern"] .bg-black\/25,
+[data-theme="modern"] .bg-black\/35,
+[data-theme="modern"] .bg-black\/40,
+[data-theme="modern"] .bg-white\/5 {
+  background-color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+[data-theme="modern"] .bg-black\/25:hover,
+[data-theme="modern"] .bg-black\/35:hover,
+[data-theme="modern"] .bg-black\/40:hover,
+[data-theme="modern"] .bg-white\/5:hover {
+  background-color: #F1F5F9 !important;
+}
+
+[data-theme="modern"] .bg-white\/25 {
+  background-color: rgba(13, 39, 80, 0.25) !important;
+}
+
+[data-theme="modern"] .border-white\/10,
+[data-theme="modern"] .border-white\/15,
+[data-theme="modern"] .border-white\/\[0\.08\] {
+  border-color: rgba(13, 39, 80, 0.16) !important;
+}
+
+/* Subtitle and author link contrast inside the modal header */
+[data-theme="modern"] .relative.z-10.flex.gap-4 .text-orange-400 {
+  color: #7C3AED !important; /* purple */
+}
+[data-theme="modern"] .relative.z-10.flex.gap-4 button.text-orange-400:hover {
+  color: #5B21B6 !important;
+}
+
+/* Mod details sheet tabs contrast */
+[data-theme="modern"] .flex.gap-1.border-b.pb-1.shrink-0.overflow-x-auto button {
+  color: rgba(13, 39, 80, 0.6) !important;
+  font-weight: 600;
+}
+[data-theme="modern"] .flex.gap-1.border-b.pb-1.shrink-0.overflow-x-auto button:hover {
+  color: rgba(13, 39, 80, 0.9) !important;
+}
+[data-theme="modern"] .flex.gap-1.border-b.pb-1.shrink-0.overflow-x-auto button[class*="text-orange-400"] {
+  background-color: #F5F3FF !important;
+  color: #7C3AED !important;
+  border-color: #DDD6FE !important;
+}
+
+/* Title labels inside details (Origen, Etiquetas, Descargas) */
+[data-theme="modern"] .text-white\/30 {
+  color: rgba(13, 39, 80, 0.5) !important;
+  font-weight: 600;
+}
+
+/* Description text inside details sheet */
+[data-theme="modern"] .mim-rich-description .mim-translation-original {
+  color: rgba(13, 39, 80, 0.8) !important;
+}
+
+/* Bottom draft button */
+[data-theme="modern"] .bg-primary\/5 { background-color: #F5F3FF !important; }
+[data-theme="modern"] .border-primary\/20 { border-color: #DDD6FE !important; }
 
 /* ── Keyframes ──────────────────────────────────────────────────────────────── */
 @keyframes fadeIn {

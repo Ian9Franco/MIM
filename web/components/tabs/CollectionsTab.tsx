@@ -29,6 +29,7 @@ interface CollectionsTabProps {
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
   userFavorites?: any[];
   userFollowedAuthors?: any[];
+  onSearchAuthor?: (name: string, platform: string) => void;
 }
 
 /**
@@ -43,6 +44,7 @@ export function CollectionsTab({
   onEditDraft, onCreateDraft, onUpdateDraftMetadata, onRecategorizeDraftItem, onUpdateDraftItemSide,
   userFavorites = [],
   userFollowedAuthors = [],
+  onSearchAuthor,
 }: CollectionsTabProps) {
   const isDraftCollection = activeCollection?.source === "draft";
 
@@ -145,15 +147,22 @@ export function CollectionsTab({
                     {userFavorites.map((fav: any) => {
                       const projectId = fav.mod_id || fav.project_id || fav.id;
                       const projectType = fav.project_type || "mod";
+                      let title = fav.name || "";
+                      let author = "Comunidad";
+                      if (fav.name && fav.name.includes(" ::: ")) {
+                        const parts = fav.name.split(" ::: ");
+                        title = parts[0];
+                        author = parts[1];
+                      }
                       return (
                         <div
                           key={fav.id}
                           onClick={() => handleOpenModDetails({
                             projectId,
-                            title: fav.name,
+                            title: title,
                             description: fav.description || "",
                             iconUrl: fav.icon_url,
-                            author: fav.author || "Comunidad",
+                            author: author,
                             projectType,
                             categories: fav.categories || [],
                             url: fav.url || `https://modrinth.com/${projectType}/${projectId}`,
@@ -165,12 +174,12 @@ export function CollectionsTab({
                             {fav.icon_url ? (
                               <img src={fav.icon_url} alt="" className="object-cover w-full h-full" />
                             ) : (
-                              <span className="text-white/40 text-xs font-bold uppercase">{fav.name.substring(0, 2)}</span>
+                              <span className="text-white/40 text-xs font-bold uppercase">{title.substring(0, 2)}</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-bold text-white truncate">{fav.name}</h4>
-                            <p className="text-[9px] text-white/35 mt-0.5 capitalize">{fav.platform}</p>
+                            <h4 className="text-xs font-bold text-white truncate">{title}</h4>
+                            <p className="text-[9px] text-white/35 mt-0.5 capitalize">{author} • {fav.platform}</p>
                           </div>
                           <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
                         </div>
@@ -194,7 +203,10 @@ export function CollectionsTab({
                     {userFollowedAuthors.map((a: any) => (
                       <div
                         key={a.id}
-                        className="bg-surface/60 border border-border rounded-2xl p-3.5 flex items-center gap-3"
+                        onClick={() => onSearchAuthor && onSearchAuthor(a.author_name, a.platform || "modrinth")}
+                        className={`bg-surface/60 border border-border rounded-2xl p-3.5 flex items-center gap-3 ${
+                          onSearchAuthor ? "cursor-pointer hover:border-white/10 active:scale-[0.98] transition-all" : ""
+                        }`}
                       >
                         <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                           {a.icon_url ? (
@@ -207,7 +219,11 @@ export function CollectionsTab({
                           <h4 className="text-xs font-bold text-white truncate">{a.author_name}</h4>
                           <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
                         </div>
-                        <UserCheck className="w-3.5 h-3.5 text-blue-400/60 shrink-0" />
+                        {onSearchAuthor ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                        ) : (
+                          <UserCheck className="w-3.5 h-3.5 text-blue-400/60 shrink-0" />
+                        )}
                       </div>
                     ))}
                   </div>

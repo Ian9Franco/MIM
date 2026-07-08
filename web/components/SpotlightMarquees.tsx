@@ -20,6 +20,12 @@ export interface ModHit {
   loaders?: string[];
   side?: string;
   versionId?: string | null;
+  gallery?: {
+    url: string;
+    thumbnailUrl?: string;
+    title?: string;
+    featured?: boolean;
+  }[];
 }
 
 interface VerticalTickerProps {

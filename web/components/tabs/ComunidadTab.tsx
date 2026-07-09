@@ -4,10 +4,11 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, ChevronRight, Trophy, Users, ArrowLeft, Heart, UserCheck,
-  Calendar, Layers, BookOpen, Tv2,
+  Calendar, Layers, BookOpen, Tv2, Share2, MessageSquare, Clock, Trash2,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { supabase } from "../../lib/supabaseClient";
+import { RankingsSkeleton, MiembrosSkeleton, PublicProfileSkeleton } from "../FomoSkeletons";
 
 interface ComunidadTabProps {
   rankings: ModHit[];
@@ -25,9 +26,13 @@ type ComunidadView = "list" | "profile";
  * canales de showcase, drafts creados, avatar, banner y fecha de registro.
  */
 export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, onSearchAuthor }: ComunidadTabProps) {
-  const [subTab, setSubTab] = useState<"rankings" | "miembros">("rankings");
+  const [subTab, setSubTab] = useState<"compartidos" | "rankings" | "miembros">("compartidos");
   const [view, setView] = useState<ComunidadView>("list");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+
+  // Shares Feed state
+  const [sharesFeed, setSharesFeed] = useState<any[]>([]);
+  const [loadingShares, setLoadingShares] = useState(false);
 
   // Profile list state
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -54,6 +59,38 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
         setProfiles(data || []);
         setLoadingProfiles(false);
       });
+  }, [subTab]);
+
+  const loadSharesFeed = async () => {
+    try {
+      setLoadingShares(true);
+      const { data, error } = await supabase
+        .from("favorite_mods")
+        .select(`
+          id,
+          mod_id,
+          platform,
+          name,
+          icon_url,
+          summary,
+          created_at,
+          profile:profiles(id, username, avatar_url, color)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setSharesFeed(data || []);
+    } catch (err) {
+      console.error("Error loading shares feed:", err);
+    } finally {
+      setLoadingShares(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subTab === "compartidos") {
+      void loadSharesFeed();
+    }
   }, [subTab]);
 
   /** Load public data for a selected profile */
@@ -125,15 +162,16 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       </div>
 
       {/* Sub-tab pills */}
-      <div className="flex gap-2 mb-4 shrink-0">
+      <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto scrollbar-none pb-1">
         {[
+          { id: "compartidos", label: "Compartidos", icon: Share2 },
           { id: "rankings", label: "Rankings", icon: Trophy },
           { id: "miembros", label: "Miembros", icon: Users },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => { setSubTab(id as any); setView("list"); setSelectedProfile(null); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border shrink-0 ${
               subTab === id
                 ? "text-white border-white/20 bg-white/10"
                 : "text-white/45 border-white/[0.06] bg-transparent hover:border-white/10"
@@ -145,14 +183,128 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
         ))}
       </div>
 
+      {/* ── Compartidos ── */}
+      {subTab === "compartidos" && view === "list" && (
+        <>
+          {loadingShares ? (
+            <SharesSkeleton />
+          ) : sharesFeed.length > 0 ? (
+            <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
+              {sharesFeed.map((item) => {
+                const meta = parseShareMeta(item.summary);
+                const projectId = item.mod_id || item.project_id || item.id;
+                const projectType = meta.projectType || "mod";
+                const modHit: ModHit = {
+                  projectId,
+                  title: item.name || "Mod",
+                  description: meta.comment || "",
+                  iconUrl: item.icon_url || null,
+                  author: "Comunidad",
+                  projectType,
+                  categories: [item.platform || "modrinth"],
+                  url: item.platform === "curseforge"
+                    ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+                    : `https://modrinth.com/${projectType}/${projectId}`,
+                  _source: item.platform || "modrinth",
+                };
+
+                const userColor = item.profile?.color || "#F05A28";
+                const userInitial = item.profile?.username?.substring(0, 2) || "U";
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-surface/85 border border-white/[0.08] rounded-3xl p-4 flex flex-col gap-3.5 hover:border-white/15 transition-all shadow-md"
+                  >
+                    {/* User Header */}
+                    <div className="flex items-center justify-between">
+                      <div
+                        onClick={() => openProfile(item.profile)}
+                        className="flex items-center gap-2.5 cursor-pointer group"
+                      >
+                        <div
+                          className="w-8 h-8 rounded-xl bg-surface border flex items-center justify-center text-xs font-bold uppercase overflow-hidden transition-all group-hover:scale-105"
+                          style={{ borderColor: userColor }}
+                        >
+                          {item.profile?.avatar_url ? (
+                            <img src={item.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span style={{ color: userColor }}>{userInitial}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-white group-hover:text-amber-400 transition-colors">
+                            @{item.profile?.username || "Usuario"}
+                          </span>
+                          <span className="text-[8px] text-white/35 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-2.5 h-2.5 animate-pulse" />
+                            {formatTimeAgo(item.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Speech Bubble Comment */}
+                    {meta.comment && (
+                      <div className="bg-white/[0.02] border-l-2 border-amber-500/50 rounded-r-xl rounded-bl-xl p-3 text-xs text-white/80 italic flex gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-amber-500/50 shrink-0 mt-0.5" />
+                        <p className="line-clamp-4 leading-relaxed whitespace-pre-wrap">{meta.comment}</p>
+                      </div>
+                    )}
+
+                    {/* Mod Item Card */}
+                    <div
+                      onClick={() => handleOpenModDetails(modHit)}
+                      className="bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0">
+                          {item.icon_url ? (
+                            <img src={item.icon_url} alt="" className="object-cover w-full h-full" />
+                          ) : (
+                            <span className="text-white/40 text-xs font-bold uppercase">{item.name?.substring(0, 2)}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
+                              item.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
+                            }`}>
+                              {item.platform === "curseforge" ? "CurseForge" : "Modrinth"}
+                            </span>
+                            {meta.modloader && (
+                              <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
+                            )}
+                            {meta.gameVersion && (
+                              <span className="text-[8px] font-mono text-white/40">{meta.gameVersion}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-white/30" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
+              <Share2 className="w-12 h-12 text-white/20 mb-4 animate-bounce" />
+              <h2 className="text-sm font-semibold text-white">Sin mods compartidos</h2>
+              <p className="text-xs text-white/40 max-w-xs mt-2">
+                Los mods compartidos por la comunidad aparecerán aquí en tiempo real con sus comentarios.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
       {/* ── Rankings ── */}
       {subTab === "rankings" && (
         <>
           {loadingRankings ? (
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--color-primary)" }} />
-              <span className="text-xs text-white/40 mt-3 font-mono">Leyendo Supabase Cloud...</span>
-            </div>
+            <RankingsSkeleton />
           ) : rankings.length > 0 ? (
             <div className="flex-1 overflow-y-auto space-y-3 pb-28 pr-1 scrollbar-none">
               {rankings.map((mod, i) => (
@@ -202,9 +354,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
               className="flex-1 overflow-y-auto pb-28 scrollbar-none space-y-3"
             >
               {loadingProfiles ? (
-                <div className="flex-1 flex justify-center items-center pt-20">
-                  <Loader2 className="w-7 h-7 animate-spin text-white/30" />
-                </div>
+                <MiembrosSkeleton />
               ) : profiles.length === 0 ? (
                 <div className="text-center p-8">
                   <Users className="w-10 h-10 text-white/20 mx-auto mb-3" />
@@ -291,9 +441,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
               </div>
 
               {loadingPub ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="w-6 h-6 animate-spin text-white/30" />
-                </div>
+                <PublicProfileSkeleton />
               ) : (
                 <div className="flex flex-col gap-5">
                   {/* Public Drafts */}
@@ -438,6 +586,81 @@ function ProfileSection({
       ) : (
         <div className="flex flex-col gap-2">{children}</div>
       )}
+    </div>
+  );
+}
+
+function parseShareMeta(summary?: string | null): { comment: string; gameVersion?: string; modloader?: string; projectType?: string } {
+  if (!summary) return { comment: "" };
+  const trimmed = summary.trim();
+
+  // 1. Try old JSON format
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return {
+        comment: parsed.comment || parsed.description || "",
+        gameVersion: parsed.gameVersion,
+        modloader: parsed.modloader,
+        projectType: parsed.projectType || "mod",
+      };
+    } catch {}
+  }
+
+  // 2. Try new HTML comment format
+  const META_RE = /<!--mim:([\s\S]*?)-->/;
+  const match = trimmed.match(META_RE);
+  const comment = trimmed.replace(META_RE, "").trim();
+
+  if (match && match[1]) {
+    try {
+      const meta = JSON.parse(match[1]);
+      return {
+        comment,
+        gameVersion: meta.gameVersion,
+        modloader: meta.modloader,
+        projectType: meta.projectType || "mod",
+      };
+    } catch {}
+  }
+
+  // Fallback: entire summary is the comment
+  return { comment: trimmed };
+}
+
+function formatTimeAgo(dateStr: string) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "ahora mismo";
+  if (diffMins < 60) return `hace ${diffMins} min`;
+  if (diffHours < 24) return `hace ${diffHours} h`;
+  if (diffDays === 1) return "ayer";
+  if (diffDays < 7) return `hace ${diffDays} días`;
+  return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+}
+
+function SharesSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-surface/60 border border-white/[0.06] rounded-3xl p-4 animate-pulse flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/10" />
+            <div className="flex-grow flex flex-col gap-1.5">
+              <div className="w-24 h-3 bg-white/10 rounded" />
+              <div className="w-16 h-2 bg-white/5 rounded" />
+            </div>
+          </div>
+          <div className="h-10 bg-white/5 rounded-2xl" />
+          <div className="h-12 bg-white/10 rounded-2xl" />
+        </div>
+      ))}
     </div>
   );
 }

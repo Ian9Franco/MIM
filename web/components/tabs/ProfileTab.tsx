@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck,
+  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck, Share2, Trash2, MessageSquare,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
@@ -22,6 +22,7 @@ interface ProfileTabProps {
   loadingUserData: boolean;
   userDrafts: any[];
   userFavorites: any[];
+  userShares?: any[];
   userFollowedAuthors?: any[];
   handleAuth: (e: React.FormEvent) => void;
   handleLogout: () => void;
@@ -31,6 +32,7 @@ interface ProfileTabProps {
   onCreateDraft: () => void;
   onEditDraft?: (draft: any) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
+  onRemoveShare?: (projectId: string) => Promise<void>;
 }
 
 /**
@@ -40,9 +42,9 @@ interface ProfileTabProps {
 export function ProfileTab({
   session, profile, email, setEmail, password, setPassword, username,
   setUsername, isRegistering, setIsRegistering, authLoading, loadingUserData,
-  userDrafts, userFavorites, userFollowedAuthors = [], handleAuth, handleLogout, handleOpenEditProfile,
+  userDrafts, userFavorites, userShares = [], userFollowedAuthors = [], handleAuth, handleLogout, handleOpenEditProfile,
   handleOpenModDetails, handleEnterDraftCollection, onCreateDraft, onEditDraft,
-  onSearchAuthor,
+  onSearchAuthor, onRemoveShare,
 }: ProfileTabProps) {
   const readFavoriteMeta = (fav: any) => {
     try {
@@ -353,6 +355,109 @@ export function ProfileTab({
               </div>
             )}
           </div>
+
+          {/* Shared Mods Section */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
+              <Share2 className="w-4 h-4 text-amber-500" /> Mis Recomendados (Compartidos)
+            </h3>
+            {loadingUserData ? (
+              <div className="py-6 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+              </div>
+            ) : userShares.length > 0 ? (
+              <div className="grid gap-3">
+                {userShares.map(share => {
+                  const meta = parseShareMeta(share.summary);
+                  const projectId = share.mod_id || share.project_id || share.id;
+                  const projectType = meta.projectType || "mod";
+                  return (
+                    <div
+                      key={share.id}
+                      className="bg-surface/80 border border-border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          onClick={() => handleOpenModDetails({
+                            projectId,
+                            title: share.name,
+                            description: meta.comment || "",
+                            iconUrl: share.icon_url,
+                            author: "Comunidad",
+                            projectType,
+                            categories: [share.platform || "modrinth"],
+                            url: share.platform === "curseforge"
+                              ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+                              : `https://modrinth.com/${projectType}/${projectId}`,
+                            _source: share.platform || "modrinth",
+                          })}
+                          className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer active:scale-95 transition-all"
+                        >
+                          {share.icon_url ? (
+                            <img src={share.icon_url} alt="" className="object-cover w-full h-full" />
+                          ) : (
+                            <span className="text-white/40 text-xs font-bold uppercase">{share.name?.substring(0, 2)}</span>
+                          )}
+                        </div>
+                        <div
+                          onClick={() => handleOpenModDetails({
+                            projectId,
+                            title: share.name,
+                            description: meta.comment || "",
+                            iconUrl: share.icon_url,
+                            author: "Comunidad",
+                            projectType,
+                            categories: [share.platform || "modrinth"],
+                            url: share.platform === "curseforge"
+                              ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+                              : `https://modrinth.com/${projectType}/${projectId}`,
+                            _source: share.platform || "modrinth",
+                          })}
+                          className="flex-1 min-w-0 cursor-pointer"
+                        >
+                          <h4 className="text-xs font-bold text-white truncate">{share.name}</h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
+                              share.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
+                            }`}>
+                              {share.platform === "curseforge" ? "CurseForge" : "Modrinth"}
+                            </span>
+                            {meta.modloader && (
+                              <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
+                            )}
+                            {meta.gameVersion && (
+                              <span className="text-[8px] font-mono text-white/40">{meta.gameVersion}</span>
+                            )}
+                          </div>
+                        </div>
+                        {onRemoveShare && (
+                          <button
+                            onClick={() => onRemoveShare(projectId)}
+                            className="p-2 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all"
+                            title="Eliminar compartido"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {meta.comment && (
+                        <div className="bg-white/[0.02] border-l border-amber-500/30 rounded-r-lg p-2.5 text-[10px] text-white/70 italic flex gap-1.5">
+                          <MessageSquare className="w-3 h-3 text-amber-500/40 shrink-0 mt-0.5" />
+                          <p className="line-clamp-2 leading-relaxed">{meta.comment}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white/[0.02] border border-dashed border-white/[0.08] rounded-2xl p-6 text-center">
+                <p className="text-xs text-white/40">No compartiste ningún mod con la comunidad todavía.</p>
+              </div>
+            )}
+          </div>
+
           {/* Autores Seguidos */}
           <div className="flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
@@ -397,4 +502,42 @@ export function ProfileTab({
       )}
     </motion.div>
   );
+}
+
+function parseShareMeta(summary?: string | null): { comment: string; gameVersion?: string; modloader?: string; projectType?: string } {
+  if (!summary) return { comment: "" };
+  const trimmed = summary.trim();
+
+  // 1. Try old JSON format
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return {
+        comment: parsed.comment || parsed.description || "",
+        gameVersion: parsed.gameVersion,
+        modloader: parsed.modloader,
+        projectType: parsed.projectType || "mod",
+      };
+    } catch {}
+  }
+
+  // 2. Try new HTML comment format
+  const META_RE = /<!--mim:([\s\S]*?)-->/;
+  const match = trimmed.match(META_RE);
+  const comment = trimmed.replace(META_RE, "").trim();
+
+  if (match && match[1]) {
+    try {
+      const meta = JSON.parse(match[1]);
+      return {
+        comment,
+        gameVersion: meta.gameVersion,
+        modloader: meta.modloader,
+        projectType: meta.projectType || "mod",
+      };
+    } catch {}
+  }
+
+  // Fallback: entire summary is the comment
+  return { comment: trimmed };
 }

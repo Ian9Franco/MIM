@@ -6,6 +6,7 @@ import { Compass, Loader2, ArrowLeft, ChevronRight, UserCheck } from "lucide-rea
 import type { ModHit } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
 import { DraftDetailView } from "../DraftDetailView";
+import { CollectionsSkeleton } from "../FomoSkeletons";
 
 interface CollectionsTabProps {
   activeCollection: CollectionItem | null;
@@ -277,10 +278,7 @@ export function CollectionsTab({
             </div>
 
             {loadingActiveMods ? (
-              <div className="flex-1 flex flex-col justify-center items-center">
-                <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-                <span className="text-xs text-white/40 mt-3 font-mono">Leyendo mods de la colección...</span>
-              </div>
+              <CollectionsSkeleton />
             ) : activeCollectionMods.length > 0 ? (
               <div className="flex-1 overflow-y-auto space-y-3 pb-24 pr-1 scrollbar-none">
                 <p className="text-[10px] text-white/40 italic px-1 mb-2">{activeCollection.description}</p>

@@ -10,6 +10,7 @@ import {
   type ModHit,
 } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
+import { SpotlightSkeleton } from "../FomoSkeletons";
 
 interface SpotlightTabProps {
   latestCollectionName: string;
@@ -80,9 +81,7 @@ export function SpotlightTab({
         </div>
 
         {loadingLatestMods ? (
-          <div className="h-40 bg-white/[0.02] rounded-2xl border border-white/[0.04] flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--color-primary)" }} />
-          </div>
+          <SpotlightSkeleton />
         ) : (
           <div className="w-full">
             {activeSpotlightPlatform === "modrinth" ? (

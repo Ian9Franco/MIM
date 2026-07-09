@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { ModHit } from "../components/SpotlightMarquees";
 import type { DraftAddResult } from "../components/DraftPickerModal";
 import { mockNewestMods, mockUpdatedMods } from "../lib/mockData";
@@ -162,7 +162,7 @@ export function useHomeController() {
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverType, setDiscoverType] = useState("mod");
   const [discoverVersion, setDiscoverVersion] = useState("1.20.1");
-  const [discoverLoader, setDiscoverLoader] = useState("fabric");
+  const [discoverLoader, setDiscoverLoader] = useState("forge");
   const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
   const [discoverCategory, setDiscoverCategory] = useState<string[]>([]);
   const [discoverSort, setDiscoverSort] = useState<string>("relevance");
@@ -170,8 +170,11 @@ export function useHomeController() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverTotal, setDiscoverTotal] = useState(0);
-  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all">("all");
+  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all">("modrinth");
   const [discoverError, setDiscoverError] = useState("");
+
+  const [isLoaded, setIsLoaded] = useState(false);
+  const initialSearchSkippedRef = useRef(false);
 
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState("");
@@ -252,11 +255,82 @@ export function useHomeController() {
         const parsed = JSON.parse(savedChannels);
         if (Array.isArray(parsed) && parsed.length) {
           setShowcaseChannels(parsed);
-          return;
+        }
+      } catch {}
+    } else {
+      setShowcaseChannels(DEFAULT_CHANNELS);
+    }
+
+    // ── Cache Loading ──
+    const cachedTab = localStorage.getItem("mim_active_tab");
+    if (cachedTab) setActiveTab(cachedTab);
+
+    const cachedQuery = localStorage.getItem("mim_discover_query");
+    if (cachedQuery !== null) setDiscoverQuery(cachedQuery);
+
+    const cachedType = localStorage.getItem("mim_discover_type");
+    if (cachedType !== null) setDiscoverType(cachedType);
+
+    const cachedVersion = localStorage.getItem("mim_discover_version");
+    if (cachedVersion !== null) setDiscoverVersion(cachedVersion);
+
+    const cachedLoader = localStorage.getItem("mim_discover_loader");
+    if (cachedLoader !== null) setDiscoverLoader(cachedLoader);
+
+    const cachedEnvironment = localStorage.getItem("mim_discover_environment");
+    if (cachedEnvironment !== null) setDiscoverEnvironment(cachedEnvironment);
+
+    const cachedCategory = localStorage.getItem("mim_discover_category");
+    if (cachedCategory !== null) {
+      try { setDiscoverCategory(JSON.parse(cachedCategory)); } catch {}
+    }
+
+    const cachedSort = localStorage.getItem("mim_discover_sort");
+    if (cachedSort !== null) setDiscoverSort(cachedSort);
+
+    const cachedSource = localStorage.getItem("mim_discover_source");
+    if (cachedSource !== null) setDiscoverSource(cachedSource as any);
+
+    const cachedPage = localStorage.getItem("mim_discover_page");
+    if (cachedPage !== null) setDiscoverPage(Number(cachedPage));
+
+    const cachedTotal = localStorage.getItem("mim_discover_total");
+    if (cachedTotal !== null) setDiscoverTotal(Number(cachedTotal));
+
+    const cachedResults = localStorage.getItem("mim_discover_results");
+    let hasResults = false;
+    if (cachedResults !== null) {
+      try {
+        const parsed = JSON.parse(cachedResults);
+        setDiscoverResults(parsed);
+        if (parsed && parsed.length > 0) {
+          hasResults = true;
         }
       } catch {}
     }
-    setShowcaseChannels(DEFAULT_CHANNELS);
+
+    const cachedCollection = localStorage.getItem("mim_active_collection");
+    if (cachedCollection !== null) {
+      try { setActiveCollection(JSON.parse(cachedCollection)); } catch {}
+    }
+
+    const cachedCollectionMods = localStorage.getItem("mim_active_collection_mods");
+    if (cachedCollectionMods !== null) {
+      try { setActiveCollectionMods(JSON.parse(cachedCollectionMods)); } catch {}
+    }
+
+    const cachedDraft = localStorage.getItem("mim_active_draft");
+    if (cachedDraft !== null) {
+      try { setActiveDraft(JSON.parse(cachedDraft)); } catch {}
+    }
+
+    if (hasResults) {
+      initialSearchSkippedRef.current = false;
+    } else {
+      initialSearchSkippedRef.current = true;
+    }
+
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -264,6 +338,55 @@ export function useHomeController() {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
     return () => data.subscription.unsubscribe();
   }, []);
+
+  // ── Cache Saving ──
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    localStorage.setItem("mim_active_tab", activeTab);
+    localStorage.setItem("mim_discover_query", discoverQuery);
+    localStorage.setItem("mim_discover_type", discoverType);
+    localStorage.setItem("mim_discover_version", discoverVersion);
+    localStorage.setItem("mim_discover_loader", discoverLoader);
+    localStorage.setItem("mim_discover_environment", discoverEnvironment);
+    localStorage.setItem("mim_discover_category", JSON.stringify(discoverCategory));
+    localStorage.setItem("mim_discover_sort", discoverSort);
+    localStorage.setItem("mim_discover_source", discoverSource);
+    localStorage.setItem("mim_discover_page", String(discoverPage));
+    localStorage.setItem("mim_discover_results", JSON.stringify(discoverResults));
+    localStorage.setItem("mim_discover_total", String(discoverTotal));
+
+    if (activeCollection) {
+      localStorage.setItem("mim_active_collection", JSON.stringify(activeCollection));
+    } else {
+      localStorage.removeItem("mim_active_collection");
+    }
+
+    localStorage.setItem("mim_active_collection_mods", JSON.stringify(activeCollectionMods));
+
+    if (activeDraft) {
+      localStorage.setItem("mim_active_draft", JSON.stringify(activeDraft));
+    } else {
+      localStorage.removeItem("mim_active_draft");
+    }
+  }, [
+    isLoaded,
+    activeTab,
+    discoverQuery,
+    discoverType,
+    discoverVersion,
+    discoverLoader,
+    discoverEnvironment,
+    discoverCategory,
+    discoverSort,
+    discoverSource,
+    discoverPage,
+    discoverResults,
+    discoverTotal,
+    activeCollection,
+    activeCollectionMods,
+    activeDraft
+  ]);
 
   const loadUserData = useCallback(async (userId: string) => {
     try {
@@ -813,6 +936,8 @@ export function useHomeController() {
   }, [runDiscoverSearch]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+
     if (activeTab === "spotlight") {
       void loadSpotlightData();
       void loadCollections();
@@ -823,9 +948,24 @@ export function useHomeController() {
     } else if (activeTab === "feed") {
       void loadYoutubeData(currentChannel, youtubeFeedType);
     } else if (activeTab === "discover") {
-      void runDiscoverSearch(1);
+      if (!initialSearchSkippedRef.current) {
+        initialSearchSkippedRef.current = true;
+      } else {
+        void runDiscoverSearch(discoverPage);
+      }
     }
-  }, [activeTab, currentChannel, youtubeFeedType, loadSpotlightData, loadCollections, loadRankingsData, loadYoutubeData, runDiscoverSearch]);
+  }, [
+    isLoaded,
+    activeTab,
+    currentChannel,
+    youtubeFeedType,
+    loadSpotlightData,
+    loadCollections,
+    loadRankingsData,
+    loadYoutubeData,
+    runDiscoverSearch,
+    discoverPage
+  ]);
 
   const handleOpenModDetails = async (mod: ModHit, isDependency = false) => {
     const normalizedMod = mod.projectId ? mod : normalizeFavorite(mod);
@@ -1178,6 +1318,23 @@ export function useHomeController() {
     }
   };
 
+  const onRemoveShare = async (projectId: string) => {
+    if (!session?.user?.id) return;
+    try {
+      const { error } = await supabase
+        .from("favorite_mods")
+        .delete()
+        .eq("profile_id", session.user.id)
+        .eq("mod_id", projectId);
+      if (error) throw error;
+      
+      setUserShares(prev => prev.filter(item => (item.mod_id || item.project_id || item.id) !== projectId));
+      await loadUserData(session.user.id);
+    } catch (err: any) {
+      showAlert("Error", `Error al eliminar compartido: ${err.message}`);
+    }
+  };
+
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
@@ -1196,6 +1353,7 @@ export function useHomeController() {
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
+    onRemoveShare,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
     activeDraft, setActiveDraft, handleSearchAuthor, handleSearchMod,

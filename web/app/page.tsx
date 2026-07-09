@@ -154,9 +154,11 @@ export default function Home() {
               loadingUserData={c.loadingUserData}
               userDrafts={c.userDrafts}
               userFavorites={c.userFavorites}
+              userShares={c.userShares}
               userFollowedAuthors={c.userFollowedAuthors}
               handleAuth={c.handleAuth}
               handleLogout={c.handleLogout}
+              onRemoveShare={c.onRemoveShare}
               handleOpenEditProfile={() => c.setShowEditProfile(true)}
               handleOpenModDetails={c.handleOpenModDetails}
               handleEnterDraftCollection={c.handleEnterDraftCollection}

@@ -143,16 +143,15 @@ async function translateDescription(projectId: string, markdown: string): Promis
     const data = await res.json();
     const translated = data.translatedText || "";
     html = `
-      <section class="mim-translation-block">
-        <div class="mim-translation-original">${richDescriptionHtml(clean)}</div>
-        ${translated.trim() ? `<div class="mim-translation-result">${escapeHtml(translated.trim())}</div>` : ""}
-      </section>
+      <div class="mim-translation-result-only" style="color: var(--color-primary); font-size: 0.82rem; font-weight: 600; line-height: 1.65;">
+        ${escapeHtml(translated.trim()).replace(/\n/g, "<br />")}
+      </div>
     `;
   } catch {
     html = `
-      <section class="mim-translation-block">
-        <div class="mim-translation-original">${richDescriptionHtml(clean)}</div>
-      </section>
+      <div class="text-xs text-white/70">
+        ${escapeHtml(clean).replace(/\n/g, "<br />")}
+      </div>
     `;
   }
 
@@ -349,6 +348,8 @@ export function ModDetailsSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedSummary, setTranslatedSummary] = useState<string | null>(null);
+  const [isTranslatingSummary, setIsTranslatingSummary] = useState(false);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareComment, setShareComment] = useState("");
@@ -362,7 +363,9 @@ export function ModDetailsSheet({
   useEffect(() => {
     if (selectedMod) playFomoSound("on");
     setTranslatedBody(null);
+    setTranslatedSummary(null);
     setIsTranslating(false);
+    setIsTranslatingSummary(false);
   }, [selectedMod?.projectId]);
 
   /** Wrapper that plays close sound before dismissing the sheet */
@@ -448,6 +451,34 @@ export function ModDetailsSheet({
     }
   }, [descriptionBody, isTranslating, selectedMod, translatedBody]);
 
+  const handleTranslateSummary = useCallback(async () => {
+    const textToTranslate = selectedMod?.description || "";
+    if (!textToTranslate || isTranslatingSummary) return;
+    if (translatedSummary) {
+      setTranslatedSummary(null);
+      return;
+    }
+
+    setIsTranslatingSummary(true);
+    try {
+      const clean = stripHtml(textToTranslate).trim();
+      if (!clean) return;
+
+      const res = await fetch("/api/fomo/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTranslatedSummary(data.translatedText || "");
+    } catch (err) {
+      console.error("[Translate Summary] Failed:", err);
+    } finally {
+      setIsTranslatingSummary(false);
+    }
+  }, [selectedMod?.description, isTranslatingSummary, translatedSummary]);
+
   const bannerUrl = selectedModDetails?.gallery?.[0]?.url || undefined;
   const projectType = selectedMod?.projectType || "mod";
   const bannerType = communityTypeToBannerType(projectType);
@@ -508,8 +539,7 @@ export function ModDetailsSheet({
             >
               {/* Header Banner Area */}
               <div 
-                className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0 cursor-grab active:cursor-grabbing select-none"
-                onPointerDown={(e) => dragControls.start(e)}
+                className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0 select-none"
               >
                 {/* Banner Image or Fallback */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ backgroundColor: bannerBgColor }}>
@@ -526,14 +556,20 @@ export function ModDetailsSheet({
                   <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent" />
                 </div>
 
-                {/* Drag handle */}
-                <div className="relative z-10 w-12 h-1 rounded-full bg-white/25 mx-auto mb-3 cursor-grab" />
+                {/* Drag handle container (larger touch zone, restricts drag to this header handle) */}
+                <div 
+                  className="relative z-30 w-full pt-1.5 pb-3.5 cursor-grab active:cursor-grabbing flex justify-center touch-none"
+                  onPointerDown={(e) => dragControls.start(e)}
+                  style={{ touchAction: "none" }}
+                >
+                  <div className="w-12 h-1.5 rounded-full bg-white/25 hover:bg-white/40 transition-colors" />
+                </div>
 
                 {/* Close Button */}
                 <button
                   onClick={closeWithSound}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="absolute right-5 top-4 z-20 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
+                  className="absolute right-5 top-4 z-40 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -740,9 +776,32 @@ export function ModDetailsSheet({
 
                         {/* Description */}
                         <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-                          <p className="text-xs text-white/75 leading-relaxed">
-                            {stripHtml(selectedMod.description || "") || "Este mod expande las opciones de automatización y es totalmente compatible con la versión activa."}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-white/[0.04]">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Resumen</span>
+                            <button
+                              type="button"
+                              onClick={handleTranslateSummary}
+                              disabled={isTranslatingSummary || !selectedMod.description}
+                              className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                              style={{
+                                color: "var(--color-primary)",
+                                background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
+                                borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
+                              }}
+                            >
+                              {isTranslatingSummary ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
+                              {isTranslatingSummary ? "Traduciendo" : translatedSummary ? "Original" : "Traducir"}
+                            </button>
+                          </div>
+                          {translatedSummary ? (
+                            <p className="text-xs font-semibold leading-relaxed" style={{ color: "var(--color-primary)" }}>
+                              {translatedSummary}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-white/75 leading-relaxed">
+                              {stripHtml(selectedMod.description || "") || "Este mod expande las opciones de automatización y es totalmente compatible con la versión activa."}
+                            </p>
+                          )}
                         </div>
 
                         {/* Compatibility */}

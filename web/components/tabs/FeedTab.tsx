@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Film, ExternalLink, Loader2, X, Play, Eye, EyeOff } from "lucide-react";
+import { FeedSkeleton } from "../FomoSkeletons";
 
 interface FeedTabProps {
   followedChannels: { name: string; url: string; visible?: boolean }[];
@@ -167,10 +168,7 @@ export function FeedTab({
 
       {/* Posts list */}
       {loadingYoutube ? (
-        <div className="flex-1 flex flex-col justify-center items-center">
-          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-          <span className="text-xs text-white/40 mt-3 font-mono">Conectando con YouTube...</span>
-        </div>
+        <FeedSkeleton />
       ) : youtubePosts.length > 0 ? (
         <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
           {youtubePosts.slice(0, visibleCount).map((post) => (

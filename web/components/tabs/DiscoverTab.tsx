@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, Loader2, ChevronRight, ExternalLink, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
+import { DiscoverSkeleton } from "../FomoSkeletons";
 
 interface DiscoverTabProps {
   discoverQuery: string;
@@ -574,12 +575,9 @@ export function DiscoverTab({
       </form>
 
       {/* Results */}
-      {discoverLoading && discoverPage === 1 ? (
-        <div className="flex-1 flex flex-col justify-center items-center">
-          <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-          <span className="text-xs text-white/40 mt-3 font-mono">
-            Buscando en {discoverSource === "all" ? "Ambos Catálogos" : discoverSource === "curseforge" ? "CurseForge" : "Modrinth"}...
-          </span>
+      {discoverLoading ? (
+        <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">
+          <DiscoverSkeleton />
         </div>
       ) : discoverResults.length > 0 ? (
         <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">

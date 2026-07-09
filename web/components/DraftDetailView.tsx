@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
 import { supabase } from "../lib/supabaseClient";
+import { CollectionsSkeleton, MiembrosSkeleton } from "./FomoSkeletons";
 
 interface DraftDetailViewProps {
   draft: any;
@@ -413,9 +414,7 @@ export function DraftDetailView({
               </div>
 
               {loadingActiveMods ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
-                </div>
+                <CollectionsSkeleton />
               ) : visibleMods.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center text-xs text-white/40">
                   {typeFilter === "all" ? "Este draft no tiene ítems." : "No hay items de este tipo."}
@@ -508,9 +507,7 @@ export function DraftDetailView({
               className="flex flex-col gap-3"
             >
               {loadingMembers ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
-                </div>
+                <MiembrosSkeleton />
               ) : members.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center">
                   <Users className="w-8 h-8 text-white/15 mx-auto mb-3" />
@@ -559,9 +556,7 @@ export function DraftDetailView({
               className="flex flex-col gap-2"
             >
               {loadingActivity ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
-                </div>
+                <MiembrosSkeleton />
               ) : activity.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center">
                   <Activity className="w-8 h-8 text-white/15 mx-auto mb-3" />

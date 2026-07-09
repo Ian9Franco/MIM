@@ -51,6 +51,7 @@ const MOD_LOADERS = [
   { value: "any", label: "Cualquiera" },
 ];
 const MOD_TYPES = [
+  { value: "any", label: "Cualquiera" },
   { value: "mod", label: "Mods" },
   { value: "resourcepack", label: "Texturas" },
   { value: "shader", label: "Shaders" },

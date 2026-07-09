@@ -43,9 +43,10 @@ export async function GET(req: NextRequest) {
   };
 
   const queryText = q;
-  const facetsArray: string[][] = [
-    [`project_type:${projectType}`],
-  ];
+  const facetsArray: string[][] = [];
+  if (projectType && projectType !== "any" && projectType !== "all") {
+    facetsArray.push([`project_type:${projectType}`]);
+  }
 
   // If search query is an author query (author:username)
   if (q.startsWith("author:")) {

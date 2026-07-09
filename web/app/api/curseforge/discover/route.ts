@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
   const gameVersion = searchParams.get("gameVersion") || "";
   const category = searchParams.get("category") || "";
 
-  const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6;
   const index = (page - 1) * pageSize;
 
   const query = new URLSearchParams({
@@ -31,23 +30,28 @@ export async function GET(req: NextRequest) {
     sortOrder: "desc",
     index: index.toString(),
     pageSize: pageSize.toString(),
-    classId: classId.toString(),
   });
+
+  const isAnyType = projectType === "any" || projectType === "all";
+  if (!isAnyType) {
+    const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6;
+    query.set("classId", classId.toString());
+    
+    if (classId === 6 && loader && loader !== "any") {
+      // 1: Forge, 4: Fabric, 6: NeoForge
+      query.set("modLoaderType", (LOADER_TO_CF_ID[loader] || 1).toString());
+    }
+  }
 
   if (q) query.set("searchFilter", q);
   if (gameVersion) query.set("gameVersion", gameVersion);
 
-  if (category) {
+  if (category && !isAnyType) {
     const map = CF_CATEGORY_MAPS[projectType] || {};
     const catId = map[category.toLowerCase()];
     if (catId) {
       query.set("categoryId", catId.toString());
     }
-  }
-
-  if (classId === 6 && loader && loader !== "any") {
-    // 1: Forge, 4: Fabric, 6: NeoForge
-    query.set("modLoaderType", (LOADER_TO_CF_ID[loader] || 1).toString());
   }
 
   try {
@@ -65,6 +69,14 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
 
+    const CLASS_ID_TO_PROJECT_TYPE: Record<number, string> = {
+      6: "mod",
+      4471: "modpack",
+      12: "resourcepack",
+      6552: "shader",
+      6945: "datapack"
+    };
+
     const mods = (data.data || []).map((m: any) => ({
       projectId: m.id.toString(),
       title: m.name,
@@ -75,7 +87,7 @@ export async function GET(req: NextRequest) {
       url: m.links?.websiteUrl || "",
       categories: m.categories?.map((c: any) => c.name) || [],
       latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
-      projectType: projectType,
+      projectType: CLASS_ID_TO_PROJECT_TYPE[m.classId] || projectType,
       _source: "curseforge",
     }));
 

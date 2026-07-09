@@ -919,6 +919,10 @@ export function useHomeController() {
   const handleSearchMod = useCallback((title: string) => {
     setDiscoverQuery(title);
     setDiscoverSource("all");
+    setDiscoverType("any");
+    setDiscoverVersion("");
+    setDiscoverLoader("any");
+    setDiscoverEnvironment("any");
     setDiscoverCategory([]);
     setDiscoverResults([]);
     setDiscoverPage(1);
@@ -930,10 +934,7 @@ export function useHomeController() {
     setSelectedModDeps([]);
     setModStack([]);
     setActiveStackIndex(-1);
-
-    // Run search immediately
-    void runDiscoverSearch(1, title, "all");
-  }, [runDiscoverSearch]);
+  }, []);
 
   useEffect(() => {
     if (!isLoaded) return;

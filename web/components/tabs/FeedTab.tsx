@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Film, ExternalLink, Loader2, X, Play, Eye, EyeOff } from "lucide-react";
+import { Film, ExternalLink, Loader2, X, Play, Eye, EyeOff, Puzzle } from "lucide-react";
 import { FeedSkeleton } from "../FomoSkeletons";
+import type { ModHit } from "../SpotlightMarquees";
 
 interface FeedTabProps {
   followedChannels: { name: string; url: string; visible?: boolean }[];
@@ -20,6 +21,7 @@ interface FeedTabProps {
   youtubeFeedType: "posts" | "videos" | "shorts";
   setYoutubeFeedType: (type: "posts" | "videos" | "shorts") => void;
   handleToggleChannelVisibility: (url: string) => void;
+  handleOpenModDetails?: (mod: ModHit) => void;
 }
 
 /**
@@ -33,13 +35,20 @@ export function FeedTab({
   handleAddChannel, handleRemoveChannel,
   youtubeFeedType, setYoutubeFeedType,
   handleToggleChannelVisibility,
+  handleOpenModDetails,
 }: FeedTabProps) {
 
   const [visibleCount, setVisibleCount] = useState(6);
+  const [expandedPostMods, setExpandedPostMods] = useState<string | null>(null);
+
+  const toggleExpandMods = (postId: string) => {
+    setExpandedPostMods(prev => prev === postId ? null : postId);
+  };
 
   // Reset pagination limit when channel or feed type changes
   useEffect(() => {
     setVisibleCount(6);
+    setExpandedPostMods(null);
   }, [currentChannel, youtubeFeedType]);
 
   const handlePlayVideo = (videoId: string) => {
@@ -189,6 +198,18 @@ export function FeedTab({
                   onClick={() => handlePlayVideo(post.embeddedVideoId)}
                   className="relative aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/[0.05] cursor-pointer group/thumb"
                 >
+                  {post.modSlugs && post.modSlugs.length > 0 && (
+                    <div
+                      className="absolute top-2 left-2 z-10 px-2 py-1 bg-black/75 backdrop-blur-md text-[9px] font-bold text-white/90 rounded-lg border border-white/10 flex items-center gap-1 shadow-lg hover:bg-orange-500/10 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpandMods(post.postId);
+                      }}
+                    >
+                      <Puzzle className="w-3 h-3 text-orange-500" />
+                      <span>{post.modSlugs.length} Mods</span>
+                    </div>
+                  )}
                   <img
                     src={post.thumbnail || `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg`}
                     alt=""
@@ -215,6 +236,76 @@ export function FeedTab({
                   <img src={post.thumbnail} alt="" referrerPolicy="no-referrer" className="object-cover w-full h-full" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 </div>
               ) : null}
+
+              {post.modSlugs && post.modSlugs.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => toggleExpandMods(post.postId)}
+                    className="flex items-center gap-1.5 text-[10px] font-bold text-orange-400 hover:text-orange-300 transition-colors self-start py-0.5"
+                  >
+                    <Puzzle className="w-3.5 h-3.5" />
+                    <span>
+                      {expandedPostMods === post.postId
+                        ? "Ocultar mods detectados"
+                        : `${post.modSlugs.length} mods detectados (Tocar para ver)`}
+                    </span>
+                  </button>
+
+                  {expandedPostMods === post.postId && (
+                    <div className="grid grid-cols-2 gap-2 bg-white/[0.02] border border-white/[0.04] p-2 rounded-xl animate-fadeIn">
+                      {post.modSlugs.map((slugStr: string, idx: number) => {
+                        const parts = slugStr.split(":");
+                        const source = parts[0];
+                        const type = parts.length >= 3 ? parts[1] : "mod";
+                        const slug = parts.length >= 3 ? parts[2] : parts[1];
+                        
+                        const isCurse = source === "curseforge";
+                        const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                        
+                        return (
+                          <div
+                            key={slugStr + idx}
+                            onClick={() => {
+                              if (handleOpenModDetails) {
+                                handleOpenModDetails({
+                                  projectId: slug,
+                                  title: displayName,
+                                  description: "",
+                                  iconUrl: "",
+                                  author: "",
+                                  projectType: type,
+                                  categories: [],
+                                  url: source === "curseforge" 
+                                    ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` 
+                                    : `https://modrinth.com/${type}/${slug}`,
+                                  _source: source as "modrinth" | "curseforge"
+                                });
+                              }
+                            }}
+                            className="p-2 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/5 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                            style={{
+                              borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
+                            }}
+                          >
+                            <div 
+                              className="w-5 h-5 rounded-md flex items-center justify-center text-[7.5px] font-black uppercase shrink-0"
+                              style={{
+                                background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                                color: isCurse ? "#f87171" : "#34d399",
+                              }}
+                            >
+                              {source.substring(0, 2)}
+                            </div>
+                            <span className="text-[10px] font-bold text-white/80 truncate flex-1">
+                              {displayName}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-between items-center pt-2 border-t border-white/[0.04] mt-1">
                 <span className="text-[10px] text-white/40 font-mono">{post.publishedAt}</span>

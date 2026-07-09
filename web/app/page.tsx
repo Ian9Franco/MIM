@@ -236,6 +236,7 @@ export default function Home() {
               youtubeFeedType={c.youtubeFeedType}
               setYoutubeFeedType={c.setYoutubeFeedType}
               handleToggleChannelVisibility={c.handleToggleChannelVisibility}
+              handleOpenModDetails={c.handleOpenModDetails}
             />
           )}
 

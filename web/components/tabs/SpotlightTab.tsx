@@ -126,7 +126,7 @@ export function SpotlightTab({
             <Settings2 className="w-3.5 h-3.5" />
           </button>
         </div>
-        <HorizontalShowcaseMarquee channels={showcaseChannels} speed={0.85} reverse={false} />
+        <HorizontalShowcaseMarquee channels={showcaseChannels} speed={0.85} reverse={false} onSelectMod={handleOpenModDetails} />
       </div>
 
       {/* Vertical tickers */}

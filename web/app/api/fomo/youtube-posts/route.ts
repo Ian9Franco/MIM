@@ -32,8 +32,49 @@ function findFirstValueForKey(obj: any, key: string): any {
       if (val !== null) return val;
     }
   }
-  return null;
 }
+
+const MODRINTH_REGEX =
+  /modrinth\.com\/(mod|plugin|datapack|shader|resourcepack|modpack)\/([a-zA-Z0-9-_]+)/g;
+const CURSEFORGE_REGEX =
+  /curseforge\.com\/minecraft\/(mc-mods|texture-packs|customization|mc-addons)\/([a-zA-Z0-9-_]+)/g;
+
+function extractModSlugs(text: string): string[] {
+  if (!text) return [];
+  const found: string[] = [];
+  const mr = new RegExp(MODRINTH_REGEX.source, "g");
+  const cf = new RegExp(CURSEFORGE_REGEX.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = mr.exec(text)) !== null) found.push(`modrinth:${m[1]}:${m[2]}`);
+  while ((m = cf.exec(text)) !== null) found.push(`curseforge:${m[1]}:${m[2]}`);
+  return [...new Set(found)];
+}
+
+async function fetchVideoDescription(videoId: string): Promise<string> {
+  try {
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+      },
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+    const match = html.match(/"shortDescription":"(.*?)"/);
+    if (match) {
+      try {
+        return JSON.parse(`"${match[1]}"`);
+      } catch {
+        return match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+      }
+    }
+  } catch (e) {
+    console.error(`[fetchVideoDescription] Error for ${videoId}:`, e);
+  }
+  return "";
+}
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -362,6 +403,18 @@ export async function GET(request: Request) {
           mode: "post",
         });
       }
+    }
+
+    if (feedType === "videos" || feedType === "shorts") {
+      const targetPosts = posts.slice(0, 12);
+      await Promise.all(
+        targetPosts.map(async (post) => {
+          const desc = await fetchVideoDescription(post.postId);
+          post.description = desc || post.description || post.title;
+          post.modSlugs = extractModSlugs(desc);
+        })
+      );
+      posts.splice(0, posts.length, ...targetPosts);
     }
 
     const responseData = {

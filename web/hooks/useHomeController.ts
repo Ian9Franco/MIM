@@ -1023,8 +1023,17 @@ export function useHomeController() {
     } catch (err) {
       console.error("Failed to load mod detailed metadata:", err);
     } finally {
+      let modChanged = false;
       if (realAuthor) {
         normalizedMod.author = realAuthor;
+        modChanged = true;
+      }
+      const resolvedIcon = details?.icon_url || details?.iconUrl;
+      if (resolvedIcon && !normalizedMod.iconUrl) {
+        normalizedMod.iconUrl = resolvedIcon;
+        modChanged = true;
+      }
+      if (modChanged) {
         setSelectedMod({ ...normalizedMod });
       }
       const stackItem = { mod: normalizedMod, details, deps: depsData, tab: "summary" as const };

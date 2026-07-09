@@ -50,29 +50,39 @@ function extractModSlugs(text: string): string[] {
   return [...new Set(found)];
 }
 
-async function fetchVideoDescription(videoId: string): Promise<string> {
+async function fetchVideoDescription(videoId: string): Promise<{ description: string; html: string }> {
   try {
     const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Cookie": "CONSENT=YES+cb.20210328-17-p0.es+FX+999;",
       },
     });
-    if (!res.ok) return "";
+    if (!res.ok) return { description: "", html: "" };
     const html = await res.text();
+    let description = "";
     const match = html.match(/"shortDescription":"(.*?)"/);
     if (match) {
       try {
-        return JSON.parse(`"${match[1]}"`);
+        description = JSON.parse(`"${match[1]}"`);
       } catch {
-        return match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
       }
     }
+    if (!description) {
+      const metaMatch = html.match(/<meta\s+name="description"\s+content="(.*?)"/i) || 
+                        html.match(/<meta\s+property="og:description"\s+content="(.*?)"/i);
+      if (metaMatch) {
+        description = metaMatch[1];
+      }
+    }
+    return { description, html };
   } catch (e) {
     console.error(`[fetchVideoDescription] Error for ${videoId}:`, e);
   }
-  return "";
+  return { description: "", html: "" };
 }
 
 
@@ -112,6 +122,7 @@ export async function GET(request: Request) {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Cookie": "CONSENT=YES+cb.20210328-17-p0.es+FX+999;",
       },
     });
 
@@ -409,9 +420,9 @@ export async function GET(request: Request) {
       const targetPosts = posts.slice(0, 12);
       await Promise.all(
         targetPosts.map(async (post) => {
-          const desc = await fetchVideoDescription(post.postId);
-          post.description = desc || post.description || post.title;
-          post.modSlugs = extractModSlugs(desc);
+          const resObj = await fetchVideoDescription(post.postId);
+          post.description = resObj.description || post.description || post.title;
+          post.modSlugs = extractModSlugs(resObj.html || resObj.description);
         })
       );
       posts.splice(0, posts.length, ...targetPosts);

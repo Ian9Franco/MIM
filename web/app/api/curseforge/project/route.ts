@@ -21,16 +21,35 @@ export async function GET(req: NextRequest) {
       "x-api-key": apiKey,
     };
 
-    // 1. Fetch mod details
-    const modRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}`, { headers });
-    if (!modRes.ok) {
-      return NextResponse.json({ error: `CurseForge API Error: ${modRes.status}` }, { status: modRes.status });
-    }
-    const modData = await modRes.json();
-    const m = modData.data;
+    let m: any;
+    let numericId = projectId;
 
-    // 2. Fetch description HTML
-    const descRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}/description`, { headers });
+    if (isNaN(Number(projectId))) {
+      // It's a slug! Search by slug first to resolve to numeric ID
+      const searchRes = await fetch(`${CURSEFORGE_API}/mods/search?gameId=432&slug=${projectId}`, { headers });
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        m = searchData.data?.[0];
+        if (m) {
+          numericId = m.id.toString();
+        } else {
+          return NextResponse.json({ error: `CurseForge mod slug not found: ${projectId}` }, { status: 404 });
+        }
+      } else {
+        return NextResponse.json({ error: `CurseForge API Error searching slug: ${searchRes.status}` }, { status: searchRes.status });
+      }
+    } else {
+      // 1. Fetch mod details by numeric ID
+      const modRes = await fetch(`${CURSEFORGE_API}/mods/${projectId}`, { headers });
+      if (!modRes.ok) {
+        return NextResponse.json({ error: `CurseForge API Error: ${modRes.status}` }, { status: modRes.status });
+      }
+      const modData = await modRes.json();
+      m = modData.data;
+    }
+
+    // 2. Fetch description HTML using resolved numeric ID
+    const descRes = await fetch(`${CURSEFORGE_API}/mods/${numericId}/description`, { headers });
     const descData = await descRes.json().catch(() => ({ data: "" }));
 
     // Infer client/server side requirements based on categories
@@ -53,6 +72,8 @@ export async function GET(req: NextRequest) {
       source_url: m.links?.sourceUrl || null,
       issues_url: m.links?.issuesUrl || null,
       discord_url: null,
+      icon_url: m.logo?.thumbnailUrl || m.logo?.url || null,
+      authors: m.authors || [],
       gallery: (m.screenshots || []).map((s: any) => ({
         url: s.url,
         title: s.title || ""

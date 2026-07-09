@@ -608,8 +608,8 @@ export function ModDetailsSheet({
                 {/* Mod info */}
                 <div className="relative z-10 flex gap-4">
                   <div className="w-16 h-16 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md">
-                    {selectedMod.iconUrl ? (
-                      <img src={selectedMod.iconUrl} alt="" className="w-full h-full object-cover" />
+                    {(selectedMod.iconUrl || selectedModDetails?.icon_url || selectedModDetails?.iconUrl) ? (
+                      <img src={selectedMod.iconUrl || selectedModDetails?.icon_url || selectedModDetails?.iconUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-white/40 font-bold uppercase">{selectedMod.title.substring(0, 2)}</span>
                     )}

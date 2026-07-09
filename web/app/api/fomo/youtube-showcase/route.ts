@@ -61,29 +61,39 @@ function parseRelativeDate(text: string): string {
   return text;
 }
 
-async function fetchVideoDescription(videoId: string): Promise<string> {
+async function fetchVideoDescription(videoId: string): Promise<{ description: string; html: string }> {
   try {
     const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Cookie": "CONSENT=YES+cb.20210328-17-p0.es+FX+999;",
       },
     });
-    if (!res.ok) return "";
+    if (!res.ok) return { description: "", html: "" };
     const html = await res.text();
+    let description = "";
     const match = html.match(/"shortDescription":"(.*?)"/);
     if (match) {
       try {
-        return JSON.parse(`"${match[1]}"`);
+        description = JSON.parse(`"${match[1]}"`);
       } catch {
-        return match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
       }
     }
+    if (!description) {
+      const metaMatch = html.match(/<meta\s+name="description"\s+content="(.*?)"/i) || 
+                        html.match(/<meta\s+property="og:description"\s+content="(.*?)"/i);
+      if (metaMatch) {
+        description = metaMatch[1];
+      }
+    }
+    return { description, html };
   } catch (e) {
     console.error(`[fetchVideoDescription] Error for ${videoId}:`, e);
   }
-  return "";
+  return { description: "", html: "" };
 }
 
 async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promise<any[]> {
@@ -96,6 +106,7 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Cookie": "CONSENT=YES+cb.20210328-17-p0.es+FX+999;",
     },
   });
 
@@ -201,8 +212,8 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
   // Fetch descriptions in parallel for the final results to populate full description and modSlugs
   await Promise.all(
     results.map(async (video) => {
-      const desc = await fetchVideoDescription(video.videoId);
-      video.modSlugs = extractModSlugs(desc);
+      const resObj = await fetchVideoDescription(video.videoId);
+      video.modSlugs = extractModSlugs(resObj.html || resObj.description);
     })
   );
 

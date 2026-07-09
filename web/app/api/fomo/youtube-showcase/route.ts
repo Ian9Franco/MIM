@@ -213,6 +213,7 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
   await Promise.all(
     results.map(async (video) => {
       const resObj = await fetchVideoDescription(video.videoId);
+      video.description = resObj.description;
       video.modSlugs = extractModSlugs(resObj.html || resObj.description);
     })
   );

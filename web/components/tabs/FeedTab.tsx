@@ -6,6 +6,40 @@ import { Film, ExternalLink, Loader2, X, Play, Eye, EyeOff, Puzzle } from "lucid
 import { FeedSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
 
+function CollapsibleVideoDescription({ text }: { text: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = text.split("\n").length > 6 || text.length > 300;
+
+  if (!isLong) {
+    return (
+      <div className="text-[10px] text-white/70 leading-relaxed font-mono whitespace-pre-wrap bg-black/25 border border-white/5 p-2 rounded-lg select-text">
+        {text}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <div 
+        className={`text-[10px] text-white/70 leading-relaxed font-mono whitespace-pre-wrap bg-black/25 border border-white/5 p-2 rounded-lg select-text transition-all duration-300 relative ${
+          isExpanded ? "max-h-80 overflow-y-auto scrollbar-none" : "max-h-24 overflow-hidden"
+        }`}
+      >
+        {text}
+        {!isExpanded && (
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+        )}
+      </div>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="text-[9px] font-bold text-orange-400 hover:text-orange-300 transition-colors self-start mt-0.5"
+      >
+        {isExpanded ? "Mostrar menos ▲" : "Mostrar descripción completa ▼"}
+      </button>
+    </div>
+  );
+}
+
 interface FeedTabProps {
   followedChannels: { name: string; url: string; visible?: boolean }[];
   currentChannel: string;
@@ -237,7 +271,7 @@ export function FeedTab({
                 </div>
               ) : null}
 
-              {post.modSlugs && post.modSlugs.length > 0 && (
+              {post.description && (
                 <div className="mt-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => toggleExpandMods(post.postId)}
@@ -246,62 +280,75 @@ export function FeedTab({
                     <Puzzle className="w-3.5 h-3.5" />
                     <span>
                       {expandedPostMods === post.postId
-                        ? "Ocultar mods detectados"
-                        : `${post.modSlugs.length} mods detectados (Tocar para ver)`}
+                        ? "Ocultar descripción"
+                        : post.modSlugs && post.modSlugs.length > 0
+                          ? `${post.modSlugs.length} mods detectados (Tocar para ver)`
+                          : "Ver descripción (Tocar para ver)"}
                     </span>
                   </button>
 
                   {expandedPostMods === post.postId && (
-                    <div className="grid grid-cols-2 gap-2 bg-white/[0.02] border border-white/[0.04] p-2 rounded-xl animate-fadeIn">
-                      {post.modSlugs.map((slugStr: string, idx: number) => {
-                        const parts = slugStr.split(":");
-                        const source = parts[0];
-                        const type = parts.length >= 3 ? parts[1] : "mod";
-                        const slug = parts.length >= 3 ? parts[2] : parts[1];
-                        
-                        const isCurse = source === "curseforge";
-                        const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                        
-                        return (
-                          <div
-                            key={slugStr + idx}
-                            onClick={() => {
-                              if (handleOpenModDetails) {
-                                handleOpenModDetails({
-                                  projectId: slug,
-                                  title: displayName,
-                                  description: "",
-                                  iconUrl: "",
-                                  author: "",
-                                  projectType: type,
-                                  categories: [],
-                                  url: source === "curseforge" 
-                                    ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` 
-                                    : `https://modrinth.com/${type}/${slug}`,
-                                  _source: source as "modrinth" | "curseforge"
-                                });
-                              }
-                            }}
-                            className="p-2 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/5 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
-                            style={{
-                              borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
-                            }}
-                          >
-                            <div 
-                              className="w-5 h-5 rounded-md flex items-center justify-center text-[7.5px] font-black uppercase shrink-0"
-                              style={{
-                                background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                                color: isCurse ? "#f87171" : "#34d399",
-                              }}
-                            >
-                              {source.substring(0, 2)}
-                            </div>
-                            <span className="text-[10px] font-bold text-white/80 truncate flex-1">
-                              {displayName}
-                            </span>
+                    <div className="flex flex-col gap-2.5 bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl animate-fadeIn">
+                      <CollapsibleVideoDescription text={post.description} />
+
+                      {post.modSlugs && post.modSlugs.length > 0 && (
+                        <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/5">
+                          <span className="text-[8px] font-bold text-white/40 uppercase tracking-wider mb-1">
+                            Mods Detectados:
+                          </span>
+                          <div className="grid grid-cols-2 gap-2">
+                            {post.modSlugs.map((slugStr: string, idx: number) => {
+                              const parts = slugStr.split(":");
+                              const source = parts[0];
+                              const type = parts.length >= 3 ? parts[1] : "mod";
+                              const slug = parts.length >= 3 ? parts[2] : parts[1];
+                              
+                              const isCurse = source === "curseforge";
+                              const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                              
+                              return (
+                                <div
+                                  key={slugStr + idx}
+                                  onClick={() => {
+                                    if (handleOpenModDetails) {
+                                      handleOpenModDetails({
+                                        projectId: slug,
+                                        title: displayName,
+                                        description: "",
+                                        iconUrl: "",
+                                        author: "",
+                                        projectType: type,
+                                        categories: [],
+                                        url: source === "curseforge" 
+                                          ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` 
+                                          : `https://modrinth.com/${type}/${slug}`,
+                                        _source: source as "modrinth" | "curseforge"
+                                      });
+                                    }
+                                  }}
+                                  className="p-2 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/5 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                                  style={{
+                                    borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
+                                  }}
+                                >
+                                  <div 
+                                    className="w-5 h-5 rounded-md flex items-center justify-center text-[7.5px] font-black uppercase shrink-0"
+                                    style={{
+                                      background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                                      color: isCurse ? "#f87171" : "#34d399",
+                                    }}
+                                  >
+                                    {source.substring(0, 2)}
+                                  </div>
+                                  <span className="text-[10px] font-bold text-white/80 truncate flex-1">
+                                    {displayName}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

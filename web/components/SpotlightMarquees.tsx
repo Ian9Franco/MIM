@@ -28,6 +28,40 @@ export interface ModHit {
   }[];
 }
 
+function CollapsibleVideoDescription({ text }: { text: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = text.split("\n").length > 6 || text.length > 300;
+
+  if (!isLong) {
+    return (
+      <div className="text-[10px] text-white/70 leading-relaxed font-mono whitespace-pre-wrap bg-black/25 border border-white/5 p-2 rounded-lg select-text">
+        {text}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <div 
+        className={`text-[10px] text-white/70 leading-relaxed font-mono whitespace-pre-wrap bg-black/25 border border-white/5 p-2 rounded-lg select-text transition-all duration-300 relative ${
+          isExpanded ? "max-h-80 overflow-y-auto scrollbar-none" : "max-h-24 overflow-hidden"
+        }`}
+      >
+        {text}
+        {!isExpanded && (
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+        )}
+      </div>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="text-[9px] font-bold text-orange-400 hover:text-orange-300 transition-colors self-start mt-0.5"
+      >
+        {isExpanded ? "Mostrar menos ▲" : "Mostrar descripción completa ▼"}
+      </button>
+    </div>
+  );
+}
+
 interface VerticalTickerProps {
   mods: ModHit[];
   onSelectMod: (mod: ModHit) => void;
@@ -241,6 +275,7 @@ export interface ShowcaseVideo {
   channelName: string;
   publishedAt?: string;
   modSlugs?: string[];
+  description?: string;
 }
 
 /**
@@ -479,7 +514,7 @@ export function HorizontalShowcaseMarquee({
               >
                 {video.title}
               </h3>
-              {video.modSlugs !== undefined && video.modSlugs.length > 0 && (
+              {(video.description || (video.modSlugs && video.modSlugs.length > 0)) && (
                 <div 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -489,7 +524,9 @@ export function HorizontalShowcaseMarquee({
                   style={{ borderColor: "var(--color-border)" }}
                 >
                   <span className="text-[8px] font-bold uppercase tracking-wide">
-                    {video.modSlugs.length} mods detectados
+                    {video.modSlugs && video.modSlugs.length > 0 
+                      ? `${video.modSlugs.length} mods detectados` 
+                      : "Ver descripción"}
                   </span>
                   <Puzzle className="w-2.5 h-2.5 text-orange-500" />
                 </div>
@@ -522,66 +559,77 @@ export function HorizontalShowcaseMarquee({
             <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3" style={{ borderColor: "var(--color-border)" }}>
               <Puzzle className="w-5 h-5 text-orange-500" />
               <h3 className="text-xs font-bold text-white/95">
-                Mods Detectados ({selectedVideoForMods.modSlugs?.length})
+                {selectedVideoForMods.modSlugs && selectedVideoForMods.modSlugs.length > 0
+                  ? `Mods Detectados (${selectedVideoForMods.modSlugs.length})`
+                  : "Descripción del Video"}
               </h3>
             </div>
             
             <p className="text-[10px] text-white/50 leading-relaxed font-medium">
               {selectedVideoForMods.title}
             </p>
+
+            {selectedVideoForMods.description && (
+              <CollapsibleVideoDescription text={selectedVideoForMods.description} />
+            )}
             
-            <div className="flex flex-col gap-2 max-h-60 overflow-y-auto scrollbar-none">
-              {selectedVideoForMods.modSlugs?.map((slugStr, idx) => {
-                const parts = slugStr.split(":");
-                const source = parts[0];
-                const type = parts.length >= 3 ? parts[1] : "mod";
-                const slug = parts.length >= 3 ? parts[2] : parts[1];
-                
-                const isCurse = source === "curseforge";
-                const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                
-                return (
-                  <div
-                    key={slugStr + idx}
-                    onClick={() => {
-                      if (onSelectMod) {
-                        onSelectMod({
-                          projectId: slug,
-                          title: displayName,
-                          description: "",
-                          iconUrl: "",
-                          author: "",
-                          projectType: type,
-                          categories: [],
-                          url: source === "curseforge" 
-                            ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` 
-                            : `https://modrinth.com/${type}/${slug}`,
-                          _source: source as "modrinth" | "curseforge"
-                        });
-                      }
-                      setSelectedVideoForMods(null);
-                    }}
-                    className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 active:scale-98 transition-all cursor-pointer flex items-center gap-3"
-                    style={{
-                      borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
-                    }}
-                  >
-                    <div 
-                      className="w-6 h-6 rounded-lg flex items-center justify-center text-[8px] font-black uppercase shrink-0"
+            {selectedVideoForMods.modSlugs && selectedVideoForMods.modSlugs.length > 0 && (
+              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto scrollbar-none pt-1.5 border-t border-white/5">
+                <span className="text-[8px] font-bold text-white/40 uppercase tracking-wider mb-1">
+                  Mods Detectados:
+                </span>
+                {selectedVideoForMods.modSlugs.map((slugStr, idx) => {
+                  const parts = slugStr.split(":");
+                  const source = parts[0];
+                  const type = parts.length >= 3 ? parts[1] : "mod";
+                  const slug = parts.length >= 3 ? parts[2] : parts[1];
+                  
+                  const isCurse = source === "curseforge";
+                  const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                  
+                  return (
+                    <div
+                      key={slugStr + idx}
+                      onClick={() => {
+                        if (onSelectMod) {
+                          onSelectMod({
+                            projectId: slug,
+                            title: displayName,
+                            description: "",
+                            iconUrl: "",
+                            author: "",
+                            projectType: type,
+                            categories: [],
+                            url: source === "curseforge" 
+                              ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` 
+                              : `https://modrinth.com/${type}/${slug}`,
+                            _source: source as "modrinth" | "curseforge"
+                          });
+                        }
+                        setSelectedVideoForMods(null);
+                      }}
+                      className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 active:scale-98 transition-all cursor-pointer flex items-center gap-3"
                       style={{
-                        background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                        color: isCurse ? "#f87171" : "#34d399",
+                        borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
                       }}
                     >
-                      {source.substring(0, 2)}
+                      <div 
+                        className="w-6 h-6 rounded-lg flex items-center justify-center text-[8px] font-black uppercase shrink-0"
+                        style={{
+                          background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                          color: isCurse ? "#f87171" : "#34d399",
+                        }}
+                      >
+                        {source.substring(0, 2)}
+                      </div>
+                      <span className="text-[11px] font-bold text-white/80 truncate flex-1">
+                        {displayName}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-bold text-white/80 truncate flex-1">
-                      {displayName}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

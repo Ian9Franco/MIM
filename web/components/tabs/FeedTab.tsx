@@ -221,8 +221,8 @@ export function FeedTab({
                 <h3 className="text-xs font-bold text-white/90 leading-snug">{post.title}</h3>
               )}
               
-              {/* Description (only if it is a post OR if it's different from the title) */}
-              {(post.mode === "post" || (post.description && post.description !== post.title)) && (
+              {/* Description (only if it is a text post) */}
+              {post.mode === "post" && post.description && (
                 <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap">{post.description}</p>
               )}
 

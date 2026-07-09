@@ -50,6 +50,69 @@ function extractModSlugs(text: string): string[] {
   return [...new Set(found)];
 }
 
+function extractJsonObjectAfter(html: string, marker: string): any | null {
+  const markerIndex = html.indexOf(marker);
+  if (markerIndex === -1) return null;
+  const start = html.indexOf("{", markerIndex);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < html.length; i++) {
+    const char = html[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === "{") {
+      depth++;
+    } else if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(html.slice(start, i + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function isUsefulVideoDescription(description: string): boolean {
+  const normalized = decodeHtmlEntities(description || "").trim();
+  if (!normalized) return false;
+  const genericSnippets = [
+    "Enjoy the videos and music you love",
+    "upload original content",
+    "share it all with friends, family, and the world on YouTube",
+  ];
+  return !genericSnippets.some((snippet) => normalized.includes(snippet));
+}
+
 async function fetchVideoDescription(videoId: string): Promise<{ description: string; html: string }> {
   try {
     const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
@@ -64,17 +127,25 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
     const html = await res.text();
     let description = "";
 
+    const playerResponse = extractJsonObjectAfter(html, "ytInitialPlayerResponse");
+    const playerDescription = playerResponse?.videoDetails?.shortDescription;
+    if (typeof playerDescription === "string" && isUsefulVideoDescription(playerDescription)) {
+      description = playerDescription;
+    }
+
     // Try to extract full description from application/ld+json
-    const ldRegex = /<script\s+type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs;
-    let ldMatch;
-    while ((ldMatch = ldRegex.exec(html)) !== null) {
-      try {
-        const ldJson = JSON.parse(ldMatch[1].trim());
-        if (ldJson && ldJson["@type"] === "VideoObject" && ldJson.description) {
-          description = ldJson.description;
-          break;
-        }
-      } catch {}
+    if (!description) {
+      const ldRegex = /<script\s+type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs;
+      let ldMatch;
+      while ((ldMatch = ldRegex.exec(html)) !== null) {
+        try {
+          const ldJson = JSON.parse(ldMatch[1].trim());
+          if (ldJson && ldJson["@type"] === "VideoObject" && isUsefulVideoDescription(ldJson.description)) {
+            description = ldJson.description;
+            break;
+          }
+        } catch {}
+      }
     }
 
     if (!description) {
@@ -85,14 +156,15 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
         } catch {
           description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
         }
+        if (!isUsefulVideoDescription(description)) description = "";
       }
     }
 
     if (!description) {
       const metaMatch = html.match(/<meta\s+name="description"\s+content="(.*?)"/i) || 
                         html.match(/<meta\s+property="og:description"\s+content="(.*?)"/i);
-      if (metaMatch) {
-        description = metaMatch[1];
+      if (metaMatch && isUsefulVideoDescription(metaMatch[1])) {
+        description = decodeHtmlEntities(metaMatch[1]);
       }
     }
 
@@ -439,7 +511,9 @@ export async function GET(request: Request) {
       await Promise.all(
         targetPosts.map(async (post) => {
           const resObj = await fetchVideoDescription(post.postId);
-          post.description = resObj.description || post.description || post.title;
+          post.description = isUsefulVideoDescription(resObj.description)
+            ? resObj.description
+            : post.description || post.title;
           post.modSlugs = extractModSlugs(resObj.html || resObj.description);
         })
       );

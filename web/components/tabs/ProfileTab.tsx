@@ -65,8 +65,19 @@ export function ProfileTab({
   }, [userFavorites]);
 
   const handleHorizontalWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.currentTarget.scrollLeft += event.deltaY;
+    const delta = event.shiftKey ? event.deltaY : event.deltaX;
+    if (!delta) return;
+
+    const target = event.currentTarget;
+    const maxScroll = target.scrollWidth - target.clientWidth;
+    if (maxScroll <= 0) return;
+
+    const canScroll =
+      (delta > 0 && target.scrollLeft < maxScroll) ||
+      (delta < 0 && target.scrollLeft > 0);
+
+    if (!canScroll) return;
+    target.scrollLeft += delta;
     event.preventDefault();
   };
 
@@ -323,7 +334,7 @@ export function ProfileTab({
             ) : sortedUserFavorites.length > 0 ? (
               <div
                 onWheel={handleHorizontalWheel}
-                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
               >
                 {sortedUserFavorites.map(fav => {
                   const meta = readFavoriteMeta(fav);
@@ -485,7 +496,7 @@ export function ProfileTab({
             {userFollowedAuthors.length > 0 ? (
               <div
                 onWheel={handleHorizontalWheel}
-                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
               >
                 {userFollowedAuthors.map(a => (
                   <div

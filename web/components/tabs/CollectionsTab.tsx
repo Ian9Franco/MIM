@@ -49,8 +49,19 @@ export function CollectionsTab({
 }: CollectionsTabProps) {
   const isDraftCollection = activeCollection?.source === "draft";
   const handleHorizontalWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.currentTarget.scrollLeft += event.deltaY;
+    const delta = event.shiftKey ? event.deltaY : event.deltaX;
+    if (!delta) return;
+
+    const target = event.currentTarget;
+    const maxScroll = target.scrollWidth - target.clientWidth;
+    if (maxScroll <= 0) return;
+
+    const canScroll =
+      (delta > 0 && target.scrollLeft < maxScroll) ||
+      (delta < 0 && target.scrollLeft > 0);
+
+    if (!canScroll) return;
+    target.scrollLeft += delta;
     event.preventDefault();
   };
 
@@ -151,7 +162,7 @@ export function CollectionsTab({
                 {userFavorites.length > 0 ? (
                   <div
                     onWheel={handleHorizontalWheel}
-                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
                   >
                     {userFavorites.map((fav: any) => {
                       const projectId = fav.mod_id || fav.project_id || fav.id;
@@ -210,7 +221,7 @@ export function CollectionsTab({
                 {userFollowedAuthors.length > 0 ? (
                   <div
                     onWheel={handleHorizontalWheel}
-                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
                   >
                     {userFollowedAuthors.map((a: any) => (
                       <div
@@ -295,7 +306,7 @@ export function CollectionsTab({
                 <p className="text-[10px] text-white/40 italic px-1 mb-2">{activeCollection.description}</p>
                 <div
                   onWheel={handleHorizontalWheel}
-                  className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                  className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
                 >
                   {activeCollectionMods.map((mod: any) => (
                     <div

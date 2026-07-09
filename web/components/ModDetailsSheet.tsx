@@ -3,7 +3,7 @@
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useSpring, useTransform, useDragControls } from "framer-motion";
 import {
-  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck,
+  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck,
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
 import { playFomoSound } from "../lib/sounds";
@@ -350,7 +350,7 @@ export function ModDetailsSheet({
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedSummary, setTranslatedSummary] = useState<string | null>(null);
   const [isTranslatingSummary, setIsTranslatingSummary] = useState(false);
-  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareComment, setShareComment] = useState("");
   const [isSharing, setIsSharing] = useState(false);
@@ -358,6 +358,11 @@ export function ModDetailsSheet({
   const dragControls = useDragControls();
 
   const descriptionBody = selectedModDetails?.body || selectedMod?.description || "";
+  const galleryImages = Array.isArray(selectedModDetails?.gallery) ? selectedModDetails.gallery : [];
+  const activeImage = activeImageIndex !== null ? galleryImages[activeImageIndex] : null;
+  const activeImageUrl = activeImage?.url || null;
+  const hasGalleryNav = galleryImages.length > 1;
+  const isSheetOpen = !!selectedMod;
 
   /** Play open sound and reset translation state when a new mod is opened */
   useEffect(() => {
@@ -366,7 +371,42 @@ export function ModDetailsSheet({
     setTranslatedSummary(null);
     setIsTranslating(false);
     setIsTranslatingSummary(false);
+    setActiveImageIndex(null);
   }, [selectedMod?.projectId]);
+
+  useEffect(() => {
+    if (!isSheetOpen) return;
+
+    const scrollY = window.scrollY;
+    const previousBodyStyles = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    return () => {
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+      document.body.style.overflow = previousBodyStyles.overflow;
+      document.body.style.position = previousBodyStyles.position;
+      document.body.style.top = previousBodyStyles.top;
+      document.body.style.width = previousBodyStyles.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isSheetOpen]);
+
+  useEffect(() => {
+    if (activeImageIndex !== null && activeImageIndex >= galleryImages.length) {
+      setActiveImageIndex(galleryImages.length ? galleryImages.length - 1 : null);
+    }
+  }, [activeImageIndex, galleryImages.length]);
 
   /** Wrapper that plays close sound before dismissing the sheet */
   const closeWithSound = useCallback(() => {
@@ -435,6 +475,33 @@ export function ModDetailsSheet({
       e.currentTarget.scrollLeft += e.deltaY;
     }
   }, []);
+
+  const showPreviousImage = useCallback(() => {
+    setActiveImageIndex((current) => {
+      if (current === null || galleryImages.length === 0) return current;
+      return (current - 1 + galleryImages.length) % galleryImages.length;
+    });
+  }, [galleryImages.length]);
+
+  const showNextImage = useCallback(() => {
+    setActiveImageIndex((current) => {
+      if (current === null || galleryImages.length === 0) return current;
+      return (current + 1) % galleryImages.length;
+    });
+  }, [galleryImages.length]);
+
+  useEffect(() => {
+    if (activeImageIndex === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveImageIndex(null);
+      if (event.key === "ArrowLeft") showPreviousImage();
+      if (event.key === "ArrowRight") showNextImage();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeImageIndex, showNextImage, showPreviousImage]);
 
   const handleTranslate = useCallback(async () => {
     if (!selectedMod || !descriptionBody || isTranslating) return;
@@ -505,6 +572,8 @@ export function ModDetailsSheet({
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
             onClick={closeWithSound}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -746,8 +815,10 @@ export function ModDetailsSheet({
 
                 {/* Scrollable content */}
                 <div 
-                  className="relative w-full overflow-y-auto max-h-[55vh] pr-1 scrollbar-none"
-                  style={{ overscrollBehaviorY: "contain" }}
+                  className="relative w-full flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-none touch-pan-y"
+                  style={{ overscrollBehaviorY: "contain", WebkitOverflowScrolling: "touch" }}
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
                 >
                     <AnimatePresence mode="popLayout">
                       {modalTab === "summary" && (
@@ -847,7 +918,7 @@ export function ModDetailsSheet({
                         </div>
 
                         {/* Gallery */}
-                        {selectedModDetails?.gallery && selectedModDetails.gallery.length > 0 && (
+                        {galleryImages.length > 0 && (
                           <div className="flex flex-col gap-2 border-t border-white/[0.04] pt-3">
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block">Galería</span>
                             <div
@@ -857,10 +928,10 @@ export function ModDetailsSheet({
                               onTouchCancel={() => setDragEnabled(true)}
                               className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x cursor-grab active:cursor-grabbing"
                             >
-                              {selectedModDetails.gallery.map((img: any, i: number) => (
+                              {galleryImages.map((img: any, i: number) => (
                                 <div
                                   key={i}
-                                  onClick={() => setActiveImageUrl(img.url)}
+                                  onClick={() => setActiveImageIndex(i)}
                                   className="relative aspect-video h-20 rounded-xl overflow-hidden bg-white/5 border border-white/[0.05] flex-shrink-0 snap-center cursor-pointer hover:border-white/20 transition-all hover:scale-[1.02]"
                                 >
                                   <img src={img.url} alt={img.title || "Screenshot"} className="object-cover w-full h-full" />
@@ -882,23 +953,24 @@ export function ModDetailsSheet({
                         className="flex flex-col gap-3.5 w-full pb-2"
                       >
                         <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">
-                          Galería de Imágenes ({selectedModDetails?.gallery?.length || 0})
+                          Galería de Imágenes ({galleryImages.length})
                         </span>
-                        {selectedModDetails?.gallery && selectedModDetails.gallery.length > 0 ? (
+                        {galleryImages.length > 0 ? (
                           <div
                             onTouchStart={(e) => { e.stopPropagation(); setDragEnabled(false); }}
                             onTouchEnd={() => setDragEnabled(true)}
                             onTouchCancel={() => setDragEnabled(true)}
-                            className="grid grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-none"
+                            className="grid grid-cols-2 gap-3 pb-1 pr-1"
                           >
-                            {selectedModDetails.gallery.map((img: any, i: number) => (
-                              <div
+                            {galleryImages.map((img: any, i: number) => (
+                              <button
+                                type="button"
                                 key={i}
-                                onClick={() => setActiveImageUrl(img.url)}
-                                className="relative aspect-video rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] cursor-pointer hover:border-white/20 transition-all hover:scale-[1.02]"
+                                onClick={() => setActiveImageIndex(i)}
+                                className="relative aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] cursor-pointer hover:border-white/20 transition-all active:scale-[0.98]"
                               >
                                 <img src={img.url} alt={img.title || "Screenshot"} className="object-cover w-full h-full" />
-                              </div>
+                              </button>
                             ))}
                           </div>
                         ) : (
@@ -1045,19 +1117,56 @@ export function ModDetailsSheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setActiveImageUrl(null)}
+            onClick={() => setActiveImageIndex(null)}
           >
             <motion.div
-              className="relative max-w-[90vw] max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+              className="relative max-w-[92vw] max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl border border-white/10"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.16}
+              onDragEnd={(_event, info) => {
+                if (!hasGalleryNav) return;
+                if (info.offset.x > 70) showPreviousImage();
+                if (info.offset.x < -70) showNextImage();
+              }}
             >
-              <img src={activeImageUrl} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
+              <img
+                key={activeImageUrl}
+                src={activeImageUrl}
+                alt={activeImage?.title || "Preview"}
+                className="max-w-full max-h-[85vh] object-contain select-none"
+                draggable={false}
+              />
+              {hasGalleryNav && (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-2 text-white/80 transition-all cursor-pointer border border-white/15 active:scale-95 flex items-center justify-center"
+                    aria-label="Imagen anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-2 text-white/80 transition-all cursor-pointer border border-white/15 active:scale-95 flex items-center justify-center"
+                    aria-label="Imagen siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  <div className="absolute left-1/2 bottom-3 -translate-x-1/2 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white/70">
+                    {(activeImageIndex ?? 0) + 1} / {galleryImages.length}
+                  </div>
+                </>
+              )}
               <button
-                onClick={() => setActiveImageUrl(null)}
+                onClick={() => setActiveImageIndex(null)}
                 className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 rounded-full p-2 text-white/80 transition-all cursor-pointer border border-white/15 active:scale-95 flex items-center justify-center"
               >
                 <X className="w-5 h-5" />

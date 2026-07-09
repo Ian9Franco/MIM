@@ -468,10 +468,10 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                   {/* Favorite mods */}
                   <ProfileSection
                     icon={<Heart className="w-3.5 h-3.5" />}
-                    title="Mods Favoritos"
+                    title="Proyectos Favoritos"
                     count={pubFavorites.length}
                     color="text-red-400"
-                    empty="No tiene mods favoritos públicos."
+                    empty="No tiene proyectos favoritos públicos."
                   >
                     {pubFavorites.map((f) => (
                       <div

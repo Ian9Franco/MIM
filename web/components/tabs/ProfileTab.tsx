@@ -54,6 +54,22 @@ export function ProfileTab({
     }
   };
 
+  const sortedUserFavorites = React.useMemo(() => {
+    const getTime = (fav: any) => {
+      const value = fav.created_at || fav.inserted_at || fav.updated_at || "";
+      const time = new Date(value).getTime();
+      return Number.isFinite(time) ? time : 0;
+    };
+
+    return [...userFavorites].sort((a, b) => getTime(b) - getTime(a));
+  }, [userFavorites]);
+
+  const handleHorizontalWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.currentTarget.scrollLeft += event.deltaY;
+    event.preventDefault();
+  };
+
   return (
     <motion.div
       key="profile"
@@ -72,7 +88,7 @@ export function ProfileTab({
             </div>
             <h2 className="text-md font-bold text-white">FOMO Cloud Sync</h2>
             <p className="text-xs text-white/40 mt-1">
-              Accedé a tus modpacks, ránkings y mods favoritos en cualquier dispositivo.
+              Accedé a tus modpacks, ránkings y proyectos favoritos en cualquier dispositivo.
             </p>
           </div>
 
@@ -298,15 +314,18 @@ export function ProfileTab({
           {/* Favorites Section */}
           <div className="flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-emerald-400" /> Mis Mods Favoritos
+              <Check className="w-4 h-4 text-emerald-400" /> Mis Proyectos Favoritos
             </h3>
             {loadingUserData ? (
               <div className="py-6 flex items-center justify-center">
                 <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
               </div>
-            ) : userFavorites.length > 0 ? (
-              <div className="grid gap-3">
-                {userFavorites.map(fav => {
+            ) : sortedUserFavorites.length > 0 ? (
+              <div
+                onWheel={handleHorizontalWheel}
+                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+              >
+                {sortedUserFavorites.map(fav => {
                   const meta = readFavoriteMeta(fav);
                   const projectId = fav.mod_id || fav.project_id || fav.id;
                   const projectType = fav.project_type || meta.project_type || "mod";
@@ -331,7 +350,7 @@ export function ProfileTab({
                       url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
                       _source: fav.platform || "modrinth",
                     })}
-                    className="bg-surface/80 border border-border rounded-2xl p-3.5 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10"
+                    className="bg-surface/80 border border-border rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10 snap-start"
                   >
                     <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                       {fav.icon_url ? (
@@ -464,28 +483,31 @@ export function ProfileTab({
               <UserCheck className="w-4 h-4 text-blue-400" /> Autores Seguidos
             </h3>
             {userFollowedAuthors.length > 0 ? (
-              <div className="grid gap-3">
+              <div
+                onWheel={handleHorizontalWheel}
+                className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+              >
                 {userFollowedAuthors.map(a => (
                   <div
                     key={a.id}
                     onClick={() => onSearchAuthor && onSearchAuthor(a.author_name, a.platform || "modrinth")}
-                    className={`bg-surface/80 border border-border rounded-2xl p-3.5 flex items-center gap-3 ${
+                    className={`bg-surface/80 border border-border rounded-xl p-3 min-h-[96px] flex flex-col items-center justify-center gap-2 text-center snap-start ${
                       onSearchAuthor ? "cursor-pointer hover:border-white/10 active:scale-[0.98] transition-all" : ""
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                       {a.icon_url ? (
-                        <img src={a.icon_url} alt="" className="w-full h-full object-cover rounded-full" />
+                        <img src={a.icon_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-blue-400 text-[10px] font-bold uppercase">{a.author_name?.substring(0, 2)}</span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="w-full min-w-0">
                       <h4 className="text-xs font-bold text-white truncate">{a.author_name}</h4>
                       <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
                     </div>
                     {onSearchAuthor ? (
-                      <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0 ml-auto" />
+                      <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
                     ) : (
                       <UserCheck className="w-3.5 h-3.5 text-blue-400/50 shrink-0" />
                     )}

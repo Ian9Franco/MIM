@@ -48,6 +48,11 @@ export function CollectionsTab({
   onSearchAuthor,
 }: CollectionsTabProps) {
   const isDraftCollection = activeCollection?.source === "draft";
+  const handleHorizontalWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.currentTarget.scrollLeft += event.deltaY;
+    event.preventDefault();
+  };
 
   return (
     <motion.div
@@ -139,12 +144,15 @@ export function CollectionsTab({
             )}
 
 
-            {/* Mis Mods Favoritos */}
+            {/* Mis Proyectos Favoritos */}
             {session && (
               <div className="flex flex-col gap-3 mb-6 shrink-0 mt-2">
-                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Mis Mods Favoritos</h3>
+                <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Mis Proyectos Favoritos</h3>
                 {userFavorites.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
+                  <div
+                    onWheel={handleHorizontalWheel}
+                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                  >
                     {userFavorites.map((fav: any) => {
                       const projectId = fav.mod_id || fav.project_id || fav.id;
                       const projectType = fav.project_type || "mod";
@@ -169,7 +177,7 @@ export function CollectionsTab({
                             url: fav.url || `https://modrinth.com/${projectType}/${projectId}`,
                             _source: fav.platform || "modrinth",
                           })}
-                          className="bg-surface/60 border border-border hover:border-white/10 rounded-2xl p-3.5 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
+                          className="bg-surface/60 border border-border hover:border-white/10 rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all snap-start"
                         >
                           <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {fav.icon_url ? (
@@ -189,7 +197,7 @@ export function CollectionsTab({
                   </div>
                 ) : (
                   <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-2xl p-6 text-center">
-                    <p className="text-xs text-white/40">No tienes mods favoritos guardados.</p>
+                    <p className="text-xs text-white/40">No tienes proyectos favoritos guardados.</p>
                   </div>
                 )}
               </div>
@@ -200,23 +208,26 @@ export function CollectionsTab({
               <div className="flex flex-col gap-3 mb-6 shrink-0">
                 <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Autores Seguidos</h3>
                 {userFollowedAuthors.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
+                  <div
+                    onWheel={handleHorizontalWheel}
+                    className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(150px,180px)] gap-3 px-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                  >
                     {userFollowedAuthors.map((a: any) => (
                       <div
                         key={a.id}
                         onClick={() => onSearchAuthor && onSearchAuthor(a.author_name, a.platform || "modrinth")}
-                        className={`bg-surface/60 border border-border rounded-2xl p-3.5 flex items-center gap-3 ${
+                        className={`bg-surface/60 border border-border rounded-xl p-3 min-h-[96px] flex flex-col items-center justify-center gap-2 text-center snap-start ${
                           onSearchAuthor ? "cursor-pointer hover:border-white/10 active:scale-[0.98] transition-all" : ""
                         }`}
                       >
-                        <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                           {a.icon_url ? (
-                            <img src={a.icon_url} alt="" className="object-cover w-full h-full rounded-full" />
+                            <img src={a.icon_url} alt="" className="object-cover w-full h-full" />
                           ) : (
                             <span className="text-blue-400 text-[10px] font-bold uppercase">{a.author_name?.substring(0, 2)}</span>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="w-full min-w-0">
                           <h4 className="text-xs font-bold text-white truncate">{a.author_name}</h4>
                           <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
                         </div>
@@ -280,27 +291,32 @@ export function CollectionsTab({
             {loadingActiveMods ? (
               <CollectionsSkeleton />
             ) : activeCollectionMods.length > 0 ? (
-              <div className="flex-1 overflow-y-auto space-y-3 pb-24 pr-1 scrollbar-none">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-24 pr-1 scrollbar-none">
                 <p className="text-[10px] text-white/40 italic px-1 mb-2">{activeCollection.description}</p>
-                {activeCollectionMods.map((mod: any) => (
-                  <div
-                    key={mod.itemId || mod.id || mod.projectId}
-                    onClick={() => handleOpenModDetails(mod)}
-                    className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {mod.iconUrl ? (
-                        <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
-                      ) : (
-                        <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
-                      )}
+                <div
+                  onWheel={handleHorizontalWheel}
+                  className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-pan-x overscroll-x-contain"
+                >
+                  {activeCollectionMods.map((mod: any) => (
+                    <div
+                      key={mod.itemId || mod.id || mod.projectId}
+                      onClick={() => handleOpenModDetails(mod)}
+                      className="bg-surface/90 border border-border rounded-2xl p-3 min-h-[74px] flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border snap-start"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {mod.iconUrl ? (
+                          <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                        ) : (
+                          <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-white/30" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-white/30" />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center text-center p-6">

@@ -149,6 +149,16 @@ function normalizeLoader(loader: string) {
   return "forge";
 }
 
+function parseStringArrayCache(value: string | null): string[] | null {
+  if (!value || !value.trim().startsWith("[")) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useHomeController() {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedMod, setSelectedMod] = useState<ModHit | null>(null);
@@ -161,11 +171,11 @@ export function useHomeController() {
 
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverType, setDiscoverType] = useState("mod");
-  const [discoverVersion, setDiscoverVersion] = useState("1.20.1");
-  const [discoverLoader, setDiscoverLoader] = useState("forge");
+  const [discoverVersion, setDiscoverVersion] = useState<string[]>([]);
+  const [discoverLoader, setDiscoverLoader] = useState<string[]>([]);
   const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
   const [discoverCategory, setDiscoverCategory] = useState<string[]>([]);
-  const [discoverSort, setDiscoverSort] = useState<string>("relevance");
+  const [discoverSort, setDiscoverSort] = useState<string>("newest");
   const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -272,10 +282,10 @@ export function useHomeController() {
     if (cachedType !== null) setDiscoverType(cachedType);
 
     const cachedVersion = localStorage.getItem("mim_discover_version");
-    if (cachedVersion !== null) setDiscoverVersion(cachedVersion);
+    if (cachedVersion !== null) setDiscoverVersion(parseStringArrayCache(cachedVersion) ?? []);
 
     const cachedLoader = localStorage.getItem("mim_discover_loader");
-    if (cachedLoader !== null) setDiscoverLoader(cachedLoader);
+    if (cachedLoader !== null) setDiscoverLoader(parseStringArrayCache(cachedLoader) ?? []);
 
     const cachedEnvironment = localStorage.getItem("mim_discover_environment");
     if (cachedEnvironment !== null) setDiscoverEnvironment(cachedEnvironment);
@@ -286,7 +296,11 @@ export function useHomeController() {
     }
 
     const cachedSort = localStorage.getItem("mim_discover_sort");
-    if (cachedSort !== null) setDiscoverSort(cachedSort);
+    const sortDefaultMigrated = localStorage.getItem("mim_discover_sort_default_v2") === "1";
+    if (cachedSort !== null && (sortDefaultMigrated || cachedSort !== "relevance")) {
+      setDiscoverSort(cachedSort);
+    }
+    localStorage.setItem("mim_discover_sort_default_v2", "1");
 
     const cachedSource = localStorage.getItem("mim_discover_source");
     if (cachedSource !== null) setDiscoverSource(cachedSource as any);
@@ -346,8 +360,8 @@ export function useHomeController() {
     localStorage.setItem("mim_active_tab", activeTab);
     localStorage.setItem("mim_discover_query", discoverQuery);
     localStorage.setItem("mim_discover_type", discoverType);
-    localStorage.setItem("mim_discover_version", discoverVersion);
-    localStorage.setItem("mim_discover_loader", discoverLoader);
+    localStorage.setItem("mim_discover_version", JSON.stringify(discoverVersion));
+    localStorage.setItem("mim_discover_loader", JSON.stringify(discoverLoader));
     localStorage.setItem("mim_discover_environment", discoverEnvironment);
     localStorage.setItem("mim_discover_category", JSON.stringify(discoverCategory));
     localStorage.setItem("mim_discover_sort", discoverSort);
@@ -393,7 +407,7 @@ export function useHomeController() {
       setLoadingUserData(true);
       const [{ data: profData }, { data: follows }, { data: shares }, { data: drafts }, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
-        supabase.from("followed_mods").select("*").eq("profile_id", userId),
+        supabase.from("followed_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
         supabase.from("favorite_mods").select("*").eq("profile_id", userId),
         supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
         supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
@@ -814,13 +828,14 @@ export function useHomeController() {
       const activeSource = overrideSource || discoverSource;
       const activeQuery = overrideQuery !== undefined ? overrideQuery : discoverQuery;
       
-      const gameVersions = discoverVersion ? [discoverVersion] : [];
+      const gameVersions = Array.isArray(discoverVersion) ? discoverVersion : [];
+      const selectedLoaders = Array.isArray(discoverLoader) ? discoverLoader : [];
       const categories = discoverCategory.length > 0 ? discoverCategory : [];
       const environments = discoverEnvironment && discoverEnvironment !== "any" ? [discoverEnvironment] : [];
 
       const queryParams = new URLSearchParams({
         projectType: discoverType,
-        loader: discoverLoader,
+        loader: selectedLoaders.length > 0 ? selectedLoaders.join(",") : "any",
         page: String(pageNumber),
         pageSize: "10",
         q: activeQuery,
@@ -920,8 +935,8 @@ export function useHomeController() {
     setDiscoverQuery(title);
     setDiscoverSource("all");
     setDiscoverType("any");
-    setDiscoverVersion("");
-    setDiscoverLoader("any");
+    setDiscoverVersion([]);
+    setDiscoverLoader([]);
     setDiscoverEnvironment("any");
     setDiscoverCategory([]);
     setDiscoverResults([]);
@@ -1281,21 +1296,46 @@ export function useHomeController() {
 
   const onToggleFavorite = async (mod: ModHit) => {
     if (!session?.user?.id) return;
+    const previousFavorites = userFavorites;
+    const userId = session.user.id;
+    const favoriteId = mod.projectId;
+    const isFav = userFavorites.some((f) => (f.mod_id || f.project_id || f.id) === favoriteId);
+
+    setUserFavorites((prev) => {
+      const withoutCurrent = prev.filter((f) => (f.mod_id || f.project_id || f.id) !== favoriteId);
+      if (isFav) return withoutCurrent;
+
+      return [
+        {
+          id: `optimistic-${favoriteId}`,
+          profile_id: userId,
+          mod_id: favoriteId,
+          project_id: favoriteId,
+          name: mod.author ? `${mod.title} ::: ${mod.author}` : mod.title,
+          icon_url: mod.iconUrl || null,
+          platform: mod._source || "modrinth",
+          project_type: mod.projectType || "mod",
+          created_at: new Date().toISOString(),
+        },
+        ...withoutCurrent,
+      ];
+    });
+
     try {
-      const isFav = userFavorites.some((f) => (f.mod_id || f.project_id || f.id) === mod.projectId);
       const request = isFav
-        ? supabase.from("followed_mods").delete().eq("profile_id", session.user.id).eq("mod_id", mod.projectId)
+        ? supabase.from("followed_mods").delete().eq("profile_id", userId).eq("mod_id", favoriteId)
         : supabase.from("followed_mods").insert({
-          profile_id: session.user.id,
-          mod_id: mod.projectId,
+          profile_id: userId,
+          mod_id: favoriteId,
           name: mod.author ? `${mod.title} ::: ${mod.author}` : mod.title,
           icon_url: mod.iconUrl || null,
           platform: mod._source || "modrinth",
         });
       const { error } = await request;
       if (error) throw error;
-      await loadUserData(session.user.id);
+      await loadUserData(userId);
     } catch (err: any) {
+      setUserFavorites(previousFavorites);
       showAlert("Error", `Error al guardar favorito: ${err.message}`);
     }
   };

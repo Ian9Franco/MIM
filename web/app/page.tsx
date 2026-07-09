@@ -25,6 +25,13 @@ const THEMES = [
   { id: "modern", label: "Modern", icon: Sun },
 ] as const;
 
+const HUB_TRANSITION = { duration: 1.15, ease: [0.25, 1, 0.5, 1] as const };
+const HUB_VARIANTS = {
+  enter: (direction: number) => ({ y: direction >= 0 ? "100%" : "-100%", opacity: 0 }),
+  center: { y: 0, opacity: 1 },
+  exit: (direction: number) => ({ y: direction >= 0 ? "-100%" : "100%", opacity: 0 }),
+};
+
 function formatSearchQuery(input: string): string {
   let text = input.trim();
   
@@ -116,6 +123,12 @@ export default function Home() {
     setSelectionRect(null);
   }, [selectionQuery, c]);
   const activeThemeIndex = Math.max(0, THEMES.findIndex((opt) => opt.id === c.theme));
+  const previousThemeIndexRef = React.useRef(activeThemeIndex);
+  const hubAnimationDirection = activeThemeIndex >= previousThemeIndexRef.current ? 1 : -1;
+
+  React.useEffect(() => {
+    previousThemeIndexRef.current = activeThemeIndex;
+  }, [activeThemeIndex]);
 
   /**
    * Fetches the latest MIM release from GitHub and opens it.
@@ -157,13 +170,15 @@ export default function Home() {
             <h1 className="text-xl font-black tracking-tighter leading-none" style={{ color: "var(--color-foreground)" }}>
               FOMO{" "}
               <span className="relative inline-block overflow-hidden align-bottom w-12 h-5">
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence mode="sync" initial={false} custom={hubAnimationDirection}>
                   <motion.span
                     key={c.theme}
-                    initial={{ y: "100%", opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: "-100%", opacity: 0 }}
-                    transition={{ duration: 0.85, ease: [0.25, 1, 0.5, 1] }}
+                    custom={hubAnimationDirection}
+                    variants={HUB_VARIANTS}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={HUB_TRANSITION}
                     className="mim-hub-word absolute inset-0 flex items-center justify-start"
                   >
                     HUB

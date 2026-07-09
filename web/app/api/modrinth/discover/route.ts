@@ -25,15 +25,15 @@ const SHADER_FILTERS = {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const loader       = searchParams.get("loader") ?? "forge";
+  const loader       = searchParams.get("loader") ?? "any";
   const gameVersionsJson = searchParams.get("gameVersions");
   const gameVersions = gameVersionsJson ? JSON.parse(gameVersionsJson) : [];
   const categories   = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
   const environments = searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : [];
   const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const pageSize     = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
-  const sortParam    = searchParams.get("sort") ?? "relevance";
-  const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "relevance";
+  const sortParam    = searchParams.get("sort") ?? "newest";
+  const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "newest";
   const projectType  = searchParams.get("projectType") ?? "mod";
   const q            = searchParams.get("q")?.trim() ?? "";
   const offset       = (page - 1) * pageSize;

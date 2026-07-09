@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, CF_CATEGORY_MAPS } from "./CurseForgeMapper";
+import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD, CF_CATEGORY_MAPS } from "./CurseForgeMapper";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
+
+function parseJsonArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string" && item.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseLoaderFilter(value: string | null): string[] {
+  if (!value || value === "any" || value === "all" || value === "unknown") return [];
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
 
 export async function GET(req: NextRequest) {
   const apiKey = process.env.CURSEFORGE_API_KEY;
@@ -19,55 +34,85 @@ export async function GET(req: NextRequest) {
   const pageSize = parseInt(searchParams.get("pageSize") || "15");
   const projectType = searchParams.get("projectType") || "mod";
   const q = searchParams.get("q")?.trim() || "";
-  const gameVersion = searchParams.get("gameVersion") || "";
-  const category = searchParams.get("category") || "";
+  const gameVersions = parseJsonArray(searchParams.get("gameVersions"));
+  const legacyGameVersion = searchParams.get("gameVersion") || "";
+  const categories = parseJsonArray(searchParams.get("categories"));
+  const legacyCategory = searchParams.get("category") || "";
+  const selectedLoaders = parseLoaderFilter(loader);
+  const sort = searchParams.get("sort") || "newest";
 
   const index = (page - 1) * pageSize;
 
-  const query = new URLSearchParams({
-    gameId: "432",
-    sortField: "2", // Popularity (downloads)
-    sortOrder: "desc",
-    index: index.toString(),
-    pageSize: pageSize.toString(),
-  });
-
   const isAnyType = projectType === "any" || projectType === "all";
-  if (!isAnyType) {
-    const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6;
-    query.set("classId", classId.toString());
-    
-    if (classId === 6 && loader && loader !== "any") {
-      // 1: Forge, 4: Fabric, 6: NeoForge
-      query.set("modLoaderType", (LOADER_TO_CF_ID[loader] || 1).toString());
-    }
-  }
+  const classId = !isAnyType ? (PROJECT_TYPE_TO_CLASS_ID[projectType] || 6) : null;
+  const versionOptions = gameVersions.length ? gameVersions : legacyGameVersion ? [legacyGameVersion] : [""];
+  const loaderOptions = classId === 6 && selectedLoaders.length ? selectedLoaders : [""];
+  const category = categories[0] || legacyCategory;
+  const hasCombinationFilters = versionOptions.length * loaderOptions.length > 1;
+  const requestPageSize = hasCombinationFilters ? Math.min(50, page * pageSize) : pageSize;
+  const requestIndex = hasCombinationFilters ? 0 : index;
 
-  if (q) query.set("searchFilter", q);
-  if (gameVersion) query.set("gameVersion", gameVersion);
-
-  if (category && !isAnyType) {
-    const map = CF_CATEGORY_MAPS[projectType] || {};
-    const catId = map[category.toLowerCase()];
-    if (catId) {
-      query.set("categoryId", catId.toString());
-    }
-  }
-
-  try {
-    const res = await fetch(`${CURSEFORGE_API}/mods/search?${query.toString()}`, {
-      headers: {
-        "Accept": "application/json",
-        "x-api-key": apiKey,
-      },
+  const buildQuery = (gameVersion: string, activeLoader: string) => {
+    const query = new URLSearchParams({
+      gameId: "432",
+      sortField: String(SORT_TO_CF_FIELD[sort] || SORT_TO_CF_FIELD.newest || 11),
+      sortOrder: "desc",
+      index: requestIndex.toString(),
+      pageSize: requestPageSize.toString(),
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: `CurseForge API Error: ${res.status} - ${errText}` }, { status: res.status });
+    if (classId) {
+      query.set("classId", classId.toString());
+
+      if (classId === 6 && activeLoader) {
+        const cfLoaderId = LOADER_TO_CF_ID[activeLoader];
+        if (cfLoaderId) query.set("modLoaderType", cfLoaderId.toString());
+      }
     }
 
-    const data = await res.json();
+    if (q) query.set("searchFilter", q);
+    if (gameVersion) query.set("gameVersion", gameVersion);
+
+    if (category && !isAnyType) {
+      const map = CF_CATEGORY_MAPS[projectType] || {};
+      const catId = map[category.toLowerCase()];
+      if (catId) query.set("categoryId", catId.toString());
+    }
+
+    return query;
+  };
+
+  try {
+    const responses = await Promise.all(
+      versionOptions.flatMap((gameVersion) =>
+        loaderOptions.map(async (activeLoader) => {
+          const query = buildQuery(gameVersion, activeLoader);
+          const res = await fetch(`${CURSEFORGE_API}/mods/search?${query.toString()}`, {
+            headers: {
+              "Accept": "application/json",
+              "x-api-key": apiKey,
+            },
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`CurseForge API Error: ${res.status} - ${errText}`);
+          }
+
+          return res.json();
+        })
+      )
+    );
+
+    const totalFromApi = responses.reduce((sum, data) => sum + (data.pagination?.totalCount || 0), 0);
+    const rawMods = responses.flatMap((data) => data.data || []);
+    const seen = new Set<number>();
+    const uniqueMods = rawMods.filter((mod: any) => {
+      if (seen.has(mod.id)) return false;
+      seen.add(mod.id);
+      return true;
+    });
+    const pagedMods = hasCombinationFilters ? uniqueMods.slice(index, index + pageSize) : uniqueMods;
 
     const CLASS_ID_TO_PROJECT_TYPE: Record<number, string> = {
       6: "mod",
@@ -77,7 +122,7 @@ export async function GET(req: NextRequest) {
       6945: "datapack"
     };
 
-    const mods = (data.data || []).map((m: any) => ({
+    const mods = pagedMods.map((m: any) => ({
       projectId: m.id.toString(),
       title: m.name,
       description: m.summary || "",
@@ -93,7 +138,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       mods,
-      total: data.pagination?.totalCount || 0,
+      total: hasCombinationFilters ? uniqueMods.length : totalFromApi,
+      page,
+      pageSize,
+      totalPages: Math.ceil((hasCombinationFilters ? uniqueMods.length : totalFromApi) / pageSize),
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to fetch from CurseForge" }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Coffee, Ghost, Share2, Sun, X } from "lucide-react";
+import { Coffee, Ghost, Share2, Sun, X, Puzzle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import ChannelPickerModal from "../components/ChannelPickerModal";
 import { DraftPickerModal } from "../components/DraftPickerModal";
@@ -25,9 +25,96 @@ const THEMES = [
   { id: "modern", label: "Modern", icon: Sun },
 ] as const;
 
+function formatSearchQuery(input: string): string {
+  let text = input.trim();
+  
+  if (text.startsWith("http://") || text.startsWith("https://") || text.includes("modrinth.com/") || text.includes("curseforge.com/")) {
+    try {
+      const cleanUrl = text.replace(/\/+$/, "");
+      const lastSlashIdx = cleanUrl.lastIndexOf("/");
+      if (lastSlashIdx !== -1) {
+        text = cleanUrl.substring(lastSlashIdx + 1);
+      }
+    } catch (e) {
+      console.error("Error parsing selection URL:", e);
+    }
+  }
+
+  text = text.replace(/[-_]/g, " ").trim();
+  return text;
+}
+
 export default function Home() {
   const c = useHomeController();
   const [editingDraftId, setEditingDraftId] = React.useState<string | null>(null);
+  const [selectionQuery, setSelectionQuery] = React.useState<string | null>(null);
+  const [selectionRect, setSelectionRect] = React.useState<{ top: number; left: number; width: number } | null>(null);
+
+  React.useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setSelectionQuery(null);
+        setSelectionRect(null);
+        return;
+      }
+      const rawText = selection.toString().trim();
+      if (!rawText || rawText.length > 150) {
+        setSelectionQuery(null);
+        setSelectionRect(null);
+        return;
+      }
+
+      const anchorNode = selection.anchorNode;
+      if (!anchorNode) return;
+      const parentElement = anchorNode.parentElement;
+      if (!parentElement) return;
+
+      let isDesc = false;
+      let curr: HTMLElement | null = parentElement;
+      while (curr) {
+        if (curr.classList && (curr.classList.contains("select-text") || curr.classList.contains("font-mono"))) {
+          isDesc = true;
+          break;
+        }
+        curr = curr.parentElement;
+      }
+
+      if (!isDesc) {
+        setSelectionQuery(null);
+        setSelectionRect(null);
+        return;
+      }
+
+      try {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setSelectionQuery(rawText);
+        setSelectionRect({
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+        });
+      } catch {
+        setSelectionQuery(null);
+        setSelectionRect(null);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
+
+  const handleSelectionSearch = React.useCallback(() => {
+    if (!selectionQuery) return;
+    const formatted = formatSearchQuery(selectionQuery);
+    c.handleSearchMod(formatted);
+    window.getSelection()?.removeAllRanges();
+    setSelectionQuery(null);
+    setSelectionRect(null);
+  }, [selectionQuery, c]);
   const activeThemeIndex = Math.max(0, THEMES.findIndex((opt) => opt.id === c.theme));
 
   /**
@@ -368,6 +455,20 @@ export default function Home() {
       )}
 
       <MobileFloatingPlayer />
+
+      {selectionRect && selectionQuery && (
+        <button
+          onClick={handleSelectionSearch}
+          className="fixed z-[9999] bg-orange-600 hover:bg-orange-500 text-white text-[10.5px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xl border border-orange-400/20 active:scale-95 transition-all flex items-center gap-1.5 animate-fadeIn select-none"
+          style={{
+            top: `${Math.max(10, selectionRect.top - 38)}px`,
+            left: `${Math.max(10, Math.min(window.innerWidth - 120, selectionRect.left + selectionRect.width / 2 - 50))}px`,
+          }}
+        >
+          <Puzzle className="w-3 h-3" />
+          <span>Buscar en FOMO</span>
+        </button>
+      )}
     </div>
   );
 }

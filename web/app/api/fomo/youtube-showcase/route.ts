@@ -67,21 +67,38 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-        "Cookie": "CONSENT=YES+cb.20210328-17-p0.es+FX+999;",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cookie": "CONSENT=YES+cb.20210328-17-p0.en+FX+999;",
       },
     });
     if (!res.ok) return { description: "", html: "" };
     const html = await res.text();
     let description = "";
-    const match = html.match(/"shortDescription":"(.*?)"/);
-    if (match) {
+
+    // Try to extract full description from application/ld+json
+    const ldRegex = /<script\s+type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs;
+    let ldMatch;
+    while ((ldMatch = ldRegex.exec(html)) !== null) {
       try {
-        description = JSON.parse(`"${match[1]}"`);
-      } catch {
-        description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        const ldJson = JSON.parse(ldMatch[1].trim());
+        if (ldJson && ldJson["@type"] === "VideoObject" && ldJson.description) {
+          description = ldJson.description;
+          break;
+        }
+      } catch {}
+    }
+
+    if (!description) {
+      const match = html.match(/"shortDescription":"(.*?)"/);
+      if (match) {
+        try {
+          description = JSON.parse(`"${match[1]}"`);
+        } catch {
+          description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        }
       }
     }
+
     if (!description) {
       const metaMatch = html.match(/<meta\s+name="description"\s+content="(.*?)"/i) || 
                         html.match(/<meta\s+property="og:description"\s+content="(.*?)"/i);
@@ -89,6 +106,7 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
         description = metaMatch[1];
       }
     }
+
     return { description, html };
   } catch (e) {
     console.error(`[fetchVideoDescription] Error for ${videoId}:`, e);

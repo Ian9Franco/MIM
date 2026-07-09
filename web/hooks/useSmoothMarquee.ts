@@ -73,7 +73,14 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
 
   const handlers = {
     onWheel: (e: React.WheelEvent) => {
-      if (isVertical) return;
+      if (isVertical) {
+        if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        targetOffset.current += e.deltaY * 0.5;
+        return;
+      }
 
       const delta = e.shiftKey ? e.deltaY : e.deltaX;
       const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
@@ -84,8 +91,6 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
       targetOffset.current += delta * 0.5;
     },
     onPointerDown: (e: React.PointerEvent) => {
-      if (isVertical && e.pointerType === "touch") return;
-
       e.stopPropagation();
       isDragging.current = true;
       hasDragged.current = false;

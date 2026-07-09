@@ -102,18 +102,25 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&gt;/g, ">");
 }
 
-function isUsefulVideoDescription(description: string): boolean {
+function normalizeComparableText(text: string): string {
+  return decodeHtmlEntities(text || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function isUsefulVideoDescription(description: string, title = ""): boolean {
   const normalized = decodeHtmlEntities(description || "").trim();
   if (!normalized) return false;
+  const comparable = normalizeComparableText(normalized);
+  if (title && comparable === normalizeComparableText(title)) return false;
+
   const genericSnippets = [
     "Enjoy the videos and music you love",
     "upload original content",
     "share it all with friends, family, and the world on YouTube",
   ];
-  return !genericSnippets.some((snippet) => normalized.includes(snippet));
+  return !genericSnippets.some((snippet) => comparable.includes(snippet.toLowerCase()));
 }
 
-async function fetchVideoDescription(videoId: string): Promise<{ description: string; html: string }> {
+async function fetchVideoDescription(videoId: string, title = ""): Promise<{ description: string; html: string }> {
   try {
     const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
@@ -129,7 +136,7 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
 
     const playerResponse = extractJsonObjectAfter(html, "ytInitialPlayerResponse");
     const playerDescription = playerResponse?.videoDetails?.shortDescription;
-    if (typeof playerDescription === "string" && isUsefulVideoDescription(playerDescription)) {
+    if (typeof playerDescription === "string" && isUsefulVideoDescription(playerDescription, title)) {
       description = playerDescription;
     }
 
@@ -140,7 +147,7 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
       while ((ldMatch = ldRegex.exec(html)) !== null) {
         try {
           const ldJson = JSON.parse(ldMatch[1].trim());
-          if (ldJson && ldJson["@type"] === "VideoObject" && isUsefulVideoDescription(ldJson.description)) {
+          if (ldJson && ldJson["@type"] === "VideoObject" && isUsefulVideoDescription(ldJson.description, title)) {
             description = ldJson.description;
             break;
           }
@@ -156,14 +163,14 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
         } catch {
           description = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
         }
-        if (!isUsefulVideoDescription(description)) description = "";
+        if (!isUsefulVideoDescription(description, title)) description = "";
       }
     }
 
     if (!description) {
       const metaMatch = html.match(/<meta\s+name="description"\s+content="(.*?)"/i) || 
                         html.match(/<meta\s+property="og:description"\s+content="(.*?)"/i);
-      if (metaMatch && isUsefulVideoDescription(metaMatch[1])) {
+      if (metaMatch && isUsefulVideoDescription(metaMatch[1], title)) {
         description = decodeHtmlEntities(metaMatch[1]);
       }
     }
@@ -320,7 +327,7 @@ export async function GET(request: Request) {
         posts.push({
           postId: videoId,
           title,
-          description: title,
+          description: "",
           thumbnail,
           embeddedVideoId: videoId,
           videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -348,7 +355,7 @@ export async function GET(request: Request) {
         posts.push({
           postId: videoId,
           title,
-          description: title,
+          description: "",
           thumbnail,
           embeddedVideoId: videoId,
           videoUrl: `https://www.youtube.com/shorts/${videoId}`,
@@ -386,7 +393,7 @@ export async function GET(request: Request) {
         posts.push({
           postId: videoId,
           title,
-          description: title,
+          description: "",
           thumbnail,
           embeddedVideoId: videoId,
           videoUrl: `https://www.youtube.com/shorts/${videoId}`,
@@ -414,7 +421,7 @@ export async function GET(request: Request) {
         posts.push({
           postId: videoId,
           title,
-          description: title,
+          description: "",
           thumbnail,
           embeddedVideoId: videoId,
           videoUrl: `https://www.youtube.com/shorts/${videoId}`,
@@ -510,10 +517,12 @@ export async function GET(request: Request) {
       const targetPosts = posts.slice(0, 12);
       await Promise.all(
         targetPosts.map(async (post) => {
-          const resObj = await fetchVideoDescription(post.postId);
-          post.description = isUsefulVideoDescription(resObj.description)
+          const resObj = await fetchVideoDescription(post.postId, post.title);
+          post.description = isUsefulVideoDescription(resObj.description, post.title)
             ? resObj.description
-            : post.description || post.title;
+            : isUsefulVideoDescription(post.description, post.title)
+              ? post.description
+              : "";
           post.modSlugs = extractModSlugs(resObj.html || resObj.description);
         })
       );

@@ -154,8 +154,8 @@ html, body {
 }
 
 .mim-marquee-vertical {
-  overscroll-behavior-y: auto;
-  touch-action: pan-y;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .mim-hub-word {

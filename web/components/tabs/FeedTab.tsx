@@ -56,6 +56,7 @@ interface FeedTabProps {
   setYoutubeFeedType: (type: "posts" | "videos" | "shorts") => void;
   handleToggleChannelVisibility: (url: string) => void;
   handleOpenModDetails?: (mod: ModHit) => void;
+  onSearchMod?: (title: string) => void;
 }
 
 /**
@@ -70,6 +71,7 @@ export function FeedTab({
   youtubeFeedType, setYoutubeFeedType,
   handleToggleChannelVisibility,
   handleOpenModDetails,
+  onSearchMod,
 }: FeedTabProps) {
 
   const [visibleCount, setVisibleCount] = useState(6);
@@ -271,7 +273,7 @@ export function FeedTab({
                 </div>
               ) : null}
 
-              {post.description && (
+              {(post.description || (post.modSlugs && post.modSlugs.length > 0)) && (
                 <div className="mt-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => toggleExpandMods(post.postId)}
@@ -289,7 +291,7 @@ export function FeedTab({
 
                   {expandedPostMods === post.postId && (
                     <div className="flex flex-col gap-2.5 bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl animate-fadeIn">
-                      <CollapsibleVideoDescription text={post.description} />
+                      {post.description && <CollapsibleVideoDescription text={post.description} />}
 
                       {post.modSlugs && post.modSlugs.length > 0 && (
                         <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/5">
@@ -300,16 +302,24 @@ export function FeedTab({
                             {post.modSlugs.map((slugStr: string, idx: number) => {
                               const parts = slugStr.split(":");
                               const source = parts[0];
+                              const isSearch = source === "search";
+                              const searchName = isSearch ? decodeURIComponent(parts.slice(1).join(":")) : "";
                               const type = parts.length >= 3 ? parts[1] : "mod";
                               const slug = parts.length >= 3 ? parts[2] : parts[1];
                               
                               const isCurse = source === "curseforge";
-                              const displayName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                              const displayName = isSearch
+                                ? searchName
+                                : slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
                               
                               return (
                                 <div
                                   key={slugStr + idx}
                                   onClick={() => {
+                                    if (isSearch) {
+                                      onSearchMod?.(searchName);
+                                      return;
+                                    }
                                     if (handleOpenModDetails) {
                                       handleOpenModDetails({
                                         projectId: slug,
@@ -328,17 +338,21 @@ export function FeedTab({
                                   }}
                                   className="p-2 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/5 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
                                   style={{
-                                    borderColor: isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
+                                    borderColor: isSearch
+                                      ? "rgba(249,115,22,0.18)"
+                                      : isCurse ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)",
                                   }}
                                 >
                                   <div 
                                     className="w-5 h-5 rounded-md flex items-center justify-center text-[7.5px] font-black uppercase shrink-0"
                                     style={{
-                                      background: isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                                      color: isCurse ? "#f87171" : "#34d399",
+                                      background: isSearch
+                                        ? "rgba(249,115,22,0.12)"
+                                        : isCurse ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                                      color: isSearch ? "#fb923c" : isCurse ? "#f87171" : "#34d399",
                                     }}
                                   >
-                                    {source.substring(0, 2)}
+                                    {isSearch ? "IR" : source.substring(0, 2)}
                                   </div>
                                   <span className="text-[10px] font-bold text-white/80 truncate flex-1">
                                     {displayName}

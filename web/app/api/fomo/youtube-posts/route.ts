@@ -39,6 +39,46 @@ const MODRINTH_REGEX =
 const CURSEFORGE_REGEX =
   /curseforge\.com\/minecraft\/(mc-mods|texture-packs|customization|mc-addons)\/([a-zA-Z0-9-_]+)/g;
 
+function cleanDetectedModName(name: string): string {
+  return decodeHtmlEntities(name)
+    .replace(/^[\s\-–—:|]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractTimestampModNames(text: string): string[] {
+  if (!text) return [];
+
+  const names: string[] = [];
+  const seen = new Set<string>();
+  const timestampLine = /^\s*(?:\(?\d{1,2}:)?\d{1,2}:\d{2}\)?\s*(?:[-–—|:]\s*)?(.+?)\s*$/;
+  const ignored = new Set(["intro", "outro", "subscribe", "conclusion", "final thoughts"]);
+
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(timestampLine);
+    if (!match) continue;
+
+    const name = cleanDetectedModName(match[1]);
+    const comparable = normalizeComparableText(name);
+    if (
+      name.length < 3 ||
+      name.length > 90 ||
+      ignored.has(comparable) ||
+      comparable.startsWith("http") ||
+      comparable.includes("sponsor") ||
+      comparable.includes("server")
+    ) {
+      continue;
+    }
+
+    if (seen.has(comparable)) continue;
+    seen.add(comparable);
+    names.push(name);
+  }
+
+  return names;
+}
+
 function extractModSlugs(text: string): string[] {
   if (!text) return [];
   const found: string[] = [];
@@ -47,6 +87,7 @@ function extractModSlugs(text: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = mr.exec(text)) !== null) found.push(`modrinth:${m[1]}:${m[2]}`);
   while ((m = cf.exec(text)) !== null) found.push(`curseforge:${m[1]}:${m[2]}`);
+  for (const name of extractTimestampModNames(text)) found.push(`search:${encodeURIComponent(name)}`);
   return [...new Set(found)];
 }
 

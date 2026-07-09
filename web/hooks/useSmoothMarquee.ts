@@ -68,26 +68,43 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
   const hasDragged = useRef(false);
   const suppressClick = useRef(false);
   const startPos = useRef(0);
+  const startCrossPos = useRef(0);
   const startOffset = useRef(0);
 
   const handlers = {
     onWheel: (e: React.WheelEvent) => {
+      if (isVertical) return;
+
+      const delta = e.shiftKey ? e.deltaY : e.deltaX;
+      const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      if (!delta || !isHorizontalIntent) return;
+
       e.preventDefault();
       e.stopPropagation();
-      const delta = isVertical ? e.deltaY : (e.deltaX || e.deltaY);
       targetOffset.current += delta * 0.5;
     },
     onPointerDown: (e: React.PointerEvent) => {
+      if (isVertical && e.pointerType === "touch") return;
+
       e.stopPropagation();
       isDragging.current = true;
       hasDragged.current = false;
       startPos.current = isVertical ? e.clientY : e.clientX;
+      startCrossPos.current = isVertical ? e.clientX : e.clientY;
       startOffset.current = offset.current;
     },
     onPointerMove: (e: React.PointerEvent) => {
       if (!isDragging.current) return;
       const currentPos = isVertical ? e.clientY : e.clientX;
+      const currentCrossPos = isVertical ? e.clientX : e.clientY;
       const diff = startPos.current - currentPos;
+      const crossDiff = startCrossPos.current - currentCrossPos;
+
+      if (!isVertical && !hasDragged.current && Math.abs(crossDiff) > Math.abs(diff) && Math.abs(crossDiff) > 5) {
+        isDragging.current = false;
+        return;
+      }
+
       if (Math.abs(diff) < 5 && !hasDragged.current) return;
       hasDragged.current = true;
       e.preventDefault();

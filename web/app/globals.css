@@ -147,6 +147,17 @@ html, body {
   touch-action: none;
 }
 
+.mim-marquee-horizontal {
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+}
+
+.mim-marquee-vertical {
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+}
+
 .mim-hub-word {
   color: var(--color-primary);
   text-shadow: 0 0 14px color-mix(in srgb, var(--color-primary) 32%, transparent);

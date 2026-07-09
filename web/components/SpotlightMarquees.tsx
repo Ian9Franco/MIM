@@ -81,7 +81,7 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
+      className="mim-marquee-isolated mim-marquee-vertical absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
       {...handlers}
     >
       <div ref={innerRef} className="flex flex-col gap-3.5 w-full px-1 pb-4">
@@ -202,7 +202,7 @@ export function HorizontalEditorialMarquee({
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
+      className="mim-marquee-isolated mim-marquee-horizontal relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
       {...handlers}
     >
       <div ref={innerRef} className="flex gap-4 w-max px-1">
@@ -428,7 +428,7 @@ export function HorizontalShowcaseMarquee({
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
+      className="mim-marquee-isolated mim-marquee-horizontal relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
       {...handlers}
     >
       <div ref={innerRef} className="flex gap-4 w-max px-1">

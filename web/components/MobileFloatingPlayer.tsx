@@ -117,18 +117,29 @@ export function MobileFloatingPlayer() {
     }
   }, []);
 
+  const syncVolumeToPlayer = useCallback((nextVolume: number) => {
+    const clampedVolume = Math.max(0, Math.min(100, Math.round(nextVolume)));
+
+    if (clampedVolume <= 0) {
+      sendCommand("setVolume", [0]);
+      sendCommand("mute");
+      return;
+    }
+
+    sendCommand("unMute");
+    sendCommand("setVolume", [clampedVolume]);
+    window.setTimeout(() => {
+      sendCommand("setVolume", [clampedVolume]);
+    }, 120);
+  }, [sendCommand]);
+
   const handleIframeReady = useCallback(() => {
     setTimeout(() => {
       sendCommand("playVideo");
-      sendCommand("setVolume", [volume]);
-      if (volume > 0) {
-        sendCommand("unMute");
-      } else {
-        sendCommand("mute");
-      }
+      syncVolumeToPlayer(volume);
       sendListening();
     }, 600);
-  }, [sendCommand, sendListening, volume]);
+  }, [sendCommand, sendListening, syncVolumeToPlayer, volume]);
 
   useEffect(() => {
     setMounted(true);
@@ -208,17 +219,12 @@ export function MobileFloatingPlayer() {
   useEffect(() => {
     if (state.isOpen && state.videoId) {
       const t = setTimeout(() => {
-        sendCommand("setVolume", [volume]);
-        if (volume > 0) {
-          sendCommand("unMute");
-        } else {
-          sendCommand("mute");
-        }
+        syncVolumeToPlayer(volume);
         sendListening();
       }, 600);
       return () => clearTimeout(t);
     }
-  }, [state.videoId, state.isOpen, volume, sendCommand, sendListening]);
+  }, [state.videoId, state.isOpen, volume, syncVolumeToPlayer, sendListening]);
 
   // Reset playback position on video changes
   useEffect(() => {
@@ -365,13 +371,9 @@ export function MobileFloatingPlayer() {
   };
 
   const changeVolume = (newVol: number) => {
-    setVolume(newVol);
-    sendCommand("setVolume", [newVol]);
-    if (newVol > 0) {
-      sendCommand("unMute");
-    } else {
-      sendCommand("mute");
-    }
+    const clampedVolume = Math.max(0, Math.min(100, Math.round(newVol)));
+    setVolume(clampedVolume);
+    syncVolumeToPlayer(clampedVolume);
   };
 
   const toggleMute = () => {

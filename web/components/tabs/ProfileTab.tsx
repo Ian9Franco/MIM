@@ -396,7 +396,11 @@ export function ProfileTab({
                 <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
               </div>
             ) : userShares.length > 0 ? (
-              <div className="grid gap-3">
+              <div
+                onWheel={handleHorizontalWheel}
+                className="grid grid-flow-col grid-rows-1 gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
+                style={{ gridAutoColumns: "minmax(260px, calc((100% - 1.5rem) / 3))" }}
+              >
                 {userShares.map(share => {
                   const meta = parseShareMeta(share.summary);
                   const projectId = share.mod_id || share.project_id || share.id;
@@ -404,7 +408,7 @@ export function ProfileTab({
                   return (
                     <div
                       key={share.id}
-                      className="bg-surface/80 border border-border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all"
+                      className="bg-surface/80 border border-border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start"
                     >
                       <div className="flex items-center gap-3">
                         <div

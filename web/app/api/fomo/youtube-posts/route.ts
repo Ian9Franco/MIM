@@ -182,6 +182,46 @@ async function fetchVideoDescription(videoId: string, title = ""): Promise<{ des
   return { description: "", html: "" };
 }
 
+async function fetchYouTubeApiDescriptions(videoIds: string[]): Promise<Map<string, string>> {
+  const descriptions = new Map<string, string>();
+  const apiKey = process.env.YOUTUBE_DATA_API_KEY?.trim();
+  const uniqueVideoIds = [...new Set(videoIds.filter(Boolean))].slice(0, 50);
+
+  if (!apiKey || uniqueVideoIds.length === 0) return descriptions;
+
+  try {
+    const params = new URLSearchParams({
+      part: "snippet",
+      id: uniqueVideoIds.join(","),
+      key: apiKey,
+    });
+
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error(`[fetchYouTubeApiDescriptions] YouTube Data API returned HTTP ${res.status}`);
+      return descriptions;
+    }
+
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    for (const item of items) {
+      const id = item?.id;
+      const description = item?.snippet?.description;
+      if (typeof id === "string" && typeof description === "string") {
+        descriptions.set(id, description);
+      }
+    }
+  } catch (e) {
+    console.error("[fetchYouTubeApiDescriptions] Error:", e);
+  }
+
+  return descriptions;
+}
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -515,17 +555,39 @@ export async function GET(request: Request) {
 
     if (feedType === "videos" || feedType === "shorts") {
       const targetPosts = posts.slice(0, 12);
+      const scrapedTextByPostId = new Map<string, string>();
+
       await Promise.all(
         targetPosts.map(async (post) => {
           const resObj = await fetchVideoDescription(post.postId, post.title);
+          scrapedTextByPostId.set(post.postId, `${resObj.html || ""}\n${resObj.description || ""}`);
           post.description = isUsefulVideoDescription(resObj.description, post.title)
             ? resObj.description
             : isUsefulVideoDescription(post.description, post.title)
               ? post.description
               : "";
-          post.modSlugs = extractModSlugs(resObj.html || resObj.description);
+          post.modSlugs = extractModSlugs(scrapedTextByPostId.get(post.postId) || "");
         })
       );
+
+      const postsMissingDescription = targetPosts.filter(
+        (post) => !isUsefulVideoDescription(post.description, post.title)
+      );
+      const apiDescriptions = await fetchYouTubeApiDescriptions(
+        postsMissingDescription.map((post) => post.postId)
+      );
+
+      for (const post of postsMissingDescription) {
+        const apiDescription = apiDescriptions.get(post.postId) || "";
+        if (!isUsefulVideoDescription(apiDescription, post.title)) continue;
+
+        post.description = apiDescription;
+        post.modSlugs = [...new Set([
+          ...(post.modSlugs || []),
+          ...extractModSlugs(apiDescription),
+        ])];
+      }
+
       posts.splice(0, posts.length, ...targetPosts);
     }
 

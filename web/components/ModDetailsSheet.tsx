@@ -71,6 +71,31 @@ function stripHtml(value: string) {
     .trim();
 }
 
+function textForTranslation(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, " ")
+    .replace(/<img\b[^>]*>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|section|article|h[1-6]|blockquote|pre|ul|ol)>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "\n- ")
+    .replace(/<\/li>/gi, "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/^[ \t]*[#>]+[ \t]*/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/g, "").replace(/[ \t]{3,}/g, "  "))
+    .join("\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+}
+
 function renderIframe(src: string) {
   const url = safeUrl(src);
   if (!url || !/(youtube\.com|youtube-nocookie\.com|youtu\.be)/i.test(url)) return "";
@@ -129,7 +154,7 @@ async function translateDescription(projectId: string, markdown: string): Promis
     return descriptionTranslationCache[projectId];
   }
 
-  const clean = stripHtml(markdown).substring(0, 1600);
+  const clean = textForTranslation(markdown).substring(0, 2200);
   if (!clean.trim()) return "";
 
   let html = "";
@@ -294,6 +319,8 @@ interface VersionRow {
   datePublished: string | null;
   downloads: number;
   versionType: string;
+  changelog: string;
+  changelogUrl?: string | null;
 }
 
 function normalizeLoaderLabel(loader: string) {
@@ -302,14 +329,16 @@ function normalizeLoaderLabel(loader: string) {
 
 function normalizeVersionRows(details: any): VersionRow[] {
   const rows = Array.isArray(details?.versions) ? details.versions : [];
-  return rows.map((version: any) => ({
-    id: version.id || version.version_number || version.name,
+  return rows.map((version: any): VersionRow => ({
+    id: String(version.id || version.version_number || version.name),
     name: version.name || version.version_number || "Version",
     gameVersions: Array.isArray(version.game_versions) ? version.game_versions : [],
     loaders: Array.isArray(version.loaders) ? version.loaders : [],
     datePublished: version.date_published || version.datePublished || null,
     downloads: version.downloads || 0,
     versionType: version.version_type || "release",
+    changelog: version.changelog || "",
+    changelogUrl: version.changelog_url || version.changelogUrl || null,
   }));
 }
 
@@ -431,6 +460,11 @@ export function ModDetailsSheet({
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareComment, setShareComment] = useState("");
   const [isSharing, setIsSharing] = useState(false);
+  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
+  const [versionChangelogs, setVersionChangelogs] = useState<Record<string, string>>({});
+  const [loadingVersionChangelog, setLoadingVersionChangelog] = useState<string | null>(null);
+  const [translatedVersionChangelogs, setTranslatedVersionChangelogs] = useState<Record<string, string>>({});
+  const [translatingVersionChangelog, setTranslatingVersionChangelog] = useState<string | null>(null);
   const [dragEnabled, setDragEnabled] = useState(true);
   const dragControls = useDragControls();
 
@@ -452,6 +486,11 @@ export function ModDetailsSheet({
     setIsTranslating(false);
     setIsTranslatingSummary(false);
     setActiveImageIndex(null);
+    setExpandedVersionId(null);
+    setVersionChangelogs({});
+    setLoadingVersionChangelog(null);
+    setTranslatedVersionChangelogs({});
+    setTranslatingVersionChangelog(null);
   }, [selectedMod?.projectId]);
 
   useEffect(() => {
@@ -608,7 +647,7 @@ export function ModDetailsSheet({
 
     setIsTranslatingSummary(true);
     try {
-      const clean = stripHtml(textToTranslate).trim();
+      const clean = textForTranslation(textToTranslate).trim();
       if (!clean) return;
 
       const res = await fetch("/api/fomo/translate", {
@@ -625,6 +664,48 @@ export function ModDetailsSheet({
       setIsTranslatingSummary(false);
     }
   }, [selectedMod?.description, isTranslatingSummary, translatedSummary]);
+
+  const handleToggleVersion = useCallback(async (version: VersionRow) => {
+    if (expandedVersionId === version.id) {
+      setExpandedVersionId(null);
+      return;
+    }
+
+    setExpandedVersionId(version.id);
+    if (version.changelog || versionChangelogs[version.id] || selectedMod?._source !== "curseforge") return;
+
+    setLoadingVersionChangelog(version.id);
+    try {
+      const res = await fetch(`/api/curseforge/file-changelog?projectId=${encodeURIComponent(selectedMod.projectId)}&fileId=${encodeURIComponent(version.id)}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setVersionChangelogs((prev) => ({ ...prev, [version.id]: data.changelog || "" }));
+    } catch {
+      setVersionChangelogs((prev) => ({ ...prev, [version.id]: "" }));
+    } finally {
+      setLoadingVersionChangelog(null);
+    }
+  }, [expandedVersionId, selectedMod, versionChangelogs]);
+
+  const handleTranslateVersionChangelog = useCallback(async (version: VersionRow, changelog: string) => {
+    if (!changelog || translatingVersionChangelog) return;
+    if (translatedVersionChangelogs[version.id]) {
+      setTranslatedVersionChangelogs((prev) => {
+        const next = { ...prev };
+        delete next[version.id];
+        return next;
+      });
+      return;
+    }
+
+    setTranslatingVersionChangelog(version.id);
+    try {
+      const html = await translateDescription(`${selectedMod?.projectId || "version"}:changelog:${version.id}`, changelog);
+      setTranslatedVersionChangelogs((prev) => ({ ...prev, [version.id]: html }));
+    } finally {
+      setTranslatingVersionChangelog(null);
+    }
+  }, [selectedMod?.projectId, translatedVersionChangelogs, translatingVersionChangelog]);
 
   const bannerUrl = selectedModDetails?.gallery?.[0]?.url || undefined;
   const projectType = selectedMod?.projectType || "mod";
@@ -945,7 +1026,7 @@ export function ModDetailsSheet({
                             </button>
                           </div>
                           {translatedSummary ? (
-                            <p className="text-xs font-semibold leading-relaxed" style={{ color: "var(--color-primary)" }}>
+                            <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap" style={{ color: "var(--color-primary)" }}>
                               {translatedSummary}
                             </p>
                           ) : (
@@ -1130,37 +1211,106 @@ export function ModDetailsSheet({
                                   <span className="text-[9px] text-white/30 font-mono">{versionRows.length}</span>
                                 </div>
                                 <div className="max-h-64 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
-                                  {versionRows.map((version) => (
-                                    <div key={version.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-white/[0.04] bg-white/[0.015] p-3 last:border-b-0">
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
-                                            version.versionType === "release"
-                                              ? "bg-emerald-500/[0.18] text-emerald-300"
-                                              : "bg-amber-500/[0.18] text-amber-300"
-                                          }`}>
-                                            {version.versionType === "release" ? "R" : version.versionType?.substring(0, 1).toUpperCase() || "V"}
-                                          </span>
-                                          <span className="text-[11px] font-bold text-white truncate">{version.name}</span>
-                                        </div>
-                                        <div className="mt-1.5 flex flex-wrap gap-1.5 pl-7">
-                                          {version.gameVersions.slice(0, 3).map((ver: string) => (
-                                            <span key={ver} className="px-1.5 py-0.5 rounded-md bg-white/[0.07] border border-white/[0.06] text-[8px] font-mono text-white/55">{ver}</span>
-                                          ))}
-                                          {version.gameVersions.length > 3 && (
-                                            <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[8px] font-mono text-white/35">+{version.gameVersions.length - 3}</span>
+                                  {versionRows.map((version) => {
+                                    const isExpanded = expandedVersionId === version.id;
+                                    const loadedChangelog = version.changelog || versionChangelogs[version.id] || "";
+                                    const isLoadingChangelog = loadingVersionChangelog === version.id;
+
+                                    return (
+                                      <div key={version.id} className="border-b border-white/[0.04] bg-white/[0.015] last:border-b-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleVersion(version)}
+                                          className="grid w-full grid-cols-[1fr_auto] gap-2 p-3 text-left transition-colors hover:bg-white/[0.025] active:bg-white/[0.04]"
+                                        >
+                                          <div className="min-w-0">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
+                                                version.versionType === "release"
+                                                  ? "bg-emerald-500/[0.18] text-emerald-300"
+                                                  : "bg-amber-500/[0.18] text-amber-300"
+                                              }`}>
+                                                {version.versionType === "release" ? "R" : version.versionType?.substring(0, 1).toUpperCase() || "V"}
+                                              </span>
+                                              <span className="text-[11px] font-bold text-white truncate">{version.name}</span>
+                                            </div>
+                                            <div className="mt-1.5 flex flex-wrap gap-1.5 pl-7">
+                                              {version.gameVersions.slice(0, 3).map((ver: string) => (
+                                                <span key={ver} className="px-1.5 py-0.5 rounded-md bg-white/[0.07] border border-white/[0.06] text-[8px] font-mono text-white/55">{ver}</span>
+                                              ))}
+                                              {version.gameVersions.length > 3 && (
+                                                <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[8px] font-mono text-white/35">+{version.gameVersions.length - 3}</span>
+                                              )}
+                                              {version.loaders.map((loader: string) => (
+                                                <span key={loader} className="px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/15 text-[8px] font-bold text-orange-300">{normalizeLoaderLabel(loader)}</span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                          <div className="text-right shrink-0">
+                                            <span className="block text-[9px] font-mono text-white/40">{formatPublishedDate(version.datePublished)}</span>
+                                            <span className="block text-[9px] font-bold text-white/55 mt-1">{compactNumber(version.downloads)} desc.</span>
+                                            <span className="mt-1 block text-[8px] font-bold uppercase tracking-wide text-orange-300/70">
+                                              {isExpanded ? "Ocultar" : "Changelog"}
+                                            </span>
+                                          </div>
+                                        </button>
+
+                                        <AnimatePresence initial={false}>
+                                          {isExpanded && (
+                                            <motion.div
+                                              initial={{ opacity: 0, height: 0 }}
+                                              animate={{ opacity: 1, height: "auto" }}
+                                              exit={{ opacity: 0, height: 0 }}
+                                              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                                              className="overflow-hidden"
+                                            >
+                                              <div className="mx-3 mb-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                                                {isLoadingChangelog ? (
+                                                  <div className="flex items-center gap-2 text-[10px] font-bold text-white/45">
+                                                    <Loader2 className="w-3 h-3 animate-spin text-orange-400" />
+                                                    Cargando changelog...
+                                                  </div>
+                                                ) : loadedChangelog ? (
+                                                  <div className="flex flex-col gap-2.5">
+                                                    <div className="flex items-center justify-between gap-2 border-b border-white/[0.04] pb-2">
+                                                      <span className="text-[9px] font-mono uppercase tracking-wider text-white/35 font-bold">Changelog</span>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleTranslateVersionChangelog(version, loadedChangelog)}
+                                                        disabled={translatingVersionChangelog === version.id}
+                                                        className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                                                        style={{
+                                                          color: "var(--color-primary)",
+                                                          background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
+                                                          borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
+                                                        }}
+                                                      >
+                                                        {translatingVersionChangelog === version.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
+                                                        {translatingVersionChangelog === version.id
+                                                          ? "Traduciendo"
+                                                          : translatedVersionChangelogs[version.id] ? "Original" : "Traducir"}
+                                                      </button>
+                                                    </div>
+                                                    {translatedVersionChangelogs[version.id] ? (
+                                                      <div className="mim-rich-description" dangerouslySetInnerHTML={{ __html: translatedVersionChangelogs[version.id] }} />
+                                                    ) : (
+                                                      renderBodyText(loadedChangelog, selectedMod?._source)
+                                                    )}
+                                                  </div>
+                                                ) : version.changelogUrl ? (
+                                                  <a href={version.changelogUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-orange-300 hover:underline inline-flex items-center gap-1">
+                                                    Ver changelog externo <ExternalLink className="w-3 h-3" />
+                                                  </a>
+                                                ) : (
+                                                  <p className="text-[10px] text-white/35 italic">Esta versión no tiene changelog publicado.</p>
+                                                )}
+                                              </div>
+                                            </motion.div>
                                           )}
-                                          {version.loaders.map((loader: string) => (
-                                            <span key={loader} className="px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/15 text-[8px] font-bold text-orange-300">{normalizeLoaderLabel(loader)}</span>
-                                          ))}
-                                        </div>
+                                        </AnimatePresence>
                                       </div>
-                                      <div className="text-right shrink-0">
-                                        <span className="block text-[9px] font-mono text-white/40">{formatPublishedDate(version.datePublished)}</span>
-                                        <span className="block text-[9px] font-bold text-white/55 mt-1">{compactNumber(version.downloads)} desc.</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ) : (

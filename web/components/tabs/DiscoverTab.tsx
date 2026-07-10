@@ -61,6 +61,7 @@ const MOD_TYPES = [
   { value: "datapack", label: "Datapacks", icon: Database },
   { value: "modpack", label: "Modpacks", icon: Package },
 ];
+const DISCOVER_PAGE_SIZE = 12;
 const ENVIRONMENTS = [
   { value: "any", label: "Cualquiera" },
   { value: "client", label: "Cliente" },
@@ -342,6 +343,51 @@ export function DiscoverTab({
   };
 
   const activeCategories = getCategories();
+  const totalDiscoverPages = Math.max(1, Math.ceil(discoverTotal / DISCOVER_PAGE_SIZE));
+  const renderPagination = (position: "top" | "bottom") => {
+    if (discoverTotal <= 0) return null;
+
+    return (
+      <div className={`flex items-center justify-between px-1 shrink-0 ${
+        position === "top"
+          ? "border-b border-white/[0.06] pb-3 mb-3"
+          : "border-t border-white/[0.06] pt-4 mt-2 mb-6"
+      }`}>
+        <button
+          onClick={() => {
+            if (discoverPage > 1) {
+              runDiscoverSearch(discoverPage - 1);
+            }
+          }}
+          disabled={discoverPage <= 1 || discoverLoading}
+          className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
+        >
+          &larr; Anterior
+        </button>
+
+        <div className="flex flex-col items-center">
+          <span className="text-[11px] font-bold text-white/90">
+            Página {discoverPage} de {totalDiscoverPages}
+          </span>
+          <span className="text-[9px] text-white/40 font-semibold font-mono mt-0.5">
+            {discoverTotal} resultados
+          </span>
+        </div>
+
+        <button
+          onClick={() => {
+            if (discoverPage < totalDiscoverPages) {
+              runDiscoverSearch(discoverPage + 1);
+            }
+          }}
+          disabled={discoverPage >= totalDiscoverPages || discoverLoading}
+          className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
+        >
+          Siguiente &rarr;
+        </button>
+      </div>
+    );
+  };
 
   return (
     <motion.div
@@ -709,6 +755,8 @@ export function DiscoverTab({
         </div>
       ) : discoverResults.length > 0 ? (
         <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">
+          {renderPagination("top")}
+
           <div className="grid grid-cols-2 gap-3.5 w-full">
             {discoverResults.map((mod) => {
               const isCurse = mod._source === "curseforge";
@@ -809,43 +857,7 @@ export function DiscoverTab({
             })}
           </div>
 
-          {discoverTotal > 0 && (
-            <div className="flex items-center justify-between border-t border-white/[0.06] pt-4 mt-2 mb-6 px-1 shrink-0">
-              <button
-                onClick={() => {
-                  if (discoverPage > 1) {
-                    runDiscoverSearch(discoverPage - 1);
-                  }
-                }}
-                disabled={discoverPage <= 1 || discoverLoading}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
-              >
-                &larr; Anterior
-              </button>
-
-              <div className="flex flex-col items-center">
-                <span className="text-[11px] font-bold text-white/90">
-                  Página {discoverPage} de {Math.max(1, Math.ceil(discoverTotal / 10))}
-                </span>
-                <span className="text-[9px] text-white/40 font-semibold font-mono mt-0.5">
-                  {discoverTotal} resultados
-                </span>
-              </div>
-
-              <button
-                onClick={() => {
-                  const totalPages = Math.ceil(discoverTotal / 10);
-                  if (discoverPage < totalPages) {
-                    runDiscoverSearch(discoverPage + 1);
-                  }
-                }}
-                disabled={discoverPage >= Math.ceil(discoverTotal / 10) || discoverLoading}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-xs font-semibold text-white/80 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1"
-              >
-                Siguiente &rarr;
-              </button>
-            </div>
-          )}
+          {renderPagination("bottom")}
         </div>
       ) : (
         <div className="flex-1 flex flex-col justify-center items-center text-center p-6">

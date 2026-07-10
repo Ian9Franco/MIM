@@ -837,7 +837,7 @@ export function useHomeController() {
         projectType: discoverType,
         loader: selectedLoaders.length > 0 ? selectedLoaders.join(",") : "any",
         page: String(pageNumber),
-        pageSize: "10",
+        pageSize: "12",
         q: activeQuery,
         sort: discoverSort,
         gameVersions: JSON.stringify(gameVersions),

@@ -286,11 +286,21 @@ function formatPublishedDate(value?: string | null) {
   return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+interface VersionRow {
+  id: string;
+  name: string;
+  gameVersions: string[];
+  loaders: string[];
+  datePublished: string | null;
+  downloads: number;
+  versionType: string;
+}
+
 function normalizeLoaderLabel(loader: string) {
   return VERSION_PLATFORM_LABELS[loader.toLowerCase()] || loader;
 }
 
-function normalizeVersionRows(details: any) {
+function normalizeVersionRows(details: any): VersionRow[] {
   const rows = Array.isArray(details?.versions) ? details.versions : [];
   return rows.map((version: any) => ({
     id: version.id || version.version_number || version.name,
@@ -304,7 +314,7 @@ function normalizeVersionRows(details: any) {
 }
 
 function getAvailableLoaders(details: any) {
-  const versionLoaders = normalizeVersionRows(details).flatMap((version: { loaders: any[] }) => version.loaders);
+  const versionLoaders = normalizeVersionRows(details).flatMap((version: VersionRow) => version.loaders);
   const directLoaders = Array.isArray(details?.loaders) ? details.loaders : [];
   return Array.from(new Set([...directLoaders, ...versionLoaders]))
     .map((loader) => String(loader).toLowerCase())

@@ -304,7 +304,7 @@ function normalizeVersionRows(details: any) {
 }
 
 function getAvailableLoaders(details: any) {
-  const versionLoaders = normalizeVersionRows(details).flatMap((version) => version.loaders);
+  const versionLoaders = normalizeVersionRows(details).flatMap((version: { loaders: any[] }) => version.loaders);
   const directLoaders = Array.isArray(details?.loaders) ? details.loaders : [];
   return Array.from(new Set([...directLoaders, ...versionLoaders]))
     .map((loader) => String(loader).toLowerCase())

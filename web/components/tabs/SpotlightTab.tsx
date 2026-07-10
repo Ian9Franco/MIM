@@ -38,6 +38,8 @@ export function SpotlightTab({
   handleOpenModDetails, handleEnterCollection, showcaseChannels,
   setShowChannelPicker, updatedMods, newestMods,
 }: SpotlightTabProps) {
+  const curseForgeMonthlyMods = (curseForgeFeatured[0]?.mods || []) as ModHit[];
+
   return (
     <motion.div
       key="spotlight"
@@ -94,9 +96,9 @@ export function SpotlightTab({
               />
             ) : (
               <HorizontalEditorialMarquee
-                items={curseForgeFeatured}
-                type="collection"
-                onSelectCollection={handleEnterCollection}
+                items={curseForgeMonthlyMods}
+                type="mod"
+                onSelectMod={handleOpenModDetails}
                 speed={0.75}
                 reverse={true}
               />

@@ -66,6 +66,8 @@ const DEFAULT_CHANNELS = [
   "https://www.youtube.com/@sir_color",
   "https://www.youtube.com/@Wero_lovernite",
 ];
+const COLLECTIONS_CACHE_KEY = "mim_collections_payload_v1";
+const COLLECTIONS_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
 
 const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
   {
@@ -185,6 +187,8 @@ export function useHomeController() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const initialSearchSkippedRef = useRef(false);
+  const collectionsLastLoadedRef = useRef(0);
+  const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState("");
@@ -332,6 +336,21 @@ export function useHomeController() {
     const cachedCollectionMods = localStorage.getItem("mim_active_collection_mods");
     if (cachedCollectionMods !== null) {
       try { setActiveCollectionMods(JSON.parse(cachedCollectionMods)); } catch {}
+    }
+
+    const cachedCollectionsPayload = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+    if (cachedCollectionsPayload !== null) {
+      try {
+        const parsed = JSON.parse(cachedCollectionsPayload);
+        if (parsed?.timestamp && Date.now() - parsed.timestamp < COLLECTIONS_CACHE_TTL_MS) {
+          if (Array.isArray(parsed.modrinthFeatured)) setModrinthFeatured(parsed.modrinthFeatured);
+          if (Array.isArray(parsed.curseForgeFeatured)) setCurseForgeFeatured(parsed.curseForgeFeatured);
+          if (Array.isArray(parsed.curseForgeCollections)) setCurseForgeCollections(parsed.curseForgeCollections);
+          if (typeof parsed.latestCollectionName === "string") setLatestCollectionName(parsed.latestCollectionName);
+          if (Array.isArray(parsed.latestFeaturedMods)) setLatestFeaturedMods(parsed.latestFeaturedMods);
+          collectionsLastLoadedRef.current = parsed.timestamp;
+        }
+      } catch {}
     }
 
     const cachedDraft = localStorage.getItem("mim_active_draft");
@@ -658,7 +677,32 @@ export function useHomeController() {
   }, []);
 
   const loadCollections = useCallback(async () => {
-    try {
+    const applyCachedCollections = (payload: any) => {
+      if (Array.isArray(payload?.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured);
+      if (Array.isArray(payload?.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured);
+      if (Array.isArray(payload?.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections);
+      if (typeof payload?.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
+      if (Array.isArray(payload?.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods);
+      if (typeof payload?.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
+    };
+
+    const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+    let cachedPayload: any = null;
+    if (cachedRaw) {
+      try {
+        cachedPayload = JSON.parse(cachedRaw);
+        if (cachedPayload?.timestamp) {
+          applyCachedCollections(cachedPayload);
+          if (Date.now() - cachedPayload.timestamp < COLLECTIONS_CACHE_TTL_MS) return;
+        }
+      } catch {}
+    }
+
+    if (Date.now() - collectionsLastLoadedRef.current < COLLECTIONS_CACHE_TTL_MS) return;
+    if (collectionsRequestRef.current) return collectionsRequestRef.current;
+
+    collectionsRequestRef.current = (async () => {
+      try {
       const [mrRes, cfRes] = await Promise.all([
         fetch("/api/modrinth/official").then((r) => r.ok ? r.json() : { collections: [] }),
         fetch("/api/curseforge/picks").then((r) => r.ok ? r.json() : { picks: [] }),
@@ -673,14 +717,33 @@ export function useHomeController() {
         setLatestCollectionName(mrColls[0].name);
         void loadCollectionMods(mrColls[0], true);
       }
-    } catch (err) {
+
+        const payload = {
+          timestamp: Date.now(),
+          modrinthFeatured: mrColls,
+          curseForgeFeatured: cfPicks,
+          curseForgeCollections: cfCollections,
+          latestCollectionName: mrColls[0]?.name || FALLBACK_MODRINTH_COLLECTIONS[0].name,
+        };
+        localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(payload));
+        collectionsLastLoadedRef.current = payload.timestamp;
+      } catch (err) {
       console.error("Error loading collections:", err);
+      if (cachedPayload) {
+        applyCachedCollections(cachedPayload);
+        return;
+      }
       setModrinthFeatured(FALLBACK_MODRINTH_COLLECTIONS);
       setCurseForgeFeatured(FALLBACK_CURSEFORGE_COLLECTIONS);
       setCurseForgeCollections(FALLBACK_CURSEFORGE_COLLECTIONS);
       setLatestCollectionName(FALLBACK_MODRINTH_COLLECTIONS[0].name);
       setLatestFeaturedMods(mockUpdatedMods);
-    }
+      } finally {
+        collectionsRequestRef.current = null;
+      }
+    })();
+
+    return collectionsRequestRef.current;
   }, [loadCollectionMods]);
 
   const handleEnterCollection = (collection: CollectionItem) => {

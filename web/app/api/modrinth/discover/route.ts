@@ -41,6 +41,9 @@ export async function GET(req: NextRequest) {
   const headers: Record<string, string> = {
     "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
   };
+  if (process.env.MODRINTH_API_KEY) {
+    headers.Authorization = process.env.MODRINTH_API_KEY;
+  }
 
   const queryText = q;
   const facetsArray: string[][] = [];

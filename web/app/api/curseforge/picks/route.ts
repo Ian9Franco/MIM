@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 
-const CURSEFORGE_MINECRAFT_HOME = "https://www.curseforge.com/minecraft";
-const PROJECT_PATH_TO_TYPE: Record<string, string> = {
-  "mc-mods": "mod",
-  "texture-packs": "resourcepack",
-  shaders: "shader",
-  modpacks: "modpack",
-  "data-packs": "datapack",
+const CURSEFORGE_API = "https://api.curseforge.com/v1";
+const MINECRAFT_GAME_ID = "432";
+const CURSEFORGE_PICKS_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+
+let memoryCache: { timestamp: number; payload: any } | null = null;
+
+const CLASS_ID_TO_PROJECT_TYPE: Record<number, string> = {
+  6: "mod",
+  4471: "modpack",
+  12: "resourcepack",
+  6552: "shader",
+  6945: "datapack",
 };
 
 const FALLBACK_PICKS = [
   {
     id: "curseforge-fallback-monthly",
     name: "CurseForge Monthly Picks",
-    description: "Selección editorial de CurseForge para Minecraft.",
-    iconUrl: "https://www.curseforge.com/community-picks/assets/minecraft/curseforge-apr26/featured-thumbnail.webp",
+    description: "Selección dinámica de proyectos destacados de CurseForge.",
+    iconUrl: "https://media.forgecdn.net/avatars/583/94/637962453676839352.png",
     source: "curseforge",
     projectCount: 3,
     previewIcons: [
@@ -26,33 +31,33 @@ const FALLBACK_PICKS = [
       {
         projectId: "waystones",
         title: "Waystones",
-        description: "Agrega bloques de teletransporte para viajar rápidamente por el mundo.",
+        description: "Bloques de teletransporte para viajar rápido por el mundo.",
         iconUrl: "https://media.forgecdn.net/avatars/583/94/637962453676839352.png",
         author: "Balm",
         projectType: "mod",
-        categories: ["Forge", "Fabric", "Utility"],
+        categories: ["Utility"],
         url: "https://www.curseforge.com/minecraft/mc-mods/waystones",
         _source: "curseforge",
       },
       {
         projectId: "xaeros-minimap",
         title: "Xaero's Minimap",
-        description: "Un minimapa fluido y personalizable con waypoints y detalles del mapa.",
+        description: "Minimapa personalizable con waypoints y detalles del mapa.",
         iconUrl: "https://media.forgecdn.net/avatars/412/120/637628373672909439.png",
         author: "Xaero",
         projectType: "mod",
-        categories: ["Forge", "Fabric"],
+        categories: ["Map and Information"],
         url: "https://www.curseforge.com/minecraft/mc-mods/xaeros-minimap",
         _source: "curseforge",
       },
       {
         projectId: "natures-compass",
         title: "Nature's Compass",
-        description: "Una brujula especial para localizar biomas y ver información sobre ellos.",
+        description: "Brujula especial para localizar biomas.",
         iconUrl: "https://media.forgecdn.net/avatars/615/340/637996373672809439.png",
-        author: "ChaosPlayr",
+        author: "Chaosyr",
         projectType: "mod",
-        categories: ["Forge", "Fabric"],
+        categories: ["Biomes"],
         url: "https://www.curseforge.com/minecraft/mc-mods/natures-compass",
         _source: "curseforge",
       },
@@ -60,186 +65,200 @@ const FALLBACK_PICKS = [
   },
 ];
 
-function decodeHtml(value: string) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
+function currentMonthLabel() {
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date());
 }
 
-function stripTags(value: string) {
-  return decodeHtml(value.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
+function monthStartTimestamp() {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
 }
 
-function absoluteUrl(path: string) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return `https://www.curseforge.com${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function slugify(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "curseforge";
-}
-
-async function fetchHtml(url: string) {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      "User-Agent": "MIM-Hub/1.0 (+https://mim-hub.vercel.app)",
-      Accept: "text/html,application/xhtml+xml",
-    },
-  });
-  if (!res.ok) throw new Error(`CurseForge HTML ${res.status}`);
-  return res.text();
-}
-
-function imageNear(html: string, index: number) {
-  const slice = html.slice(Math.max(0, index - 1200), Math.min(html.length, index + 2200));
-  const imageMatch =
-    slice.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/i) ||
-    slice.match(/(?:src|data-src)=["']([^"']+\.(?:png|jpe?g|webp)(?:\?[^"']*)?)["']/i);
-  return imageMatch ? absoluteUrl(decodeHtml(imageMatch[1])) : undefined;
-}
-
-function descriptionNear(html: string, index: number) {
-  const slice = html.slice(index, Math.min(html.length, index + 1800));
-  const paragraphs = [...slice.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map((match) => stripTags(match[1]))
-    .filter((text) => text.length > 24 && !/^By\s+/i.test(text));
-  return paragraphs[0] || "";
-}
-
-function parseProjects(html: string, limit = 12) {
-  const projectRegex = /<a[^>]+href=["']([^"']*\/minecraft\/(mc-mods|texture-packs|shaders|modpacks|data-packs)\/([^"'/?#]+)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  const mods: any[] = [];
-  const seen = new Set<string>();
-  let match: RegExpExecArray | null;
-
-  while ((match = projectRegex.exec(html)) && mods.length < limit) {
-    const [, rawHref, pathType, slug, innerHtml] = match;
-    const title = stripTags(innerHtml);
-    if (!title || title.length < 3 || /^(view|install|download|browse all)$/i.test(title)) continue;
-    if (seen.has(slug)) continue;
-    seen.add(slug);
-
-    const authorSlice = html.slice(match.index, Math.min(html.length, match.index + 900));
-    const author = stripTags(authorSlice.match(/By\s+<\/?[^>]*>([\s\S]{1,120}?)(?:<|\n)/i)?.[1] || "") || "CurseForge";
-
-    mods.push({
-      projectId: decodeHtml(slug),
-      title,
-      description: descriptionNear(html, match.index),
-      iconUrl: imageNear(html, match.index),
-      author,
-      projectType: PROJECT_PATH_TO_TYPE[pathType] || "mod",
-      categories: [],
-      url: absoluteUrl(rawHref),
-      _source: "curseforge",
-    });
-  }
-
-  return mods;
-}
-
-function parseSections(homeHtml: string) {
-  const sections: any[] = [];
-  const headingRegex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-  const headings = [...homeHtml.matchAll(headingRegex)];
-
-  headings.forEach((heading, index) => {
-    const name = stripTags(heading[1]);
-    if (!name || /popular categories/i.test(name)) return;
-
-    const start = heading.index || 0;
-    const end = headings[index + 1]?.index || homeHtml.length;
-    const sectionHtml = homeHtml.slice(start, end);
-    const mods = parseProjects(sectionHtml, 12);
-    if (!mods.length) return;
-
-    sections.push({
-      id: `curseforge-${slugify(name)}`,
-      name,
-      description: `Selección de CurseForge: ${name}.`,
-      iconUrl: mods.find((mod) => mod.iconUrl)?.iconUrl,
-      source: "curseforge",
-      projectCount: mods.length,
-      previewIcons: mods.map((mod) => mod.iconUrl).filter(Boolean).slice(0, 6),
-      mods,
-    });
-  });
-
-  return sections;
-}
-
-function findMonthlyCollection(homeHtml: string) {
-  const heroMatch = homeHtml.match(/<a[^>]+href=["']([^"']*\/community-picks\/minecraft\/[^"']+)["'][^>]*>\s*(?:<[^>]+>)*\s*View Collection/gi)?.[0];
-  const href = heroMatch?.match(/href=["']([^"']+)["']/i)?.[1];
-  const name =
-    stripTags(homeHtml.match(/Top Mods for [A-Za-z]+/i)?.[0] || "") ||
-    "CurseForge Monthly Picks";
-  const description =
-    stripTags(homeHtml.match(/Top Mods for [A-Za-z]+[\s\S]{0,400}?<p[^>]*>([\s\S]*?)<\/p>/i)?.[1] || "") ||
-    "Selección mensual de mods destacados por CurseForge.";
-
-  return href ? { name, description, url: absoluteUrl(href) } : null;
-}
-
-async function buildMonthlyPick(homeHtml: string, sections: any[]) {
-  const monthly = findMonthlyCollection(homeHtml);
-  let mods: any[] = [];
-  let iconUrl: string | undefined;
-
-  if (monthly?.url) {
-    const collectionHtml = await fetchHtml(monthly.url).catch(() => "");
-    if (collectionHtml) {
-      mods = parseProjects(collectionHtml, 24);
-      iconUrl = imageNear(collectionHtml, 0);
-    }
-  }
-
-  if (!mods.length) {
-    const monthlySection = sections.find((section) => /monthly|theme|top mods/i.test(section.name));
-    mods = monthlySection?.mods || [];
-    iconUrl = monthlySection?.iconUrl;
-  }
-
-  if (!mods.length) return null;
+function mapMod(m: any) {
+  const projectType = CLASS_ID_TO_PROJECT_TYPE[m.classId] || "mod";
 
   return {
-    id: `curseforge-${slugify(monthly?.name || "monthly-picks")}`,
-    name: monthly?.name || "CurseForge Monthly Picks",
-    description: monthly?.description || "Selección mensual de mods destacados por CurseForge.",
-    iconUrl: iconUrl || mods.find((mod) => mod.iconUrl)?.iconUrl,
-    source: "curseforge",
-    projectCount: mods.length,
-    previewIcons: mods.map((mod) => mod.iconUrl).filter(Boolean).slice(0, 6),
-    mods,
-    url: monthly?.url,
+    projectId: m.id?.toString(),
+    title: m.name,
+    description: m.summary || "",
+    iconUrl: m.logo?.thumbnailUrl || m.logo?.url || null,
+    author: m.authors?.[0]?.name || "CurseForge",
+    downloads: m.downloadCount || 0,
+    url: m.links?.websiteUrl || `https://www.curseforge.com/projects/${m.id}`,
+    categories: m.categories?.map((c: any) => c.name).filter(Boolean) || [],
+    latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
+    projectType,
+    dateCreated: m.dateCreated || m.dateReleased || "",
+    dateModified: m.dateModified || "",
+    _source: "curseforge",
   };
 }
 
-export async function GET() {
-  try {
-    const homeHtml = await fetchHtml(CURSEFORGE_MINECRAFT_HOME);
-    const sections = parseSections(homeHtml);
-    const monthlyPick = await buildMonthlyPick(homeHtml, sections);
-    const collections = sections.filter((section) => section.id !== monthlyPick?.id);
+function uniqueMods(mods: any[]) {
+  const seen = new Set<string>();
+  return mods.filter((mod) => {
+    if (!mod?.projectId || seen.has(mod.projectId)) return false;
+    seen.add(mod.projectId);
+    return true;
+  });
+}
 
-    return NextResponse.json({
-      picks: monthlyPick ? [monthlyPick] : FALLBACK_PICKS,
-      collections: collections.length ? collections : FALLBACK_PICKS,
-      source: "curseforge-home",
-    });
-  } catch (err: any) {
-    console.error("[CurseForge Picks] Failed to scrape home:", err);
+function toCollection(id: string, name: string, description: string, mods: any[]) {
+  const cleanMods = uniqueMods(mods).slice(0, 18);
+
+  return {
+    id,
+    name,
+    description,
+    iconUrl: cleanMods.find((mod) => mod.iconUrl)?.iconUrl,
+    source: "curseforge",
+    projectCount: cleanMods.length,
+    previewIcons: cleanMods.map((mod) => mod.iconUrl).filter(Boolean).slice(0, 8),
+    mods: cleanMods,
+  };
+}
+
+async function searchCurseForge(
+  headers: HeadersInit,
+  options: {
+    classId?: number;
+    query?: string;
+    sortField?: number;
+    pageSize?: number;
+  }
+) {
+  const params = new URLSearchParams({
+    gameId: MINECRAFT_GAME_ID,
+    sortField: String(options.sortField ?? 3),
+    sortOrder: "desc",
+    index: "0",
+    pageSize: String(options.pageSize ?? 24),
+  });
+
+  if (options.classId) params.set("classId", String(options.classId));
+  if (options.query) params.set("searchFilter", options.query);
+
+  const res = await fetch(`${CURSEFORGE_API}/mods/search?${params.toString()}`, {
+    headers,
+    next: { revalidate: 60 * 60 },
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "");
+    throw new Error(`CurseForge API ${res.status}: ${errorText.slice(0, 160)}`);
+  }
+
+  const data = await res.json();
+  return (data.data || []).map(mapMod);
+}
+
+export async function GET() {
+  const now = Date.now();
+  if (memoryCache && now - memoryCache.timestamp < CURSEFORGE_PICKS_CACHE_TTL_MS) {
+    return NextResponse.json(
+      { ...memoryCache.payload, cached: true, cacheAgeMs: now - memoryCache.timestamp },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400",
+        },
+      }
+    );
+  }
+
+  const apiKey = process.env.CURSEFORGE_API_KEY;
+
+  if (!apiKey) {
     return NextResponse.json({
       picks: FALLBACK_PICKS,
       collections: FALLBACK_PICKS,
-      source: "fallback",
+      source: "fallback-missing-key",
+    });
+  }
+
+  const headers = {
+    Accept: "application/json",
+    "x-api-key": apiKey,
+  };
+
+  try {
+    const [
+      newestMods,
+      updatedMods,
+      popularMods,
+      endThemeMods,
+      latestResourcePacks,
+      latestShaders,
+      latestModpacks,
+    ] = await Promise.all([
+      searchCurseForge(headers, { classId: 6, sortField: 11, pageSize: 30 }),
+      searchCurseForge(headers, { classId: 6, sortField: 3, pageSize: 30 }),
+      searchCurseForge(headers, { classId: 6, sortField: 2, pageSize: 18 }),
+      searchCurseForge(headers, { query: "end", sortField: 3, pageSize: 24 }),
+      searchCurseForge(headers, { classId: 12, sortField: 11, pageSize: 18 }),
+      searchCurseForge(headers, { classId: 6552, sortField: 11, pageSize: 18 }),
+      searchCurseForge(headers, { classId: 4471, sortField: 11, pageSize: 18 }),
+    ]);
+
+    const startOfMonth = monthStartTimestamp();
+    const monthlyMods = uniqueMods([...newestMods, ...updatedMods])
+      .filter((mod) => {
+        const date = new Date(mod.dateCreated || mod.dateModified || 0).getTime();
+        return Number.isFinite(date) && date >= startOfMonth;
+      })
+      .slice(0, 18);
+
+    const month = currentMonthLabel();
+    const picks = [
+      toCollection(
+        `curseforge-monthly-${month.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        `CurseForge Monthly Picks - ${month}`,
+        "Proyectos recientes y actualizados este mes desde la API oficial de CurseForge.",
+        monthlyMods.length ? monthlyMods : uniqueMods([...newestMods, ...updatedMods]).slice(0, 18)
+      ),
+    ];
+
+    const collections = [
+      toCollection("curseforge-from-top-authors", "From Top Authors", "Proyectos populares de autores destacados en CurseForge.", popularMods),
+      toCollection("curseforge-monthly-theme-end", "Monthly Theme - The End Update", "Selección dinámica relacionada con The End.", endThemeMods),
+      toCollection("curseforge-latest-mods", "Latest Mods", "Mods publicados recientemente en CurseForge.", newestMods),
+      toCollection("curseforge-latest-resource-packs", "Latest Resource Packs", "Resource packs publicados recientemente en CurseForge.", latestResourcePacks),
+      toCollection("curseforge-latest-shaders", "Latest Shaders", "Shaders publicados recientemente en CurseForge.", latestShaders),
+      toCollection("curseforge-latest-modpacks", "Latest Modpacks", "Modpacks publicados recientemente en CurseForge.", latestModpacks),
+    ].filter((collection) => collection.mods.length > 0);
+
+    const payload = {
+      picks: picks[0].mods.length ? picks : FALLBACK_PICKS,
+      collections: collections.length ? collections : FALLBACK_PICKS,
+      source: "curseforge-api",
+      cached: false,
+      generatedAt: new Date().toISOString(),
+    };
+
+    memoryCache = { timestamp: now, payload };
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400",
+      },
+    });
+  } catch (err: any) {
+    console.error("[CurseForge Picks] API failed:", err?.message || err);
+    if (memoryCache?.payload) {
+      return NextResponse.json(
+        { ...memoryCache.payload, cached: true, stale: true, error: err?.message || "CurseForge API error" },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400",
+          },
+        }
+      );
+    }
+
+    return NextResponse.json({
+      picks: FALLBACK_PICKS,
+      collections: FALLBACK_PICKS,
+      source: "fallback-api-error",
+      error: err?.message || "CurseForge API error",
     });
   }
 }

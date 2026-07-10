@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const headers: Record<string, string> = {
+      "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
+      "Content-Type": "application/json"
+    };
+    if (process.env.MODRINTH_API_KEY) {
+      headers.Authorization = process.env.MODRINTH_API_KEY;
+    }
+
     const res = await fetch("https://api.modrinth.com/v3/user/modrinth/collections", {
-      headers: {
-        "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
-        "Content-Type": "application/json"
-      },
+      headers,
       next: { revalidate: 3600 } // Cache output for 1 hour
     });
 
@@ -31,7 +36,7 @@ export async function GET() {
     
     if (idArray.length > 0) {
       const resProjects = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(idArray)}`, {
-        headers: { "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)" }
+        headers
       });
       if (resProjects.ok) {
         const projects = await resProjects.json();

@@ -35,6 +35,34 @@ interface ProfileTabProps {
   onRemoveShare?: (projectId: string) => Promise<void>;
 }
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function projectUpdateKey(source: string | undefined, projectId: string) {
+  return `${source || "modrinth"}:${projectId}`;
+}
+
+function isUpdatedInLastMonth(value?: string | null) {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && Date.now() - time <= THIRTY_DAYS_MS;
+}
+
+async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
+  if (!projectId || projectId.startsWith("youtube:")) return null;
+
+  if (source === "curseforge") {
+    const res = await fetch(`/api/curseforge/project?projectId=${encodeURIComponent(projectId)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.details?.updated_at || data.details?.dateModified || null;
+  }
+
+  const res = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.updated_at || data.published || null;
+}
+
 /**
  * ProfileTab — muestra login/registro o el perfil del usuario autenticado.
  * Incluye acceso a Drafts y Favoritos con click funcional.
@@ -63,6 +91,41 @@ export function ProfileTab({
 
     return [...userFavorites].sort((a, b) => getTime(b) - getTime(a));
   }, [userFavorites]);
+  const [recentUpdates, setRecentUpdates] = React.useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const entries = [...userFavorites, ...userShares]
+      .map((item) => {
+        const meta = item.summary?.trim?.().startsWith("{") ? readFavoriteMeta(item) : {};
+        const projectId = item.mod_id || item.project_id || item.id;
+        const source = item.platform || item.source || "modrinth";
+        const projectType = item.project_type || meta.project_type || meta.projectType || "mod";
+        return { projectId, source, projectType };
+      })
+      .filter((item) => item.projectId && item.source !== "youtube" && !String(item.projectId).startsWith("youtube:"));
+    const unique = Array.from(new Map(entries.map((item) => [projectUpdateKey(item.source, item.projectId), item])).values());
+
+    if (!unique.length) {
+      setRecentUpdates({});
+      return;
+    }
+
+    Promise.all(unique.map(async (item) => {
+      try {
+        const updatedAt = await fetchProjectUpdatedAt(item.source, item.projectId);
+        return [projectUpdateKey(item.source, item.projectId), isUpdatedInLastMonth(updatedAt)] as const;
+      } catch {
+        return [projectUpdateKey(item.source, item.projectId), false] as const;
+      }
+    })).then((pairs) => {
+      if (!cancelled) setRecentUpdates(Object.fromEntries(pairs));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userFavorites, userShares]);
 
   const handleHorizontalWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     const delta = event.shiftKey ? event.deltaY : event.deltaX;
@@ -340,6 +403,8 @@ export function ProfileTab({
                   const meta = readFavoriteMeta(fav);
                   const projectId = fav.mod_id || fav.project_id || fav.id;
                   const projectType = fav.project_type || meta.project_type || "mod";
+                  const projectSource = fav.platform || fav.source || "modrinth";
+                  const isRecentlyUpdated = recentUpdates[projectUpdateKey(projectSource, projectId)];
                   let title = fav.name || "";
                   let author = "Comunidad";
                   if (fav.name && fav.name.includes(" ::: ")) {
@@ -359,9 +424,11 @@ export function ProfileTab({
                       projectType,
                       categories: fav.categories || meta.categories || [],
                       url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
-                      _source: fav.platform || "modrinth",
+                      _source: projectSource,
                     })}
-                    className="bg-surface/80 border border-border rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10 snap-start"
+                    className={`bg-surface/80 border rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10 snap-start ${
+                      isRecentlyUpdated ? "border-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.28)]" : "border-border"
+                    }`}
                   >
                     <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                       {fav.icon_url ? (
@@ -405,26 +472,43 @@ export function ProfileTab({
                   const meta = parseShareMeta(share.summary);
                   const projectId = share.mod_id || share.project_id || share.id;
                   const projectType = meta.projectType || "mod";
+                  const isYoutubeShare = share.platform === "youtube" || projectType.startsWith("youtube-");
+                  const shareSource = share.platform || "modrinth";
+                  const isRecentlyUpdated = !isYoutubeShare && recentUpdates[projectUpdateKey(shareSource, projectId)];
+                  const openShare = () => {
+                    if (isYoutubeShare) {
+                      if (meta.embeddedVideoId) {
+                        window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
+                      } else if (meta.videoUrl) {
+                        window.open(meta.videoUrl, "_blank", "noopener,noreferrer");
+                      }
+                      return;
+                    }
+
+                    handleOpenModDetails({
+                      projectId,
+                      title: share.name,
+                      description: meta.comment || "",
+                      iconUrl: share.icon_url,
+                      author: "Comunidad",
+                      projectType,
+                      categories: [share.platform || "modrinth"],
+                      url: share.platform === "curseforge"
+                        ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+                        : `https://modrinth.com/${projectType}/${projectId}`,
+                      _source: share.platform || "modrinth",
+                    });
+                  };
                   return (
                     <div
                       key={share.id}
-                      className="bg-surface/80 border border-border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start"
+                      className={`bg-surface/80 border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start ${
+                        isRecentlyUpdated ? "border-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.28)]" : "border-border"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          onClick={() => handleOpenModDetails({
-                            projectId,
-                            title: share.name,
-                            description: meta.comment || "",
-                            iconUrl: share.icon_url,
-                            author: "Comunidad",
-                            projectType,
-                            categories: [share.platform || "modrinth"],
-                            url: share.platform === "curseforge"
-                              ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
-                              : `https://modrinth.com/${projectType}/${projectId}`,
-                            _source: share.platform || "modrinth",
-                          })}
+                          onClick={openShare}
                           className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer active:scale-95 transition-all"
                         >
                           {share.icon_url ? (
@@ -434,27 +518,17 @@ export function ProfileTab({
                           )}
                         </div>
                         <div
-                          onClick={() => handleOpenModDetails({
-                            projectId,
-                            title: share.name,
-                            description: meta.comment || "",
-                            iconUrl: share.icon_url,
-                            author: "Comunidad",
-                            projectType,
-                            categories: [share.platform || "modrinth"],
-                            url: share.platform === "curseforge"
-                              ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
-                              : `https://modrinth.com/${projectType}/${projectId}`,
-                            _source: share.platform || "modrinth",
-                          })}
+                          onClick={openShare}
                           className="flex-1 min-w-0 cursor-pointer"
                         >
                           <h4 className="text-xs font-bold text-white truncate">{share.name}</h4>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
-                              share.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
+                              isYoutubeShare
+                                ? "bg-red-600/20 text-red-300 border border-red-500/20"
+                                : share.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
                             }`}>
-                              {share.platform === "curseforge" ? "CurseForge" : "Modrinth"}
+                              {isYoutubeShare ? "YouTube" : share.platform === "curseforge" ? "CurseForge" : "Modrinth"}
                             </span>
                             {meta.modloader && (
                               <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
@@ -541,7 +615,17 @@ export function ProfileTab({
   );
 }
 
-function parseShareMeta(summary?: string | null): { comment: string; gameVersion?: string; modloader?: string; projectType?: string } {
+function parseShareMeta(summary?: string | null): {
+  comment: string;
+  gameVersion?: string;
+  modloader?: string;
+  projectType?: string;
+  videoUrl?: string;
+  thumbnail?: string;
+  embeddedVideoId?: string;
+  mode?: string;
+  publishedAt?: string;
+} {
   if (!summary) return { comment: "" };
   const trimmed = summary.trim();
 
@@ -554,6 +638,11 @@ function parseShareMeta(summary?: string | null): { comment: string; gameVersion
         gameVersion: parsed.gameVersion,
         modloader: parsed.modloader,
         projectType: parsed.projectType || "mod",
+        videoUrl: parsed.videoUrl,
+        thumbnail: parsed.thumbnail,
+        embeddedVideoId: parsed.embeddedVideoId,
+        mode: parsed.mode,
+        publishedAt: parsed.publishedAt,
       };
     } catch {}
   }
@@ -571,6 +660,11 @@ function parseShareMeta(summary?: string | null): { comment: string; gameVersion
         gameVersion: meta.gameVersion,
         modloader: meta.modloader,
         projectType: meta.projectType || "mod",
+        videoUrl: meta.videoUrl,
+        thumbnail: meta.thumbnail,
+        embeddedVideoId: meta.embeddedVideoId,
+        mode: meta.mode,
+        publishedAt: meta.publishedAt,
       };
     } catch {}
   }

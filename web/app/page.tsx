@@ -340,6 +340,8 @@ export default function Home() {
               handleToggleChannelVisibility={c.handleToggleChannelVisibility}
               handleOpenModDetails={c.handleOpenModDetails}
               onSearchMod={c.handleSearchMod}
+              userShares={c.userShares}
+              onShareYoutubePost={c.shareYoutubePost}
             />
           )}
 

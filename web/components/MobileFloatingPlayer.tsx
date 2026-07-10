@@ -61,6 +61,7 @@ export function MobileFloatingPlayer() {
   const positionRef = useRef(position);
   const sizeRef = useRef(size);
   const requestRef = useRef<number | null>(null);
+  const controlsTimerRef = useRef<number | null>(null);
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -85,6 +86,7 @@ export function MobileFloatingPlayer() {
   const [isSeeking, setIsSeeking] = useState(false);
   const isSeekingRef = useRef(false);
   const [hoverLeft, setHoverLeft] = useState<number | null>(null);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   // Keep ref synchronized with state
   useEffect(() => {
@@ -116,6 +118,23 @@ export function MobileFloatingPlayer() {
       );
     }
   }, []);
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimerRef.current) {
+      window.clearTimeout(controlsTimerRef.current);
+      controlsTimerRef.current = null;
+    }
+  }, []);
+
+  const revealControls = useCallback((keepVisible = false) => {
+    setControlsVisible(true);
+    clearControlsTimer();
+
+    if (keepVisible || sizeRef.current === "micro") return;
+    controlsTimerRef.current = window.setTimeout(() => {
+      setControlsVisible(false);
+    }, 2000);
+  }, [clearControlsTimer]);
 
   const syncVolumeToPlayer = useCallback((nextVolume: number) => {
     const clampedVolume = Math.max(0, Math.min(100, Math.round(nextVolume)));
@@ -177,8 +196,20 @@ export function MobileFloatingPlayer() {
       window.removeEventListener("fomo-play-video", handlePlay);
       window.removeEventListener("resize", handleResize);
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      clearControlsTimer();
     };
-  }, []);
+  }, [clearControlsTimer]);
+
+  useEffect(() => {
+    if (!state.isOpen || !state.videoId) {
+      clearControlsTimer();
+      setControlsVisible(true);
+      return;
+    }
+
+    revealControls();
+    return clearControlsTimer;
+  }, [state.isOpen, state.videoId, size, revealControls, clearControlsTimer]);
 
   // Listen for message events from the YouTube iframe API
   useEffect(() => {
@@ -294,6 +325,7 @@ export function MobileFloatingPlayer() {
     const target = event.target as HTMLElement;
     if (target.closest("button") || target.closest("a") || target.closest("input")) return;
 
+    revealControls();
     setIsDragging(true);
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
     dragRef.current = {
@@ -311,6 +343,7 @@ export function MobileFloatingPlayer() {
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    revealControls(Boolean(dragRef.current));
     if (!dragRef.current) return;
     const now = performance.now();
     const dt = Math.max(1, now - dragRef.current.lastTime);
@@ -330,6 +363,7 @@ export function MobileFloatingPlayer() {
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(false);
+    revealControls();
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
     } catch {}
@@ -343,18 +377,21 @@ export function MobileFloatingPlayer() {
   };
 
   const toggleSize = () => {
+    revealControls();
     const next = size === "large" ? "mini" : size === "mini" ? "micro" : "large";
     setSize(next);
     setPosition((prev) => clampPosition(prev.x, prev.y, next));
   };
 
   const close = () => {
+    clearControlsTimer();
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
     setState({ isOpen: false, videoId: null });
   };
 
   // Playback control handlers
   const togglePlay = () => {
+    revealControls();
     if (isPlaying) {
       sendCommand("pauseVideo");
       setIsPlaying(false);
@@ -365,18 +402,21 @@ export function MobileFloatingPlayer() {
   };
 
   const changeSpeed = () => {
+    revealControls();
     const nextSpeed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
     sendCommand("setPlaybackRate", [nextSpeed]);
     setSpeed(nextSpeed);
   };
 
   const changeVolume = (newVol: number) => {
+    revealControls();
     const clampedVolume = Math.max(0, Math.min(100, Math.round(newVol)));
     setVolume(clampedVolume);
     syncVolumeToPlayer(clampedVolume);
   };
 
   const toggleMute = () => {
+    revealControls();
     if (volume > 0) {
       prevVolumeRef.current = volume;
       changeVolume(0);
@@ -386,12 +426,14 @@ export function MobileFloatingPlayer() {
   };
 
   const handleRewind = () => {
+    revealControls();
     const newTime = Math.max(0, currentTime - 15);
     setCurrentTime(newTime);
     sendCommand("seekTo", [newTime, true]);
   };
 
   const handleForward = () => {
+    revealControls();
     if (!duration) return;
     const newTime = Math.min(duration, currentTime + 15);
     setCurrentTime(newTime);
@@ -400,6 +442,7 @@ export function MobileFloatingPlayer() {
 
   // Seek bar event handlers
   const handleSeekStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    revealControls(true);
     setIsSeeking(true);
     setHoverLeft(null);
     if (duration) {
@@ -413,6 +456,7 @@ export function MobileFloatingPlayer() {
   };
 
   const handleSeekMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    revealControls(Boolean(isSeekingRef.current));
     if (!duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -436,6 +480,7 @@ export function MobileFloatingPlayer() {
     sendCommand("seekTo", [newTime, true]);
     setIsSeeking(false);
     setHoverLeft(null);
+    revealControls();
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {}
@@ -461,6 +506,8 @@ export function MobileFloatingPlayer() {
   if (!mounted || !state.isOpen || !state.videoId) return null;
 
   const current = getSizes()[size];
+  const showChrome = size === "micro" || controlsVisible || isDragging || isSeeking;
+  const videoAsDragSurface = isDragging || !showChrome;
 
   return (
     <AnimatePresence>
@@ -478,86 +525,93 @@ export function MobileFloatingPlayer() {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 18 }}
         transition={{ type: "spring", stiffness: 360, damping: 25, bounce: 0.22 }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerEnter={() => revealControls()}
       >
         {/* Header bar (Draggable) */}
-        <div
-          className="h-9 cursor-grab active:cursor-grabbing flex items-center justify-between gap-2 border-b px-3"
-          style={{ 
-            borderColor: "var(--color-border)", 
-            background: "color-mix(in srgb, var(--color-surface) 90%, black)", 
-            touchAction: "none" 
-          }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-        >
-          <div className="pointer-events-none flex min-w-0 items-center gap-2">
-            <Move className="w-3.5 h-3.5" style={{ color: "var(--color-foreground)", opacity: 0.5 }} />
-            <span className="truncate text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--color-primary)" }}>
-              {size === "micro" ? "Player" : "Showcase Player"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1" style={{ color: "var(--color-foreground)" }}>
-            {/* Cycle button — Large Mode */}
-            {size === "large" && (
-              <button
-                type="button"
-                onClick={toggleSize}
-                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
-                style={{ color: "var(--color-foreground)" }}
-                title="Modo mini"
-              >
-                <Minimize2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {/* Cycle button — Mini Mode */}
-            {size === "mini" && (
-              <button
-                type="button"
-                onClick={toggleSize}
-                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
-                style={{ color: "var(--color-foreground)" }}
-                title="Modo micro"
-              >
-                <Minimize2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {/* Cycle button — Micro Mode */}
-            {size === "micro" && (
-              <button
-                type="button"
-                onClick={toggleSize}
-                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
-                style={{ color: "var(--color-foreground)" }}
-                title="Modo grande"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {size !== "micro" && (
-              <a
-                href={`https://www.youtube.com/watch?v=${state.videoId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:bg-foreground/10 flex items-center justify-center"
-                style={{ color: "var(--color-foreground)" }}
-                title="Abrir en YouTube"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={close}
-              className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:text-red-500 hover:bg-foreground/10 cursor-pointer"
-              style={{ color: "var(--color-foreground)" }}
-              title="Cerrar"
+        <AnimatePresence initial={false}>
+          {showChrome && (
+            <motion.div
+              key="player-header"
+              initial={{ opacity: 0, height: 0, y: -8 }}
+              animate={{ opacity: 1, height: 36, y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -8 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="cursor-grab active:cursor-grabbing flex items-center justify-between gap-2 border-b px-3 overflow-hidden"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "color-mix(in srgb, var(--color-surface) 90%, black)",
+                touchAction: "none",
+              }}
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+              <div className="pointer-events-none flex min-w-0 items-center gap-2">
+                <Move className="w-3.5 h-3.5" style={{ color: "var(--color-foreground)", opacity: 0.5 }} />
+                <span className="truncate text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--color-primary)" }}>
+                  {size === "micro" ? "Player" : "Showcase Player"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1" style={{ color: "var(--color-foreground)" }}>
+                {size === "large" && (
+                  <button
+                    type="button"
+                    onClick={toggleSize}
+                    className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
+                    style={{ color: "var(--color-foreground)" }}
+                    title="Modo mini"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {size === "mini" && (
+                  <button
+                    type="button"
+                    onClick={toggleSize}
+                    className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
+                    style={{ color: "var(--color-foreground)" }}
+                    title="Modo micro"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {size === "micro" && (
+                  <button
+                    type="button"
+                    onClick={toggleSize}
+                    className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all cursor-pointer hover:bg-foreground/10"
+                    style={{ color: "var(--color-foreground)" }}
+                    title="Modo grande"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {size !== "micro" && (
+                  <a
+                    href={`https://www.youtube.com/watch?v=${state.videoId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:bg-foreground/10 flex items-center justify-center"
+                    style={{ color: "var(--color-foreground)" }}
+                    title="Abrir en YouTube"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={close}
+                  className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 active:scale-90 transition-all hover:text-red-500 hover:bg-foreground/10 cursor-pointer"
+                  style={{ color: "var(--color-foreground)" }}
+                  title="Cerrar"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Video Frame */}
         <div className="relative bg-black w-full shrink-0" style={{ height: current.h }}>
@@ -565,7 +619,7 @@ export function MobileFloatingPlayer() {
             ref={iframeRef}
             key={state.videoId}
             src={embedSrc}
-            className={`absolute inset-0 h-full w-full ${isDragging ? "pointer-events-none" : ""}`}
+            className={`absolute inset-0 h-full w-full ${videoAsDragSurface ? "pointer-events-none" : ""}`}
             allow="autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
             title="YouTube showcase player"
@@ -574,11 +628,16 @@ export function MobileFloatingPlayer() {
         </div>
 
         {/* Seek Bar & Telemetry Display */}
-        {size !== "micro" && (
-          <div 
-            className="px-4 py-1.5 flex items-center gap-3 select-none border-b"
+        <AnimatePresence initial={false}>
+        {size !== "micro" && showChrome && (
+          <motion.div 
+            key="player-seek"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 20 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="px-4 py-1.5 flex items-center gap-3 select-none border-b overflow-hidden"
             style={{ 
-              height: 20, 
               background: "color-mix(in srgb, var(--color-surface) 95%, black)", 
               borderColor: "var(--color-border)" 
             }}
@@ -630,13 +689,20 @@ export function MobileFloatingPlayer() {
             >
               {formatTime(duration)}
             </span>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* Playback Controls */}
-        {size !== "micro" && (
-          <div 
-            className="h-10 shrink-0 flex items-center justify-between px-4" 
+        <AnimatePresence initial={false}>
+        {size !== "micro" && showChrome && (
+          <motion.div 
+            key="player-controls"
+            initial={{ opacity: 0, height: 0, y: 8 }}
+            animate={{ opacity: 1, height: 40, y: 0 }}
+            exit={{ opacity: 0, height: 0, y: 8 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="shrink-0 flex items-center justify-between px-4 overflow-hidden" 
             style={{ background: "color-mix(in srgb, var(--color-surface) 93%, black)" }}
           >
             {/* Play/Pause & Speed & Navigation buttons */}
@@ -716,8 +782,9 @@ export function MobileFloatingPlayer() {
                 title={`Volumen: ${volume}%`}
               />
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </motion.div>
     </AnimatePresence>
   );

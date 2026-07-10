@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, ChevronRight, Trophy, Users, ArrowLeft, Heart, UserCheck,
   Calendar, Layers, BookOpen, Tv2, Share2, MessageSquare, Clock, Trash2,
+  Play, ExternalLink,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { supabase } from "../../lib/supabaseClient";
@@ -19,6 +20,33 @@ interface ComunidadTabProps {
 }
 
 type ComunidadView = "list" | "profile";
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function projectUpdateKey(source: string | undefined, projectId: string) {
+  return `${source || "modrinth"}:${projectId}`;
+}
+
+function isUpdatedInLastMonth(value?: string | null) {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && Date.now() - time <= THIRTY_DAYS_MS;
+}
+
+async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
+  if (!projectId || projectId.startsWith("youtube:")) return null;
+
+  if (source === "curseforge") {
+    const res = await fetch(`/api/curseforge/project?projectId=${encodeURIComponent(projectId)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.details?.updated_at || data.details?.dateModified || null;
+  }
+
+  const res = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.updated_at || data.published || null;
+}
 
 /**
  * ComunidadTab — Rankings comunitarios + directorio de perfiles de usuarios.
@@ -33,6 +61,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   // Shares Feed state
   const [sharesFeed, setSharesFeed] = useState<any[]>([]);
   const [loadingShares, setLoadingShares] = useState(false);
+  const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
 
   // Profile list state
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -93,6 +122,38 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     }
   }, [subTab]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const targets = sharesFeed
+      .map((item) => {
+        const projectId = item.mod_id || item.project_id || item.id;
+        const source = item.platform || "modrinth";
+        return { projectId, source };
+      })
+      .filter((item) => item.projectId && item.source !== "youtube" && !String(item.projectId).startsWith("youtube:"));
+    const unique = Array.from(new Map(targets.map((item) => [projectUpdateKey(item.source, item.projectId), item])).values());
+
+    if (!unique.length) {
+      setRecentUpdates({});
+      return;
+    }
+
+    Promise.all(unique.map(async (item) => {
+      try {
+        const updatedAt = await fetchProjectUpdatedAt(item.source, item.projectId);
+        return [projectUpdateKey(item.source, item.projectId), isUpdatedInLastMonth(updatedAt)] as const;
+      } catch {
+        return [projectUpdateKey(item.source, item.projectId), false] as const;
+      }
+    })).then((pairs) => {
+      if (!cancelled) setRecentUpdates(Object.fromEntries(pairs));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sharesFeed]);
+
   /** Load public data for a selected profile */
   const openProfile = async (prof: any) => {
     setSelectedProfile(prof);
@@ -134,6 +195,11 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   const formatDate = (iso: string) => {
     if (!iso) return "";
     return new Date(iso).toLocaleDateString("es-AR", { year: "numeric", month: "long" });
+  };
+
+  const playYoutubeVideo = (videoId?: string) => {
+    if (!videoId) return;
+    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId } }));
   };
 
   return (
@@ -194,6 +260,10 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                 const meta = parseShareMeta(item.summary);
                 const projectId = item.mod_id || item.project_id || item.id;
                 const projectType = meta.projectType || "mod";
+                const isYoutubeShare = item.platform === "youtube" || projectType.startsWith("youtube-");
+                const youtubeThumb = meta.thumbnail || item.icon_url;
+                const youtubeUrl = meta.videoUrl || (meta.embeddedVideoId ? `https://www.youtube.com/watch?v=${meta.embeddedVideoId}` : "");
+                const isRecentlyUpdated = !isYoutubeShare && recentUpdates[projectUpdateKey(item.platform || "modrinth", projectId)];
                 const modHit: ModHit = {
                   projectId,
                   title: item.name || "Mod",
@@ -214,7 +284,11 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                 return (
                   <div
                     key={item.id}
-                    className="bg-surface/85 border border-white/[0.08] rounded-3xl p-4 flex flex-col gap-3.5 hover:border-white/15 transition-all shadow-md"
+                    className={`bg-surface/85 border rounded-3xl p-4 flex flex-col gap-3.5 hover:border-white/15 transition-all shadow-md ${
+                      isRecentlyUpdated
+                        ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.26)]"
+                        : "border-white/[0.08]"
+                    }`}
                   >
                     {/* User Header */}
                     <div className="flex items-center justify-between">
@@ -252,38 +326,91 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
                       </div>
                     )}
 
-                    {/* Mod Item Card */}
-                    <div
-                      onClick={() => handleOpenModDetails(modHit)}
-                      className="bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0">
-                          {item.icon_url ? (
-                            <img src={item.icon_url} alt="" className="object-cover w-full h-full" />
-                          ) : (
-                            <span className="text-white/40 text-xs font-bold uppercase">{item.name?.substring(0, 2)}</span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
-                              item.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
-                            }`}>
-                              {item.platform === "curseforge" ? "CurseForge" : "Modrinth"}
-                            </span>
-                            {meta.modloader && (
-                              <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
+                    {isYoutubeShare ? (
+                      <div className="bg-white/5 border border-white/[0.06] rounded-2xl overflow-hidden">
+                        {youtubeThumb && (
+                          <button
+                            type="button"
+                            onClick={() => playYoutubeVideo(meta.embeddedVideoId)}
+                            className="relative aspect-video w-full overflow-hidden bg-black/40 block active:scale-[0.99] transition-transform"
+                          >
+                            <img src={youtubeThumb} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            {meta.embeddedVideoId && (
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <span className="w-10 h-10 rounded-full bg-orange-600/90 border border-white/20 text-white flex items-center justify-center shadow-lg">
+                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                </span>
+                              </span>
                             )}
-                            {meta.gameVersion && (
-                              <span className="text-[8px] font-mono text-white/40">{meta.gameVersion}</span>
+                          </button>
+                        )}
+                        <div className="p-3 flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-white leading-snug">{item.name}</h4>
+                              <span className="inline-flex mt-1 text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/20">
+                                {projectType === "youtube-post" ? "Post" : projectType === "youtube-short" ? "Short" : "Video"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {meta.embeddedVideoId && (
+                              <button
+                                type="button"
+                                onClick={() => playYoutubeVideo(meta.embeddedVideoId)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600/15 border border-orange-500/25 text-orange-300 text-[10px] font-bold active:scale-95 transition-all"
+                              >
+                                <Play className="w-3 h-3 fill-current" />
+                                Reproducir
+                              </button>
+                            )}
+                            {youtubeUrl && (
+                              <a
+                                href={youtubeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/65 text-[10px] font-bold active:scale-95 transition-all"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                YouTube
+                              </a>
                             )}
                           </div>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-white/30" />
-                    </div>
+                    ) : (
+                      <div
+                        onClick={() => handleOpenModDetails(modHit)}
+                        className="bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0">
+                            {item.icon_url ? (
+                              <img src={item.icon_url} alt="" className="object-cover w-full h-full" />
+                            ) : (
+                              <span className="text-white/40 text-xs font-bold uppercase">{item.name?.substring(0, 2)}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
+                                item.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
+                              }`}>
+                                {item.platform === "curseforge" ? "CurseForge" : "Modrinth"}
+                              </span>
+                              {meta.modloader && (
+                                <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
+                              )}
+                              {meta.gameVersion && (
+                                <span className="text-[8px] font-mono text-white/40">{meta.gameVersion}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/30" />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -590,7 +717,17 @@ function ProfileSection({
   );
 }
 
-function parseShareMeta(summary?: string | null): { comment: string; gameVersion?: string; modloader?: string; projectType?: string } {
+function parseShareMeta(summary?: string | null): {
+  comment: string;
+  gameVersion?: string;
+  modloader?: string;
+  projectType?: string;
+  videoUrl?: string;
+  thumbnail?: string;
+  embeddedVideoId?: string;
+  mode?: string;
+  publishedAt?: string;
+} {
   if (!summary) return { comment: "" };
   const trimmed = summary.trim();
 
@@ -603,6 +740,11 @@ function parseShareMeta(summary?: string | null): { comment: string; gameVersion
         gameVersion: parsed.gameVersion,
         modloader: parsed.modloader,
         projectType: parsed.projectType || "mod",
+        videoUrl: parsed.videoUrl,
+        thumbnail: parsed.thumbnail,
+        embeddedVideoId: parsed.embeddedVideoId,
+        mode: parsed.mode,
+        publishedAt: parsed.publishedAt,
       };
     } catch {}
   }
@@ -620,6 +762,11 @@ function parseShareMeta(summary?: string | null): { comment: string; gameVersion
         gameVersion: meta.gameVersion,
         modloader: meta.modloader,
         projectType: meta.projectType || "mod",
+        videoUrl: meta.videoUrl,
+        thumbnail: meta.thumbnail,
+        embeddedVideoId: meta.embeddedVideoId,
+        mode: meta.mode,
+        publishedAt: meta.publishedAt,
       };
     } catch {}
   }

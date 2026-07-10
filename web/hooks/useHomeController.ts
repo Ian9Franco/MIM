@@ -408,7 +408,7 @@ export function useHomeController() {
       const [{ data: profData }, { data: follows }, { data: shares }, { data: drafts }, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase.from("followed_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
-        supabase.from("favorite_mods").select("*").eq("profile_id", userId),
+        supabase.from("favorite_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
         supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
         supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
       ]);
@@ -1009,13 +1009,14 @@ export function useHomeController() {
           }
         }
       } else {
-        const [pRes, dRes] = await Promise.all([
+        const [pRes, dRes, vRes] = await Promise.all([
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}`),
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
+          fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/version`),
         ]);
+        let versionsData: any[] = [];
         if (pRes.ok) {
           details = await pRes.json();
-          setSelectedModDetails(details);
           if (details?.team) {
             try {
               const teamRes = await fetch(`https://api.modrinth.com/v2/team/${details.team}/members`);
@@ -1030,6 +1031,17 @@ export function useHomeController() {
               console.error("Error resolving Modrinth team members:", e);
             }
           }
+        }
+        if (vRes.ok) {
+          versionsData = await vRes.json();
+        }
+        if (details) {
+          details = {
+            ...details,
+            versions: versionsData,
+            updated_at: details.updated_at || versionsData[0]?.date_published || null,
+          };
+          setSelectedModDetails(details);
         }
         if (dRes.ok) {
           depsData = (await dRes.json()).projects || [];
@@ -1385,6 +1397,82 @@ export function useHomeController() {
     }
   };
 
+  const shareYoutubePost = async (post: any) => {
+    if (!session?.user?.id) {
+      showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
+      return;
+    }
+
+    const postId = post?.postId || post?.embeddedVideoId;
+    if (!postId) {
+      showAlert("Sin contenido", "No encontré un identificador válido para compartir este contenido.");
+      return;
+    }
+
+    const userId = session.user.id;
+    const projectId = `youtube:${postId}`;
+    const title = post.title || (post.mode === "short" ? "Short de YouTube" : post.mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
+    const videoUrl = post.videoUrl || (post.embeddedVideoId ? `https://www.youtube.com/watch?v=${post.embeddedVideoId}` : currentChannel);
+    const thumbnail = post.thumbnail || (post.embeddedVideoId ? `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg` : null);
+    const contentKind = post.mode === "short" || post.mode === "video-short"
+      ? "youtube-short"
+      : post.mode === "post"
+        ? "youtube-post"
+        : "youtube-video";
+    const summary = JSON.stringify({
+      comment: post.description || "",
+      projectType: contentKind,
+      videoUrl,
+      thumbnail,
+      embeddedVideoId: post.embeddedVideoId || null,
+      mode: post.mode || "video",
+      publishedAt: post.publishedAt || "",
+      channelUrl: currentChannel,
+    });
+    const previousShares = userShares;
+    const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);
+
+    setUserShares((prev) => [
+      {
+        id: alreadyShared ? prev.find((share) => (share.mod_id || share.project_id || share.id) === projectId)?.id || `optimistic-${projectId}` : `optimistic-${projectId}`,
+        profile_id: userId,
+        mod_id: projectId,
+        platform: "youtube",
+        name: title,
+        icon_url: thumbnail,
+        summary,
+        created_at: new Date().toISOString(),
+      },
+      ...prev.filter((share) => (share.mod_id || share.project_id || share.id) !== projectId),
+    ]);
+
+    try {
+      const request = alreadyShared
+        ? supabase.from("favorite_mods").update({
+          platform: "youtube",
+          name: title,
+          icon_url: thumbnail,
+          summary,
+        }).eq("profile_id", userId).eq("mod_id", projectId)
+        : supabase.from("favorite_mods").insert({
+          profile_id: userId,
+          mod_id: projectId,
+          platform: "youtube",
+          name: title,
+          icon_url: thumbnail,
+          summary,
+        });
+
+      const { error } = await request;
+      if (error) throw error;
+      await loadUserData(userId);
+      showAlert(alreadyShared ? "Compartido actualizado" : "Compartido", "Este contenido ya aparece en Comunidad.");
+    } catch (err: any) {
+      setUserShares(previousShares);
+      showAlert("Error", `No se pudo compartir: ${err.message}`);
+    }
+  };
+
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
@@ -1403,7 +1491,7 @@ export function useHomeController() {
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
-    onRemoveShare,
+    onRemoveShare, shareYoutubePost,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
     activeDraft, setActiveDraft, handleSearchAuthor, handleSearchMod,

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Film, ExternalLink, Loader2, X, Play, Eye, EyeOff, Puzzle } from "lucide-react";
+import { Film, ExternalLink, X, Play, Eye, EyeOff, Puzzle, Share2, Check } from "lucide-react";
 import { FeedSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
 
@@ -57,6 +57,8 @@ interface FeedTabProps {
   handleToggleChannelVisibility: (url: string) => void;
   handleOpenModDetails?: (mod: ModHit) => void;
   onSearchMod?: (title: string) => void;
+  userShares?: any[];
+  onShareYoutubePost?: (post: any) => void | Promise<void>;
 }
 
 /**
@@ -72,6 +74,8 @@ export function FeedTab({
   handleToggleChannelVisibility,
   handleOpenModDetails,
   onSearchMod,
+  userShares = [],
+  onShareYoutubePost,
 }: FeedTabProps) {
 
   const [visibleCount, setVisibleCount] = useState(6);
@@ -216,7 +220,11 @@ export function FeedTab({
         <FeedSkeleton />
       ) : youtubePosts.length > 0 ? (
         <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
-          {youtubePosts.slice(0, visibleCount).map((post) => (
+          {youtubePosts.slice(0, visibleCount).map((post) => {
+            const shareId = `youtube:${post.postId || post.embeddedVideoId}`;
+            const isShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === shareId);
+
+            return (
             <div key={post.postId} className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
               {/* Bold Title for videos and shorts */}
               {(post.mode === "video" || post.mode === "short" || post.mode === "video-short") && post.title && (
@@ -368,19 +376,34 @@ export function FeedTab({
                 </div>
               )}
 
-              <div className="flex justify-between items-center pt-2 border-t border-white/[0.04] mt-1">
+              <div className="flex justify-between items-center gap-2 pt-2 border-t border-white/[0.04] mt-1">
                 <span className="text-[10px] text-white/40 font-mono">{post.publishedAt}</span>
-                <a
-                  href={post.videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-bold text-orange-400 hover:underline flex items-center gap-1"
-                >
-                  Abrir YouTube <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="flex items-center gap-2">
+                  {onShareYoutubePost && (
+                    <button
+                      type="button"
+                      onClick={() => onShareYoutubePost(post)}
+                      className={`text-[10px] font-bold flex items-center gap-1 transition-colors active:scale-95 ${
+                        isShared ? "text-emerald-400" : "text-amber-400 hover:text-amber-300"
+                      }`}
+                    >
+                      {isShared ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                      {isShared ? "Compartido" : "Compartir"}
+                    </button>
+                  )}
+                  <a
+                    href={post.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-bold text-orange-400 hover:underline flex items-center gap-1"
+                  >
+                    Abrir YouTube <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
             </div>
-          ))}
+          );
+          })}
 
           {/* Load More Button */}
           {visibleCount < youtubePosts.length && (

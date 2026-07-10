@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
+const CF_LOADER_NAMES = ["forge", "fabric", "neoforge", "quilt", "cauldron", "liteloader"];
+
+function isMinecraftVersion(value: string) {
+  return /^\d+(?:\.\d+){1,3}(?:[-+][\w.-]+)?$/.test(value);
+}
+
+function mapReleaseType(value: number) {
+  if (value === 2) return "beta";
+  if (value === 3) return "alpha";
+  return "release";
+}
 
 export async function GET(req: NextRequest) {
   const apiKey = process.env.CURSEFORGE_API_KEY;
@@ -52,6 +63,28 @@ export async function GET(req: NextRequest) {
     const descRes = await fetch(`${CURSEFORGE_API}/mods/${numericId}/description`, { headers });
     const descData = await descRes.json().catch(() => ({ data: "" }));
 
+    const filesRes = await fetch(`${CURSEFORGE_API}/mods/${numericId}/files?pageSize=50`, { headers });
+    const filesData = filesRes.ok ? await filesRes.json().catch(() => ({ data: [] })) : { data: [] };
+    const versions = (filesData.data || []).map((file: any) => {
+      const rawVersions = Array.isArray(file.gameVersions) ? file.gameVersions : [];
+      const loaders = rawVersions
+        .map((value: string) => value.toLowerCase())
+        .filter((value: string) => CF_LOADER_NAMES.includes(value));
+      const gameVersions = rawVersions.filter((value: string) => isMinecraftVersion(value));
+
+      return {
+        id: file.id?.toString() || file.fileName,
+        name: file.displayName || file.fileName || "Version",
+        version_number: file.displayName || file.fileName || "Version",
+        game_versions: gameVersions,
+        loaders,
+        date_published: file.fileDate || null,
+        downloads: file.downloadCount || 0,
+        version_type: mapReleaseType(file.releaseType),
+        platform: "CurseForge",
+      };
+    });
+
     // Infer client/server side requirements based on categories
     const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());
     const isWorld = cats.some((c: any) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
@@ -74,11 +107,18 @@ export async function GET(req: NextRequest) {
       discord_url: null,
       icon_url: m.logo?.thumbnailUrl || m.logo?.url || null,
       authors: m.authors || [],
+      project_type: m.classId === 12 ? "resourcepack" : m.classId === 6552 ? "shader" : m.classId === 6945 ? "datapack" : m.classId === 4471 ? "modpack" : "mod",
+      updated_at: m.dateModified || m.dateReleased || versions[0]?.date_published || null,
       gallery: (m.screenshots || []).map((s: any) => ({
         url: s.url,
         title: s.title || ""
       })).filter((s: any) => s.url),
-      game_versions: Array.from(new Set(m.latestFilesIndexes?.map((idx: any) => idx.gameVersion) || [])) as string[],
+      game_versions: Array.from(new Set([
+        ...(m.latestFilesIndexes?.map((idx: any) => idx.gameVersion) || []),
+        ...versions.flatMap((v: any) => v.game_versions || []),
+      ])) as string[],
+      loaders: Array.from(new Set(versions.flatMap((v: any) => v.loaders || []))),
+      versions,
     };
 
     // 3. Fetch dependencies in batch if any

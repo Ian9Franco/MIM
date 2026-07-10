@@ -256,6 +256,73 @@ function stripShareMeta(summary?: string | null): string {
 }
 
 const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
+const VERSION_PLATFORM_LABELS: Record<string, string> = {
+  fabric: "Fabric",
+  forge: "Forge",
+  neoforge: "NeoForge",
+  quilt: "Quilt",
+  datapack: "Datapack",
+};
+const CONTENT_TYPE_LABELS: Record<string, string> = {
+  mod: "Mod",
+  resourcepack: "Textura",
+  textura: "Textura",
+  shader: "Shader",
+  datapack: "Datapack",
+  modpack: "Modpack",
+};
+
+function compactNumber(value?: number | null) {
+  if (!value || Number.isNaN(value)) return "0";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 100_000 ? 0 : 1)}K`;
+  return String(value);
+}
+
+function formatPublishedDate(value?: string | null) {
+  if (!value) return "Sin fecha";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+  return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function normalizeLoaderLabel(loader: string) {
+  return VERSION_PLATFORM_LABELS[loader.toLowerCase()] || loader;
+}
+
+function normalizeVersionRows(details: any) {
+  const rows = Array.isArray(details?.versions) ? details.versions : [];
+  return rows.map((version: any) => ({
+    id: version.id || version.version_number || version.name,
+    name: version.name || version.version_number || "Version",
+    gameVersions: Array.isArray(version.game_versions) ? version.game_versions : [],
+    loaders: Array.isArray(version.loaders) ? version.loaders : [],
+    datePublished: version.date_published || version.datePublished || null,
+    downloads: version.downloads || 0,
+    versionType: version.version_type || "release",
+  }));
+}
+
+function getAvailableLoaders(details: any) {
+  const versionLoaders = normalizeVersionRows(details).flatMap((version) => version.loaders);
+  const directLoaders = Array.isArray(details?.loaders) ? details.loaders : [];
+  return Array.from(new Set([...directLoaders, ...versionLoaders]))
+    .map((loader) => String(loader).toLowerCase())
+    .filter((loader) => KNOWN_LOADERS.includes(loader as (typeof KNOWN_LOADERS)[number]));
+}
+
+function getAvailableContentTypes(details: any, selectedMod?: ModHit | null) {
+  const values = [
+    selectedMod?.projectType,
+    details?.project_type,
+    ...(Array.isArray(details?.versions) ? details.versions.flatMap((version: any) => version.loaders || []) : []),
+  ]
+    .map((value) => String(value || "").toLowerCase())
+    .map((value) => value === "resource-pack" || value === "texture" ? "resourcepack" : value)
+    .filter((value) => Boolean(CONTENT_TYPE_LABELS[value]));
+
+  return Array.from(new Set(values));
+}
 
 function buildShareMetaFromMod(
   mod: {
@@ -363,6 +430,9 @@ export function ModDetailsSheet({
   const activeImageUrl = activeImage?.url || null;
   const hasGalleryNav = galleryImages.length > 1;
   const isSheetOpen = !!selectedMod;
+  const versionRows = normalizeVersionRows(selectedModDetails);
+  const availableLoaders = getAvailableLoaders(selectedModDetails);
+  const availableContentTypes = getAvailableContentTypes(selectedModDetails, selectedMod);
 
   /** Play open sound and reset translation state when a new mod is opened */
   useEffect(() => {
@@ -893,6 +963,35 @@ export function ModDetailsSheet({
                           )}
                         </div>
 
+                        {(availableLoaders.length > 0 || availableContentTypes.length > 0) && (
+                          <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 flex flex-col gap-3">
+                            {availableLoaders.length > 0 && (
+                              <div>
+                                <span className="text-[9px] text-white/30 uppercase font-mono block mb-1.5">Modloaders disponibles</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {availableLoaders.map((loader) => (
+                                    <span key={loader} className="px-2 py-1 rounded-lg border border-orange-500/20 bg-orange-500/10 text-orange-300 text-[9px] font-bold">
+                                      {normalizeLoaderLabel(loader)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {availableContentTypes.length > 0 && (
+                              <div>
+                                <span className="text-[9px] text-white/30 uppercase font-mono block mb-1.5">Tipos disponibles</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {availableContentTypes.map((type) => (
+                                    <span key={type} className="px-2 py-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 text-[9px] font-bold">
+                                      {CONTENT_TYPE_LABELS[type] || type}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* External links */}
                         <div className="flex flex-wrap gap-2 pt-1">
                           {selectedModDetails?.wiki_url && (
@@ -1012,17 +1111,63 @@ export function ModDetailsSheet({
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
                           </div>
-                        ) : selectedModDetails?.game_versions?.length > 0 ? (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones de Minecraft Compatibles</span>
-                            <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-none">
-                              {selectedModDetails.game_versions.map((ver: string) => (
-                                <span key={ver} className="bg-white/5 border border-white/[0.08] text-white/70 text-[9px] px-2.5 py-0.5 rounded-full font-mono">{ver}</span>
-                              ))}
-                            </div>
-                          </div>
                         ) : (
-                          <p className="text-xs text-white/40 italic">No se listaron versiones compatibles.</p>
+                          <div className="flex flex-col gap-3">
+                            {versionRows.length > 0 ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones del mod</span>
+                                  <span className="text-[9px] text-white/30 font-mono">{versionRows.length}</span>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
+                                  {versionRows.map((version) => (
+                                    <div key={version.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-white/[0.04] bg-white/[0.015] p-3 last:border-b-0">
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
+                                            version.versionType === "release"
+                                              ? "bg-emerald-500/[0.18] text-emerald-300"
+                                              : "bg-amber-500/[0.18] text-amber-300"
+                                          }`}>
+                                            {version.versionType === "release" ? "R" : version.versionType?.substring(0, 1).toUpperCase() || "V"}
+                                          </span>
+                                          <span className="text-[11px] font-bold text-white truncate">{version.name}</span>
+                                        </div>
+                                        <div className="mt-1.5 flex flex-wrap gap-1.5 pl-7">
+                                          {version.gameVersions.slice(0, 3).map((ver: string) => (
+                                            <span key={ver} className="px-1.5 py-0.5 rounded-md bg-white/[0.07] border border-white/[0.06] text-[8px] font-mono text-white/55">{ver}</span>
+                                          ))}
+                                          {version.gameVersions.length > 3 && (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[8px] font-mono text-white/35">+{version.gameVersions.length - 3}</span>
+                                          )}
+                                          {version.loaders.map((loader: string) => (
+                                            <span key={loader} className="px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/15 text-[8px] font-bold text-orange-300">{normalizeLoaderLabel(loader)}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className="block text-[9px] font-mono text-white/40">{formatPublishedDate(version.datePublished)}</span>
+                                        <span className="block text-[9px] font-bold text-white/55 mt-1">{compactNumber(version.downloads)} desc.</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-white/40 italic">No se listaron versiones del mod.</p>
+                            )}
+
+                            {selectedModDetails?.game_versions?.length > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones de Minecraft compatibles</span>
+                                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1 scrollbar-none">
+                                  {selectedModDetails.game_versions.map((ver: string) => (
+                                    <span key={ver} className="bg-white/5 border border-white/[0.08] text-white/70 text-[9px] px-2.5 py-0.5 rounded-full font-mono">{ver}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </motion.div>
                     )}

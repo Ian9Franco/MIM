@@ -295,7 +295,7 @@ export default function Home() {
             <CollectionsTab
               activeCollection={c.activeCollection}
               modrinthFeatured={c.modrinthFeatured}
-              curseForgeFeatured={c.curseForgeFeatured}
+              curseForgeFeatured={c.curseForgeCollections}
               activeCollectionMods={c.activeCollectionMods}
               loadingActiveMods={c.loadingActiveMods}
               session={c.session}

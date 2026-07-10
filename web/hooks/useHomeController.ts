@@ -207,6 +207,7 @@ export function useHomeController() {
   const [newestMods, setNewestMods] = useState<ModHit[]>(mockNewestMods);
   const [modrinthFeatured, setModrinthFeatured] = useState<CollectionItem[]>(FALLBACK_MODRINTH_COLLECTIONS);
   const [curseForgeFeatured, setCurseForgeFeatured] = useState<CollectionItem[]>(FALLBACK_CURSEFORGE_COLLECTIONS);
+  const [curseForgeCollections, setCurseForgeCollections] = useState<CollectionItem[]>(FALLBACK_CURSEFORGE_COLLECTIONS);
   const [latestFeaturedMods, setLatestFeaturedMods] = useState<ModHit[]>(mockUpdatedMods);
   const [latestCollectionName, setLatestCollectionName] = useState(FALLBACK_MODRINTH_COLLECTIONS[0].name);
   const [loadingLatestMods, setLoadingLatestMods] = useState(false);
@@ -621,6 +622,11 @@ export function useHomeController() {
         return;
       }
 
+      if (collection.source === "curseforge") {
+        isSpotlightHero ? setLatestFeaturedMods([]) : setActiveCollectionMods([]);
+        return;
+      }
+
       const collRes = await fetch("https://api.modrinth.com/v3/user/modrinth/collections");
       const colls = collRes.ok ? await collRes.json() : [];
       const projectIds = colls.find((c: any) => c.id === collection.id)?.projects?.slice(0, 15) || [];
@@ -659,8 +665,10 @@ export function useHomeController() {
       ]);
       const mrColls = mrRes.collections?.length ? mrRes.collections : FALLBACK_MODRINTH_COLLECTIONS;
       const cfPicks = cfRes.picks?.length ? cfRes.picks : FALLBACK_CURSEFORGE_COLLECTIONS;
+      const cfCollections = cfRes.collections?.length ? cfRes.collections : cfPicks;
       setModrinthFeatured(mrColls);
       setCurseForgeFeatured(cfPicks);
+      setCurseForgeCollections(cfCollections);
       if (mrColls[0]) {
         setLatestCollectionName(mrColls[0].name);
         void loadCollectionMods(mrColls[0], true);
@@ -669,6 +677,7 @@ export function useHomeController() {
       console.error("Error loading collections:", err);
       setModrinthFeatured(FALLBACK_MODRINTH_COLLECTIONS);
       setCurseForgeFeatured(FALLBACK_CURSEFORGE_COLLECTIONS);
+      setCurseForgeCollections(FALLBACK_CURSEFORGE_COLLECTIONS);
       setLatestCollectionName(FALLBACK_MODRINTH_COLLECTIONS[0].name);
       setLatestFeaturedMods(mockUpdatedMods);
     }
@@ -1480,7 +1489,7 @@ export function useHomeController() {
     discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
     showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts, userFollowedAuthors, loadingUserData,
-    updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, latestFeaturedMods, latestCollectionName,
+    updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, curseForgeCollections, latestFeaturedMods, latestCollectionName,
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
     loadingActiveMods, theme, customAlert, setCustomAlert, youtubePosts, loadingYoutube, currentChannel,
     setCurrentChannel, youtubeFeedType, setYoutubeFeedType, followedChannels, showChannelManager, setShowChannelManager, newChannelInput, setNewChannelInput,

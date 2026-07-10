@@ -296,6 +296,7 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   datapack: "Datapack",
   modpack: "Modpack",
 };
+const DEFAULT_VERSION_FILTERS = ["1.21.1", "1.20.1"];
 
 function compactNumber(value?: number | null) {
   if (!value || Number.isNaN(value)) return "0";
@@ -325,6 +326,22 @@ interface VersionRow {
 
 function normalizeLoaderLabel(loader: string) {
   return VERSION_PLATFORM_LABELS[loader.toLowerCase()] || loader;
+}
+
+function normalizeChannelLabel(channel: string) {
+  const value = channel.toLowerCase();
+  if (value === "release") return "Release";
+  if (value === "beta") return "Beta";
+  if (value === "alpha") return "Alpha";
+  return channel;
+}
+
+function channelPillClass(channel: string) {
+  const value = channel.toLowerCase();
+  if (value === "release") return "bg-emerald-500/[0.18] text-emerald-300 border-emerald-500/20";
+  if (value === "beta") return "bg-amber-500/[0.18] text-amber-300 border-amber-500/20";
+  if (value === "alpha") return "bg-rose-500/[0.18] text-rose-300 border-rose-500/20";
+  return "bg-white/[0.07] text-white/55 border-white/[0.08]";
 }
 
 function normalizeVersionRows(details: any): VersionRow[] {
@@ -465,6 +482,7 @@ export function ModDetailsSheet({
   const [loadingVersionChangelog, setLoadingVersionChangelog] = useState<string | null>(null);
   const [translatedVersionChangelogs, setTranslatedVersionChangelogs] = useState<Record<string, string>>({});
   const [translatingVersionChangelog, setTranslatingVersionChangelog] = useState<string | null>(null);
+  const [selectedGameVersionFilters, setSelectedGameVersionFilters] = useState<string[]>(DEFAULT_VERSION_FILTERS);
   const [dragEnabled, setDragEnabled] = useState(true);
   const dragControls = useDragControls();
 
@@ -475,6 +493,17 @@ export function ModDetailsSheet({
   const hasGalleryNav = galleryImages.length > 1;
   const isSheetOpen = !!selectedMod;
   const versionRows = normalizeVersionRows(selectedModDetails);
+  const availableGameVersionFilters = Array.from(
+    new Set(versionRows.flatMap((version) => version.gameVersions))
+  );
+  const activeGameVersionFilters = selectedGameVersionFilters.filter((version) =>
+    availableGameVersionFilters.includes(version)
+  );
+  const filteredVersionRows = activeGameVersionFilters.length > 0
+    ? versionRows.filter((version) =>
+        version.gameVersions.some((gameVersion) => activeGameVersionFilters.includes(gameVersion))
+      )
+    : versionRows;
   const availableLoaders = getAvailableLoaders(selectedModDetails);
   const availableContentTypes = getAvailableContentTypes(selectedModDetails, selectedMod);
 
@@ -491,6 +520,7 @@ export function ModDetailsSheet({
     setLoadingVersionChangelog(null);
     setTranslatedVersionChangelogs({});
     setTranslatingVersionChangelog(null);
+    setSelectedGameVersionFilters(DEFAULT_VERSION_FILTERS);
   }, [selectedMod?.projectId]);
 
   useEffect(() => {
@@ -686,6 +716,15 @@ export function ModDetailsSheet({
       setLoadingVersionChangelog(null);
     }
   }, [expandedVersionId, selectedMod, versionChangelogs]);
+
+  const handleToggleGameVersionFilter = useCallback((gameVersion: string) => {
+    setSelectedGameVersionFilters((current) => (
+      current.includes(gameVersion)
+        ? current.filter((version) => version !== gameVersion)
+        : [...current, gameVersion]
+    ));
+    setExpandedVersionId(null);
+  }, []);
 
   const handleTranslateVersionChangelog = useCallback(async (version: VersionRow, changelog: string) => {
     if (!changelog || translatingVersionChangelog) return;
@@ -1208,10 +1247,35 @@ export function ModDetailsSheet({
                               <div className="flex flex-col gap-2">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones del mod</span>
-                                  <span className="text-[9px] text-white/30 font-mono">{versionRows.length}</span>
+                                  <span className="text-[9px] text-white/30 font-mono">{filteredVersionRows.length}/{versionRows.length}</span>
                                 </div>
+                                {availableGameVersionFilters.length > 0 && (
+                                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-2">
+                                    <span className="text-[8px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1.5">Filtrar por versión de juego</span>
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                                      {availableGameVersionFilters.map((gameVersion) => {
+                                        const isSelected = selectedGameVersionFilters.includes(gameVersion);
+
+                                        return (
+                                          <button
+                                            key={gameVersion}
+                                            type="button"
+                                            onClick={() => handleToggleGameVersionFilter(gameVersion)}
+                                            className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black font-mono transition-all active:scale-95 ${
+                                              isSelected
+                                                ? "bg-orange-500/15 border-orange-500/35 text-orange-200 shadow-[0_0_14px_rgba(249,115,22,0.16)]"
+                                                : "bg-white/[0.035] border-white/[0.06] text-white/45 hover:text-white/75 hover:bg-white/[0.06]"
+                                            }`}
+                                          >
+                                            {gameVersion}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="max-h-64 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
-                                  {versionRows.map((version) => {
+                                  {filteredVersionRows.map((version) => {
                                     const isExpanded = expandedVersionId === version.id;
                                     const loadedChangelog = version.changelog || versionChangelogs[version.id] || "";
                                     const isLoadingChangelog = loadingVersionChangelog === version.id;
@@ -1225,12 +1289,8 @@ export function ModDetailsSheet({
                                         >
                                           <div className="min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
-                                              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
-                                                version.versionType === "release"
-                                                  ? "bg-emerald-500/[0.18] text-emerald-300"
-                                                  : "bg-amber-500/[0.18] text-amber-300"
-                                              }`}>
-                                                {version.versionType === "release" ? "R" : version.versionType?.substring(0, 1).toUpperCase() || "V"}
+                                              <span className={`px-2 py-1 rounded-full border text-[8px] font-black uppercase shrink-0 ${channelPillClass(version.versionType)}`}>
+                                                {normalizeChannelLabel(version.versionType)}
                                               </span>
                                               <span className="text-[11px] font-bold text-white truncate">{version.name}</span>
                                             </div>
@@ -1317,16 +1377,6 @@ export function ModDetailsSheet({
                               <p className="text-xs text-white/40 italic">No se listaron versiones del mod.</p>
                             )}
 
-                            {selectedModDetails?.game_versions?.length > 0 && (
-                              <div className="flex flex-col gap-2">
-                                <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones de Minecraft compatibles</span>
-                                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1 scrollbar-none">
-                                  {selectedModDetails.game_versions.map((ver: string) => (
-                                    <span key={ver} className="bg-white/5 border border-white/[0.08] text-white/70 text-[9px] px-2.5 py-0.5 rounded-full font-mono">{ver}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         )}
                       </motion.div>

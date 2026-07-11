@@ -26,6 +26,75 @@ function updateKey(source: string | undefined, projectId: string) {
   return `${source || "modrinth"}:${projectId}`;
 }
 
+function isMissingPinnedColumnError(error: any) {
+  const message = String(error?.message || error?.details || "");
+  return error?.code === "42703" || error?.code === "PGRST204" || /\bpinned\b/i.test(message);
+}
+
+function isSharePinned(row: any) {
+  if (row?.pinned === true) return true;
+  if (row?.pinned === false) return false;
+  return !!parseShareMeta(row?.summary).priority;
+}
+
+function sortSharesByPinned(rows: any[]) {
+  return [...rows].sort((a, b) => {
+    const priorityOrder = Number(isSharePinned(b)) - Number(isSharePinned(a));
+    if (priorityOrder) return priorityOrder;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+}
+
+async function loadCommunitySharesPage(page: number) {
+  const from = page * SHARES_PAGE_SIZE;
+  const to = from + SHARES_PAGE_SIZE;
+  const query = supabase
+    .from("favorite_mods")
+    .select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles(id, username, avatar_url, color)`)
+    .eq("pinned", true)
+    .order("pinned", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const { data, error } = await query;
+  if (!error) {
+    const sorted = sortSharesByPinned(data || []);
+    return { items: sorted.slice(0, SHARES_PAGE_SIZE), hasNext: sorted.length > SHARES_PAGE_SIZE };
+  }
+  if (!isMissingPinnedColumnError(error)) throw error;
+
+  const fallback = await supabase
+    .from("favorite_mods")
+    .select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles(id, username, avatar_url, color)`)
+    .order("created_at", { ascending: false })
+    .range(0, 240);
+
+  if (fallback.error) throw fallback.error;
+  const sorted = sortSharesByPinned((fallback.data || []).filter(isSharePinned));
+  return { items: sorted.slice(from, to), hasNext: sorted.length > to };
+}
+
+async function loadProfileShares(profileId: string) {
+  const withPinned = await supabase
+    .from("favorite_mods")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("pinned", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (!withPinned.error) return sortSharesByPinned(withPinned.data || []);
+  if (!isMissingPinnedColumnError(withPinned.error)) throw withPinned.error;
+
+  const fallback = await supabase
+    .from("favorite_mods")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (fallback.error) throw fallback.error;
+  return sortSharesByPinned(fallback.data || []);
+}
+
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
   if (!projectId || projectId.startsWith("youtube:")) return null;
   const url = source === "curseforge"
@@ -62,16 +131,19 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       return;
     }
     setLoadingShares(true);
-    const from = sharesPage * SHARES_PAGE_SIZE;
     // Requesting one extra row tells us if a next page exists without a full-table count.
-    supabase.from("favorite_mods").select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles(id, username, avatar_url, color)`).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).range(from, from + SHARES_PAGE_SIZE)
-      .then(({ data, error }) => {
-        if (error) console.error("Error loading shares feed:", error);
-        const rows = data || [];
-        const pageData = { items: rows.slice(0, SHARES_PAGE_SIZE), hasNext: rows.length > SHARES_PAGE_SIZE };
+    loadCommunitySharesPage(sharesPage)
+      .then((pageData) => {
         sharePageCache.current.set(sharesPage, pageData);
         setShares(pageData.items);
         setHasNextSharesPage(pageData.hasNext);
+      })
+      .catch((error) => {
+        console.error("Error loading shares feed:", error);
+        setShares([]);
+        setHasNextSharesPage(false);
+      })
+      .finally(() => {
         setLoadingShares(false);
       });
   }, [section, sharesPage]);
@@ -107,11 +179,11 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     setProfileView("profile");
     setLoadingPublic(true);
     setPublicData({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
-    const [{ data: favorites }, { data: authors }, { data: drafts }, { data: sharesData }] = await Promise.all([
+    const [{ data: favorites }, { data: authors }, { data: drafts }, sharesData] = await Promise.all([
       supabase.from("followed_mods").select("*").eq("profile_id", profile.id),
       supabase.from("followed_authors").select("*").eq("profile_id", profile.id),
       supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", profile.id).eq("visibility", "public"),
-      supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+      loadProfileShares(profile.id),
     ]);
     // Showcase preferences live in profile metadata and are already public.
     const channels = profile.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
@@ -143,11 +215,11 @@ interface FeedProps { shares: any[]; loading: boolean; recentUpdates: Record<str
 /** The feed keeps user context first, then presents the shared media as one clear action. */
 function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageChange, onOpenProfile, onOpenMod }: FeedProps) {
   if (loading) return <CommunityFeedSkeleton />;
-  if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada compartido todavía" text="Los proyectos compartidos aparecerán acá en tiempo real." />;
+  if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada fijado todavía" text="Las recomendaciones marcadas con pin aparecerán acá." />;
 
   return (
     <motion.div key="community-feed" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-3 overflow-y-auto pb-28 pr-1 scrollbar-none">
-      <div className="flex items-end justify-between px-1 pb-1"><div><p className="text-[9px] font-mono uppercase text-white/30">Actividad reciente</p><h3 className="mt-0.5 text-xs font-bold text-white/80">Compartido por la comunidad</h3></div><span className="text-[8px] font-mono uppercase text-white/25">Más nuevos primero</span></div>
+      <div className="flex items-end justify-between px-1 pb-1"><div><p className="text-[9px] font-mono uppercase text-white/30">Selección fijada</p><h3 className="mt-0.5 text-xs font-bold text-white/80">Recomendados por la comunidad</h3></div><span className="text-[8px] font-mono uppercase text-white/25">Con pin</span></div>
       {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} />)}
       <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
         <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>

@@ -70,29 +70,6 @@ const COLLECTIONS_CACHE_KEY = "mim_collections_payload_v1";
 const COLLECTIONS_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
 const SHARE_META_PATTERN = /<!--mim:([\s\S]*?)-->/;
 
-/** Preserve both legacy JSON and embedded metadata formats when pinning a recommendation. */
-function setShareSummaryPriority(summary: string | null | undefined, priority: boolean) {
-  const value = String(summary || "").trim();
-  if (value.startsWith("{")) {
-    try {
-      return JSON.stringify({ ...JSON.parse(value), priority });
-    } catch {
-      return JSON.stringify({ comment: value, priority });
-    }
-  }
-
-  const match = value.match(SHARE_META_PATTERN);
-  const comment = value.replace(SHARE_META_PATTERN, "").trim();
-  let metadata: Record<string, unknown> = {};
-  try {
-    metadata = match?.[1] ? JSON.parse(match[1]) : {};
-  } catch {
-    metadata = {};
-  }
-  const encoded = `<!--mim:${JSON.stringify({ ...metadata, priority })}-->`;
-  return comment ? `${comment} ${encoded}` : encoded;
-}
-
 function getShareSummaryPriority(summary: string | null | undefined) {
   const value = String(summary || "").trim();
   try {
@@ -102,6 +79,51 @@ function getShareSummaryPriority(summary: string | null | undefined) {
   } catch {
     return false;
   }
+}
+
+function isMissingPinnedColumnError(error: any) {
+  const message = String(error?.message || error?.details || "");
+  return error?.code === "42703" || error?.code === "PGRST204" || /\bpinned\b/i.test(message);
+}
+
+function isFavoritePlatformConstraintError(error: any) {
+  const message = String(error?.message || error?.details || "");
+  return error?.code === "23514" && /favorite_mods_platform_check|platform/i.test(message);
+}
+
+function isSharePinned(share: any) {
+  if (share?.pinned === true) return true;
+  if (share?.pinned === false) return false;
+  return getShareSummaryPriority(share?.summary);
+}
+
+function sortSharesByPriority(shares: any[]) {
+  return [...shares].sort((a, b) => {
+    const priorityOrder = Number(isSharePinned(b)) - Number(isSharePinned(a));
+    if (priorityOrder) return priorityOrder;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+}
+
+async function fetchUserShares(userId: string) {
+  const withPinned = await supabase
+    .from("favorite_mods")
+    .select("*")
+    .eq("profile_id", userId)
+    .order("pinned", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (!withPinned.error) return sortSharesByPriority(withPinned.data || []);
+  if (!isMissingPinnedColumnError(withPinned.error)) throw withPinned.error;
+
+  const fallback = await supabase
+    .from("favorite_mods")
+    .select("*")
+    .eq("profile_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (fallback.error) throw fallback.error;
+  return sortSharesByPriority(fallback.data || []);
 }
 
 const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
@@ -460,10 +482,10 @@ export function useHomeController() {
   const loadUserData = useCallback(async (userId: string, silent = false) => {
     try {
       if (!silent) setLoadingUserData(true);
-      const [{ data: profData }, { data: follows }, { data: shares }, { data: drafts }, { data: followedAuthors }] = await Promise.all([
+      const [{ data: profData }, { data: follows }, shares, { data: drafts }, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase.from("followed_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
-        supabase.from("favorite_mods").select("*").eq("profile_id", userId).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        fetchUserShares(userId),
         supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
         supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
       ]);
@@ -1542,31 +1564,25 @@ export function useHomeController() {
     );
     if (!currentShare) return;
 
-    // Keep the summary blob in sync for backward compatibility with existing readers.
-    const summary = setShareSummaryPriority(currentShare.summary, priority);
-
     // Optimistic update — immediately reorder in UI so the pin feels instant.
     setUserShares((items) =>
-      items
-        .map((item) => {
+      sortSharesByPriority(
+        items.map((item) => {
           const match = isUuid ? item.id === shareId : (item.mod_id || item.project_id || item.id) === shareId;
-          return match ? { ...item, summary, pinned: priority } : item;
+          return match ? { ...item, pinned: priority } : item;
         })
-        // Pinned items sort to the front.
-        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+      )
     );
 
     try {
-      // Write `pinned` as a real DB column so community feed can order by it.
-      let query = supabase.from("favorite_mods").update({ summary, pinned: priority });
+      let query = supabase.from("favorite_mods").update({ pinned: priority });
       if (isUuid) {
         query = query.eq("id", shareId);
       } else {
         query = query.eq("profile_id", session.user.id).eq("mod_id", shareId);
       }
-      const { error } = await query;
+      const { error } = await query.select("id,pinned").single();
       if (error) throw error;
-      await loadUserData(session.user.id, true);
     } catch (err: any) {
       setUserShares(previousShares);
       showAlert("Error", `No se pudo actualizar la prioridad: ${err.message}`);
@@ -1605,7 +1621,6 @@ export function useHomeController() {
       mode: post.mode || "video",
       publishedAt: post.publishedAt || "",
       channelUrl: currentChannel,
-      priority: existingShare?.pinned ?? getShareSummaryPriority(existingShare?.summary),
     });
     const previousShares = userShares;
     const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);
@@ -1619,32 +1634,38 @@ export function useHomeController() {
         name: title,
         icon_url: thumbnail,
         summary,
+        pinned: existingShare?.pinned ?? false,
         created_at: new Date().toISOString(),
       },
       ...prev.filter((share) => (share.mod_id || share.project_id || share.id) !== projectId),
     ]);
 
-    try {
-      const request = alreadyShared
-        ? supabase.from("favorite_mods").update({
-          platform: "youtube",
-          name: title,
-          icon_url: thumbnail,
-          summary,
-        }).eq("profile_id", userId).eq("mod_id", projectId)
+    const saveShare = (platform: "youtube" | "modrinth") => {
+      const payload = {
+        platform,
+        name: title,
+        icon_url: thumbnail,
+        summary,
+        pinned: existingShare?.pinned ?? false,
+      };
+
+      return alreadyShared
+        ? supabase.from("favorite_mods").update(payload).eq("profile_id", userId).eq("mod_id", projectId)
         : supabase.from("favorite_mods").insert({
           profile_id: userId,
           mod_id: projectId,
-          platform: "youtube",
-          name: title,
-          icon_url: thumbnail,
-          summary,
+          ...payload,
         });
+    };
 
-      const { error } = await request;
-      if (error) throw error;
+    try {
+      const { error } = await saveShare("youtube");
+      if (error) {
+        if (!isFavoritePlatformConstraintError(error)) throw error;
+        const { error: fallbackError } = await saveShare("modrinth");
+        if (fallbackError) throw fallbackError;
+      }
       await loadUserData(userId);
-      showAlert(alreadyShared ? "Compartido actualizado" : "Compartido", "Este contenido ya aparece en Comunidad.");
     } catch (err: any) {
       setUserShares(previousShares);
       showAlert("Error", `No se pudo compartir: ${err.message}`);

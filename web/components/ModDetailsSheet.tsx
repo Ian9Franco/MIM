@@ -293,6 +293,16 @@ function readSharePriority(summary?: string | null) {
   }
 }
 
+function releaseGlobalSheetLocks() {
+  if (typeof document === "undefined") return;
+  document.body.style.overflow = "";
+  document.body.style.pointerEvents = "";
+  document.body.style.touchAction = "";
+  document.documentElement.style.overscrollBehavior = "";
+  document.documentElement.style.pointerEvents = "";
+  document.documentElement.style.touchAction = "";
+}
+
 const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
 const VERSION_PLATFORM_LABELS: Record<string, string> = {
   fabric: "Fabric",
@@ -531,6 +541,16 @@ export function ModDetailsSheet({
   const activeImageUrl = activeImage?.url || null;
   const hasGalleryNav = galleryImages.length > 1;
   const isSheetOpen = !!selectedMod;
+  const sheetTargetHeight =
+    modalTab === "deps"
+      ? selectedModDeps?.length > 0 ? "62vh" : "46vh"
+      : modalTab === "versions"
+        ? "78vh"
+        : modalTab === "gallery"
+          ? "76vh"
+          : modalTab === "desc"
+            ? "84vh"
+            : "88vh";
   const versionRows = normalizeVersionRows(selectedModDetails);
   const availableGameVersionFilters = Array.from(
     new Set(versionRows.flatMap((version) => version.gameVersions))
@@ -572,14 +592,10 @@ export function ModDetailsSheet({
       document.body.style.overflow = "hidden";
       document.documentElement.style.overscrollBehavior = "none";
     } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overscrollBehavior = "";
+      releaseGlobalSheetLocks();
     }
 
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overscrollBehavior = "";
-    };
+    return releaseGlobalSheetLocks;
   }, [isSheetOpen]);
 
   useEffect(() => {
@@ -593,6 +609,9 @@ export function ModDetailsSheet({
     if (closeStartedRef.current) return;
     closeStartedRef.current = true;
     setIsClosing(true);
+    setActiveImageIndex(null);
+    setShowShareModal(false);
+    releaseGlobalSheetLocks();
     playFomoSound("off");
     handleCloseModDetails();
   }, [handleCloseModDetails]);
@@ -623,7 +642,7 @@ export function ModDetailsSheet({
       const alreadyShared = !!existingShare;
       const summaryText = buildShareMetaFromMod(selectedMod, {
         comment: shareComment.trim() || selectedMod.description || "",
-        priority: readSharePriority(existingShare?.summary),
+        priority: existingShare?.pinned ?? readSharePriority(existingShare?.summary),
       });
 
       const request = alreadyShared
@@ -803,8 +822,7 @@ export function ModDetailsSheet({
 
   return (
     <>
-      <AnimatePresence>
-        {selectedMod && (
+      {selectedMod && (
           <motion.div
             key="mod-details-backdrop"
             className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
@@ -819,9 +837,9 @@ export function ModDetailsSheet({
           >
             <motion.div
               ref={sheetRef}
-              layout="size"
-              initial={{ y: "112%", scale: 0.96, opacity: 0.75 }}
-              animate={{ y: 0, scale: 1, opacity: 1 }}
+              layout="position"
+              initial={{ y: "112%", scale: 0.96, opacity: 0.75, height: sheetTargetHeight }}
+              animate={{ y: 0, scale: 1, opacity: 1, height: sheetTargetHeight }}
               exit={{ y: "108%", scale: 0.98, opacity: 0 }}
               transition={{
                 type: "spring",
@@ -835,7 +853,7 @@ export function ModDetailsSheet({
                   mass: 1.0,
                 }
               }}
-              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[85vh] overflow-hidden"
+              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-3 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[92vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               drag="y"
               dragControls={dragControls}
@@ -1097,9 +1115,9 @@ export function ModDetailsSheet({
               </div>
 
               {/* Body Content Area (Tabs + Scrollable Content) */}
-              <div className="flex flex-col gap-4 p-6 pt-4 flex-1 min-h-0">
+              <div className="flex flex-col gap-2.5 px-4 pt-3 pb-3 flex-1 min-h-0">
                 {/* Modal tabs */}
-                <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-1 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
+                <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-0.5 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
                   {[
                     { id: "summary", label: "Resumen" },
                     ...(selectedModDetails?.gallery?.length > 0 ? [{ id: "gallery", label: "Galería" }] : []),
@@ -1110,7 +1128,7 @@ export function ModDetailsSheet({
                     <button
                       key={t.id}
                       onClick={() => setModalTab(t.id as any)}
-                      className={`relative overflow-hidden flex-1 text-center py-1.5 px-1 rounded-lg text-[10.5px] sm:text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                      className={`relative overflow-hidden flex-1 text-center py-1 px-1 rounded-lg text-[9.5px] sm:text-[10px] font-semibold transition-colors whitespace-nowrap ${
                         modalTab === t.id
                           ? "text-orange-400"
                           : "text-white/50 hover:text-white/80"
@@ -1325,14 +1343,14 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "desc" && (
-                      <motion.div key="desc" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px] w-full">
-                        <div className="flex items-center justify-between gap-2 mb-3">
+                      <motion.div key="desc" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-3 min-h-full w-full">
+                        <div className="flex items-center justify-between gap-2 mb-2.5">
                           <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Descripción</span>
                           <button
                             type="button"
                             onClick={handleTranslate}
                             disabled={isTranslating || !descriptionBody}
-                            className="px-2.5 py-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                            className="px-2 py-1 rounded-lg border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
                             style={{
                               color: "var(--color-primary)",
                               background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
@@ -1543,7 +1561,7 @@ export function ModDetailsSheet({
                 <div className="flex gap-2 mt-auto pt-2 border-t border-white/[0.04] shrink-0">
                   <button
                     onClick={() => setModalTab(modalTab === "summary" ? "desc" : "summary")}
-                    className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs rounded-xl py-3.5 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-medium text-[11px] rounded-xl py-2.5 flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
                   >
                     {modalTab === "summary" ? (
                       <><Layers className="w-4 h-4" /> Ver Detalles Completos</>
@@ -1561,7 +1579,7 @@ export function ModDetailsSheet({
                         categories: selectedMod.categories || selectedModDetails?.categories || [],
                         ...(selectedModDetails?.game_versions ? { game_versions: selectedModDetails.game_versions } : {}),
                       } as ModHit)}
-                      className="shrink-0 px-3 py-3.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                      className="shrink-0 px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95"
                       style={{
                         background: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
                         border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)",
@@ -1577,8 +1595,7 @@ export function ModDetailsSheet({
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* Lightbox / Fullscreen Image Viewer */}
       <AnimatePresence>

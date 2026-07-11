@@ -86,9 +86,9 @@ export function SpotlightTab({
         <div className="flex justify-between items-center px-1">
           <h3 className="flex min-w-0 flex-1 items-center gap-1 text-xs font-bold text-white/80">
             <motion.span
-              animate={{ width: activeSpotlightPlatform === "modrinth" ? 60 : 76 }}
+              animate={{ width: activeSpotlightPlatform === "modrinth" ? 66 : 84 }}
               transition={PICKS_TRANSITION}
-              className="relative inline-block h-4 shrink-0 overflow-hidden"
+              className="relative mr-1.5 inline-block h-4 shrink-0 overflow-hidden"
             >
               <AnimatePresence mode="sync" initial={false} custom={picksDirection}>
                 <motion.span

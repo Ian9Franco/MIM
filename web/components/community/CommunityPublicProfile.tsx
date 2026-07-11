@@ -118,7 +118,14 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
                   const playVideo = () => embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: embeddedVideoId } }));
 
                   return (
-                    <div key={share.id} className="relative flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3">
+                    <div
+                      key={share.id}
+                      className={`relative flex flex-col gap-2 rounded-xl border bg-white/[0.025] p-3 ${
+                        isPriority
+                          ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.20)]"
+                          : "border-white/[0.06]"
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
                         <SquareAvatar src={share.icon_url} fallback={share.name} />
                         <div className="min-w-0 flex-1">
@@ -196,4 +203,3 @@ function InfoRow({ icon, title, meta }: { icon: React.ReactNode; title: string; 
 function SquareAvatar({ src, fallback, round = false }: { src?: string; fallback?: string; round?: boolean }) {
   return <div className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden border border-white/[0.07] bg-white/[0.04] ${round ? "rounded-full" : "rounded-lg"}`}>{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <span className="text-[9px] font-bold uppercase text-white/35">{fallback?.slice(0, 2)}</span>}</div>;
 }
-

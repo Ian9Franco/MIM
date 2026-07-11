@@ -62,7 +62,7 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true, 
     animationFrame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(animationFrame);
-  }, [speed, reverse, isVertical, paused, containerRef.current, innerRef.current]);
+  });
 
   const isDragging = useRef(false);
   const hasDragged = useRef(false);

@@ -1,4 +1,5 @@
 "use client";
+import { DefaultModIcon } from "./DefaultModIcon";
 
 import React, { useEffect, useState } from "react";
 import { TvMinimalPlay, X, Puzzle } from "lucide-react";
@@ -114,11 +115,23 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
                 }}
               >
                 {mod.iconUrl ? (
-                  <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
+                  <>
+                    <img
+                      src={mod.iconUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const sibling = e.currentTarget.nextSibling as HTMLElement;
+                        if (sibling) sibling.style.display = "block";
+                      }}
+                    />
+                    <div className="hidden w-full h-full">
+                      <DefaultModIcon platform={mod._source} />
+                    </div>
+                  </>
                 ) : (
-                  <span className="font-bold text-xs uppercase" style={{ color: "var(--color-muted)" }}>
-                    {mod.title.substring(0, 2)}
-                  </span>
+                  <DefaultModIcon platform={mod._source} />
                 )}
                 <span
                   className="absolute bottom-0 right-0 px-1 rounded-tl text-[8px] font-mono"
@@ -187,7 +200,8 @@ export function HorizontalEditorialMarquee({
   onSelectMod,
   onSelectCollection,
   speed = 0.6,
-  reverse = false
+  reverse = false,
+  paused = false,
 }: {
   items: any[];
   type?: "mod" | "collection";
@@ -195,9 +209,10 @@ export function HorizontalEditorialMarquee({
   onSelectCollection?: (coll: any) => void;
   speed?: number;
   reverse?: boolean;
+  paused?: boolean;
 }) {
   const duplicatedItems = [...items, ...items, ...items, ...items];
-  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false);
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused);
 
   return (
     <div
@@ -216,11 +231,23 @@ export function HorizontalEditorialMarquee({
               >
                 <div className="h-24 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
                   {item.iconUrl ? (
-                    <img src={item.iconUrl} alt="" className="w-full h-full object-cover" />
+                    <>
+                      <img
+                        src={item.iconUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const sibling = e.currentTarget.nextSibling as HTMLElement;
+                          if (sibling) sibling.style.display = "block";
+                        }}
+                      />
+                      <div className="hidden w-full h-full">
+                        <DefaultModIcon platform={item.source} />
+                      </div>
+                    </>
                   ) : (
-                    <span className="font-bold text-xs uppercase" style={{ color: "var(--color-muted)" }}>
-                      {item.name?.substring(0, 2) || "CO"}
-                    </span>
+                    <DefaultModIcon platform={item.source} />
                   )}
                   <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70">
                     {item.projectCount || item.mods?.length || 0} mods
@@ -241,9 +268,23 @@ export function HorizontalEditorialMarquee({
               >
                 <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
                   {item.iconUrl ? (
-                    <img src={item.iconUrl} alt="" className="w-full h-full object-cover scale-110 opacity-90" />
+                    <>
+                      <img
+                        src={item.iconUrl}
+                        alt=""
+                        className="w-full h-full object-cover scale-110 opacity-90"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const sibling = e.currentTarget.nextSibling as HTMLElement;
+                          if (sibling) sibling.style.display = "block";
+                        }}
+                      />
+                      <div className="hidden w-full h-full">
+                        <DefaultModIcon platform={item._source} />
+                      </div>
+                    </>
                   ) : (
-                    <span className="text-white/40 font-bold uppercase">{item.title?.substring(0, 2) || "MD"}</span>
+                    <DefaultModIcon platform={item._source} />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                   <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70 capitalize">
@@ -334,7 +375,7 @@ function formatDate(raw?: string): string {
 export function HorizontalShowcaseMarquee({
   channels = DEFAULT_SHOWCASE_CHANNELS,
   speed = 0.5,
-  reverse = true,
+  reverse = false,
   onSelectMod,
 }: {
   channels?: string[];
@@ -423,7 +464,7 @@ export function HorizontalShowcaseMarquee({
     );
   }
 
-  const displayVideos = [...videos, ...videos, ...videos];
+  const displayVideos = [...videos, ...videos, ...videos, ...videos];
 
   return (
     <div

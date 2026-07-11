@@ -1,4 +1,5 @@
 "use client";
+import { DefaultModIcon } from "./DefaultModIcon";
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useSpring, useTransform, useDragControls } from "framer-motion";
@@ -262,6 +263,7 @@ interface CommunityShareMeta {
   gameVersion?: string;
   modloader?: string;
   projectType?: CommunityProjectType;
+  priority?: boolean;
 }
 
 const META_RE = /<!--mim:([\s\S]*?)-->/;
@@ -278,6 +280,17 @@ function encodeShareMeta(
 function stripShareMeta(summary?: string | null): string {
   if (!summary) return "";
   return summary.replace(META_RE, "").trim();
+}
+
+function readSharePriority(summary?: string | null) {
+  const value = String(summary || "").trim();
+  try {
+    if (value.startsWith("{")) return !!JSON.parse(value).priority;
+    const match = value.match(META_RE);
+    return match?.[1] ? !!JSON.parse(match[1]).priority : false;
+  } catch {
+    return false;
+  }
 }
 
 const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
@@ -395,6 +408,7 @@ function buildShareMetaFromMod(
     comment?: string;
     gameVersion?: string;
     modloader?: string;
+    priority?: boolean;
   }
 ): string {
   const cats = (mod.categories || []).map((c) =>
@@ -419,6 +433,7 @@ function buildShareMetaFromMod(
     gameVersion,
     modloader,
     projectType: inferTypeFromModHit(mod),
+    priority: opts?.priority,
   });
 }
 
@@ -484,6 +499,8 @@ export function ModDetailsSheet({
   const [translatingVersionChangelog, setTranslatingVersionChangelog] = useState<string | null>(null);
   const [selectedGameVersionFilters, setSelectedGameVersionFilters] = useState<string[]>(DEFAULT_VERSION_FILTERS);
   const [dragEnabled, setDragEnabled] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
+  const closeStartedRef = useRef(false);
   const dragControls = useDragControls();
 
   const descriptionBody = selectedModDetails?.body || selectedMod?.description || "";
@@ -509,7 +526,12 @@ export function ModDetailsSheet({
 
   /** Play open sound and reset translation state when a new mod is opened */
   useEffect(() => {
-    if (selectedMod) playFomoSound("on");
+    if (selectedMod) {
+      // A fresh project creates a new close cycle; stale exit events are ignored.
+      closeStartedRef.current = false;
+      setIsClosing(false);
+      playFomoSound("on");
+    }
     setTranslatedBody(null);
     setTranslatedSummary(null);
     setIsTranslating(false);
@@ -557,8 +579,11 @@ export function ModDetailsSheet({
     }
   }, [activeImageIndex, galleryImages.length]);
 
-  /** Wrapper that plays close sound before dismissing the sheet */
+  /** Close once and release pointer capture immediately while the exit animation finishes. */
   const closeWithSound = useCallback(() => {
+    if (closeStartedRef.current) return;
+    closeStartedRef.current = true;
+    setIsClosing(true);
     playFomoSound("off");
     handleCloseModDetails();
   }, [handleCloseModDetails]);
@@ -580,15 +605,17 @@ export function ModDetailsSheet({
     if (!selectedMod || !session?.user?.id) return;
     setIsSharing(true);
     try {
-      const summaryText = buildShareMetaFromMod(selectedMod, {
-        comment: shareComment.trim() || selectedMod.description || "",
-      });
       const platform = selectedMod._source === "curseforge" ? "curseforge" : "modrinth";
 
       // Use userShares (favorite_mods) to check prior shares, independent of userFavorites (followed_mods)
-      const alreadyShared = userShares.some(
+      const existingShare = userShares.find(
         f => (f.mod_id || f.project_id || f.id) === selectedMod.projectId
       );
+      const alreadyShared = !!existingShare;
+      const summaryText = buildShareMetaFromMod(selectedMod, {
+        comment: shareComment.trim() || selectedMod.description || "",
+        priority: readSharePriority(existingShare?.summary),
+      });
 
       const request = alreadyShared
         ? supabase.from("favorite_mods").update({
@@ -771,6 +798,7 @@ export function ModDetailsSheet({
         {selectedMod && (
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
+            style={{ pointerEvents: isClosing ? "none" : "auto" }}
             onClick={closeWithSound}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
@@ -838,6 +866,7 @@ export function ModDetailsSheet({
                 <button
                   onClick={closeWithSound}
                   onPointerDown={(e) => e.stopPropagation()}
+                  aria-label="Cerrar detalles"
                   className="absolute right-5 top-4 z-40 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -861,13 +890,14 @@ export function ModDetailsSheet({
                         <button
                           key={idx}
                           onClick={() => handleSwitchStackIndex(idx)}
-                          className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all whitespace-nowrap border ${
+                          className={`relative overflow-hidden px-2.5 py-1 rounded-lg text-[9px] font-bold transition-colors whitespace-nowrap border ${
                             activeStackIndex === idx
-                              ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                              ? "text-orange-400 border-orange-500/30"
                               : "bg-black/40 text-white/50 hover:text-white/80 border-white/10"
                           }`}
                         >
-                          {item.mod.title.length > 15 ? `${item.mod.title.slice(0, 12)}...` : item.mod.title}
+                          {activeStackIndex === idx && <motion.span layoutId="mod-stack-selection" className="absolute inset-0 bg-orange-500/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                          <span className="relative z-10">{item.mod.title.length > 15 ? `${item.mod.title.slice(0, 12)}...` : item.mod.title}</span>
                         </button>
                       ))}
                     </div>
@@ -877,10 +907,24 @@ export function ModDetailsSheet({
                 {/* Mod info */}
                 <div className="relative z-10 flex gap-4">
                   <div className="w-16 h-16 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md">
-                    {(selectedMod.iconUrl || selectedModDetails?.icon_url || selectedModDetails?.iconUrl) ? (
-                      <img src={selectedMod.iconUrl || selectedModDetails?.icon_url || selectedModDetails?.iconUrl} alt="" className="w-full h-full object-cover" />
+                    {(selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl) ? (
+                      <>
+                        <img
+                          src={selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const sibling = e.currentTarget.nextSibling as HTMLElement;
+                            if (sibling) sibling.style.display = "block";
+                          }}
+                        />
+                        <div className="hidden w-full h-full">
+                          <DefaultModIcon platform={selectedMod._source} />
+                        </div>
+                      </>
                     ) : (
-                      <span className="text-white/40 font-bold uppercase">{selectedMod.title.substring(0, 2)}</span>
+                      <DefaultModIcon platform={selectedMod._source} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -991,7 +1035,7 @@ export function ModDetailsSheet({
               {/* Body Content Area (Tabs + Scrollable Content) */}
               <div className="flex flex-col gap-4 p-6 pt-4 flex-1 min-h-0">
                 {/* Modal tabs */}
-                <div className="flex gap-1 border-b border-white/[0.06] pb-1 shrink-0 overflow-x-auto scrollbar-none">
+                <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-1 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
                   {[
                     { id: "summary", label: "Resumen" },
                     ...(selectedModDetails?.gallery?.length > 0 ? [{ id: "gallery", label: "Galería" }] : []),
@@ -1002,13 +1046,21 @@ export function ModDetailsSheet({
                     <button
                       key={t.id}
                       onClick={() => setModalTab(t.id as any)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
+                      className={`relative overflow-hidden px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${
                         modalTab === t.id
-                          ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                          ? "text-orange-400"
                           : "text-white/50 hover:text-white/80"
                       }`}
                     >
-                      {t.label}
+                      {/* One shared plate makes the selected tab travel instead of blinking. */}
+                      {modalTab === t.id && (
+                        <motion.span
+                          layoutId="mod-details-tab-selection"
+                          className="absolute inset-0 rounded-lg border border-orange-500/25 bg-orange-500/15 shadow-[0_6px_16px_rgba(0,0,0,0.18)]"
+                          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative z-10">{t.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1020,9 +1072,9 @@ export function ModDetailsSheet({
                   onWheel={(e) => e.stopPropagation()}
                   onTouchMove={(e) => e.stopPropagation()}
                 >
-                    <AnimatePresence mode="popLayout">
+                    <AnimatePresence mode="wait">
                       {modalTab === "summary" && (
-                        <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-4 w-full pb-2">
+                        <motion.div key="summary" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-4 w-full pb-2">
                         {/* Stats row */}
                         <div className="flex gap-3 text-[10px] border-b border-white/[0.04] pb-3 flex-wrap">
                           <div className="flex-1 min-w-[70px]">
@@ -1175,10 +1227,10 @@ export function ModDetailsSheet({
                     {modalTab === "gallery" && (
                       <motion.div
                         key="gallery"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.15 }}
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.2 }}
                         className="flex flex-col gap-3.5 w-full pb-2"
                       >
                         <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">
@@ -1209,7 +1261,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "desc" && (
-                      <motion.div key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px] w-full">
+                      <motion.div key="desc" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 min-h-[200px] w-full">
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Descripción</span>
                           <button
@@ -1236,7 +1288,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "versions" && (
-                      <motion.div key="versions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5 w-full">
+                      <motion.div key="versions" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -1383,7 +1435,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "deps" && (
-                      <motion.div key="deps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="flex flex-col gap-2.5 w-full">
+                      <motion.div key="deps" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />

@@ -261,6 +261,7 @@ export default function Home() {
               handleAuth={c.handleAuth}
               handleLogout={c.handleLogout}
               onRemoveShare={c.onRemoveShare}
+              onUpdateSharePriority={c.onUpdateSharePriority}
               handleOpenEditProfile={() => c.setShowEditProfile(true)}
               handleOpenModDetails={c.handleOpenModDetails}
               handleEnterDraftCollection={c.handleEnterDraftCollection}

@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck, Share2, Trash2, MessageSquare,
+  Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck, Share2, Trash2, MessageSquare, Pin,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
@@ -33,6 +33,7 @@ interface ProfileTabProps {
   onEditDraft?: (draft: any) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
   onRemoveShare?: (projectId: string) => Promise<void>;
+  onUpdateSharePriority?: (projectId: string, priority: boolean) => Promise<void>;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -72,7 +73,7 @@ export function ProfileTab({
   setUsername, isRegistering, setIsRegistering, authLoading, loadingUserData,
   userDrafts, userFavorites, userShares = [], userFollowedAuthors = [], handleAuth, handleLogout, handleOpenEditProfile,
   handleOpenModDetails, handleEnterDraftCollection, onCreateDraft, onEditDraft,
-  onSearchAuthor, onRemoveShare,
+  onSearchAuthor, onRemoveShare, onUpdateSharePriority,
 }: ProfileTabProps) {
   const readFavoriteMeta = (fav: any) => {
     try {
@@ -82,16 +83,30 @@ export function ProfileTab({
     }
   };
 
+  const [recentUpdates, setRecentUpdates] = React.useState<Record<string, boolean>>({});
+  const getCreatedTime = (item: any) => {
+    const value = item.created_at || item.inserted_at || item.updated_at || "";
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? time : 0;
+  };
+
   const sortedUserFavorites = React.useMemo(() => {
     const getTime = (fav: any) => {
-      const value = fav.created_at || fav.inserted_at || fav.updated_at || "";
-      const time = new Date(value).getTime();
-      return Number.isFinite(time) ? time : 0;
+      return getCreatedTime(fav);
     };
 
-    return [...userFavorites].sort((a, b) => getTime(b) - getTime(a));
-  }, [userFavorites]);
-  const [recentUpdates, setRecentUpdates] = React.useState<Record<string, boolean>>({});
+    return [...userFavorites].sort((a, b) => {
+      const aKey = projectUpdateKey(a.platform || a.source || "modrinth", a.mod_id || a.project_id || a.id);
+      const bKey = projectUpdateKey(b.platform || b.source || "modrinth", b.mod_id || b.project_id || b.id);
+      const updateOrder = Number(!!recentUpdates[bKey]) - Number(!!recentUpdates[aKey]);
+      return updateOrder || getTime(b) - getTime(a);
+    });
+  }, [userFavorites, recentUpdates]);
+
+  const sortedUserShares = React.useMemo(() => [...userShares].sort((a, b) => {
+    const priorityOrder = Number(!!parseShareMeta(b.summary).priority) - Number(!!parseShareMeta(a.summary).priority);
+    return priorityOrder || getCreatedTime(b) - getCreatedTime(a);
+  }), [userShares]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -233,10 +248,15 @@ export function ProfileTab({
         </div>
       ) : (
         /* ── Authenticated Profile View ── */
-        <div className="flex flex-col gap-6">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+          className="flex flex-col gap-6"
+        >
 
           {/* Profile Card */}
-          <div className="bg-surface/90 border border-border rounded-3xl overflow-hidden flex flex-col relative shadow-xl">
+          <motion.section variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.28 }} className="bg-surface/90 border border-border rounded-3xl overflow-hidden flex flex-col relative shadow-xl">
             {/* Banner */}
             <div className="h-28 w-full relative overflow-hidden bg-gradient-to-r from-orange-600/30 to-rose-600/30 border-b border-white/[0.04]">
               {profile?.banner_url ? (
@@ -299,10 +319,10 @@ export function ProfileTab({
                 </button>
               </div>
             </div>
-          </div>
+          </motion.section>
 
           {/* Drafts Section */}
-          <div className="flex flex-col gap-3">
+          <motion.section variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
                 <Bookmark className="w-4 h-4 text-orange-500" /> Borradores Modpacks (Drafts)
@@ -326,11 +346,16 @@ export function ProfileTab({
               </div>
             ) : userDrafts.length > 0 ? (
               <div className="grid gap-3">
-                {userDrafts.map(draft => (
-                  <div
+                {userDrafts.map((draft, draftIndex) => (
+                  <motion.div
                     key={draft.id}
                     onClick={() => handleEnterDraftCollection(draft)}
-                    className="bg-surface/80 border border-border rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all hover:border-white/10"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(draftIndex * 0.04, 0.16) }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    className="bg-surface/80 border border-border rounded-2xl overflow-hidden cursor-pointer transition-colors hover:border-white/15 hover:shadow-[0_12px_30px_rgba(0,0,0,0.2)]"
                   >
                     {draft.cover_image && (
                       <div className="h-20 w-full">
@@ -369,7 +394,7 @@ export function ProfileTab({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -383,10 +408,10 @@ export function ProfileTab({
                 </button>
               </div>
             )}
-          </div>
+          </motion.section>
 
           {/* Favorites Section */}
-          <div className="flex flex-col gap-3">
+          <motion.section variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
               <Check className="w-4 h-4 text-emerald-400" /> Mis Proyectos Favoritos
             </h3>
@@ -451,10 +476,10 @@ export function ProfileTab({
                 <p className="text-xs text-white/40">No guardaste ningún mod favorito todavía.</p>
               </div>
             )}
-          </div>
+          </motion.section>
 
           {/* Shared Mods Section */}
-          <div className="flex flex-col gap-3">
+          <motion.section variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
               <Share2 className="w-4 h-4 text-amber-500" /> Mis Recomendados (Compartidos)
             </h3>
@@ -462,19 +487,20 @@ export function ProfileTab({
               <div className="py-6 flex items-center justify-center">
                 <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
               </div>
-            ) : userShares.length > 0 ? (
+            ) : sortedUserShares.length > 0 ? (
               <div
                 onWheel={handleHorizontalWheel}
                 className="grid grid-flow-col grid-rows-1 gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
                 style={{ gridAutoColumns: "minmax(260px, calc((100% - 1.5rem) / 3))" }}
               >
-                {userShares.map(share => {
+                {sortedUserShares.map(share => {
                   const meta = parseShareMeta(share.summary);
                   const projectId = share.mod_id || share.project_id || share.id;
                   const projectType = meta.projectType || "mod";
                   const isYoutubeShare = share.platform === "youtube" || projectType.startsWith("youtube-");
                   const shareSource = share.platform || "modrinth";
                   const isRecentlyUpdated = !isYoutubeShare && recentUpdates[projectUpdateKey(shareSource, projectId)];
+                  const isPriority = !!meta.priority;
                   const openShare = () => {
                     if (isYoutubeShare) {
                       if (meta.embeddedVideoId) {
@@ -538,6 +564,21 @@ export function ProfileTab({
                             )}
                           </div>
                         </div>
+                        {onUpdateSharePriority && (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateSharePriority(projectId, !isPriority)}
+                            className={`p-2 rounded-lg active:scale-95 transition-all ${
+                              isPriority
+                                ? "text-amber-300 bg-amber-500/15 border border-amber-500/25"
+                                : "text-white/30 hover:text-amber-300 hover:bg-amber-500/10 border border-transparent"
+                            }`}
+                            title={isPriority ? "Quitar de prioritarios" : "Fijar arriba"}
+                            aria-label={isPriority ? `Quitar prioridad a ${share.name}` : `Dar prioridad a ${share.name}`}
+                          >
+                            <Pin className={`w-3.5 h-3.5 ${isPriority ? "fill-current" : ""}`} />
+                          </button>
+                        )}
                         {onRemoveShare && (
                           <button
                             onClick={() => onRemoveShare(projectId)}
@@ -564,10 +605,10 @@ export function ProfileTab({
                 <p className="text-xs text-white/40">No compartiste ningún mod con la comunidad todavía.</p>
               </div>
             )}
-          </div>
+          </motion.section>
 
           {/* Autores Seguidos */}
-          <div className="flex flex-col gap-3">
+          <motion.section variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
               <UserCheck className="w-4 h-4 text-blue-400" /> Autores Seguidos
             </h3>
@@ -608,8 +649,8 @@ export function ProfileTab({
                 <p className="text-xs text-white/40">No seguís a ningún autor todavía.</p>
               </div>
             )}
-          </div>
-        </div>
+          </motion.section>
+        </motion.div>
       )}
     </motion.div>
   );
@@ -625,6 +666,7 @@ function parseShareMeta(summary?: string | null): {
   embeddedVideoId?: string;
   mode?: string;
   publishedAt?: string;
+  priority?: boolean;
 } {
   if (!summary) return { comment: "" };
   const trimmed = summary.trim();
@@ -643,6 +685,7 @@ function parseShareMeta(summary?: string | null): {
         embeddedVideoId: parsed.embeddedVideoId,
         mode: parsed.mode,
         publishedAt: parsed.publishedAt,
+        priority: !!parsed.priority,
       };
     } catch {}
   }
@@ -665,6 +708,7 @@ function parseShareMeta(summary?: string | null): {
         embeddedVideoId: meta.embeddedVideoId,
         mode: meta.mode,
         publishedAt: meta.publishedAt,
+        priority: !!meta.priority,
       };
     } catch {}
   }

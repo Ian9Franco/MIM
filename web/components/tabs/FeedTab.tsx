@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Film, ExternalLink, X, Play, Eye, EyeOff, Puzzle, Share2, Check } from "lucide-react";
 import { FeedSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
@@ -178,18 +178,19 @@ export function FeedTab({
       )}
 
       {/* Channel selector pills (Max 3 visible) */}
-      <div className="flex gap-2 mb-3 shrink-0 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-1 mb-3 shrink-0 overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.025] p-1 scrollbar-none">
         {visibleChannels.map(chan => (
           <button
             key={chan.url}
             onClick={() => setCurrentChannel(chan.url)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+            className={`relative overflow-hidden px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
               currentChannel === chan.url
-                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                : "bg-white/5 text-white/50 border border-white/[0.05]"
+                ? "text-orange-400"
+                : "text-white/45 hover:text-white/70"
             }`}
           >
-            {chan.name}
+            {currentChannel === chan.url && <motion.span layoutId="channel-selection" className="absolute inset-0 rounded-lg border border-orange-500/25 bg-orange-500/12" transition={{ type: "spring", stiffness: 410, damping: 33 }} />}
+            <span className="relative z-10">{chan.name}</span>
           </button>
         ))}
       </div>
@@ -204,28 +205,30 @@ export function FeedTab({
           <button
             key={t.id}
             onClick={() => setYoutubeFeedType(t.id as any)}
-            className={`flex-1 py-1.5 rounded-lg text-center text-[10.5px] font-bold transition-all ${
+            className={`relative flex-1 overflow-hidden py-1.5 rounded-lg text-center text-[10.5px] font-bold transition-colors ${
               youtubeFeedType === t.id
-                ? "bg-orange-600/20 text-orange-400 border border-orange-500/20 shadow-inner"
+                ? "text-orange-400"
                 : "text-white/40 hover:text-white/70"
             }`}
           >
-            {t.label}
+            {youtubeFeedType === t.id && <motion.span layoutId="feed-type-selection" className="absolute inset-0 rounded-lg border border-orange-500/20 bg-orange-600/15 shadow-inner" transition={{ type: "spring", stiffness: 410, damping: 33 }} />}
+            <span className="relative z-10">{t.label}</span>
           </button>
         ))}
       </div>
 
       {/* Posts list */}
+      <AnimatePresence mode="wait">
       {loadingYoutube ? (
         <FeedSkeleton />
       ) : youtubePosts.length > 0 ? (
-        <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
-          {youtubePosts.slice(0, visibleCount).map((post) => {
+        <motion.div key={`${currentChannel}-${youtubeFeedType}`} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }} className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
+          {youtubePosts.slice(0, visibleCount).map((post, postIndex) => {
             const shareId = `youtube:${post.postId || post.embeddedVideoId}`;
             const isShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === shareId);
 
             return (
-            <div key={post.postId} className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+            <motion.article key={post.postId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(postIndex * 0.03, 0.18) }} whileHover={{ y: -2 }} className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-[0_14px_34px_rgba(0,0,0,0.2)] transition-shadow">
               {/* Bold Title for videos and shorts */}
               {(post.mode === "video" || post.mode === "short" || post.mode === "video-short") && post.title && (
                 <h3 className="text-xs font-bold text-white/90 leading-snug">{post.title}</h3>
@@ -401,7 +404,7 @@ export function FeedTab({
                   </a>
                 </div>
               </div>
-            </div>
+            </motion.article>
           );
           })}
 
@@ -416,7 +419,7 @@ export function FeedTab({
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       ) : (
         <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
           <Film className="w-12 h-12 text-orange-500/50 mb-4" />
@@ -424,6 +427,7 @@ export function FeedTab({
           <p className="text-xs text-white/40 mt-1">No se encontraron elementos en esta sección.</p>
         </div>
       )}
+      </AnimatePresence>
     </motion.div>
   );
 }

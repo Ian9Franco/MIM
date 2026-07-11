@@ -1,4 +1,5 @@
 "use client";
+import { DefaultModIcon } from "../DefaultModIcon";
 
 import React from "react";
 import { motion } from "framer-motion";
@@ -57,9 +58,23 @@ export function RankingsTab({ rankings, loadingRankings, handleOpenModDetails }:
               </div>
               <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                 {mod.iconUrl ? (
-                  <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                  <>
+                    <img
+                      src={mod.iconUrl}
+                      alt=""
+                      className="object-cover w-full h-full"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const sibling = e.currentTarget.nextSibling as HTMLElement;
+                        if (sibling) sibling.style.display = "block";
+                      }}
+                    />
+                    <div className="hidden w-full h-full">
+                      <DefaultModIcon platform={mod._source} />
+                    </div>
+                  </>
                 ) : (
-                  <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                  <DefaultModIcon platform={mod._source} />
                 )}
               </div>
               <div className="flex-1 min-w-0">

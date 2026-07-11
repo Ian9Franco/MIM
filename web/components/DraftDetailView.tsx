@@ -229,7 +229,7 @@ export function DraftDetailView({
       className="flex-1 flex flex-col min-h-0"
     >
       {/* Banner */}
-      <div className="relative rounded-2xl overflow-hidden mb-4 shrink-0" style={{ minHeight: draft?.cover_image ? 130 : 80 }}>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative rounded-2xl overflow-hidden mb-4 shrink-0 border border-white/[0.07] shadow-[0_16px_38px_rgba(0,0,0,0.24)]" style={{ minHeight: draft?.cover_image ? 130 : 80 }}>
         {draft?.cover_image ? (
           <img
             src={draft.cover_image}
@@ -299,22 +299,24 @@ export function DraftDetailView({
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-white/[0.06] pb-2 shrink-0">
+      <div className="flex gap-1 mb-4 rounded-xl border border-white/[0.07] bg-black/15 p-1 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap uppercase tracking-wider ${
+            className={`relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors whitespace-nowrap uppercase tracking-wider ${
               tab === t.id
-                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                ? "text-orange-400"
                 : "text-white/40 hover:text-white/70"
             }`}
           >
-            {t.icon}
-            {t.label}
+            {/* Draft tabs share the same moving selection language as project details. */}
+            {tab === t.id && <motion.span layoutId="draft-tab-selection" className="absolute inset-0 rounded-lg border border-orange-500/25 bg-orange-500/15 shadow-[0_6px_16px_rgba(0,0,0,0.18)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <span className="relative z-10">{t.icon}</span>
+            <span className="relative z-10">{t.label}</span>
           </button>
         ))}
       </div>
@@ -326,8 +328,8 @@ export function DraftDetailView({
           {tab === "summary" && (
             <motion.div
               key="summary"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
               {/* Stats */}
@@ -388,26 +390,25 @@ export function DraftDetailView({
           {tab === "items" && (
             <motion.div
               key="items"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.2 }}
               className="flex flex-col gap-3"
             >
               {/* Type filter */}
-              <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+              <div className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-white/[0.06] bg-black/10 p-1">
                 {typeFilters.map((f) => {
                   const active = typeFilter === f.id;
                   return (
                     <button
                       key={f.id}
                       onClick={() => setTypeFilter(f.id)}
-                      className="shrink-0 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all active:scale-95"
+                      className="relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors active:scale-95"
                       style={{
-                        background: active ? "color-mix(in srgb, var(--color-primary) 16%, transparent)" : "color-mix(in srgb, var(--color-card) 70%, transparent)",
-                        borderColor: active ? "color-mix(in srgb, var(--color-primary) 35%, transparent)" : "var(--color-border)",
                         color: active ? "var(--color-primary)" : "var(--color-muted)",
                       }}
                     >
-                      {f.label}
+                      {active && <motion.span layoutId="draft-type-filter-selection" className="absolute inset-0 rounded-lg border" style={{ background: "color-mix(in srgb, var(--color-primary) 13%, transparent)", borderColor: "color-mix(in srgb, var(--color-primary) 28%, transparent)" }} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                      <span className="relative z-10">{f.label}</span>
                     </button>
                   );
                 })}
@@ -502,8 +503,8 @@ export function DraftDetailView({
           {tab === "members" && (
             <motion.div
               key="members"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.2 }}
               className="flex flex-col gap-3"
             >
               {loadingMembers ? (
@@ -551,8 +552,8 @@ export function DraftDetailView({
           {tab === "activity" && (
             <motion.div
               key="activity"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.2 }}
               className="flex flex-col gap-2"
             >
               {loadingActivity ? (

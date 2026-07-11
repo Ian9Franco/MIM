@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) {
+export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true, paused = false) {
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const offset = useRef(0);
@@ -19,8 +19,8 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
       // Lerp smooth scroll
       offset.current += (targetOffset.current - offset.current) * 0.1;
 
-      // Natural speed scroll
-      const step = speed * (reverse ? -1 : 1);
+      // A paused marquee keeps its exact offset while another surface crossfades in.
+      const step = paused ? 0 : speed * (reverse ? -1 : 1);
       
       const size = isVertical ? inner.scrollHeight / 2 : inner.scrollWidth / 2;
 
@@ -62,7 +62,7 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true) 
     animationFrame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(animationFrame);
-  });
+  }, [speed, reverse, isVertical, paused, containerRef.current, innerRef.current]);
 
   const isDragging = useRef(false);
   const hasDragged = useRef(false);

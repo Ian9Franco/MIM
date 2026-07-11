@@ -68,6 +68,41 @@ const DEFAULT_CHANNELS = [
 ];
 const COLLECTIONS_CACHE_KEY = "mim_collections_payload_v1";
 const COLLECTIONS_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+const SHARE_META_PATTERN = /<!--mim:([\s\S]*?)-->/;
+
+/** Preserve both legacy JSON and embedded metadata formats when pinning a recommendation. */
+function setShareSummaryPriority(summary: string | null | undefined, priority: boolean) {
+  const value = String(summary || "").trim();
+  if (value.startsWith("{")) {
+    try {
+      return JSON.stringify({ ...JSON.parse(value), priority });
+    } catch {
+      return JSON.stringify({ comment: value, priority });
+    }
+  }
+
+  const match = value.match(SHARE_META_PATTERN);
+  const comment = value.replace(SHARE_META_PATTERN, "").trim();
+  let metadata: Record<string, unknown> = {};
+  try {
+    metadata = match?.[1] ? JSON.parse(match[1]) : {};
+  } catch {
+    metadata = {};
+  }
+  const encoded = `<!--mim:${JSON.stringify({ ...metadata, priority })}-->`;
+  return comment ? `${comment} ${encoded}` : encoded;
+}
+
+function getShareSummaryPriority(summary: string | null | undefined) {
+  const value = String(summary || "").trim();
+  try {
+    if (value.startsWith("{")) return !!JSON.parse(value).priority;
+    const match = value.match(SHARE_META_PATTERN);
+    return match?.[1] ? !!JSON.parse(match[1]).priority : false;
+  } catch {
+    return false;
+  }
+}
 
 const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
   {
@@ -1469,6 +1504,32 @@ export function useHomeController() {
     }
   };
 
+  const onUpdateSharePriority = async (projectId: string, priority: boolean) => {
+    if (!session?.user?.id) return;
+    const previousShares = userShares;
+    const currentShare = userShares.find((item) => (item.mod_id || item.project_id || item.id) === projectId);
+    if (!currentShare) return;
+
+    const summary = setShareSummaryPriority(currentShare.summary, priority);
+    // Reorder immediately; Supabase remains the source of truth after confirmation.
+    setUserShares((items) => items.map((item) =>
+      (item.mod_id || item.project_id || item.id) === projectId ? { ...item, summary } : item
+    ));
+
+    try {
+      const { error } = await supabase
+        .from("favorite_mods")
+        .update({ summary })
+        .eq("profile_id", session.user.id)
+        .eq("mod_id", projectId);
+      if (error) throw error;
+      await loadUserData(session.user.id);
+    } catch (err: any) {
+      setUserShares(previousShares);
+      showAlert("Error", `No se pudo actualizar la prioridad: ${err.message}`);
+    }
+  };
+
   const shareYoutubePost = async (post: any) => {
     if (!session?.user?.id) {
       showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
@@ -1491,6 +1552,7 @@ export function useHomeController() {
       : post.mode === "post"
         ? "youtube-post"
         : "youtube-video";
+    const existingShare = userShares.find((share) => (share.mod_id || share.project_id || share.id) === projectId);
     const summary = JSON.stringify({
       comment: post.description || "",
       projectType: contentKind,
@@ -1500,6 +1562,7 @@ export function useHomeController() {
       mode: post.mode || "video",
       publishedAt: post.publishedAt || "",
       channelUrl: currentChannel,
+      priority: getShareSummaryPriority(existingShare?.summary),
     });
     const previousShares = userShares;
     const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);
@@ -1563,7 +1626,7 @@ export function useHomeController() {
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
-    onRemoveShare, shareYoutubePost,
+    onRemoveShare, onUpdateSharePriority, shareYoutubePost,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
     activeDraft, setActiveDraft, handleSearchAuthor, handleSearchMod,

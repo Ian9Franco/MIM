@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Calendar, Loader2, Settings2, ChevronRight } from "lucide-react";
 import {
   VerticalTicker,
@@ -11,6 +11,13 @@ import {
 } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
 import { SpotlightSkeleton } from "../FomoSkeletons";
+
+const PICKS_TRANSITION = { duration: 1.15, ease: [0.25, 1, 0.5, 1] as const };
+const PICKS_VARIANTS = {
+  enter: (direction: number) => ({ y: direction >= 0 ? "100%" : "-100%", opacity: 0 }),
+  center: { y: 0, opacity: 1 },
+  exit: (direction: number) => ({ y: direction >= 0 ? "-100%" : "100%", opacity: 0 }),
+};
 
 interface SpotlightTabProps {
   latestCollectionName: string;
@@ -39,6 +46,15 @@ export function SpotlightTab({
   setShowChannelPicker, updatedMods, newestMods,
 }: SpotlightTabProps) {
   const curseForgeMonthlyMods = (curseForgeFeatured[0]?.mods || []) as ModHit[];
+  const [isPlatformTransitioning, setIsPlatformTransitioning] = useState(false);
+  const picksDirection = activeSpotlightPlatform === "curseforge" ? 1 : -1;
+
+  // Freeze both tracks during the crossfade, then resume only the visible platform.
+  useEffect(() => {
+    setIsPlatformTransitioning(true);
+    const timer = window.setTimeout(() => setIsPlatformTransitioning(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [activeSpotlightPlatform]);
 
   return (
     <motion.div
@@ -68,16 +84,54 @@ export function SpotlightTab({
       {/* Featured mods carousel */}
       <div className="flex flex-col gap-3 mb-6 shrink-0">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-xs font-bold text-white/80 tracking-wide flex items-center gap-1.5">
-            {activeSpotlightPlatform === "modrinth"
-              ? `Destacados: ${latestCollectionName || "Modrinth Featured"}`
-              : `Destacados: ${curseForgeFeatured[0]?.name || "CurseForge Community Picks"}`}
+          <h3 className="flex min-w-0 flex-1 items-center gap-1 text-xs font-bold text-white/80">
+            <motion.span
+              animate={{ width: activeSpotlightPlatform === "modrinth" ? 60 : 76 }}
+              transition={PICKS_TRANSITION}
+              className="relative inline-block h-4 shrink-0 overflow-hidden"
+            >
+              <AnimatePresence mode="sync" initial={false} custom={picksDirection}>
+                <motion.span
+                  key={activeSpotlightPlatform}
+                  custom={picksDirection}
+                  variants={PICKS_VARIANTS}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={PICKS_TRANSITION}
+                  className={`absolute inset-0 flex items-center whitespace-nowrap ${
+                    activeSpotlightPlatform === "modrinth" ? "text-[#1bd672]" : "text-orange-400"
+                  }`}
+                >
+                  {activeSpotlightPlatform === "modrinth" ? "Modrinth" : "Curseforge"}
+                </motion.span>
+              </AnimatePresence>
+            </motion.span>
+            <span className="whitespace-nowrap">Picks</span>
           </h3>
           <button
             onClick={() => setActiveSpotlightPlatform(activeSpotlightPlatform === "modrinth" ? "curseforge" : "modrinth")}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md hover:bg-white/10 transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase bg-white/5 text-white/80 border shadow-sm backdrop-blur-md hover:bg-white/10 transition-all duration-300 ${
+              activeSpotlightPlatform === "modrinth" 
+                ? "border-white/10 hover:border-orange-500/30" 
+                : "border-white/10 hover:border-emerald-500/30"
+            }`}
           >
-            <span>{activeSpotlightPlatform === "modrinth" ? "Ver CurseForge" : "Ver Modrinth"}</span>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span 
+                key={activeSpotlightPlatform} 
+                initial={{ opacity: 0, y: 4 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -4 }} 
+                transition={{ duration: 0.16 }}
+                className="flex items-center gap-1"
+              >
+                <span>Ver</span>
+                <span className={activeSpotlightPlatform === "modrinth" ? "text-orange-400" : "text-[#1bd672]"}>
+                  {activeSpotlightPlatform === "modrinth" ? "CurseForge" : "Modrinth"}
+                </span>
+              </motion.span>
+            </AnimatePresence>
             <ChevronRight className={`w-3 h-3 transform transition-transform ${activeSpotlightPlatform === "curseforge" ? "rotate-180" : ""}`} />
           </button>
         </div>
@@ -85,30 +139,46 @@ export function SpotlightTab({
         {loadingLatestMods ? (
           <SpotlightSkeleton />
         ) : (
-          <div className="w-full">
-            {activeSpotlightPlatform === "modrinth" ? (
+          <div className="grid w-full">
+            {/* Both tracks remain mounted so switching platform never resets their position. */}
+            <motion.div
+              className="col-start-1 row-start-1 min-w-0"
+              animate={{ opacity: activeSpotlightPlatform === "modrinth" ? 1 : 0 }}
+              transition={{ duration: 0.24, ease: "easeInOut" }}
+              style={{ pointerEvents: activeSpotlightPlatform === "modrinth" ? "auto" : "none" }}
+              aria-hidden={activeSpotlightPlatform !== "modrinth"}
+            >
               <HorizontalEditorialMarquee
                 items={latestFeaturedMods}
                 type="mod"
                 onSelectMod={handleOpenModDetails}
                 speed={0.8}
                 reverse={true}
+                paused={isPlatformTransitioning || activeSpotlightPlatform !== "modrinth"}
               />
-            ) : (
+            </motion.div>
+            <motion.div
+              className="col-start-1 row-start-1 min-w-0"
+              animate={{ opacity: activeSpotlightPlatform === "curseforge" ? 1 : 0 }}
+              transition={{ duration: 0.24, ease: "easeInOut" }}
+              style={{ pointerEvents: activeSpotlightPlatform === "curseforge" ? "auto" : "none" }}
+              aria-hidden={activeSpotlightPlatform !== "curseforge"}
+            >
               <HorizontalEditorialMarquee
                 items={curseForgeMonthlyMods}
                 type="mod"
                 onSelectMod={handleOpenModDetails}
                 speed={0.75}
                 reverse={true}
+                paused={isPlatformTransitioning || activeSpotlightPlatform !== "curseforge"}
               />
-            )}
+            </motion.div>
           </div>
         )}
       </div>
 
       {/* Multi-channel showcase marquee — derecha a izquierda (reverse=false) */}
-      <div className="flex flex-col gap-3 mb-6 shrink-0">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.24 }} className="flex flex-col gap-3 mb-6 shrink-0">
         <div className="px-1 flex items-center justify-between">
           <span
             className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border shadow-sm backdrop-blur-md"
@@ -129,10 +199,10 @@ export function SpotlightTab({
           </button>
         </div>
         <HorizontalShowcaseMarquee channels={showcaseChannels} speed={0.85} reverse={false} onSelectMod={handleOpenModDetails} />
-      </div>
+      </motion.div>
 
       {/* Vertical tickers */}
-      <div className="flex gap-4 h-[300px] min-h-[300px] mb-4">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.24 }} className="flex gap-4 h-[300px] min-h-[300px] mb-4">
         <div className="flex-1 flex flex-col min-h-0">
           <h3 className="text-[11px] font-bold text-white/80 tracking-wide mb-3 flex items-center gap-1.5 shrink-0">
             <Clock className="w-3.5 h-3.5 text-blue-400" /> Actualizados
@@ -150,7 +220,7 @@ export function SpotlightTab({
             <VerticalTicker mods={newestMods} onSelectMod={handleOpenModDetails} speed={0.5} color="text-purple-400" />
           </div>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

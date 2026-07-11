@@ -1,4 +1,5 @@
 "use client";
+import { DefaultModIcon } from "../DefaultModIcon";
 
 import React from "react";
 import { motion } from "framer-motion";
@@ -428,15 +429,16 @@ export function DiscoverTab({
               setDiscoverPage(1);
               setDiscoverCategory([]);
             }}
-            className={`h-6 rounded-lg text-xs font-bold transition-all border flex items-center justify-center ${
+            className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center ${
               discoverSource === "modrinth"
-                ? "bg-[#1bd672]/20 text-[#1bd672] border-[#1bd672]/30"
+                ? "text-[#1bd672] border-[#1bd672]/30"
                 : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
             }`}
             title="Buscar en Modrinth"
             aria-label="Buscar en Modrinth"
           >
-            <ModrinthIcon className="w-3.5 h-3.5" />
+            {discoverSource === "modrinth" && <motion.span layoutId="discover-platform-selection" className="absolute inset-0 bg-[#1bd672]/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <ModrinthIcon className="relative z-10 w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -446,15 +448,16 @@ export function DiscoverTab({
               setDiscoverPage(1);
               setDiscoverCategory([]);
             }}
-            className={`h-6 rounded-lg text-xs font-bold transition-all border flex items-center justify-center ${
+            className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center ${
               discoverSource === "curseforge"
-                ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                ? "text-orange-400 border-orange-500/30"
                 : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
             }`}
             title="Buscar en CurseForge"
             aria-label="Buscar en CurseForge"
           >
-            <CurseForgeIcon className="w-3.5 h-3.5" />
+            {discoverSource === "curseforge" && <motion.span layoutId="discover-platform-selection" className="absolute inset-0 bg-orange-500/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <CurseForgeIcon className="relative z-10 w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -464,16 +467,17 @@ export function DiscoverTab({
               setDiscoverPage(1);
               setDiscoverCategory([]);
             }}
-            className={`col-span-2 h-6 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-1 ${
+            className={`relative col-span-2 h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
               discoverSource === "all"
-                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                ? "text-blue-400 border-blue-500/30"
                 : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
             }`}
             title="Buscar en ambas plataformas"
             aria-label="Buscar en ambas plataformas"
           >
-            <ModrinthIcon className="w-3.5 h-3.5" />
-            <CurseForgeIcon className="w-3.5 h-3.5" />
+            {discoverSource === "all" && <motion.span layoutId="discover-platform-selection" className="absolute inset-0 bg-blue-500/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <ModrinthIcon className="relative z-10 w-3.5 h-3.5" />
+            <CurseForgeIcon className="relative z-10 w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -514,16 +518,17 @@ export function DiscoverTab({
               onClick={() => handleTypeChange(type.value)}
               title={type.label}
               aria-label={type.label}
-              className={`group h-8 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 flex items-center justify-center gap-1.5 overflow-hidden ${
+              className={`group relative h-8 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 flex items-center justify-center gap-1.5 overflow-hidden ${
                 isSelected ? "px-2.5 min-w-0" : "px-2 w-9 hover:w-auto hover:px-2.5"
               } ${
                 isSelected
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/35 shadow-sm"
+                  ? "text-amber-300 border border-amber-500/35 shadow-sm"
                   : "bg-white/5 text-white/50 border border-white/[0.04] hover:bg-white/10"
               }`}
             >
-              <TypeIcon className="w-[18px] h-[18px]" />
-              <span className={`overflow-hidden transition-all duration-200 ${
+              {isSelected && <motion.span layoutId="discover-type-selection" className="absolute inset-0 rounded-xl bg-amber-500/18" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+              <TypeIcon className="relative z-10 w-[18px] h-[18px]" />
+              <span className={`relative z-10 overflow-hidden transition-all duration-200 ${
                 isSelected ? "max-w-[76px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[76px] group-hover:opacity-100"
               }`}>
                 {type.label}
@@ -758,7 +763,7 @@ export function DiscoverTab({
           {renderPagination("top")}
 
           <div className="grid grid-cols-2 gap-3.5 w-full">
-            {discoverResults.map((mod) => {
+            {discoverResults.map((mod, resultIndex) => {
               const isCurse = mod._source === "curseforge";
               const cardRoundedClass = isCurse ? "rounded-xl" : "rounded-3xl";
               const iconRoundedClass = isCurse ? "rounded-lg" : "rounded-2xl";
@@ -772,10 +777,15 @@ export function DiscoverTab({
                 : "border-emerald-500/15 hover:border-emerald-500/40 hover:shadow-[0_4px_20px_rgba(16,185,129,0.08)]";
 
               return (
-                <div
+                <motion.div
                   key={mod.projectId}
                   onClick={() => handleOpenModDetails(mod)}
-                  className={`bg-surface/60 border flex flex-col overflow-hidden active:scale-[0.98] transition-all cursor-pointer ${cardRoundedClass} ${platformBorderClass}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(resultIndex * 0.025, 0.18) }}
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.985 }}
+                  className={`bg-surface/60 border flex flex-col overflow-hidden cursor-pointer transition-shadow ${cardRoundedClass} ${platformBorderClass}`}
                 >
                   {/* Banner/Header of the card */}
                   <div 
@@ -813,9 +823,23 @@ export function DiscoverTab({
                     {/* Floating Icon Container */}
                     <div className={`absolute -top-6 left-3 w-10 h-10 bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shadow-md ${iconRoundedClass}`}>
                       {mod.iconUrl ? (
-                        <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                        <>
+                          <img
+                            src={mod.iconUrl}
+                            alt=""
+                            className="object-cover w-full h-full"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              const sibling = e.currentTarget.nextSibling as HTMLElement;
+                              if (sibling) sibling.style.display = "block";
+                            }}
+                          />
+                          <div className="hidden w-full h-full">
+                            <DefaultModIcon platform={mod._source} />
+                          </div>
+                        </>
                       ) : (
-                        <span className="text-white/40 text-[10px] font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                        <DefaultModIcon platform={mod._source} />
                       )}
                     </div>
 
@@ -852,7 +876,7 @@ export function DiscoverTab({
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>

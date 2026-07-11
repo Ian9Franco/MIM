@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Loader2, ChevronRight, Trophy, Users, ArrowLeft, Heart, UserCheck,
-  Calendar, Layers, BookOpen, Tv2, Share2, MessageSquare, Clock, Trash2,
-  Play, ExternalLink,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Clock, ExternalLink, MessageSquare, Play, Share2, Users } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
+import { MiembrosSkeleton } from "../FomoSkeletons";
 import { supabase } from "../../lib/supabaseClient";
-import { RankingsSkeleton, MiembrosSkeleton, PublicProfileSkeleton } from "../FomoSkeletons";
+import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
+import { CommunityRankings } from "../community/CommunityRankings";
+import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
+import { CommunityFeedSkeleton, formatCommunityDate, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 
 interface ComunidadTabProps {
   rankings: ModHit[];
@@ -19,795 +19,182 @@ interface ComunidadTabProps {
   onSearchAuthor?: (name: string, platform: string) => void;
 }
 
-type ComunidadView = "list" | "profile";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const SHARES_PAGE_SIZE = 12;
 
-function projectUpdateKey(source: string | undefined, projectId: string) {
+function updateKey(source: string | undefined, projectId: string) {
   return `${source || "modrinth"}:${projectId}`;
-}
-
-function isUpdatedInLastMonth(value?: string | null) {
-  if (!value) return false;
-  const time = new Date(value).getTime();
-  return Number.isFinite(time) && Date.now() - time <= THIRTY_DAYS_MS;
 }
 
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
   if (!projectId || projectId.startsWith("youtube:")) return null;
-
-  if (source === "curseforge") {
-    const res = await fetch(`/api/curseforge/project?projectId=${encodeURIComponent(projectId)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.details?.updated_at || data.details?.dateModified || null;
-  }
-
-  const res = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.updated_at || data.published || null;
+  const url = source === "curseforge"
+    ? `/api/curseforge/project?projectId=${encodeURIComponent(projectId)}`
+    : `https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`;
+  const response = await fetch(url);
+  if (!response.ok) return null;
+  const data = await response.json();
+  return source === "curseforge" ? data.details?.updated_at || data.details?.dateModified : data.updated_at || data.published;
 }
 
-/**
- * ComunidadTab — Rankings comunitarios + directorio de perfiles de usuarios.
- * Permite ver el perfil público de cualquier miembro: favoritos, autores seguidos,
- * canales de showcase, drafts creados, avatar, banner y fecha de registro.
- */
-export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, onSearchAuthor }: ComunidadTabProps) {
-  const [subTab, setSubTab] = useState<"compartidos" | "rankings" | "miembros">("compartidos");
-  const [view, setView] = useState<ComunidadView>("list");
+/** Comunidad orchestrates data and delegates each visual surface to a focused component. */
+export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, onSearchAuthor }: ComunidadTabProps) {
+  const [section, setSection] = useState<CommunitySection>("compartidos");
+  const [profileView, setProfileView] = useState<"list" | "profile">("list");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
-
-  // Shares Feed state
-  const [sharesFeed, setSharesFeed] = useState<any[]>([]);
+  const [shares, setShares] = useState<any[]>([]);
   const [loadingShares, setLoadingShares] = useState(false);
+  const [sharesPage, setSharesPage] = useState(0);
+  const [hasNextSharesPage, setHasNextSharesPage] = useState(false);
+  const sharePageCache = useRef(new Map<number, { items: any[]; hasNext: boolean }>());
   const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
-
-  // Profile list state
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [publicData, setPublicData] = useState({ favorites: [] as any[], authors: [] as any[], drafts: [] as any[], channels: [] as string[] });
+  const [loadingPublic, setLoadingPublic] = useState(false);
 
-  // Selected user public data
-  const [pubFavorites, setPubFavorites] = useState<any[]>([]);
-  const [pubAuthors, setPubAuthors] = useState<any[]>([]);
-  const [pubDrafts, setPubDrafts] = useState<any[]>([]);
-  const [pubChannels, setPubChannels] = useState<string[]>([]);
-  const [loadingPub, setLoadingPub] = useState(false);
-
-  /** Load all public profiles on mount or when switching to Miembros sub-tab */
   useEffect(() => {
-    if (subTab !== "miembros") return;
-    if (profiles.length > 0) return;
-    setLoadingProfiles(true);
-    supabase
-      .from("profiles")
-      .select("id, username, avatar_url, banner_url, color, created_at, banner_meta")
-      .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setProfiles(data || []);
-        setLoadingProfiles(false);
+    if (section !== "compartidos") return;
+    const cached = sharePageCache.current.get(sharesPage);
+    if (cached) {
+      setShares(cached.items);
+      setHasNextSharesPage(cached.hasNext);
+      return;
+    }
+    setLoadingShares(true);
+    const from = sharesPage * SHARES_PAGE_SIZE;
+    // Requesting one extra row tells us if a next page exists without a full-table count.
+    supabase.from("favorite_mods").select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles(id, username, avatar_url, color)`).order("created_at", { ascending: false }).range(from, from + SHARES_PAGE_SIZE)
+      .then(({ data, error }) => {
+        if (error) console.error("Error loading shares feed:", error);
+        const rows = data || [];
+        const pageData = { items: rows.slice(0, SHARES_PAGE_SIZE), hasNext: rows.length > SHARES_PAGE_SIZE };
+        sharePageCache.current.set(sharesPage, pageData);
+        setShares(pageData.items);
+        setHasNextSharesPage(pageData.hasNext);
+        setLoadingShares(false);
       });
-  }, [subTab]);
-
-  const loadSharesFeed = async () => {
-    try {
-      setLoadingShares(true);
-      const { data, error } = await supabase
-        .from("favorite_mods")
-        .select(`
-          id,
-          mod_id,
-          platform,
-          name,
-          icon_url,
-          summary,
-          created_at,
-          profile:profiles(id, username, avatar_url, color)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setSharesFeed(data || []);
-    } catch (err) {
-      console.error("Error loading shares feed:", err);
-    } finally {
-      setLoadingShares(false);
-    }
-  };
+  }, [section, sharesPage]);
 
   useEffect(() => {
-    if (subTab === "compartidos") {
-      void loadSharesFeed();
-    }
-  }, [subTab]);
+    if (section !== "miembros" || profiles.length) return;
+    setLoadingProfiles(true);
+    supabase.from("profiles").select("id, username, avatar_url, banner_url, color, created_at, banner_meta").order("created_at", { ascending: false }).limit(50)
+      .then(({ data }) => { setProfiles(data || []); setLoadingProfiles(false); });
+  }, [section, profiles.length]);
 
   useEffect(() => {
     let cancelled = false;
-    const targets = sharesFeed
-      .map((item) => {
-        const projectId = item.mod_id || item.project_id || item.id;
-        const source = item.platform || "modrinth";
-        return { projectId, source };
-      })
-      .filter((item) => item.projectId && item.source !== "youtube" && !String(item.projectId).startsWith("youtube:"));
-    const unique = Array.from(new Map(targets.map((item) => [projectUpdateKey(item.source, item.projectId), item])).values());
+    const projects = Array.from(new Map(shares.map((item) => {
+      const projectId = item.mod_id || item.id;
+      const source = item.platform || "modrinth";
+      return [updateKey(source, projectId), { projectId, source }];
+    })).values()).filter(({ projectId, source }) => projectId && source !== "youtube" && !String(projectId).startsWith("youtube:"));
 
-    if (!unique.length) {
-      setRecentUpdates({});
-      return;
-    }
-
-    Promise.all(unique.map(async (item) => {
+    Promise.all(projects.map(async ({ projectId, source }) => {
       try {
-        const updatedAt = await fetchProjectUpdatedAt(item.source, item.projectId);
-        return [projectUpdateKey(item.source, item.projectId), isUpdatedInLastMonth(updatedAt)] as const;
-      } catch {
-        return [projectUpdateKey(item.source, item.projectId), false] as const;
-      }
-    })).then((pairs) => {
-      if (!cancelled) setRecentUpdates(Object.fromEntries(pairs));
-    });
+        const updatedAt = await fetchProjectUpdatedAt(source, projectId);
+        const time = updatedAt ? new Date(updatedAt).getTime() : 0;
+        return [updateKey(source, projectId), !!time && Date.now() - time <= THIRTY_DAYS_MS] as const;
+      } catch { return [updateKey(source, projectId), false] as const; }
+    })).then((pairs) => { if (!cancelled) setRecentUpdates(Object.fromEntries(pairs)); });
+    return () => { cancelled = true; };
+  }, [shares]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [sharesFeed]);
-
-  /** Load public data for a selected profile */
-  const openProfile = async (prof: any) => {
-    setSelectedProfile(prof);
-    setView("profile");
-    setPubFavorites([]);
-    setPubAuthors([]);
-    setPubDrafts([]);
-    setPubChannels([]);
-    setLoadingPub(true);
-
-    const [{ data: favs }, { data: authors }, { data: drafts }] = await Promise.all([
-      supabase.from("followed_mods").select("*").eq("profile_id", prof.id),
-      supabase.from("followed_authors").select("*").eq("profile_id", prof.id),
-      supabase
-        .from("drafts")
-        .select("id, name, minecraft_version, loader, visibility, cover_image")
-        .eq("owner_id", prof.id)
-        .eq("visibility", "public"),
+  const openProfile = async (profile: any) => {
+    if (!profile?.id) return;
+    setSelectedProfile(profile);
+    setProfileView("profile");
+    setLoadingPublic(true);
+    setPublicData({ favorites: [], authors: [], drafts: [], channels: [] });
+    const [{ data: favorites }, { data: authors }, { data: drafts }] = await Promise.all([
+      supabase.from("followed_mods").select("*").eq("profile_id", profile.id),
+      supabase.from("followed_authors").select("*").eq("profile_id", profile.id),
+      supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", profile.id).eq("visibility", "public"),
     ]);
-
-    setPubFavorites(favs || []);
-    setPubAuthors(authors || []);
-    setPubDrafts(drafts || []);
-
-    // Extract showcase channels from banner_meta if present
-    const channels: string[] = prof.banner_meta?.youtube_channels
-      ?.filter((c: any) => c.visible !== false)
-      ?.map((c: any) => c.name || c.url || c)
-      ?.filter(Boolean) || [];
-    setPubChannels(channels);
-    setLoadingPub(false);
+    // Showcase preferences live in profile metadata and are already public.
+    const channels = profile.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
+    setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels });
+    setLoadingPublic(false);
   };
 
-  const backToList = () => {
-    setView("list");
+  const changeSection = (next: CommunitySection) => {
+    setSection(next);
+    setProfileView("list");
     setSelectedProfile(null);
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    return new Date(iso).toLocaleDateString("es-AR", { year: "numeric", month: "long" });
-  };
-
-  const playYoutubeVideo = (videoId?: string) => {
-    if (!videoId) return;
-    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId } }));
-  };
-
   return (
-    <motion.div
-      key="comunidad"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="flex-1 flex flex-col min-h-0"
-    >
-      {/* Header */}
-      <div
-        className="border-l-2 rounded-r-lg p-3 mb-4 shrink-0"
-        style={{
-          background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
-          borderColor: "var(--color-primary)",
-        }}
-      >
-        <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>
-          Comunidad
-        </p>
-        <h2 className="text-xs font-semibold text-white/90 mt-1">
-          Rankings, miembros y perfiles públicos de la comunidad MIM.
-        </h2>
-      </div>
-
-      {/* Sub-tab pills */}
-      <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto scrollbar-none pb-1">
-        {[
-          { id: "compartidos", label: "Compartidos", icon: Share2 },
-          { id: "rankings", label: "Rankings", icon: Trophy },
-          { id: "miembros", label: "Miembros", icon: Users },
-        ].map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => { setSubTab(id as any); setView("list"); setSelectedProfile(null); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border shrink-0 ${
-              subTab === id
-                ? "text-white border-white/20 bg-white/10"
-                : "text-white/45 border-white/[0.06] bg-transparent hover:border-white/10"
-            }`}
-          >
-            <Icon className="w-3 h-3" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Compartidos ── */}
-      {subTab === "compartidos" && view === "list" && (
-        <>
-          {loadingShares ? (
-            <SharesSkeleton />
-          ) : sharesFeed.length > 0 ? (
-            <div className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
-              {sharesFeed.map((item) => {
-                const meta = parseShareMeta(item.summary);
-                const projectId = item.mod_id || item.project_id || item.id;
-                const projectType = meta.projectType || "mod";
-                const isYoutubeShare = item.platform === "youtube" || projectType.startsWith("youtube-");
-                const youtubeThumb = meta.thumbnail || item.icon_url;
-                const youtubeUrl = meta.videoUrl || (meta.embeddedVideoId ? `https://www.youtube.com/watch?v=${meta.embeddedVideoId}` : "");
-                const isRecentlyUpdated = !isYoutubeShare && recentUpdates[projectUpdateKey(item.platform || "modrinth", projectId)];
-                const modHit: ModHit = {
-                  projectId,
-                  title: item.name || "Mod",
-                  description: meta.comment || "",
-                  iconUrl: item.icon_url || null,
-                  author: "Comunidad",
-                  projectType,
-                  categories: [item.platform || "modrinth"],
-                  url: item.platform === "curseforge"
-                    ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
-                    : `https://modrinth.com/${projectType}/${projectId}`,
-                  _source: item.platform || "modrinth",
-                };
-
-                const userColor = item.profile?.color || "#F05A28";
-                const userInitial = item.profile?.username?.substring(0, 2) || "U";
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`bg-surface/85 border rounded-3xl p-4 flex flex-col gap-3.5 hover:border-white/15 transition-all shadow-md ${
-                      isRecentlyUpdated
-                        ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.26)]"
-                        : "border-white/[0.08]"
-                    }`}
-                  >
-                    {/* User Header */}
-                    <div className="flex items-center justify-between">
-                      <div
-                        onClick={() => openProfile(item.profile)}
-                        className="flex items-center gap-2.5 cursor-pointer group"
-                      >
-                        <div
-                          className="w-8 h-8 rounded-xl bg-surface border flex items-center justify-center text-xs font-bold uppercase overflow-hidden transition-all group-hover:scale-105"
-                          style={{ borderColor: userColor }}
-                        >
-                          {item.profile?.avatar_url ? (
-                            <img src={item.profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span style={{ color: userColor }}>{userInitial}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-bold text-white group-hover:text-amber-400 transition-colors">
-                            @{item.profile?.username || "Usuario"}
-                          </span>
-                          <span className="text-[8px] text-white/35 flex items-center gap-1 mt-0.5">
-                            <Clock className="w-2.5 h-2.5 animate-pulse" />
-                            {formatTimeAgo(item.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Speech Bubble Comment */}
-                    {meta.comment && (
-                      <div className="bg-white/[0.02] border-l-2 border-amber-500/50 rounded-r-xl rounded-bl-xl p-3 text-xs text-white/80 italic flex gap-2">
-                        <MessageSquare className="w-3.5 h-3.5 text-amber-500/50 shrink-0 mt-0.5" />
-                        <p className="line-clamp-4 leading-relaxed whitespace-pre-wrap">{meta.comment}</p>
-                      </div>
-                    )}
-
-                    {isYoutubeShare ? (
-                      <div className="bg-white/5 border border-white/[0.06] rounded-2xl overflow-hidden">
-                        {youtubeThumb && (
-                          <button
-                            type="button"
-                            onClick={() => playYoutubeVideo(meta.embeddedVideoId)}
-                            className="relative aspect-video w-full overflow-hidden bg-black/40 block active:scale-[0.99] transition-transform"
-                          >
-                            <img src={youtubeThumb} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            {meta.embeddedVideoId && (
-                              <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                <span className="w-10 h-10 rounded-full bg-orange-600/90 border border-white/20 text-white flex items-center justify-center shadow-lg">
-                                  <Play className="w-4 h-4 fill-current ml-0.5" />
-                                </span>
-                              </span>
-                            )}
-                          </button>
-                        )}
-                        <div className="p-3 flex flex-col gap-2">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-bold text-white leading-snug">{item.name}</h4>
-                              <span className="inline-flex mt-1 text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/20">
-                                {projectType === "youtube-post" ? "Post" : projectType === "youtube-short" ? "Short" : "Video"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {meta.embeddedVideoId && (
-                              <button
-                                type="button"
-                                onClick={() => playYoutubeVideo(meta.embeddedVideoId)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600/15 border border-orange-500/25 text-orange-300 text-[10px] font-bold active:scale-95 transition-all"
-                              >
-                                <Play className="w-3 h-3 fill-current" />
-                                Reproducir
-                              </button>
-                            )}
-                            {youtubeUrl && (
-                              <a
-                                href={youtubeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/65 text-[10px] font-bold active:scale-95 transition-all"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                YouTube
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => handleOpenModDetails(modHit)}
-                        className="bg-white/5 hover:bg-white/10 border border-white/[0.06] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-surface border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0">
-                            {item.icon_url ? (
-                              <img src={item.icon_url} alt="" className="object-cover w-full h-full" />
-                            ) : (
-                              <span className="text-white/40 text-xs font-bold uppercase">{item.name?.substring(0, 2)}</span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm ${
-                                item.platform === "curseforge" ? "bg-orange-600/20 text-orange-400 border border-orange-500/20" : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/20"
-                              }`}>
-                                {item.platform === "curseforge" ? "CurseForge" : "Modrinth"}
-                              </span>
-                              {meta.modloader && (
-                                <span className="text-[8px] font-mono text-white/40 uppercase">{meta.modloader}</span>
-                              )}
-                              {meta.gameVersion && (
-                                <span className="text-[8px] font-mono text-white/40">{meta.gameVersion}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-white/30" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
-              <Share2 className="w-12 h-12 text-white/20 mb-4 animate-bounce" />
-              <h2 className="text-sm font-semibold text-white">Sin mods compartidos</h2>
-              <p className="text-xs text-white/40 max-w-xs mt-2">
-                Los mods compartidos por la comunidad aparecerán aquí en tiempo real con sus comentarios.
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── Rankings ── */}
-      {subTab === "rankings" && (
-        <>
-          {loadingRankings ? (
-            <RankingsSkeleton />
-          ) : rankings.length > 0 ? (
-            <div className="flex-1 overflow-y-auto space-y-3 pb-28 pr-1 scrollbar-none">
-              {rankings.map((mod, i) => (
-                <div
-                  key={mod.projectId}
-                  onClick={() => handleOpenModDetails(mod)}
-                  className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/10"
-                >
-                  <div className="w-6 text-center font-mono font-black text-sm text-purple-400/80">#{i + 1}</div>
-                  <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {mod.iconUrl ? (
-                      <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
-                    ) : (
-                      <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
-                    <p className="text-[9px] text-white/40 mt-0.5 capitalize">{mod._source}</p>
-                  </div>
-                  <div className="bg-purple-500/10 border border-purple-500/20 text-purple-300 font-mono text-[10px] px-2 py-0.5 rounded-full">
-                    {mod.downloads} {mod.downloads === 1 ? "voto" : "votos"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
-              <Trophy className="w-12 h-12 text-purple-400 mb-4 opacity-50" />
-              <h2 className="text-sm font-semibold text-white">Sin rankings</h2>
-              <p className="text-xs text-white/40 mt-1">No hay votos registrados todavía.</p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── Miembros ── */}
-      {subTab === "miembros" && (
-        <AnimatePresence mode="wait">
-          {view === "list" ? (
-            /* ─ Profile list ─ */
-            <motion.div
-              key="members-list"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              className="flex-1 overflow-y-auto pb-28 scrollbar-none space-y-3"
-            >
-              {loadingProfiles ? (
-                <MiembrosSkeleton />
-              ) : profiles.length === 0 ? (
-                <div className="text-center p-8">
-                  <Users className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                  <p className="text-xs text-white/40">No hay miembros registrados aún.</p>
-                </div>
-              ) : (
-                profiles.map((prof) => (
-                  <div
-                    key={prof.id}
-                    onClick={() => openProfile(prof)}
-                    className="bg-surface/80 border border-border hover:border-white/10 rounded-2xl p-3.5 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
-                  >
-                    {/* Avatar */}
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border"
-                      style={{ borderColor: prof.color || "rgba(255,255,255,0.08)" }}
-                    >
-                      {prof.avatar_url ? (
-                        <img src={prof.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs font-black uppercase" style={{ color: prof.color || "var(--color-primary)" }}>
-                          {(prof.username || "?").substring(0, 2)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">@{prof.username || "usuario"}</p>
-                      <p className="text-[9px] text-white/35 mt-0.5">
-                        Miembro desde {formatDate(prof.created_at)}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
-                  </div>
-                ))
-              )}
-            </motion.div>
-          ) : (
-            /* ─ Public Profile Detail ─ */
-            <motion.div
-              key="profile-detail"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="flex-1 overflow-y-auto pb-28 scrollbar-none"
-            >
-              {/* Back button */}
-              <button
-                onClick={backToList}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-white/50 hover:text-white mb-4 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Volver a miembros
-              </button>
-
-              {/* Profile card */}
-              <div className="bg-surface/90 border border-border rounded-2xl overflow-hidden mb-5">
-                {/* Banner */}
-                <div className="h-24 w-full relative overflow-hidden"
-                  style={{ background: `linear-gradient(135deg, ${selectedProfile?.color || "var(--color-primary)"}33 0%, #0c0c0c 100%)` }}
-                >
-                  {selectedProfile?.banner_url && (
-                    <img src={selectedProfile.banner_url} alt="" className="w-full h-full object-cover" />
-                  )}
-                </div>
-                <div className="px-4 pb-4 pt-0 relative">
-                  <div
-                    className="w-14 h-14 rounded-xl border-2 flex items-center justify-center overflow-hidden -mt-7 shadow-lg z-10 relative bg-surface"
-                    style={{ borderColor: selectedProfile?.color || "rgba(255,255,255,0.1)" }}
-                  >
-                    {selectedProfile?.avatar_url ? (
-                      <img src={selectedProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm font-black uppercase" style={{ color: selectedProfile?.color || "var(--color-primary)" }}>
-                        {(selectedProfile?.username || "?").substring(0, 2)}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-sm font-black text-white mt-2">@{selectedProfile?.username || "usuario"}</h3>
-                  <p className="text-[10px] text-white/35 mt-0.5 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Miembro desde {formatDate(selectedProfile?.created_at)}
-                  </p>
-                </div>
-              </div>
-
-              {loadingPub ? (
-                <PublicProfileSkeleton />
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {/* Public Drafts */}
-                  <ProfileSection
-                    icon={<Layers className="w-3.5 h-3.5" />}
-                    title="Modpacks Públicos"
-                    count={pubDrafts.length}
-                    color="text-emerald-400"
-                    empty="No tiene drafts públicos."
-                  >
-                    {pubDrafts.map((d) => (
-                      <div key={d.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                          <Layers className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">{d.name}</p>
-                          <p className="text-[9px] text-white/35 mt-0.5">{d.minecraft_version} · {d.loader}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </ProfileSection>
-
-                  {/* Favorite mods */}
-                  <ProfileSection
-                    icon={<Heart className="w-3.5 h-3.5" />}
-                    title="Proyectos Favoritos"
-                    count={pubFavorites.length}
-                    color="text-red-400"
-                    empty="No tiene proyectos favoritos públicos."
-                  >
-                    {pubFavorites.map((f) => (
-                      <div
-                        key={f.id}
-                        onClick={() => handleOpenModDetails({
-                          projectId: f.mod_id || f.id,
-                          title: f.name,
-                          description: "",
-                          iconUrl: f.icon_url,
-                          author: "",
-                          projectType: "mod",
-                          categories: [],
-                          url: `https://modrinth.com/mod/${f.mod_id || f.id}`,
-                          _source: f.platform || "modrinth",
-                        })}
-                        className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] hover:border-white/10 transition-all"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden shrink-0">
-                          {f.icon_url
-                            ? <img src={f.icon_url} alt="" className="w-full h-full object-cover" />
-                            : <span className="text-[9px] font-bold uppercase text-white/40">{f.name?.substring(0, 2)}</span>
-                          }
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">{f.name}</p>
-                          <p className="text-[9px] text-white/35 mt-0.5 capitalize">{f.platform}</p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0 ml-auto" />
-                      </div>
-                    ))}
-                  </ProfileSection>
-
-                  {/* Followed authors */}
-                  <ProfileSection
-                    icon={<UserCheck className="w-3.5 h-3.5" />}
-                    title="Autores Seguidos"
-                    count={pubAuthors.length}
-                    color="text-blue-400"
-                    empty="No sigue a ningún autor todavía."
-                  >
-                    {pubAuthors.map((a) => (
-                      <div
-                        key={a.id}
-                        onClick={() => onSearchAuthor && onSearchAuthor(a.author_name, a.platform || "modrinth")}
-                        className={`bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 flex items-center gap-3 ${
-                          onSearchAuthor ? "cursor-pointer hover:border-white/20 active:scale-[0.98] transition-all" : ""
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                          {a.icon_url
-                            ? <img src={a.icon_url} alt="" className="w-full h-full object-cover rounded-full" />
-                            : <span className="text-[9px] font-bold text-blue-400">{a.author_name?.substring(0, 2)}</span>
-                          }
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">{a.author_name}</p>
-                          <p className="text-[9px] text-white/35 mt-0.5 capitalize">{a.platform}</p>
-                        </div>
-                        {onSearchAuthor && <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0 ml-auto" />}
-                      </div>
-                    ))}
-                  </ProfileSection>
-
-                  {/* Showcase channels */}
-                  {pubChannels.length > 0 && (
-                    <ProfileSection
-                      icon={<Tv2 className="w-3.5 h-3.5" />}
-                      title="Canales de Showcase"
-                      count={pubChannels.length}
-                      color="text-rose-400"
-                      empty=""
-                    >
-                      {pubChannels.map((ch, idx) => (
-                        <div key={idx} className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2.5">
-                          <p className="text-xs text-white/70 truncate font-mono">{ch}</p>
-                        </div>
-                      ))}
-                    </ProfileSection>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+    <motion.div key="comunidad" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="flex min-h-0 flex-1 flex-col">
+      <CommunityHeader active={section} onChange={changeSection} />
+      <AnimatePresence mode="wait">
+        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={setSharesPage} onOpenProfile={openProfile} onOpenMod={handleOpenModDetails} />}
+        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={handleOpenModDetails} /></motion.div>}
+        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={openProfile} />}
+        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => setProfileView("list")} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} />}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-/** Reusable collapsible section for the public profile view */
-function ProfileSection({
-  icon, title, count, color, empty, children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  count: number;
-  color: string;
-  empty: string;
-  children?: React.ReactNode;
-}) {
+interface FeedProps { shares: any[]; loading: boolean; recentUpdates: Record<string, boolean>; page: number; hasNext: boolean; onPageChange: (page: number) => void; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; }
+
+/** The feed keeps user context first, then presents the shared media as one clear action. */
+function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageChange, onOpenProfile, onOpenMod }: FeedProps) {
+  if (loading) return <CommunityFeedSkeleton />;
+  if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada compartido todavía" text="Los proyectos compartidos aparecerán acá en tiempo real." />;
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-1">
-        <span className={color}>{icon}</span>
-        <h4 className="text-xs font-bold text-white/80">{title}</h4>
-        <span className="ml-auto text-[9px] font-mono text-white/30">{count}</span>
+    <motion.div key="community-feed" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-3 overflow-y-auto pb-28 pr-1 scrollbar-none">
+      <div className="flex items-end justify-between px-1 pb-1"><div><p className="text-[9px] font-mono uppercase text-white/30">Actividad reciente</p><h3 className="mt-0.5 text-xs font-bold text-white/80">Compartido por la comunidad</h3></div><span className="text-[8px] font-mono uppercase text-white/25">Más nuevos primero</span></div>
+      {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} />)}
+      <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+        <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
+        <span className="font-mono text-[8px] uppercase text-white/30">Página {page + 1}</span>
+        <button type="button" disabled={!hasNext} onClick={() => onPageChange(page + 1)} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20">Anteriores<ChevronRight className="h-3.5 w-3.5" /></button>
       </div>
-      {count === 0 ? (
-        <div className="bg-white/[0.01] border border-dashed border-white/[0.06] rounded-xl p-4 text-center">
-          <p className="text-[10px] text-white/35">{empty}</p>
+    </motion.div>
+  );
+}
+
+function ShareCard({ item, index, updated, onOpenProfile, onOpenMod }: { item: any; index: number; updated: boolean; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void }) {
+  const meta = parseShareMeta(item.summary);
+  const projectId = item.mod_id || item.id;
+  const projectType = meta.projectType || "mod";
+  const isYoutube = item.platform === "youtube" || projectType.startsWith("youtube-");
+  const userColor = item.profile?.color || "var(--color-primary)";
+  const videoUrl = meta.videoUrl || (meta.embeddedVideoId ? `https://www.youtube.com/watch?v=${meta.embeddedVideoId}` : "");
+  const mod: ModHit = { projectId, title: item.name || "Proyecto", description: meta.comment || "", iconUrl: item.icon_url || null, author: "Comunidad", projectType, categories: [item.platform || "modrinth"], url: item.platform === "curseforge" ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`, _source: item.platform || "modrinth" };
+  const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
+
+  return (
+    <motion.article initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index * 0.025, 0.18) }} className={`group relative flex flex-col gap-3 overflow-hidden rounded-2xl border bg-surface/78 p-3.5 transition-all hover:-translate-y-0.5 hover:border-white/15 hover:shadow-[0_14px_34px_rgba(0,0,0,0.24)] ${updated && !isYoutube ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.22)]" : "border-white/[0.08]"}`}>
+      <span className="absolute inset-y-4 left-0 w-px bg-white/10 transition-colors group-hover:bg-[var(--color-primary)]" />
+      <button type="button" onClick={() => onOpenProfile(item.profile)} className="flex w-fit items-center gap-2.5 text-left">
+        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-surface text-xs font-bold uppercase shadow-md transition-transform group-hover:scale-105" style={{ borderColor: userColor }}>{item.profile?.avatar_url ? <img src={item.profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span style={{ color: userColor }}>{item.profile?.username?.slice(0, 2) || "U"}</span>}</div>
+        <div><span className="block text-[11px] font-bold text-white">@{item.profile?.username || "Usuario"}</span><span className="mt-0.5 flex items-center gap-1 text-[8px] text-white/35"><Clock className="h-2.5 w-2.5" />{formatTimeAgo(item.created_at)}</span></div>
+      </button>
+
+      {meta.comment && <div className="flex gap-2 rounded-xl border border-white/[0.045] bg-black/15 p-3 text-[11px] text-white/70"><MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-primary)" }} /><p className="line-clamp-4 whitespace-pre-wrap leading-relaxed">{meta.comment}</p></div>}
+
+      {isYoutube ? (
+        <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025]">
+          {(meta.thumbnail || item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={meta.thumbnail || item.icon_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
+          <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">{children}</div>
+        <button type="button" onClick={() => onOpenMod(mod)} className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.035] p-3 text-left transition-all hover:bg-white/[0.07] active:scale-[0.99]">
+          <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-surface">{item.icon_url ? <img src={item.icon_url} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] font-bold uppercase text-white/35">{item.name?.slice(0, 2)}</span>}</div><div className="min-w-0"><h4 className="truncate text-xs font-bold text-white">{item.name}</h4><div className="mt-1 flex items-center gap-1.5"><span className={`rounded border px-1.5 py-0.5 text-[7px] font-black uppercase ${item.platform === "curseforge" ? "border-orange-500/20 bg-orange-600/15 text-orange-400" : "border-emerald-500/20 bg-emerald-600/15 text-emerald-400"}`}>{item.platform === "curseforge" ? "CurseForge" : "Modrinth"}</span>{meta.modloader && <span className="text-[8px] font-mono uppercase text-white/35">{meta.modloader}</span>}{meta.gameVersion && <span className="text-[8px] font-mono text-white/35">{meta.gameVersion}</span>}</div></div></div><ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+        </button>
       )}
-    </div>
+    </motion.article>
   );
 }
 
-function parseShareMeta(summary?: string | null): {
-  comment: string;
-  gameVersion?: string;
-  modloader?: string;
-  projectType?: string;
-  videoUrl?: string;
-  thumbnail?: string;
-  embeddedVideoId?: string;
-  mode?: string;
-  publishedAt?: string;
-} {
-  if (!summary) return { comment: "" };
-  const trimmed = summary.trim();
-
-  // 1. Try old JSON format
-  if (trimmed.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      return {
-        comment: parsed.comment || parsed.description || "",
-        gameVersion: parsed.gameVersion,
-        modloader: parsed.modloader,
-        projectType: parsed.projectType || "mod",
-        videoUrl: parsed.videoUrl,
-        thumbnail: parsed.thumbnail,
-        embeddedVideoId: parsed.embeddedVideoId,
-        mode: parsed.mode,
-        publishedAt: parsed.publishedAt,
-      };
-    } catch {}
-  }
-
-  // 2. Try new HTML comment format
-  const META_RE = /<!--mim:([\s\S]*?)-->/;
-  const match = trimmed.match(META_RE);
-  const comment = trimmed.replace(META_RE, "").trim();
-
-  if (match && match[1]) {
-    try {
-      const meta = JSON.parse(match[1]);
-      return {
-        comment,
-        gameVersion: meta.gameVersion,
-        modloader: meta.modloader,
-        projectType: meta.projectType || "mod",
-        videoUrl: meta.videoUrl,
-        thumbnail: meta.thumbnail,
-        embeddedVideoId: meta.embeddedVideoId,
-        mode: meta.mode,
-        publishedAt: meta.publishedAt,
-      };
-    } catch {}
-  }
-
-  // Fallback: entire summary is the comment
-  return { comment: trimmed };
+function MembersList({ profiles, loading, onOpen }: { profiles: any[]; loading: boolean; onOpen: (profile: any) => void }) {
+  return <motion.div key="members-list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-2 overflow-y-auto pb-28 scrollbar-none">{loading ? <MiembrosSkeleton /> : !profiles.length ? <EmptyCommunity icon={<Users className="h-10 w-10" />} title="Sin miembros" text="Todavía no hay perfiles públicos." /> : <><div className="flex items-end justify-between px-1 pb-1"><div><p className="text-[9px] font-mono uppercase text-white/30">Directorio</p><h3 className="mt-0.5 text-xs font-bold text-white/80">Personas del hub</h3></div><span className="text-[9px] font-mono text-white/25">{profiles.length} miembros</span></div>{profiles.map((profile, index) => <motion.button key={profile.id} type="button" onClick={() => onOpen(profile)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index * 0.03, 0.2) }} whileHover={{ x: 3 }} whileTap={{ scale: 0.985 }} className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-surface/78 p-3.5 text-left transition-colors hover:border-white/15 hover:bg-white/[0.04]"><span className="absolute inset-y-3 left-0 w-px opacity-70" style={{ background: profile.color || "var(--color-primary)" }} /><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-lg transition-transform group-hover:scale-105" style={{ borderColor: profile.color || "rgba(255,255,255,.08)", boxShadow: `0 6px 18px ${profile.color || "#000"}22` }}>{profile.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span className="text-xs font-black uppercase" style={{ color: profile.color || "var(--color-primary)" }}>{(profile.username || "?").slice(0, 2)}</span>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">@{profile.username || "usuario"}</p><p className="mt-0.5 text-[9px] text-white/35">Miembro desde {formatCommunityDate(profile.created_at)}</p></div><ChevronRight className="h-4 w-4 shrink-0 text-white/20" /></motion.button>)}</>}</motion.div>;
 }
 
-function formatTimeAgo(dateStr: string) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "ahora mismo";
-  if (diffMins < 60) return `hace ${diffMins} min`;
-  if (diffHours < 24) return `hace ${diffHours} h`;
-  if (diffDays === 1) return "ayer";
-  if (diffDays < 7) return `hace ${diffDays} días`;
-  return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
-}
-
-function SharesSkeleton() {
-  return (
-    <div className="flex flex-col gap-4">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-surface/60 border border-white/[0.06] rounded-3xl p-4 animate-pulse flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/10" />
-            <div className="flex-grow flex flex-col gap-1.5">
-              <div className="w-24 h-3 bg-white/10 rounded" />
-              <div className="w-16 h-2 bg-white/5 rounded" />
-            </div>
-          </div>
-          <div className="h-10 bg-white/5 rounded-2xl" />
-          <div className="h-12 bg-white/10 rounded-2xl" />
-        </div>
-      ))}
-    </div>
-  );
+function EmptyCommunity({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-white/15">{icon}<h3 className="mt-3 text-sm font-bold text-white">{title}</h3><p className="mt-1 max-w-xs text-[10px] text-white/35">{text}</p></div>;
 }

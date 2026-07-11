@@ -1,4 +1,5 @@
 "use client";
+import { DefaultModIcon } from "../DefaultModIcon";
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -103,18 +104,38 @@ export function CollectionsTab({
             {modrinthFeatured.length > 0 && (
               <div className="flex flex-col gap-3 mb-6 shrink-0">
                 <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">Colecciones Oficiales de Modrinth</h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                  {modrinthFeatured.map(coll => (
-                    <div
+                <div className="flex gap-4 overflow-x-auto pt-1 pb-2 scrollbar-none snap-x snap-mandatory">
+                  {modrinthFeatured.map((coll, collectionIndex) => (
+                    <motion.button
                       key={coll.id}
+                      type="button"
                       onClick={() => handleEnterCollection(coll)}
-                      className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
+                      initial={{ opacity: 0, x: 18 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: Math.min(collectionIndex * 0.05, 0.2) }}
+                      whileHover={{ y: -3 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/15 hover:shadow-[0_14px_34px_rgba(0,0,0,0.22)] transition-shadow cursor-pointer text-left"
                     >
                       <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
                         {coll.iconUrl ? (
-                          <img src={coll.iconUrl} alt="" className="w-full h-full object-cover" />
+                          <>
+                            <img
+                              src={coll.iconUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                const sibling = e.currentTarget.nextSibling as HTMLElement;
+                                if (sibling) sibling.style.display = "block";
+                              }}
+                            />
+                            <div className="hidden w-full h-full">
+                              <DefaultModIcon platform={coll.source} />
+                            </div>
+                          </>
                         ) : (
-                          <Compass className="w-12 h-12 text-white/20" />
+                          <DefaultModIcon platform={coll.source} />
                         )}
                         <span className="absolute bottom-2.5 right-2.5 bg-black/60 border border-white/[0.05] rounded-md px-2 py-0.5 text-[9px] font-mono text-white/70">
                           {coll.projectCount} mods
@@ -124,7 +145,7 @@ export function CollectionsTab({
                         <h4 className="text-xs font-bold text-white truncate">{coll.name}</h4>
                         <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{coll.description}</p>
                       </div>
-                    </div>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -134,12 +155,18 @@ export function CollectionsTab({
             {curseForgeFeatured.length > 0 && (
               <div className="flex flex-col gap-3 mb-6 shrink-0">
                 <h3 className="text-xs font-bold text-white/80 tracking-wide px-1">CurseForge Picks</h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                  {curseForgeFeatured.map(pick => (
-                    <div
+                <div className="flex gap-4 overflow-x-auto pt-1 pb-2 scrollbar-none snap-x snap-mandatory">
+                  {curseForgeFeatured.map((pick, pickIndex) => (
+                    <motion.button
                       key={pick.id}
+                      type="button"
                       onClick={() => handleEnterCollection(pick)}
-                      className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer"
+                      initial={{ opacity: 0, x: 18 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: Math.min(pickIndex * 0.05, 0.2) }}
+                      whileHover={{ y: -3 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[260px] max-w-[260px] snap-center hover:border-white/15 hover:shadow-[0_14px_34px_rgba(0,0,0,0.22)] transition-shadow cursor-pointer text-left"
                     >
                       <div className="h-28 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative">
                         <img src={pick.iconUrl} alt="" className="w-full h-full object-cover" />
@@ -148,7 +175,7 @@ export function CollectionsTab({
                         <h4 className="text-xs font-bold text-white truncate">{pick.name}</h4>
                         <p className="text-[10px] text-white/40 mt-1 leading-relaxed line-clamp-2">{pick.description}</p>
                       </div>
-                    </div>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -192,9 +219,23 @@ export function CollectionsTab({
                         >
                           <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {fav.icon_url ? (
-                              <img src={fav.icon_url} alt="" className="object-cover w-full h-full" />
+                              <>
+                                <img
+                                  src={fav.icon_url}
+                                  alt=""
+                                  className="object-cover w-full h-full"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const sibling = e.currentTarget.nextSibling as HTMLElement;
+                                    if (sibling) sibling.style.display = "block";
+                                  }}
+                                />
+                                <div className="hidden w-full h-full">
+                                  <DefaultModIcon platform={fav.platform} />
+                                </div>
+                              </>
                             ) : (
-                              <span className="text-white/40 text-xs font-bold uppercase">{title.substring(0, 2)}</span>
+                              <DefaultModIcon platform={fav.platform} />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -308,24 +349,44 @@ export function CollectionsTab({
                   onWheel={handleHorizontalWheel}
                   className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
                 >
-                  {activeCollectionMods.map((mod: any) => (
-                    <div
+                  {activeCollectionMods.map((mod: any, modIndex: number) => (
+                    <motion.button
                       key={mod.itemId || mod.id || mod.projectId}
+                      type="button"
                       onClick={() => handleOpenModDetails(mod)}
-                      className="bg-surface/90 border border-border rounded-2xl p-3 min-h-[74px] flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-border snap-start"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(modIndex * 0.025, 0.18) }}
+                      whileHover={{ x: 3 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="bg-surface/90 border border-border rounded-2xl p-3 min-h-[74px] flex items-center gap-3 cursor-pointer hover:border-white/15 snap-start text-left"
                     >
                       <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                         {mod.iconUrl ? (
-                          <img src={mod.iconUrl} alt="" className="object-cover w-full h-full" />
+                          <>
+                            <img
+                              src={mod.iconUrl}
+                              alt=""
+                              className="object-cover w-full h-full"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                const sibling = e.currentTarget.nextSibling as HTMLElement;
+                                if (sibling) sibling.style.display = "block";
+                              }}
+                            />
+                            <div className="hidden w-full h-full">
+                              <DefaultModIcon platform={mod._source} />
+                            </div>
+                          </>
                         ) : (
-                          <span className="text-white/40 text-xs font-bold uppercase">{mod.title.substring(0, 2)}</span>
+                          <DefaultModIcon platform={mod._source} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{mod.title}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-white/30" />
-                    </div>
+                    </motion.button>
                   ))}
                 </div>
               </div>

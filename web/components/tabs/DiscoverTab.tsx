@@ -553,12 +553,11 @@ export function DiscoverTab({
       </div>
 
       {/* Filtros y Categorías - Cabecera Colapsable */}
-      <div className="flex items-center justify-between mb-2 shrink-0 bg-white/5 border border-white/[0.04] p-1.5 rounded-2xl">
-        <button
-          type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-white/80 hover:text-white hover:bg-white/5 transition-all"
-        >
+      <div 
+        onClick={() => setShowFilters(!showFilters)}
+        className="flex items-center justify-between mb-2 shrink-0 bg-white/5 border border-white/[0.04] p-1.5 rounded-2xl cursor-pointer hover:bg-white/[0.08] transition-colors"
+      >
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-white/80 transition-all select-none">
           <SlidersHorizontal className={`w-3.5 h-3.5 transition-transform duration-300 ${showFilters ? "rotate-90 text-amber-400" : "text-white/40"}`} />
           <span>Filtros y Categorías</span>
           {activeFiltersCount > 0 && (
@@ -566,26 +565,25 @@ export function DiscoverTab({
               {activeFiltersCount}
             </span>
           )}
-        </button>
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-1.5">
           {activeFiltersCount > 0 && (
             <button
               type="button"
-              onClick={handleClearFilters}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearFilters();
+              }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all uppercase tracking-wider font-mono"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Limpiar</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className="p-1 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-          >
+          <div className="p-1 text-white/40 transition-colors">
             {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+          </div>
         </div>
       </div>
 

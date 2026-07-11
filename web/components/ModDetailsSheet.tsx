@@ -4,10 +4,10 @@ import { DefaultModIcon } from "./DefaultModIcon";
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useSpring, useTransform, useDragControls } from "framer-motion";
 import {
-  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck,
+  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck, Volume2, VolumeX,
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
-import { playFomoSound } from "../lib/sounds";
+import { playFomoSound, getSoundSettings, setSoundMuted } from "../lib/sounds";
 import { supabase } from "../lib/supabaseClient";
 import { markdownToHtml, formatCurseForgeHtml } from "../lib/markdown";
 
@@ -502,6 +502,28 @@ export function ModDetailsSheet({
   const [isClosing, setIsClosing] = useState(false);
   const closeStartedRef = useRef(false);
   const dragControls = useDragControls();
+  const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    const settings = getSoundSettings();
+    setMuted(settings.muted);
+
+    const handleSettingsChange = () => {
+      const updated = getSoundSettings();
+      setMuted(updated.muted);
+    };
+
+    window.addEventListener("fomo_sounds_changed", handleSettingsChange);
+    return () => {
+      window.removeEventListener("fomo_sounds_changed", handleSettingsChange);
+    };
+  }, []);
+
+  const handleToggleMute = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const current = getSoundSettings().muted;
+    setSoundMuted(!current);
+  }, []);
 
   const descriptionBody = selectedModDetails?.body || selectedMod?.description || "";
   const galleryImages = Array.isArray(selectedModDetails?.gallery) ? selectedModDetails.gallery : [];
@@ -548,28 +570,15 @@ export function ModDetailsSheet({
   useEffect(() => {
     if (!isSheetOpen) return;
 
-    const scrollY = window.scrollY;
-    const previousBodyStyles = {
-      overflow: document.body.style.overflow,
-      position: document.body.style.position,
-      top: document.body.style.top,
-      width: document.body.style.width,
-    };
-    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+    const originalOverflow = document.body.style.overflow;
+    const originalOverscroll = document.documentElement.style.overscrollBehavior;
 
-    document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
+    document.documentElement.style.overscrollBehavior = "none";
 
     return () => {
-      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
-      document.body.style.overflow = previousBodyStyles.overflow;
-      document.body.style.position = previousBodyStyles.position;
-      document.body.style.top = previousBodyStyles.top;
-      document.body.style.width = previousBodyStyles.width;
-      window.scrollTo(0, scrollY);
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overscrollBehavior = originalOverscroll;
     };
   }, [isSheetOpen]);
 
@@ -862,6 +871,16 @@ export function ModDetailsSheet({
                   <div className="w-12 h-1.5 rounded-full bg-white/25 hover:bg-white/40 transition-colors" />
                 </div>
 
+                {/* Mute/Unmute Button */}
+                <button
+                  onClick={handleToggleMute}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  aria-label={muted ? "Activar audio" : "Silenciar audio"}
+                  className="absolute right-14 top-4 z-40 bg-black/35 hover:bg-black/50 border border-white/15 rounded-full p-1.5 text-white/70 active:scale-95 flex items-center justify-center transition-all"
+                >
+                  {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+
                 {/* Close Button */}
                 <button
                   onClick={closeWithSound}
@@ -1039,14 +1058,14 @@ export function ModDetailsSheet({
                   {[
                     { id: "summary", label: "Resumen" },
                     ...(selectedModDetails?.gallery?.length > 0 ? [{ id: "gallery", label: "Galería" }] : []),
-                    { id: "desc", label: "Descripción" },
-                    { id: "versions", label: "Versiones" },
-                    { id: "deps", label: "Dependencias" },
+                    { id: "desc", label: "Desc." },
+                    { id: "versions", label: "Vers." },
+                    { id: "deps", label: "Depen." },
                   ].map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setModalTab(t.id as any)}
-                      className={`relative overflow-hidden px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                      className={`relative overflow-hidden flex-1 text-center py-1.5 px-1 rounded-lg text-[10.5px] sm:text-[11px] font-semibold transition-colors whitespace-nowrap ${
                         modalTab === t.id
                           ? "text-orange-400"
                           : "text-white/50 hover:text-white/80"

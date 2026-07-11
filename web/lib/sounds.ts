@@ -77,8 +77,41 @@ if (typeof window !== "undefined") {
   window.addEventListener("keydown", unlockFomoSounds, { once: true });
 }
 
+export function getSoundSettings() {
+  if (typeof window === "undefined") return { muted: false, volume: 1.0 };
+  try {
+    const mutedVal = localStorage.getItem("fomo_sounds_muted");
+    const volVal = localStorage.getItem("fomo_sounds_volume");
+    return {
+      muted: mutedVal === "true",
+      volume: volVal !== null ? parseFloat(volVal) : 1.0,
+    };
+  } catch {
+    return { muted: false, volume: 1.0 };
+  }
+}
+
+export function setSoundMuted(muted: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("fomo_sounds_muted", String(muted));
+    window.dispatchEvent(new Event("fomo_sounds_changed"));
+  } catch {}
+}
+
+export function setSoundVolume(volume: number) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("fomo_sounds_volume", String(volume));
+    window.dispatchEvent(new Event("fomo_sounds_changed"));
+  } catch {}
+}
+
 export function playFomoSound(kind: "on" | "off" = "on") {
   if (typeof window === "undefined") return;
+
+  const settings = getSoundSettings();
+  if (settings.muted) return;
 
   try {
     const pool = getPool(kind);
@@ -88,7 +121,7 @@ export function playFomoSound(kind: "on" | "off" = "on") {
 
     audio.pause();
     audio.currentTime = 0;
-    audio.volume = SOUND_CONFIG[kind].volume;
+    audio.volume = SOUND_CONFIG[kind].volume * settings.volume;
     audio.play().catch(() => {});
   } catch {
     // Audio is ornamental; never block the interaction.

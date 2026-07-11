@@ -123,9 +123,22 @@ export async function GET(req: NextRequest) {
 
     // 3. Fetch dependencies in batch if any
     const cfDeps = m.dependencies || [];
-    const depIds = cfDeps
-      .filter((d: any) => d.relationType === 3) // 3 = RequiredDependency
-      .map((d: any) => d.modId);
+    const relationToDependencyType = (relationType: number) => {
+      if (relationType === 2) return "optional";
+      if (relationType === 3) return "required";
+      if (relationType === 5) return "incompatible";
+      return "embedded";
+    };
+    const dependencyTypeById = new Map(
+      cfDeps.map((d: any) => [String(d.modId), relationToDependencyType(d.relationType)])
+    );
+    const depIds = Array.from(
+      new Set(
+        cfDeps
+          .filter((d: any) => [2, 3, 5].includes(d.relationType))
+          .map((d: any) => d.modId)
+      )
+    );
 
     let dependencies: any[] = [];
     if (depIds.length > 0) {
@@ -142,6 +155,8 @@ export async function GET(req: NextRequest) {
         const depsJson = await depsRes.json();
         dependencies = (depsJson.data || []).map((dep: any) => ({
           id: dep.id.toString(),
+          project_id: dep.id.toString(),
+          dependency_type: dependencyTypeById.get(String(dep.id)) || "required",
           title: dep.name,
           description: dep.summary || "",
           icon_url: dep.logo?.thumbnailUrl || dep.logo?.url || null,

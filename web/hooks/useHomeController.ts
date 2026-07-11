@@ -105,6 +105,40 @@ function sortSharesByPriority(shares: any[]) {
   });
 }
 
+function dependencyTypeRank(type?: string) {
+  if (type === "required") return 4;
+  if (type === "incompatible") return 3;
+  if (type === "optional") return 2;
+  return 1;
+}
+
+function buildDependencyTypeMap(versions: any[]) {
+  const map = new Map<string, string>();
+  versions.forEach((version) => {
+    (version.dependencies || []).forEach((dependency: any) => {
+      const projectId = dependency.project_id || dependency.projectId;
+      const type = dependency.dependency_type || dependency.dependencyType || "required";
+      if (!projectId) return;
+      const current = map.get(projectId);
+      if (!current || dependencyTypeRank(type) > dependencyTypeRank(current)) {
+        map.set(projectId, type);
+      }
+    });
+  });
+  return map;
+}
+
+function attachDependencyTypes(projects: any[], typeMap: Map<string, string>) {
+  return projects.map((project) => {
+    const projectId = project.id || project.project_id || project.projectId;
+    return {
+      ...project,
+      project_id: projectId,
+      dependency_type: typeMap.get(projectId) || project.dependency_type || "required",
+    };
+  });
+}
+
 async function fetchUserShares(userId: string) {
   const withPinned = await supabase
     .from("favorite_mods")
@@ -1192,7 +1226,8 @@ export function useHomeController() {
           setSelectedModDetails(details);
         }
         if (dRes.ok) {
-          depsData = (await dRes.json()).projects || [];
+          const dependencyTypeMap = buildDependencyTypeMap(versionsData);
+          depsData = attachDependencyTypes((await dRes.json()).projects || [], dependencyTypeMap);
           setSelectedModDeps(depsData);
         }
       }

@@ -303,6 +303,171 @@ function releaseGlobalSheetLocks() {
   document.documentElement.style.touchAction = "";
 }
 
+type EnvironmentSide = "required" | "optional" | "unsupported" | "unknown";
+
+function normalizeEnvironmentSide(value?: string | null): EnvironmentSide {
+  const side = String(value || "").toLowerCase();
+  if (side === "required" || side === "optional" || side === "unsupported") return side;
+  return "unknown";
+}
+
+function environmentSideLabel(value: EnvironmentSide) {
+  if (value === "required") return "Requerido";
+  if (value === "optional") return "Opcional";
+  if (value === "unsupported") return "No soportado";
+  return "Desconocido";
+}
+
+function interpretModEnvironment(clientValue?: string | null, serverValue?: string | null) {
+  const client = normalizeEnvironmentSide(clientValue);
+  const server = normalizeEnvironmentSide(serverValue);
+  const clientSupported = client === "required" || client === "optional";
+  const serverSupported = server === "required" || server === "optional";
+
+  if (client === "unsupported" && server === "unsupported") {
+    return {
+      label: "No compatible",
+      description: "El proyecto declara que no corre ni en cliente ni en servidor.",
+      tone: "danger",
+      client,
+      server,
+    };
+  }
+
+  if (clientSupported && server === "unsupported") {
+    return {
+      label: client === "required" ? "Solo cliente" : "Cliente opcional",
+      description: client === "required"
+        ? "Instalalo en el cliente. No va en servidores dedicados."
+        : "Puede ir en cliente si queres esa funcion, pero no va en servidor.",
+      tone: "client",
+      client,
+      server,
+    };
+  }
+
+  if (serverSupported && client === "unsupported") {
+    return {
+      label: server === "required" ? "Solo servidor" : "Servidor opcional",
+      description: server === "required"
+        ? "Instalalo en el servidor. El cliente no lo necesita."
+        : "Puede ir en servidor si queres esa funcion, pero no va en cliente.",
+      tone: "server",
+      client,
+      server,
+    };
+  }
+
+  if (client === "required" && server === "required") {
+    return {
+      label: "Cliente y servidor",
+      description: "Debe estar instalado en ambos lados para funcionar correctamente.",
+      tone: "both",
+      client,
+      server,
+    };
+  }
+
+  if (client === "optional" && server === "optional") {
+    return {
+      label: "Opcional en ambos",
+      description: "Puede estar en cliente, servidor o ambos segun el uso del pack.",
+      tone: "optional",
+      client,
+      server,
+    };
+  }
+
+  if (client === "required" && server === "optional") {
+    return {
+      label: "Cliente requerido",
+      description: "Debe estar en el cliente; en servidor es opcional.",
+      tone: "client",
+      client,
+      server,
+    };
+  }
+
+  if (client === "optional" && server === "required") {
+    return {
+      label: "Servidor requerido",
+      description: "Debe estar en el servidor; en cliente es opcional.",
+      tone: "server",
+      client,
+      server,
+    };
+  }
+
+  if (clientSupported || serverSupported) {
+    return {
+      label: clientSupported ? "Cliente declarado" : "Servidor declarado",
+      description: "El otro entorno no esta declarado por la fuente. Revisalo antes de armar el pack.",
+      tone: clientSupported ? "client" : "server",
+      client,
+      server,
+    };
+  }
+
+  return {
+    label: "Entorno no declarado",
+    description: "La fuente no informa claramente donde debe instalarse.",
+    tone: "unknown",
+    client,
+    server,
+  };
+}
+
+function environmentToneClass(tone: string) {
+  if (tone === "client") return "border-sky-500/20 bg-sky-500/10 text-sky-200";
+  if (tone === "server") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+  if (tone === "both") return "border-orange-500/25 bg-orange-500/10 text-orange-200";
+  if (tone === "optional") return "border-purple-500/20 bg-purple-500/10 text-purple-200";
+  if (tone === "danger") return "border-red-500/25 bg-red-500/10 text-red-200";
+  return "border-white/[0.08] bg-white/[0.04] text-white/65";
+}
+
+type DependencyKind = "required" | "optional" | "incompatible" | "embedded";
+
+function normalizeDependencyKind(dep: any): DependencyKind {
+  const raw = String(dep?.dependency_type || dep?.dependencyType || dep?.relationType || "").toLowerCase();
+  if (raw === "required" || raw === "requireddependency" || raw === "3") return "required";
+  if (raw === "optional" || raw === "optionaldependency" || raw === "2") return "optional";
+  if (raw === "incompatible" || raw === "incompatibility" || raw === "5") return "incompatible";
+  return "embedded";
+}
+
+const DEPENDENCY_GROUPS: Record<DependencyKind, {
+  title: string;
+  empty: string;
+  badge: string;
+  className: string;
+}> = {
+  required: {
+    title: "Obligatorias",
+    empty: "No hay dependencias obligatorias.",
+    badge: "Requerida",
+    className: "border-orange-500/20 bg-orange-500/10 text-orange-300",
+  },
+  optional: {
+    title: "Opcionales",
+    empty: "No hay dependencias opcionales.",
+    badge: "Opcional",
+    className: "border-sky-500/20 bg-sky-500/10 text-sky-300",
+  },
+  incompatible: {
+    title: "Incompatibilidades",
+    empty: "No se declararon incompatibilidades.",
+    badge: "Incompatible",
+    className: "border-red-500/25 bg-red-500/10 text-red-300",
+  },
+  embedded: {
+    title: "Otras relaciones",
+    empty: "No hay otras relaciones.",
+    badge: "Relación",
+    className: "border-white/[0.08] bg-white/[0.05] text-white/45",
+  },
+};
+
 const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
 const VERSION_PLATFORM_LABELS: Record<string, string> = {
   fabric: "Fabric",
@@ -508,6 +673,7 @@ export function ModDetailsSheet({
   const [translatedVersionChangelogs, setTranslatedVersionChangelogs] = useState<Record<string, string>>({});
   const [translatingVersionChangelog, setTranslatingVersionChangelog] = useState<string | null>(null);
   const [selectedGameVersionFilters, setSelectedGameVersionFilters] = useState<string[]>(DEFAULT_VERSION_FILTERS);
+  const [selectedLoaderFilters, setSelectedLoaderFilters] = useState<string[]>([]);
   const [dragEnabled, setDragEnabled] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const closeStartedRef = useRef(false);
@@ -558,11 +724,19 @@ export function ModDetailsSheet({
   const activeGameVersionFilters = selectedGameVersionFilters.filter((version) =>
     availableGameVersionFilters.includes(version)
   );
-  const filteredVersionRows = activeGameVersionFilters.length > 0
-    ? versionRows.filter((version) =>
-        version.gameVersions.some((gameVersion) => activeGameVersionFilters.includes(gameVersion))
-      )
-    : versionRows;
+  const availableVersionLoaderFilters = Array.from(
+    new Set(versionRows.flatMap((version) => version.loaders.map((loader) => loader.toLowerCase())))
+  ).filter((loader) => KNOWN_LOADERS.includes(loader as (typeof KNOWN_LOADERS)[number]));
+  const activeLoaderFilters = selectedLoaderFilters.filter((loader) =>
+    availableVersionLoaderFilters.includes(loader)
+  );
+  const filteredVersionRows = versionRows.filter((version) => {
+    const matchesGameVersion = activeGameVersionFilters.length === 0 ||
+      version.gameVersions.some((gameVersion) => activeGameVersionFilters.includes(gameVersion));
+    const matchesLoader = activeLoaderFilters.length === 0 ||
+      version.loaders.some((loader) => activeLoaderFilters.includes(loader.toLowerCase()));
+    return matchesGameVersion && matchesLoader;
+  });
   const availableLoaders = getAvailableLoaders(selectedModDetails);
   const availableContentTypes = getAvailableContentTypes(selectedModDetails, selectedMod);
 
@@ -585,6 +759,7 @@ export function ModDetailsSheet({
     setTranslatedVersionChangelogs({});
     setTranslatingVersionChangelog(null);
     setSelectedGameVersionFilters(DEFAULT_VERSION_FILTERS);
+    setSelectedLoaderFilters([]);
   }, [selectedMod?.projectId]);
 
   useEffect(() => {
@@ -781,6 +956,15 @@ export function ModDetailsSheet({
     setExpandedVersionId(null);
   }, []);
 
+  const handleToggleLoaderFilter = useCallback((loader: string) => {
+    setSelectedLoaderFilters((current) => (
+      current.includes(loader)
+        ? current.filter((value) => value !== loader)
+        : [...current, loader]
+    ));
+    setExpandedVersionId(null);
+  }, []);
+
   const handleTranslateVersionChangelog = useCallback(async (version: VersionRow, changelog: string) => {
     if (!changelog || translatingVersionChangelog) return;
     if (translatedVersionChangelogs[version.id]) {
@@ -805,6 +989,16 @@ export function ModDetailsSheet({
   const projectType = selectedMod?.projectType || "mod";
   const bannerType = communityTypeToBannerType(projectType);
   const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(bannerType);
+  const environment = interpretModEnvironment(
+    selectedModDetails?.client_side || selectedModDetails?.clientSide,
+    selectedModDetails?.server_side || selectedModDetails?.serverSide
+  );
+  const dependencyGroups = selectedModDeps.reduce<Record<DependencyKind, any[]>>((groups, dep) => {
+    groups[normalizeDependencyKind(dep)].push(dep);
+    return groups;
+  }, { required: [], optional: [], incompatible: [], embedded: [] });
+  const visibleDependencyKinds = (["required", "optional", "incompatible", "embedded"] as DependencyKind[])
+    .filter((kind) => dependencyGroups[kind].length > 0);
   const communitySharedByMe = userShares.some(
     f => (f.mod_id || f.project_id || f.id) === selectedMod?.projectId
   );
@@ -1211,13 +1405,18 @@ export function ModDetailsSheet({
 
                         {/* Compatibility */}
                         <div className="grid grid-cols-2 gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 text-[11px] text-white/70">
-                          <div>
-                            <span className="text-[9px] text-white/30 uppercase font-mono block">Lado Cliente</span>
-                            <span className="font-semibold block capitalize mt-0.5">{selectedModDetails?.client_side || "Desconocido"}</span>
+                          <div className={`col-span-2 rounded-xl border p-3 ${environmentToneClass(environment.tone)}`}>
+                            <span className="text-[9px] uppercase font-mono block opacity-60">Entorno</span>
+                            <span className="font-black block text-[12px] mt-1">{environment.label}</span>
+                            <p className="text-[10px] leading-relaxed mt-1 opacity-75">{environment.description}</p>
                           </div>
                           <div>
-                            <span className="text-[9px] text-white/30 uppercase font-mono block">Lado Servidor</span>
-                            <span className="font-semibold block capitalize mt-0.5">{selectedModDetails?.server_side || "Desconocido"}</span>
+                            <span className="text-[9px] text-white/30 uppercase font-mono block">Cliente</span>
+                            <span className="font-semibold block mt-0.5">{environmentSideLabel(environment.client)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-white/30 uppercase font-mono block">Servidor</span>
+                            <span className="font-semibold block mt-0.5">{environmentSideLabel(environment.server)}</span>
                           </div>
                           {selectedModDetails?.license && (
                             <div className="col-span-2">
@@ -1408,8 +1607,33 @@ export function ModDetailsSheet({
                                     </div>
                                   </div>
                                 )}
+                                {availableVersionLoaderFilters.length > 0 && (
+                                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-2">
+                                    <span className="text-[8px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1.5">Filtrar por modloader</span>
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                                      {availableVersionLoaderFilters.map((loader) => {
+                                        const isSelected = selectedLoaderFilters.includes(loader);
+
+                                        return (
+                                          <button
+                                            key={loader}
+                                            type="button"
+                                            onClick={() => handleToggleLoaderFilter(loader)}
+                                            className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black transition-all active:scale-95 ${
+                                              isSelected
+                                                ? "bg-orange-500/15 border-orange-500/35 text-orange-200 shadow-[0_0_14px_rgba(249,115,22,0.16)]"
+                                                : "bg-white/[0.035] border-white/[0.06] text-white/45 hover:text-white/75 hover:bg-white/[0.06]"
+                                            }`}
+                                          >
+                                            {normalizeLoaderLabel(loader)}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="max-h-64 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
-                                  {filteredVersionRows.map((version) => {
+                                  {filteredVersionRows.length > 0 ? filteredVersionRows.map((version) => {
                                     const isExpanded = expandedVersionId === version.id;
                                     const loadedChangelog = version.changelog || versionChangelogs[version.id] || "";
                                     const isLoadingChangelog = loadingVersionChangelog === version.id;
@@ -1504,7 +1728,11 @@ export function ModDetailsSheet({
                                         </AnimatePresence>
                                       </div>
                                     );
-                                  })}
+                                  }) : (
+                                    <div className="p-4 text-center text-[10px] text-white/35">
+                                      No hay versiones para esa combinación de filtros.
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ) : (
@@ -1525,28 +1753,64 @@ export function ModDetailsSheet({
                         ) : selectedModDeps?.length > 0 ? (
                           <div className="flex flex-col gap-2">
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Dependencias ({selectedModDeps.length})</span>
-                            <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 scrollbar-none">
-                              {selectedModDeps.map((dep: any) => (
-                                <div
-                                  key={dep.id}
-                                  onClick={() => handleOpenModDetails({
-                                    projectId: dep.id, title: dep.title, description: dep.description || "",
-                                    iconUrl: dep.icon_url, author: dep.author || "Comunidad",
-                                    projectType: dep.project_type || "mod", categories: dep.categories || [],
-                                    url: `https://modrinth.com/${dep.project_type || "mod"}/${dep.slug}`, _source: "modrinth"
-                                  }, true)}
-                                  className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] rounded-xl p-2 flex items-center gap-3 transition-colors cursor-pointer"
-                                >
-                                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
-                                    {dep.icon_url ? <img src={dep.icon_url} alt="" className="w-full h-full object-cover" /> : <span className="text-white/40 text-xs font-bold uppercase">{dep.title.substring(0, 2)}</span>}
+                            <div className="flex flex-col gap-3 max-h-56 overflow-y-auto pr-1 scrollbar-none">
+                              {visibleDependencyKinds.map((kind) => {
+                                const group = DEPENDENCY_GROUPS[kind];
+                                return (
+                                  <div key={kind} className="flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between gap-2 px-1">
+                                      <span className="text-[9px] text-white/35 uppercase font-mono tracking-wider font-bold">{group.title}</span>
+                                      <span className={`rounded-md border px-1.5 py-0.5 text-[8px] font-black ${group.className}`}>
+                                        {dependencyGroups[kind].length}
+                                      </span>
+                                    </div>
+                                    {dependencyGroups[kind].map((dep: any) => {
+                                      const depSource = dep._source || selectedMod?._source || "modrinth";
+                                      const depProjectId = String(dep.project_id || dep.projectId || dep.id);
+                                      const depType = dep.project_type || dep.projectType || "mod";
+                                      const depUrl = dep.url || (depSource === "curseforge"
+                                        ? `https://www.curseforge.com/projects/${depProjectId}`
+                                        : `https://modrinth.com/${depType}/${dep.slug || depProjectId}`);
+
+                                      return (
+                                        <div
+                                          key={`${kind}-${depProjectId}`}
+                                          onClick={() => handleOpenModDetails({
+                                            projectId: depProjectId,
+                                            title: dep.title || dep.name || depProjectId,
+                                            description: dep.description || "",
+                                            iconUrl: dep.icon_url || dep.iconUrl,
+                                            author: dep.author || "Comunidad",
+                                            projectType: depType,
+                                            categories: dep.categories || [],
+                                            url: depUrl,
+                                            _source: depSource,
+                                          }, true)}
+                                          className={`border rounded-xl p-2 flex items-center gap-3 transition-colors cursor-pointer ${
+                                            kind === "incompatible"
+                                              ? "bg-red-500/[0.035] hover:bg-red-500/[0.07] border-red-500/15"
+                                              : "bg-white/[0.02] hover:bg-white/[0.05] border-white/[0.04]"
+                                          }`}
+                                        >
+                                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            {dep.icon_url ? <img src={dep.icon_url} alt="" className="w-full h-full object-cover" /> : <span className="text-white/40 text-xs font-bold uppercase">{(dep.title || dep.name || depProjectId).substring(0, 2)}</span>}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <span className="text-xs font-bold text-white truncate block">{dep.title || dep.name || depProjectId}</span>
+                                            <div className="mt-0.5 flex items-center gap-1.5">
+                                              <span className="text-[9px] text-white/45 capitalize">{depType}</span>
+                                              <span className={`rounded border px-1.5 py-0.5 text-[7px] font-black uppercase ${group.className}`}>
+                                                {group.badge}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <ChevronRight className="w-3.5 h-3.5 text-white/20" />
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-xs font-bold text-white truncate block">{dep.title}</span>
-                                    <span className="text-[9px] text-white/45 block capitalize">{dep.project_type || "mod"}</span>
-                                  </div>
-                                  <ChevronRight className="w-3.5 h-3.5 text-white/20" />
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         ) : (

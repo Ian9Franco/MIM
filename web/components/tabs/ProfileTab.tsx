@@ -7,6 +7,10 @@ import {
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
+const CACHE_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
+const globalRecentUpdatesCache: Record<string, boolean> = {};
+const globalRecentUpdatesFetchedAt: Record<string, number> = {};
+
 interface ProfileTabProps {
   session: any;
   profile: any;
@@ -58,7 +62,7 @@ async function fetchProjectUpdatedAt(source: string | undefined, projectId: stri
     return data.details?.updated_at || data.details?.dateModified || null;
   }
 
-  const res = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`);
+  const res = await fetch(`/api/modrinth/project?projectId=${encodeURIComponent(projectId)}`);
   if (!res.ok) return null;
   const data = await res.json();
   return data.updated_at || data.published || null;
@@ -104,9 +108,26 @@ export function ProfileTab({
   }, [userFavorites, recentUpdates]);
 
   const sortedUserShares = React.useMemo(() => [...userShares].sort((a, b) => {
-    const priorityOrder = Number(!!parseShareMeta(b.summary).priority) - Number(!!parseShareMeta(a.summary).priority);
-    return priorityOrder || getCreatedTime(b) - getCreatedTime(a);
-  }), [userShares]);
+    // share.pinned = true means explicitly pinned via DB column.
+    // fall back to parsing the summary blob for rows predating the column.
+    const aPriority = a.pinned === true ? true : (a.pinned == null && !!parseShareMeta(a.summary).priority);
+    const bPriority = b.pinned === true ? true : (b.pinned == null && !!parseShareMeta(b.summary).priority);
+
+    if (aPriority !== bPriority) {
+      return bPriority ? 1 : -1;
+    }
+
+    const aKey = projectUpdateKey(a.platform || "modrinth", a.mod_id || a.project_id || a.id);
+    const bKey = projectUpdateKey(b.platform || "modrinth", b.mod_id || b.project_id || b.id);
+    const aUpdated = !aKey.startsWith("youtube:") && !!recentUpdates[aKey];
+    const bUpdated = !bKey.startsWith("youtube:") && !!recentUpdates[bKey];
+
+    if (aUpdated !== bUpdated) {
+      return bUpdated ? 1 : -1;
+    }
+
+    return getCreatedTime(b) - getCreatedTime(a);
+  }), [userShares, recentUpdates]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -126,16 +147,79 @@ export function ProfileTab({
       return;
     }
 
-    Promise.all(unique.map(async (item) => {
-      try {
-        const updatedAt = await fetchProjectUpdatedAt(item.source, item.projectId);
-        return [projectUpdateKey(item.source, item.projectId), isUpdatedInLastMonth(updatedAt)] as const;
-      } catch {
-        return [projectUpdateKey(item.source, item.projectId), false] as const;
-      }
-    })).then((pairs) => {
-      if (!cancelled) setRecentUpdates(Object.fromEntries(pairs));
+    // Identify which projects actually need fetching
+    const needsFetch = unique.filter((item) => {
+      const key = projectUpdateKey(item.source, item.projectId);
+      const cachedTime = globalRecentUpdatesFetchedAt[key];
+      return !cachedTime || Date.now() - cachedTime > CACHE_EXPIRY_MS;
     });
+
+    // Hydrate state from cache immediately to prevent flash/layout shift
+    const initialFromCache: Record<string, boolean> = {};
+    unique.forEach((item) => {
+      const key = projectUpdateKey(item.source, item.projectId);
+      if (globalRecentUpdatesCache[key] !== undefined) {
+        initialFromCache[key] = globalRecentUpdatesCache[key];
+      }
+    });
+
+    if (Object.keys(initialFromCache).length > 0) {
+      setRecentUpdates((prev) => ({ ...prev, ...initialFromCache }));
+    }
+
+    if (!needsFetch.length) return;
+
+    (async () => {
+      const pairs: [string, boolean][] = [];
+      
+      // Batch Modrinth project fetches
+      const modrinthIds = needsFetch.filter(item => item.source === "modrinth").map(item => item.projectId);
+      if (modrinthIds.length > 0) {
+        try {
+          const res = await fetch(`/api/modrinth/projects?ids=${encodeURIComponent(JSON.stringify(modrinthIds))}`);
+          if (res.ok) {
+            const projects = await res.json();
+            if (Array.isArray(projects)) {
+              projects.forEach((proj: any) => {
+                const key = projectUpdateKey("modrinth", proj.id);
+                const updated = isUpdatedInLastMonth(proj.updated_at || proj.published);
+                globalRecentUpdatesCache[key] = updated;
+                globalRecentUpdatesFetchedAt[key] = Date.now();
+                pairs.push([key, updated]);
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error batch fetching Modrinth updates:", err);
+        }
+      }
+
+      // Single fetch for CurseForge projects
+      const curseforgeItems = needsFetch.filter(item => item.source === "curseforge");
+      if (curseforgeItems.length > 0) {
+        await Promise.all(curseforgeItems.map(async (item) => {
+          const key = projectUpdateKey(item.source, item.projectId);
+          try {
+            const updatedAt = await fetchProjectUpdatedAt(item.source, item.projectId);
+            const updated = isUpdatedInLastMonth(updatedAt);
+            globalRecentUpdatesCache[key] = updated;
+            globalRecentUpdatesFetchedAt[key] = Date.now();
+            pairs.push([key, updated]);
+          } catch {
+            globalRecentUpdatesCache[key] = false;
+            globalRecentUpdatesFetchedAt[key] = Date.now();
+            pairs.push([key, false]);
+          }
+        }));
+      }
+
+      if (!cancelled && pairs.length > 0) {
+        setRecentUpdates((prev) => ({
+          ...prev,
+          ...Object.fromEntries(pairs)
+        }));
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -500,7 +584,12 @@ export function ProfileTab({
                   const isYoutubeShare = share.platform === "youtube" || projectType.startsWith("youtube-");
                   const shareSource = share.platform || "modrinth";
                   const isRecentlyUpdated = !isYoutubeShare && recentUpdates[projectUpdateKey(shareSource, projectId)];
-                  const isPriority = !!meta.priority;
+                  // share.pinned = true → pinned via DB column (source of truth).
+                  // share.pinned = null/undefined → old row, fall back to summary blob.
+                  // share.pinned = false → explicitly NOT pinned, don't fall back to blob.
+                  const isPriority: boolean = share.pinned === true ? true
+                    : share.pinned == null ? !!meta.priority
+                    : false;
                   const openShare = () => {
                     if (isYoutubeShare) {
                       if (meta.embeddedVideoId) {
@@ -529,7 +618,11 @@ export function ProfileTab({
                     <div
                       key={share.id}
                       className={`bg-surface/80 border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start ${
-                        isRecentlyUpdated ? "border-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.28)]" : "border-border"
+                        isPriority
+                          ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.28)]"
+                          : isRecentlyUpdated
+                            ? "border-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
+                            : "border-border"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -567,7 +660,7 @@ export function ProfileTab({
                         {onUpdateSharePriority && (
                           <button
                             type="button"
-                            onClick={() => onUpdateSharePriority(projectId, !isPriority)}
+                            onClick={() => onUpdateSharePriority(share.id, !isPriority)}
                             className={`p-2 rounded-lg active:scale-95 transition-all ${
                               isPriority
                                 ? "text-amber-300 bg-amber-500/15 border border-amber-500/25"
@@ -581,7 +674,7 @@ export function ProfileTab({
                         )}
                         {onRemoveShare && (
                           <button
-                            onClick={() => onRemoveShare(projectId)}
+                            onClick={() => onRemoveShare(share.id)}
                             className="p-2 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all"
                             title="Eliminar compartido"
                           >

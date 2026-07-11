@@ -112,6 +112,68 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // If search query is an organization query (organization:slug_or_id)
+  if (q.startsWith("organization:")) {
+    const orgIdOrSlug = q.replace(/^organization:/i, "").trim();
+    if (orgIdOrSlug) {
+      try {
+        const orgProjectsRes = await fetch(`https://api.modrinth.com/v3/organization/${orgIdOrSlug}/projects`, { headers });
+        if (orgProjectsRes.ok) {
+          const projects = await orgProjectsRes.json();
+          const filtered = [...(projects ?? [])];
+          
+          // Paginate
+          const totalHits = filtered.length;
+          const paginated = filtered.slice(offset, offset + pageSize);
+          
+          // Map to same ModHit structure as Search Hits, resolving V3 fields
+          const mods = paginated.map((p: any) => {
+            const pType = (p.project_types && p.project_types[0]) || p.project_type || "mod";
+            return {
+              projectId:   p.id,
+              externalProjectId: p.id,
+              sourceProjectId: p.id,
+              platformId: p.id,
+              slug:        p.slug,
+              title:       p.name || p.title || "",
+              description: p.summary || p.description || "",
+              iconUrl:     p.icon_url ?? null,
+              author:      p.organization || orgIdOrSlug,
+              downloads:   p.downloads || 0,
+              follows:     p.followers || 0,
+              latestVersion: null,
+              categories:  p.categories ?? [],
+              dateCreated: p.published || "",
+              url:         `https://modrinth.com/${pType}/${p.slug}`,
+              projectType: pType,
+              client_side: p.client_side || (p.environment ? p.environment.client : null),
+              server_side: p.server_side || (p.environment ? p.environment.server : null),
+              gallery:     (p.gallery ?? []).map((img: any) => {
+                const urlStr = typeof img === "string" ? img : img.url;
+                return {
+                  url: urlStr,
+                  thumbnailUrl: urlStr,
+                  title: typeof img === "string" ? "" : img.title || "",
+                  featured: typeof img === "string" ? false : img.featured || false
+                };
+              }).filter((g: any) => g.url),
+            };
+          });
+          
+          return NextResponse.json({
+            mods,
+            total: totalHits,
+            page,
+            pageSize,
+            totalPages: Math.ceil(totalHits / pageSize),
+          });
+        }
+      } catch (err) {
+        console.warn("[/api/modrinth/discover] Error fetching direct organization projects, falling back:", err);
+      }
+    }
+  }
+
   // Game Versions (OR)
   if (projectType !== "datapack" && gameVersions.length > 0) {
     facetsArray.push(gameVersions.map((v: string) => `versions:${v}`));

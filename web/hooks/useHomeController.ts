@@ -457,13 +457,13 @@ export function useHomeController() {
     activeDraft
   ]);
 
-  const loadUserData = useCallback(async (userId: string) => {
+  const loadUserData = useCallback(async (userId: string, silent = false) => {
     try {
-      setLoadingUserData(true);
+      if (!silent) setLoadingUserData(true);
       const [{ data: profData }, { data: follows }, { data: shares }, { data: drafts }, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase.from("followed_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
-        supabase.from("favorite_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
+        supabase.from("favorite_mods").select("*").eq("profile_id", userId).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
         supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
       ]);
@@ -514,7 +514,7 @@ export function useHomeController() {
     } catch (err) {
       console.error("Error loading user cloud data:", err);
     } finally {
-      setLoadingUserData(false);
+      if (!silent) setLoadingUserData(false);
     }
   }, []);
 
@@ -681,29 +681,39 @@ export function useHomeController() {
         return;
       }
 
-      const collRes = await fetch("https://api.modrinth.com/v3/user/modrinth/collections");
-      const colls = collRes.ok ? await collRes.json() : [];
-      const projectIds = colls.find((c: any) => c.id === collection.id)?.projects?.slice(0, 15) || [];
-      if (projectIds.length) {
-        const pRes = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(projectIds)}`);
-        if (pRes.ok) {
-          const projects = await pRes.json();
-          const mapped = projects.map((m: any) => ({
-            projectId: m.id,
-            title: m.title,
-            description: m.description,
-            iconUrl: m.icon_url,
-            author: m.author || "Creador",
-            projectType: m.project_type,
-            categories: m.categories,
-            url: `https://modrinth.com/${m.project_type}/${m.slug}`,
-            _source: "modrinth",
-          }));
-          isSpotlightHero ? setLatestFeaturedMods(mapped) : setActiveCollectionMods(mapped);
-          return;
+      const res = await fetch(`/api/modrinth/official?id=${collection.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = data.mods || [];
+        if (isSpotlightHero) {
+          setLatestFeaturedMods(mapped);
+          try {
+            const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+            if (cachedRaw) {
+              const parsed = JSON.parse(cachedRaw);
+              parsed.latestFeaturedMods = mapped;
+              localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(parsed));
+            }
+          } catch {}
+        } else {
+          setActiveCollectionMods(mapped);
         }
+        return;
       }
-      isSpotlightHero ? setLatestFeaturedMods(mockUpdatedMods.slice(0, 5)) : setActiveCollectionMods(mockUpdatedMods.slice(0, 6));
+      const fallback = mockUpdatedMods.slice(0, 5);
+      if (isSpotlightHero) {
+        setLatestFeaturedMods(fallback);
+        try {
+          const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+          if (cachedRaw) {
+            const parsed = JSON.parse(cachedRaw);
+            parsed.latestFeaturedMods = fallback;
+            localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(parsed));
+          }
+        } catch {}
+      } else {
+        setActiveCollectionMods(mockUpdatedMods.slice(0, 6));
+      }
     } catch (err) {
       console.error("Failed to load collection mods:", err);
     } finally {
@@ -726,14 +736,15 @@ export function useHomeController() {
     if (cachedRaw) {
       try {
         cachedPayload = JSON.parse(cachedRaw);
-        if (cachedPayload?.timestamp) {
+        if (cachedPayload?.timestamp && Array.isArray(cachedPayload.latestFeaturedMods) && cachedPayload.latestFeaturedMods.length > 0) {
           applyCachedCollections(cachedPayload);
-          if (Date.now() - cachedPayload.timestamp < COLLECTIONS_CACHE_TTL_MS) return;
         }
       } catch {}
     }
 
-    if (Date.now() - collectionsLastLoadedRef.current < COLLECTIONS_CACHE_TTL_MS) return;
+    // In-memory throttling (1 minute) to avoid spamming calls during the same user session
+    const THROTTLE_MS = 60 * 1000;
+    if (Date.now() - collectionsLastLoadedRef.current < THROTTLE_MS) return;
     if (collectionsRequestRef.current) return collectionsRequestRef.current;
 
     collectionsRequestRef.current = (async () => {
@@ -748,9 +759,15 @@ export function useHomeController() {
       setModrinthFeatured(mrColls);
       setCurseForgeFeatured(cfPicks);
       setCurseForgeCollections(cfCollections);
+      let latestFeatured: any[] = [];
       if (mrColls[0]) {
         setLatestCollectionName(mrColls[0].name);
-        void loadCollectionMods(mrColls[0], true);
+        if (Array.isArray(mrRes.latestFeaturedMods) && mrRes.latestFeaturedMods.length > 0) {
+          setLatestFeaturedMods(mrRes.latestFeaturedMods);
+          latestFeatured = mrRes.latestFeaturedMods;
+        } else {
+          void loadCollectionMods(mrColls[0], true);
+        }
       }
 
         const payload = {
@@ -759,6 +776,7 @@ export function useHomeController() {
           curseForgeFeatured: cfPicks,
           curseForgeCollections: cfCollections,
           latestCollectionName: mrColls[0]?.name || FALLBACK_MODRINTH_COLLECTIONS[0].name,
+          latestFeaturedMods: latestFeatured,
         };
         localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(payload));
         collectionsLastLoadedRef.current = payload.timestamp;
@@ -1019,7 +1037,8 @@ export function useHomeController() {
 
   const handleSearchAuthor = useCallback((authorName: string, platform: string) => {
     const cleanPlatform = (platform === "curseforge" || platform === "all" || platform === "modrinth") ? platform : "modrinth";
-    const authorQuery = `author:${authorName}`;
+    const isOrg = authorName.startsWith("organization:");
+    const authorQuery = isOrg ? authorName : `author:${authorName}`;
     setDiscoverQuery(authorQuery);
     setDiscoverSource(cleanPlatform);
     setDiscoverCategory([]);
@@ -1117,7 +1136,7 @@ export function useHomeController() {
         }
       } else {
         const [pRes, dRes, vRes] = await Promise.all([
-          fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}`),
+          fetch(`/api/modrinth/project?projectId=${normalizedMod.projectId}`),
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/version`),
         ]);
@@ -1481,49 +1500,73 @@ export function useHomeController() {
           });
       const { error } = await request;
       if (error) throw error;
-      await loadUserData(session.user.id);
+      await loadUserData(session.user.id, true);
     } catch (err: any) {
       showAlert("Error", `Error al seguir autor: ${err.message}`);
     }
   };
 
-  const onRemoveShare = async (projectId: string) => {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const onRemoveShare = async (shareId: string) => {
     if (!session?.user?.id) return;
     try {
-      const { error } = await supabase
-        .from("favorite_mods")
-        .delete()
-        .eq("profile_id", session.user.id)
-        .eq("mod_id", projectId);
+      const isUuid = UUID_REGEX.test(shareId);
+      let query = supabase.from("favorite_mods").delete();
+      if (isUuid) {
+        query = query.eq("id", shareId);
+      } else {
+        query = query.eq("profile_id", session.user.id).eq("mod_id", shareId);
+      }
+      const { error } = await query;
       if (error) throw error;
       
-      setUserShares(prev => prev.filter(item => (item.mod_id || item.project_id || item.id) !== projectId));
-      await loadUserData(session.user.id);
+      setUserShares(prev => prev.filter(item => {
+        const itemId = item.id;
+        const itemModId = item.mod_id || item.project_id;
+        return isUuid ? itemId !== shareId : itemModId !== shareId;
+      }));
+      await loadUserData(session.user.id, true);
     } catch (err: any) {
       showAlert("Error", `Error al eliminar compartido: ${err.message}`);
     }
   };
 
-  const onUpdateSharePriority = async (projectId: string, priority: boolean) => {
+  const onUpdateSharePriority = async (shareId: string, priority: boolean) => {
     if (!session?.user?.id) return;
+    const isUuid = UUID_REGEX.test(shareId);
     const previousShares = userShares;
-    const currentShare = userShares.find((item) => (item.mod_id || item.project_id || item.id) === projectId);
+
+    const currentShare = userShares.find((item) =>
+      isUuid ? item.id === shareId : (item.mod_id || item.project_id || item.id) === shareId
+    );
     if (!currentShare) return;
 
+    // Keep the summary blob in sync for backward compatibility with existing readers.
     const summary = setShareSummaryPriority(currentShare.summary, priority);
-    // Reorder immediately; Supabase remains the source of truth after confirmation.
-    setUserShares((items) => items.map((item) =>
-      (item.mod_id || item.project_id || item.id) === projectId ? { ...item, summary } : item
-    ));
+
+    // Optimistic update — immediately reorder in UI so the pin feels instant.
+    setUserShares((items) =>
+      items
+        .map((item) => {
+          const match = isUuid ? item.id === shareId : (item.mod_id || item.project_id || item.id) === shareId;
+          return match ? { ...item, summary, pinned: priority } : item;
+        })
+        // Pinned items sort to the front.
+        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+    );
 
     try {
-      const { error } = await supabase
-        .from("favorite_mods")
-        .update({ summary })
-        .eq("profile_id", session.user.id)
-        .eq("mod_id", projectId);
+      // Write `pinned` as a real DB column so community feed can order by it.
+      let query = supabase.from("favorite_mods").update({ summary, pinned: priority });
+      if (isUuid) {
+        query = query.eq("id", shareId);
+      } else {
+        query = query.eq("profile_id", session.user.id).eq("mod_id", shareId);
+      }
+      const { error } = await query;
       if (error) throw error;
-      await loadUserData(session.user.id);
+      await loadUserData(session.user.id, true);
     } catch (err: any) {
       setUserShares(previousShares);
       showAlert("Error", `No se pudo actualizar la prioridad: ${err.message}`);
@@ -1562,7 +1605,7 @@ export function useHomeController() {
       mode: post.mode || "video",
       publishedAt: post.publishedAt || "",
       channelUrl: currentChannel,
-      priority: getShareSummaryPriority(existingShare?.summary),
+      priority: existingShare?.pinned ?? getShareSummaryPriority(existingShare?.summary),
     });
     const previousShares = userShares;
     const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);

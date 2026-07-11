@@ -568,17 +568,17 @@ export function ModDetailsSheet({
   }, [selectedMod?.projectId]);
 
   useEffect(() => {
-    if (!isSheetOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    const originalOverscroll = document.documentElement.style.overscrollBehavior;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overscrollBehavior = "none";
+    if (isSheetOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overscrollBehavior = "none";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overscrollBehavior = "";
+    }
 
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overscrollBehavior = originalOverscroll;
+      document.body.style.overflow = "";
+      document.documentElement.style.overscrollBehavior = "";
     };
   }, [isSheetOpen]);
 
@@ -806,8 +806,9 @@ export function ModDetailsSheet({
       <AnimatePresence>
         {selectedMod && (
           <motion.div
+            key="mod-details-backdrop"
             className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
-            style={{ pointerEvents: isClosing ? "none" : "auto" }}
+            style={{ pointerEvents: (!selectedMod || isClosing) ? "none" : "auto" }}
             onClick={closeWithSound}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
@@ -949,8 +950,8 @@ export function ModDetailsSheet({
                   <div className="flex-1 min-w-0">
                     <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">Detalles del Proyecto</span>
                     <h3 className="text-sm font-bold text-white mt-0.5 pr-6 leading-tight drop-shadow-md">{selectedMod.title}</h3>
-                    <p className="text-[10px] text-white/40 mt-1">
-                      Autor:{" "}
+                    <p className="text-[10px] text-white/40 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span>Autor:{" "}</span>
                       {onSearchAuthor && selectedMod.author && selectedMod.author !== "Comunidad" ? (
                         <button
                           onClick={() => onSearchAuthor(selectedMod.author, selectedMod._source || "modrinth")}
@@ -961,6 +962,19 @@ export function ModDetailsSheet({
                         </button>
                       ) : (
                         <span className="text-white/60">{selectedMod.author || "Comunidad"}</span>
+                      )}
+                      {selectedModDetails?.organization_info && (
+                        <>
+                          <span className="text-white/20">|</span>
+                          <span>Org:{" "}</span>
+                          <button
+                            onClick={() => onSearchAuthor && onSearchAuthor(`organization:${selectedModDetails.organization_info.slug}`, selectedMod._source || "modrinth")}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="text-orange-400 hover:underline hover:text-orange-300 font-bold transition-all text-left inline-block"
+                          >
+                            {selectedModDetails.organization_info.name}
+                          </button>
+                        </>
                       )}
                     </p>
                   </div>
@@ -1047,6 +1061,37 @@ export function ModDetailsSheet({
                         : <UserPlus className="w-3.5 h-3.5 shrink-0" />}
                       <span>{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
                     </button>
+                  )}
+
+                  {/* Follow Organization (visible to logged-in users if org exists) */}
+                  {session && onToggleFollowAuthor && selectedModDetails?.organization_info && (
+                    (() => {
+                      const orgSlug = selectedModDetails.organization_info.slug;
+                      const orgName = selectedModDetails.organization_info.name;
+                      const orgIcon = selectedModDetails.organization_info.icon_url;
+                      const followedKey = `organization:${orgSlug}`;
+                      const isFollowingOrg = userFollowedAuthors.some(
+                        a => a.author_name === followedKey && a.platform === authorPlatform
+                      );
+                      const orgUrl = `https://modrinth.com/organization/${orgSlug}`;
+
+                      return (
+                        <button
+                          onClick={() => onToggleFollowAuthor(followedKey, orgUrl, orgIcon, authorPlatform)}
+                          className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                            isFollowingOrg
+                              ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+                              : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
+                          }`}
+                          type="button"
+                        >
+                          {isFollowingOrg
+                            ? <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                            : <UserPlus className="w-3.5 h-3.5 shrink-0" />}
+                          <span>{isFollowingOrg ? `Siguiendo a ${orgName}` : `Seguir a ${orgName}`}</span>
+                        </button>
+                      );
+                    })()
                   )}
                 </div>
               </div>

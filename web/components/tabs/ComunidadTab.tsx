@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Clock, ExternalLink, MessageSquare, Play, Share2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, ExternalLink, MessageSquare, Play, Share2, Users, Pin } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { MiembrosSkeleton } from "../FomoSkeletons";
 import { supabase } from "../../lib/supabaseClient";
@@ -50,7 +50,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [publicData, setPublicData] = useState({ favorites: [] as any[], authors: [] as any[], drafts: [] as any[], channels: [] as string[] });
+  const [publicData, setPublicData] = useState({ favorites: [] as any[], authors: [] as any[], drafts: [] as any[], channels: [] as string[], shares: [] as any[] });
   const [loadingPublic, setLoadingPublic] = useState(false);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     setLoadingShares(true);
     const from = sharesPage * SHARES_PAGE_SIZE;
     // Requesting one extra row tells us if a next page exists without a full-table count.
-    supabase.from("favorite_mods").select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles(id, username, avatar_url, color)`).order("created_at", { ascending: false }).range(from, from + SHARES_PAGE_SIZE)
+    supabase.from("favorite_mods").select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles(id, username, avatar_url, color)`).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).range(from, from + SHARES_PAGE_SIZE)
       .then(({ data, error }) => {
         if (error) console.error("Error loading shares feed:", error);
         const rows = data || [];
@@ -106,15 +106,16 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     setSelectedProfile(profile);
     setProfileView("profile");
     setLoadingPublic(true);
-    setPublicData({ favorites: [], authors: [], drafts: [], channels: [] });
-    const [{ data: favorites }, { data: authors }, { data: drafts }] = await Promise.all([
+    setPublicData({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
+    const [{ data: favorites }, { data: authors }, { data: drafts }, { data: sharesData }] = await Promise.all([
       supabase.from("followed_mods").select("*").eq("profile_id", profile.id),
       supabase.from("followed_authors").select("*").eq("profile_id", profile.id),
       supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", profile.id).eq("visibility", "public"),
+      supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("pinned", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
     ]);
     // Showcase preferences live in profile metadata and are already public.
     const channels = profile.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
-    setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels });
+    setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels, shares: sharesData || [] });
     setLoadingPublic(false);
   };
 
@@ -164,15 +165,42 @@ function ShareCard({ item, index, updated, onOpenProfile, onOpenMod }: { item: a
   const isYoutube = item.platform === "youtube" || projectType.startsWith("youtube-");
   const userColor = item.profile?.color || "var(--color-primary)";
   const videoUrl = meta.videoUrl || (meta.embeddedVideoId ? `https://www.youtube.com/watch?v=${meta.embeddedVideoId}` : "");
+  // share.pinned = true → pinned via DB column (source of truth).
+  // share.pinned = null/undefined → old row, fall back to summary blob.
+  // share.pinned = false → explicitly NOT pinned.
+  const isPinned: boolean = item.pinned === true ? true
+    : item.pinned == null ? (meta.priority ?? false)
+    : false;
   const mod: ModHit = { projectId, title: item.name || "Proyecto", description: meta.comment || "", iconUrl: item.icon_url || null, author: "Comunidad", projectType, categories: [item.platform || "modrinth"], url: item.platform === "curseforge" ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`, _source: item.platform || "modrinth" };
   const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
 
   return (
-    <motion.article initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index * 0.025, 0.18) }} className={`group relative flex flex-col gap-3 overflow-hidden rounded-2xl border bg-surface/78 p-3.5 transition-all hover:-translate-y-0.5 hover:border-white/15 hover:shadow-[0_14px_34px_rgba(0,0,0,0.24)] ${updated && !isYoutube ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.22)]" : "border-white/[0.08]"}`}>
-      <span className="absolute inset-y-4 left-0 w-px bg-white/10 transition-colors group-hover:bg-[var(--color-primary)]" />
+    <motion.article
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.025, 0.18) }}
+      className={`group relative flex flex-col gap-3 overflow-hidden rounded-2xl border bg-surface/78 p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,0,0,0.24)] ${
+        isPinned
+          ? "border-amber-400/60 shadow-[0_0_22px_rgba(251,191,36,0.18)] hover:border-amber-400/80"
+          : updated && !isYoutube
+            ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.22)] hover:border-white/15"
+            : "border-white/[0.08] hover:border-white/15"
+      }`}
+    >
+      {isPinned && (
+        <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[7px] font-black uppercase tracking-widest text-amber-400">
+          <Pin className="h-2.5 w-2.5 fill-current" /> Fijada
+        </span>
+      )}
+      <span className={`absolute inset-y-4 left-0 w-px transition-colors ${isPinned ? "bg-amber-400/50" : "bg-white/10 group-hover:bg-[var(--color-primary)]"}`} />
       <button type="button" onClick={() => onOpenProfile(item.profile)} className="flex w-fit items-center gap-2.5 text-left">
         <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-surface text-xs font-bold uppercase shadow-md transition-transform group-hover:scale-105" style={{ borderColor: userColor }}>{item.profile?.avatar_url ? <img src={item.profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span style={{ color: userColor }}>{item.profile?.username?.slice(0, 2) || "U"}</span>}</div>
-        <div><span className="block text-[11px] font-bold text-white">@{item.profile?.username || "Usuario"}</span><span className="mt-0.5 flex items-center gap-1 text-[8px] text-white/35"><Clock className="h-2.5 w-2.5" />{formatTimeAgo(item.created_at)}</span></div>
+        <div>
+          <span className="block text-[11px] font-bold text-white">@{item.profile?.username || "Usuario"}</span>
+          <span className="mt-0.5 flex items-center gap-1 text-[8px] text-white/35">
+            <Clock className="h-2.5 w-2.5" />{formatTimeAgo(item.created_at)}
+          </span>
+        </div>
       </button>
 
       {meta.comment && <div className="flex gap-2 rounded-xl border border-white/[0.045] bg-black/15 p-3 text-[11px] text-white/70"><MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-primary)" }} /><p className="line-clamp-4 whitespace-pre-wrap leading-relaxed">{meta.comment}</p></div>}
@@ -187,6 +215,7 @@ function ShareCard({ item, index, updated, onOpenProfile, onOpenMod }: { item: a
           <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-surface">{item.icon_url ? <img src={item.icon_url} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] font-bold uppercase text-white/35">{item.name?.slice(0, 2)}</span>}</div><div className="min-w-0"><h4 className="truncate text-xs font-bold text-white">{item.name}</h4><div className="mt-1 flex items-center gap-1.5"><span className={`rounded border px-1.5 py-0.5 text-[7px] font-black uppercase ${item.platform === "curseforge" ? "border-orange-500/20 bg-orange-600/15 text-orange-400" : "border-emerald-500/20 bg-emerald-600/15 text-emerald-400"}`}>{item.platform === "curseforge" ? "CurseForge" : "Modrinth"}</span>{meta.modloader && <span className="text-[8px] font-mono uppercase text-white/35">{meta.modloader}</span>}{meta.gameVersion && <span className="text-[8px] font-mono text-white/35">{meta.gameVersion}</span>}</div></div></div><ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
         </button>
       )}
+
     </motion.article>
   );
 }

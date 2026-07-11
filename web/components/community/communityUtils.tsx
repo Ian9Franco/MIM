@@ -10,6 +10,7 @@ export interface ShareMeta {
   embeddedVideoId?: string;
   mode?: string;
   publishedAt?: string;
+  priority?: boolean;
 }
 
 /** Reads both persisted share formats so older community posts remain compatible. */
@@ -30,6 +31,7 @@ export function parseShareMeta(summary?: string | null): ShareMeta {
         embeddedVideoId: parsed.embeddedVideoId,
         mode: parsed.mode,
         publishedAt: parsed.publishedAt,
+        priority: !!parsed.priority,
       };
     } catch {
       // Invalid legacy JSON is rendered as regular user text below.
@@ -42,7 +44,7 @@ export function parseShareMeta(summary?: string | null): ShareMeta {
   if (match?.[1]) {
     try {
       const meta = JSON.parse(match[1]);
-      return { comment, ...meta, projectType: meta.projectType || "mod" };
+      return { comment, ...meta, projectType: meta.projectType || "mod", priority: !!meta.priority };
     } catch {
       // Keep the visible comment even if hidden metadata is malformed.
     }

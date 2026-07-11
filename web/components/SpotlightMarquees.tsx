@@ -267,25 +267,66 @@ export function HorizontalEditorialMarquee({
                 className="mim-themed-card border rounded-2xl overflow-hidden flex flex-col min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.97] transition-all shadow-md"
               >
                 <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
-                  {item.iconUrl ? (
-                    <>
-                      <img
-                        src={item.iconUrl}
-                        alt=""
-                        className="w-full h-full object-cover scale-110 opacity-90"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          const sibling = e.currentTarget.nextSibling as HTMLElement;
-                          if (sibling) sibling.style.display = "block";
-                        }}
-                      />
-                      <div className="hidden w-full h-full">
-                        <DefaultModIcon platform={item._source} />
-                      </div>
-                    </>
-                  ) : (
-                    <DefaultModIcon platform={item._source} />
-                  )}
+                  {(() => {
+                    const bannerImg = item.gallery?.find((g: any) => g.featured)?.url || item.gallery?.[0]?.url;
+                    if (bannerImg) {
+                      return (
+                        <>
+                          <img
+                            src={bannerImg}
+                            alt=""
+                            className="w-full h-full object-cover scale-110 opacity-90"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              const nextSibling = e.currentTarget.nextSibling as HTMLElement;
+                              if (nextSibling) nextSibling.style.display = "block";
+                            }}
+                          />
+                          <div className="hidden w-full h-full">
+                            {item.iconUrl ? (
+                              <>
+                                <img
+                                  src={item.iconUrl}
+                                  alt=""
+                                  className="w-full h-full object-cover scale-110 opacity-90"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const nextSibling = e.currentTarget.nextSibling as HTMLElement;
+                                    if (nextSibling) nextSibling.style.display = "block";
+                                  }}
+                                />
+                                <div className="hidden w-full h-full">
+                                  <DefaultModIcon platform={item._source} />
+                                </div>
+                              </>
+                            ) : (
+                              <DefaultModIcon platform={item._source} />
+                            )}
+                          </div>
+                        </>
+                      );
+                    } else if (item.iconUrl) {
+                      return (
+                        <>
+                          <img
+                            src={item.iconUrl}
+                            alt=""
+                            className="w-full h-full object-cover scale-110 opacity-90"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              const nextSibling = e.currentTarget.nextSibling as HTMLElement;
+                              if (nextSibling) nextSibling.style.display = "block";
+                            }}
+                          />
+                          <div className="hidden w-full h-full">
+                            <DefaultModIcon platform={item._source} />
+                          </div>
+                        </>
+                      );
+                    } else {
+                      return <DefaultModIcon platform={item._source} />;
+                    }
+                  })()}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                   <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70 capitalize">
                     {item.projectType || "mod"}

@@ -462,11 +462,12 @@ export function ModDetailsSheet({
   const activeImageUrl = activeImage?.url || null;
   const hasGalleryNav = galleryImages.length > 1;
   const isSheetOpen = !!selectedMod;
+  const isReadingTab = modalTab === "versions" || modalTab === "deps";
   const sheetTargetHeight =
     modalTab === "deps"
-      ? selectedModDeps?.length > 0 ? "82vh" : "58vh"
+      ? selectedModDeps?.length > 0 ? "96dvh" : "72dvh"
       : modalTab === "versions"
-        ? "88vh"
+        ? "96dvh"
         : modalTab === "gallery"
           ? "76vh"
           : modalTab === "desc"
@@ -802,7 +803,7 @@ export function ModDetailsSheet({
                   mass: 1.0,
                 }
               }}
-              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-3 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[92vh] overflow-hidden"
+              className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[96dvh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               drag="y"
               dragControls={dragControls}
@@ -813,7 +814,9 @@ export function ModDetailsSheet({
             >
               {/* Header Banner Area */}
               <div 
-                className="relative overflow-hidden px-6 pt-3 pb-5 border-b border-white/[0.06] shrink-0 select-none"
+                className={`relative overflow-hidden border-b border-white/[0.06] shrink-0 select-none ${
+                  isReadingTab ? "px-4 pt-2 pb-3" : "px-6 pt-3 pb-5"
+                }`}
               >
                 {/* Banner Image or Fallback */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ backgroundColor: bannerBgColor }}>
@@ -892,8 +895,8 @@ export function ModDetailsSheet({
                 )}
 
                 {/* Mod info */}
-                <div className="relative z-10 flex gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md">
+                <div className={`relative z-10 flex ${isReadingTab ? "gap-3" : "gap-4"}`}>
+                  <div className={`${isReadingTab ? "w-12 h-12" : "w-16 h-16"} rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md`}>
                     {(selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl) ? (
                       <>
                         <img
@@ -916,8 +919,8 @@ export function ModDetailsSheet({
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">Detalles del Proyecto</span>
-                    <h3 className="text-sm font-bold text-white mt-0.5 pr-6 leading-tight drop-shadow-md">{selectedMod.title}</h3>
-                    <p className="text-[10px] text-white/40 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <h3 className={`${isReadingTab ? "text-[13px]" : "text-sm"} font-bold text-white mt-0.5 pr-6 leading-tight drop-shadow-md`}>{selectedMod.title}</h3>
+                    <p className={`${isReadingTab ? "text-[9px] mt-0.5" : "text-[10px] mt-1"} text-white/40 flex flex-wrap items-center gap-x-2 gap-y-0.5`}>
                       <span>Autor:{" "}</span>
                       {onSearchAuthor && selectedMod.author && selectedMod.author !== "Comunidad" ? (
                         <button
@@ -950,14 +953,14 @@ export function ModDetailsSheet({
                 {/* Actions row: Share, Favorite, Follow and External Platform link */}
                 <div 
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="relative z-10 flex flex-col gap-1.5 mt-4"
+                  className={`relative z-10 flex flex-col ${isReadingTab ? "gap-1 mt-2" : "gap-1.5 mt-4"}`}
                 >
                   {session && (
                     <div className="flex gap-2">
                       {/* Share button */}
                       <button
                         onClick={handleShareClick}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                        className={`flex-1 flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-black uppercase tracking-wider transition-all border ${
                           communitySharedByMe
                             ? "bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.15)]"
                             : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
@@ -972,7 +975,7 @@ export function ModDetailsSheet({
                       {/* Favorite button */}
                       <button
                         onClick={() => onToggleFavorite(selectedMod)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                        className={`flex-1 flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-black uppercase tracking-wider transition-all border ${
                           isFavorited
                             ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.15)]"
                             : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
@@ -991,7 +994,7 @@ export function ModDetailsSheet({
                       href={projectPlatformUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20"
+                      className={`flex-1 flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-bold uppercase tracking-wider transition-all border bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20`}
                     >
                       <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       <span>Ver en {selectedMod?._source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
@@ -1003,7 +1006,7 @@ export function ModDetailsSheet({
                           onSearchMod(selectedMod.title);
                           closeWithSound();
                         }}
-                        className="flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white"
+                        className={`flex-1 flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-bold uppercase tracking-wider transition-all border bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white`}
                         type="button"
                       >
                         <Layers className="w-3.5 h-3.5 shrink-0" />
@@ -1016,7 +1019,7 @@ export function ModDetailsSheet({
                   {session && onToggleFollowAuthor && authorName && authorName !== "Comunidad" && (
                     <button
                       onClick={() => onToggleFollowAuthor(authorName, `https://modrinth.com/user/${authorName}`, undefined, authorPlatform)}
-                      className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                      className={`w-full flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-bold uppercase tracking-wider transition-all border ${
                         isFollowingAuthor
                           ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
                           : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
@@ -1045,7 +1048,7 @@ export function ModDetailsSheet({
                       return (
                         <button
                           onClick={() => onToggleFollowAuthor(followedKey, orgUrl, orgIcon, authorPlatform)}
-                          className={`w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                          className={`w-full flex items-center justify-center gap-1.5 ${isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"} font-bold uppercase tracking-wider transition-all border ${
                             isFollowingOrg
                               ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
                               : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
@@ -1064,7 +1067,7 @@ export function ModDetailsSheet({
               </div>
 
               {/* Body Content Area (Tabs + Scrollable Content) */}
-              <div className="flex flex-col gap-2.5 px-4 pt-3 pb-3 flex-1 min-h-0">
+              <div className={`flex flex-col flex-1 min-h-0 ${isReadingTab ? "gap-1.5 px-3 pt-2 pb-2" : "gap-2.5 px-4 pt-3 pb-3"}`}>
                 {/* Modal tabs */}
                 <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-0.5 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
                   {[
@@ -1324,7 +1327,7 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "versions" && (
-                      <motion.div key="versions" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5 w-full">
+                      <motion.div key="versions" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex h-full min-h-0 flex-col gap-2 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -1332,14 +1335,14 @@ export function ModDetailsSheet({
                         ) : (
                           <div className="flex flex-col gap-3">
                             {versionRows.length > 0 ? (
-                              <div className="flex flex-col gap-2">
+                              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Versiones del mod</span>
                                   <span className="text-[9px] text-white/30 font-mono">{filteredVersionRows.length}/{versionRows.length}</span>
                                 </div>
                                 {availableGameVersionFilters.length > 0 && (
-                                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-2">
-                                    <span className="text-[8px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1.5">Filtrar por versión de juego</span>
+                                  <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-2 py-1.5">
+                                    <span className="text-[7.5px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1">Filtrar por versión de juego</span>
                                     <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
                                       {availableGameVersionFilters.map((gameVersion) => {
                                         const isSelected = selectedGameVersionFilters.includes(gameVersion);
@@ -1349,7 +1352,7 @@ export function ModDetailsSheet({
                                             key={gameVersion}
                                             type="button"
                                             onClick={() => handleToggleGameVersionFilter(gameVersion)}
-                                            className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black font-mono transition-all active:scale-95 ${
+                                            className={`shrink-0 px-2 py-0.5 rounded-md border text-[8.5px] font-black font-mono transition-all active:scale-95 ${
                                               isSelected
                                                 ? "bg-orange-500/15 border-orange-500/35 text-orange-200 shadow-[0_0_14px_rgba(249,115,22,0.16)]"
                                                 : "bg-white/[0.035] border-white/[0.06] text-white/45 hover:text-white/75 hover:bg-white/[0.06]"
@@ -1363,8 +1366,8 @@ export function ModDetailsSheet({
                                   </div>
                                 )}
                                 {availableVersionLoaderFilters.length > 0 && (
-                                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-2">
-                                    <span className="text-[8px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1.5">Filtrar por modloader</span>
+                                  <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-2 py-1.5">
+                                    <span className="text-[7.5px] text-white/28 uppercase font-mono tracking-wider block font-semibold mb-1">Filtrar por modloader</span>
                                     <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
                                       {availableVersionLoaderFilters.map((loader) => {
                                         const isSelected = selectedLoaderFilters.includes(loader);
@@ -1374,7 +1377,7 @@ export function ModDetailsSheet({
                                             key={loader}
                                             type="button"
                                             onClick={() => handleToggleLoaderFilter(loader)}
-                                            className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black transition-all active:scale-95 ${
+                                            className={`shrink-0 px-2 py-0.5 rounded-md border text-[8.5px] font-black transition-all active:scale-95 ${
                                               isSelected
                                                 ? "bg-orange-500/15 border-orange-500/35 text-orange-200 shadow-[0_0_14px_rgba(249,115,22,0.16)]"
                                                 : "bg-white/[0.035] border-white/[0.06] text-white/45 hover:text-white/75 hover:bg-white/[0.06]"
@@ -1387,7 +1390,7 @@ export function ModDetailsSheet({
                                     </div>
                                   </div>
                                 )}
-                                <div className="max-h-[54vh] overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
+                                <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
                                   {filteredVersionRows.length > 0 ? filteredVersionRows.map((version) => {
                                     const isExpanded = expandedVersionId === version.id;
                                     const loadedChangelog = version.changelog || versionChangelogs[version.id] || "";
@@ -1398,7 +1401,7 @@ export function ModDetailsSheet({
                                         <button
                                           type="button"
                                           onClick={() => handleToggleVersion(version)}
-                                          className="grid w-full grid-cols-[1fr_auto] gap-2 p-3 text-left transition-colors hover:bg-white/[0.025] active:bg-white/[0.04]"
+                                          className="grid w-full grid-cols-[1fr_auto] gap-2 p-2.5 text-left transition-colors hover:bg-white/[0.025] active:bg-white/[0.04]"
                                         >
                                           <div className="min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
@@ -1500,15 +1503,15 @@ export function ModDetailsSheet({
                     )}
 
                     {modalTab === "deps" && (
-                      <motion.div key="deps" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5 w-full">
+                      <motion.div key="deps" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex h-full min-h-0 flex-col gap-2 w-full">
                         {loadingDetails ? (
                           <div className="flex flex-col items-center justify-center py-6">
                             <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
                           </div>
                         ) : selectedModDeps?.length > 0 ? (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Dependencias ({selectedModDeps.length})</span>
-                            <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1 scrollbar-none">
+                            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1 scrollbar-none">
                               {visibleDependencyKinds.map((kind) => {
                                 const group = DEPENDENCY_GROUPS[kind];
                                 return (
@@ -1577,10 +1580,10 @@ export function ModDetailsSheet({
                 </div>
 
                 {/* Footer action buttons */}
-                <div className="flex gap-2 mt-auto pt-2 border-t border-white/[0.04] shrink-0">
+                <div className={`flex gap-2 mt-auto border-t border-white/[0.04] shrink-0 ${isReadingTab ? "pt-1.5" : "pt-2"}`}>
                   <button
                     onClick={() => setModalTab(modalTab === "summary" ? "desc" : "summary")}
-                    className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-medium text-[11px] rounded-xl py-2.5 flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+                    className={`flex-1 bg-orange-600 hover:bg-orange-500 text-white font-medium ${isReadingTab ? "text-[10px] rounded-lg py-2" : "text-[11px] rounded-xl py-2.5"} flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]`}
                   >
                     {modalTab === "summary" ? (
                       <><Layers className="w-4 h-4" /> Ver Detalles Completos</>
@@ -1598,7 +1601,7 @@ export function ModDetailsSheet({
                         categories: selectedMod.categories || selectedModDetails?.categories || [],
                         ...(selectedModDetails?.game_versions ? { game_versions: selectedModDetails.game_versions } : {}),
                       } as ModHit)}
-                      className="shrink-0 px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                      className={`shrink-0 ${isReadingTab ? "px-2.5 py-2 rounded-lg text-[10px]" : "px-3 py-2.5 rounded-xl text-[11px]"} font-bold flex items-center gap-1.5 transition-all active:scale-95`}
                       style={{
                         background: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
                         border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)",

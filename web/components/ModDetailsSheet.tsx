@@ -10,6 +10,9 @@ import type { ModHit } from "./SpotlightMarquees";
 import { playFomoSound, getSoundSettings, setSoundMuted } from "../lib/sounds";
 import { supabase } from "../lib/supabaseClient";
 import { markdownToHtml, formatCurseForgeHtml } from "../lib/markdown";
+import { DEPENDENCY_GROUPS, normalizeDependencyKind, type DependencyKind } from "../lib/dependencies";
+import { encodeShareMeta, readSharePriority } from "../lib/shareMeta";
+import { environmentSideLabel, environmentToneClass, interpretModEnvironment } from "../lib/projectEnvironment";
 
 interface ModDetailsSheetProps {
   selectedMod: ModHit | null;
@@ -53,12 +56,6 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-function safeUrl(value: string) {
-  const url = value.trim();
-  if (/^(https?:|data:image\/)/i.test(url)) return url.replace(/"/g, "&quot;");
-  return "";
-}
-
 function stripHtml(value: string) {
   return value
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, " ")
@@ -95,41 +92,6 @@ function textForTranslation(value: string) {
     .join("\n")
     .replace(/\n{4,}/g, "\n\n\n")
     .trim();
-}
-
-function renderIframe(src: string) {
-  const url = safeUrl(src);
-  if (!url || !/(youtube\.com|youtube-nocookie\.com|youtu\.be)/i.test(url)) return "";
-  return `<div class="mim-rich-embed"><iframe src="${url}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>`;
-}
-
-function richDescriptionHtml(body: string) {
-  if (!body) return "";
- 
-  let html = body
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<iframe\b[^>]*src=["']([^"']+)["'][\s\S]*?<\/iframe>/gi, (_m, src) => renderIframe(src))
-    .replace(/\son\w+=["'][^"']*["']/gi, "")
-    .replace(/\s(href|src)=["']\s*javascript:[^"']*["']/gi, ' $1="#"')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, src) => {
-      const url = safeUrl(src);
-      return url ? `<img src="${url}" alt="${escapeHtml(alt)}" loading="lazy" />` : "";
-    })
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, label, href) => {
-      const url = safeUrl(href);
-      return url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>` : escapeHtml(label);
-    })
-    .replace(/^####\s+(.+)$/gm, "<h4>$1</h4>")
-    .replace(/^###\s+(.+)$/gm, "<h3>$1</h3>")
-    .replace(/^##\s+(.+)$/gm, "<h2>$1</h2>")
-    .replace(/^#\s+(.+)$/gm, "<h2>$1</h2>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/<br\s*\/?>/gi, "\n");
-
-  html = html.replace(/\n{3,}/g, "\n\n").replace(/\n/g, "<br />");
-  return html;
 }
 
 function renderBodyText(body: string, source = "modrinth") {
@@ -251,48 +213,6 @@ function getBannerFallbackStyle(
   return { bannerBgColor, fallbackTexture };
 }
 
-type CommunityProjectType =
-  | "mod"
-  | "textura"
-  | "shader"
-  | "datapack"
-  | "modpack"
-  | "autor";
-
-interface CommunityShareMeta {
-  gameVersion?: string;
-  modloader?: string;
-  projectType?: CommunityProjectType;
-  priority?: boolean;
-}
-
-const META_RE = /<!--mim:([\s\S]*?)-->/;
-
-function encodeShareMeta(
-  summary: string,
-  meta: CommunityShareMeta
-): string {
-  const clean = stripShareMeta(summary);
-  const payload = JSON.stringify(meta);
-  return clean ? `${clean} <!--mim:${payload}-->` : `<!--mim:${payload}-->`;
-}
-
-function stripShareMeta(summary?: string | null): string {
-  if (!summary) return "";
-  return summary.replace(META_RE, "").trim();
-}
-
-function readSharePriority(summary?: string | null) {
-  const value = String(summary || "").trim();
-  try {
-    if (value.startsWith("{")) return !!JSON.parse(value).priority;
-    const match = value.match(META_RE);
-    return match?.[1] ? !!JSON.parse(match[1]).priority : false;
-  } catch {
-    return false;
-  }
-}
-
 function releaseGlobalSheetLocks() {
   if (typeof document === "undefined") return;
   document.body.style.overflow = "";
@@ -302,171 +222,6 @@ function releaseGlobalSheetLocks() {
   document.documentElement.style.pointerEvents = "";
   document.documentElement.style.touchAction = "";
 }
-
-type EnvironmentSide = "required" | "optional" | "unsupported" | "unknown";
-
-function normalizeEnvironmentSide(value?: string | null): EnvironmentSide {
-  const side = String(value || "").toLowerCase();
-  if (side === "required" || side === "optional" || side === "unsupported") return side;
-  return "unknown";
-}
-
-function environmentSideLabel(value: EnvironmentSide) {
-  if (value === "required") return "Requerido";
-  if (value === "optional") return "Opcional";
-  if (value === "unsupported") return "No soportado";
-  return "Desconocido";
-}
-
-function interpretModEnvironment(clientValue?: string | null, serverValue?: string | null) {
-  const client = normalizeEnvironmentSide(clientValue);
-  const server = normalizeEnvironmentSide(serverValue);
-  const clientSupported = client === "required" || client === "optional";
-  const serverSupported = server === "required" || server === "optional";
-
-  if (client === "unsupported" && server === "unsupported") {
-    return {
-      label: "No compatible",
-      description: "El proyecto declara que no corre ni en cliente ni en servidor.",
-      tone: "danger",
-      client,
-      server,
-    };
-  }
-
-  if (clientSupported && server === "unsupported") {
-    return {
-      label: client === "required" ? "Solo cliente" : "Cliente opcional",
-      description: client === "required"
-        ? "Instalalo en el cliente. No va en servidores dedicados."
-        : "Puede ir en cliente si queres esa funcion, pero no va en servidor.",
-      tone: "client",
-      client,
-      server,
-    };
-  }
-
-  if (serverSupported && client === "unsupported") {
-    return {
-      label: server === "required" ? "Solo servidor" : "Servidor opcional",
-      description: server === "required"
-        ? "Instalalo en el servidor. El cliente no lo necesita."
-        : "Puede ir en servidor si queres esa funcion, pero no va en cliente.",
-      tone: "server",
-      client,
-      server,
-    };
-  }
-
-  if (client === "required" && server === "required") {
-    return {
-      label: "Cliente y servidor",
-      description: "Debe estar instalado en ambos lados para funcionar correctamente.",
-      tone: "both",
-      client,
-      server,
-    };
-  }
-
-  if (client === "optional" && server === "optional") {
-    return {
-      label: "Opcional en ambos",
-      description: "Puede estar en cliente, servidor o ambos segun el uso del pack.",
-      tone: "optional",
-      client,
-      server,
-    };
-  }
-
-  if (client === "required" && server === "optional") {
-    return {
-      label: "Cliente requerido",
-      description: "Debe estar en el cliente; en servidor es opcional.",
-      tone: "client",
-      client,
-      server,
-    };
-  }
-
-  if (client === "optional" && server === "required") {
-    return {
-      label: "Servidor requerido",
-      description: "Debe estar en el servidor; en cliente es opcional.",
-      tone: "server",
-      client,
-      server,
-    };
-  }
-
-  if (clientSupported || serverSupported) {
-    return {
-      label: clientSupported ? "Cliente declarado" : "Servidor declarado",
-      description: "El otro entorno no esta declarado por la fuente. Revisalo antes de armar el pack.",
-      tone: clientSupported ? "client" : "server",
-      client,
-      server,
-    };
-  }
-
-  return {
-    label: "Entorno no declarado",
-    description: "La fuente no informa claramente donde debe instalarse.",
-    tone: "unknown",
-    client,
-    server,
-  };
-}
-
-function environmentToneClass(tone: string) {
-  if (tone === "client") return "border-sky-500/20 bg-sky-500/10 text-sky-200";
-  if (tone === "server") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
-  if (tone === "both") return "border-orange-500/25 bg-orange-500/10 text-orange-200";
-  if (tone === "optional") return "border-purple-500/20 bg-purple-500/10 text-purple-200";
-  if (tone === "danger") return "border-red-500/25 bg-red-500/10 text-red-200";
-  return "border-white/[0.08] bg-white/[0.04] text-white/65";
-}
-
-type DependencyKind = "required" | "optional" | "incompatible" | "embedded";
-
-function normalizeDependencyKind(dep: any): DependencyKind {
-  const raw = String(dep?.dependency_type || dep?.dependencyType || dep?.relationType || "").toLowerCase();
-  if (raw === "required" || raw === "requireddependency" || raw === "3") return "required";
-  if (raw === "optional" || raw === "optionaldependency" || raw === "2") return "optional";
-  if (raw === "incompatible" || raw === "incompatibility" || raw === "5") return "incompatible";
-  return "embedded";
-}
-
-const DEPENDENCY_GROUPS: Record<DependencyKind, {
-  title: string;
-  empty: string;
-  badge: string;
-  className: string;
-}> = {
-  required: {
-    title: "Obligatorias",
-    empty: "No hay dependencias obligatorias.",
-    badge: "Requerida",
-    className: "border-orange-500/20 bg-orange-500/10 text-orange-300",
-  },
-  optional: {
-    title: "Opcionales",
-    empty: "No hay dependencias opcionales.",
-    badge: "Opcional",
-    className: "border-sky-500/20 bg-sky-500/10 text-sky-300",
-  },
-  incompatible: {
-    title: "Incompatibilidades",
-    empty: "No se declararon incompatibilidades.",
-    badge: "Incompatible",
-    className: "border-red-500/25 bg-red-500/10 text-red-300",
-  },
-  embedded: {
-    title: "Otras relaciones",
-    empty: "No hay otras relaciones.",
-    badge: "Relación",
-    className: "border-white/[0.08] bg-white/[0.05] text-white/45",
-  },
-};
 
 const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"] as const;
 const VERSION_PLATFORM_LABELS: Record<string, string> = {
@@ -618,7 +373,7 @@ function inferTypeFromModHit(mod: {
   url?: string;
   slug?: string;
   title?: string;
-}): CommunityProjectType {
+}): string {
   const cats = (mod.categories || []).map((c) =>
     typeof c === "string" ? c.toLowerCase() : ""
   );
@@ -709,9 +464,9 @@ export function ModDetailsSheet({
   const isSheetOpen = !!selectedMod;
   const sheetTargetHeight =
     modalTab === "deps"
-      ? selectedModDeps?.length > 0 ? "62vh" : "46vh"
+      ? selectedModDeps?.length > 0 ? "82vh" : "58vh"
       : modalTab === "versions"
-        ? "78vh"
+        ? "88vh"
         : modalTab === "gallery"
           ? "76vh"
           : modalTab === "desc"
@@ -1632,7 +1387,7 @@ export function ModDetailsSheet({
                                     </div>
                                   </div>
                                 )}
-                                <div className="max-h-64 overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
+                                <div className="max-h-[54vh] overflow-y-auto rounded-xl border border-white/[0.06] scrollbar-none">
                                   {filteredVersionRows.length > 0 ? filteredVersionRows.map((version) => {
                                     const isExpanded = expandedVersionId === version.id;
                                     const loadedChangelog = version.changelog || versionChangelogs[version.id] || "";
@@ -1753,7 +1508,7 @@ export function ModDetailsSheet({
                         ) : selectedModDeps?.length > 0 ? (
                           <div className="flex flex-col gap-2">
                             <span className="text-[10px] text-white/30 uppercase font-mono tracking-wider block font-semibold">Dependencias ({selectedModDeps.length})</span>
-                            <div className="flex flex-col gap-3 max-h-56 overflow-y-auto pr-1 scrollbar-none">
+                            <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1 scrollbar-none">
                               {visibleDependencyKinds.map((kind) => {
                                 const group = DEPENDENCY_GROUPS[kind];
                                 return (

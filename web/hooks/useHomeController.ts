@@ -6,6 +6,9 @@ import type { DraftAddResult } from "../components/DraftPickerModal";
 import { mockNewestMods, mockUpdatedMods } from "../lib/mockData";
 import { supabase } from "../lib/supabaseClient";
 import type { CollectionItem } from "../app/types";
+import { attachDependencyTypes, buildDependencyTypeMap } from "../lib/dependencies";
+import { inferSide, normalizeContentType, normalizeLoader } from "../lib/projectTypes";
+import { fetchUserShares, isFavoritePlatformConstraintError, sortSharesByPriority } from "../lib/shareMeta";
 
 export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -68,97 +71,6 @@ const DEFAULT_CHANNELS = [
 ];
 const COLLECTIONS_CACHE_KEY = "mim_collections_payload_v1";
 const COLLECTIONS_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
-const SHARE_META_PATTERN = /<!--mim:([\s\S]*?)-->/;
-
-function getShareSummaryPriority(summary: string | null | undefined) {
-  const value = String(summary || "").trim();
-  try {
-    if (value.startsWith("{")) return !!JSON.parse(value).priority;
-    const match = value.match(SHARE_META_PATTERN);
-    return match?.[1] ? !!JSON.parse(match[1]).priority : false;
-  } catch {
-    return false;
-  }
-}
-
-function isMissingPinnedColumnError(error: any) {
-  const message = String(error?.message || error?.details || "");
-  return error?.code === "42703" || error?.code === "PGRST204" || /\bpinned\b/i.test(message);
-}
-
-function isFavoritePlatformConstraintError(error: any) {
-  const message = String(error?.message || error?.details || "");
-  return error?.code === "23514" && /favorite_mods_platform_check|platform/i.test(message);
-}
-
-function isSharePinned(share: any) {
-  if (share?.pinned === true) return true;
-  if (share?.pinned === false) return false;
-  return getShareSummaryPriority(share?.summary);
-}
-
-function sortSharesByPriority(shares: any[]) {
-  return [...shares].sort((a, b) => {
-    const priorityOrder = Number(isSharePinned(b)) - Number(isSharePinned(a));
-    if (priorityOrder) return priorityOrder;
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-  });
-}
-
-function dependencyTypeRank(type?: string) {
-  if (type === "required") return 4;
-  if (type === "incompatible") return 3;
-  if (type === "optional") return 2;
-  return 1;
-}
-
-function buildDependencyTypeMap(versions: any[]) {
-  const map = new Map<string, string>();
-  versions.forEach((version) => {
-    (version.dependencies || []).forEach((dependency: any) => {
-      const projectId = dependency.project_id || dependency.projectId;
-      const type = dependency.dependency_type || dependency.dependencyType || "required";
-      if (!projectId) return;
-      const current = map.get(projectId);
-      if (!current || dependencyTypeRank(type) > dependencyTypeRank(current)) {
-        map.set(projectId, type);
-      }
-    });
-  });
-  return map;
-}
-
-function attachDependencyTypes(projects: any[], typeMap: Map<string, string>) {
-  return projects.map((project) => {
-    const projectId = project.id || project.project_id || project.projectId;
-    return {
-      ...project,
-      project_id: projectId,
-      dependency_type: typeMap.get(projectId) || project.dependency_type || "required",
-    };
-  });
-}
-
-async function fetchUserShares(userId: string) {
-  const withPinned = await supabase
-    .from("favorite_mods")
-    .select("*")
-    .eq("profile_id", userId)
-    .order("pinned", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
-
-  if (!withPinned.error) return sortSharesByPriority(withPinned.data || []);
-  if (!isMissingPinnedColumnError(withPinned.error)) throw withPinned.error;
-
-  const fallback = await supabase
-    .from("favorite_mods")
-    .select("*")
-    .eq("profile_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (fallback.error) throw fallback.error;
-  return sortSharesByPriority(fallback.data || []);
-}
 
 const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
   {
@@ -213,33 +125,6 @@ function normalizeFavorite(fav: any): ModHit {
     url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
     _source: fav.platform || fav.source || "modrinth",
   };
-}
-
-function normalizeContentType(mod: ModHit | any): string {
-  const raw = String(mod.projectType || mod.project_type || mod.content_type || "mod").toLowerCase();
-  if (raw === "resourcepack" || raw === "resource-pack" || raw === "texture" || raw === "texture-pack") return "resourcepack";
-  if (raw === "shader" || raw === "shaderpack") return "shader";
-  if (raw === "datapack" || raw === "data-pack") return "datapack";
-  return "mod";
-}
-
-function inferSide(contentType: string, details?: any): "client" | "server" | "both" {
-  if (contentType === "resourcepack" || contentType === "shader") return "client";
-  if (contentType === "datapack") return "server";
-  const client = details?.client_side;
-  const server = details?.server_side;
-  if (client === "required" && server !== "required") return "client";
-  if (server === "required" && client !== "required") return "server";
-  return "both";
-}
-
-function normalizeLoader(loader: string) {
-  const l = loader.toLowerCase();
-  if (l === "neoforge") return "neoforge";
-  if (l === "quilt") return "quilt";
-  if (l === "fabric") return "fabric";
-  if (l === "any" || l === "all") return "";
-  return "forge";
 }
 
 function parseStringArrayCache(value: string | null): string[] | null {

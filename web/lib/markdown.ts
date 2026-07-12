@@ -21,7 +21,94 @@ function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttribute(input: string): string {
+  return input.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function isSafeUrl(value: string): boolean {
+  const cleaned = value.trim().replace(/&amp;/g, "&");
+  return /^(https?:|mailto:|data:image\/|#|\/)/i.test(cleaned);
+}
+
+const ALLOWED_TAGS = new Set([
+  "a",
+  "b",
+  "blockquote",
+  "br",
+  "code",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "i",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "span",
+  "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+]);
+
+const GLOBAL_ATTRS = new Set(["class", "data-external-link"]);
+const TAG_ATTRS: Record<string, Set<string>> = {
+  a: new Set(["href", "target", "rel", "title"]),
+  img: new Set(["src", "alt", "loading", "title"]),
+  td: new Set(["colspan", "rowspan"]),
+  th: new Set(["colspan", "rowspan"]),
+};
+
+export function sanitizeHtml(input: string): string {
+  if (!input) return "";
+
+  return input
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<\/?([a-z][a-z0-9-]*)(\s[^<>]*)?>/gi, (match, tagName, rawAttrs = "") => {
+      const tag = String(tagName).toLowerCase();
+      if (!ALLOWED_TAGS.has(tag)) return "";
+      if (match.startsWith("</")) return `</${tag}>`;
+
+      const allowedAttrs = TAG_ATTRS[tag] || new Set<string>();
+      const attrs: string[] = [];
+      String(rawAttrs).replace(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g, (_m, rawName, quoted, singleQuoted, bare) => {
+        const name = String(rawName).toLowerCase();
+        const value = String(quoted ?? singleQuoted ?? bare ?? "");
+        if (name.startsWith("on")) return "";
+        if (!GLOBAL_ATTRS.has(name) && !allowedAttrs.has(name)) return "";
+        if ((name === "href" || name === "src") && !isSafeUrl(value)) return "";
+        attrs.push(`${name}="${escapeAttribute(value)}"`);
+        return "";
+      });
+
+      if (tag === "a") {
+        if (!attrs.some((attr) => attr.startsWith("target="))) attrs.push('target="_blank"');
+        if (!attrs.some((attr) => attr.startsWith("rel="))) attrs.push('rel="noopener noreferrer"');
+      }
+      if (tag === "img" && !attrs.some((attr) => attr.startsWith("loading="))) {
+        attrs.push('loading="lazy"');
+      }
+
+      return `<${tag}${attrs.length ? ` ${attrs.join(" ")}` : ""}>`;
+    });
 }
 
 function normalizeRichText(input: string, defaultDomain = "https://modrinth.com"): string {
@@ -150,10 +237,10 @@ export function markdownToHtml(md: string): string {
     html = html.replace(`@@@MIMHTML${index}@@@`, block);
   });
 
-  return html
+  return sanitizeHtml(html
     .replace(/<ul class="space-y-1 my-3">(<ul class="space-y-1 my-3">)+/g, '<ul class="space-y-1 my-3">')
     .replace(/(<\/ul>)+/g, "</ul>")
-    .replace(/@@@MIMHTML\d+@@@/g, "");
+    .replace(/@@@MIMHTML\d+@@@/g, ""));
 }
 
 /**
@@ -212,5 +299,5 @@ export function formatCurseForgeHtml(html: string): string {
     return `<img ${cleanAttrs}>`;
   });
 
-  return formatted;
+  return sanitizeHtml(formatted);
 }

@@ -74,20 +74,23 @@ CREATE TABLE IF NOT EXISTS public.favorite_mods (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     profile_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     mod_id text NOT NULL,
-    platform text NOT NULL CHECK (platform IN ('modrinth', 'curseforge')),
+    platform text NOT NULL CHECK (platform IN ('modrinth', 'curseforge', 'youtube')),
     name text NOT NULL,
     icon_url text,
     summary text,
+    pinned boolean DEFAULT false NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     UNIQUE (profile_id, mod_id, platform)
 );
 
 CREATE INDEX IF NOT EXISTS idx_favorite_mods_profile_id ON public.favorite_mods (profile_id);
 CREATE INDEX IF NOT EXISTS idx_favorite_mods_created_at ON public.favorite_mods (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_favorite_mods_pinned_created_at ON public.favorite_mods (pinned DESC, created_at DESC);
 
 ALTER TABLE public.favorite_mods ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Lectura pública de favoritos" ON public.favorite_mods FOR SELECT USING (true);
 CREATE POLICY "Insertar favoritos propios" ON public.favorite_mods FOR INSERT WITH CHECK (auth.uid() = profile_id);
+CREATE POLICY "Actualizar favoritos propios" ON public.favorite_mods FOR UPDATE USING (auth.uid() = profile_id) WITH CHECK (auth.uid() = profile_id);
 CREATE POLICY "Eliminar favoritos propios" ON public.favorite_mods FOR DELETE USING (auth.uid() = profile_id);
 
 

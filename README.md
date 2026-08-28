@@ -210,6 +210,7 @@ D:\.mine\
 | **API** | Modrinth, CurseForge, VirusTotal | [API.md](./docs/API.md) |
 | **ARQUITECTURA** | Diseño técnico completo | [MIM.md](./docs/MIM.md) |
 | **FOMO CLOUD** | Plataforma comunitaria | [FOMO_CLOUD.md](./docs/FOMO_CLOUD.md) |
+| **FOMO WEB HARDENING** | Reglas de mantenimiento, Supabase y pruebas críticas | [WEB_HARDENING.md](./docs/WEB_HARDENING.md) |
 
 ---
 

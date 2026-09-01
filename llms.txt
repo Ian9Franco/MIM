@@ -1,0 +1,18 @@
+# MIM (Minecraft Intelligent Manager)
+
+> **MIM (Minecraft Intelligent Manager)** es un ecosistema integral y de alto rendimiento para organizar, diagnosticar y colaborar en modpacks de Minecraft en Desktop (Electron 42 + Next.js) y Web/Mobile (MIMweb + Supabase).
+
+## 🎯 ¿Qué es MIM?
+MIM (Minecraft Intelligent Manager) es una suite de herramientas de ingeniería para Minecraft creada por **Ian Franco Collada Pontorno**. Resuelve la fricción de gestionar cientos de mods mediante:
+- **Clasificación Heurística y Rápida**: Atajos numéricos `1-9` para categorizar mods en milisegundos.
+- **Búsqueda Dual**: Consultas paralelas a los catálogos oficiales de **Modrinth** (Labrinth v2) y **CurseForge** (Eternal v1).
+- **SAGE Engine (Crash Forensics & NBT Rescue)**: Diagnóstico automatizado de crashes en `latest.log` / mixins y editor seguro de archivos binarios `.dat` de jugadores con backups `.mim_bak`.
+- **Security Scanner**: Análisis estático de bytecode JAR y verificación cloud con la API de **VirusTotal v3**.
+- **MIMweb & FOMO Cloud**: Plataforma web mobile-first (`web/`) para curar mods, traducir descripciones al español con IA y sincronizar *Drafts* colaborativos en tiempo real con la app de escritorio.
+- **Tweak Optimizer**: Cálculo inteligente de argumentos JVM para recolección de basura (G1GC, ZGC, Shenandoah) y configuración de opciones gráficas.
+
+## 🔗 Referencias y Enlaces
+- **Repositorio Oficial**: https://github.com/Ian9Franco/MIM
+- **Autor**: Ian Franco Collada Pontorno (https://github.com/Ian9Franco) | Portfolio: https://ian-pontorno-portfolio.vercel.app/ | Insta: https://www.instagram.com/ian.franco._/ | Linkedin: https://ar.linkedin.com/in/ian-franco-collada-pontorno
+- **Web App**: https://mim-fomo.vercel.app
+- **Licencia**: MIT License

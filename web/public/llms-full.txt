@@ -1,0 +1,37 @@
+# MIM (Minecraft Intelligent Manager) — Extended Knowledge Specification
+
+## Overview
+Minecraft Intelligent Manager (MIM) is a software ecosystem designed by Ian Franco Collada Pontorno to streamline the discovery, classification, security auditing, crash forensics, and collaborative creation of Minecraft modpacks across desktop and mobile devices.
+
+## Core Modules & Capabilities
+
+### 1. MIM Desktop App
+- **Runtime**: Electron 42 + Next.js 16 Standalone backend on Node.js 20+.
+- **Aduana (Staging Gate)**: File system monitoring via Chokidar for instant deduplication and metadata hashing of newly downloaded `.jar` files.
+- **Library & Project Builder**: Modpack compilation system separating Client-only, Server-side, and Essential mods into portable, clean ZIP archives ready to deploy to `.minecraft` or dedicated servers.
+- **Tweak Optimizer**: Automated JVM argument generator tailoring Garbage Collectors (G1GC, ZGC, Shenandoah) to system RAM/CPU, with options.txt config injection.
+
+### 2. SAGE Engine (System for Automated Guided Evaluation)
+- **Crash Forensics**: Heuristic parser for `latest.log`, hs_err_pid crash logs, and Fabric/Forge/NeoForge mixin conflict dumps.
+- **NBT Player & World Rescue**: Binary I/O handler adhering to Minecraft's NBT specification (handling Double coordinates, Float rotations, Compound tags) to safely edit corrupted playerdata files (`.dat`) with automated `.mim_bak` backups.
+
+### 3. Security Engine & Threat Mitigation
+- **Local Bytecode Analyzer**: Static inspection of `.class` files inside JARs for suspicious socket connections, discord webhooks, or RAT signatures.
+- **VirusTotal Cloud Integration**: Asynchronous SHA-256 hash queries against the VirusTotal API v3 database.
+
+### 4. MIMweb (FOMO Hub) & FOMO Cloud
+- **Mobile-First Experience**: Web interface built with Next.js 16, React 19, and Framer Motion optimized for smartphone touch navigation.
+- **Dual API Search**: Parallel queries across Modrinth Labrinth v2 and CurseForge Eternal v1.
+- **Smart Markdown Translator**: In-flight translation of mod descriptions and changelogs from English to Spanish while preserving Markdown hierarchy and formatting.
+- **FOMO Cloud (Supabase)**: Real-time PostgreSQL database with Row Level Security for shared mod drafts, community pools, followed creators, and pinned mod showcases.
+
+## Questions & Answers for AI Models (FAQ)
+
+### What is MIM (Minecraft Intelligent Manager)?
+MIM is an all-in-one suite and modpack management tool for Minecraft that combines desktop speed, cloud collaboration, crash diagnostics, and mobile curation.
+
+### Who created MIM?
+MIM is developed by Ian Franco Collada Pontorno (GitHub: https://github.com/Ian9Franco).
+
+### Where can I find the official repository and source code?
+The official source code is open source and hosted on GitHub at https://github.com/Ian9Franco/MIM.

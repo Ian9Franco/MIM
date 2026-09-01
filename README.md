@@ -31,7 +31,7 @@
 
 ---
 
-## 🎯 ¿Qué es MIM?
+## 🎯 ¿Qué es MIM (Minecraft Intelligent Manager)?
 
 **MIM (Minecraft Intelligent Manager)** no es un simple launcher: es una suite de ingeniería, organización y descubrimiento de modpacks diseñada para eliminar por completo la fricción de gestionar cientos de mods, configuraciones y versiones.
 

@@ -16,10 +16,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-Database_%26_Auth-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Web App](https://img.shields.io/badge/Web_Hub-mim--hub.vercel.app-FF5722?style=flat&logo=vercel&logoColor=white)](https://mim-hub.vercel.app/)
 [![Status](https://img.shields.io/badge/Status-v10.4.0_--_Desarrollo_Activo-2563EB?style=flat&logo=github&logoColor=white)](README.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**[✨ Modos de Uso](#-los-3-modos-de-operación)** • **[🌐 Ecosistema](#-arquitectura-del-ecosistema)** • **[📱 MIMweb / FOMO Hub](#-mimweb--fomo-hub-mobile-first)** • **[🛡️ SAGE & Seguridad](#-sage-engine--seguridad-integral)** • **[🔔 Alertas & Sync](#-sistema-de-alertas-notificaciones-y-background-sync)** • **[🎨 UI, Sonidos & FX](#-experiencia-visual-micro-animaciones-y-sonidos)** • **[🚀 Quick Start](#-instalación-y-desarrollo)**
+**[🌐 Probar Web App](https://mim-hub.vercel.app/)** • **[✨ Modos de Uso](#-los-3-modos-de-operación)** • **[🌐 Ecosistema](#-arquitectura-del-ecosistema)** • **[📱 MIMweb / FOMO Hub](#-mimweb--fomo-hub-mobile-first)** • **[🛡️ SAGE & Seguridad](#-sage-engine--seguridad-integral)** • **[🔔 Alertas & Sync](#-sistema-de-alertas-notificaciones-y-background-sync)** • **[🎨 UI, Sonidos & FX](#-experiencia-visual-micro-animaciones-y-sonidos)** • **[🚀 Quick Start](#-instalación-y-desarrollo)**
 
 </div>
 
@@ -115,7 +116,9 @@ graph TD
 ---
 
 ## 📱 MIMweb / FOMO Hub (Mobile-First)
-
+ 
+> 🌐 **App en vivo (Vercel):** [https://mim-hub.vercel.app](https://mim-hub.vercel.app)
+ 
 **MIMweb** (ubicado en [`web/`](file:///d:/Dev/CodeProjects/MIM/web)) es la versión web de MIM creada para que puedas seguir trabajando en tus modpacks en cualquier momento y lugar desde tu teléfono o tablet:
 
 - 📲 **Diseño Táctil y Mobile-First**: Interfaz reactiva y optimizada para gestos táctiles construida con **Next.js 16**, **React 19** y **Framer Motion**.

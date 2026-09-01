@@ -1,22 +1,23 @@
-# MIM — Minecraft Intelligent Manager
+# MIM (Minecraft Intelligent Manager)
 
-> **MIM (Minecraft Intelligent Manager)** es un ecosistema y gestor integral de modpacks para Minecraft, compuesto por una aplicación de escritorio de alto rendimiento (Electron + Next.js), una aplicación web móvil complementaria (**MIMweb / FOMO Hub**) y una plataforma comunitaria en la nube (**FOMO Cloud** con Supabase).
+> **MIM (Minecraft Intelligent Manager)** es un ecosistema integral y gestor de modpacks de alto rendimiento para Minecraft, compuesto por una aplicación de escritorio nativa (**MIM Desktop** en Electron 42 + Next.js), una aplicación web móvil complementaria (**MIMweb / FOMO Hub**) y una plataforma comunitaria en la nube (**FOMO Cloud** con Supabase).
 
 ## 🎯 ¿Qué es MIM?
 MIM resuelve la complejidad y fricción de gestionar cientos de mods en Minecraft. Proporciona herramientas automatizadas para:
-1. **Clasificación y Organización Rápida**: Categorización de archivos `.jar` en milisegundos con hotkeys `1-9` o clasificación heurística automática.
+
+1. **Clasificación Rápida y Heurística**: Categoriza archivos `.jar` en milisegundos con hotkeys numéricos `1-9` o clasificación heurística automática por loader y entorno.
 2. **Búsqueda Dual Simultánea**: Consulta en paralelo los catálogos oficiales de **Modrinth** (Labrinth v2) y **CurseForge** (Eternal v1).
-3. **Diagnóstico y Rescate Forense (SAGE Engine)**:
-   - Análisis heurístico de logs de crasheos (`latest.log`, `crash-reports`) para Forge, Fabric, NeoForge y Quilt.
-   - Editor visual e interactivo de archivos NBT (`playerdata/*.dat`, `level.dat`) para rescatar jugadores atrapados o mundos con datos corruptos.
-4. **Seguridad y Detección de Amenazas**:
-   - Escáner estático de bytecode JAR para detectar llamadas sospechosas o malware.
-   - Verificación en la nube de hashes SHA-256 a través de la API de **VirusTotal v3**.
+3. **Diagnóstico Forense y Rescate (SAGE Engine)**:
+   - Análisis heurístico de logs de crasheos (`latest.log`, `crash-reports`, Mixin conflicts) para Forge, Fabric, NeoForge y Quilt.
+   - Editor visual de datos binarios NBT (`playerdata/*.dat`, `level.dat`) para rescatar jugadores atrapados o mundos corruptos con backups automáticos `.mim_bak`.
+4. **Seguridad y Mitigación de Amenazas**:
+   - Escáner estático de bytecode JAR para detectar scripts ofuscados, webhooks o malware.
+   - Verificación en segundo plano de hashes SHA-256 con la API de **VirusTotal v3**.
 5. **Curación Móvil y Colaboración (MIMweb / FOMO Cloud)**:
-   - Diseñada para teléfonos y tablets (`web/`), permitiendo buscar mods, traducir descripciones al español, crear borradores (*Drafts*) de modpacks con amigos y sincronizar directamente con la PC.
+   - Web app responsive mobile-first para buscar mods, traducir descripciones al español en tiempo real, crear *Drafts* colaborativos y sincronizar en 1 clic con la app de escritorio.
 6. **Optimizador de Rendimiento (Tweak)**:
-   - Asignación inteligente de memoria RAM y flags de Garbage Collection para Java (G1GC, ZGC, Shenandoah).
-   - Gestor de shaders y overrides para resource packs incompatibles.
+   - Asignación inteligente de RAM y flags de Garbage Collection para Java (G1GC, ZGC, Shenandoah).
+   - Gestor de shaders y compatibilidad forzada de resource packs en `options.txt`.
 
 ## 🛠️ Tecnologías y Arquitectura
 - **Desktop**: Electron 42, Next.js 16, React 19, Tailwind CSS v4, Chokidar.
@@ -24,7 +25,12 @@ MIM resuelve la complejidad y fricción de gestionar cientos de mods en Minecraf
 - **Cloud & DB**: Supabase (PostgreSQL con Row Level Security), IndexedDB local.
 - **APIs**: Modrinth Labrinth API, CurseForge Eternal API, VirusTotal API v3.
 
-## 🔗 Enlaces Oficiales
+## 🔗 Enlaces y Contacto Oficial
+- **Web App (Live)**: https://mim-hub.vercel.app
 - **Repositorio GitHub**: https://github.com/Ian9Franco/MIM
-- **Autor**: Ian Franco Collada Pontorno (https://github.com/Ian9Franco)
+- **Autor**: [Ian Franco Collada Pontorno](https://github.com/Ian9Franco)
+- **Portfolio**: https://ian-pontorno-portfolio.vercel.app/
+- **LinkedIn**: https://ar.linkedin.com/in/ian-franco-collada-pontorno
+- **Instagram**: https://www.instagram.com/ian.franco._/
+- **Email**: ian9franco@gmail.com
 - **Licencia**: MIT License

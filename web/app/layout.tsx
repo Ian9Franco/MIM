@@ -14,7 +14,7 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://mim-fomo.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://mim-hub.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

@@ -8,6 +8,7 @@ import { useSmoothMarquee } from "../hooks/useSmoothMarquee";
 export interface ModHit {
   itemId?: string;
   projectId: string;
+  slug?: string;
   title: string;
   author: string;
   iconUrl?: string;

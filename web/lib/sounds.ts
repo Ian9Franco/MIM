@@ -1,15 +1,17 @@
 "use client";
 
-type FomoSoundKind = "on" | "off";
+export type FomoSoundKind = "on" | "off" | "pop" | "sparkle";
 
 const SOUND_CONFIG: Record<FomoSoundKind, { src: string; volume: number }> = {
   on: { src: "/fomo_sound.mp3", volume: 0.01 },
   off: { src: "/fomoff.mp3", volume: 0.008 },
+  pop: { src: "/fomo_sound.mp3", volume: 0.01 },
+  sparkle: { src: "/fomo_sound.mp3", volume: 0.012 },
 };
 
 const POOL_SIZE = 3;
 let pools: Partial<Record<FomoSoundKind, HTMLAudioElement[]>> = {};
-let poolCursor: Record<FomoSoundKind, number> = { on: 0, off: 0 };
+let poolCursor: Record<FomoSoundKind, number> = { on: 0, off: 0, pop: 0, sparkle: 0 };
 let preloadStarted = false;
 let unlockStarted = false;
 
@@ -107,7 +109,7 @@ export function setSoundVolume(volume: number) {
   } catch {}
 }
 
-export function playFomoSound(kind: "on" | "off" = "on") {
+export function playFomoSound(kind: FomoSoundKind = "on") {
   if (typeof window === "undefined") return;
 
   const settings = getSoundSettings();

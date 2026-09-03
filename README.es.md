@@ -209,6 +209,16 @@ Cliente Desktop (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ 
 
 > Documentación de sistemas distribuidos en [docs/DISTRIBUTED_ARCHITECTURE.md](./docs/DISTRIBUTED_ARCHITECTURE.md).
 
+#### 🤖 MIM-Bot — Explicador Multimodal On-Demand & Asistente AI Bully
+*Síntesis contextual de proyectos on-demand, evidencia visual en capturas y mini-chat interactivo.*
+- **Inspección Visual Multimodal:** Analiza de 3 a 5 capturas de pantalla oficiales junto a Google Search Grounding para descifrar mods, shaders y texturas sin descripción.
+- **Personalidad Bully Gamer:** Proporciona un tono ácido, directo y humorístico que descansa tostadoras y preguntas novatas, garantizando al mismo tiempo **100% de precisión técnica** sobre loaders, dependencias y mecánicas.
+- **Mini-Chat Interactivo por Proyecto:** Sub-panel conversacional (`chatWithProjectAssistant`) para despejar dudas sobre recetas, compatibilidad y configuración directamente en el panel del mod.
+- **Identidad Visual Slime Animada:** Integra el icono animado de MIM (`/icon.png` con `.animate-slime`) en botones pill, banners de análisis y burbujas de respuesta, retirando emojis genéricos.
+- **Cascada Resiliente y Fallback Local:** Degrada automáticamente entre Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash -> Motor Heurístico Local ante límites de cuota (HTTP 429).
+
+> Especificación completa en [docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md).
+
 ---
 
 ### MOTOR 04 — Análisis Estático de Amenazas en Bytecode Java

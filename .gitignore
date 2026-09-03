@@ -65,6 +65,11 @@ dist/
 
 
 curseforge_picks_cache.json
+*.cache.json
+*.mim_bak
+brain/
+/brain/
+**/scratch/
 
 # Web subproject ignores
 /web/node_modules/

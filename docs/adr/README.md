@@ -15,7 +15,9 @@ Each record follows the standard Michael Nygard format:
 
 | Identifier | Title | Domain / Engine | Status |
 |:---|:---|:---:|:---:|
-| **[ADR-001](./ADR-001-typed-event-bus.md)** | Reactive Typed Event Bus for Cross-Engine Communication and Fault Isolation | Core / Architecture | ✅ Accepted |
-| **[ADR-002](./ADR-002-content-addressed-caching.md)** | Content-Addressed Cryptographic Hashing and Two-Tier Cache for Mod Deduplication | Aduana Storage Engine | ✅ Accepted |
-| **[ADR-003](./ADR-003-deterministic-diagnostic-ai-boundary.md)** | Strict Architectural Boundary Between Deterministic Diagnostic Engine and AI Explanation Layer | SAGE 2.0 / AI Engine | ✅ Accepted |
-| **[ADR-004](./ADR-004-offline-first-lww-synchronization.md)** | Offline-First Synchronization with Last-Write-Wins and Client-Side Idempotency Queues | FOMO Cloud / Distributed | ✅ Accepted |
+| **[ADR-001](./ADR-001-deterministic-diagnosis-vs-llm.md)** | Why deterministic diagnosis instead of LLM diagnosis | SAGE 2.0 / AI Engine | ✅ Accepted |
+| **[ADR-002](./ADR-002-content-addressed-caching.md)** | Why content hashes are the source of truth for deduplication | Aduana Storage Engine | ✅ Accepted |
+| **[ADR-003](./ADR-003-offline-first-synchronization.md)** | Offline-first synchronization and conflict resolution | FOMO Cloud / Distributed | ✅ Accepted |
+| **[ADR-004](./ADR-004-atomic-writes-nbt-recovery.md)** | Atomic writes and snapshot backups for corrupted NBT recovery | NBT Rescue Engine | ✅ Accepted |
+| **[ADR-005](./ADR-005-static-bytecode-inspection-vs-execution.md)** | Static bytecode inspection instead of executing unknown JARs | Security Engine | ✅ Accepted |
+| **[ADR-006](./ADR-006-typed-event-bus.md)** | Reactive typed event bus for cross-engine fault isolation | Core Architecture | ✅ Accepted |

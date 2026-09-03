@@ -14,7 +14,7 @@
 | **Macro F1-Score** | **100.0%** | > 85.0% | ✅ Exceeded (100.0%) |
 | **Top-1 Culprit Diagnosis** | **84.0%** | > 80.0% | ✅ Exceeded (84.0%) |
 | **Top-3 Culprit Diagnosis** | **100.0%** | > 95.0% | ✅ Exceeded (100.0%) |
-| **Mean Inference Latency** | **0.06 ms** | < 15.0 ms | ⚡ Ultra-fast |
+| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ⚡ Ultra-fast |
 
 ---
 
@@ -50,6 +50,18 @@ In contrast to naive chatbot wrappers that prompt generic LLMs with entire 5,000
 1. **The Deterministic SAGE Engine** extracts evidence, calculates confidence, and identifies culprits with zero hallucination.
 2. **The LLM Explanation Layer** receives only verified, structured diagnostic facts to synthesize user-friendly explanations. The LLM is architecturally forbidden from diagnosing or overriding causes.
 
+### 4. Operational Boundaries & Non-Goals (What SAGE Does & Does NOT Do)
+
+| Capability | SAGE Architectural Stance | Technical Implementation |
+|:---|:---:|:---|
+| **Deterministic Crash Parsing** | ✅ DOES | Structural stackframe demangling, Mixin injection normalization, Java runtime fingerprinting. |
+| **Evidence-Backed Attribution** | ✅ DOES | Maps frame namespaces to mod packages; computes multi-factor evidence-based confidence (0–100%). |
+| **Offline Semantic Retrieval (RAG)** | ✅ DOES | Token-frequency and cosine similarity matching against curated compatibility database (`knowledgeBase.ts`). |
+| **Anti-Hallucination Guardrails** | ✅ DOES | `SageGuardrails` strictly blocks fabricated culprits and dangerous remediation commands. |
+| **Universal 100% In-The-Wild Guarantee** | ❌ DOES NOT | 100% Macro F1 is strictly evaluated against the 125 canonical benchmark corpus. Unseen logs gracefully degrade to `UNKNOWN_RUNTIME`. |
+| **Runtime JVM Process Injection** | ❌ DOES NOT | Zero live execution or JVM process attachment; analysis is entirely static on log files. |
+| **Generative Hallucination** | ❌ DOES NOT | The LLM layer is forbidden from inventing culprits, changing scores, or altering evidence. |
+
 ---
 
 ## ⚙️ Diagnostic Pipeline Architecture
@@ -75,7 +87,7 @@ Raw Minecraft Log / Crash Report
                │
                ▼
    [4. Confidence Scorer]
-      • Multi-factor Bayesian certainty scoring
+      • Multi-factor evidence-based confidence scoring
       • Evidence & stacktrace corroboration
                │
                ▼

@@ -73,12 +73,11 @@ Fabric Loader: 0.15.11`;
   const sageStart = process.hrtime.bigint();
   
   // Call ts-node runner for SAGE live diagnosis
-  const sageRes = spawnSync("npx", [
-    "ts-node",
-    "--project",
-    "tsconfig.scripts.json",
-    "scripts/demo-sage.ts"
-  ], { encoding: "utf-8", shell: true, cwd: path.join(__dirname, "..") });
+  const sageRes = spawnSync("npx ts-node --project tsconfig.scripts.json scripts/demo-sage.ts", {
+    encoding: "utf-8",
+    shell: true,
+    cwd: path.join(__dirname, "..")
+  });
 
   const sageDurationMs = Number(process.hrtime.bigint() - sageStart) / 1_000_000;
 
@@ -86,7 +85,7 @@ Fabric Loader: 0.15.11`;
     const parsed = JSON.parse(sageRes.stdout.trim().split("\n").pop());
     console.log(`  🎯 Categorization:     ${colors.green}${parsed.category}${colors.reset}`);
     console.log(`  🔍 Isolated Culprit:   ${colors.green}${parsed.culprit}${colors.reset}`);
-    console.log(`  📊 Bayesian Confidence:${colors.green} ${parsed.confidence}%${colors.reset}`);
+    console.log(`  📊 Confidence Score:   ${colors.green}${parsed.confidence}%${colors.reset}`);
     console.log(`  ⚡ Engine Latency:     ${colors.yellow}0.06 ms${colors.reset} (Cold VM invocation: ${sageDurationMs.toFixed(0)} ms)`);
     console.log(`\n  📚 ${colors.bold}RAG Semantic Context Retrieved:${colors.reset}`);
     for (const kb of parsed.kbMatches) {

@@ -24,7 +24,7 @@ We establish a **Strict Architectural Boundary**:
 > *"AI should explain evidence, not manufacture it."*
 
 1. **Deterministic Core Engine (`SageCrashEngine`):**
-   - Implements a five-stage deterministic pipeline: `Parser & Normalizer` $\to$ `Taxonomy Classifier` $\to$ `Mod Correlator` $\to$ `Bayesian Confidence Scorer` $\to$ `Remediation Planner`.
+   - Implements a five-stage deterministic pipeline: `Parser & Normalizer` $\to$ `Taxonomy Classifier` $\to$ `Mod Correlator` $\to$ `Multi-factor Evidence-Based Confidence Scorer` $\to$ `Remediation Planner`.
    - Diagnoses root causes, culprit mods, and confidence scores based exclusively on verifiable structural signatures (e.g. ASM injection exceptions, class file versions, loader dependency manifests).
    - Execution is 100% local, offline, and sub-millisecond ($0.06\text{ ms}$).
 2. **Decoupled AI Explanation Layer (`SageExplainer`):**

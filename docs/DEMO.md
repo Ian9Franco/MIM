@@ -27,7 +27,7 @@ The interactive CLI tour demonstrates the five core engineering pillars of MIM i
 ### Stage 1: SAGE 2.0 Crash Intelligence Engine (Deterministic + RAG)
 Simulates an unparsed production crash dump involving Fabric Loader, Sodium, and OptiFine:
 - **Parser & Demangler:** Strips ANSI and reconstructs Mixin injection target (`handler$zfa000$render in sodium.mixins.json`).
-- **Deterministic Classifier:** Categorizes as `MIXIN_FAILURE` with 89% Bayesian confidence.
+- **Deterministic Classifier:** Categorizes as `MIXIN_FAILURE` with 89% evidence confidence score.
 - **RAG Semantic Knowledge Retrieval:** Queries the offline Knowledge Base, extracting:
   - `[73% match] Indium Requirement for Fabric Rendering API Mods`
   - `[71% match] Sodium / Embeddium and OptiFine Mutual Exclusion`

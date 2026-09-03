@@ -1,7 +1,7 @@
 /**
  * MIM Core — Structured Logger & Observability Engine
  * ─────────────────────────────────────────────────────────────────────────────
- * Enterprise-grade structured logging with Correlation IDs, Engine tagging,
+ * Structured typed logging with Correlation IDs, Engine tagging,
  * and high-resolution ISO timestamps for distributed tracing across subsystems.
  * ─────────────────────────────────────────────────────────────────────────────
  */

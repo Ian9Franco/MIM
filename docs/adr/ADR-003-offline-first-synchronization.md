@@ -23,7 +23,7 @@ In a collaborative modding environment:
 We implement an **Offline-First Eventual Consistency Synchronization Layer**:
 
 1. **Sub-16ms Optimistic UI Mutations:** Local state updates synchronously in React 19 memory and IndexedDB. If the subsequent backend request fails or violates permissions, the client executes an **Optimistic Rollback** restoring `previousState`.
-2. **Deterministic Conflict Resolution (Last-Write-Wins):** All mutative records carry an ISO 8601 monotonic timestamp vector. In concurrent writes, conflict is deterministically resolved using:
+2. **Deterministic Conflict Resolution (Last-Write-Wins):** All mutative records carry client timestamps (ISO 8601) and a unique client identifier. In concurrent writes, conflict is deterministically resolved using:
    $$\text{Winning Record} = \max(\text{updatedAt}) \quad \lor \quad (\text{if equal}) \quad \max(\text{clientUUID})$$
    Guarantees convergence across all nodes without locking.
 3. **IndexedDB FIFO Offline Queue:** Outgoing mutations during offline states are stored in an IndexedDB table (`pending_mutations`). A network listener drains the queue in chronological order upon reconnection.

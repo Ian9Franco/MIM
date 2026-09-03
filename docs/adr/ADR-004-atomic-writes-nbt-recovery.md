@@ -52,7 +52,7 @@ flowchart TD
 ## 3. Consequences
 
 ### Positive
-- **Guaranteed Zero Data Loss:** Hardware power failures or process crashes during recovery cannot truncate or destroy save files.
+- **Zero-Data-Loss Invariant & Crash Consistency:** Incomplete writes or unexpected process termination cannot truncate or destroy original save files because modifications are written to a separate staging buffer (`.tmp`) and atomically swapped only after validation.
 - **Rollback Safety:** If a player desires their prior corrupted state, the `.mim_bak` file provides an instant 1-click restore.
 - **100% Type Compliance:** Verified by 12/12 integration tests covering inventory compounds, doubles, floats, and Nether dimension switches.
 

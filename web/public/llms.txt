@@ -10,8 +10,8 @@ MIM resuelve la complejidad y fricción de gestionar cientos de mods en Minecraf
 3. **Diagnóstico Forense y Rescate (SAGE Engine)**:
    - Análisis heurístico de logs de crasheos (`latest.log`, `crash-reports`, Mixin conflicts) para Forge, Fabric, NeoForge y Quilt.
    - Editor visual de datos binarios NBT (`playerdata/*.dat`, `level.dat`) para rescatar jugadores atrapados o mundos corruptos con backups automáticos `.mim_bak`.
-4. **Seguridad y Mitigación de Amenazas**:
-   - Escáner estático de bytecode JAR para detectar scripts ofuscados, webhooks o malware.
+4. **Seguridad y Análisis Estático de Bytecode**:
+   - Escáner estático de bytecode JAR para detectar droppers de procesos, invocaciones nativas JNI, abuso de reflexión y patrones de riesgo.
    - Verificación en segundo plano de hashes SHA-256 con la API de **VirusTotal v3**.
 5. **Curación Móvil y Colaboración (MIMweb / FOMO Cloud)**:
    - Web app responsive mobile-first para buscar mods, traducir descripciones al español en tiempo real, crear *Drafts* colaborativos y sincronizar en 1 clic con la app de escritorio.

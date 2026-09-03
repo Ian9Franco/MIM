@@ -46,7 +46,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
     {
       target: '#onboarding-sage-content',
       title: 'Escáner de Seguridad',
-      content: 'Acá podés escanear tus mods en busca de malware usando la API de VirusTotal.'
+      content: 'Análisis estático de bytecode JAR para identificar patrones de riesgo y droppers en tus mods.'
     },
     {
       target: '#onboarding-sage-content',

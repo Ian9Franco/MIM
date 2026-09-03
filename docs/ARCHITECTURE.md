@@ -75,7 +75,7 @@ flowchart TD
 
 ### 6. FOMO Distributed Sync Engine (`lib/fomo/`, Supabase)
 - **Responsibility:** Bi-directional state synchronization between Desktop Electron clients and Mobile Web PWAs.
-- **Conflict Strategy:** Deterministic Last-Write-Wins (LWW) utilizing monotonic timestamps and idempotent queue replays upon reconnection.
+- **Conflict Strategy:** Deterministic Last-Write-Wins (LWW) utilizing client timestamps with client UUID tie-breaking and idempotent queue replays upon reconnection.
 - **Security Boundary:** PostgreSQL Row-Level Security (RLS) ensures users can only mutate owned modpack drafts and collections.
 
 ### 7. UI / Presentation Layer (`app/`, `components/`)
@@ -88,7 +88,7 @@ flowchart TD
 
 | Subsystem | Core Metric | Architectural Guarantee |
 |:---|:---:|:---|
-| **SAGE 2.0** | **0.06 ms** inference latency | 100% deterministic taxonomy classification |
-| **Aduana** | **> 300 MB/s** hashing throughput | Zero false deduplications (cryptographic identity) |
+| **SAGE 2.0** | **0.06 ms** inference latency | 100% deterministic taxonomy classification on benchmark corpus |
+| **Aduana** | **> 1,800 MB/s** hashing throughput | Zero false deduplications (cryptographic SHA-512 / SHA-1) |
 | **NBT Rescue** | **100%** round-trip fidelity | Atomic writes with mandatory `.mim_bak` snapshot |
-| **Cloud Sync** | **< 150 ms** WebSocket latency | Offline mutation persistence in IndexedDB |
+| **Cloud Sync** | **< 100 ms** WebSocket latency | Offline mutation persistence in IndexedDB |

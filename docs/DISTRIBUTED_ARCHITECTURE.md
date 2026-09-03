@@ -46,11 +46,11 @@ When a user stars a mod, creates a draft, or adds dependencies to a collaborativ
 2. **Network Mutation Dispatch:** A parameterized payload is dispatched to PostgreSQL via Supabase RPC/REST.
 3. **Rollback Guarantee:** If the network request fails due to server validation, timeout, or RLS denial, the UI automatically rolls back to the prior state with a non-blocking toast alert.
 
-### 2. Conflict Resolution Model (Last-Write-Wins with Monotonic Timestamps)
+### 2. Conflict Resolution Model (Last-Write-Wins with Client Timestamps & Tie-Breaking)
 In collaborative drafting (where multiple users simultaneously curate a modpack playlist):
-- Each state change carries an ISO 8601 monotonic timestamp vector:
+- Each state change carries an ISO 8601 formatted timestamp and client identifier:
   $$\text{Payload} = \{ \text{id}, \text{modId}, \text{version}, \text{updatedAt}, \text{clientId} \}$$
-- If concurrent modifications occur within the same clock window, the conflict is deterministically resolved using:
+- While ISO 8601 standardizes temporal representation, distributed nodes can experience clock drift. To resolve concurrent writes within identical millisecond timestamps deterministically without distributed lock overhead, conflict is resolved using:
   $$\text{Winning Record} = \max(\text{updatedAt}) \quad \lor \quad (\text{if equal}) \quad \max(\text{clientId})$$
 - This guarantees convergent eventual consistency across all connected nodes without split-brain anomalies.
 
@@ -64,11 +64,11 @@ In collaborative drafting (where multiple users simultaneously curate a modpack 
 ## 🛠️ Engineering Challenges & Distributed Failure Modes
 
 ### 1. ¿Qué pasa si el usuario pierde la conexión? (Network Disconnection)
-- **Solución:** La aplicación degrada a un modo *Offline-First*. Todas las mutaciones locales (favoritos, listas, cambios en borradores de modpacks) se aplican de inmediato en la UI con latencia cero ($< 8\text{ ms}$) y se persisten en una cola transaccional FIFO en **IndexedDB** (`pending_mutations`).
+- **Solución:** La aplicación degrada a un modo *Offline-First*. Todas las mutaciones locales (favoritos, listas, cambios en borradores de modpacks) se aplican de inmediato en la UI con latencia instantánea sub-8ms ($< 8\text{ ms}$) y se persisten en una cola transaccional FIFO en **IndexedDB** (`pending_mutations`).
 - El usuario continúa operando sin interrupción visual. Cuando el `navigator.onLine` y el heartbeat de WebSocket confirman reconexión, un worker de drenaje procesa la cola secuencialmente.
 
 ### 2. ¿Qué pasa si dos clientes modifican el mismo recurso en paralelo? (Concurrent Edits)
-- **Solución:** Implementación de un modelo determinista **Last-Write-Wins (LWW)** respaldado por vectores de tiempo monótonos en ISO 8601:
+- **Solución:** Implementación de un modelo determinista **Last-Write-Wins (LWW)** respaldado por timestamps ISO 8601 y desempate determinista por UUID de cliente:
   $$\text{Winning Record} = \max(\text{updatedAt}) \quad \lor \quad (\text{si empate}) \quad \max(\text{clientUUID})$$
 - Al sincronizar vía Supabase Realtime, el estado converge a la versión con timestamp más reciente sin bifurcaciones de datos (evitando split-brain states) y sin requerir bloqueos pesados distribuidos (locks) que arruinarían la reactividad.
 

@@ -1,8 +1,8 @@
-# Static Security Engine — Threat Detection Specification
+# Static Java Bytecode Threat Analysis — Engine Specification
 
 > **Module:** `lib/security/security-scanner.ts` & `lib/security/security-data.ts`  
-> **Classification:** Application Security (AppSec) / Static Bytecode Analysis  
-> **Target Threat Profile:** Java Bytecode Malware, Supply-Chain Infestation (e.g. Fractureiser, Necro, BleedingPipe), Unauthorized System Execution.
+> **Classification:** Application Security (AppSec) / Static Bytecode Threat Analysis  
+> **Target Threat Profile:** Java Bytecode Supply-Chain Anomalies (e.g. Fractureiser, Necro, BleedingPipe patterns), Process Droppers, Unauthorized System Execution.
 
 ---
 
@@ -112,3 +112,15 @@ When an archive is scanned, the engine produces an itemized audit trail:
 
 - **Parallel Worker Pools:** Batch scanning (`scanSecurityBatch`) utilizes bounded concurrency (5 files per batch) to avoid I/O bottlenecks and memory exhaustion on large modpacks.
 - **VirusTotal Rate-Limiting:** Background API requests are cached in `.mim-index/cache/vt-cache.json` to respect external rate quotas (4 requests/minute free-tier ceiling).
+
+---
+
+## 🚫 Non-Goals & Defensibility (Static Analysis vs. Runtime Detection)
+
+> **Static Analysis ≠ Universal Malware Detection.**  
+> MIM is explicitly designed to identify supply-chain risk patterns without executing untrusted code.
+
+1. **Zero-Execution Guarantee:** Untrusted archives are never executed or passed to a JVM runtime during scanning. This eliminates host infection risk entirely, but means the engine cannot observe dynamic polymorphic unpackers that only emerge in memory at runtime.
+2. **Defendable Threat Scoring:** The engine evaluates concrete bytecode and manifest evidence: process spawning (`Runtime.exec`, `ProcessBuilder`), shell droppers (`powershell`, `cmd`), unmanaged native libraries (`System.loadLibrary`, JNI), and reflection evasion (`setAccessible`).
+3. **No False Promises:** The engine does not promise "100% malware detection." It delivers **deterministic, zero-execution static Java bytecode threat analysis with verifiable class-level evidence trails**.
+

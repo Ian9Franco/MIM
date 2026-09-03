@@ -65,14 +65,22 @@ const ALLOWED_TAGS = new Set([
   "thead",
   "tr",
   "ul",
+  "details",
+  "summary",
+  "iframe",
 ]);
 
-const GLOBAL_ATTRS = new Set(["class", "data-external-link"]);
+const GLOBAL_ATTRS = new Set(["class", "data-external-link", "style"]);
 const TAG_ATTRS: Record<string, Set<string>> = {
-  a: new Set(["href", "target", "rel", "title"]),
-  img: new Set(["src", "alt", "loading", "title"]),
+  a: new Set(["href", "target", "rel", "title", "class", "style"]),
+  img: new Set(["src", "alt", "loading", "title", "referrerpolicy", "onerror", "class", "style"]),
   td: new Set(["colspan", "rowspan"]),
   th: new Set(["colspan", "rowspan"]),
+  details: new Set(["class", "open"]),
+  summary: new Set(["class"]),
+  iframe: new Set(["src", "class", "allowfullscreen", "loading", "title", "frameborder", "width", "height"]),
+  span: new Set(["class", "style"]),
+  h3: new Set(["class", "style"]),
 };
 
 export function sanitizeHtml(input: string): string {
@@ -92,7 +100,7 @@ export function sanitizeHtml(input: string): string {
       String(rawAttrs).replace(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g, (_m, rawName, quoted, singleQuoted, bare) => {
         const name = String(rawName).toLowerCase();
         const value = String(quoted ?? singleQuoted ?? bare ?? "");
-        if (name.startsWith("on")) return "";
+        if (name.startsWith("on") && name !== "onerror") return "";
         if (!GLOBAL_ATTRS.has(name) && !allowedAttrs.has(name)) return "";
         if ((name === "href" || name === "src") && !isSafeUrl(value)) return "";
         attrs.push(`${name}="${escapeAttribute(value)}"`);
@@ -119,25 +127,58 @@ function normalizeRichText(input: string, defaultDomain = "https://modrinth.com"
     .replace(/<center>/gi, '<div class="text-center my-4 space-y-2">')
     .replace(/<\/center>/gi, "</div>")
     .replace(/<hr\s*\/?>/gi, '<hr class="my-4 border-white/10" />')
-    .replace(/<br\s*\/?>/gi, "<br />");
+    .replace(/<details\b([^>]*)>/gi, '<details class="my-2.5 rounded-xl border border-white/10 bg-black/25 overflow-hidden p-2 text-xs">')
+    .replace(/<summary\b([^>]*)>/gi, '<summary class="cursor-pointer font-bold text-orange-400 select-none py-1 px-1.5 hover:bg-white/5 rounded-lg transition-colors outline-none list-none flex items-center gap-1.5">');
 
-  // 2. Normalizar todas las etiquetas <img> de manera robusta (soporta cualquier orden de atributos y presencia de alt)
+  // Separar listas pegadas en el texto crudo de Modrinth
+  normalized = normalized
+    .replace(/([.!?])\s*([1-9]\.\s+[A-Z])/g, "$1\n\n$2")
+    .replace(/<\/font>\s*([A-Z0-9+][^–\n]{2,40}\s*–\s*)/g, "</font>\n\n• $1")
+    .replace(/([.!?*])\s*([A-Z0-9+][^–\n]{2,40}\s*–\s*<font)/g, "$1\n\n• $2")
+    .replace(/<\/font>\s*([A-Z][a-z]+)/g, "</font>\n\n$1");
+
+  // Normalizar <font color="..."> a encabezados o spans estilizados
+  normalized = normalized.replace(/(^|\n)\s*<font\s+color=["']([^"']+)["']>([^<\n]+)<\/font>\s*($|\n)/gim, (_m, before, color, content, after) => {
+    return `${before}<h3 class="text-xs font-black tracking-wider uppercase mt-4 mb-1.5 block" style="color: ${color}">${content.trim()}</h3>${after}`;
+  });
+  normalized = normalized.replace(/<font\s+color=["']([^"']+)["']>([\s\S]*?)<\/font>/gim, (_m, color, content) => {
+    return `<span style="color: ${color}">${content}</span>`;
+  });
+
+  // Normalizar iframes de YouTube / video responsive
+  normalized = normalized.replace(/<iframe\b([^>]*?)src=["']([^"']+)["']([^>]*?)>(?:<\/iframe>)?/gim, (_m, _before, src) => {
+    return `<div class="aspect-video w-full rounded-xl overflow-hidden my-3 border border-white/10 bg-black/40"><iframe src="${src}" class="w-full h-full border-0" allowfullscreen loading="lazy"></iframe></div>`;
+  });
+
+  // 2. Normalizar todas las etiquetas <img> de manera robusta
   normalized = normalized.replace(/<img\b([^>]*?)>/gim, (match, attrs) => {
     const srcMatch = attrs.match(/src\s*=\s*["']([^"']+)["']/i);
-    if (!srcMatch) return match; // si no tiene src, no alterar
+    if (!srcMatch) return match;
     
     const rawSrc = srcMatch[1];
     const cleanSrc = cleanEmbeddedUrl(rawSrc, defaultDomain);
     
-    // Reemplazar src original por la URL absoluta limpia
     let newAttrs = attrs.replace(/src\s*=\s*["']([^"']+)["']/i, `src="${cleanSrc}"`);
     
-    // Inyectar estilos responsivos premium y lazy loading si no están presentes
-    if (!newAttrs.includes("class=")) {
-      newAttrs += ' class="max-w-full rounded-xl my-4 h-auto block mx-auto border border-white/10"';
+    const isBadge = cleanSrc.includes("shields.io") || cleanSrc.includes("/badge") || cleanSrc.includes("ko-fi.com");
+    if (isBadge) {
+      if (!newAttrs.includes("class=")) {
+        newAttrs += ' class="inline-block h-6 my-1 mr-1.5 align-middle border-0 rounded shadow-sm hover:opacity-90"';
+      }
+    } else {
+      if (!newAttrs.includes("class=")) {
+        newAttrs += ' class="max-w-full rounded-xl my-4 h-auto block mx-auto border border-white/10"';
+      }
     }
+
     if (!newAttrs.includes("loading=")) {
       newAttrs += ' loading="lazy"';
+    }
+    if (!newAttrs.includes("referrerpolicy=")) {
+      newAttrs += ' referrerpolicy="no-referrer"';
+    }
+    if (!newAttrs.includes("onerror=")) {
+      newAttrs += ' onerror="this.style.display=\'none\'"';
     }
     
     return `<img ${newAttrs}>`;
@@ -189,11 +230,16 @@ export function markdownToHtml(md: string): string {
 
   // Preservar estructuras de HTML seguras durante el escape de caracteres de Markdown
   let html = normalized
+    .replace(/<div\b[^>]*class="[^"]*aspect-video[^"]*"[^>]*>[\s\S]*?<\/div>/gi, (match) => preserve(match))
+    .replace(/<\/?details\b[^>]*>/gi, (match) => preserve(match))
+    .replace(/<\/?summary\b[^>]*>/gi, (match) => preserve(match))
+    .replace(/<iframe\b[\s\S]*?<\/iframe>/gi, (match) => preserve(match))
     .replace(/<a\b[\s\S]*?<\/a>/gi, (match) => preserve(match))
     .replace(/<img\b[^>]*>/gi, (match) => preserve(match))
+    .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi, (match) => preserve(match))
+    .replace(/<span\b[^>]*>[\s\S]*?<\/span>/gi, (match) => preserve(match))
     .replace(/<div\b[^>]*>[\s\S]*?<\/div>/gi, (match) => preserve(match))
     .replace(/<p\b[\s\S]*?<\/p>/gi, (match) => preserve(match))
-    .replace(/<span\b[\s\S]*?<\/span>/gi, (match) => preserve(match))
     .replace(/<strong\b[\s\S]*?<\/strong>/gi, (match) => preserve(match))
     .replace(/<b\b[\s\S]*?<\/b>/gi, (match) => preserve(match))
     .replace(/<em\b[\s\S]*?<\/em>/gi, (match) => preserve(match))
@@ -201,7 +247,6 @@ export function markdownToHtml(md: string): string {
     .replace(/<ul\b[\s\S]*?<\/ul>/gi, (match) => preserve(match))
     .replace(/<ol\b[\s\S]*?<\/ol>/gi, (match) => preserve(match))
     .replace(/<li\b[\s\S]*?<\/li>/gi, (match) => preserve(match))
-    .replace(/<h[1-6]\b[\s\S]*?<\/h[1-6]>/gi, (match) => preserve(match))
     .replace(/<table\b[\s\S]*?<\/table>/gi, (match) => preserve(match))
     .replace(/<code\b[\s\S]*?<\/code>/gi, (match) => preserve(match))
     .replace(/<pre\b[\s\S]*?<\/pre>/gi, (match) => preserve(match))
@@ -210,10 +255,13 @@ export function markdownToHtml(md: string): string {
     .replace(/<br\s*\/?>/gi, (match) => preserve(match));
 
   html = escapeHtml(html)
+    .replace(/\s*\(Sin Vueltas\)/gi, "") // Limpiar cualquier mención residual
     .replace(/HTMLBLOCK(\d+)/g, "") // Limpiar marcadores residuales de la API
-    .replace(/^###\s+(.*)$/gim, '<h3 class="text-lg font-bold mt-5 mb-2 text-white">$1</h3>')
-    .replace(/^##\s+(.*)$/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-white">$1</h2>')
-    .replace(/^#\s+(.*)$/gim, '<h1 class="text-2xl font-bold mt-7 mb-4 text-white">$1</h1>')
+    .replace(/^###\s+(.*)$/gim, (_m, title) => `<h3 class="text-sm font-bold mt-4 mb-2 text-white">${title.replace(/\*\*/g, "")}</h3>`)
+    .replace(/^##\s+(.*)$/gim, (_m, title) => `<h2 class="text-base font-black mt-5 mb-2 text-white tracking-wide uppercase">${title.replace(/\*\*/g, "")}</h2>`)
+    .replace(/^#\s+(.*)$/gim, (_m, title) => `<h1 class="text-lg font-black mt-6 mb-3 text-white tracking-wide uppercase">${title.replace(/\*\*/g, "")}</h1>`)
+    .replace(/_\*\*(.*?)\*\*_/g, "<strong><em>$1</em></strong>")
+    .replace(/\*\*_(.*?)_\*\*/g, "<strong><em>$1</em></strong>")
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/__(.*?)__/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
@@ -221,14 +269,20 @@ export function markdownToHtml(md: string): string {
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, src) => {
       const cleanSrc = cleanEmbeddedUrl(src, "https://modrinth.com");
       const safeAlt = escapeHtml(alt);
-      return `<img src="${cleanSrc}" alt="${safeAlt}" class="max-w-full rounded-xl my-4 h-auto block mx-auto border border-white/10" loading="lazy" />`;
+      const isBadge = cleanSrc.includes("shields.io") || cleanSrc.includes("/badge") || cleanSrc.includes("ko-fi.com");
+      const cls = isBadge
+        ? "inline-block h-6 my-1 mr-1.5 align-middle border-0 rounded shadow-sm hover:opacity-90"
+        : "max-w-full rounded-xl my-4 h-auto block mx-auto border border-white/10";
+      return `<img src="${cleanSrc}" alt="${safeAlt}" referrerpolicy="no-referrer" onerror="this.style.display='none'" class="${cls}" loading="lazy" />`;
     })
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) => {
       const cleanHref = cleanEmbeddedUrl(href, "https://modrinth.com");
       return `<a href="${cleanHref}" data-external-link="true" class="text-primary hover:underline" rel="noopener noreferrer">${text}</a>`;
     })
-    .replace(/^\s*[-*]\s+(.*)$/gim, '<li class="ml-5 list-disc">$1</li>')
-    .replace(/(<li class="ml-5 list-disc">[\s\S]*?<\/li>)/g, '<ul class="space-y-1 my-3">$1</ul>')
+    // Auto-link URLs crudas en el texto
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)(?=[)\s]|$)/g, '$1<a href="$2" data-external-link="true" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">$2</a>')
+    .replace(/^\s*[-*•]\s+(.*)$/gim, '<li class="ml-5 list-disc my-1">$1</li>')
+    .replace(/(<li class="ml-5 list-disc my-1">[\s\S]*?<\/li>)/g, '<ul class="space-y-1 my-3">$1</ul>')
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\n\n/g, "<br /><br />")
     .replace(/\n/g, "<br />");

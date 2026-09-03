@@ -12,11 +12,13 @@ export function useSettingsManager(onClose: () => void) {
   const [modrinthApiKey, setModrinthApiKey] = useState("");
   const [curseforgeApiKey, setCurseforgeApiKey] = useState("");
   const [virusTotalApiKey, setVirusTotalApiKey] = useState("");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
   
   const [showModrinth, setShowModrinth] = useState(false);
   const [showCurseforge, setShowCurseforge] = useState(false);
   const [showVirusTotal, setShowVirusTotal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"paths" | "apiKeys" | "tools">("paths");
+  const [showGemini, setShowGemini] = useState(false);
+  const [activeTab, setActiveTab] = useState<"paths" | "apiKeys" | "tools" | "vault">("paths");
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +57,7 @@ export function useSettingsManager(onClose: () => void) {
         setModrinthApiKey(d.modrinthApiKey || "");
         setCurseforgeApiKey(d.curseforgeApiKey || "");
         setVirusTotalApiKey(d.virusTotalApiKey || "");
+        setGeminiApiKey(d.geminiApiKey || localStorage.getItem("mim_gemini_api_key") || "");
         setLoading(false);
         
         validatePaths([
@@ -187,7 +190,8 @@ export function useSettingsManager(onClose: () => void) {
       stagingPath !== originalSettings.stagingPath ||
       modrinthApiKey !== (originalSettings.modrinthApiKey || "") ||
       curseforgeApiKey !== (originalSettings.curseforgeApiKey || "") ||
-      virusTotalApiKey !== (originalSettings.virusTotalApiKey || "")
+      virusTotalApiKey !== (originalSettings.virusTotalApiKey || "") ||
+      geminiApiKey !== (originalSettings.geminiApiKey || "")
     );
   };
 
@@ -240,12 +244,18 @@ export function useSettingsManager(onClose: () => void) {
     }
 
     setMoveProgress("Guardando ajustes...");
+    try {
+      if (geminiApiKey) {
+        localStorage.setItem("mim_gemini_api_key", geminiApiKey.trim());
+      }
+    } catch {}
+
     await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath,
-        modrinthApiKey, curseforgeApiKey, virusTotalApiKey,
+        modrinthApiKey, curseforgeApiKey, virusTotalApiKey, geminiApiKey,
         validated: true 
       })
     });
@@ -259,7 +269,9 @@ export function useSettingsManager(onClose: () => void) {
     sourceBase, setSourceBase, buildsBase, setBuildsBase, downloadsPath, setDownloadsPath, 
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
+    geminiApiKey, setGeminiApiKey,
     showModrinth, setShowModrinth, showCurseforge, setShowCurseforge, showVirusTotal, setShowVirusTotal,
+    showGemini, setShowGemini,
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, 
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,

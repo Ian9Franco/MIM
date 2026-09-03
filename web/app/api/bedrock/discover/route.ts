@@ -1,37 +1,19 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-import { getPortableDir } from "@/lib/core/settings";
 
-const CACHE_DIR = path.join(getPortableDir(), "cache");
+// In-memory cache for serverless environments (6 hours duration)
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
   const page = parseInt(searchParams.get("page") || "1", 10);
 
-  // Cachear los resultados por 6 horas para ser amigables con chunk.gg
-  const cacheKey = `chunk_discover_${crypto
-    .createHash("md5")
-    .update(query + "_" + page)
-    .digest("hex")
-    .substring(0, 10)}.json`;
-  const cacheFile = path.join(CACHE_DIR, cacheKey);
-
-  if (fs.existsSync(cacheFile)) {
-    try {
-      const stats = fs.statSync(cacheFile);
-      const ageHours =
-        (Date.now() - new Date(stats.mtime).getTime()) / (1000 * 60 * 60);
-      if (ageHours < 6) {
-        return NextResponse.json(
-          JSON.parse(fs.readFileSync(cacheFile, "utf-8"))
-        );
-      }
-    } catch {
-      // Continuar con solicitud fresca si el caché falla
-    }
+  const cacheKey = `${query}_${page}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return NextResponse.json(cached.data);
   }
 
   try {
@@ -59,7 +41,6 @@ export async function GET(request: Request) {
     const mods: any[] = [];
     const seen = new Set<string>();
 
-    // Parser robusto sin dependencias externas
     const cardRegex = /<a[^>]+href="(\/@[^"]+)"[^>]*>([\s\S]*?<\/product-frame>)<\/a>/gi;
     let match: RegExpExecArray | null;
 
@@ -75,27 +56,22 @@ export async function GET(request: Request) {
       const slug = parts[1] || "";
       if (!slug) continue;
 
-      // Extraer título (h2 o h3)
       const titleMatch =
         cardHtml.match(/<h[23][^>]*class="[^"]*product-card__title[^"]*"[^>]*>([\s\S]*?)<\/h[23]>/i) ||
         cardHtml.match(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/i);
       const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : slug;
 
-      // Extraer autor
       const authorMatch = cardHtml.match(/<p[^>]+text="xs tinted"[^>]*>([\s\S]*?)<\/p>/i);
       const author = authorMatch ? authorMatch[1].replace(/<[^>]+>/g, "").trim() : creatorRaw;
 
-      // Extraer imagen
       const imgMatch =
         cardHtml.match(/<img[^>]+src="([^"]+)"/i) ||
         cardHtml.match(/<source[^>]+srcset="([^",\s]+)/i);
       const iconUrl = imgMatch ? imgMatch[1] : null;
 
-      // Extraer ratings
       const ratingsMatch = cardHtml.match(/([\d,]+)\s*Ratings?/i);
       const ratingsCount = ratingsMatch ? parseInt(ratingsMatch[1].replace(/,/g, ""), 10) : 0;
 
-      // Determinar Minecoins vs Gratis
       const isFree = /free|gratis/i.test(cardHtml);
       const mcMatch =
         cardHtml.match(/(\d[\d,]*)\s*Minecoins?/i) ||
@@ -122,7 +98,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // Parsear páginas
     let maxPage = 1;
     const pageMatches = html.match(/[?&]page=(\d+)/g) || [];
     for (const pm of pageMatches) {
@@ -142,13 +117,7 @@ export async function GET(request: Request) {
       query,
     };
 
-    if (!fs.existsSync(CACHE_DIR))
-      fs.mkdirSync(CACHE_DIR, { recursive: true });
-    fs.writeFileSync(
-      cacheFile,
-      JSON.stringify(responseData, null, 2),
-      "utf-8"
-    );
+    cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
 
     return NextResponse.json(responseData);
   } catch (err: any) {

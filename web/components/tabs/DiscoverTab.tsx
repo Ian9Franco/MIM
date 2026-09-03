@@ -30,8 +30,8 @@ interface DiscoverTabProps {
   setDiscoverPage: (p: number) => void;
   runDiscoverSearch: (page?: number) => void;
   handleOpenModDetails: (mod: ModHit) => void;
-  discoverSource: "modrinth" | "curseforge" | "all";
-  setDiscoverSource: (s: "modrinth" | "curseforge" | "all") => void;
+  discoverSource: "modrinth" | "curseforge" | "all" | "chunk";
+  setDiscoverSource: (s: "modrinth" | "curseforge" | "all" | "chunk") => void;
   discoverError: string;
 }
 
@@ -416,11 +416,13 @@ export function DiscoverTab({
               ? "Explorá mods, texturas, shaders y modpacks en Modrinth y CurseForge."
               : discoverSource === "curseforge"
               ? "Explorá mods, texturas, shaders y modpacks de CurseForge."
+              : discoverSource === "chunk"
+              ? "Explorá Add-ons oficiales de Minecraft Bedrock (chunk.gg Marketplace)."
               : "Explorá mods, texturas, shaders y modpacks de Modrinth."}
           </h2>
         </div>
 
-        <div className="w-[86px] shrink-0 grid grid-cols-2 gap-1">
+        <div className="w-[124px] shrink-0 grid grid-cols-3 gap-1">
           <button
             type="button"
             onClick={() => {
@@ -462,17 +464,36 @@ export function DiscoverTab({
           <button
             type="button"
             onClick={() => {
+              setDiscoverSource("chunk");
+              setDiscoverResults([]);
+              setDiscoverPage(1);
+              setDiscoverCategory([]);
+            }}
+            className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
+              discoverSource === "chunk"
+                ? "text-[#00cc44] border-[#00cc44]/30"
+                : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
+            }`}
+            title="Buscar Bedrock Add-ons (chunk.gg)"
+            aria-label="Buscar Bedrock Add-ons (chunk.gg)"
+          >
+            {discoverSource === "chunk" && <motion.span layoutId="discover-platform-selection" className="absolute inset-0 bg-[#00cc44]/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <span className="relative z-10 text-[10px]">💎</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setDiscoverSource("all");
               setDiscoverResults([]);
               setDiscoverPage(1);
               setDiscoverCategory([]);
             }}
-            className={`relative col-span-2 h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
+            className={`relative col-span-3 h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
               discoverSource === "all"
                 ? "text-blue-400 border-blue-500/30"
                 : "bg-white/5 text-white/50 border-transparent hover:bg-white/10"
             }`}
-            title="Buscar en ambas plataformas"
+            title="Buscar en Modrinth y CurseForge"
             aria-label="Buscar en ambas plataformas"
           >
             {discoverSource === "all" && <motion.span layoutId="discover-platform-selection" className="absolute inset-0 bg-blue-500/15" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}

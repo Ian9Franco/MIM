@@ -5,7 +5,7 @@ import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSe
 import { useSettingsManager } from "@/hooks/useSettingsManager";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
-  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, OverlayDialog, SettingsFooter, YtDlpUpdaterCard 
+  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
 } from "./SettingsComponents";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -13,7 +13,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     sourceBase, setSourceBase, buildsBase, setBuildsBase, downloadsPath, setDownloadsPath, 
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
+    geminiApiKey, setGeminiApiKey,
     showModrinth, setShowModrinth, showCurseforge, setShowCurseforge, showVirusTotal, setShowVirusTotal,
+    showGemini, setShowGemini,
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, 
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
@@ -152,6 +154,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 )}
                 {activeTab === "apiKeys" && (
                   <div id="onboarding-settings-keys" className="space-y-5">
+                    <ApiKeyInputGroup label="Google Gemini API Key" value={geminiApiKey} onChange={setGeminiApiKey} show={showGemini} onToggleShow={() => setShowGemini(!showGemini)} canEdit={canEdit} isValid={geminiApiKey ? true : null} isValidating={isValidatingKeys} saving={saving} placeholder="AIzaSy..." badge="Gratis" color="purple" link="https://aistudio.google.com/app/apikey" />
                     <ApiKeyInputGroup label="CurseForge API Key" value={curseforgeApiKey} onChange={setCurseforgeApiKey} show={showCurseforge} onToggleShow={() => setShowCurseforge(!showCurseforge)} canEdit={canEdit} isValid={keyValidation.curseforge} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave de CurseForge..." badge="Requerida" link="https://console.curseforge.com/" />
                     <ApiKeyInputGroup label="Modrinth Token" value={modrinthApiKey} onChange={setModrinthApiKey} show={showModrinth} onToggleShow={() => setShowModrinth(!showModrinth)} canEdit={canEdit} isValid={keyValidation.modrinth} isValidating={isValidatingKeys} saving={saving} placeholder="mrp_..." badge="Opcional" color="emerald" link="https://modrinth.com/settings/pats" />
                     <ApiKeyInputGroup label="VirusTotal API Key" value={virusTotalApiKey} onChange={setVirusTotalApiKey} show={showVirusTotal} onToggleShow={() => setShowVirusTotal(!showVirusTotal)} canEdit={canEdit} isValid={keyValidation.virusTotal} isValidating={isValidatingKeys} saving={saving} placeholder="Tu clave API..." badge="Opcional" color="blue" link="https://www.virustotal.com/gui/user/join" />
@@ -160,6 +163,34 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 {activeTab === "tools" && (
                   <div id="onboarding-settings-tools" className="space-y-5">
                     <YtDlpUpdaterCard />
+                  </div>
+                )}
+                {activeTab === "vault" && (
+                  <div id="onboarding-settings-vault" className="space-y-5">
+                    <SovereignVaultSettingsCard 
+                      settingsData={{
+                        downloadsPath,
+                        minecraftPath,
+                        stagingPath,
+                        sourceBase,
+                        buildsBase,
+                        curseforgeApiKey,
+                        modrinthApiKey,
+                        virusTotalApiKey,
+                        geminiApiKey,
+                      }}
+                      onApplySettings={(newSettings) => {
+                        if (newSettings.downloadsPath) setDownloadsPath(newSettings.downloadsPath);
+                        if (newSettings.minecraftPath) setMinecraftPath(newSettings.minecraftPath);
+                        if (newSettings.stagingPath) setStagingPath(newSettings.stagingPath);
+                        if (newSettings.sourceBase) setSourceBase(newSettings.sourceBase);
+                        if (newSettings.buildsBase) setBuildsBase(newSettings.buildsBase);
+                        if (newSettings.curseforgeApiKey) setCurseforgeApiKey(newSettings.curseforgeApiKey);
+                        if (newSettings.modrinthApiKey) setModrinthApiKey(newSettings.modrinthApiKey);
+                        if (newSettings.virusTotalApiKey) setVirusTotalApiKey(newSettings.virusTotalApiKey);
+                        if (newSettings.geminiApiKey) setGeminiApiKey(newSettings.geminiApiKey);
+                      }}
+                    />
                   </div>
                 )}
               </div>

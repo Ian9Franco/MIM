@@ -68,13 +68,19 @@
 # 🚧 Roadmap y Próximos Pasos (Backlog & Propuestas)
 
 ### 🛡️ Propuesta de Arquitectura: MIM Sovereign Vault & Data Sovereignty
-- [ ] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)).
-- [ ] **Desktop Silent Rolling Snapshots**: Guardado automático de snapshots locales en segundo plano (`%APPDATA%/MIM/vaults/`) para independencia total de conectividad cloud.
-- [ ] **Cifrado Zero-Knowledge Opcional**: Cifrado del vault con `AES-256-GCM` y `PBKDF2` en el cliente antes de la exportación.
+- [x] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)).
+- [x] **Desktop Silent Rolling Snapshots & Local Vaulting**: Exportación e importación desacoplada de la nube en MIM Desktop y MIMweb para independencia total de conectividad cloud.
+- [x] **Cifrado Zero-Knowledge Opcional**: Cifrado del vault con `AES-256-GCM` y `PBKDF2` (100.000 iteraciones) en el cliente antes de la exportación.
+
+### 🧠 Propuesta: Explicador Inteligente de Proyectos On-Demand (Public Gemini Grounding API)
+- [x] **Síntesis Contextual On-Demand**: Botón de acción explícita ("✨ Explicar con IA") en `ModDetailsSheet` y `FomoVersionOverlay` (sin ejecución en segundo plano no solicitada).
+- [x] **Grounding con Google Search para Metadatos Vacíos**: Para mods/texturas/shaders sin descripción o con información escueta, sintetizar su función investigando automáticamente vía Gemini Search Grounding con el título, autor, slug y enlaces de origen (ver especificación completa en [docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)).
+- [x] **Arquitectura Serverless / Direct Public API**: Consumo directo mediante API pública (Gemini Flash) sin dependencia de servidores propietarios backend.
+- [x] **Caché Persistente en Almacenamiento Local**: Almacenamiento local de síntesis en `mim_explain_${projectId}` para costo cero en consultas repetidas.
 
 ### 🌟 Integración Bedrock & Canales de Comunidad (Backlog)
-- [ ] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para creadores asociados.
-- [ ] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit`.
+- [x] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para creadores asociados (integrado en `FeedTab` en MIMweb y `FomoFollowedShowcases` en MIM Desktop).
+- [x] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit` (disponible en `DiscoverTab` y Desktop con parser robusto sin dependencias y soporte de Marketplace).
 
 ### 🎯 Posicionamiento Profesional e Integración en Portfolio
 - [x] **Technical Case Study & Flagship Positioning**: Publicado en el portafolio profesional con desglose de los 5 motores de dominio, topología de bus de eventos y benchmarks empíricos auditados.

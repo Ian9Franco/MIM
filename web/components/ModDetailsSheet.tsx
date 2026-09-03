@@ -4,7 +4,7 @@ import { DefaultModIcon } from "./DefaultModIcon";
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useSpring, useTransform, useDragControls } from "framer-motion";
 import {
-  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck, Volume2, VolumeX,
+  X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck, Volume2, VolumeX, Sparkles, Search, Key, Images as ImageIcon, RotateCcw, Send, MessageSquare
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
 import { playFomoSound, getSoundSettings, setSoundMuted } from "../lib/sounds";
@@ -418,6 +418,19 @@ export function ModDetailsSheet({
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedSummary, setTranslatedSummary] = useState<string | null>(null);
   const [isTranslatingSummary, setIsTranslatingSummary] = useState(false);
+  const [explainedBody, setExplainedBody] = useState<string | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [explanationSources, setExplanationSources] = useState<Array<{ title: string; url: string }>>([]);
+  const [explanationSearchUsed, setExplanationSearchUsed] = useState(false);
+  const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
+  const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
+  const [geminiKeyVal, setGeminiKeyVal] = useState("");
+  const [explainError, setExplainError] = useState<string | null>(null);
+  // Project Mini-Chat
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatSending, setIsChatSending] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareComment, setShareComment] = useState("");
@@ -508,6 +521,35 @@ export function ModDetailsSheet({
     setTranslatedSummary(null);
     setIsTranslating(false);
     setIsTranslatingSummary(false);
+    setExplainedBody(null);
+    setIsExplaining(false);
+    setExplanationSources([]);
+    setExplanationSearchUsed(false);
+    setExplanationImagesAnalyzed(0);
+    setExplainError(null);
+    setShowGeminiKeyInput(false);
+    setChatMessages([]);
+    setChatInput("");
+    setIsChatSending(false);
+
+    if (selectedMod?.projectId) {
+      try {
+        const cached = localStorage.getItem(`mim_explain_${selectedMod.projectId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.summaryMarkdown) {
+            const cleaned = parsed.summaryMarkdown.replace(/\s*\(Sin Vueltas\)/gi, "");
+            setExplainedBody(cleaned);
+            setExplanationSources(parsed.groundedSources || []);
+            setExplanationSearchUsed(!!parsed.searchUsed);
+            setExplanationImagesAnalyzed(parsed.imagesAnalyzed || 0);
+          }
+        }
+      } catch {
+        // ignore cache read error
+      }
+    }
+
     setActiveImageIndex(null);
     setExpandedVersionId(null);
     setVersionChangelogs({});
@@ -653,6 +695,163 @@ export function ModDetailsSheet({
     }
   }, [descriptionBody, isTranslating, selectedMod, translatedBody]);
 
+  const handleExplain = useCallback(async (customKey?: string, forceRefresh?: boolean) => {
+    if (!selectedMod || isExplaining) return;
+    if (explainedBody && !customKey && !forceRefresh) {
+      setExplainedBody(null);
+      return;
+    }
+
+    const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
+
+    // Revisar caché si no estamos forzando una clave nueva ni refresco
+    const cacheKey = `mim_explain_${selectedMod.projectId}`;
+    if (!customKey && !forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.summaryMarkdown) {
+            setExplainedBody(parsed.summaryMarkdown);
+            setExplanationSources(parsed.groundedSources || []);
+            setExplanationSearchUsed(!!parsed.searchUsed);
+            setExplanationImagesAnalyzed(parsed.imagesAnalyzed || 0);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    setIsExplaining(true);
+    setExplainError(null);
+
+    const galleryUrls = galleryImages
+      .map((g: any) => g?.url || g?.thumbnailUrl)
+      .filter((u: any): u is string => typeof u === "string" && u.length > 0)
+      .slice(0, 5);
+
+    try {
+      const res = await fetch("/api/fomo/explain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(savedKey ? { "x-gemini-key": savedKey } : {}),
+        },
+        body: JSON.stringify({
+          projectId: selectedMod.projectId,
+          title: selectedMod.title,
+          author: selectedMod.author,
+          slug: selectedMod.slug || selectedMod.projectId,
+          description: descriptionBody || selectedMod.description || "",
+          url: selectedMod.url,
+          source: selectedMod._source,
+          categories: selectedMod.categories || [],
+          loaders: selectedMod.loaders || [],
+          galleryUrls,
+          clientApiKey: savedKey,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401 || data.error === "NO_API_KEY") {
+        setShowGeminiKeyInput(true);
+        setExplainError("Introduce tu clave gratuita de Gemini API para activar la síntesis inteligente.");
+        return;
+      }
+
+      if (!res.ok || data.error) {
+        if (typeof data.error === "string" && (data.error.includes("quota") || data.error.includes("RESOURCE_EXHAUSTED") || data.error.includes("limit:"))) {
+          setExplainError("⚡ MIM-Bot alcanzó el límite de solicitudes por minuto de la clave. Esperá unos segundos y reintentá.");
+          return;
+        }
+        throw new Error(data.error || "No se pudo sintetizar la explicación.");
+      }
+
+      const cleanedSummary = (data.summaryMarkdown || "").replace(/\s*\(Sin Vueltas\)/gi, "");
+      setExplainedBody(cleanedSummary);
+      setExplanationSources(data.groundedSources || []);
+      setExplanationSearchUsed(!!data.searchUsed);
+      setExplanationImagesAnalyzed(data.imagesAnalyzed || 0);
+      setShowGeminiKeyInput(false);
+
+      // Guardar en caché local
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ ...data, summaryMarkdown: cleanedSummary }));
+      } catch {}
+    } catch (err: any) {
+      console.error("[Mod Explainer] Error:", err);
+      setExplainError(err?.message || "Ocurrió un error al consultar Gemini API.");
+    } finally {
+      setIsExplaining(false);
+    }
+  }, [descriptionBody, explainedBody, isExplaining, selectedMod]);
+
+  const handleSaveGeminiKey = useCallback(() => {
+    if (!geminiKeyVal.trim()) return;
+    const cleanKey = geminiKeyVal.trim();
+    try {
+      localStorage.setItem("mim_gemini_api_key", cleanKey);
+    } catch {}
+    handleExplain(cleanKey);
+  }, [geminiKeyVal, handleExplain]);
+
+  const handleSendChatMessage = useCallback(async (textToSend?: string) => {
+    const query = (textToSend || chatInput).trim();
+    if (!query || isChatSending || !selectedMod) return;
+
+    const newMessages = [...chatMessages, { role: "user" as const, text: query }];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setIsChatSending(true);
+
+    try {
+      const savedKey = localStorage.getItem("mim_gemini_api_key") || "";
+      const res = await fetch("/api/fomo/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "chat",
+          projectId: selectedMod.projectId,
+          title: selectedMod.title,
+          author: selectedMod.author,
+          description: descriptionBody || selectedMod.description || "",
+          categories: selectedMod.categories || [],
+          loaders: selectedMod.loaders || [],
+          initialSummary: explainedBody || "",
+          clientApiKey: savedKey,
+          messages: chatMessages,
+          question: query,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.reply) {
+        setChatMessages([...newMessages, { role: "model" as const, text: data.reply }]);
+        playFomoSound("pop");
+      } else if (data.error) {
+        setChatMessages([
+          ...newMessages,
+          { role: "model" as const, text: `⚠️ ${data.message || data.error}` },
+        ]);
+      }
+    } catch (err: any) {
+      console.error("[ProjectChat] Error:", err);
+      setChatMessages([
+        ...newMessages,
+        { role: "model" as const, text: `⚠️ Error de conexión: ${err?.message || "Intenta de nuevo."}` },
+      ]);
+    } finally {
+      setIsChatSending(false);
+    }
+  }, [chatInput, chatMessages, descriptionBody, explainedBody, isChatSending, selectedMod]);
+
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, isChatSending]);
+
   const handleTranslateSummary = useCallback(async () => {
     const textToTranslate = selectedMod?.description || "";
     if (!textToTranslate || isTranslatingSummary) return;
@@ -741,7 +940,13 @@ export function ModDetailsSheet({
     }
   }, [selectedMod?.projectId, translatedVersionChangelogs, translatingVersionChangelog]);
 
-  const bannerUrl = selectedModDetails?.gallery?.[0]?.url || undefined;
+  const bannerUrl =
+    selectedModDetails?.gallery?.find((g: any) => g.featured)?.url ||
+    selectedModDetails?.gallery?.find((g: any) => g.featured)?.raw_url ||
+    selectedModDetails?.gallery?.[0]?.raw_url ||
+    selectedModDetails?.gallery?.[0]?.url ||
+    selectedMod?.iconUrl ||
+    undefined;
   const projectType = selectedMod?.projectType || "mod";
   const bannerType = communityTypeToBannerType(projectType);
   const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(bannerType);
@@ -824,8 +1029,10 @@ export function ModDetailsSheet({
                     <img
                       src={bannerUrl}
                       alt=""
-                      className="w-full h-full object-cover opacity-35 scale-110 transition-opacity duration-1000 blur-[2px]"
-                      style={{ filter: "brightness(0.55)" }}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      className="w-full h-full object-cover opacity-60 scale-105 transition-opacity duration-700"
+                      style={{ filter: "brightness(0.75)" }}
                     />
                   ) : (
                     <div className="absolute inset-0 opacity-15" style={fallbackTexture} />
@@ -1135,20 +1342,37 @@ export function ModDetailsSheet({
                         <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
                           <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-white/[0.04]">
                             <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Resumen</span>
-                            <button
-                              type="button"
-                              onClick={handleTranslateSummary}
-                              disabled={isTranslatingSummary || !selectedMod.description}
-                              className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
-                              style={{
-                                color: "var(--color-primary)",
-                                background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
-                                borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
-                              }}
-                            >
-                              {isTranslatingSummary ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
-                              {isTranslatingSummary ? "Traduciendo" : translatedSummary ? "Original" : "Traducir"}
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!explainedBody) {
+                                    handleExplain();
+                                  }
+                                  setModalTab("desc");
+                                }}
+                                disabled={isExplaining}
+                                className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20"
+                                title="Explicar e investigar con MIM-Bot"
+                              >
+                                {isExplaining ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5 text-purple-400" />}
+                                {isExplaining ? "Sintetizando..." : "MIM-Bot"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleTranslateSummary}
+                                disabled={isTranslatingSummary || !selectedMod.description}
+                                className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                                style={{
+                                  color: "var(--color-primary)",
+                                  background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
+                                  borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
+                                }}
+                              >
+                                {isTranslatingSummary ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Languages className="w-2.5 h-2.5" />}
+                                {isTranslatingSummary ? "Traduciendo" : translatedSummary ? "Original" : "Traducir"}
+                              </button>
+                            </div>
                           </div>
                           {translatedSummary ? (
                             <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap" style={{ color: "var(--color-primary)" }}>
@@ -1235,6 +1459,21 @@ export function ModDetailsSheet({
                               <ExternalLink className="w-3 h-3" /> Discord
                             </a>
                           )}
+                          {selectedMod?.url && (
+                            <a
+                              href={selectedMod.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold flex items-center gap-1.5 transition-all border ${
+                                selectedMod._source === "chunk"
+                                  ? "bg-[#00cc44]/10 hover:bg-[#00cc44]/20 border-[#00cc44]/30 text-[#00cc44]"
+                                  : "bg-white/5 hover:bg-white/10 border-white/[0.06] text-white/80"
+                              }`}
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>{selectedMod._source === "chunk" ? "Ver en chunk.gg (Marketplace)" : "Página Oficial"}</span>
+                            </a>
+                          )}
                         </div>
 
                         {/* Gallery */}
@@ -1303,22 +1542,280 @@ export function ModDetailsSheet({
                       <motion.div key="desc" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-3 min-h-full w-full">
                         <div className="flex items-center justify-between gap-2 mb-2.5">
                           <span className="text-[10px] font-mono uppercase tracking-widest text-white/35 font-bold">Descripción</span>
-                          <button
-                            type="button"
-                            onClick={handleTranslate}
-                            disabled={isTranslating || !descriptionBody}
-                            className="px-2 py-1 rounded-lg border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
-                            style={{
-                              color: "var(--color-primary)",
-                              background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
-                              borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
-                            }}
-                          >
-                            {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
-                            {isTranslating ? "Traduciendo" : translatedBody ? "Original" : "Traducir"}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleExplain()}
+                              disabled={isExplaining}
+                              className="px-2 py-1 rounded-lg border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                              style={{
+                                color: "#c084fc",
+                                background: "rgba(192, 132, 252, 0.12)",
+                                borderColor: "rgba(192, 132, 252, 0.28)",
+                              }}
+                              title="Explicar e investigar este proyecto con Gemini 2.0 Flash y Google Search"
+                            >
+                              {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+                              {isExplaining ? "Sintetizando..." : explainedBody ? "Original" : "MIM-Bot"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleTranslate}
+                              disabled={isTranslating || !descriptionBody}
+                              className="px-2 py-1 rounded-lg border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                              style={{
+                                color: "var(--color-primary)",
+                                background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",
+                                borderColor: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
+                              }}
+                            >
+                              {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+                              {isTranslating ? "Traduciendo" : translatedBody ? "Original" : "Traducir"}
+                            </button>
+                          </div>
                         </div>
-                        {translatedBody ? (
+
+                        {/* Modal/Panel de Entrada de Gemini API Key si falta o se solicita */}
+                        {showGeminiKeyInput && (
+                          <div className="p-3 mb-3 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2 text-xs animate-in fade-in zoom-in-95">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                                <Key className="w-3.5 h-3.5" /> Clave de Gemini API Requerida
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowGeminiKeyInput(false)}
+                                className="text-white/40 hover:text-white text-[10px]"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-white/60 leading-relaxed">
+                              Para investigar y explicar proyectos sin servidor propio, se utiliza la API pública gratuita de Google Gemini.
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="password"
+                                value={geminiKeyVal}
+                                onChange={(e) => setGeminiKeyVal(e.target.value)}
+                                placeholder="AIzaSy..."
+                                className="flex-1 px-2.5 py-1.5 rounded-lg bg-black/40 border border-purple-500/30 text-xs text-white placeholder-white/20 focus:outline-none focus:border-purple-400 font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleSaveGeminiKey}
+                                disabled={!geminiKeyVal.trim() || isExplaining}
+                                className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
+                              >
+                                Guardar y Explicar
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] pt-1">
+                              <a
+                                href="https://aistudio.google.com/app/apikey"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-purple-400 hover:underline flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-3 h-3" /> Obtener clave gratuita en Google AI Studio
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {explainError && !showGeminiKeyInput && (
+                          <div className="p-2.5 mb-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center justify-between gap-2">
+                            <span>{explainError}</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowGeminiKeyInput(true)}
+                              className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-[10px] font-bold text-white whitespace-nowrap"
+                            >
+                              Configurar Key
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Caso de Proyecto Sin Descripción: Llamado a la acción destacado */}
+                        {!descriptionBody && !explainedBody && (
+                          <div className="p-4 rounded-xl bg-purple-900/10 border border-purple-500/20 text-center space-y-3 my-2">
+                            <div className="w-9 h-9 rounded-full bg-purple-500/15 text-purple-300 mx-auto flex items-center justify-center border border-purple-500/30">
+                              <Sparkles className="w-4 h-4" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-white/90">Este proyecto no incluye descripción del autor</p>
+                              <p className="text-[11px] text-white/50 leading-relaxed max-w-sm mx-auto">
+                                Gemini AI puede buscar en Google Search (GitHub, foros y wikis) para averiguar qué hace y resumírtelo en segundos.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleExplain()}
+                              disabled={isExplaining}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                              {isExplaining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                              {isExplaining ? "Investigando en Google..." : "Investigar y Explicar con IA"}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Renderizado de la Explicación Generada */}
+                        {explainedBody ? (
+                          <div className="space-y-3 animate-in fade-in duration-200">
+                            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-purple-950/40 border border-purple-500/25 text-[10px] flex-wrap gap-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-1.5 text-purple-300 font-bold">
+                                  <Sparkles className="w-3 h-3 text-purple-400" /> MIM-Bot · Análisis de Proyecto
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleExplain(undefined, true)}
+                                  disabled={isExplaining}
+                                  title="Volver a generar explicación completa con MIM-Bot"
+                                  className="p-1 rounded hover:bg-purple-500/20 text-purple-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                  <RotateCcw className={`w-3 h-3 ${isExplaining ? "animate-spin" : ""}`} />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {explanationImagesAnalyzed > 0 && (
+                                  <span className="flex items-center gap-1 text-sky-400 font-medium text-[9px] bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                                    <ImageIcon className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas analizadas
+                                  </span>
+                                )}
+                                {explanationSearchUsed && (
+                                  <span className="flex items-center gap-1 text-emerald-400 font-medium text-[9px] bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                    <Search className="w-2.5 h-2.5" /> Google Search Grounding
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div
+                              className="mim-rich-description text-xs text-white/80 leading-relaxed space-y-2.5 break-words bg-black/20 p-3 rounded-xl border border-white/5"
+                              dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
+                            />
+
+                            {explanationSources.length > 0 && (
+                              <div className="pt-2 border-t border-white/5 space-y-1.5">
+                                <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">
+                                  Fuentes de Google Search consultadas:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {explanationSources.map((src, i) => (
+                                    <a
+                                      key={i}
+                                      href={src.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[9px] text-white/60 hover:text-white transition-colors border border-white/5"
+                                    >
+                                      <ExternalLink className="w-2.5 h-2.5 text-purple-400" />
+                                      <span className="max-w-[160px] truncate">{src.title}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ── Mini-Chat Interactivo del Proyecto ── */}
+                            <div className="mt-4 pt-3.5 border-t border-purple-500/20 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">
+                                  <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                                  <span>Preguntale a MIM-Bot sobre este proyecto</span>
+                                </div>
+                                <span className="text-[9px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
+                                  MIM-Bot ⚡
+                                </span>
+                              </div>
+
+                              {/* Historial de mensajes */}
+                              {chatMessages.length > 0 && (
+                                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
+                                  {chatMessages.map((msg, idx) => (
+                                    <div
+                                      key={idx}
+                                      className={`flex flex-col text-xs rounded-2xl p-3 max-w-[90%] shadow-sm ${
+                                        msg.role === "user"
+                                          ? "ml-auto bg-purple-600/30 text-purple-100 border border-purple-500/30 rounded-br-sm"
+                                          : "mr-auto bg-black/40 text-white/90 border border-white/5 rounded-bl-sm"
+                                      }`}
+                                    >
+                                      <span className="text-[9px] font-mono uppercase text-white/40 mb-1">
+                                        {msg.role === "user" ? "Vos" : "MIM-Bot"}
+                                      </span>
+                                      <div
+                                        className="mim-rich-description text-xs leading-relaxed space-y-1.5 break-words"
+                                        dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
+                                      />
+                                    </div>
+                                  ))}
+                                  {isChatSending && (
+                                    <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-black/30 border border-white/5 text-xs text-purple-300 w-fit">
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                                      <span>Pensando la jugada...</span>
+                                    </div>
+                                  )}
+                                  <div ref={chatBottomRef} />
+                                </div>
+                              )}
+
+                              {/* Chips de sugerencias rápidas */}
+                              {chatMessages.length === 0 && (
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                  {[
+                                    "¿Es compatible con Create y Sodium?",
+                                    "¿Tiene comandos útiles o configuración?",
+                                    "¿Añade nuevas dimensiones o biomas?",
+                                  ].map((chip, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => handleSendChatMessage(chip)}
+                                      disabled={isChatSending}
+                                      className="text-[10px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/20 border border-white/5 hover:border-purple-500/30 text-white/60 hover:text-purple-200 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                      💡 {chip}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Input y botón enviar */}
+                              <div className="flex items-center gap-2 pt-1">
+                                <input
+                                  type="text"
+                                  placeholder="Hacé tu pregunta a MIM-Bot..."
+                                  value={chatInput}
+                                  onChange={(e) => setChatInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleSendChatMessage();
+                                    }
+                                  }}
+                                  disabled={isChatSending}
+                                  className="flex-1 bg-black/40 border border-white/10 focus:border-purple-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none transition-colors"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendChatMessage()}
+                                  disabled={!chatInput.trim() || isChatSending}
+                                  className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition-all active:scale-95 disabled:opacity-30 shrink-0 shadow-lg shadow-purple-600/20"
+                                >
+                                  {isChatSending ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : translatedBody ? (
                           <div className="mim-rich-description" dangerouslySetInnerHTML={{ __html: translatedBody }} />
                         ) : (
                           renderBodyText(descriptionBody, selectedMod?._source)

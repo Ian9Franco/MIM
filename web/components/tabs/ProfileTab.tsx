@@ -4,8 +4,22 @@ import React from "react";
 import { motion } from "framer-motion";
 import {
   Loader2, User, Mail, Key, Bookmark, Check, Pencil, LogOut, Layers, ChevronRight, UserCheck, Share2, Trash2, MessageSquare, Pin,
+  Shield, Download, Upload, Lock, FileCheck, AlertCircle, RefreshCw, X,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
+import { supabase } from "../../lib/supabaseClient";
+import {
+  createVault,
+  encryptVault,
+  decryptVault,
+  verifyVault,
+  generateVaultFilename,
+  type MimVaultSchema,
+  type EncryptedVaultEnvelope,
+  type VaultData,
+} from "../../lib/vault/vaultEngine";
+import { importVaultToSupabase, type VaultImportResult } from "../../lib/vault/vaultImporter";
+import { playFomoSound } from "../../lib/sounds";
 
 const CACHE_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 const globalRecentUpdatesCache: Record<string, boolean> = {};
@@ -128,6 +142,197 @@ export function ProfileTab({
 
     return getCreatedTime(b) - getCreatedTime(a);
   }), [userShares, recentUpdates]);
+
+  // ── Sovereign Vault & Data Sovereignty ──
+  const [isExportingVault, setIsExportingVault] = React.useState(false);
+  const [vaultPassphrase, setVaultPassphrase] = React.useState("");
+  const [encryptVaultCheckbox, setEncryptVaultCheckbox] = React.useState(false);
+  const [showExportModal, setShowExportModal] = React.useState(false);
+
+  const [showImportModal, setShowImportModal] = React.useState(false);
+  const [importFileName, setImportFileName] = React.useState<string>("");
+  const [parsedVault, setParsedVault] = React.useState<MimVaultSchema | null>(null);
+  const [isEncryptedVault, setIsEncryptedVault] = React.useState(false);
+  const [rawEnvelope, setRawEnvelope] = React.useState<EncryptedVaultEnvelope | null>(null);
+  const [importPassphrase, setImportPassphrase] = React.useState("");
+  const [importPassError, setImportPassError] = React.useState<string | null>(null);
+  const [importValidation, setImportValidation] = React.useState<{ valid: boolean; error?: string } | null>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importResult, setImportResult] = React.useState<VaultImportResult | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleExportVault = async () => {
+    try {
+      setIsExportingVault(true);
+
+      const formattedDrafts = (userDrafts || []).map((d: any) => ({
+        name: d.name || "Borrador sin título",
+        description: d.description || "",
+        minecraft_version: d.minecraft_version || "1.20.1",
+        loader: d.loader || "fabric",
+        visibility: d.visibility || "private",
+        cover_image: d.cover_image || undefined,
+        created_at: d.created_at,
+        items: (d.draft_items || d.items || []).map((it: any) => ({
+          project_id: it.project_id,
+          mod_name: it.mod_name || it.project_id,
+          source: it.source || "modrinth",
+          category: it.category || "mods",
+          content_type: it.content_type || "mods",
+          side: it.side || "both",
+          version_id: it.version_id || undefined,
+          dependencies: it.dependencies || [],
+        })),
+      }));
+
+      const formattedFavorites = (userFavorites || []).map((f: any) => ({
+        project_id: f.mod_id || f.project_id || f.id,
+        mod_name: f.mod_name || f.title || f.name,
+        platform: f.platform || f.source || "modrinth",
+        summary: f.summary,
+        author: f.author,
+        icon_url: f.icon_url,
+        pinned: !!f.pinned,
+        created_at: f.created_at,
+      }));
+
+      const formattedAuthors = (userFollowedAuthors || []).map((a: any) => ({
+        author_id: a.author_id,
+        author_name: a.author_name,
+        platform: a.platform || a.source || "modrinth",
+        avatar_url: a.avatar_url,
+        created_at: a.created_at,
+      }));
+
+      const vaultData: VaultData = {
+        drafts: formattedDrafts,
+        favorites: formattedFavorites,
+        followedAuthors: formattedAuthors,
+        followedMods: [],
+        preferences: {
+          defaultMinecraftVersion: "1.20.1",
+          preferredLoader: "fabric",
+        },
+      };
+
+      const identity = {
+        username: profile?.username || username || "Usuario",
+        avatar_url: profile?.avatar_url,
+        color: profile?.color,
+        banner_url: profile?.banner_url,
+        banner_meta: profile?.banner_meta,
+      };
+
+      const baseVault = await createVault(vaultData, identity, {
+        app: "MIMweb (FOMO Hub)",
+        version: "1.0.0",
+      });
+
+      let finalContent: string;
+      const isEncrypted = encryptVaultCheckbox && vaultPassphrase.trim().length > 0;
+
+      if (isEncrypted) {
+        const encryptedEnvelope = await encryptVault(baseVault, vaultPassphrase.trim());
+        finalContent = JSON.stringify(encryptedEnvelope, null, 2);
+      } else {
+        finalContent = JSON.stringify(baseVault, null, 2);
+      }
+
+      const filename = generateVaultFilename(profile?.username || username, isEncrypted);
+      const blob = new Blob([finalContent], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      playFomoSound("sparkle");
+      setShowExportModal(false);
+      setVaultPassphrase("");
+      setEncryptVaultCheckbox(false);
+    } catch (err) {
+      console.error("[Sovereign Vault] Error al exportar:", err);
+    } finally {
+      setIsExportingVault(false);
+    }
+  };
+
+  const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    setImportPassError(null);
+    setImportResult(null);
+    setParsedVault(null);
+    setRawEnvelope(null);
+    setIsEncryptedVault(false);
+    setImportValidation(null);
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      if (json.isEncrypted) {
+        setIsEncryptedVault(true);
+        setRawEnvelope(json);
+        setShowImportModal(true);
+        playFomoSound("pop");
+      } else {
+        setIsEncryptedVault(false);
+        const verification = await verifyVault(json);
+        setImportValidation(verification);
+        setParsedVault(json);
+        setShowImportModal(true);
+        playFomoSound("pop");
+      }
+    } catch (err: any) {
+      setImportValidation({ valid: false, error: "El archivo seleccionado no es un formato .mimvault válido." });
+      setShowImportModal(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDecryptVault = async () => {
+    if (!rawEnvelope || !importPassphrase.trim()) return;
+    setImportPassError(null);
+    try {
+      const decrypted = await decryptVault(rawEnvelope, importPassphrase.trim());
+      setParsedVault(decrypted);
+      setIsEncryptedVault(false);
+      setImportValidation({ valid: true });
+      playFomoSound("sparkle");
+    } catch (err: any) {
+      setImportPassError(err?.message || "Contraseña incorrecta o archivo dañado.");
+    }
+  };
+
+  const handleExecuteImport = async () => {
+    if (!parsedVault || !session?.user?.id) return;
+    setIsImporting(true);
+    try {
+      const res = await importVaultToSupabase(parsedVault, session.user.id, supabase);
+      setImportResult(res);
+      if (res.success) {
+        playFomoSound("sparkle");
+      }
+    } catch (err: any) {
+      setImportResult({
+        success: false,
+        draftsImported: 0,
+        itemsImported: 0,
+        favoritesImported: 0,
+        authorsImported: 0,
+        error: err?.message || "Error al sincronizar con la base de datos.",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -743,6 +948,295 @@ export function ProfileTab({
               </div>
             )}
           </motion.section>
+
+          {/* ── Bóveda Soberana (MIM Sovereign Vault & Data Sovereignty) ── */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-gradient-to-br from-emerald-950/20 via-indigo-950/15 to-surface/80 border border-emerald-500/20 rounded-3xl p-5 shadow-xl space-y-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">Bóveda Soberana (MIM Vault)</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                      SHA-256
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/50 leading-relaxed mt-0.5">
+                    Respaldá tus borradores, favoritos y creadores en un archivo portable <code className="text-emerald-300 font-mono">.mimvault</code> independiente de la nube.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Acciones principales */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowExportModal(true)}
+                disabled={isExportingVault}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-200 text-xs font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {isExportingVault ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 text-emerald-400" />
+                )}
+                Exportar Bóveda (.mimvault)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <Upload className="w-4 h-4 text-indigo-400" />
+                Restaurar / Migrar Bóveda
+              </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFilePicked}
+                accept=".mimvault,.json"
+                className="hidden"
+              />
+            </div>
+          </motion.section>
+
+          {/* ── Modal de Exportación ── */}
+          {showExportModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#12131a] border border-emerald-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                    <Shield className="w-4 h-4" /> Exportar Bóveda Soberana
+                  </div>
+                  <button
+                    onClick={() => setShowExportModal(false)}
+                    className="text-white/40 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Se generará un archivo <code className="text-emerald-300 font-mono">.mimvault</code> con tus{" "}
+                  <strong>{userDrafts.length} borradores</strong>, <strong>{userFavorites.length} favoritos</strong> y{" "}
+                  <strong>{userFollowedAuthors.length} autores</strong>, firmado con suma de verificación SHA-256.
+                </p>
+
+                {/* Opción Cifrado Zero-Knowledge */}
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
+                  <label className="flex items-center gap-2.5 text-xs text-white/80 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={encryptVaultCheckbox}
+                      onChange={(e) => setEncryptVaultCheckbox(e.target.checked)}
+                      className="rounded accent-emerald-500 w-4 h-4"
+                    />
+                    <span className="font-semibold flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-emerald-400" /> Cifrado Zero-Knowledge (AES-256-GCM)
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-white/40 leading-relaxed pl-6">
+                    Protege el contenido con contraseña usando PBKDF2 (100.000 iteraciones). Nadie sin la clave podrá leer tus modpacks.
+                  </p>
+
+                  {encryptVaultCheckbox && (
+                    <div className="pt-2 pl-6">
+                      <input
+                        type="password"
+                        placeholder="Contraseña de la bóveda..."
+                        value={vaultPassphrase}
+                        onChange={(e) => setVaultPassphrase(e.target.value)}
+                        className="w-full bg-black/40 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowExportModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs text-white/50 hover:text-white"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportVault}
+                    disabled={isExportingVault || (encryptVaultCheckbox && !vaultPassphrase.trim())}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                  >
+                    {isExportingVault ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    Descargar Bóveda (.mimvault)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Modal de Importación / Restauración ── */}
+          {showImportModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#12131a] border border-indigo-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+                    <Upload className="w-4 h-4" /> Restaurar Bóveda Soberana
+                  </div>
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    className="text-white/40 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="text-xs text-white/50 font-mono truncate">
+                  Archivo: <span className="text-white font-bold">{importFileName}</span>
+                </div>
+
+                {/* Caso 1: Archivo Cifrado */}
+                {isEncryptedVault && (
+                  <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
+                      <Lock className="w-4 h-4" /> Bóveda Cifrada Detectada (AES-256-GCM)
+                    </div>
+                    <p className="text-[11px] text-white/60">
+                      Esta bóveda está protegida. Introduce la contraseña definida durante su exportación para descifrarla:
+                    </p>
+                    <div className="space-y-2">
+                      <input
+                        type="password"
+                        placeholder="Contraseña de la bóveda..."
+                        value={importPassphrase}
+                        onChange={(e) => setImportPassphrase(e.target.value)}
+                        className="w-full bg-black/40 border border-indigo-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-indigo-400"
+                      />
+                      {importPassError && (
+                        <p className="text-[11px] text-rose-400 font-semibold">{importPassError}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDecryptVault}
+                      disabled={!importPassphrase.trim()}
+                      className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      Descifrar y Validar
+                    </button>
+                  </div>
+                )}
+
+                {/* Caso 2: Validación de Integridad */}
+                {importValidation && (
+                  <div
+                    className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 ${
+                      importValidation.valid
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                        : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                    }`}
+                  >
+                    {importValidation.valid ? (
+                      <>
+                        <FileCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Integridad SHA-256 Verificada con éxito.</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>{importValidation.error || "Fallo en la validación del archivo."}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Caso 3: Desglose de Contenido y Botón Restaurar */}
+                {parsedVault && !isEncryptedVault && importValidation?.valid && !importResult && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <span className="block text-base font-bold text-white font-mono">
+                          {parsedVault.data.drafts?.length || 0}
+                        </span>
+                        <span className="text-[10px] text-white/40 uppercase">Borradores</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <span className="block text-base font-bold text-white font-mono">
+                          {parsedVault.data.favorites?.length || 0}
+                        </span>
+                        <span className="text-[10px] text-white/40 uppercase">Favoritos</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <span className="block text-base font-bold text-white font-mono">
+                          {parsedVault.data.followedAuthors?.length || 0}
+                        </span>
+                        <span className="text-[10px] text-white/40 uppercase">Autores</span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-white/50 leading-relaxed text-center">
+                      Los datos se sincronizarán con tu cuenta actual de forma idempotente sin duplicar contenido existente.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleExecuteImport}
+                      disabled={isImporting}
+                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Restaurando en tu cuenta...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" /> Restaurar en mi Cuenta
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Resultado Exitoso */}
+                {importResult && (
+                  <div className="space-y-3 text-center pt-2">
+                    {importResult.success ? (
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
+                          <Check className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-bold text-white">¡Bóveda Restaurada con Éxito!</h4>
+                        <p className="text-xs text-white/60">
+                          Se restauraron {importResult.draftsImported} borradores, {importResult.itemsImported} items,{" "}
+                          {importResult.favoritesImported} favoritos y {importResult.authorsImported} autores.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => window.location.reload()}
+                          className="mt-2 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                        >
+                          Actualizar Vista
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                        {importResult.error || "Ocurrió un error durante la importación."}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
     </motion.div>

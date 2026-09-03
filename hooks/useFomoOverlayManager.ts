@@ -40,6 +40,19 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
   const [followedMods, setFollowedMods] = useState<any[]>([]);
 
+  // Explainer Logic (Gemini Flash Multimodal + Grounded)
+  const [explainedBody, setExplainedBody] = useState<string | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [explanationSources, setExplanationSources] = useState<Array<{ title: string; url: string }>>([]);
+  const [explanationSearchUsed, setExplanationSearchUsed] = useState(false);
+  const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
+  const [explainError, setExplainError] = useState<string | null>(null);
+  const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
+  // Project Mini-Chat
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatSending, setIsChatSending] = useState(false);
+
   // Gallery Logic
   const [gallery, setGallery] = useState<any[]>(normalizeGallery(mod.gallery));
   const [loadingGallery, setLoadingGallery] = useState(false);
@@ -52,7 +65,32 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     lastFetchedKey.current = null;
     setTranslatedBody(null);
     setFullBody(null);
+    setExplainedBody(null);
+    setIsExplaining(false);
+    setExplanationSources([]);
+    setExplanationSearchUsed(false);
+    setExplanationImagesAnalyzed(0);
+    setExplainError(null);
+    setShowGeminiKeyInput(false);
+    setChatMessages([]);
+    setChatInput("");
+    setIsChatSending(false);
     setDepSearchQuery("");
+
+    try {
+      const cached = localStorage.getItem(`mim_explain_${mod.projectId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.summaryMarkdown) {
+          setExplainedBody(parsed.summaryMarkdown);
+          setExplanationSources(parsed.groundedSources || []);
+          setExplanationSearchUsed(!!parsed.searchUsed);
+          setExplanationImagesAnalyzed(parsed.imagesAnalyzed || 0);
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, [mod.projectId, mod.gallery]);
 
   useEffect(() => {
@@ -296,5 +334,186 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
   };
 
-  return { activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, isTranslating, translatedBody, setTranslatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery };
+  const handleExplain = async (customKey?: string, forceRefresh?: boolean) => {
+    if (isExplaining) return;
+    if (explainedBody && !customKey && !forceRefresh) {
+      setExplainedBody(null);
+      return;
+    }
+
+    const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
+    const cacheKey = `mim_explain_${mod.projectId}`;
+
+    if (!customKey && !forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.summaryMarkdown) {
+            const cleaned = parsed.summaryMarkdown.replace(/\s*\(Sin Vueltas\)/gi, "");
+            setExplainedBody(cleaned);
+            setExplanationSources(parsed.groundedSources || []);
+            setExplanationSearchUsed(!!parsed.searchUsed);
+            setExplanationImagesAnalyzed(parsed.imagesAnalyzed || 0);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    setIsExplaining(true);
+    setExplainError(null);
+
+    const galleryUrls = (gallery || [])
+      .map((g: any) => g?.thumbnailUrl || g?.url)
+      .filter((u: any): u is string => typeof u === "string" && u.length > 0)
+      .slice(0, 5);
+
+    try {
+      const res = await fetch("/api/fomo/explain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(savedKey ? { "x-gemini-key": savedKey } : {}),
+        },
+        body: JSON.stringify({
+          projectId: mod.projectId,
+          title: mod.title,
+          author: mod.author,
+          slug: mod.slug || mod.projectId,
+          description: fullBody || mod.body || mod.description || "",
+          url: mod.url,
+          source: mod._source,
+          categories: mod.categories || [],
+          loaders: mod.loaders || [],
+          galleryUrls,
+          clientApiKey: savedKey,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401 || data.error === "NO_API_KEY") {
+        setShowGeminiKeyInput(true);
+        setExplainError("Introduce tu clave de Gemini API para activar la explicación inteligente.");
+        return;
+      }
+
+      if (!res.ok || data.error) {
+        if (typeof data.error === "string" && (data.error.includes("quota") || data.error.includes("RESOURCE_EXHAUSTED") || data.error.includes("limit:"))) {
+          setExplainError("⚡ MIM-Bot alcanzó el límite de solicitudes por minuto de la clave. Esperá unos segundos y reintentá.");
+          return;
+        }
+        throw new Error(data.error || "No se pudo sintetizar la explicación.");
+      }
+
+      const cleanedSummary = (data.summaryMarkdown || "").replace(/\s*\(Sin Vueltas\)/gi, "");
+      setExplainedBody(cleanedSummary);
+      setExplanationSources(data.groundedSources || []);
+      setExplanationSearchUsed(!!data.searchUsed);
+      setExplanationImagesAnalyzed(data.imagesAnalyzed || 0);
+      setShowGeminiKeyInput(false);
+
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ ...data, summaryMarkdown: cleanedSummary }));
+      } catch {}
+    } catch (err: any) {
+      console.error("[Mod Explainer] Error:", err);
+      setExplainError(err?.message || "Error al conectar con Gemini API.");
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
+  const handleSendChatMessage = async (textToSend?: string) => {
+    const query = (textToSend || chatInput).trim();
+    if (!query || isChatSending || !mod) return;
+
+    const newMessages = [...chatMessages, { role: "user" as const, text: query }];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setIsChatSending(true);
+
+    try {
+      const savedKey = localStorage.getItem("mim_gemini_api_key") || "";
+      const res = await fetch("/api/fomo/explain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(savedKey ? { "x-gemini-key": savedKey } : {}),
+        },
+        body: JSON.stringify({
+          mode: "chat",
+          projectId: mod.projectId,
+          title: mod.title,
+          author: mod.author,
+          description: fullBody || mod.description || "",
+          categories: mod.categories || [],
+          loaders: mod.loaders || [],
+          initialSummary: explainedBody || "",
+          clientApiKey: savedKey,
+          messages: chatMessages,
+          question: query,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.reply) {
+        setChatMessages([...newMessages, { role: "model" as const, text: data.reply }]);
+      } else if (data.error) {
+        setChatMessages([
+          ...newMessages,
+          { role: "model" as const, text: `⚠️ ${data.message || data.error}` },
+        ]);
+      }
+    } catch (err: any) {
+      console.error("[ProjectChat] Error:", err);
+      setChatMessages([
+        ...newMessages,
+        { role: "model" as const, text: `⚠️ Error de conexión: ${err?.message || "Intenta de nuevo."}` },
+      ]);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
+
+  return {
+    activeTab,
+    setActiveTab,
+    expandedVersion,
+    setExpandedVersion,
+    depDownloading,
+    setDepDownloading,
+    isTranslating,
+    translatedBody,
+    setTranslatedBody,
+    fullBody,
+    depSearchQuery,
+    setDepSearchQuery,
+    followedAuthors,
+    followedMods,
+    toggleFollowAuthor,
+    toggleFollowMod,
+    allDependencies,
+    handleTranslate,
+    gallery,
+    loadingGallery,
+    // Explainer additions:
+    explainedBody,
+    setExplainedBody,
+    isExplaining,
+    explanationSources,
+    explanationSearchUsed,
+    explanationImagesAnalyzed,
+    explainError,
+    showGeminiKeyInput,
+    setShowGeminiKeyInput,
+    handleExplain,
+    // Mini-Chat additions:
+    chatMessages,
+    chatInput,
+    setChatInput,
+    isChatSending,
+    handleSendChatMessage,
+  };
 }

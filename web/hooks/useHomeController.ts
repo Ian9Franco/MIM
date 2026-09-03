@@ -158,7 +158,7 @@ export function useHomeController() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverTotal, setDiscoverTotal] = useState(0);
-  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all">("modrinth");
+  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("modrinth");
   const [discoverError, setDiscoverError] = useState("");
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -914,7 +914,19 @@ export function useHomeController() {
       let mapped: ModHit[] = [];
       let totalHits = 0;
 
-      if (activeSource === "all") {
+      if (activeSource === "chunk") {
+        const chunkParams = new URLSearchParams({
+          page: String(pageNumber),
+          ...(activeQuery ? { q: activeQuery } : {}),
+        });
+        const res = await fetch(`/api/bedrock/discover?${chunkParams.toString()}`);
+        if (!res.ok) {
+          throw new Error("Error en la API de Bedrock (chunk.gg)");
+        }
+        const data = await res.json();
+        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "chunk" }));
+        totalHits = data.total || 0;
+      } else if (activeSource === "all") {
         const [mRes, cRes] = await Promise.allSettled([
           fetch(`/api/modrinth/discover?${queryParams.toString()}`),
           fetch(`/api/curseforge/discover?${queryParams.toString()}`)

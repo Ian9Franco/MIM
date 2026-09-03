@@ -1,16 +1,17 @@
-import React from "react";
-import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench, Shield, Download, Upload, FileCheck, Loader2 } from "lucide-react";
+import { createVault, verifyVault, encryptVault, decryptVault, generateVaultFilename, type VaultData, type MimVaultSchema } from "@/lib/vault/vaultEngine";
 
 // ── SettingsTabNav ───────────────────────────────────────────────────────────
 
 interface SettingsTabNavProps {
   activeTab: string;
-  setActiveTab: (t: "paths" | "apiKeys" | "tools") => void;
+  setActiveTab: (t: "paths" | "apiKeys" | "tools" | "vault") => void;
 }
 
 export function SettingsTabNav({ activeTab, setActiveTab }: SettingsTabNavProps) {
   return (
-    <div className="flex border-b border-white/5 pb-2 mb-4 gap-2">
+    <div className="flex border-b border-white/5 pb-2 mb-4 gap-2 flex-wrap">
       <button
         type="button"
         onClick={() => setActiveTab("paths")}
@@ -46,6 +47,18 @@ export function SettingsTabNav({ activeTab, setActiveTab }: SettingsTabNavProps)
       >
         <Wrench className="w-3.5 h-3.5" />
         HERRAMIENTAS
+      </button>
+      <button
+        type="button"
+        onClick={() => setActiveTab("vault")}
+        className={`pb-2.5 px-4 text-xs font-headline tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+          activeTab === "vault"
+            ? "border-emerald-400 text-emerald-400 font-bold"
+            : "border-transparent text-muted hover:text-foreground"
+        }`}
+      >
+        <Shield className="w-3.5 h-3.5" />
+        BÓVEDA SOBERANA
       </button>
     </div>
   );
@@ -140,9 +153,9 @@ export function ApiKeyInputGroup({
   label, value, onChange, show, onToggleShow, canEdit, isValid, isValidating, saving, 
   placeholder, desc, link, linkText, badge, color = "primary" 
 }: ApiKeyInputGroupProps) {
-  const colorClass = color === "emerald" ? "text-emerald-400" : color === "blue" ? "text-blue-400" : "text-primary";
-  const bgClass = color === "emerald" ? "bg-emerald-500/10 border-emerald-500/20" : color === "blue" ? "bg-blue-500/10 border-blue-500/20" : "bg-primary/10 border-primary/20";
-  const borderClass = color === "emerald" ? "border-emerald-500/20 focus:border-emerald-400 focus:shadow-[0_0_15px_rgba(16,185,129,0.08)]" : color === "blue" ? "border-blue-500/20 focus:border-blue-400 focus:shadow-[0_0_15px_rgba(59,130,246,0.08)]" : "border-primary/30 focus:border-primary focus:shadow-[0_0_15px_rgba(217,119,87,0.15)]";
+  const colorClass = color === "emerald" ? "text-emerald-400" : color === "blue" ? "text-blue-400" : color === "purple" ? "text-purple-400" : "text-primary";
+  const bgClass = color === "emerald" ? "bg-emerald-500/10 border-emerald-500/20" : color === "blue" ? "bg-blue-500/10 border-blue-500/20" : color === "purple" ? "bg-purple-500/10 border-purple-500/20" : "bg-primary/10 border-primary/20";
+  const borderClass = color === "emerald" ? "border-emerald-500/20 focus:border-emerald-400 focus:shadow-[0_0_15px_rgba(16,185,129,0.08)]" : color === "blue" ? "border-blue-500/20 focus:border-blue-400 focus:shadow-[0_0_15px_rgba(59,130,246,0.08)]" : color === "purple" ? "border-purple-500/20 focus:border-purple-400 focus:shadow-[0_0_15px_rgba(168,85,247,0.15)]" : "border-primary/30 focus:border-primary focus:shadow-[0_0_15px_rgba(217,119,87,0.15)]";
 
   return (
     <div className="group">
@@ -450,3 +463,190 @@ export function YtDlpUpdaterCard() {
     </div>
   );
 }
+
+// ── SovereignVaultSettingsCard ───────────────────────────────────────────────
+
+interface SovereignVaultSettingsCardProps {
+  settingsData: any;
+  onApplySettings?: (newSettings: any) => void;
+}
+
+export function SovereignVaultSettingsCard({ settingsData, onApplySettings }: SovereignVaultSettingsCardProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const [encrypt, setEncrypt] = useState(false);
+  const [passphrase, setPassphrase] = useState("");
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const vaultData: VaultData = {
+        drafts: [],
+        favorites: [],
+        followedAuthors: [],
+        followedMods: [],
+        preferences: {
+          downloadsPath: settingsData.downloadsPath,
+          minecraftPath: settingsData.minecraftPath,
+          stagingPath: settingsData.stagingPath,
+          sourceBase: settingsData.sourceBase,
+          buildsBase: settingsData.buildsBase,
+          curseforgeApiKey: settingsData.curseforgeApiKey,
+          modrinthApiKey: settingsData.modrinthApiKey,
+          virusTotalApiKey: settingsData.virusTotalApiKey,
+          geminiApiKey: settingsData.geminiApiKey,
+        },
+      };
+
+      const baseVault = await createVault(vaultData, { username: "MIM Desktop User" }, {
+        app: "MIM Desktop",
+        version: "10.5.0",
+      });
+
+      let content: string;
+      const isEncrypted = encrypt && passphrase.trim().length > 0;
+      if (isEncrypted) {
+        const envelope = await encryptVault(baseVault, passphrase.trim());
+        content = JSON.stringify(envelope, null, 2);
+      } else {
+        content = JSON.stringify(baseVault, null, 2);
+      }
+
+      const filename = generateVaultFilename("desktop-backup", isEncrypted);
+      const blob = new Blob([content], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Error exporting vault:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportStatus(null);
+    setImportError(null);
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      let vault: MimVaultSchema;
+      if (json.isEncrypted) {
+        if (!passphrase.trim()) {
+          setImportError("Esta bóveda está cifrada. Ingresa la contraseña arriba antes de importar.");
+          return;
+        }
+        vault = await decryptVault(json, passphrase.trim());
+      } else {
+        vault = json;
+      }
+
+      const verification = await verifyVault(vault);
+      if (!verification.valid) {
+        setImportError(verification.error || "Integridad fallida.");
+        return;
+      }
+
+      if (vault.data?.preferences && onApplySettings) {
+        onApplySettings(vault.data.preferences);
+      }
+
+      setImportStatus(`Bóveda verificada (SHA-256: ${vault.integrity.checksum.substring(0, 10)}...). Ajustes restaurados con éxito.`);
+    } catch (err: any) {
+      setImportError(err?.message || "Error al procesar el archivo .mimvault.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="p-5 rounded-2xl bg-white/[0.02] border border-emerald-500/20 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5 text-emerald-400 font-headline font-bold text-sm">
+          <Shield className="w-4 h-4" /> Bóveda Soberana (MIM Sovereign Vault)
+        </div>
+        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+          SHA-256 Portable
+        </span>
+      </div>
+
+      <p className="text-xs text-muted leading-relaxed">
+        Exporta e importa tus rutas, preferencias y claves en un archivo portable <code className="text-emerald-400 font-mono text-[11px]">.mimvault</code> con verificación criptográfica SHA-256 e independiente de la nube.
+      </p>
+
+      <div className="p-3 rounded-xl bg-black/20 border border-white/5 space-y-2">
+        <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
+          <input
+            type="checkbox"
+            checked={encrypt}
+            onChange={(e) => setEncrypt(e.target.checked)}
+            className="rounded accent-emerald-500"
+          />
+          <span>Cifrado Zero-Knowledge (AES-256-GCM)</span>
+        </label>
+        {encrypt && (
+          <input
+            type="password"
+            placeholder="Contraseña de la bóveda..."
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            className="w-full bg-white/5 border border-emerald-500/30 rounded-lg px-2.5 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-emerald-400"
+          />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 pt-1">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
+        >
+          {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+          Exportar Bóveda
+        </button>
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-foreground text-xs font-bold transition-all active:scale-95"
+        >
+          <Upload className="w-3.5 h-3.5 text-indigo-400" />
+          Importar Bóveda
+        </button>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFile}
+          accept=".mimvault,.json"
+          className="hidden"
+        />
+      </div>
+
+      {importStatus && (
+        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+          <FileCheck className="w-4 h-4 shrink-0" /> {importStatus}
+        </div>
+      )}
+
+      {importError && (
+        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" /> {importError}
+        </div>
+      )}
+    </div>
+  );
+}
+

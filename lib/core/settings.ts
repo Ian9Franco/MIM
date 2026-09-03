@@ -12,6 +12,7 @@ export interface MimSettings {
   modrinthApiKey?: string;
   curseforgeApiKey?: string;
   virusTotalApiKey?: string;
+  geminiApiKey?: string;
 }
 
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
@@ -92,7 +93,8 @@ export function getSettings(): MimSettings {
     validated: false,
     modrinthApiKey: "",
     curseforgeApiKey: "",
-    virusTotalApiKey: ""
+    virusTotalApiKey: "",
+    geminiApiKey: ""
   };
 }
 
@@ -104,7 +106,7 @@ export function saveSettings(settings: Partial<MimSettings>) {
   return next;
 }
 
-export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal"): string {
+export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal" | "gemini"): string {
   const settings = getSettings();
   if (keyName === "modrinth") {
     return settings.modrinthApiKey || process.env.MODRINTH_API_KEY || process.env.MODRINTH_TOKEN || "";
@@ -114,6 +116,9 @@ export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal"): st
   }
   if (keyName === "virustotal") {
     return settings.virusTotalApiKey || process.env.VIRUSTOTAL_API_KEY || "";
+  }
+  if (keyName === "gemini") {
+    return settings.geminiApiKey || process.env.GEMINI_API_KEY || "";
   }
   return "";
 }

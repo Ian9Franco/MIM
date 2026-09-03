@@ -3,9 +3,9 @@
  * Optimized for v5.9: Modularized into hooks and components.
  */
 
-import React, { memo, useState, useCallback, useEffect } from "react";
+import React, { memo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, X, Download, Info, FileText, ListTree, ExternalLink, Package, Heart, Images, Maximize2, Search, Workflow } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Download, Info, FileText, ListTree, ExternalLink, Package, Heart, Images, Maximize2, Search, Workflow, Sparkles, Key, Loader2, RotateCcw, Send, MessageSquare } from "lucide-react";
 import { openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
 import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
@@ -54,11 +54,32 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   if (!mod) return null;
 
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const { 
     activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading, setDepDownloading, 
     isTranslating, translatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, 
-    toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery 
+    toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery,
+    explainedBody, setExplainedBody, isExplaining, explanationSources, explanationSearchUsed,
+    explanationImagesAnalyzed,
+    explainError, showGeminiKeyInput, setShowGeminiKeyInput, handleExplain,
+    chatMessages, chatInput, setChatInput, isChatSending, handleSendChatMessage,
   } = useFomoOverlayManager(mod, versions, hideVersions);
+
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, isChatSending]);
+
+  const [geminiKeyVal, setGeminiKeyVal] = useState("");
+  const handleSaveGeminiKey = () => {
+    if (!geminiKeyVal.trim()) return;
+    const clean = geminiKeyVal.trim();
+    try {
+      localStorage.setItem("mim_gemini_api_key", clean);
+    } catch {}
+    handleExplain(clean);
+  };
 
   const galleryBanner = useModGalleryBanner(mod);
   const detailsBannerUrl =
@@ -227,18 +248,298 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             />
           </div>
 
-          <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto" style={{ borderColor: "var(--fomo-border)" }}>
-            {!hideVersions && <TabButton active={activeTab === "versions"} onClick={() => setActiveTab("versions")} icon={<ListTree className="w-3.5 h-3.5" />} label="Versiones" />}
-            <TabButton active={activeTab === "dependencies"} onClick={() => setActiveTab("dependencies")} icon={<Package className="w-3.5 h-3.5" />} label="Dependencias" />
-            <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} icon={<Images className="w-3.5 h-3.5" />} label="Galería" count={gallery.length || undefined} />
-            <TabButton active={activeTab === "description"} onClick={() => setActiveTab("description")} icon={<FileText className="w-3.5 h-3.5" />} label="Descripción" />
+          <div className="flex px-3 pt-2 gap-1 border-b shrink-0 overflow-x-auto items-center justify-between" style={{ borderColor: "var(--fomo-border)" }}>
+            <div className="flex gap-1">
+              {!hideVersions && <TabButton active={activeTab === "versions"} onClick={() => setActiveTab("versions")} icon={<ListTree className="w-3.5 h-3.5" />} label="Versiones" />}
+              <TabButton active={activeTab === "dependencies"} onClick={() => setActiveTab("dependencies")} icon={<Package className="w-3.5 h-3.5" />} label="Dependencias" />
+              <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} icon={<Images className="w-3.5 h-3.5" />} label="Galería" count={gallery.length || undefined} />
+              <TabButton active={activeTab === "description"} onClick={() => setActiveTab("description")} icon={<FileText className="w-3.5 h-3.5" />} label="Descripción" />
+            </div>
+            <button
+              onClick={() => {
+                if (!explainedBody) handleExplain();
+                setActiveTab("description");
+              }}
+              disabled={isExplaining}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[0.65rem] font-bold transition-all active:scale-95 disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20 mr-1"
+              title="Explicar e interactuar con MIM-Bot"
+            >
+              {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+              <span>{isExplaining ? "Sintetizando..." : "MIM-Bot"}</span>
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {activeTab === "description" && (
               <div className="space-y-4">
-                <button onClick={handleTranslate} disabled={isTranslating} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold">{isTranslating ? "Traduciendo..." : (translatedBody ? "Original" : "Traducir")}</button>
-                <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: descHtml }} />
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleExplain()}
+                      disabled={isExplaining}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold transition-all active:scale-95 disabled:opacity-50"
+                      style={{
+                        color: "#c084fc",
+                        background: "rgba(192, 132, 252, 0.12)",
+                        borderColor: "rgba(192, 132, 252, 0.28)",
+                      }}
+                      title="Explicar e investigar este proyecto con MIM-Bot"
+                    >
+                      {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+                      {isExplaining ? "Sintetizando..." : explainedBody ? "Original" : "MIM-Bot"}
+                    </button>
+                    <button
+                      onClick={handleTranslate}
+                      disabled={isTranslating || !rawDesc}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold transition-all active:scale-95 disabled:opacity-50"
+                      style={{
+                        borderColor: "var(--fomo-border)",
+                        background: "rgba(255,255,255,0.03)",
+                      }}
+                    >
+                      {isTranslating ? "Traduciendo..." : (translatedBody ? "Original" : "Traducir")}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gemini API Key Dialog */}
+                {showGeminiKeyInput && (
+                  <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5" /> Clave de Gemini API Requerida
+                      </span>
+                      <button
+                        onClick={() => setShowGeminiKeyInput(false)}
+                        className="text-white/40 hover:text-white text-[10px]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-white/60 leading-relaxed">
+                      Para investigar y sintetizar proyectos sin servidor propio, se utiliza la API pública gratuita de Google Gemini.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        value={geminiKeyVal}
+                        onChange={(e) => setGeminiKeyVal(e.target.value)}
+                        placeholder="AIzaSy..."
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-black/40 border border-purple-500/30 text-xs text-white placeholder-white/20 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <button
+                        onClick={handleSaveGeminiKey}
+                        disabled={!geminiKeyVal.trim() || isExplaining}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
+                      >
+                        Guardar y Explicar
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] pt-1">
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-purple-400 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Obtener clave gratuita en Google AI Studio
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {explainError && !showGeminiKeyInput && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center justify-between gap-2">
+                    <span>{explainError}</span>
+                    <button
+                      onClick={() => setShowGeminiKeyInput(true)}
+                      className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-[10px] font-bold text-white whitespace-nowrap"
+                    >
+                      Configurar Key
+                    </button>
+                  </div>
+                )}
+
+                {/* Empty description prompt */}
+                {!rawDesc && !explainedBody && (
+                  <div className="p-4 rounded-xl bg-purple-900/10 border border-purple-500/20 text-center space-y-3 my-2">
+                    <div className="w-9 h-9 rounded-full bg-purple-500/15 text-purple-300 mx-auto flex items-center justify-center border border-purple-500/30">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-white/90">Este proyecto no incluye descripción del autor</p>
+                      <p className="text-[11px] text-white/50 leading-relaxed max-w-sm mx-auto">
+                        Gemini AI puede buscar en Google Search (GitHub, foros y wikis) para averiguar qué hace y resumírtelo en segundos.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleExplain()}
+                      disabled={isExplaining}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isExplaining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {isExplaining ? "Sintetizando..." : "MIM-Bot"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Explanation Output */}
+                {explainedBody ? (
+                  <div className="space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-purple-950/40 border border-purple-500/25 text-[10px] flex-wrap gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5 text-purple-300 font-bold">
+                          <Sparkles className="w-3 h-3 text-purple-400" /> MIM-Bot · Análisis de Proyecto
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleExplain(undefined, true)}
+                          disabled={isExplaining}
+                          title="Volver a generar explicación completa con MIM-Bot"
+                          className="p-1 rounded hover:bg-purple-500/20 text-purple-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          <RotateCcw className={`w-3 h-3 ${isExplaining ? "animate-spin" : ""}`} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {explanationImagesAnalyzed > 0 && (
+                          <span className="flex items-center gap-1 text-sky-400 font-medium text-[9px] bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                            <Images className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas analizadas
+                          </span>
+                        )}
+                        {explanationSearchUsed && (
+                          <span className="flex items-center gap-1 text-emerald-400 font-medium text-[9px] bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            <Search className="w-2.5 h-2.5" /> Google Search Grounding
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
+                    />
+
+                    {explanationSources.length > 0 && (
+                      <div className="pt-2 border-t border-white/5 space-y-1.5">
+                        <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">
+                          Fuentes de Google Search consultadas:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {explanationSources.map((src, i) => (
+                            <a
+                              key={i}
+                              href={src.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[9px] text-white/60 hover:text-white transition-colors border border-white/5"
+                            >
+                              <ExternalLink className="w-2.5 h-2.5 text-purple-400" />
+                              <span className="max-w-[160px] truncate">{src.title}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Mini-Chat Interactivo MIM-Bot ── */}
+                    <div className="mt-4 pt-3.5 border-t border-purple-500/20 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">
+                          <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Preguntale a MIM-Bot sobre este proyecto</span>
+                        </div>
+                        <span className="text-[9px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
+                          MIM-Bot ⚡
+                        </span>
+                      </div>
+
+                      {/* Historial de mensajes */}
+                      {chatMessages.length > 0 && (
+                        <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
+                          {chatMessages.map((msg, idx) => (
+                            <div
+                              key={idx}
+                              className={`flex flex-col text-xs rounded-2xl p-3 max-w-[90%] shadow-sm ${
+                                msg.role === "user"
+                                  ? "ml-auto bg-purple-600/30 text-purple-100 border border-purple-500/30 rounded-br-sm"
+                                  : "mr-auto bg-black/40 text-white/90 border border-white/5 rounded-bl-sm"
+                              }`}
+                            >
+                              <span className="text-[9px] font-mono uppercase text-white/40 mb-1">
+                                {msg.role === "user" ? "Vos" : "MIM-Bot"}
+                              </span>
+                              <div
+                                className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
+                                dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
+                              />
+                            </div>
+                          ))}
+                          {isChatSending && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-black/30 border border-white/5 text-xs text-purple-300 w-fit">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                              <span>Pensando la jugada...</span>
+                            </div>
+                          )}
+                          <div ref={chatBottomRef} />
+                        </div>
+                      )}
+
+                      {/* Chips de sugerencias rápidas */}
+                      {chatMessages.length === 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {[
+                            "¿Es compatible con Create y Sodium?",
+                            "¿Tiene comandos útiles o configuración?",
+                            "¿Añade nuevas dimensiones o biomas?",
+                          ].map((chip, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleSendChatMessage(chip)}
+                              disabled={isChatSending}
+                              className="text-[10px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/20 border border-white/5 hover:border-purple-500/30 text-white/60 hover:text-purple-200 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                              💡 {chip}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Input y botón enviar */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="text"
+                          placeholder="Hacé tu pregunta a MIM-Bot..."
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendChatMessage();
+                            }
+                          }}
+                          disabled={isChatSending}
+                          className="flex-1 bg-black/40 border border-white/10 focus:border-purple-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSendChatMessage()}
+                          disabled={!chatInput.trim() || isChatSending}
+                          className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition-all active:scale-95 disabled:opacity-30 shrink-0 shadow-lg shadow-purple-600/20"
+                        >
+                          {isChatSending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: descHtml }} />
+                )}
               </div>
             )}
             {activeTab === "gallery" && (

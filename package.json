@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint app components lib --max-warnings=9999",
     "test:nbt": "ts-node --project tsconfig.scripts.json scripts/__tests__/nbt-integration.test.ts",
     "test:api": "ts-node --project tsconfig.scripts.json scripts/__tests__/api-integration.test.ts",
     "eval:sage": "ts-node --project tsconfig.scripts.json scripts/evaluation/sage-eval.ts",

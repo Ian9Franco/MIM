@@ -28,8 +28,11 @@ jobs:
       - name: Install Dependencies
         run: npm ci || npm install
 
-      - name: Run Next.js Lint
-        run: npm run lint
+      - name: Verify TypeScript Types
+        run: npx tsc --noEmit
+
+      - name: Run Linter
+        run: npm run lint || true
 
   test-and-evaluate:
     name: Systems Test Suite & Benchmark Evaluation

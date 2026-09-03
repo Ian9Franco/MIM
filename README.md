@@ -14,7 +14,7 @@
 [![CI](https://github.com/Ian9Franco/MIM/actions/workflows/ci.yml/badge.svg)](https://github.com/Ian9Franco/MIM/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests: Passing](https://img.shields.io/badge/Tests-All%20Passing-brightgreen)](scripts/test-runner.js)
-[![Coverage](https://img.shields.io/badge/Coverage-96.4%25-brightgreen)](scripts/test-runner.js)
+[![Coverage](https://img.shields.io/badge/Coverage-96.4%25-brightgreen)](scripts/coverage.js)
 
 **[🎬 Live Demo](./docs/DEMO.md)** • **[🌐 Web Hub](https://mim-hub.vercel.app/)** • **[🏛️ Architecture](#-system-architecture)** • **[📑 ADRs (Decisions)](./docs/adr/)** • **[🛡️ SAGE Engine](#engine-01--sage-crash-intelligence-system)** • **[⚡ Aduana Engine](#engine-02--aduana-storage-engine--performance-benchmarks)** • **[🌐 FOMO Cloud](#engine-03--fomo-cloud--distributed-systems-architecture)** • **[🔒 Security Engine](#engine-04--static-java-bytecode-threat-analysis)** • **[💾 NBT Rescue](#engine-05--nbt-rescue-engine--binary-data-recovery)** • **[🐳 Reproducibility](./docs/REPRODUCIBILITY.md)**
 

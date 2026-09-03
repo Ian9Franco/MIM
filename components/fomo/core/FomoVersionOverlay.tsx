@@ -264,7 +264,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[0.65rem] font-bold transition-all active:scale-95 disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20 mr-1"
               title="Explicar e interactuar con MIM-Bot"
             >
-              {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+              {isExplaining ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+              )}
               <span>{isExplaining ? "Sintetizando..." : "MIM-Bot"}</span>
             </button>
           </div>
@@ -285,7 +289,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       }}
                       title="Explicar e investigar este proyecto con MIM-Bot"
                     >
-                      {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+                      {isExplaining ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                      )}
                       {isExplaining ? "Sintetizando..." : explainedBody ? "Original" : "MIM-Bot"}
                     </button>
                     <button
@@ -377,7 +385,11 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       disabled={isExplaining}
                       className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {isExplaining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {isExplaining ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                      )}
                       {isExplaining ? "Sintetizando..." : "MIM-Bot"}
                     </button>
                   </div>

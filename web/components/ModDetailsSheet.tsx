@@ -1355,7 +1355,11 @@ export function ModDetailsSheet({
                                 className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20"
                                 title="Explicar e investigar con MIM-Bot"
                               >
-                                {isExplaining ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5 text-purple-400" />}
+                                {isExplaining ? (
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                ) : (
+                                  <img src="/icon.png" alt="" className="w-3 h-3 object-contain animate-slime shrink-0" />
+                                )}
                                 {isExplaining ? "Sintetizando..." : "MIM-Bot"}
                               </button>
                               <button
@@ -1555,7 +1559,11 @@ export function ModDetailsSheet({
                               }}
                               title="Explicar e investigar este proyecto con Gemini 2.0 Flash y Google Search"
                             >
-                              {isExplaining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
+                              {isExplaining ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                              )}
                               {isExplaining ? "Sintetizando..." : explainedBody ? "Original" : "MIM-Bot"}
                             </button>
 

@@ -9,7 +9,7 @@ on:
       tag_name:
         description: 'Tag name for release'
         required: false
-        default: 'v10.5.0'
+        default: 'v10.5.1'
 
 permissions:
   contents: write
@@ -36,12 +36,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve Release Notes
+        id: notes
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name || inputs.tag_name || 'v10.5.1' }}"
+          FILE="docs/release-notes-${TAG}.md"
+          if [ -f "$FILE" ]; then
+            echo "path=$FILE" >> $GITHUB_OUTPUT
+          elif [ -f "docs/release-notes-v10.5.1.md" ]; then
+            echo "path=docs/release-notes-v10.5.1.md" >> $GITHUB_OUTPUT
+          else
+            echo "path=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: MIM v10.5.0 — Modular Systems Engineering Platform
-          tag_name: ${{ github.ref_name || inputs.tag_name || 'v10.5.0' }}
-          body_path: docs/release-notes-v10.5.0.md
+          name: MIM ${{ github.ref_name || inputs.tag_name || 'v10.5.1' }} — Systems Platform & MIM-Bot
+          tag_name: ${{ github.ref_name || inputs.tag_name || 'v10.5.1' }}
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: true
           draft: false
           prerelease: false
           files: |

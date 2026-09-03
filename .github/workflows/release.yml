@@ -33,6 +33,8 @@ jobs:
 
       - name: Package Windows Standalone
         run: npm run package:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -43,9 +45,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/MIM Setup 10.5.0.exe
-            dist/MIM 10.5.0.exe
-            dist/MIM Setup 10.5.0.exe.blockmap
+            dist/*.exe
+            dist/*.blockmap
             dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

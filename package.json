@@ -2,6 +2,10 @@
   "name": "mim",
   "version": "10.5.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ian9Franco/MIM.git"
+  },
   "main": "standalone/main.js",
   "scripts": {
     "dev": "next dev",
@@ -19,7 +23,7 @@
     "demo": "node scripts/demo-tour.js",
     "build:standalone": "next build && node standalone/prepare.js",
     "start:standalone": "electron standalone/main.js",
-    "package:win": "npm run build:standalone && electron-builder build --win",
+    "package:win": "npm run build:standalone && electron-builder build --win --publish never",
     "release": "node scripts/release.js",
     "version:sync": "node scripts/release.js"
   },

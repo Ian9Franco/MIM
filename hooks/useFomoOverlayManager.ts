@@ -401,7 +401,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
 
       if (!res.ok || data.error) {
         if (typeof data.error === "string" && (data.error.includes("quota") || data.error.includes("RESOURCE_EXHAUSTED") || data.error.includes("limit:"))) {
-          setExplainError("⚡ MIM-Bot alcanzó el límite de solicitudes por minuto de la clave. Esperá unos segundos y reintentá.");
+          setExplainError("MIM-Bot alcanzó el límite de solicitudes por minuto de la clave. Esperá unos segundos y reintentá.");
           return;
         }
         throw new Error(data.error || "No se pudo sintetizar la explicación.");

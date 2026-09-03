@@ -389,7 +389,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-purple-950/40 border border-purple-500/25 text-[10px] flex-wrap gap-1.5">
                       <div className="flex items-center gap-2">
                         <span className="flex items-center gap-1.5 text-purple-300 font-bold">
-                          <Sparkles className="w-3 h-3 text-purple-400" /> MIM-Bot · Análisis de Proyecto
+                          <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                          <span>MIM-Bot · Análisis de Proyecto</span>
                         </span>
                         <button
                           type="button"
@@ -449,8 +450,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                           <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
                           <span>Preguntale a MIM-Bot sobre este proyecto</span>
                         </div>
-                        <span className="text-[9px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
-                          MIM-Bot ⚡
+                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
+                          <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                          <span>MIM-Bot</span>
                         </span>
                       </div>
 
@@ -466,8 +468,15 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                                   : "mr-auto bg-black/40 text-white/90 border border-white/5 rounded-bl-sm"
                               }`}
                             >
-                              <span className="text-[9px] font-mono uppercase text-white/40 mb-1">
-                                {msg.role === "user" ? "Vos" : "MIM-Bot"}
+                              <span className="text-[9px] font-mono uppercase text-white/40 mb-1 flex items-center gap-1.5">
+                                {msg.role === "user" ? (
+                                  "Vos"
+                                ) : (
+                                  <>
+                                    <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+                                    <span className="text-purple-300 font-bold">MIM-Bot</span>
+                                  </>
+                                )}
                               </span>
                               <div
                                 className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
@@ -477,8 +486,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                           ))}
                           {isChatSending && (
                             <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-black/30 border border-white/5 text-xs text-purple-300 w-fit">
+                              <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                              <span>Pensando la jugada...</span>
+                              <span>Pensando la forreada...</span>
                             </div>
                           )}
                           <div ref={chatBottomRef} />

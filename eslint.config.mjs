@@ -40,10 +40,19 @@ const eslintConfig = defineConfig([
       "react/no-unescaped-entities": "off",
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/immutability": "off",
-      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/exhaustive-deps": "warn",
       "prefer-const": "warn"
+    }
+  },
+  {
+    // Scoped override for legacy FOMO UI components currently undergoing hook refactoring
+    files: [
+      "components/fomo/**/*"
+    ],
+    rules: {
+      "react-hooks/rules-of-hooks": "warn"
     }
   }
 ]);

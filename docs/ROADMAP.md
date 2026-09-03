@@ -65,22 +65,21 @@
 
 ---
 
-# 🚧 Roadmap y Próximos Pasos (PENDIENTE)
+# 🚧 Roadmap y Próximos Pasos (Backlog & Propuestas)
 
-### Prioridad Inmediata: FOMO Cloud & Robustez de Canal
-- [ ] **Mapeo Semántico en Discover**: Perfeccionar el fallback heurístico en `searchProjectInFomo` si las IDs no coinciden directamente en las búsquedas del feed.
-- [ ] **Focus Trap & Accesibilidad**: Agregar políticas de control de teclado robusto y trampas de foco en la expansión modal de tarjetas de clubs de usuarios.
-- [ ] **Métricas Anónimas**: Implementación de telemetría de rendimiento y errores en la carga de showcases para alertar sobre fallos en `yt-dlp`.
-- [ ] **Updater de yt-dlp**: Panel de utilidades de administración para que el usuario pueda reinstalar o actualizar `yt-dlp` localmente en 1 clic.
+### 🛡️ Propuesta de Arquitectura: MIM Sovereign Vault & Data Sovereignty
+- [ ] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)).
+- [ ] **Desktop Silent Rolling Snapshots**: Guardado automático de snapshots locales en segundo plano (`%APPDATA%/MIM/vaults/`) para independencia total de conectividad cloud.
+- [ ] **Cifrado Zero-Knowledge Opcional**: Cifrado del vault con `AES-256-GCM` y `PBKDF2` en el cliente antes de la exportación.
 
-### 🌟 Integración Bedrock & Canales de Comunidad (Plan Diseñado)
-- [ ] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para `@Wero_lovernite` y `@EnderVerseMC` (ver plan en [todo_bedrock_addons_y_posts_youtube.md](file:///d:/.mine/manager/docs/todo_bedrock_addons_y_posts_youtube.md)).
-- [ ] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit` (ver plan en [todo_bedrock_addons_y_posts_youtube.md](file:///d:/.mine/manager/docs/todo_bedrock_addons_y_posts_youtube.md)).
+### 🌟 Integración Bedrock & Canales de Comunidad (Backlog)
+- [ ] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para creadores asociados.
+- [ ] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit`.
 
-### Fase 5: Posicionamiento Profesional e Integración en Portfolio
-- [ ] **Technical Case Study**: Redacción de un documento técnico de alto nivel sobre los trade-offs de rendimiento resueltos al migrar de localStorage a IndexedDB y desacoplar el Event Bus.
-- [ ] **Video Demo**: Clip de 1 minuto mostrando la fluidez de clasificación (1-9), el diagnóstico de crashes de SAGE y la inmersión visual de FOMO Cloud.
-- [ ] **Landing Page Estática**: Creación de un showcase visual para MIM con capturas animadas y el roadmap.
+### 🎯 Posicionamiento Profesional e Integración en Portfolio
+- [x] **Technical Case Study & Flagship Positioning**: Publicado en el portafolio profesional con desglose de los 5 motores de dominio, topología de bus de eventos y benchmarks empíricos auditados.
+- [x] **Bilingual Documentation Hub**: Documentación completa en español e inglés en `README.md` y `README.es.md`.
+- [x] **Standalone Release v10.5.0**: Binarios de producción empaquetados para Windows (`dist/MIM Setup 10.5.0.exe` y `dist/MIM 10.5.0.exe`).
 
 ---
 

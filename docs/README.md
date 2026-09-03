@@ -24,6 +24,7 @@ Welcome to the technical documentation of **MIM (Minecraft Intelligent Manager)*
 - **[Static Java Bytecode Threat Analysis](./SECURITY_ENGINE.md)**: AST inspection rules (process execution, shell droppers, native JNI, reflection evasion), bounded worker pools, and threat scoring.
 - **[STRIDE Threat Model & Attack Trees](./THREAT_MODEL.md)**: Formal AppSec analysis across Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege.
 - **[NBT Binary Safe Recovery Specification](./NBT_RESCUE_SPEC.md)**: Named Binary Tag protocol (NBT v19133), RFC 1952 Gzip decompression, mandatory `.mim_bak` snapshot, and the Zero-Data-Loss Invariant.
+- **[MIM Sovereign Vault Architecture Proposal](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)**: Data sovereignty specification, SHA-256 integrity, idempotent account re-seeding, and cloud dormancy mitigation.
 
 ### 📑 Architecture Decision Records (ADRs)
 - **[ADR Index](./adr/README.md)**: Overview of foundational design decisions.
@@ -53,6 +54,7 @@ Bienvenido a la documentación técnica de **MIM (Minecraft Intelligent Manager)
 - **[Análisis Estático de Amenazas en Bytecode Java](./SECURITY_ENGINE.md)**: Reglas de inspección AST (procesos externos, droppers, JNI, evasión por reflexión) y puntuación de riesgo.
 - **[Modelo de Amenazas STRIDE y Árboles de Ataque](./THREAT_MODEL.md)**: Análisis formal de seguridad de aplicaciones.
 - **[Especificación de Recuperación Binaria NBT](./NBT_RESCUE_SPEC.md)**: Protocolo NBT v19133 de Mojang, descompresión RFC 1952, snapshot `.mim_bak` e invariante de cero pérdida de datos.
+- **[Propuesta Arquitectónica: MIM Sovereign Vault](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)**: Soberanía de datos, verificación de integridad SHA-256, migración de cuentas y mitigación de pausas en la nube.
 
 ### 📑 Registro de Decisiones de Arquitectura (ADRs)
 - **[Índice de ADRs](./adr/README.md)**: Decisiones fundacionales de diseño.

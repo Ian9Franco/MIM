@@ -105,7 +105,9 @@ export async function GET(req: NextRequest) {
               const month = months[monthStr] || "01";
               logDate = `${year}-${month}-${day}`;
             }
-          } catch (e) {}
+          } catch (e) {
+            console.debug("[/api/project/logs] Unable to parse timestamp from latest.log header:", e);
+          }
 
           files.push({
             name: "latest.log (Instancia del Proyecto)",
@@ -179,7 +181,9 @@ export async function GET(req: NextRequest) {
             const month = months[monthStr] || "01";
             logDate = `${year}-${month}-${day}`;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.debug("[/api/project/logs] Unable to parse timestamp from global latest.log header:", e);
+        }
 
         files.push({
           name: "latest.log (Global .minecraft)",

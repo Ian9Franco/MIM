@@ -358,7 +358,9 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
             return;
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useFomoOverlayManager] Failed to read explanation cache:", e);
+      }
     }
 
     setIsExplaining(true);
@@ -416,7 +418,9 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
 
       try {
         localStorage.setItem(cacheKey, JSON.stringify({ ...data, summaryMarkdown: cleanedSummary }));
-      } catch {}
+      } catch (e) {
+        console.warn("[useFomoOverlayManager] Failed to write explanation cache:", e);
+      }
     } catch (err: any) {
       console.error("[Mod Explainer] Error:", err);
       setExplainError(err?.message || "Error al conectar con Gemini API.");

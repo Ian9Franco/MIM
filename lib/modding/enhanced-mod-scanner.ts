@@ -46,7 +46,10 @@ async function extractMetadata(zip: AdmZip, filePath: string, warnings: string[]
       try {
         const parsed = config.parser(zip.readAsText(entry));
         candidates.push({ ...parsed, source: config.file } as ScanCandidate);
-      } catch {}
+      } catch (err) {
+        warnings.push(`Warning: Failed to parse ${config.file} (${err instanceof Error ? err.message : String(err)})`);
+        console.warn(`[/lib/modding/enhanced-mod-scanner] Error parsing ${config.file} in ${filePath}:`, err);
+      }
     }
   }
 
@@ -85,7 +88,12 @@ async function extractMetadata(zip: AdmZip, filePath: string, warnings: string[]
   }
 
   // Mixin extraction
-  try { result.mixinTargets = await extractMixinTargets(zip); } catch {}
+  try { 
+    result.mixinTargets = await extractMixinTargets(zip); 
+  } catch (err) {
+    warnings.push(`Warning: Failed to extract mixin targets (${err instanceof Error ? err.message : String(err)})`);
+    console.warn(`[/lib/modding/enhanced-mod-scanner] Error extracting mixins from ${filePath}:`, err);
+  }
 
   result.isCompatibleWithConnector = result.loader === "fabric";
   result.extractionQuality = result.modId !== UNKNOWN ? "high" : "low";

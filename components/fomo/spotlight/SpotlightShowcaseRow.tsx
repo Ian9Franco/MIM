@@ -423,7 +423,9 @@ export function SpotlightShowcaseRow({ theme }: SpotlightShowcaseRowProps) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) setChannels(parsed);
-      } catch {}
+      } catch (e) {
+        console.warn("[SpotlightShowcaseRow] Error parsing saved channels:", e);
+      }
     }
   }, []);
 
@@ -484,7 +486,9 @@ export function SpotlightShowcaseRow({ theme }: SpotlightShowcaseRowProps) {
             setVideos([]);
             loadVideos(parsed);
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[SpotlightShowcaseRow] Error parsing channels on external update:", e);
+        }
       }
     };
     window.addEventListener("fomo-spotlight-channels-changed", onUpdate);

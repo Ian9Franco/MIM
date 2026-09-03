@@ -90,7 +90,9 @@ function scanModRaw(filePath: string): ModMeta {
         ...DEFAULT_META, ...parsed, loader, projectType: "mod", sha1, 
         source: entry.entryName 
       } as ScanCandidate);
-    } catch {}
+    } catch (err) {
+      console.warn(`[/lib/scanner] Could not parse Forge entry "${entry.entryName}" in ${filePath}:`, err);
+    }
   }
 
   // 2. Extraer candidatos de Fabric/Quilt
@@ -114,7 +116,9 @@ function scanModRaw(filePath: string): ModMeta {
         sha1,
         source: entry!.entryName
       } as ScanCandidate);
-    } catch {}
+    } catch (err) {
+      console.warn(`[/lib/scanner] Could not parse Fabric/Quilt JSON entry "${entry?.entryName}" in ${filePath}:`, err);
+    }
   }
 
   // 3. Candidato de Respaldo (Filename)

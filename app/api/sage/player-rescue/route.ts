@@ -90,7 +90,9 @@ export async function GET(req: NextRequest) {
             });
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn("[/api/sage/player-rescue] Error scanning rescue directory:", err);
+      }
     }
 
     // 2. Scan global minecraftPath/saves folder
@@ -130,7 +132,9 @@ export async function GET(req: NextRequest) {
     let usercache: any[] = [];
     try {
       usercache = await loadUsercacheEntries(minecraftPath);
-    } catch (_) {}
+    } catch (err) {
+      console.warn("[/api/sage/player-rescue] Failed to load usercache entries:", err);
+    }
 
     const activePlayers = [];
     for (const p of playersList) {

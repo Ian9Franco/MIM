@@ -366,7 +366,9 @@ export function MobileFloatingPlayer() {
     revealControls();
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {}
+    } catch (e) {
+      console.debug("[MobileFloatingPlayer] Pointer capture already released:", e);
+    }
 
     if (dragRef.current) {
       const { vx, vy } = dragRef.current;
@@ -483,7 +485,9 @@ export function MobileFloatingPlayer() {
     revealControls();
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch (e) {
+      console.debug("[MobileFloatingPlayer] Seek pointer capture already released:", e);
+    }
   };
 
   const handleSeekLeave = () => {

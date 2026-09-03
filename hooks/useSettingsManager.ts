@@ -248,7 +248,9 @@ export function useSettingsManager(onClose: () => void) {
       if (geminiApiKey) {
         localStorage.setItem("mim_gemini_api_key", geminiApiKey.trim());
       }
-    } catch {}
+    } catch (e) {
+      console.warn("[useSettingsManager] Unable to persist API key to localStorage:", e);
+    }
 
     await fetch("/api/settings", {
       method: "POST",

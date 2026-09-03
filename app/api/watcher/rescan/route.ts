@@ -10,10 +10,13 @@ export async function GET() {
   
   const pending = files.map(filePath => {
     const fileName = path.basename(filePath);
-    let meta = {};
+    let meta: any = {};
     try {
       meta = scanMod(filePath);
-    } catch {}
+    } catch (err) {
+      console.warn(`[/api/watcher/rescan] Failed to scan mod file ${filePath}:`, err);
+      meta = { status: "unverified", error: err instanceof Error ? err.message : String(err) };
+    }
     return { path: filePath, fileName, meta };
   });
 

@@ -135,7 +135,9 @@ export function useLibrary(
         const data = await res.json();
         if (data.data && data.data[0]) setModDescription(data.data[0]);
       }
-    } catch {}
+    } catch (err) {
+      console.error("[useLibrary] Failed to fetch mod description:", err);
+    }
     setLoadingDescription(false);
   }, [selectedLibFiles, activeProject]);
 
@@ -148,7 +150,9 @@ export function useLibrary(
         body: JSON.stringify({ url, filename }),
       });
       if (res.ok) updates.setModrinthStatus(prev => ({ ...prev, [path]: { ...prev[path], status: "updated_downloaded" } }));
-    } catch {}
+    } catch (err) {
+      console.error("[useLibrary] Failed to download mod update:", err);
+    }
     updates.setDownloadingMods(prev => ({ ...prev, [path]: false }));
   }, [updates]);
 

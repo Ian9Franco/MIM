@@ -8,7 +8,11 @@ export function useFomoSelection() {
   useEffect(() => {
     const saved = localStorage.getItem("fomo_selected_mods");
     if (saved) {
-      try { setSelectedMods(JSON.parse(saved)); } catch (e) {}
+      try { 
+        setSelectedMods(JSON.parse(saved)); 
+      } catch (e) {
+        console.warn("[useFomoSelection] Corrupted fomo_selected_mods in localStorage:", e);
+      }
     }
   }, []);
 

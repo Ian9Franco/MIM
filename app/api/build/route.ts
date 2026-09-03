@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/modding/builder";
 import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/core/constants";
+import { mimMsg } from "@/lib/core/voice";
 import type { Loader } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     // ── Validate required fields ───────────────────────────────────────────────
     if (!version || !loader || !projectName || !buildType) {
       return NextResponse.json(
-        { error: "Missing required fields: version, loader, projectName, buildType" },
+        { error: mimMsg.classifyMissingFields() },
         { status: 400 }
       );
     }
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     // ── Validate loader via shared helper (avoids duplicating the LOADERS cast) ─
     if (!isValidLoader(loader)) {
       return NextResponse.json(
-        { error: `Invalid loader "${loader}". Must be one of: forge, neoforge, fabric` },
+        { error: mimMsg.badRequest(`Loader "${loader}" no válido. Debe ser: forge, neoforge o fabric`) },
         { status: 400 }
       );
     }
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     // ── Validate build type ────────────────────────────────────────────────────
     if (!(BUILD_TYPES as readonly string[]).includes(buildType)) {
       return NextResponse.json(
-        { error: `buildType must be "alluser" or "allhost"` },
+        { error: mimMsg.badRequest('buildType debe ser "alluser" o "allhost"') },
         { status: 400 }
       );
     }
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     // Guard: sanitization may produce an empty string (e.g. projectName = "???")
     if (!safeName) {
       return NextResponse.json(
-        { error: "projectName is empty after sanitization" },
+        { error: mimMsg.buildPathEmpty() },
         { status: 400 }
       );
     }
@@ -83,6 +84,6 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/build] Unhandled error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: mimMsg.internalError("/api/build") }, { status: 500 });
   }
 }

@@ -72,7 +72,9 @@ export async function extractMixinTargets(zip: AdmZip): Promise<string[]> {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[/lib/modding/mixin-scanner] Failed to parse mixin configurations in fabric.mod.json:", e);
+    }
   }
 
   return Array.from(targets);

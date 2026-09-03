@@ -1274,7 +1274,9 @@ function parseShareMeta(summary?: string | null): {
         publishedAt: parsed.publishedAt,
         priority: !!parsed.priority,
       };
-    } catch {}
+    } catch (e) {
+      console.debug("[ProfileTab] Could not parse favorite summary JSON directly:", e);
+    }
   }
 
   // 2. Try new HTML comment format
@@ -1297,7 +1299,9 @@ function parseShareMeta(summary?: string | null): {
         publishedAt: meta.publishedAt,
         priority: !!meta.priority,
       };
-    } catch {}
+    } catch (e) {
+      console.debug("[ProfileTab] Could not parse HTML comment metadata in favorite summary:", e);
+    }
   }
 
   // Fallback: entire summary is the comment

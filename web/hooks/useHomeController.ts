@@ -102,7 +102,9 @@ function normalizeFavorite(fav: any): ModHit {
   let meta: any = {};
   try {
     meta = fav.summary && fav.summary.trim().startsWith("{") ? JSON.parse(fav.summary) : {};
-  } catch {}
+  } catch (e) {
+    console.debug("[useHomeController] Could not parse favorite summary JSON:", e);
+  }
   const projectId = fav.project_id || fav.mod_id || fav.id;
   const projectType = fav.project_type || meta.project_type || fav.content_type || "mod";
   
@@ -247,7 +249,9 @@ export function useHomeController() {
         if (Array.isArray(parsed) && parsed.length) {
           setShowcaseChannels(parsed);
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_spotlight_showcase_channels in localStorage:", e);
+      }
     } else {
       setShowcaseChannels(DEFAULT_CHANNELS);
     }
@@ -273,7 +277,11 @@ export function useHomeController() {
 
     const cachedCategory = localStorage.getItem("mim_discover_category");
     if (cachedCategory !== null) {
-      try { setDiscoverCategory(JSON.parse(cachedCategory)); } catch {}
+      try { 
+        setDiscoverCategory(JSON.parse(cachedCategory)); 
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_discover_category in localStorage:", e);
+      }
     }
 
     const cachedSort = localStorage.getItem("mim_discover_sort");
@@ -301,17 +309,27 @@ export function useHomeController() {
         if (parsed && parsed.length > 0) {
           hasResults = true;
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_discover_results in localStorage:", e);
+      }
     }
 
     const cachedCollection = localStorage.getItem("mim_active_collection");
     if (cachedCollection !== null) {
-      try { setActiveCollection(JSON.parse(cachedCollection)); } catch {}
+      try { 
+        setActiveCollection(JSON.parse(cachedCollection)); 
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_active_collection in localStorage:", e);
+      }
     }
 
     const cachedCollectionMods = localStorage.getItem("mim_active_collection_mods");
     if (cachedCollectionMods !== null) {
-      try { setActiveCollectionMods(JSON.parse(cachedCollectionMods)); } catch {}
+      try { 
+        setActiveCollectionMods(JSON.parse(cachedCollectionMods)); 
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_active_collection_mods in localStorage:", e);
+      }
     }
 
     const cachedCollectionsPayload = localStorage.getItem(COLLECTIONS_CACHE_KEY);
@@ -326,12 +344,18 @@ export function useHomeController() {
           if (Array.isArray(parsed.latestFeaturedMods)) setLatestFeaturedMods(parsed.latestFeaturedMods);
           collectionsLastLoadedRef.current = parsed.timestamp;
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted collections cache payload:", e);
+      }
     }
 
     const cachedDraft = localStorage.getItem("mim_active_draft");
     if (cachedDraft !== null) {
-      try { setActiveDraft(JSON.parse(cachedDraft)); } catch {}
+      try { 
+        setActiveDraft(JSON.parse(cachedDraft)); 
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_active_draft in localStorage:", e);
+      }
     }
 
     if (hasResults) {
@@ -476,7 +500,9 @@ export function useHomeController() {
         if (Array.isArray(parsed) && parsed.length) {
           setFollowedChannels(ensureMaxThreeVisible(parsed));
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useHomeController] Corrupted mim_web_youtube_channels in localStorage:", e);
+      }
     }
   }, [session, loadUserData]);
 
@@ -635,7 +661,9 @@ export function useHomeController() {
               parsed.latestFeaturedMods = mapped;
               localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(parsed));
             }
-          } catch {}
+          } catch (e) {
+            console.warn("[useHomeController] Error updating featured mods cache:", e);
+          }
         } else {
           setActiveCollectionMods(mapped);
         }
@@ -651,7 +679,9 @@ export function useHomeController() {
             parsed.latestFeaturedMods = fallback;
             localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(parsed));
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[useHomeController] Error writing fallback featured mods cache:", e);
+        }
       } else {
         setActiveCollectionMods(mockUpdatedMods.slice(0, 6));
       }
@@ -680,7 +710,9 @@ export function useHomeController() {
         if (cachedPayload?.timestamp && Array.isArray(cachedPayload.latestFeaturedMods) && cachedPayload.latestFeaturedMods.length > 0) {
           applyCachedCollections(cachedPayload);
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[useHomeController] Error parsing collections cache from localStorage:", e);
+      }
     }
 
     // In-memory throttling (1 minute) to avoid spamming calls during the same user session

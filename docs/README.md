@@ -6,11 +6,18 @@
 
 </div>
 
+> **Estado honesto:** MIM es un proyecto de un solo desarrollador. La documentación técnica es detallada y los benchmarks son reales, pero el proyecto está en **beta activa** — no en producción empresarial. Ver [PROJECT_STATUS.md](./PROJECT_STATUS.md) para el estado real de calidad técnica.
+
 ---
 
 ## English
 
 Welcome to the technical documentation of **MIM (Minecraft Intelligent Manager)**. Below is the organized directory of systems engineering specifications, benchmarks, threat models, and architectural decisions.
+
+### 📋 Project Transparency & Contributing
+- **[Honest Project Status](./PROJECT_STATUS.md)**: Real quality state — what works, known technical debt, and the solo-dev context. Read before making assumptions about production readiness.
+- **[Technical Backlog (TODO)](../TODO.md)**: Prioritized list of real technical debt — tests, error handling, validation, rate limiting — with concrete action items.
+- **[Contributing Guide](../CONTRIBUTING.md)**: Internal architecture map, SAGE pipeline deep-dive, code directory, conventions, and known debt zones. Essential for onboarding.
 
 ### 🏛️ Core Architecture & Distributed Systems
 - **[System Architecture (7 Domain Engines)](./ARCHITECTURE.md)**: Full topology, decoupled engines, and typed event bus (`MimEventMap`).
@@ -41,6 +48,11 @@ Welcome to the technical documentation of **MIM (Minecraft Intelligent Manager)*
 ## Español
 
 Bienvenido a la documentación técnica de **MIM (Minecraft Intelligent Manager)**. A continuación se detalla el índice de especificaciones de ingeniería, benchmarks, modelos de amenazas y decisiones arquitectónicas.
+
+### 📋 Transparencia del Proyecto
+- **[Estado Real del Proyecto](./PROJECT_STATUS.md)**: Estado honesto de calidad — qué funciona, deuda técnica conocida y contexto de solo-dev. Leer antes de asumir madurez de producción.
+- **[Backlog Técnico (TODO)](../TODO.md)**: Lista priorizada de deuda técnica real — tests, manejo de errores, validación, rate limiting — con acciones concretas.
+- **[Guía de Contribución](../CONTRIBUTING.md)**: Mapa del código, pipeline interno de SAGE, convenciones y zonas de deuda conocida. Esencial para orientarse.
 
 ### 🏛️ Arquitectura Central y Sistemas Distribuidos
 - **[Arquitectura del Sistema (7 Motores de Dominio)](./ARCHITECTURE.md)**: Topología completa, motores desacoplados y bus de eventos tipado (`MimEventMap`).

@@ -8,6 +8,7 @@ import path from "path";
 import os from "os";
 import { execSync } from "child_process";
 import { getSettings } from "@/lib/core/settings";
+import { mimMsg } from "@/lib/core/voice";
 import { Keybind, SnapshotMetadata } from "./lib/types";
 import { 
   formatKeyName, parseCategoryFromId, extractModSource, detectKeybindConflicts, groupKeybindsForUI 
@@ -80,7 +81,11 @@ export async function GET(req: NextRequest) {
         if (k.startsWith("key_")) {
           kbs.push({ id: k, name: k.replace("key_", ""), key: v, category: parseCategoryFromId(k), modSource: extractModSource(k) });
         } else if (k === "resourcePacks") {
-          try { activePacks = JSON.parse(v); } catch {}
+          try { 
+            activePacks = JSON.parse(v); 
+          } catch (err) { 
+            console.warn("[/api/tweak] Malformed resourcePacks in options.txt:", err); 
+          }
         } else if (TRACKED_SETTINGS.has(k)) {
           settingsMap[k] = v;
         }
@@ -125,7 +130,9 @@ export async function GET(req: NextRequest) {
       try {
         const data = JSON.parse(fs.readFileSync(launcherProfilesPath, "utf-8"));
         profilesMap = data.profiles || {};
-      } catch {}
+      } catch (err) {
+        console.warn("[/api/tweak] Could not read launcher_profiles.json:", err);
+      }
     }
 
     if (fs.existsSync(versionsDir)) {
@@ -264,7 +271,11 @@ export async function GET(req: NextRequest) {
     // Load Draft (Always global now)
     const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
     if (fs.existsSync(globalDraftPath)) {
-      try { resData.draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8")); } catch {}
+      try { 
+        resData.draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8")); 
+      } catch (err) {
+        console.warn("[/api/tweak] Failed to parse global tweak draft:", err);
+      }
     }
 
     return NextResponse.json(resData);
@@ -361,7 +372,9 @@ export async function POST(req: NextRequest) {
           try { 
             const draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8"));
             lockedKeys = new Set(draft.lockedKeys || []);
-          } catch {}
+          } catch (err) {
+            console.warn("[/api/tweak] Failed to load locked keys from draft:", err);
+          }
         }
         
         keybinds.forEach((kb: any) => {
@@ -405,7 +418,7 @@ export async function POST(req: NextRequest) {
       const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
       if (fs.existsSync(globalDraftPath)) fs.unlinkSync(globalDraftPath);
 
-      return NextResponse.json({ success: true, message: "Ajustes guardados correctamente" });
+      return NextResponse.json({ success: true, message: mimMsg.tweakSaved() });
     }
 
     if (action === "save-draft") {
@@ -417,22 +430,22 @@ export async function POST(req: NextRequest) {
 
       const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
       fs.writeFileSync(globalDraftPath, JSON.stringify(draft, null, 2));
-      return NextResponse.json({ success: true, message: "Borrador guardado localmente" });
+      return NextResponse.json({ success: true, message: mimMsg.tweakDraftSaved() });
     }
 
     if (action === "initialize") {
       // Initialize always points to global minecraftPath now
       fs.writeFileSync(optionsPath, "lang:en_us\nguiScale:0\nresourcePacks:[]\nincompatibleResourcePacks:[]\n");
-      return NextResponse.json({ success: true, message: "Perfil inicializado" });
+      return NextResponse.json({ success: true, message: mimMsg.tweakProfileInit() });
     }
 
     if (action === "restore-backup") {
       const backupPath = `${optionsPath}.mim_bak`;
       if (fs.existsSync(backupPath)) {
         fs.copyFileSync(backupPath, optionsPath);
-        return NextResponse.json({ success: true, message: "Backup original restaurado" });
+        return NextResponse.json({ success: true, message: mimMsg.tweakRestored() });
       }
-      return NextResponse.json({ error: "No se encontró el backup original" }, { status: 404 });
+      return NextResponse.json({ error: mimMsg.tweakNoBackup() }, { status: 404 });
     }
 
     if (action === "sync-resourcepacks") {
@@ -454,7 +467,11 @@ export async function POST(req: NextRequest) {
       if (fs.existsSync(optionsPath)) {
         for (const line of fs.readFileSync(optionsPath, "utf-8").split(/\r?\n/)) {
           if (line.startsWith("resourcePacks:")) {
-            try { activePacks = JSON.parse(line.slice("resourcePacks:".length)); } catch {}
+            try { 
+              activePacks = JSON.parse(line.slice("resourcePacks:".length)); 
+            } catch (err) {
+              console.warn("[/api/tweak] Malformed active resourcePacks line:", err);
+            }
           }
         }
       }
@@ -486,7 +503,11 @@ export async function POST(req: NextRequest) {
           if (!k || !v) continue;
           if (k.startsWith("key_")) currentKeybinds.push({ id: k, key: v });
           if (k === "resourcePacks") {
-            try { currentPacks = JSON.parse(v); } catch {}
+            try { 
+              currentPacks = JSON.parse(v); 
+            } catch (err) {
+              console.warn("[/api/tweak] Failed to parse resourcePacks during snapshot creation:", err);
+            }
           }
         }
       }
@@ -527,7 +548,7 @@ export async function POST(req: NextRequest) {
       const snapshotFile = path.join(snapshotDir, `${snapshotId}.json`);
 
       if (!fs.existsSync(snapshotFile)) {
-        return NextResponse.json({ error: "Snapshot no encontrado" }, { status: 404 });
+        return NextResponse.json({ error: mimMsg.tweakSnapshotNotFound() }, { status: 404 });
       }
 
       const snap = JSON.parse(fs.readFileSync(snapshotFile, "utf-8"));
@@ -570,16 +591,16 @@ export async function POST(req: NextRequest) {
       }
 
       fs.writeFileSync(optionsPath, lines.join("\n") + "\n");
-      return NextResponse.json({ success: true, message: `Snapshot "${snap.profileName}" aplicado al juego. Backup guardado.` });
+      return NextResponse.json({ success: true, message: mimMsg.tweakSnapshotApplied(snap.profileName) });
     }
 
     if (action === "restore-backup") {
       const backupPath = `${optionsPath}.mim_bak`;
       if (fs.existsSync(backupPath)) {
         fs.copyFileSync(backupPath, optionsPath);
-        return NextResponse.json({ success: true, message: "Configuración original restaurada desde backup" });
+        return NextResponse.json({ success: true, message: mimMsg.tweakRestored() });
       }
-      return NextResponse.json({ error: "No se encontró el backup original" }, { status: 404 });
+      return NextResponse.json({ error: mimMsg.tweakNoBackup() }, { status: 404 });
     }
 
     if (action === "autofix-packs") {
@@ -602,12 +623,13 @@ export async function POST(req: NextRequest) {
         return line;
       });
       fs.writeFileSync(optionsPath, newContent.filter(l => l.trim()).join("\n"));
-      return NextResponse.json({ success: true, message: "Orden de packs corregido automáticamente" });
+      return NextResponse.json({ success: true, message: mimMsg.tweakOrderFixed() });
     }
 
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+    return NextResponse.json({ error: mimMsg.tweakUnknownAction() }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    console.error("[/api/tweak] Unhandled error:", e);
+    return NextResponse.json({ error: mimMsg.internalError("/api/tweak") }, { status: 500 });
   }
 }
 

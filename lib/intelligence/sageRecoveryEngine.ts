@@ -48,7 +48,12 @@ class SageRecoveryEngine {
   private async analyzeCrash(crashData: any): Promise<CrashAnalysis> {
     const logFile = crashData.logFile || "latest.log";
     const logPath = path.join(this.projectPath, "logs", logFile);
-    let logContent = ""; try { logContent = fs.readFileSync(logPath, "utf-8"); } catch {}
+    let logContent = ""; 
+    try { 
+      logContent = fs.readFileSync(logPath, "utf-8"); 
+    } catch (err) {
+      console.warn(`[/lib/intelligence/sageRecoveryEngine] Unable to read crash log at ${logPath}:`, err);
+    }
 
     const analysis: CrashAnalysis = { crashType: "unknown", severity: "medium", suggestedActions: [], confidence: 0, logFile };
 

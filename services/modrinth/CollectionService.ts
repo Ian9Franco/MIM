@@ -31,7 +31,9 @@ export async function tryFetchUserCollections(userId: string, headers: Record<st
         }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.warn(`[/services/CollectionService] Error fetching collections for user "${userId}":`, err);
+  }
   return collections;
 }
 
@@ -43,6 +45,8 @@ export async function getAuthorName(projectId: string, headers: any) {
       const owner = members.find((m: any) => m.role?.toLowerCase() === "owner" || m.is_owner === true) || members[0];
       return owner?.user?.username || "Desconocido";
     }
-  } catch {}
+  } catch (err) {
+    console.warn(`[/services/CollectionService] Error retrieving author for project "${projectId}":`, err);
+  }
   return "Desconocido";
 }

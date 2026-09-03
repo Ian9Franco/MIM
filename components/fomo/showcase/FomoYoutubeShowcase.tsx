@@ -585,7 +585,9 @@ export function FomoYoutubeShowcase({
             setMods(parsed);
             setStatus("done");
             return;
-          } catch (e) { }
+          } catch (e) {
+            console.warn("[FomoYoutubeShowcase] Error migrating cached mods from localStorage:", e);
+          }
         }
 
         setStatus("loading-mods");

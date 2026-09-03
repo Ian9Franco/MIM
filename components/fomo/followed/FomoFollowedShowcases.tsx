@@ -110,7 +110,9 @@ export function FomoFollowedShowcases({
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) setSpotlightChannels(parsed);
-      } catch {}
+      } catch (e) {
+        console.warn("[FomoFollowedShowcases] Error parsing saved spotlight channels:", e);
+      }
     }
   }, []);
 
@@ -122,7 +124,9 @@ export function FomoFollowedShowcases({
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) setSpotlightChannels(parsed);
-        } catch {}
+        } catch (e) {
+          console.warn("[FomoFollowedShowcases] Error parsing spotlight channels on change:", e);
+        }
       }
     };
     window.addEventListener("fomo-spotlight-channels-changed", onUpdate);
@@ -199,14 +203,18 @@ export function FomoFollowedShowcases({
             cachedV = JSON.parse(lsV);
             await mimDB.setCache(cacheVKey, cachedV, 12 * 60 * 60 * 1000);
             localStorage.removeItem(cacheVKey);
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoFollowedShowcases] Error migrating video cache from localStorage:", e);
+          }
         }
         if (!cachedS && lsS) {
           try {
             cachedS = JSON.parse(lsS);
             await mimDB.setCache(cacheSKey, cachedS, 12 * 60 * 60 * 1000);
             localStorage.removeItem(cacheSKey);
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoFollowedShowcases] Error migrating shorts cache from localStorage:", e);
+          }
         }
         
         setVideos(cachedV || []);

@@ -77,7 +77,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     const clean = geminiKeyVal.trim();
     try {
       localStorage.setItem("mim_gemini_api_key", clean);
-    } catch {}
+    } catch (e) {
+      console.warn("[FomoVersionOverlay] Error persisting Gemini API key:", e);
+    }
     handleExplain(clean);
   };
 

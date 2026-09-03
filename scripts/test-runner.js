@@ -83,6 +83,11 @@ async function main() {
       name: "Aduana Deduplication & Storage Verification",
       cmd: "npx",
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/benchmarks/aduana-benchmark.ts"]
+    },
+    {
+      name: "Security Threat Intelligence & Rate Limiter",
+      cmd: "npx",
+      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/security-malware-and-ratelimit.test.ts"]
     }
   ];
 

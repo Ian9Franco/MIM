@@ -10,6 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { mimMsg } from "@/lib/core/voice";
 import fs from "fs";
 import path from "path";
 
@@ -49,24 +50,20 @@ export async function POST(req: Request) {
   try {
     const { sourcePath, targetPath } = await req.json();
 
-    if (!sourcePath || !targetPath) {
-      return NextResponse.json({ error: "Rutas inválidas" }, { status: 400 });
-    }
-
     if (sourcePath === targetPath) {
-      return NextResponse.json({ success: true, message: "Misma ruta, no se hizo nada" });
+      return NextResponse.json({ success: true, message: mimMsg.settingsSamePath() });
     }
 
     if (!fs.existsSync(sourcePath)) {
-      return NextResponse.json({ error: "La ruta de origen no existe" }, { status: 404 });
+      return NextResponse.json({ error: mimMsg.notFound(sourcePath) }, { status: 404 });
     }
 
     moveDirectorySync(sourcePath, targetPath);
 
-    return NextResponse.json({ success: true, message: "Archivos movidos correctamente" });
+    return NextResponse.json({ success: true, message: mimMsg.settingsMoved() });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/settings/move-files] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: mimMsg.internalError("/api/settings/move-files") }, { status: 500 });
   }
 }

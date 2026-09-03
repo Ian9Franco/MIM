@@ -98,7 +98,9 @@ export function setSoundMuted(muted: boolean) {
   try {
     localStorage.setItem("fomo_sounds_muted", String(muted));
     window.dispatchEvent(new Event("fomo_sounds_changed"));
-  } catch {}
+  } catch (err) {
+    console.warn("[sounds] Failed to persist sound muted state:", err);
+  }
 }
 
 export function setSoundVolume(volume: number) {
@@ -106,7 +108,9 @@ export function setSoundVolume(volume: number) {
   try {
     localStorage.setItem("fomo_sounds_volume", String(volume));
     window.dispatchEvent(new Event("fomo_sounds_changed"));
-  } catch {}
+  } catch (err) {
+    console.warn("[sounds] Failed to persist sound volume state:", err);
+  }
 }
 
 export function playFomoSound(kind: FomoSoundKind = "on") {

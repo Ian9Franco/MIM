@@ -106,7 +106,9 @@ export function FomoSpotlight({
             cachedPicks = JSON.parse(lsPicks);
             await mimDB.setCache("fomo_cf_picks", cachedPicks, 12 * 60 * 60 * 1000);
             localStorage.removeItem("fomo_cf_picks");
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoSpotlight] Error migrating fomo_cf_picks from localStorage:", e);
+          }
         }
         
         if (!cachedMods && lsMods) {
@@ -114,7 +116,9 @@ export function FomoSpotlight({
             cachedMods = JSON.parse(lsMods);
             await mimDB.setCache("fomo_modrinth_mods", cachedMods, 12 * 60 * 60 * 1000);
             localStorage.removeItem("fomo_modrinth_mods");
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoSpotlight] Error migrating fomo_modrinth_mods from localStorage:", e);
+          }
         }
         
         if (cachedPicks) setCfPicks(cachedPicks);

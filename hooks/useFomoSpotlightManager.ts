@@ -35,7 +35,11 @@ export function useFomoSpotlightManager(loader: string, gameVersion: string, sin
         const m = await fetchCollectionMods(colls.collections[0].id);
         setLatestCollectionMods(m.mods.map((x: any) => ({ ...x, _source: "modrinth" })));
       }
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error("[useFomoSpotlightManager] Error loading spotlight data:", err);
+    } finally { 
+      setLoading(false); 
+    }
   }, [loader, gameVersion, sinytraActive]);
 
   useEffect(() => { load(); }, [load]);
@@ -54,7 +58,11 @@ export function useFomoSpotlightManager(loader: string, gameVersion: string, sin
         } else {
           const lsStatus = localStorage.getItem("mim_modrinth_status");
           if (lsStatus) {
-            try { status = JSON.parse(lsStatus); } catch {}
+            try { 
+              status = JSON.parse(lsStatus); 
+            } catch (e) {
+              console.warn("[useFomoSpotlightManager] Corrupt mim_modrinth_status in localStorage:", e);
+            }
           }
         }
         

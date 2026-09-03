@@ -86,7 +86,9 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
                       comment = p.comment || p.description || "";
                       embeddedVideoId = p.embeddedVideoId || "";
                       if (p.projectType?.startsWith("youtube-")) isYoutube = true;
-                    } catch {}
+                    } catch (e) {
+                      console.debug("[CommunityPublicProfile] Could not parse direct JSON summary:", e);
+                    }
                   } else {
                     const match = summaryTrimmed.match(/<!--mim:([\s\S]*?)-->/);
                     comment = summaryTrimmed.replace(/<!--mim:([\s\S]*?)-->/, "").trim();
@@ -95,7 +97,9 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
                         const p = JSON.parse(match[1]);
                         embeddedVideoId = p.embeddedVideoId || "";
                         if (p.projectType?.startsWith("youtube-")) isYoutube = true;
-                      } catch {}
+                      } catch (e) {
+                        console.debug("[CommunityPublicProfile] Could not parse HTML comment summary:", e);
+                      }
                     }
                   }
 
@@ -107,10 +111,20 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
                     isPriority = true;
                   } else if (share.pinned == null) {
                     if (summaryTrimmed.startsWith("{")) {
-                      try { isPriority = !!JSON.parse(summaryTrimmed).priority; } catch {}
+                      try { 
+                        isPriority = !!JSON.parse(summaryTrimmed).priority; 
+                      } catch (e) {
+                        console.debug("[CommunityPublicProfile] Could not parse priority from JSON summary:", e);
+                      }
                     } else {
                       const match = summaryTrimmed.match(/<!--mim:([\s\S]*?)-->/);
-                      if (match?.[1]) { try { isPriority = !!JSON.parse(match[1]).priority; } catch {} }
+                      if (match?.[1]) { 
+                        try { 
+                          isPriority = !!JSON.parse(match[1]).priority; 
+                        } catch (e) {
+                          console.debug("[CommunityPublicProfile] Could not parse priority from comment summary:", e);
+                        } 
+                      }
                     }
                   }
 

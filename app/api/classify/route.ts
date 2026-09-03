@@ -297,7 +297,9 @@ export async function POST(req: NextRequest) {
                       console.log(`[/api/classify] Replacing modId "${currentMeta.modId}" found at: ${fullPath}`);
                       fs.unlinkSync(fullPath);
                     }
-                  } catch {}
+                  } catch (err) {
+                    console.warn(`[/api/classify] Error scanning/replacing conflicting mod ${fullPath}:`, err);
+                  }
                 }
               }
             };
@@ -305,7 +307,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (e) {
-        // Ignore errors during metadata replacement check
+        console.warn("[/api/classify] Warning during duplicate modId cleanup pass:", e);
       }
 
       const fileName = path.basename(p);

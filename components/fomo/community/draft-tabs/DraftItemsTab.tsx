@@ -90,7 +90,9 @@ export function DraftItemsTab({
         fetchDraftInfo(true);
         window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
       }
-    } catch {}
+    } catch (err) {
+      console.error("[DraftItemsTab] Error deleting draft items:", err);
+    }
   };
 
   const handleOpenDetails = (item: any, e: React.MouseEvent) => {

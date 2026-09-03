@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { mimMsg } from "@/lib/core/voice";
 import fs from "fs";
 
 export async function POST(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { path, paths } = await req.json();
 
     if (!path && (!paths || !Array.isArray(paths))) {
-      return NextResponse.json({ error: "No path or paths provided" }, { status: 400 });
+      return NextResponse.json({ error: mimMsg.deleteNoPath() }, { status: 400 });
     }
 
     const targetPaths = paths || [path];
@@ -38,11 +39,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Files processed. Deleted: ${deletedCount}, Failed: ${failedCount}` 
+      message: mimMsg.deleteDone(deletedCount, failedCount)
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/delete] Unhandled error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: mimMsg.internalError("/api/delete") }, { status: 500 });
   }
 }

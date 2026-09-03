@@ -153,21 +153,27 @@ export const FomoCollections = memo(function FomoCollections({
             cachedMim = JSON.parse(lsMim);
             await mimDB.setCache("fomo_mim_collections", cachedMim, 12 * 60 * 60 * 1000);
             localStorage.removeItem("fomo_mim_collections");
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoCollections] Error migrating fomo_mim_collections from localStorage:", e);
+          }
         }
         if (!cachedOfficial && lsOfficial) {
           try {
             cachedOfficial = JSON.parse(lsOfficial);
             await mimDB.setCache("fomo_official_collections", cachedOfficial, 12 * 60 * 60 * 1000);
             localStorage.removeItem("fomo_official_collections");
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoCollections] Error migrating fomo_official_collections from localStorage:", e);
+          }
         }
         if (!cachedCf && lsCf) {
           try {
             cachedCf = JSON.parse(lsCf);
             await mimDB.setCache("fomo_cf_collections", cachedCf, 12 * 60 * 60 * 1000);
             localStorage.removeItem("fomo_cf_collections");
-          } catch (e) {}
+          } catch (e) {
+            console.warn("[FomoCollections] Error migrating fomo_cf_collections from localStorage:", e);
+          }
         }
         
         if (cachedMim) setCollections(cachedMim);

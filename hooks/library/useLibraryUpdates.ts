@@ -24,7 +24,9 @@ export function useLibraryUpdates(activeProject: Project | null) {
         const data = await res.json();
         setModrinthStatus(data.updates || {});
       }
-    } catch {}
+    } catch (err) {
+      console.error("[useLibraryUpdates] Failed to check for mod updates:", err);
+    }
     setCheckingUpdates(false);
   }, [activeProject]);
 

@@ -28,7 +28,9 @@ export function getModCount(projectDir: string): number {
         if (fs.statSync(subPath).isDirectory()) count += fs.readdirSync(subPath).filter(f => f.endsWith(".jar")).length;
         else if (sub.endsWith(".jar")) count++;
       }
-    } catch {}
+    } catch (err) {
+      console.warn(`[SnapshotSystem] Failed reading mods directory at ${projectDir}:`, err);
+    }
   }
   return count;
 }

@@ -65,7 +65,9 @@ export function getSettings(): MimSettings {
   if (!fs.existsSync(defaultStaging)) {
     try {
       fs.mkdirSync(defaultStaging, { recursive: true });
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[/lib/core/settings] Could not create default staging directory:", e);
+    }
   }
 
   if (fs.existsSync(settingsFile)) {
@@ -82,7 +84,9 @@ export function getSettings(): MimSettings {
         curseforgeApiKey: data.curseforgeApiKey || "",
         virusTotalApiKey: data.virusTotalApiKey || ""
       };
-    } catch (e) {}
+    } catch (e) {
+      console.warn(`[/lib/core/settings] Corrupted or unreadable settings file at ${settingsFile}, falling back to defaults:`, e);
+    }
   }
   return {
     sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".MIM", "source"),

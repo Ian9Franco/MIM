@@ -71,7 +71,9 @@ export function useFomoFollowedManager() {
               statusData = JSON.parse(lsStatus);
               await mimDB.setCache("mim_modrinth_status", statusData, 30 * 24 * 60 * 60 * 1000);
               localStorage.removeItem("mim_modrinth_status");
-            } catch (e) {}
+            } catch (e) {
+              console.warn("[useFomoFollowedManager] Error parsing legacy mim_modrinth_status:", e);
+            }
           }
         }
         setModrinthStatus(statusData);

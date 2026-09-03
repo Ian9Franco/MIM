@@ -28,7 +28,9 @@ export function useFomoFilters(defaultLoader: string, defaultGameVersion: string
         if (s.sortOrder) setSortOrder(s.sortOrder);
         if (s.query) setQuery(s.query);
         if (s.sinytraActive !== undefined) setSinytraActive(s.sinytraActive);
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[useFomoFilters] Corrupt fomo_discover_state in localStorage:", e);
+      }
     }
   }, []);
 

@@ -58,7 +58,11 @@ export function useTweakManager(isOpen: boolean, activeProject: Project | null) 
           setHistoryIndex(0);
         }
       }
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error("[useTweakManager] Failed to fetch tweak data:", err);
+    } finally { 
+      setLoading(false); 
+    }
   }, [activeProject, keybindHistory.length]);
 
   useEffect(() => { if (isOpen) fetchData(); }, [isOpen, fetchData]);

@@ -85,7 +85,9 @@ async function fetchVideoDescription(videoId: string): Promise<{ description: st
           description = ldJson.description;
           break;
         }
-      } catch {}
+      } catch (err) {
+        console.debug("[youtube-showcase] Could not parse LD+JSON block:", err);
+      }
     }
 
     if (!description) {

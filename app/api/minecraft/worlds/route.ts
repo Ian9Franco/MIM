@@ -69,7 +69,9 @@ export async function GET(req: NextRequest) {
         try {
           const stats = fs.statSync(levelDatPath);
           lastPlayed = stats.mtimeMs;
-        } catch {}
+        } catch (err) {
+          console.warn(`[/api/minecraft/worlds] Could not stat level.dat for ${entry.name}:`, err);
+        }
       }
 
       worlds.push({

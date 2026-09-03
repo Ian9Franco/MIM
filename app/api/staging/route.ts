@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSettings } from "@/lib/core/settings";
+import { mimMsg } from "@/lib/core/voice";
 import path from "path";
 import fs from "fs";
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "resolve") {
       if (!fs.existsSync(mcPath)) {
-        return NextResponse.json({ error: "Minecraft path not found. Configure it in settings first." }, { status: 400 });
+        return NextResponse.json({ error: mimMsg.stagingNoMinecraft() }, { status: 400 });
       }
 
       const filesToMove = filePath ? [filePath] : [];
@@ -91,7 +92,12 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      return NextResponse.json({ success: true, moved, errors });
+      return NextResponse.json({ 
+        success: true, 
+        moved, 
+        errors,
+        message: mimMsg.stagingDone(moved.length, errors)
+      });
     }
 
     if (action === "clear") {
@@ -105,8 +111,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ error: mimMsg.stagingInvalidAction() }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[/api/staging POST] Error:", error.message);
+    return NextResponse.json({ error: mimMsg.internalError("/api/staging") }, { status: 500 });
   }
 }

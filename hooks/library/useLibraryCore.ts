@@ -65,7 +65,9 @@ export function useLibraryCore(activeProject: Project | null, appMode: "MIM" | "
               setLibrary(prev => prev.map(item => 
                 item.path === m.path ? { ...item, meta: { ...item.meta, ...meta } } : item
               ));
-            } catch {}
+            } catch (err) {
+              console.warn(`[useLibraryCore] Failed to fetch smart metadata for ${m.path}:`, err);
+            }
           });
       })
       .catch(() => setLoadingLibrary(false));

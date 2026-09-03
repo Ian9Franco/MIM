@@ -46,7 +46,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
               status = JSON.parse(lsStatus);
               await mimDB.setCache("mim_modrinth_status", status, 30 * 24 * 60 * 60 * 1000);
               localStorage.removeItem("mim_modrinth_status");
-            } catch (e) {}
+            } catch (e) {
+              console.warn("[useAlertManager] Error parsing legacy mim_modrinth_status:", e);
+            }
           }
         }
         setModrinthStatusStored(status);
@@ -119,7 +121,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
           dData.actions?.forEach((act: any) => incidentManager.createIncident({ id: `dep-ownership-${act.modId}`, title: `Librería mal aislada: ${act.modName}`, detail: act.reason, severity: act.severity === "warning" ? "warning" : "info", module: "SYSTEM", meta: { type: "dependency_move", modId: act.modId, currentPath: act.currentPath, suggestedCategory: act.suggestedCategory } }));
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error("[useAlertManager] Error fetching config and sage alerts:", err);
+    }
   }, []); // empty deps — uses ref for activeProject, stable identity
 
   useEffect(() => {
@@ -230,7 +234,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
               }
             });
           }
-        } catch {}
+        } catch (err) {
+          console.warn(`[useAlertManager] Error fetching mods for author "${author}":`, err);
+        }
       }
       
       if (notifiedUpdated) {
@@ -318,7 +324,9 @@ export function useAlertManager(sidebarOpen: boolean, library: any[], modrinthSt
                 lastVideos[channelUrl] = latestVideo.videoId;
               }
             }
-          } catch {}
+          } catch (err) {
+            console.warn(`[useAlertManager] Error checking channel "${channelUrl}":`, err);
+          }
         }
         
         // Guardar estado actualizado

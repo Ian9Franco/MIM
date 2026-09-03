@@ -24,7 +24,11 @@ export async function GET() {
     const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
     let history = [];
     if (fs.existsSync(HISTORY_FILE)) {
-      try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8")); } catch {}
+      try { 
+        history = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8")); 
+      } catch (err) {
+        console.warn("[/api/pending-files] Corrupted download-history.json, using empty array:", err);
+      }
     }
 
     const files = fs.readdirSync(downloadsPath);

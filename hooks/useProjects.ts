@@ -5,7 +5,12 @@ import type { Project } from "@/lib/core/types";
 const STORAGE_KEY = "mim_projects";
 function loadProjects(): Project[] {
   if (typeof window === "undefined") return [];
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch (_) {}
+  try { 
+    const r = localStorage.getItem(STORAGE_KEY); 
+    if (r) return JSON.parse(r); 
+  } catch (err) {
+    console.warn("[useProjects] Failed to parse saved projects from localStorage:", err);
+  }
   return [];
 }
 function saveProjects(ps: Project[]) { localStorage.setItem(STORAGE_KEY, JSON.stringify(ps)); }

@@ -266,7 +266,9 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
                     await fetch("/api/modrinth/collections", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "add_project", collectionId: "followed-projects", projectId: mod.projectId }) });
                     const btn = document.getElementById(`mr-btn-${mod.projectId}`);
                     if (btn) { btn.style.background = "rgba(16,185,129,0.4)"; btn.style.backdropFilter = "blur(12px)"; btn.style.color = "#fff"; btn.style.borderColor = "rgba(16,185,129,0.6)"; btn.innerText = "Agregado!"; }
-                  } catch {}
+                  } catch (err) {
+                    console.error("[ModHeader] Error adding project to Modrinth collections:", err);
+                  }
                 }} 
                 id={`mr-btn-${mod.projectId}`}
                 className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white`}

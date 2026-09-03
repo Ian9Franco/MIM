@@ -719,7 +719,9 @@ export function ModDetailsSheet({
             return;
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[ModDetailsSheet] Error reading explanation cache:", e);
+      }
     }
 
     setIsExplaining(true);
@@ -778,7 +780,9 @@ export function ModDetailsSheet({
       // Guardar en caché local
       try {
         localStorage.setItem(cacheKey, JSON.stringify({ ...data, summaryMarkdown: cleanedSummary }));
-      } catch {}
+      } catch (e) {
+        console.warn("[ModDetailsSheet] Error caching explanation:", e);
+      }
     } catch (err: any) {
       console.error("[Mod Explainer] Error:", err);
       setExplainError(err?.message || "Ocurrió un error al consultar Gemini API.");
@@ -792,7 +796,9 @@ export function ModDetailsSheet({
     const cleanKey = geminiKeyVal.trim();
     try {
       localStorage.setItem("mim_gemini_api_key", cleanKey);
-    } catch {}
+    } catch (e) {
+      console.warn("[ModDetailsSheet] Error persisting Gemini API key:", e);
+    }
     handleExplain(cleanKey);
   }, [geminiKeyVal, handleExplain]);
 

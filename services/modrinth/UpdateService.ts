@@ -56,7 +56,12 @@ export function hasRealUpdate(latest: string, current: string): boolean {
 export const updateCache = {
   get: () => {
     if (fsSync.existsSync(REMOTE_CACHE_FILE)) {
-      try { return JSON.parse(fsSync.readFileSync(REMOTE_CACHE_FILE, "utf-8")); } catch { return { entries: {} }; }
+      try { 
+        return JSON.parse(fsSync.readFileSync(REMOTE_CACHE_FILE, "utf-8")); 
+      } catch (err) { 
+        console.warn("[/services/UpdateService] Corrupted update cache file, resetting:", err);
+        return { entries: {} }; 
+      }
     }
     return { entries: {} };
   },
@@ -64,7 +69,9 @@ export const updateCache = {
     try {
       fsSync.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
       fsSync.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(data, null, 2), "utf-8");
-    } catch {}
+    } catch (err) {
+      console.warn("[/services/UpdateService] Failed to persist update cache to disk:", err);
+    }
   }
 };
 

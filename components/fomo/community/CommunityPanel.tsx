@@ -113,7 +113,9 @@ function CommunityPanelInner({
           setActiveSubTab('profile');
           setSelectedUserProfile(username);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn("[CommunityPanel] Error parsing fomo_community_user_filter:", err);
+      }
       localStorage.removeItem("fomo_community_user_filter");
     }
 

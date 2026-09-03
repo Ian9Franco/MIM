@@ -119,8 +119,9 @@ export interface EncryptedVaultEnvelope {
 
 export type AnyVault = MimVaultSchema | EncryptedVaultEnvelope;
 
-function bufferToHex(buffer: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buffer))
+function bufferToHex(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
@@ -236,7 +237,7 @@ async function deriveKeyFromPassphrase(
   return crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt,
+      salt: salt as BufferSource,
       iterations,
       hash: "SHA-256",
     },
@@ -261,7 +262,7 @@ export async function encryptVault(
   const ciphertextBuffer = await crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv,
+      iv: iv as BufferSource,
     },
     key,
     plaintext
@@ -300,10 +301,10 @@ export async function decryptVault(
     const decryptedBuffer = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
-        iv,
+        iv: iv as BufferSource,
       },
       key,
-      ciphertextBytes
+      ciphertextBytes as BufferSource
     );
 
     const decoder = new TextDecoder();

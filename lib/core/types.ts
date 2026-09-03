@@ -16,6 +16,8 @@ export interface ModHit {
   follows:       number;
   latestVersion: string | null;
   categories:    string[];
+  loaders?:      string[];
+  gameVersions?: string[];
   dateCreated:   string;
   dateModified?:  string;
   url:           string;

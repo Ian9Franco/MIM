@@ -1,4 +1,4 @@
-# ADR-001: Reactive Typed Event Bus for Cross-Engine Communication and Fault Isolation
+# ADR-006: Reactive Typed Event Bus for Cross-Engine Communication and Fault Isolation
 
 - **Status:** Accepted
 - **Deciders:** Systems Architecture Team

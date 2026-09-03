@@ -2,8 +2,41 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v10.2.2 (FOMO Dependency & API Hardening)  
-> **Última actualización:** 2026-05-30
+> **Versión Actual:** v10.5.0 (Systems Engineering Finalization & Scope Freeze)  
+> **Última actualización:** 2026-09-03
+
+---
+
+## 🚀 Versión 10.5.0 — Systems Engineering Finalization & Scope Freeze (2026-09-03)
+
+### 🧠 SAGE 2.0 Forensics & RAG Hardening
+- **Corpus Canónico de Evaluación**: Suite automatizada con 125 casos reales logrando 100% Macro F1, 84% Top-1 mod culpable y 0.05ms de latencia media por log.
+- **Recuperación Semántica (RAG) & Guardrails**: Integración de base de conocimiento de compatibilidad con similitud de tokens y restricciones matemáticas contra alucinaciones de LLMs.
+- **Fronteras Operativas y Non-Goals**: Declaración explícita de límites arquitectónicos sin ejecución dinámica de bytecode riesgoso.
+
+### ⚡ Motor Aduana Multi-Escala
+- **Benchmarks Empíricos**: Hashing verificado de 2,083.9 MB/s (SHA-1) y 940.3 MB/s (SHA-512) con aceleración de caché de 8.0x a 8.5x escalando de 1k a 25k archivos.
+
+### 🌐 Sistemas Distribuidos & Resiliencia
+- **Last-Write-Wins (LWW) Calibrado**: Resolución determinista con timestamps ISO 8601 y desempate por UUID de cliente, eliminando locks distribuidos pesados.
+- **Offline-First & Idempotencia**: Cola transaccional FIFO en IndexedDB con replays idempotentes (`UUIDv5`) y rollback optimista de UI ante rechazos de RLS.
+
+### 🛡️ Seguridad & Recuperación Binaria NBT
+- **Análisis Estático de Amenazas en Bytecode**: Detección sin ejecución de droppers, evasión por reflexión y librerías nativas JNI no administradas.
+- **Invariante de Cero Pérdida de Datos**: Recuperación quirúrgica NBT v19133 con backup verificado y escritura atómica (12/12 integration tests passing).
+
+### 📚 Documentación Bilingüe & Standalone Release
+- **Paridad de Idiomas**: Documentación técnica integral disponible en inglés (`README.md`) y español (`README.es.md`).
+- **Release Empaquetado**: Distribución standalone completa para Windows en instalador NSIS y binario portable.
+
+---
+
+## 🚀 Versión 10.4.0 — Suite Ecosistema Unificada & MIMweb Mobile (2026-05-30)
+
+### 🖥️ Desktop & Web
+- **MIM Desktop (Electron 42)**: Runtime nativo de escritorio con backend Next.js Standalone y empaquetado optimizado para Windows.
+- **MIMweb (FOMO Hub)**: Aplicación web mobile-first con curación remota de drafts y reproductor adaptativo.
+- **Showcases & Spotlight**: Fallback robusto a YouTube ante bloqueos de red y aislamiento de fallas de media.
 
 ---
 

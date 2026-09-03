@@ -1,19 +1,26 @@
 # MIM — Strategic Roadmap & Ecosystem Status
 
 > Logros alcanzados y visión de evolución de Minecraft Intelligent Manager.  
-> **Versión Actual:** v10.4.0 (Suite Integrada: Desktop Electron + MIMweb Mobile + FOMO Cloud)  
-> **Estado:** En Desarrollo Activo y Refinamiento Continuo  
-> **Última actualización:** 2026-05-30
+> **Versión Actual:** v10.5.0 (Systems Engineering Finalization, SAGE 2.0 Evaluation & Scope Freeze)  
+> **Estado:** Finalizado & Congelado (Portfolio Engineering Artifact)  
+> **Última actualización:** 2026-09-03
 
 ---
 
 > [!NOTE]
 > **Estado del Ecosistema MIM:**
-> Los componentes centrales del ecosistema (**MIM Desktop** en Electron 42 y **MIMweb**) cuentan con implementaciones funcionales operativas. La hoja de ruta refleja las fases de optimización, estabilización y nuevas capacidades planificadas.
+> Los componentes centrales del ecosistema (**MIM Desktop** en Electron 42 y **MIMweb**) cuentan con implementaciones funcionales operativas, suites de evaluación deterministas, análisis estático de bytecode y contratos de cierre formalizados.
 
 ---
 
 # 📌 Hitos e Implementaciones Realizadas
+
+## 🚀 Versión 10.5.0 — Systems Engineering Finalization & Scope Freeze (2026-09-03)
+- **SAGE 2.0 Evaluación Cuantitativa**: 100% Macro F1, 84% Top-1 atribución en corpus de 125 casos y 0.05ms latencia diagnóstica con RAG semántico y guardrails anti-alucinación.
+- **Aduana Multi-Escala Benchmarking**: Deduplicación direccionada por contenido (CAS) benchmarkeada hasta 25K archivos con aceleración de caché de 8.0x y >2,000 MB/s en hashing.
+- **Sistemas Distribuidos**: Modelo Last-Write-Wins con timestamps del cliente y desempate por UUID, rollback optimista y cola de mutaciones offline idempotentes.
+- **Seguridad y Rescate Binario**: Análisis estático de amenazas en bytecode Java sin ejecución de código y recuperación NBT v19133 con Invariante de Cero Pérdida de Datos.
+- **Documentación Bilingüe & Standalone Release**: Paridad total inglés/español y empaquetado de producción Windows NSIS / Portable.
 
 ## 🚀 Versión 10.4.0 — Suite Ecosistema Unificada & MIMweb Mobile (2026-05-30)
 - **MIM Desktop (Electron 42)**: Runtime nativo de escritorio 100% completo, con backend Next.js Standalone, empaquetado para Windows con Electron Builder y cero dependencias de Rust/Tauri.

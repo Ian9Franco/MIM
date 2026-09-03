@@ -11,7 +11,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { readNBT, writeNBT, NBTTag, TagType } from "../../lib/modding/nbt.ts";
+import { readNBT, writeNBT, NBTTag, TagType } from "../../lib/modding/nbt";
 
 const colors = {
   reset: "\x1b[0m",

@@ -10,7 +10,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { readNBT, writeNBT, NBTTag, TagType } from "../../lib/modding/nbt.ts";
+import { readNBT, writeNBT, NBTTag, TagType } from "../../lib/modding/nbt";
 
 // Colors for terminal output
 const colors = {

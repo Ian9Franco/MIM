@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+dist
+.git
+.agents
+brain
+scratch
+recuperoMIM
+*.log
+*.mim_bak
+.env.local

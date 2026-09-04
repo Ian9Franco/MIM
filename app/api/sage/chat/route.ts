@@ -21,6 +21,8 @@ const GEMINI_MODELS = [
   "gemini-3.6-flash",
 ];
 
+const GEMINI_REQUEST_TIMEOUT_MS = 15_000;
+
 // Memoria en caliente del último modelo que respondió exitosamente
 let lastSuccessfulModel = GEMINI_MODELS[0];
 
@@ -180,6 +182,7 @@ Respondé a la consulta del usuario de forma concisa y accionable.
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestPayload),
+          signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
         });
 
         if (res.ok) {

@@ -1,6 +1,6 @@
 # Contributing to MIM
 
-> **Contexto honesto primero:** MIM es un proyecto de un solo desarrollador activo. No hay equipo, no hay reuniones de planificación, no hay sprints. El código que ves acá es producto de meses de trabajo iterativo combinando experiencia real de modding con ingeniería de software. Este documento existe para bajar el bus factor y para que cualquier persona —incluido yo mismo después de un mes sin tocar el repo— pueda orientarse rápido.
+> **Contexto honesto primero:** MIM es un proyecto de un solo desarrollador activo. No hay equipo, no hay reuniones de planificación, no hay sprints. El código que ves acá es producto de meses de trabajo iterativo combinando conocimiento de dominio práctico con ingeniería de software. Este documento existe para bajar el bus factor y para que cualquier persona —incluido yo mismo después de un mes sin tocar el repo— pueda orientarse rápido.
 
 ---
 
@@ -8,14 +8,16 @@
 
 **Ian Franco** — [@Ian9Franco](https://github.com/Ian9Franco)
 
-Soy el único desarrollador activo de MIM. Mi background no es puramente académico: llegué al código *desde* el mundo del modding de Minecraft, donde durante años administré modpacks, diagnostiqué crashes, resolví conflictos de versiones y construí setups complejos para mi comunidad. Ese conocimiento operativo es lo que guía las decisiones de diseño de MIM — no frameworks teóricos.
+Soy el único desarrollador activo de MIM. Me dedico a la programación impulsado por una necesidad constante de crear, diseñar y materializar ideas en soluciones funcionales. Esa pulsión creativa es el verdadero origen de mi vocación por el desarrollo de software; explica también por qué de chico jugaba Minecraft —como un lienzo más donde explorar y materializar ideas—, pero es simplemente uno de tantos intereses pasados y no la razón por la que desarrollo, ni una obsesión o hobby definitorio.
+
+MIM es uno de mis proyectos: un espacio donde aplico ingeniería y resuelvo problemas de sistemas reales dentro de un ecosistema específico. En este proyecto, las decisiones de diseño se guían por la experiencia práctica directa resolviendo fricciones técnicas concretas (conflictos entre loaders, diagnóstico de fallos en runtime, manipulación de formatos binarios y deduplicación de activos) combinada con una arquitectura de software disciplinada.
 
 Lo que eso significa para el código:
-- Cuando el SAGE classifier distingue un `MIXIN_FAILURE` de un `VERSION_CONFLICT`, es porque sé exactamente qué se ve diferente en un crash log real de Forge vs Fabric.
-- Cuando Aduana hace deduplicación por SHA-512 antes de SHA-1, es porque vi en la práctica cómo CurseForge y Modrinth pueden servir el mismo archivo con distinto nombre.
-- Cuando el builder fuerza los `incompatibleResourcePacks`, es porque me cansé de que Minecraft desactivara silenciosamente texturas de packs "viejos" que funcionaban perfectamente.
+- Cuando el SAGE classifier distingue un `MIXIN_FAILURE` de un `VERSION_CONFLICT`, es porque conozco en detalle las firmas y diferencias en los crash logs reales de Forge vs Fabric.
+- Cuando Aduana hace deduplicación por SHA-512 antes de SHA-1, es porque resolví en la práctica cómo CurseForge y Modrinth pueden servir el mismo archivo con distinto nombre.
+- Cuando el builder fuerza los `incompatibleResourcePacks`, es porque solucioné el comportamiento donde se desactivaban silenciosamente texturas que eran perfectamente compatibles.
 
-**Amigos que usan MIM:** No son devs, pero son usuarios reales del modding. Su feedback es de UX y de flujos de trabajo, no de arquitectura.
+**Amigos que usan MIM:** No son desarrolladores, pero son usuarios reales de la plataforma. Su feedback es de UX y flujos de trabajo, no de arquitectura.
 
 ---
 
@@ -40,6 +42,12 @@ Esto no es una lista de vergüenzas — es una lista de trabajo pendiente con pr
 ---
 
 ## Arquitectura Interna
+
+### La tesis de ingeniería (más allá del dominio)
+
+Si se extrae el dominio puntual de la ecuación, **MIM es exactamente esto:**
+
+> Una plataforma híbrida Desktop + Web para gestionar archivos y estructuras de datos binarias complejas, consumir y coordinar múltiples APIs externas, analizar contenido local mediante inspección estática de bytecode, sincronizar estado distribuido con la nube en modo offline-first, ejecutar motores deterministas de diagnóstico y seguridad, incorporar IA generativa contextual, gestionar interacción comunitaria online y articular todo bajo una UI de producto reactiva, respaldada por testing automatizado, compuertas de CI y documentación exhaustiva de arquitectura.
 
 ### El problema que resuelve MIM (para entender las decisiones)
 
@@ -337,15 +345,15 @@ Ningún componente debería superar 600 líneas de código funcional (sin contar
 - [x] **Firmas de Malware Reales**: Integradas 19 firmas SHA-1/SHA-256 del incidente Fracturiser y troyanos en `lib/security/security-data.ts`.
 - [x] **Validación Zod**: Schemas de validación en rutas públicas y locales de mutación.
 - [x] **Toggle de Personalidad MIM-Bot**: Modos `bully` y `standard` integrados en frontend y backend.
-- [x] **withApiGuard Universal & CI Guard**: 100% de endpoints web y rutas críticas externas/IA blindadas (40/40). Regla de CI (`lint:api-guard`) bloquea PRs sin withApiGuard.
+- [x] **withApiGuard Universal & CI Guard**: 112/112 handlers HTTP blindados (100%), con enforcement estructural fail-closed por AST en `npm run lint:api-guard`.
 
 ---
 
 ## Filosofía de Producto
 
-MIM no es un AI assistant con chat. Eso lo hace todo el mundo. MIM hace herramientas concretas que resuelven problemas reales que yo mismo tuve como usuario de modding: crashes que no podía leer, datos de jugadores perdidos, mods duplicados, texturas que Minecraft desactivaba sin avisar.
+MIM no es un asistente genérico de IA ni una capa de chat. MIM construye herramientas concretas que resuelven problemas técnicos reales del ecosistema: crashes que antes requerían descifrar stacktraces crudos de JVM, datos de jugadores en riesgo de corrupción, mods redundantes por falta de deduplicación y assets que se desactivaban sin avisar.
 
-Cada feature de MIM existe porque alguien (yo, o alguien en mi comunidad) tuvo ese problema. Eso es lo que hace que las decisiones de diseño tengan sentido aunque a veces el código no sea perfecto.
+Cada feature de MIM existe para solucionar una fricción real comprobada, priorizando la utilidad técnica y la robustez de ingeniería por sobre promesas teóricas.
 
 > **Regla de oro:** Nunca hagas un "AI Assistant". Siempre haz "Herramientas Concretas".
 

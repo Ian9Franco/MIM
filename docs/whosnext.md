@@ -5,7 +5,7 @@ Roadmap de lo que sigue, basado en revisión de código real (v11.2.0). Dividido
 
 ## 1. Proceso — lo único que de verdad urge
 
-- [x] *Hacer withApiGuard obligatorio, no opcional.* 40/40 rutas críticas (100% de web/ y llamadas a APIs externas/IA) blindadas.
+- [x] *Hacer withApiGuard obligatorio, no opcional.* 112/112 handlers HTTP blindados, con enforcement estructural fail-closed por AST en `npm run lint:api-guard`.
   - [x] Barrido de las rutas restantes, empezando por las que llaman APIs externas o de IA.
   - [x] Regla de CI o lint que falle el build si un route.ts nuevo no importa withApiGuard (`npm run lint:api-guard`).
   - [x] Ítem de checklist y guía estándar en CONTRIBUTING.md.

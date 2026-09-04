@@ -18,7 +18,7 @@
 [![Tests: Passing](https://img.shields.io/badge/Tests-All%20Passing-brightgreen)](scripts/test-runner.js)
 [![Coverage](https://img.shields.io/badge/Coverage-91.0%25%20(V8%20Runtime)-brightgreen)](https://github.com/Ian9Franco/MIM/actions)
 
-**[🎬 Live Demo](./docs/DEMO.md)** • **[🌐 Web Hub](https://mim-hub.vercel.app/)** • **[🏛️ Architecture](#-system-architecture)** • **[📑 ADRs (Decisions)](./docs/adr/)** • **[🛡️ SAGE Engine](#engine-01--sage-crash-intelligence-system)** • **[⚡ Aduana Engine](#engine-02--aduana-storage-engine--performance-benchmarks)** • **[🌐 FOMO Cloud](#engine-03--fomo-cloud--distributed-systems-architecture)** • **[🔒 Security Engine](#engine-04--static-java-bytecode-threat-analysis)** • **[💾 NBT Rescue](#engine-05--nbt-rescue-engine--binary-data-recovery)** • **[🐳 Reproducibility](./docs/REPRODUCIBILITY.md)**
+**[🎬 Live Demo](./docs/guides/DEMO.md)** • **[🌐 Web Hub](https://mim-hub.vercel.app/)** • **[🏛️ Architecture](#-system-architecture)** • **[📑 ADRs (Decisions)](./docs/adr/)** • **[🛡️ SAGE Engine](#engine-01--sage-crash-intelligence-system)** • **[⚡ Aduana Engine](#engine-02--aduana-storage-engine--performance-benchmarks)** • **[🌐 FOMO Cloud](#engine-03--fomo-cloud--distributed-systems-architecture)** • **[🔒 Security Engine](#engine-04--static-java-bytecode-threat-analysis)** • **[💾 NBT Rescue](#engine-05--nbt-rescue-engine--binary-data-recovery)** • **[🐳 Reproducibility](./docs/guides/REPRODUCIBILITY.md)**
 
 </div>
 
@@ -131,7 +131,7 @@ Structured Crash Report    → Deterministic JSON schema consumed by UI or AI Ex
 | **Mean Inference Latency** | **0.06 ms/log** | < 15.0 ms | Sub-Millisecond Deterministic | ⚡ Real-Time |
 
 > [!NOTE]
-> **Operational Boundary & Non-Goals:** SAGE evaluates static log evidence. It does not execute untrusted Java bytecode, does not attach to live JVM runtime memory, and the LLM layer is strictly forbidden from manufacturing culprits. The 100% Macro F1 reflects performance against the 125 canonical benchmark corpus across 8 failure modes; unseen or corrupted wild traces degrade safely to `UNKNOWN_RUNTIME` with bounded low confidence. Full taxonomy report in [docs/SAGE_EVALUATION.md](./docs/SAGE_EVALUATION.md).
+> **Operational Boundary & Non-Goals:** SAGE evaluates static log evidence. It does not execute untrusted Java bytecode, does not attach to live JVM runtime memory, and the LLM layer is strictly forbidden from manufacturing culprits. The 100% Macro F1 reflects performance against the 125 canonical benchmark corpus across 8 failure modes; unseen or corrupted wild traces degrade safely to `UNKNOWN_RUNTIME` with bounded low confidence. Full taxonomy report in [docs/engines/SAGE_EVALUATION.md](./docs/engines/SAGE_EVALUATION.md).
 
 #### The AI Design Boundary & Semantic RAG Layer
 > *"AI should explain evidence, not manufacture it."*
@@ -183,7 +183,7 @@ Warm Scan (100% Cache): ████ 1.68 s (8.0x Speedup)
 
 - **SHA-1 Throughput:** **2,083.9 MB/s** | **SHA-512 Throughput:** **940.3 MB/s**
 - **Fast-Path Lookup Latency:** **227.45 µs/op** | **Cache Hit Rate:** **99.4%**
-- Complete methodology in [docs/ADUANA_BENCHMARKS.md](./docs/ADUANA_BENCHMARKS.md).
+- Complete methodology in [docs/engines/ADUANA_BENCHMARKS.md](./docs/engines/ADUANA_BENCHMARKS.md).
 
 ---
 
@@ -207,7 +207,7 @@ Desktop Client (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ M
 4. **How do you prevent duplicate mutations upon reconnect?**
    - *Solution:* **Idempotent Mutation Keys**. Each queued mutation carries a deterministic UUID (`UUIDv5(resourceId + action + timestamp)`). PostgreSQL executes idempotent `ON CONFLICT DO UPDATE` upserts, preventing duplication.
 
-> Complete distributed systems whitepaper in [docs/DISTRIBUTED_ARCHITECTURE.md](./docs/DISTRIBUTED_ARCHITECTURE.md).
+> Complete distributed systems whitepaper in [docs/architecture/DISTRIBUTED_ARCHITECTURE.md](./docs/architecture/DISTRIBUTED_ARCHITECTURE.md).
 
 #### 🤖 MIM-Bot — Multimodal On-Demand Explainer & Bully AI Assistant
 *On-demand project synthesis, multimodal screenshot grounding, and contextual project mini-chat.*
@@ -217,7 +217,7 @@ Desktop Client (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ M
 - **Slime Micro-Animation Branding:** Replaces generic icons with the bouncing slime favicon (`/icon.png` with `.animate-slime`) across pill buttons, banners, and chat bubbles.
 - **Resilient Cascade & Local Fallback:** Automatically cascades across Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash -> Local Heuristic Engine on quota exhaustion (HTTP 429).
 
-> Full specification in [docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md).
+> Full specification in [docs/proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./docs/proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md).
 
 ---
 
@@ -234,7 +234,7 @@ Desktop Client (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ M
 - **Concurrency & Rate Limits:** Bounded worker batches (5 files/chunk) prevent disk saturation; background VirusTotal queries are cached to respect free-tier API limits.
 - **Output:** Emits a deterministic Threat Score (0–100) with line-level evidence references.
 
-> Full security taxonomy in [docs/SECURITY_ENGINE.md](./docs/SECURITY_ENGINE.md) and formal STRIDE attack trees in [docs/THREAT_MODEL.md](./docs/THREAT_MODEL.md).
+> Full security taxonomy in [docs/security/SECURITY_ENGINE.md](./docs/security/SECURITY_ENGINE.md) and formal STRIDE attack trees in [docs/security/THREAT_MODEL.md](./docs/security/THREAT_MODEL.md).
 
 ---
 
@@ -250,7 +250,7 @@ $$\text{INVARIANT}: \quad \text{Source binary state is NEVER overwritten without
 4. **Atomic Write Buffer:** Encodes repaired tree into a temporary `.tmp` file, verifies magic bytes, and atomically renames over target file.
 5. **Integration Tests:** **12/12 test cases passing** (`npm run test:nbt`).
 
-> Technical binary specification in [docs/NBT_RESCUE_SPEC.md](./docs/NBT_RESCUE_SPEC.md).
+> Technical binary specification in [docs/engines/NBT_RESCUE_SPEC.md](./docs/engines/NBT_RESCUE_SPEC.md).
 
 ---
 
@@ -324,7 +324,7 @@ manager/
 
 ## 🔒 Quality Verification & Architecture Scope
 
-MIM is maintained as an active modular systems engineering platform and portfolio artifact under strict verification standards. For an honest analysis of solo-developer realities, empirical benchmarks, and managed technical debt, see [**Project Reality & Status**](./docs/PROJECT_STATUS.md):
+MIM is maintained as an active modular systems engineering platform and portfolio artifact under strict verification standards. For an honest analysis of solo-developer realities, empirical benchmarks, and managed technical debt, see [**Project Reality & Status**](./docs/planning/PROJECT_STATUS.md):
 
 - [x] **Disciplined Scope Management:** Controlled feature evolution avoiding speculative bloat; architecture choices are backed by ADRs, real-world community modding experience, and empirical benchmarks.
 - [x] **Defendable Engineering Claims:** All performance, security, and algorithmic claims verified directly against source code and benchmarks.

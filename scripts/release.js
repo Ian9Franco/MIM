@@ -70,8 +70,10 @@ function updateVersion(newVersion) {
     console.log(chalk.green("README.md actualizado con la nueva versión."));
   }
 
-  // Actualizar docs/MIM.md
-  const mimDocPath = path.join(process.cwd(), "docs", "MIM.md");
+  // Actualizar docs/architecture/MIM.md
+  const mimDocPath = fs.existsSync(path.join(process.cwd(), "docs", "architecture", "MIM.md"))
+    ? path.join(process.cwd(), "docs", "architecture", "MIM.md")
+    : path.join(process.cwd(), "docs", "MIM.md");
   if (fs.existsSync(mimDocPath)) {
     let mimDoc = fs.readFileSync(mimDocPath, "utf-8");
     // Reemplazar versión en el encabezado
@@ -82,11 +84,13 @@ function updateVersion(newVersion) {
     const today = new Date().toISOString().slice(0, 10);
     mimDoc = mimDoc.replace(/\*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `**Última actualización:** ${today}`);
     fs.writeFileSync(mimDocPath, mimDoc);
-    console.log(chalk.green("docs/MIM.md actualizado con la nueva versión y fecha."));
+    console.log(chalk.green("docs/architecture/MIM.md actualizado con la nueva versión y fecha."));
   }
 
-  // Actualizar docs/CHANGELOG.md
-  const changelogPath = path.join(process.cwd(), "docs", "CHANGELOG.md");
+  // Actualizar docs/releases/CHANGELOG.md
+  const changelogPath = fs.existsSync(path.join(process.cwd(), "docs", "releases", "CHANGELOG.md"))
+    ? path.join(process.cwd(), "docs", "releases", "CHANGELOG.md")
+    : path.join(process.cwd(), "docs", "CHANGELOG.md");
   if (fs.existsSync(changelogPath)) {
     let changelog = fs.readFileSync(changelogPath, "utf-8");
     // Reemplazar versión actual en el encabezado
@@ -95,7 +99,7 @@ function updateVersion(newVersion) {
     const today = new Date().toISOString().slice(0, 10);
     changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
     fs.writeFileSync(changelogPath, changelog);
-    console.log(chalk.green("docs/CHANGELOG.md actualizado con la nueva versión y fecha."));
+    console.log(chalk.green("docs/releases/CHANGELOG.md actualizado con la nueva versión y fecha."));
   }
 }
 

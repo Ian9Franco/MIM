@@ -1,109 +1,82 @@
-# MIM — Strategic Roadmap & Ecosystem Status
+# MIM — Roadmap Oficial & Estado de Evolución (v11.3.0)
 
-> Logros alcanzados y visión de evolución de Minecraft Intelligent Manager.  
-> **Versión Actual:** v10.5.0 (Systems Engineering Finalization, SAGE 2.0 Evaluation & Scope Freeze)  
-> **Estado:** Finalizado & Congelado (Portfolio Engineering Artifact)  
-> **Última actualización:** 2026-09-03
-
----
-
-> [!NOTE]
-> **Estado del Ecosistema MIM:**
-> Los componentes centrales del ecosistema (**MIM Desktop** en Electron 42 y **MIMweb**) cuentan con implementaciones funcionales operativas, suites de evaluación deterministas, análisis estático de bytecode y contratos de cierre formalizados.
+> Roadmap unificado de evolución técnica de Minecraft Intelligent Manager.  
+> **Versión Actual:** v11.3.0 | **Última actualización:** 2026-09-04  
+> *(Historial de hitos de versiones anteriores preservado en [docs/releases/ROADMAP_v10_HISTORIC.md](../releases/ROADMAP_v10_HISTORIC.md)).*
 
 ---
 
-# 📌 Hitos e Implementaciones Realizadas
+## 1. Proceso & Seguridad de API (Completado en v11.3.0)
 
-## 🚀 Versión 10.5.0 — Systems Engineering Finalization & Scope Freeze (2026-09-03)
-- **SAGE 2.0 Evaluación Cuantitativa**: 100% Macro F1, 84% Top-1 atribución en corpus de 125 casos y 0.05ms latencia diagnóstica con RAG semántico y guardrails anti-alucinación.
-- **Aduana Multi-Escala Benchmarking**: Deduplicación direccionada por contenido (CAS) benchmarkeada hasta 25K archivos con aceleración de caché de 8.0x y >2,000 MB/s en hashing.
-- **Sistemas Distribuidos**: Modelo Last-Write-Wins con timestamps del cliente y desempate por UUID, rollback optimista y cola de mutaciones offline idempotentes.
-- **Seguridad y Rescate Binario**: Análisis estático de amenazas en bytecode Java sin ejecución de código y recuperación NBT v19133 con Invariante de Cero Pérdida de Datos.
-- **Documentación Bilingüe & Standalone Release**: Paridad total inglés/español y empaquetado de producción Windows NSIS / Portable.
-
-## 🚀 Versión 10.4.0 — Suite Ecosistema Unificada & MIMweb Mobile (2026-05-30)
-- **MIM Desktop (Electron 42)**: Runtime nativo de escritorio funcional y verificado, con backend Next.js Standalone, empaquetado para Windows con Electron Builder y cero dependencias de Rust/Tauri.
-- **MIMweb (FOMO Hub)**: Aplicación web complementaria mobile-first totalmente operativa, con curación remota de drafts, traductor inteligente de descripciones y reproductor PiP adaptativo.
-- **FOMO Cloud & Supabase**: Sincronización en la nube en tiempo real con autenticación, clubes comunitarios, favoritos fijados y pool compartido de mods.
-- **SAGE Forensics & NBT Player Rescue**: Diagnóstico automatizado de stacktraces de crashes y editor visual interactivo de archivos `.dat` de inventario de jugadores.
-- **Seguridad y Aduana**: Escáner estático de bytecode JAR, mitigación de malware vía API VirusTotal Cloud y deduplicación local de descargas en milisegundos con Chokidar.
-
-## 🏛️ Versión 9.3.0 — Arquitectura Modular & FOMO Cloud Overhaul (2026-05-21)
-- **Reorganización Estructural**: Consolidación y estructuración de los subdominios de la aplicación:
-  - `components/fomo/` dividido en subcarpetas cohesivas: `community/`, `discover/`, `showcase/`, `collections/`, `followed/`, `spotlight/`, `sidebar/`, `core/`.
-  - `lib/` dividido en subcarpetas de control: `fomo/`, `modding/`, `storage/`, `events/`, `intelligence/`, `security/`, `core/`.
-- **Premium FOMO Cloud Interface**: Rediseño inmersivo completo del panel social comunitario:
-  - *Liquid Glass Tabs*: Sub-navegación premium con píldoras de transición fluida de desplazamiento y escala elástica al cambiar de sección (Pool ➔ Showcases ➔ Clubs).
-  - *Immersive Header*: Fondos degradados dinámicos basados en la paleta del color de perfil del usuario, con desenfoques intensos en el fondo (`backdrop-blur-3xl`).
-  - *Elevated Mod Cards*: Tarjetas con bordes ultra-delgados de cristal, sombras internas profundas y elevación activa en el eje Z mediante hover para una experiencia interactiva fluida.
-  - *Drafts Colaborativos*: Nueva capa social de "Collaborative Playlist Building", permitiendo crear listas de mods coordinadas con amigos en tiempo real antes de descargar.
-- **Showcase Player Decoupling**: Tratamiento estratégico del reproductor de video de showcases como una **característica secundaria de conveniencia** y no la identidad core de la aplicación.
-  - Implementación de un botón robusto de fallback **"Abrir en YouTube"** cuando fallan las APIs de extracción de `yt-dlp`.
-  - Aislamiento completo de fallas multimedia para que el descubrimiento de mods se mantenga operativo en todo momento.
-- **Build & Path Resolvers**: Resolución definitiva de errores de Turbopack en importaciones relativas (`../ui/primitives` y `./db/core`) mapeando paths absolutos (`@/components/ui/primitives` y `@/lib/db/...`).
-
-## 🏛️ Versión 9.2.0 — Asynchronous Storage Architecture (2026-05-20)
-- **Migración a IndexedDB**: Reemplazo de localStorage síncrono por IndexedDB asíncrono para datos pesados, evitando bloqueos visuales y mejorando los tiempos de respuesta en un 40%.
-- **Auto-Healing Storage**: Lógica inteligente de migración automática que transfiere colecciones, seguidos e historial a IndexedDB y limpia el almacenamiento viejo de forma segura.
-- **Showcase Native Player**: Reproductor flotante PiP premium persistente con barra de progreso multicapa (Track Base, Progress, Hover Preview) con controles de volumen analógico.
-- **Thumbnail Auto-Healing**: Cola de recuperación secuencial en cascada para corregir imágenes rotas de YouTube en videos privados o de "Solo Miembros" públicos (`maxresdefault` ➔ `mqdefault` ➔ `hqdefault` ➔ Placeholder Temático Offline).
-- **CurseForge Picks Counter**: Diccionario dinámico en backend para resolver el conteo exacto de mods en colecciones CurseForge.
-
-## 🏛️ Versión 7.0.3 — Mejoras de Sistema & ALRT (2026-05-18)
-- **Generación de `modlist.html`**: Generación automática de lista de mods clasificados para compartir.
-- **Preview de Entornos**: Previsualización física de ámbitos `allhost` (servidor) y `alluser` (cliente).
-- **Guía de Uso / Onboarding**: Sistema interactivo de primeros pasos por pestañas funcionales.
-
-## 🏛️ Versión 6.3.1 — FOMO Rankings & Live Details (2026-05-17)
-- **Rankings Dinámicos**: Tops estilo podio (1º destacado a lo ancho, 2º y 3º abajo en fila) para mods compartidos por la comunidad.
-- **Carrusel de Autores**: Rotación animada de iconos de mods seguidos en las tarjetas de creadores.
-
-## 🏛️ Beta 5.9 — Architecture & Code Consolidation (2026-05-14)
-- **Bytecode Conflict Engine**: Análisis estático en caliente de JARs para detectar colisiones de Mixin antes del arranque.
-- **SAGE Recovery Engine**: Reparador interactivo con reparación de archivos `.dat` de jugadores con backups automáticos `.mim_bak` y descargas inmediatas.
+- [x] **Hacer withApiGuard obligatorio, no opcional:**
+  - [x] Barrido de 100% de rutas en `web/app/api/` y `app/api/` (112 handlers protegidos).
+  - [x] Regla de CI que falla estructuralmente con AST si un `route.ts` no usa `withApiGuard` (`npm run lint:api-guard`).
+  - [x] Soporte para allowlist formalizada y documentada de excepciones.
+  - [x] Suite de tests exhaustiva del wrapper con casos negativos, validación Zod y rate limits reales.
+  - [x] CI/CD: Branch protection ruleset en GitHub configurado para `main` con bypass admin para pushes locales.
+  - [x] Helper local interactivo para auditar PRs de IAs en un solo paso (`npm run pr:review`).
 
 ---
 
-# 🚧 Roadmap y Próximos Pasos (Backlog & Propuestas)
+## 2. Funcionamiento de MimBot (En curso)
 
-### 🛡️ Propuesta de Arquitectura: MIM Sovereign Vault & Data Sovereignty
-- [x] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)).
-- [x] **Desktop Silent Rolling Snapshots & Local Vaulting**: Exportación e importación desacoplada de la nube en MIM Desktop y MIMweb para independencia total de conectividad cloud.
-- [x] **Cifrado Zero-Knowledge Opcional**: Cifrado del vault con `AES-256-GCM` y `PBKDF2` (100.000 iteraciones) en el cliente antes de la exportación.
-
-### 🧠 Propuesta: Explicador Inteligente de Proyectos On-Demand (Public Gemini Grounding API)
-- [x] **Síntesis Contextual On-Demand**: Botón de acción explícita ("✨ Explicar con IA") en `ModDetailsSheet` y `FomoVersionOverlay` (sin ejecución en segundo plano no solicitada).
-- [x] **Grounding con Google Search para Metadatos Vacíos**: Para mods/texturas/shaders sin descripción o con información escueta, sintetizar su función investigando automáticamente vía Gemini Search Grounding con el título, autor, slug y enlaces de origen (ver especificación completa en [docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)).
-- [x] **Arquitectura Serverless / Direct Public API**: Consumo directo mediante API pública (Gemini Flash) sin dependencia de servidores propietarios backend.
-- [x] **Caché Persistente en Almacenamiento Local**: Almacenamiento local de síntesis en `mim_explain_${projectId}` para costo cero en consultas repetidas.
-
-### 🌟 Integración Bedrock & Canales de Comunidad (Backlog)
-- [x] **Scraper de YouTube Posts**: Integrar el endpoint `/api/fomo/youtube-posts` para extraer showcases de la pestaña comunidad para creadores asociados (integrado en `FeedTab` en MIMweb y `FomoFollowedShowcases` en MIM Desktop).
-- [x] **Discover de Bedrock Addons (chunk.gg)**: Crear el proxy de búsqueda controlado de chunk.gg mapeándolo al modelo `ModHit` (disponible en `DiscoverTab` y Desktop con parser robusto sin dependencias y soporte de Marketplace).
-
-### 🎯 Posicionamiento Profesional e Integración en Portfolio
-- [x] **Technical Case Study & Flagship Positioning**: Publicado en el portafolio profesional con desglose de los 5 motores de dominio, topología de bus de eventos y benchmarks empíricos auditados.
-- [x] **Bilingual Documentation Hub**: Documentación completa en español e inglés en `README.md` y `README.es.md`.
-- [x] **Standalone Release v10.5.0**: Binarios de producción empaquetados para Windows (`dist/MIM Setup 10.5.0.exe` y `dist/MIM 10.5.0.exe`).
+- [x] *Aplicar withApiGuard a api/sage/chat:* Blindado con rate limit defensivo (25 req/min) y validación Zod estricta.
+- [ ] *No guardar la API key de Gemini en texto plano:* Cifrar en disco o usar `safeStorage` del SO en Electron.
+- [x] *Recortar el contexto de conversación antes de enviarlo:* Truncado automático a los últimos 6 turnos en `api/sage/chat`.
+- [ ] *Streaming de respuesta:* Implementar streaming de tokens en Gemini para mejorar sensación de velocidad en respuestas largas.
+- [x] *Manejo de rate-limit/cuota de la propia API de Gemini:* Diferenciación explícita de código 429 (`RATE_LIMITED`) con mensaje claro en el chat sin desconfigurar la key.
+- [ ] *Persistir el historial del chat:* Guardar historial localmente (opt-in) para no perderlo al cambiar de crash o recargar.
 
 ---
 
-## 📊 Métricas de Éxito y Logros
+## 3. UX/UI de MimBot (En curso)
 
-| Métrica | Estado Inicial | Estado Actual (v9.3.0) | Objetivo |
-|---------|----------------|-----------------------|----------|
-| Mods gestionables | 200+ | **1,200+** | 10,000+ |
-| Latencia de carga inicial | 3-5 minutos | **<2 segundos** | <1 segundo |
-| Consultas API reducidas | 0% | **97% (Smart Cache)** | 99% |
-| Consumo de Memoria RAM | 200-300MB | **40-60MB** | <50MB |
-| Compilación (Turbopack) | Lenta (>10s) | **Rápida (~2-3s)** | <1.5s |
-| Frame Rate de Interfaz | 20-30fps | **60fps estable** | 60fps constante |
+- [ ] *Mejorar primera experiencia (onboarding sin key):* Ofrecer modo de prueba inicial o preview estático de ejemplos de respuesta antes de exigir la API key.
+- [x] *Explicación de modo Bully vs. Estándar:* Tooltips descriptivos y etiquetas claras.
+- [x] *Copia de mensajes y código:* Botón de copiar respuesta con feedback visual inmediato.
+- [x] *Confirmación de reinicio:* Mecanismo de deshacer (Undo) de 4.5 segundos al resetear la conversación.
+- [ ] *Preguntas de seguimiento sugeridas:* Chips contextuales dinámicos ligados a la última respuesta del modelo.
+- [x] *Desacoplar error 429 del error 401:* Los límites de cuota se muestran inline sin desloguear la clave.
+- [x] *Accesibilidad:* Atributos `aria-label` descriptivos en todos los botones del copiloto.
+- [ ] *Validación preventiva de API Key:* Ping liviano al guardar la clave antes de marcar "Gemini Conectado".
 
 ---
 
-> [!IMPORTANT]
-> **Regla de Oro de MIM:**
-> **Nunca hagas un "AI Assistant". Siempre haz "Herramientas Concretas".**
-> 
-> *Preferimos el valor técnico e interactivo de herramientas de diagnóstico y automatización por sobre interfaces de chat conversacionales de IA.*
+## 4. Deuda de fondo & Arquitectura
+
+- [ ] Bajar el uso de `any` (935 casos) — priorizar `lib/security/`, `lib/intelligence/sage/` y hooks orquestadores (`useHomeController.ts`).
+- [ ] Generalizar esquemas Zod a más rutas (actualmente 17/93).
+- [ ] Seguir sumando tests — meta: mantener 100% pass en todas las suites de `npm test`.
+- [ ] Revisar el `eval("require")` en `sage/cacheEngine.ts` — reemplazar por imports estáticos si es posible.
+- [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
+  - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
+  - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
+  - [ ] `web/hooks/useHomeController.ts` (1,525 líneas) modularizar en sub-hooks (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
+- [ ] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
+
+---
+
+## 5. Pipeline de Inferencia & Cascada de Modelos (`api/sage/chat`)
+
+- [x] *Caché determinista conectada:* Integración de `cacheEngine.ts` con `api/sage/chat` para diagnósticos instantáneos de firmas conocidas.
+- [x] *Memoria de modelo en la cascada:* Recordar el último modelo exitoso (`flash-lite-latest` → `3.5-flash-lite` → `3.5-flash` → `3.6-flash`) para evitar round-trips fallidos tras un 429.
+- [x] *Presupuestos de tokens diferenciados:* Modo Bully (~250 tokens) vs. Modo Estándar (~700 tokens estructurados).
+- [x] *Ajuste de temperatura en modo Bully:* Reducida a 0.5 para conservar estilo satírico sin alucinar dependencias.
+- [x] *Ventana de contexto acotada:* Últimos 6 turnos para no inflar consumo de tokens.
+- [ ] *Soporte multi-proveedor:* Conectar `gpt-4o` de `sageMimbotEngine.ts` como proveedor de respaldo ante agotamiento de cuota de Google AI Studio.
+
+---
+
+## 6. Gestión de Cuota y Resiliencia en Free Tier
+
+- [x] *Diferenciación de error 429 en UI:* Desacoplar cuota/frecuencia de falta de clave.
+- [ ] *Diferenciación contextual de límites:* Distinguir en el mensaje si se alcanzó el límite por minuto (RPM ~15 / TPM ~250k) o el límite diario (RPD ~1.500).
+- [ ] *Encolamiento de peticiones concurrentes:* Procesar en cola secuencial para no superar el límite de 15 RPM.
+- [ ] *Caché persistente local para quick questions:* Guardar respuestas de preguntas frecuentes por 24 horas.
+
+---
+
+## 7. Privacidad y Transparencia en BYOK
+
+- [ ] *Aviso de privacidad del Free Tier de Google:* Notificar con claridad que la capa gratuita de AI Studio puede usar datos para entrenamiento (a diferencia de tiers pagos).
+- [ ] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión.

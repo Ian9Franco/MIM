@@ -71,12 +71,17 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
 - [x] *Accesibilidad básica:* los botones ahora cuentan con `aria-label` descriptivos para lectores de pantalla.
 - [ ] *El indicador "Gemini Conectado" es engañoso.* Se muestra apenas hay una key guardada, no cuando se confirmó que la key es válida. Un usuario con key vencida ve "Conectado" hasta que manda un mensaje y falla. Mejor: validar la key al guardarla (un ping liviano a la API) antes de mostrar el estado "conectado".
 
-## 4. Deuda de fondo (ya en curso, seguir empujando)
+## 4. Deuda de fondo & Arquitectura (ya en curso, seguir empujando)
 
-- [ ] Bajar el uso de any (935 casos) — priorizar lib/security/ y lib/intelligence/sage/.
-- [ ] Generalizar Zod a más rutas (hoy 17/93).
-- [ ] Seguir sumando tests — el patrón de crecimiento (5→10→12) está bien, no aflojar.
-- [ ] Revisar el eval("require") en sage/cacheEngine.ts — funciona, pero cualquier SAST lo va a marcar; reemplazar por imports estáticos si es posible.
+- [ ] Bajar el uso de `any` (935 casos) — priorizar `lib/security/`, `lib/intelligence/sage/` y hooks orquestadores (`useHomeController.ts`).
+- [ ] Generalizar esquemas Zod a más rutas (actualmente 17/93).
+- [ ] Seguir sumando tests — el patrón de crecimiento (5→10→12→13 suites) está bien, no aflojar.
+- [ ] Revisar el `eval("require")` en `sage/cacheEngine.ts` — reemplazar por imports estáticos si es posible.
+- [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
+  - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
+  - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
+  - [ ] `web/hooks/useHomeController.ts` (1,525 líneas) modularizar en sub-hooks (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
+- [ ] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---
 

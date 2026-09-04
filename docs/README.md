@@ -1,4 +1,4 @@
-# 🗺️ MIM Documentation & Master Map / Mapa Maestro de Documentación
+# 🗂️ Catálogo & Mapa Maestro de Documentación Técnica / Technical Documentation Index
 
 <div align="center">
 
@@ -6,8 +6,8 @@
 
 </div>
 
-> **Estado del Proyecto:** MIM es un sistema de ingeniería modular para Minecraft en **desarrollo activo y beta avanzada** (v11.3.0).  
-> Ver [planning/PROJECT_STATUS.md](./planning/PROJECT_STATUS.md) para el informe de madurez técnica real y zonas de deuda asumida.
+> **Catálogo de Ingeniería MIM:** Índice estructurado de especificaciones, benchmarks, modelos de amenazas y arquitectura (v11.3.0).  
+> *(Para la presentación general del software a usuarios, consultar el [README.es.md](../README.es.md) en la raíz).*
 
 ---
 
@@ -17,17 +17,17 @@ La documentación está organizada físicamente en carpetas temáticas para que 
 
 ```text
 docs/
-├── README.md                      # Este mapa maestro
+├── README.md                      # Este catálogo técnico
 ├── whosnext.md                    # 🟢 Tablero táctico del sprint activo (v11.3.0)
 │
-├── architecture/                  # Arquitectura del sistema y APIs
-├── security/                      # Seguridad, análisis de bytecode y threat models
+├── architecture/                  # Arquitectura del sistema y catálogo de APIs
+├── security/                      # Seguridad, escáner de bytecode y threat models
 ├── engines/                       # Especificaciones profundas y benchmarks de motores
 ├── cloud/                         # Infraestructura de nube y base de datos Supabase
 ├── proposals/                     # RFCs y propuestas técnicas de diseño
-├── planning/                      # Visión de producto, status y backlog
+├── planning/                      # Roadmap unificado y auditoría de madurez
 ├── guides/                        # Guías operativas, onboarding y reproducibilidad
-├── releases/                      # Changelog y notas de versión
+├── releases/                      # Changelog, notas de versiones y archivos históricos
 └── adr/                           # Architecture Decision Records (inmutables)
 ```
 
@@ -37,9 +37,8 @@ docs/
 | Documento | Ubicación | Propósito |
 | :--- | :--- | :--- |
 | **[whosnext.md](./whosnext.md)** 🟢 | `docs/` | **Checklist táctico del sprint activo (v11.3.0).** Tareas inmediatas de MimBot, seguridad, optimizaciones de UI y deuda técnica urgente. |
-| **[ROADMAP.md](./planning/ROADMAP.md)** | `docs/planning/` | **Hitos y evolución estratégica.** Registro de versiones completadas (v9, v10, v11) y visión de largo plazo. |
-| **[PROJECT_STATUS.md](./planning/PROJECT_STATUS.md)** | `docs/planning/` | **Auditoría de madurez honesta.** Qué funciona al 100%, qué es experimental y contexto de desarrollo solo-dev. |
-| **[BACKLOG.md](./planning/BACKLOG.md)** | `docs/planning/` | **Banco de ideas y mejoras diferidas.** Tareas no urgentes anotadas para el futuro. |
+| **[ROADMAP.md](./planning/ROADMAP.md)** 📌 | `docs/planning/` | **Roadmap Técnico Oficial (v11.3.0).** Visión estratégica y consolidación de metas en curso. *(Historial previo en [releases/ROADMAP_v10_HISTORIC.md](./releases/ROADMAP_v10_HISTORIC.md))*. |
+| **[PROJECT_STATUS.md](./planning/PROJECT_STATUS.md)** ⚖️ | `docs/planning/` | **Auditoría de Madurez & Transparencia.** Evaluación honesta de qué motores son estables, cuáles están en beta y zonas de deuda asumida. |
 
 ---
 
@@ -116,6 +115,8 @@ Ubicadas en [docs/adr/](./adr/README.md):
 | **[CHANGELOG.md](./releases/CHANGELOG.md)** | `docs/releases/` | Historial completo de versiones y cambios. |
 | **[release-notes-v10.5.0.md](./releases/release-notes-v10.5.0.md)** | `docs/releases/` | Notas de la versión v10.5.0. |
 | **[release-notes-v10.5.1.md](./releases/release-notes-v10.5.1.md)** | `docs/releases/` | Notas de la versión v10.5.1. |
+| **[ROADMAP_v10_HISTORIC.md](./releases/ROADMAP_v10_HISTORIC.md)** | `docs/releases/` | Archivo histórico de hitos cerrados en versiones v9 y v10. |
+| **[BACKLOG_v10_HISTORIC.md](./releases/BACKLOG_v10_HISTORIC.md)** | `docs/releases/` | Archivo del backlog MoSCoW original de v10 (completado). |
 
 ---
 

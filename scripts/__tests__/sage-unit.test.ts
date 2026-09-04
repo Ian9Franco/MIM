@@ -168,6 +168,29 @@ async function run() {
   assert(correlation.primaryCulprit === "supermod", `Identified primary culprit: ${correlation.primaryCulprit}`);
   assert(correlation.allSuspects.includes("supermod"), "Suspect list includes targeted mod");
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // 6. I18N: Multi-Language Diagnostic & Remediation Verification
+  // ───────────────────────────────────────────────────────────────────────────
+  console.log(`\n${colors.bold}6. i18n: Multi-Language Diagnostic & Remediation Verification${colors.reset}`);
+  const sampleCrash = `
+    Minecraft Version: 1.20.1
+    Operating System: Linux
+    Fabric Mods:
+    - iris 1.6.4 requires sodium which is missing
+  `;
+
+  const { SageCrashEngine } = await import("../../lib/intelligence/sage/engine");
+  const reportEn = SageCrashEngine.diagnose(sampleCrash, { locale: "en" });
+  assert(reportEn.locale === "en", "Report defaults/records English locale");
+  assert(reportEn.rootCause.includes("Missing required dependency mod"), `English root cause formulated: ${reportEn.rootCause}`);
+  assert(reportEn.remediation.summary.includes("Install the missing dependency"), `English remediation summary formulated: ${reportEn.remediation.summary}`);
+
+  const reportEs = SageCrashEngine.diagnose(sampleCrash, { locale: "es" });
+  assert(reportEs.locale === "es", "Report records Spanish locale");
+  assert(reportEs.rootCause.includes("Dependencia requerida faltante"), `Spanish root cause formulated: ${reportEs.rootCause}`);
+  assert(reportEs.remediation.summary.includes("Instala la dependencia faltante"), `Spanish remediation summary formulated: ${reportEs.remediation.summary}`);
+  assert(reportEs.remediation.allActions[0].instructions[0].includes("Busca"), "Spanish remediation instructions generated");
+
   console.log(`\n${colors.green}${colors.bold}✓ All SAGE 2.0 unit tests passed successfully!${colors.reset}\n`);
 }
 

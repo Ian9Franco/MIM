@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { supabase } from "@/lib/supabaseClient";
 
 const querySchema = z.object({
@@ -25,23 +26,12 @@ interface CommunityRankingMod {
   downloads: number;
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const parsedQuery = querySchema.safeParse({
-      limit: searchParams.get("limit") ?? undefined,
-      platform: searchParams.get("platform") ?? undefined,
-    });
-
-    if (!parsedQuery.success) {
-      return NextResponse.json(
-        { error: parsedQuery.error.issues[0]?.message || "Invalid query parameters" },
-        { status: 400 }
-      );
-    }
-
-    const { limit, platform } = parsedQuery.data;
-
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { limit, platform } }) => {
     let query = supabase
       .from("favorite_mods")
       .select("mod_id, name, icon_url, platform");
@@ -88,16 +78,13 @@ export async function GET(req: NextRequest) {
     const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
     const topCommunity: CommunityRankingMod[] = sorted.slice(0, limit).map((x) => ({
       ...x.mod,
-      downloads: x.count, // Vote count represents popularity
+      downloads: x.count,
     }));
 
     return NextResponse.json({
       rankings: topCommunity,
     });
-  } catch (e: unknown) {
-    const errorMsg = e instanceof Error ? e.message : "Internal error";
-    console.error("Error in community rankings API:", errorMsg);
-    return NextResponse.json({ rankings: [] }, { status: 500 });
   }
-}
+);
+
 export const dynamic = "force-dynamic";

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const CF_LOADER_NAMES = ["forge", "fabric", "neoforge", "quilt", "cauldron", "liteloader"];
@@ -70,23 +71,16 @@ function mapReleaseType(value: number) {
   return "release";
 }
 
-export async function GET(req: NextRequest) {
-  const apiKey = process.env.CURSEFORGE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "CURSEFORGE_API_KEY no configurada" }, { status: 503 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const parsed = querySchema.safeParse({ projectId: searchParams.get("projectId") });
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || "Invalid projectId parameter" },
-      { status: 400 }
-    );
-  }
-
-  const { projectId } = parsed.data;
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { projectId } }) => {
+    const apiKey = process.env.CURSEFORGE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "CURSEFORGE_API_KEY no configurada" }, { status: 503 });
+    }
 
   try {
     const headers = {
@@ -257,3 +251,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
+);

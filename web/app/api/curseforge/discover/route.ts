@@ -1,93 +1,126 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD, CF_CATEGORY_MAPS } from "./CurseForgeMapper";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
-function parseJsonArray(value: string | null): string[] {
+interface CurseForgeRawMod {
+  id: number;
+  classId: number;
+  name: string;
+  summary?: string;
+  downloadCount: number;
+  logo?: {
+    thumbnailUrl?: string;
+    url?: string;
+  };
+  authors?: Array<{ name: string }>;
+  links?: {
+    websiteUrl?: string;
+  };
+  categories?: Array<{ name: string }>;
+  latestFilesIndexes?: Array<{ gameVersion: string }>;
+}
+
+interface CurseForgeSearchResponse {
+  data?: CurseForgeRawMod[];
+  pagination?: {
+    totalCount: number;
+  };
+}
+
+function parseJsonArray(value: string | undefined): string[] {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string" && item.trim()) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
   } catch {
     return [];
   }
 }
 
-function parseLoaderFilter(value: string | null): string[] {
+function parseLoaderFilter(value: string): string[] {
   if (!value || value === "any" || value === "all" || value === "unknown") return [];
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-export async function GET(req: NextRequest) {
-  const apiKey = process.env.CURSEFORGE_API_KEY;
+const querySchema = z.object({
+  loader: z.string().trim().max(100).optional().default("any"),
+  page: z.coerce.number().int().min(1).max(500).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).optional().default(15),
+  projectType: z.string().trim().max(50).optional().default("mod"),
+  q: z.string().trim().max(100).optional().default(""),
+  gameVersions: z.string().trim().optional(),
+  gameVersion: z.string().trim().optional().default(""),
+  categories: z.string().trim().optional(),
+  category: z.string().trim().optional().default(""),
+  sort: z.string().trim().max(30).optional().default("newest"),
+});
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "CURSEFORGE_API_KEY no está configurada en las variables de entorno de Vercel / .env.local" },
-      { status: 503 }
-    );
-  }
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    const apiKey = process.env.CURSEFORGE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "CURSEFORGE_API_KEY no está configurada en las variables de entorno de Vercel / .env.local" },
+        { status: 503 }
+      );
+    }
 
-  const { searchParams } = new URL(req.url);
-  const loader = searchParams.get("loader") || "any";
-  const page = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("pageSize") || "15");
-  const projectType = searchParams.get("projectType") || "mod";
-  const q = searchParams.get("q")?.trim() || "";
-  const gameVersions = parseJsonArray(searchParams.get("gameVersions"));
-  const legacyGameVersion = searchParams.get("gameVersion") || "";
-  const categories = parseJsonArray(searchParams.get("categories"));
-  const legacyCategory = searchParams.get("category") || "";
-  const selectedLoaders = parseLoaderFilter(loader);
-  const sort = searchParams.get("sort") || "newest";
+    const { loader, page, pageSize, projectType, q, gameVersions, gameVersion: legacyGameVersion, categories, category: legacyCategory, sort } = query;
+    const parsedGameVersions = parseJsonArray(gameVersions);
+    const parsedCategories = parseJsonArray(categories);
+    const selectedLoaders = parseLoaderFilter(loader);
 
-  const index = (page - 1) * pageSize;
+    const index = (page - 1) * pageSize;
+    const isAnyType = projectType === "any" || projectType === "all";
+    const classId = !isAnyType ? (PROJECT_TYPE_TO_CLASS_ID[projectType] || 6) : null;
+    const versionOptions = parsedGameVersions.length ? parsedGameVersions : legacyGameVersion ? [legacyGameVersion] : [""];
+    const loaderOptions = classId === 6 && selectedLoaders.length ? selectedLoaders : [""];
+    const activeCategory = parsedCategories[0] || legacyCategory;
+    const hasCombinationFilters = versionOptions.length * loaderOptions.length > 1;
+    const requestPageSize = hasCombinationFilters ? Math.min(50, page * pageSize) : pageSize;
+    const requestIndex = hasCombinationFilters ? 0 : index;
 
-  const isAnyType = projectType === "any" || projectType === "all";
-  const classId = !isAnyType ? (PROJECT_TYPE_TO_CLASS_ID[projectType] || 6) : null;
-  const versionOptions = gameVersions.length ? gameVersions : legacyGameVersion ? [legacyGameVersion] : [""];
-  const loaderOptions = classId === 6 && selectedLoaders.length ? selectedLoaders : [""];
-  const category = categories[0] || legacyCategory;
-  const hasCombinationFilters = versionOptions.length * loaderOptions.length > 1;
-  const requestPageSize = hasCombinationFilters ? Math.min(50, page * pageSize) : pageSize;
-  const requestIndex = hasCombinationFilters ? 0 : index;
+    const buildQuery = (gVersion: string, activeLoader: string) => {
+      const qParams = new URLSearchParams({
+        gameId: "432",
+        sortField: String(SORT_TO_CF_FIELD[sort] || SORT_TO_CF_FIELD.newest || 11),
+        sortOrder: "desc",
+        index: requestIndex.toString(),
+        pageSize: requestPageSize.toString(),
+      });
 
-  const buildQuery = (gameVersion: string, activeLoader: string) => {
-    const query = new URLSearchParams({
-      gameId: "432",
-      sortField: String(SORT_TO_CF_FIELD[sort] || SORT_TO_CF_FIELD.newest || 11),
-      sortOrder: "desc",
-      index: requestIndex.toString(),
-      pageSize: requestPageSize.toString(),
-    });
-
-    if (classId) {
-      query.set("classId", classId.toString());
-
-      if (classId === 6 && activeLoader) {
-        const cfLoaderId = LOADER_TO_CF_ID[activeLoader];
-        if (cfLoaderId) query.set("modLoaderType", cfLoaderId.toString());
+      if (classId) {
+        qParams.set("classId", classId.toString());
+        if (classId === 6 && activeLoader) {
+          const cfLoaderId = LOADER_TO_CF_ID[activeLoader];
+          if (cfLoaderId) qParams.set("modLoaderType", cfLoaderId.toString());
+        }
       }
-    }
 
-    if (q) query.set("searchFilter", q);
-    if (gameVersion) query.set("gameVersion", gameVersion);
+      if (q) qParams.set("searchFilter", q);
+      if (gVersion) qParams.set("gameVersion", gVersion);
 
-    if (category && !isAnyType) {
-      const map = CF_CATEGORY_MAPS[projectType] || {};
-      const catId = map[category.toLowerCase()];
-      if (catId) query.set("categoryId", catId.toString());
-    }
+      if (activeCategory && !isAnyType) {
+        const map = CF_CATEGORY_MAPS[projectType] || {};
+        const catId = map[activeCategory.toLowerCase()];
+        if (catId) qParams.set("categoryId", catId.toString());
+      }
 
-    return query;
-  };
+      return qParams;
+    };
 
-  try {
-    const responses = await Promise.all(
-      versionOptions.flatMap((gameVersion) =>
+    const responses: CurseForgeSearchResponse[] = await Promise.all(
+      versionOptions.flatMap((v) =>
         loaderOptions.map(async (activeLoader) => {
-          const query = buildQuery(gameVersion, activeLoader);
-          const res = await fetch(`${CURSEFORGE_API}/mods/search?${query.toString()}`, {
+          const qParams = buildQuery(v, activeLoader);
+          const res = await fetch(`${CURSEFORGE_API}/mods/search?${qParams.toString()}`, {
             headers: {
               "Accept": "application/json",
               "x-api-key": apiKey,
@@ -99,7 +132,7 @@ export async function GET(req: NextRequest) {
             throw new Error(`CurseForge API Error: ${res.status} - ${errText}`);
           }
 
-          return res.json();
+          return res.json() as Promise<CurseForgeSearchResponse>;
         })
       )
     );
@@ -107,7 +140,7 @@ export async function GET(req: NextRequest) {
     const totalFromApi = responses.reduce((sum, data) => sum + (data.pagination?.totalCount || 0), 0);
     const rawMods = responses.flatMap((data) => data.data || []);
     const seen = new Set<number>();
-    const uniqueMods = rawMods.filter((mod: any) => {
+    const uniqueMods = rawMods.filter((mod) => {
       if (seen.has(mod.id)) return false;
       seen.add(mod.id);
       return true;
@@ -122,7 +155,7 @@ export async function GET(req: NextRequest) {
       6945: "datapack"
     };
 
-    const mods = pagedMods.map((m: any) => ({
+    const mods = pagedMods.map((m) => ({
       projectId: m.id.toString(),
       title: m.name,
       description: m.summary || "",
@@ -130,7 +163,7 @@ export async function GET(req: NextRequest) {
       author: m.authors?.[0]?.name || "Desconocido",
       downloads: m.downloadCount,
       url: m.links?.websiteUrl || "",
-      categories: m.categories?.map((c: any) => c.name) || [],
+      categories: m.categories?.map((c) => c.name) || [],
       latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
       projectType: CLASS_ID_TO_PROJECT_TYPE[m.classId] || projectType,
       _source: "curseforge",
@@ -143,7 +176,5 @@ export async function GET(req: NextRequest) {
       pageSize,
       totalPages: Math.ceil((hasCombinationFilters ? uniqueMods.length : totalFromApi) / pageSize),
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to fetch from CurseForge" }, { status: 500 });
   }
-}
+);

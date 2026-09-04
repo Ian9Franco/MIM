@@ -1,0 +1,79 @@
+{
+  "f81e56771bed5b44cf9cb0df5bce3a571f39a3fda23a6e1b63b05f143fd473e7": {
+    "signature": "f81e56771bed5b44cf9cb0df5bce3a571f39a3fda23a6e1b63b05f143fd473e7",
+    "timestamp": 1788487646145,
+    "loader": "fabric",
+    "mcVersion": "1.20.1",
+    "culprit": "optifine",
+    "suspects": [
+      "optifine",
+      "sodium"
+    ],
+    "severity": "critical",
+    "summary": "Colisión directa de rendering.",
+    "mimbotExplanation": "Roast de prueba.",
+    "personality": "bully",
+    "solutions": [
+      "Remover OptiFine"
+    ],
+    "actionableFixes": [
+      {
+        "id": "fix-1",
+        "label": "Desactivar OptiFine",
+        "action": "disable_mod",
+        "modId": "optifine"
+      }
+    ],
+    "eliminationTree": [
+      {
+        "modId": "optifine",
+        "confidence": 0.95,
+        "reason": "Conflict",
+        "hasDirectMixinCollision": true,
+        "isMissingDependency": false
+      }
+    ]
+  },
+  "52172cc0ab80561868ac46d5796258a0cda5300fa3b91b1d07936507e28691c6": {
+    "signature": "52172cc0ab80561868ac46d5796258a0cda5300fa3b91b1d07936507e28691c6",
+    "timestamp": 1788487564698,
+    "loader": "fabric",
+    "mcVersion": "1.20.1",
+    "culprit": "optifine",
+    "suspects": [
+      "optifine",
+      "sodium"
+    ],
+    "severity": "critical",
+    "summary": "Colisión crítica entre OptiFine y Sodium.",
+    "mimbotExplanation": "🔥 **El Roast de MIM-Bot**: Pusiste 'OptiFine' junto con 'sodium'. Es como tirar agua hirviendo a la placa de video y esperar 200 FPS.\n\n🎯 **La Posta**: OptiFine replaces vanilla rendering pipelines completely, causing fatal crashes when loaded alongside Sodium/Iris/Embeddium.\n\n🛠️ **Plan de Rescate**:\n1. Elegí uno de los dos mods y desactiva el otro.\n2. Si son mods de rendimiento, conservá el que sea nativo de tu loader.",
+    "personality": "bully",
+    "solutions": [
+      "Desinstalar OptiFine"
+    ],
+    "actionableFixes": [
+      {
+        "id": "disable-optifine",
+        "label": "Desactivar temporalmente 'optifine' (.disabled)",
+        "action": "disable_mod",
+        "modId": "optifine"
+      }
+    ],
+    "eliminationTree": [
+      {
+        "modId": "optifine",
+        "confidence": 1,
+        "reason": "Identificado preliminarmente en el stack frame del error. Aparece explícitamente en la cláusula 'Caused by:' (net.optifine.render.CustomRenderException). Incompatibilidad estructural activa con 'sodium'.",
+        "hasDirectMixinCollision": false,
+        "isMissingDependency": false
+      },
+      {
+        "modId": "sodium",
+        "confidence": 0.7,
+        "reason": "Identificado preliminarmente en el stack frame del error. Incompatibilidad estructural activa con 'optifine'.",
+        "hasDirectMixinCollision": false,
+        "isMissingDependency": false
+      }
+    ]
+  }
+}

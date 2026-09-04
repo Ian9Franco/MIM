@@ -1,94 +1,149 @@
-# MIM Systems Architecture & Engine Specification
+# MIM System Architecture & Engineering Blueprint
 
-> **Platform:** MIM — Minecraft Intelligent Manager  
-> **System Scope:** Desktop (Electron + Next.js App Router), Realtime Cloud (Supabase + PostgreSQL), Mobile Web PWA  
-> **Design Principles:** Single Responsibility, Event-Driven Fault Isolation, Content-Addressed Caching, Deterministic Diagnostic Inference.
+Este documento describe la topología, arquitectura de software, ciclo de vida de datos y contratos de integración de **MIM (Minecraft Intelligent Manager)**. Su objetivo es brindar una referencia técnica completa que garantice la mantenibilidad, escalabilidad y la mitigación del *bus factor* para cualquier desarrollador o auditor externo.
 
 ---
 
-## 🏛️ High-Level System Architecture
+## 1. Topología del Sistema y Ecosistema
 
-MIM is engineered around seven autonomous, decoupled engines communicating over a typed event bus and structured storage layers:
+MIM opera como una plataforma híbrida compuesta por dos clientes y un backend perimetral:
 
 ```mermaid
-flowchart TD
-    subgraph UI_Layer ["Presentation Layer"]
-        ElectronMain["Electron Shell (main.js)"]
-        NextUI["Next.js App Router (React 19)"]
-        MobilePWA["FOMO Web Hub (Mobile-First)"]
+graph TD
+    subgraph ClientLayer["Superficie de Clientes"]
+        Desktop["MIM Desktop (Electron + Next.js App)"]
+        Web["MIMweb (Next.js 14 / Edge en Vercel)"]
     end
 
-    subgraph Event_Bus ["Core Reactive Backbone"]
-        Bus["Typed Event Bus (MimEventMap)"]
+    subgraph DefensePerimeter["Perímetro Defensivo (MIMweb)"]
+        EdgeMW["Edge Middleware (web/middleware.ts)<br/>HSTS, CSP, Nosniff, Method Guard"]
+        ApiGuard["API Guard Universal (web/lib/apiGuard.ts)<br/>Sliding-Window IP Rate Limiter & Zod Validation"]
     end
 
-    subgraph Engines ["Domain Engines"]
-        CoreEngine["1. MIM Core (Config, FS, Logger)"]
-        ModpackEngine["2. Modpack Engine (Manifests, Resolvers)"]
-        SageEngine["3. SAGE Crash Intelligence Engine"]
-        SecurityEngine["4. Static Security Engine (Bytecode / AST)"]
-        AduanaEngine["5. Aduana Storage Engine (Dedup / Cache)"]
-        NbtEngine["6. NBT Binary Recovery Engine"]
-        SyncEngine["7. FOMO Cloud Sync (Supabase Realtime)"]
+    subgraph CoreEngines["Motores Core del Dominio"]
+        Aduana["Aduana Storage Engine (lib/storage)<br/>SHA-256 Deduplication, Hardlinks & Atomic Staging"]
+        SAGE["SAGE 2.0 Diagnostic Engine (lib/intelligence/sage)<br/>ANSI Stripping, Fingerprinting, Scoring, RAG"]
+        Security["Security Scanner (lib/security)<br/>Static Bytecode Analysis & Threat Signatures"]
+        LicenseAudit["License Auditor (lib/modding/licenseAuditor.ts)<br/>Redistribution & Copyright Classification"]
     end
 
-    subgraph Storage ["Persistence Layers"]
-        IndexedDB["IndexedDB (SmartCache / Offline Mut)"]
-        LocalFS["Local Filesystem (.minecraft, MIM/library)"]
-        CloudDB["Supabase PostgreSQL (RLS / Realtime)"]
+    subgraph ExternalServices["Servicios y APIs Externas"]
+        CurseForge["CurseForge Core API v1"]
+        Modrinth["Modrinth API v2/v3"]
+        Gemini["Google Gemini 1.5 / 2.0 API"]
+        OfficialTrans["Translation Providers (DeepL / Google / Libre)"]
+        Supabase["Supabase DB (MIM Community Sync)"]
     end
 
-    UI_Layer <--> Bus
-    Engines <--> Bus
-    Engines <--> Storage
+    Desktop --> Aduana
+    Desktop --> SAGE
+    Desktop --> Security
+    Desktop --> LicenseAudit
+
+    Web --> EdgeMW
+    EdgeMW --> ApiGuard
+    ApiGuard --> CurseForge
+    ApiGuard --> Modrinth
+    ApiGuard --> Gemini
+    ApiGuard --> OfficialTrans
+    ApiGuard --> Supabase
 ```
 
 ---
 
-## 🧩 Engine Specifications & Boundaries
+## 2. Arquitectura Defensiva de API (Defense-in-Depth)
 
-### 1. MIM Core Engine (`lib/core/`, `lib/events/`)
-- **Responsibility:** Runtime configuration, file-system path normalization, structured error reporting, and typed event broker.
-- **Contract:** All cross-engine communication flows through `MimEventMap` (`lib/events/eventContract.ts`), strictly avoiding direct circular dependencies between modules.
-- **Fault Isolation:** Event listeners execute within isolated `try/catch` boundaries. Failure in an observer (e.g. analytics or UI badge refresh) never interrupts core filesystem operations.
+Todas las rutas públicas de MIMweb (`web/app/api/*`) implementan un modelo de seguridad por capas en profundidad:
 
-### 2. SAGE Crash Intelligence Engine (`lib/intelligence/sage/`)
-- **Responsibility:** Multi-stage diagnostic inference for Minecraft crashes and exceptions.
-- **Pipeline:**
-  $$\text{Raw Log} \xrightarrow{\text{Parser}} \text{Norm. Stack} \xrightarrow{\text{Classifier}} \text{Evidence} \xrightarrow{\text{Correlator}} \text{Culprit Mod} \xrightarrow{\text{Scorer}} \text{Report (JSON)}$$
-- **Taxonomy:** Classifies into 8 standard categories: `MISSING_DEPENDENCY`, `VERSION_CONFLICT`, `MIXIN_FAILURE`, `JAVA_INCOMPATIBILITY`, `MOD_CONFLICT`, `CORRUPTED_WORLD`, `OUT_OF_MEMORY`, and `UNKNOWN_RUNTIME`.
-- **AI Boundary:** The diagnostic engine is 100% deterministic. The optional AI layer (`SageExplainer`) acts exclusively as an empathetic translator of engine evidence into natural language; it is mathematically prevented from guessing or altering diagnosed causes.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Cliente / Navegador
+    participant MW as Edge Middleware (web/middleware.ts)
+    participant Guard as withApiGuard (web/lib/apiGuard.ts)
+    participant Limiter as In-Memory Sliding Limiter
+    participant Zod as Esquema Zod (Query/Body)
+    participant Route as Route Handler Interno
+    participant Provider as Proveedor Externo
 
-### 3. Aduana Storage & Deduplication Engine (`lib/fomo/aduana.ts`)
-- **Responsibility:** Content-addressed deduplication preventing redundant network downloads across Modrinth and CurseForge.
-- **Guarantee:** Cryptographic verification is the sole truth (SHA-512 $\succ$ SHA-1). Same filename with different hash is treated as an independent file; different filenames with identical hashes are instantly deduplicated.
-- **Performance:** Two-stage lookup. $O(1)$ fast filename-hint probing before falling back to full directory traversal, backed by an in-memory `mtimeMs + size` cache.
+    Client->>MW: HTTP Request (/api/*)
+    Note over MW: Inyección HSTS, nosniff, frame-deny, CORS
+    MW->>Guard: Pasa solicitud sanitizada
+    Guard->>Limiter: checkRateLimit(clientIp)
+    alt Cuota excedida
+        Limiter-->>Client: HTTP 429 Too Many Requests (Retry-After, X-RateLimit-*)
+    else Cuota válida
+        Guard->>Zod: safeParse(params / body)
+        alt Parámetros inválidos
+            Zod-->>Client: HTTP 400 Bad Request (JSON de issues)
+        else Payload validado
+            Guard->>Route: Ejecuta handler tipado
+            Route->>Provider: Consume API externa segura
+            Provider-->>Route: Respuesta upstream
+            Route-->>Guard: Genera Response
+            Guard-->>Client: HTTP 200 OK (Cabeceras de defensa inyectadas)
+        end
+    end
+```
 
-### 4. Static Security Engine (`lib/security/`)
-- **Responsibility:** Static analysis of Java JAR archives without dynamic execution.
-- **Inspection Pipeline:** Extracts ZIP manifests and decompresses `.class` bytecode to evaluate risk rules (process execution, native JNI calls, network sockets, reflection evasion, mass deletion).
-- **Threat Scoring:** Emits a deterministic Threat Score (0–100) and an itemized evidence audit trail for AppSec analysis.
-
-### 5. NBT Binary Recovery Engine (`lib/modding/nbt.ts`, `lib/intelligence/sageRecoveryEngine.ts`)
-- **Responsibility:** Low-level binary decoding, validation, and safe repair of Minecraft `.dat` files (inventories, entities, coordinates).
-- **Zero-Loss Invariant:** Original binary data is never mutated in-place. A verified `.mim_bak` snapshot is written to disk prior to any modification.
-
-### 6. FOMO Distributed Sync Engine (`lib/fomo/`, Supabase)
-- **Responsibility:** Bi-directional state synchronization between Desktop Electron clients and Mobile Web PWAs.
-- **Conflict Strategy:** Deterministic Last-Write-Wins (LWW) utilizing client timestamps with client UUID tie-breaking and idempotent queue replays upon reconnection.
-- **Security Boundary:** PostgreSQL Row-Level Security (RLS) ensures users can only mutate owned modpack drafts and collections.
-
-### 7. UI / Presentation Layer (`app/`, `components/`)
-- **Responsibility:** Modern, accessible user interface built with Next.js App Router, React 19, and Framer Motion micro-interactions.
-- **Rule:** UI components contain zero business logic; they interact with engines exclusively via typed React hooks (`useSageManager`, `useFomoDownload`, `useSmartUpdates`).
+### Componentes Clave:
+- **`web/middleware.ts`**: Aplica filtrado de métodos HTTP autorizados (`GET`, `POST`, `OPTIONS`, `HEAD`), preflight de CORS y encabezados de protección universal (`Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
+- **`web/lib/apiGuard.ts`**: Higher-Order Function `withApiGuard` que encapsula:
+  - Extracción robusta de IP considerando proxies (`x-forwarded-for`, `x-real-ip`, `cf-connecting-ip`).
+  - Rate limiting en memoria con ventana deslizante (default: 60 req/min para búsquedas, 20 req/min para IA y traducción).
+  - Validación y coercitividad tipada con esquemas Zod tanto para Query (`querySchema`) como para Body (`bodySchema`).
+  - Captura y manejo seguro de excepciones sin fuga de stack traces internos.
 
 ---
 
-## ⚡ Performance & Invariant Summary
+## 3. Pipeline de Diagnóstico SAGE 2.0
 
-| Subsystem | Core Metric | Architectural Guarantee |
-|:---|:---:|:---|
-| **SAGE 2.0** | **0.06 ms** inference latency | 100% deterministic taxonomy classification on benchmark corpus |
-| **Aduana** | **> 1,800 MB/s** hashing throughput | Zero false deduplications (cryptographic SHA-512 / SHA-1) |
-| **NBT Rescue** | **100%** round-trip fidelity | Atomic writes with mandatory `.mim_bak` snapshot |
-| **Cloud Sync** | **< 100 ms** WebSocket latency | Offline mutation persistence in IndexedDB |
+SAGE (Systemic Automated Guidance & Evaluation) procesa logs de errores y crash dumps de Minecraft:
+
+```mermaid
+flowchart LR
+    CrashLog["Log Crudo (.log / .txt)"] --> ANSI["1. ANSI Cleaner<br/>parser.ts"]
+    ANSI --> Fingerprint["2. Fingerprinting Loader<br/>Forge / Fabric / NeoForge / Quilt"]
+    Fingerprint --> TraceExtract["3. Extractor de Stack Frames<br/>Exception & Root Cause Isolation"]
+    TraceExtract --> Classifier["4. Classifier & Scorer<br/>classifier.ts / scorer.ts"]
+    Classifier --> Taxonomy["5. Core Taxonomy Matcher<br/>OOM, Mixin Conflict, Incompat"]
+    Taxonomy --> RAG["6. Guardrails & Knowledge RAG<br/>Soluciones Validadas"]
+    RAG --> Diagnosis["Reporte Diagnóstico Estructurado"]
+```
+
+---
+
+## 4. Motor de Almacenamiento y Deduplicación Aduana
+
+Aduana gestiona el almacenamiento masivo de mods, modpacks, shaders y resourcepacks con cero duplicación física en disco:
+
+```mermaid
+flowchart TD
+    FileIn["Archivo Descargado (JAR / ZIP)"] --> Hash["Cálculo SHA-256 en Stream"]
+    Hash --> DedupeCheck{"¿Existe Hash en Vault?"}
+    DedupeCheck -- Sí --> Hardlink["Genera Hardlink / Symlink<br/>(0 bytes de espacio adicional)"]
+    DedupeCheck -- No --> StoreVault["Mueve a Storage Vault Central<br/>(/lib/.mim-index/vault)"]
+    StoreVault --> RegisterIndex["Registra Metadata en SQLite/Index"]
+    Hardlink --> AtomicStaging["Atomic Staging en Perfil de Juego"]
+    RegisterIndex --> AtomicStaging
+```
+
+---
+
+## 5. Motor de Amenazas y Seguridad (Security Scanner)
+
+El pipeline de análisis de seguridad de archivos JAR de terceros opera en 4 fases:
+
+1. **Chequeo de Hash Inmediato**: Comparación contra la base de datos de 19 firmas de amenazas conocidas de alto impacto (Fracturiser, Necro RAT, etc.).
+2. **Caché y Consulta VirusTotal**: Conexión con VT API v3 con caché local persistente en `lib/.mim-index/cache/vt-cache.json` para minimizar consumo de cuotas.
+3. **Análisis Estático de Bytecode**: Inspección profunda de archivos `.class` dentro del archivo ZIP/JAR buscando invocaciones reflectivas sospechosas (`Runtime.getRuntime().exec`, `ProcessBuilder`, sockets de red ocultos, payloads ofuscados).
+4. **Auditoría de Licencias y Redistribución**: Clasificación automática del archivo (`PERMISSIVE`, `COPYLEFT`, `RESTRICTED`, `UNKNOWN`) advirtiendo sobre cláusulas restrictivas o "All Rights Reserved" antes de empaquetar modpacks.
+
+---
+
+## 6. Convenciones de Código y Estándares del Proyecto
+
+- **Sin Carpeta `src`**: Todo el código principal vive en la raíz (`app/`, `web/`, `lib/`, `components/`, `hooks/`, `services/`).
+- **Límite de Modularidad**: Ningún componente debe superar **600 líneas de código funcional** (sin contar comentarios ni interfaces de documentación).
+- **Testing Headless**: La verificación se realiza mediante `npm test` ejecutando las 10 suites especializadas de `scripts/test-runner.js`.
+- **Verificación Visual**: Reservada exclusivamente para el desarrollador humano (sin subagentes de navegador ni capturas de pantalla invasivas).

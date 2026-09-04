@@ -1,22 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 
-export async function GET(req: NextRequest) {
-  const apiKey = process.env.CURSEFORGE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "CURSEFORGE_API_KEY no configurada" }, { status: 503 });
-  }
+const querySchema = z.object({
+  projectId: z.string().trim().regex(/^\d+$/, "projectId must be numeric"),
+  fileId: z.string().trim().regex(/^\d+$/, "fileId must be numeric"),
+});
 
-  const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get("projectId");
-  const fileId = searchParams.get("fileId");
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { projectId, fileId } }) => {
+    const apiKey = process.env.CURSEFORGE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "CURSEFORGE_API_KEY no configurada" }, { status: 503 });
+    }
 
-  if (!projectId || !fileId) {
-    return NextResponse.json({ error: "Missing projectId or fileId" }, { status: 400 });
-  }
-
-  try {
     const res = await fetch(`${CURSEFORGE_API}/mods/${projectId}/files/${fileId}/changelog`, {
       headers: {
         Accept: "application/json",
@@ -29,8 +32,6 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
-    return NextResponse.json({ changelog: data.data || "" });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to load changelog" }, { status: 500 });
+    return NextResponse.json({ changelog: typeof data.data === "string" ? data.data : "" });
   }
-}
+);

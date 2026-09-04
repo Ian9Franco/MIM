@@ -113,12 +113,31 @@ Please explain this crash to the player in clear, friendly Spanish, explaining w
       report.culpritMod
     );
 
+    const isEs = report.locale === "es";
+
     const kbBlock = retrievedContext.length > 0
-      ? `\n#### 📚 Retrieved Knowledge Context (RAG):
-${retrievedContext.map(rc => `  • **${rc.article.title}** (Relevance: ${(rc.relevanceScore * 100).toFixed(0)}%)\n    *${rc.article.rootCauseAnalysis}*`).join("\n")}\n`
+      ? `\n#### ${isEs ? "📚 Contexto de Conocimiento Recuperado (RAG):" : "📚 Retrieved Knowledge Context (RAG):"}
+${retrievedContext.map(rc => `  • **${rc.article.title}** (${isEs ? "Relevancia" : "Relevance"}: ${(rc.relevanceScore * 100).toFixed(0)}%)\n    *${rc.article.rootCauseAnalysis}*`).join("\n")}\n`
       : "";
 
-    const formattedMarkdown = `### 🛡️ SAGE Diagnostic Report
+    const formattedMarkdown = isEs
+      ? `### 🛡️ Reporte Diagnóstico SAGE
+
+**Causa Raíz:** ${report.rootCause}  
+**Categoría:** \`${report.category}\`  
+**Nivel de Confianza:** **${report.confidence}%**  
+**Culpable Probable:** \`${report.culpritMod || "No especificado"}\`  
+**Entorno:** Minecraft \`${report.environment.minecraftVersion || "N/D"}\` (${report.environment.loader})
+${kbBlock}
+#### 📋 Registro de Evidencias:
+${evidenceBullets || "  • No se aislaron patrones específicos."}
+
+#### 🛠️ Remediación Recomendada:
+${guardrails.sanitizedActions.join("\n") || "  1. Revisa latest.log en busca de anomalías."}
+
+> *Puntuación de Fundamentación:* **${(guardrails.groundingScore * 100).toFixed(0)}%** (Protección Anti-Alucinación: ${guardrails.valid ? "SUPERADA" : "VIOLACIONES DETECTADAS"})
+`
+      : `### 🛡️ SAGE Diagnostic Report
 
 **Root Cause:** ${report.rootCause}  
 **Category:** \`${report.category}\`  

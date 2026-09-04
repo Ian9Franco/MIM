@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 export const HARDCODED_POSTS_CHANNELS = [
   "https://www.youtube.com/@Wero_lovernite",
@@ -266,25 +268,33 @@ async function fetchYouTubeApiDescriptions(videoIds: string[]): Promise<Map<stri
 }
 
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const channelUrl = searchParams.get("channel") || HARDCODED_POSTS_CHANNELS[0];
-  const feedType = searchParams.get("type") || "posts"; // "posts", "videos", "shorts"
+const querySchema = z.object({
+  channel: z.string().trim().max(200).optional().default(HARDCODED_POSTS_CHANNELS[0]),
+  type: z.enum(["posts", "videos", "shorts"]).optional().default("posts"),
+});
 
-  const channelHash = crypto
-    .createHash("md5")
-    .update(`${channelUrl}_${feedType}`)
-    .digest("hex")
-    .substring(0, 10);
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    const channelUrl = query.channel;
+    const feedType = query.type;
 
-  // 1. Check in-memory cache (bypassed in development mode)
-  const isDev = process.env.NODE_ENV === "development";
-  const cached = cache.get(channelHash);
-  if (!isDev && cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-    return NextResponse.json(cached.data);
-  }
+    const channelHash = crypto
+      .createHash("md5")
+      .update(`${channelUrl}_${feedType}`)
+      .digest("hex")
+      .substring(0, 10);
 
-  try {
+    // 1. Check in-memory cache (bypassed in development mode)
+    const isDev = process.env.NODE_ENV === "development";
+    const cached = cache.get(channelHash);
+    if (!isDev && cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+      return NextResponse.json(cached.data);
+    }
+
     const handle = channelUrl.includes("@")
       ? "@" + channelUrl.split("@").pop()!.split("/")[0]
       : channelUrl.split("/").pop() || "";
@@ -645,10 +655,5 @@ export async function GET(request: Request) {
     cache.set(channelHash, { data: responseData, timestamp: Date.now() });
 
     return NextResponse.json(responseData);
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Error desconocido" },
-      { status: 500 }
-    );
   }
-}
+);

@@ -1,5 +1,74 @@
 import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD, CF_CATEGORY_MAPS } from './CurseForgeMapper';
 
+export interface CurseForgeSearchParams {
+  loader?: string;
+  gameVersions?: string[];
+  page: number;
+  pageSize: number;
+  sort?: string;
+  projectType: string;
+  q?: string;
+  categories?: string[];
+  environments?: string[];
+}
+
+interface CurseForgeAuthor {
+  name: string;
+}
+
+interface CurseForgeCategory {
+  name: string;
+}
+
+interface CurseForgeFileIndex {
+  modLoaderType?: number;
+  gameVersion?: string;
+}
+
+interface CurseForgeScreenshot {
+  url: string;
+  thumbnailUrl?: string;
+  title?: string;
+}
+
+interface CurseForgeRawModItem {
+  id: number;
+  name: string;
+  summary?: string;
+  logo?: { url?: string };
+  authors?: CurseForgeAuthor[];
+  downloadCount: number;
+  links?: { websiteUrl?: string };
+  categories?: CurseForgeCategory[];
+  latestFilesIndexes?: CurseForgeFileIndex[];
+  allowModDistribution?: boolean;
+  screenshots?: CurseForgeScreenshot[];
+  _classId?: number;
+}
+
+export interface CurseForgeSearchResult {
+  mods: Array<{
+    projectId: string;
+    externalProjectId: string;
+    sourceProjectId: string;
+    platformId: string;
+    title: string;
+    description: string;
+    iconUrl: string | null;
+    author: string;
+    downloads: number;
+    url: string;
+    categories: string[];
+    latestVersion: string | null;
+    projectType: string;
+    allowModDistribution: boolean;
+    gallery: Array<{ url: string; thumbnailUrl: string; title: string }>;
+    client_side?: string;
+    server_side?: string;
+  }>;
+  total: number;
+}
+
 /**
  * CurseForgeService — Cliente de Integración con CurseForge (Eternal API).
  * ─────────────────────────────────────────────────────────────────────────────
@@ -20,8 +89,8 @@ export class CurseForgeService {
    * @param apiKey - Clave de acceso a la API (requerida por CF)
    * @returns Resultados normalizados y total de coincidencias.
    */
-  static async search(params: any, apiKey: string) {
-    const { loader, gameVersions, page, pageSize, sort, projectType, q, categories, environments } = params;
+  static async search(params: CurseForgeSearchParams, apiKey: string): Promise<CurseForgeSearchResult> {
+    const { loader, gameVersions, page, pageSize, sort, projectType, q, categories } = params;
     
     // ── Author search: buscar todos los proyectos de un autor ──
     const isAuthorQuery = q && q.startsWith("author:");
@@ -33,7 +102,7 @@ export class CurseForgeService {
     
     // Traducción de términos MIM a IDs de CurseForge
     const classId = PROJECT_TYPE_TO_CLASS_ID[projectType] || 6; // 6 = Mods
-    const sortField = SORT_TO_CF_FIELD[sort] || 1; // 1 = Featured
+    const sortField = SORT_TO_CF_FIELD[sort || "newest"] || 1; // 1 = Featured
     
     const query = new URLSearchParams({
       gameId: "432", // Minecraft
@@ -78,64 +147,61 @@ export class CurseForgeService {
       throw new Error(`CurseForge API Error (${res.status}): ${errorText}`);
     }
 
-    const data = await res.json();
+    const data = await res.json() as { data?: CurseForgeRawModItem[]; pagination?: { totalCount?: number } };
 
-    const mods = (data.data || []).map((m: any) => ({
-        projectId: m.id.toString(),
-        externalProjectId: m.id.toString(),
-        sourceProjectId: m.id.toString(),
-        platformId: m.id.toString(),
-        title: m.name,
-        description: m.summary || "",
-        iconUrl: m.logo?.url || null,
-        author: m.authors?.[0]?.name || "Desconocido",
-        downloads: m.downloadCount,
-        url: m.links?.websiteUrl || "",
-        categories: Array.from(new Set([
-          ...(m.categories || []).map((c: any) => c.name),
-          ...((m.latestFilesIndexes || []).map((idx: any) => {
-            if (idx.modLoaderType === 1) return "forge";
-            if (idx.modLoaderType === 2) return "fabric";
-            if (idx.modLoaderType === 4) return "quilt";
-            if (idx.modLoaderType === 5) return "neoforge";
-            return null;
-          }).filter(Boolean) as string[])
-        ])),
-        latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
-        projectType: projectType,
-        allowModDistribution: m.allowModDistribution !== false,
-        gallery: (m.screenshots || []).map((s: any) => ({
-          url: s.url,
-          thumbnailUrl: s.thumbnailUrl || s.url,
-          title: s.title || ""
-        })).filter((g: any) => g.url),
-        // Inferencia de entorno para CurseForge basada en categorías
-        ...(() => {
-          const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());
-          const isWorld = cats.some((c: any) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
-          const isClient = cats.some((c: any) => ["optimization", "performance", "visuals", "cosmetic", "map and information", "chat"].includes(c));
-          const isServer = cats.some((c: any) => ["server utility", "management"].includes(c));
-          
-          if (isWorld) return { client_side: "required", server_side: "required" };
-          if (isServer) return { client_side: "optional", server_side: "required" };
-          if (isClient) return { client_side: "required", server_side: "unsupported" };
-          return {}; // Fallback a Desconocido
-        })()
-      }));
+    const mods = (data.data || []).map((m: CurseForgeRawModItem) => ({
+      projectId: m.id.toString(),
+      externalProjectId: m.id.toString(),
+      sourceProjectId: m.id.toString(),
+      platformId: m.id.toString(),
+      title: m.name,
+      description: m.summary || "",
+      iconUrl: m.logo?.url || null,
+      author: m.authors?.[0]?.name || "Desconocido",
+      downloads: m.downloadCount,
+      url: m.links?.websiteUrl || "",
+      categories: Array.from(new Set([
+        ...(m.categories || []).map((c) => c.name),
+        ...((m.latestFilesIndexes || []).map((idx) => {
+          if (idx.modLoaderType === 1) return "forge";
+          if (idx.modLoaderType === 2) return "fabric";
+          if (idx.modLoaderType === 4) return "quilt";
+          if (idx.modLoaderType === 5) return "neoforge";
+          return null;
+        }).filter(Boolean) as string[])
+      ])),
+      latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
+      projectType: projectType,
+      allowModDistribution: m.allowModDistribution !== false,
+      gallery: (m.screenshots || []).map((s) => ({
+        url: s.url,
+        thumbnailUrl: s.thumbnailUrl || s.url,
+        title: s.title || ""
+      })).filter((g) => Boolean(g.url)),
+      // Inferencia de entorno para CurseForge basada en categorías
+      ...(() => {
+        const cats = (m.categories || []).map((c) => c.name.toLowerCase());
+        const isWorld = cats.some((c) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
+        const isClient = cats.some((c) => ["optimization", "performance", "visuals", "cosmetic", "map and information", "chat"].includes(c));
+        const isServer = cats.some((c) => ["server utility", "management"].includes(c));
+        
+        if (isWorld) return { client_side: "required", server_side: "required" };
+        if (isServer) return { client_side: "optional", server_side: "required" };
+        if (isClient) return { client_side: "required", server_side: "unsupported" };
+        return {};
+      })()
+    }));
 
-      return {
-        mods,
-        total: data.pagination.totalCount || 0
-      };
+    return {
+      mods,
+      total: data.pagination?.totalCount || 0
+    };
   }
 
   /**
    * Búsqueda por autor en CurseForge.
-   * CurseForge no tiene endpoint de perfil por username, así que buscamos
-   * por nombre de autor como texto libre en TODOS los classIds para obtener
-   * el catálogo completo del creador (mods, texturas, shaders, datapacks, modpacks).
    */
-  private static async searchByAuthor(authorName: string, page: number, pageSize: number, apiKey: string) {
+  private static async searchByAuthor(authorName: string, page: number, pageSize: number, apiKey: string): Promise<CurseForgeSearchResult> {
     const CLASS_IDS = Object.values(PROJECT_TYPE_TO_CLASS_ID);
     const CLASS_ID_TO_TYPE: Record<number, string> = {};
     for (const [type, id] of Object.entries(PROJECT_TYPE_TO_CLASS_ID)) {
@@ -159,8 +225,8 @@ export class CurseForgeService {
           headers: { "Accept": "application/json", "x-api-key": apiKey }
         });
         if (!res.ok) return [];
-        const data = await res.json();
-        return (data.data || []).map((m: any) => ({ ...m, _classId: classId }));
+        const data = await res.json() as { data?: CurseForgeRawModItem[] };
+        return (data.data || []).map((m) => ({ ...m, _classId: classId }));
       } catch {
         return [];
       }
@@ -171,8 +237,8 @@ export class CurseForgeService {
 
     // Filtrar SOLO los proyectos cuyo autor coincide exactamente
     const authorLower = authorName.toLowerCase();
-    const authorMods = allMods.filter((m: any) =>
-      (m.authors || []).some((a: any) => a.name?.toLowerCase() === authorLower)
+    const authorMods = allMods.filter((m) =>
+      (m.authors || []).some((a) => a.name?.toLowerCase() === authorLower)
     );
 
     // Paginar
@@ -180,8 +246,8 @@ export class CurseForgeService {
     const start = (page - 1) * pageSize;
     const paginated = authorMods.slice(start, start + pageSize);
 
-    const mods = paginated.map((m: any) => {
-      const pType = CLASS_ID_TO_TYPE[m._classId] || "mod";
+    const mods = paginated.map((m) => {
+      const pType = (m._classId ? CLASS_ID_TO_TYPE[m._classId] : null) || "mod";
       return {
         projectId: m.id.toString(),
         externalProjectId: m.id.toString(),
@@ -194,8 +260,8 @@ export class CurseForgeService {
         downloads: m.downloadCount,
         url: m.links?.websiteUrl || "",
         categories: Array.from(new Set([
-          ...(m.categories || []).map((c: any) => c.name),
-          ...((m.latestFilesIndexes || []).map((idx: any) => {
+          ...(m.categories || []).map((c) => c.name),
+          ...((m.latestFilesIndexes || []).map((idx) => {
             if (idx.modLoaderType === 1) return "forge";
             if (idx.modLoaderType === 2) return "fabric";
             if (idx.modLoaderType === 4) return "quilt";
@@ -206,11 +272,11 @@ export class CurseForgeService {
         latestVersion: m.latestFilesIndexes?.[0]?.gameVersion || null,
         projectType: pType,
         allowModDistribution: m.allowModDistribution !== false,
-        gallery: (m.screenshots || []).map((s: any) => ({
+        gallery: (m.screenshots || []).map((s) => ({
           url: s.url,
           thumbnailUrl: s.thumbnailUrl || s.url,
           title: s.title || ""
-        })).filter((g: any) => g.url),
+        })).filter((g) => Boolean(g.url)),
       };
     });
 

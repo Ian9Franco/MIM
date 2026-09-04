@@ -1,25 +1,58 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
+
+interface BedrockItem {
+  projectId: string;
+  slug: string;
+  title: string;
+  description: string;
+  iconUrl: string | null;
+  author: string;
+  downloads: number;
+  follows: number;
+  latestVersion: string;
+  categories: string[];
+  dateCreated: string;
+  url: string;
+  projectType: "bedrock";
+  _source: "chunk";
+  _bedrockCost: string;
+  _bedrockRatings: number;
+}
+
+interface DiscoverResponse {
+  mods: BedrockItem[];
+  total: number;
+  totalPages: number;
+  page: number;
+  query: string;
+}
 
 // In-memory cache for serverless environments (6 hours duration)
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: DiscoverResponse; timestamp: number }>();
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-  const page = parseInt(searchParams.get("page") || "1", 10);
+const querySchema = z.object({
+  q: z.string().trim().max(120).optional().default(""),
+  page: z.coerce.number().int().min(1).max(100).optional().default(1),
+});
 
-  const cacheKey = `${query}_${page}`;
-  const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return NextResponse.json(cached.data);
-  }
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { q, page } }) => {
+    const cacheKey = `${q}_${page}`;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return NextResponse.json(cached.data);
+    }
 
-  try {
     let targetUrl = `https://chunk.gg/add-ons?page=${page}`;
-    if (query) {
-      targetUrl = `https://chunk.gg/search?q=${encodeURIComponent(query)}`;
+    if (q) {
+      targetUrl = `https://chunk.gg/search?q=${encodeURIComponent(q)}`;
     }
 
     const response = await fetch(targetUrl, {
@@ -33,12 +66,14 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      throw new Error(`chunk.gg devolvió HTTP ${response.status}`);
+      return NextResponse.json(
+        { error: `chunk.gg devolvió HTTP ${response.status}` },
+        { status: 502 }
+      );
     }
 
     const html = await response.text();
-
-    const mods: any[] = [];
+    const mods: BedrockItem[] = [];
     const seen = new Set<string>();
 
     const cardRegex = /<a[^>]+href="(\/@[^"]+)"[^>]*>([\s\S]*?<\/product-frame>)<\/a>/gi;
@@ -109,21 +144,15 @@ export async function GET(request: Request) {
     }
     if (mods.length > 0 && page > maxPage) maxPage = page;
 
-    const responseData = {
+    const responseData: DiscoverResponse = {
       mods,
       total: mods.length > 0 ? (maxPage > 1 ? maxPage * 24 : mods.length) : 0,
       totalPages: maxPage,
       page,
-      query,
+      query: q,
     };
 
     cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
-
     return NextResponse.json(responseData);
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Error desconocido al conectar con chunk.gg" },
-      { status: 500 }
-    );
   }
-}
+);

@@ -1,9 +1,40 @@
 import { NextResponse } from "next/server";
-import { explainModWithGemini, chatWithProjectAssistant, type ModExplainerInput } from "@/lib/intelligence/modExplainer";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
+import {
+  explainModWithGemini,
+  chatWithProjectAssistant,
+  type ModExplainerInput,
+  type BotPersonality,
+} from "@/lib/intelligence/modExplainer";
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
+const bodySchema = z.object({
+  projectId: z.string().trim().min(1, "Faltan parámetros requeridos (projectId)"),
+  title: z.string().trim().min(1, "Faltan parámetros requeridos (title)"),
+  author: z.string().optional().default(""),
+  slug: z.string().optional().default(""),
+  description: z.string().optional().default(""),
+  url: z.string().optional().default(""),
+  source: z.string().optional().default(""),
+  categories: z.array(z.string()).optional().default([]),
+  loaders: z.array(z.string()).optional().default([]),
+  galleryUrls: z.array(z.string()).optional().default([]),
+  model: z.string().optional(),
+  clientApiKey: z.string().optional(),
+  personality: z.enum(["bully", "standard"]).optional(),
+  question: z.string().optional(),
+  mode: z.string().optional(),
+  initialSummary: z.string().optional(),
+  projectContext: z.record(z.string(), z.unknown()).optional(),
+  messages: z.array(z.unknown()).optional().default([]),
+});
+
+export const POST = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 20 },
+    bodySchema,
+  },
+  async ({ request, body }) => {
     const {
       projectId,
       title,
@@ -17,14 +48,13 @@ export async function POST(request: Request) {
       galleryUrls,
       model,
       clientApiKey,
-    } = body || {};
-
-    if (!projectId || !title) {
-      return NextResponse.json(
-        { error: "Faltan parámetros requeridos (projectId, title)" },
-        { status: 400 }
-      );
-    }
+      personality,
+      question,
+      mode,
+      initialSummary,
+      projectContext,
+      messages,
+    } = body;
 
     const headerKey = request.headers.get("x-gemini-key") || "";
     const resolvedApiKey =
@@ -46,16 +76,16 @@ export async function POST(request: Request) {
     }
 
     const headerPersonality = request.headers.get("x-bot-personality");
-    const requestedPersonality =
-      body.personality ||
+    const requestedPersonality: BotPersonality =
+      personality ||
       (headerPersonality === "standard" || headerPersonality === "bully" ? headerPersonality : undefined) ||
       (process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully");
 
     // Modo Mini-Chat: Responder pregunta de seguimiento
-    if (body.question || body.mode === "chat") {
+    if (question || mode === "chat") {
       const chatRes = await chatWithProjectAssistant(
         {
-          projectContext: body.projectContext || {
+          projectContext: (projectContext as any) || {
             projectId,
             title,
             author,
@@ -64,10 +94,10 @@ export async function POST(request: Request) {
             categories,
             loaders,
             descriptionSnippet: description,
-            initialSummary: body.initialSummary,
+            initialSummary,
           },
-          messages: Array.isArray(body.messages) ? body.messages : [],
-          question: body.question,
+          messages: Array.isArray(messages) ? (messages as any[]) : [],
+          question: question || "",
           model,
           personality: requestedPersonality,
         },
@@ -86,19 +116,12 @@ export async function POST(request: Request) {
       source,
       categories,
       loaders,
-      galleryUrls: Array.isArray(galleryUrls) ? galleryUrls : [],
+      galleryUrls,
       model,
       personality: requestedPersonality,
     };
 
     const result = await explainModWithGemini(input, resolvedApiKey);
     return NextResponse.json(result);
-  } catch (error: unknown) {
-    const errorMsg = error instanceof Error ? error.message : "Error al sintetizar el mod con Gemini";
-    console.error("[MIMweb Explain Error]:", error);
-    return NextResponse.json(
-      { error: errorMsg },
-      { status: 500 }
-    );
   }
-}
+);

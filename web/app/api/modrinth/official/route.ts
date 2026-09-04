@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 interface ModrinthProject {
   id: string;
@@ -24,10 +26,16 @@ interface ModrinthCollection {
   created: string;
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const collectionId = searchParams.get("id");
+const querySchema = z.object({
+  id: z.string().trim().optional(),
+});
+
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { id: collectionId } }) => {
 
     const headers: Record<string, string> = {
       "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
@@ -176,9 +184,5 @@ export async function GET(request: NextRequest) {
       collections: finalCollections,
       latestFeaturedMods
     });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Failed to fetch collections";
-    console.error("[Modrinth Official Proxy Fail]:", errorMsg);
-    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+);

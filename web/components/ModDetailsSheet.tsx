@@ -7,6 +7,17 @@ import {
   X, ArrowLeft, Layers, ExternalLink, Loader2, ChevronLeft, ChevronRight, Plus, Heart, Languages, Globe, CircleFadingPlus, UserPlus, UserCheck, Volume2, VolumeX, Sparkles, Search, Key, Images as ImageIcon, RotateCcw, Send, MessageSquare
 } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
+import type {
+  FomoModDetails,
+  FomoDependencyItem,
+  FomoUserDraft,
+  FomoFollowedAuthor,
+  FomoCommunityShare,
+  FomoUserSession,
+  FomoGalleryItem,
+  ModStackItem,
+  FomoFavoriteItem
+} from "../types/fomo";
 import { playFomoSound, getSoundSettings, setSoundMuted } from "../lib/sounds";
 import { supabase } from "../lib/supabaseClient";
 import { markdownToHtml, formatCurseForgeHtml } from "../lib/markdown";
@@ -16,10 +27,10 @@ import { environmentSideLabel, environmentToneClass, interpretModEnvironment } f
 
 interface ModDetailsSheetProps {
   selectedMod: ModHit | null;
-  selectedModDetails: any;
-  selectedModDeps: any[];
+  selectedModDetails: FomoModDetails | null;
+  selectedModDeps: FomoDependencyItem[];
   loadingDetails: boolean;
-  modStack: any[];
+  modStack: ModStackItem[];
   activeStackIndex: number;
   modalTab: "summary" | "gallery" | "desc" | "versions" | "deps";
   setModalTab: (t: "summary" | "gallery" | "desc" | "versions" | "deps") => void;
@@ -30,18 +41,18 @@ interface ModDetailsSheetProps {
   onSearchAuthor?: (name: string, platform: string) => void;
   onSearchMod?: (title: string) => void;
   /* Draft */
-  userDrafts: any[];
-  session: any;
+  userDrafts: FomoUserDraft[];
+  session: FomoUserSession | null;
   onAddToDraft: (mod: ModHit, draftId: string) => void;
   onOpenDraftPicker: (mod: ModHit) => void;
   /* Favorite (followed_mods) */
-  userFavorites: any[];
+  userFavorites: FomoFavoriteItem[];
   onToggleFavorite: (mod: ModHit) => void;
   /* Followed Authors */
-  userFollowedAuthors?: any[];
+  userFollowedAuthors?: FomoFollowedAuthor[];
   onToggleFollowAuthor?: (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => void;
   /* Community shares (favorite_mods) */
-  userShares?: any[];
+  userShares?: FomoCommunityShare[];
   refreshUserData?: () => void;
 }
 
@@ -287,34 +298,34 @@ function channelPillClass(channel: string) {
   return "bg-white/[0.07] text-white/55 border-white/[0.08]";
 }
 
-function normalizeVersionRows(details: any): VersionRow[] {
+function normalizeVersionRows(details: FomoModDetails | null | undefined): VersionRow[] {
   const rows = Array.isArray(details?.versions) ? details.versions : [];
-  return rows.map((version: any): VersionRow => ({
-    id: String(version.id || version.version_number || version.name),
-    name: version.name || version.version_number || "Version",
-    gameVersions: Array.isArray(version.game_versions) ? version.game_versions : [],
+  return rows.map((version): VersionRow => ({
+    id: String(version.id || version.version_number || version.versionNumber || version.name),
+    name: version.name || version.version_number || version.versionNumber || "Version",
+    gameVersions: Array.isArray(version.game_versions) ? version.game_versions : Array.isArray(version.gameVersions) ? version.gameVersions : [],
     loaders: Array.isArray(version.loaders) ? version.loaders : [],
     datePublished: version.date_published || version.datePublished || null,
     downloads: version.downloads || 0,
-    versionType: version.version_type || "release",
+    versionType: version.version_type || version.versionType || "release",
     changelog: version.changelog || "",
-    changelogUrl: version.changelog_url || version.changelogUrl || null,
+    changelogUrl: (version as Record<string, unknown>).changelog_url as string || (version as Record<string, unknown>).changelogUrl as string || null,
   }));
 }
 
-function getAvailableLoaders(details: any) {
+function getAvailableLoaders(details: FomoModDetails | null | undefined) {
   const versionLoaders = normalizeVersionRows(details).flatMap((version: VersionRow) => version.loaders);
-  const directLoaders = Array.isArray(details?.loaders) ? details.loaders : [];
+  const directLoaders = Array.isArray(details?.loaders) ? (details.loaders as string[]) : [];
   return Array.from(new Set([...directLoaders, ...versionLoaders]))
     .map((loader) => String(loader).toLowerCase())
     .filter((loader) => KNOWN_LOADERS.includes(loader as (typeof KNOWN_LOADERS)[number]));
 }
 
-function getAvailableContentTypes(details: any, selectedMod?: ModHit | null) {
+function getAvailableContentTypes(details: FomoModDetails | null | undefined, selectedMod?: ModHit | null) {
   const values = [
     selectedMod?.projectType,
-    details?.project_type,
-    ...(Array.isArray(details?.versions) ? details.versions.flatMap((version: any) => version.loaders || []) : []),
+    details?.project_type || details?.projectType,
+    ...(Array.isArray(details?.versions) ? details.versions.flatMap((version) => version.loaders || []) : []),
   ]
     .map((value) => String(value || "").toLowerCase())
     .map((value) => value === "resource-pack" || value === "texture" ? "resourcepack" : value)
@@ -424,6 +435,7 @@ export function ModDetailsSheet({
   const [explanationSearchUsed, setExplanationSearchUsed] = useState(false);
   const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
   const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
+  const [geminiKeyVal, setGeminiKeyVal] = useState("");
   const [explainError, setExplainError] = useState<string | null>(null);
   const [botPersonality, setBotPersonality] = useState<"bully" | "standard">(() => {
     if (typeof window !== "undefined") {
@@ -598,7 +610,7 @@ export function ModDetailsSheet({
   }, [handleCloseModDetails]);
 
   const isFavorited = userFavorites.some(
-    f => (f.mod_id || f.project_id || f.id) === selectedMod?.projectId
+    f => ((f as any).mod_id || (f as any).project_id || (f as any).projectId || (f as any).id) === selectedMod?.projectId
   );
 
   const handleShareClick = useCallback(() => {
@@ -617,13 +629,13 @@ export function ModDetailsSheet({
       const platform = selectedMod._source === "curseforge" ? "curseforge" : "modrinth";
 
       // Use userShares (favorite_mods) to check prior shares, independent of userFavorites (followed_mods)
-      const existingShare = userShares.find(
-        f => (f.mod_id || f.project_id || f.id) === selectedMod.projectId
+      const existingShare = (userShares || []).find(
+        f => (f.mod_id || f.projectId || (f as any).project_id || f.id) === selectedMod.projectId
       );
       const alreadyShared = !!existingShare;
       const summaryText = buildShareMetaFromMod(selectedMod, {
         comment: shareComment.trim() || selectedMod.description || "",
-        priority: existingShare?.pinned ?? readSharePriority(existingShare?.summary),
+        priority: existingShare?.pinned ?? readSharePriority(existingShare?.summary as string | undefined),
       });
 
       const request = alreadyShared
@@ -969,8 +981,8 @@ export function ModDetailsSheet({
   }, [selectedMod?.projectId, translatedVersionChangelogs, translatingVersionChangelog]);
 
   const bannerUrl =
-    selectedModDetails?.gallery?.find((g: any) => g.featured)?.url ||
-    selectedModDetails?.gallery?.find((g: any) => g.featured)?.raw_url ||
+    selectedModDetails?.gallery?.find((g: FomoGalleryItem) => g.featured)?.url ||
+    selectedModDetails?.gallery?.find((g: FomoGalleryItem) => g.featured)?.raw_url ||
     selectedModDetails?.gallery?.[0]?.raw_url ||
     selectedModDetails?.gallery?.[0]?.url ||
     selectedMod?.iconUrl ||
@@ -982,19 +994,19 @@ export function ModDetailsSheet({
     selectedModDetails?.client_side || selectedModDetails?.clientSide,
     selectedModDetails?.server_side || selectedModDetails?.serverSide
   );
-  const dependencyGroups = selectedModDeps.reduce<Record<DependencyKind, any[]>>((groups, dep) => {
+  const dependencyGroups = selectedModDeps.reduce<Record<DependencyKind, FomoDependencyItem[]>>((groups, dep) => {
     groups[normalizeDependencyKind(dep)].push(dep);
     return groups;
   }, { required: [], optional: [], incompatible: [], embedded: [] });
   const visibleDependencyKinds = (["required", "optional", "incompatible", "embedded"] as DependencyKind[])
     .filter((kind) => dependencyGroups[kind].length > 0);
-  const communitySharedByMe = userShares.some(
-    f => (f.mod_id || f.project_id || f.id) === selectedMod?.projectId
+  const communitySharedByMe = (userShares || []).some(
+    f => (f.mod_id || f.projectId || (f as Record<string, unknown>).project_id || f.id) === selectedMod?.projectId
   );
   const authorName = selectedMod?.author || "";
   const authorPlatform = selectedMod?._source || "modrinth";
-  const isFollowingAuthor = !!authorName && userFollowedAuthors.some(
-    a => a.author_name === authorName && a.platform === authorPlatform
+  const isFollowingAuthor = !!authorName && (userFollowedAuthors || []).some(
+    a => ((a as Record<string, unknown>).author_name === authorName || a.name === authorName) && a.platform === authorPlatform
   );
   
   const projectPlatformUrl = selectedMod
@@ -1173,11 +1185,11 @@ export function ModDetailsSheet({
                           <span className="text-white/20">|</span>
                           <span>Org:{" "}</span>
                           <button
-                            onClick={() => onSearchAuthor && onSearchAuthor(`organization:${selectedModDetails.organization_info.slug}`, selectedMod._source || "modrinth")}
+                            onClick={() => onSearchAuthor && onSearchAuthor(`organization:${selectedModDetails.organization_info?.slug}`, selectedMod._source || "modrinth")}
                             onPointerDown={(e) => e.stopPropagation()}
                             className="text-orange-400 hover:underline hover:text-orange-300 font-bold transition-all text-left inline-block"
                           >
-                            {selectedModDetails.organization_info.name}
+                            {selectedModDetails.organization_info?.name}
                           </button>
                         </>
                       )}
@@ -1307,7 +1319,7 @@ export function ModDetailsSheet({
                 <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-0.5 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
                   {[
                     { id: "summary", label: "Resumen" },
-                    ...(selectedModDetails?.gallery?.length > 0 ? [{ id: "gallery", label: "Galería" }] : []),
+                    ...((selectedModDetails?.gallery?.length ?? 0) > 0 ? [{ id: "gallery", label: "Galería" }] : []),
                     { id: "desc", label: "Desc." },
                     { id: "versions", label: "Vers." },
                     { id: "deps", label: "Depen." },
@@ -1519,7 +1531,7 @@ export function ModDetailsSheet({
                               onTouchCancel={() => setDragEnabled(true)}
                               className="flex gap-3 overflow-x-auto pb-1 scrollbar-none snap-x cursor-grab active:cursor-grabbing"
                             >
-                              {galleryImages.map((img: any, i: number) => (
+                              {galleryImages.map((img: FomoGalleryItem, i: number) => (
                                 <div
                                   key={i}
                                   onClick={() => setActiveImageIndex(i)}
@@ -1553,7 +1565,7 @@ export function ModDetailsSheet({
                             onTouchCancel={() => setDragEnabled(true)}
                             className="grid grid-cols-2 gap-3 pb-1 pr-1"
                           >
-                            {galleryImages.map((img: any, i: number) => (
+                            {galleryImages.map((img: FomoGalleryItem, i: number) => (
                               <button
                                 type="button"
                                 key={i}
@@ -2092,9 +2104,9 @@ export function ModDetailsSheet({
                                         {dependencyGroups[kind].length}
                                       </span>
                                     </div>
-                                    {dependencyGroups[kind].map((dep: any) => {
-                                      const depSource = dep._source || selectedMod?._source || "modrinth";
-                                      const depProjectId = String(dep.project_id || dep.projectId || dep.id);
+                                    {dependencyGroups[kind].map((dep: FomoDependencyItem) => {
+                                      const depSource = (dep as Record<string, unknown>)._source || selectedMod?._source || "modrinth";
+                                      const depProjectId = String((dep as Record<string, unknown>).project_id || dep.projectId || dep.id);
                                       const depType = dep.project_type || dep.projectType || "mod";
                                       const depUrl = dep.url || (depSource === "curseforge"
                                         ? `https://www.curseforge.com/projects/${depProjectId}`
@@ -2105,14 +2117,16 @@ export function ModDetailsSheet({
                                           key={`${kind}-${depProjectId}`}
                                           onClick={() => handleOpenModDetails({
                                             projectId: depProjectId,
+                                            slug: dep.slug || depProjectId,
                                             title: dep.title || dep.name || depProjectId,
                                             description: dep.description || "",
-                                            iconUrl: dep.icon_url || dep.iconUrl,
+                                            iconUrl: dep.icon_url || dep.iconUrl || undefined,
                                             author: dep.author || "Comunidad",
                                             projectType: depType,
                                             categories: dep.categories || [],
                                             url: depUrl,
-                                            _source: depSource,
+                                            _source: (depSource as "modrinth" | "curseforge") || "modrinth",
+                                            downloads: 0,
                                           }, true)}
                                           className={`border rounded-xl p-2 flex items-center gap-3 transition-colors cursor-pointer ${
                                             kind === "incompatible"

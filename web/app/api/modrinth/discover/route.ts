@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const DEFAULT_PAGE_SIZE = 21;
@@ -11,6 +12,9 @@ const discoverQuerySchema = z.object({
   sort: z.enum(["updated", "relevance", "downloads", "newest", "follows"]).optional().default("newest"),
   projectType: z.string().optional().default("mod"),
   q: z.string().optional().default(""),
+  gameVersions: z.string().optional(),
+  categories: z.string().optional(),
+  environments: z.string().optional(),
 });
 
 const MODRINTH_CATEGORIES = [
@@ -79,50 +83,34 @@ interface ModrinthSearchHit {
   gallery?: string[];
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema: discoverQuerySchema,
+  },
+  async ({ query }) => {
+    const { loader, page, pageSize, sort, projectType, q, gameVersions: rawGv, categories: rawCat, environments: rawEnv } = query;
 
-  const parsedQuery = discoverQuerySchema.safeParse({
-    loader: searchParams.get("loader") ?? undefined,
-    page: searchParams.get("page") ?? undefined,
-    pageSize: searchParams.get("pageSize") ?? undefined,
-    sort: searchParams.get("sort") ?? undefined,
-    projectType: searchParams.get("projectType") ?? undefined,
-    q: searchParams.get("q")?.trim() ?? undefined,
-  });
+    let gameVersions: string[] = [];
+    try {
+      if (rawGv) gameVersions = JSON.parse(rawGv);
+    } catch {
+      gameVersions = [];
+    }
 
-  if (!parsedQuery.success) {
-    return NextResponse.json(
-      { error: parsedQuery.error.issues[0]?.message || "Invalid query parameters" },
-      { status: 400 }
-    );
-  }
+    let categories: string[] = [];
+    try {
+      if (rawCat) categories = JSON.parse(rawCat);
+    } catch {
+      categories = [];
+    }
 
-  const { loader, page, pageSize, sort, projectType, q } = parsedQuery.data;
-
-  let gameVersions: string[] = [];
-  try {
-    const raw = searchParams.get("gameVersions");
-    if (raw) gameVersions = JSON.parse(raw);
-  } catch {
-    gameVersions = [];
-  }
-
-  let categories: string[] = [];
-  try {
-    const raw = searchParams.get("categories");
-    if (raw) categories = JSON.parse(raw);
-  } catch {
-    categories = [];
-  }
-
-  let environments: string[] = [];
-  try {
-    const raw = searchParams.get("environments");
-    if (raw) environments = JSON.parse(raw);
-  } catch {
-    environments = [];
-  }
+    let environments: string[] = [];
+    try {
+      if (rawEnv) environments = JSON.parse(rawEnv);
+    } catch {
+      environments = [];
+    }
 
   const offset = (page - 1) * pageSize;
 
@@ -313,8 +301,7 @@ export async function GET(req: NextRequest) {
 
   const facets = JSON.stringify(facetsArray);
 
-  try {
-    const res = await fetch(
+  const res = await fetch(
       `${MODRINTH_API}/search` +
         `?facets=${encodeURIComponent(facets)}` +
         `&index=${sort}` +
@@ -373,9 +360,5 @@ export async function GET(req: NextRequest) {
       pageSize,
       totalPages: Math.ceil((data.total_hits ?? 0) / pageSize),
     });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Unknown error";
-    console.error("[/api/modrinth/discover] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+);

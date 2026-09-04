@@ -6,7 +6,42 @@ import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { communityTypeToBannerType, getBannerFallbackStyle, inferPrimaryProjectType } from "@/lib/fomo/fomoModBanner";
 import { openExternal } from "@/utils/format";
 
-export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, onSearchMod, followedAuthors, followedMods, toggleFollowAuthor, toggleFollowMod, selectedProjectType, onSelectProjectType, communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null }: any) {
+import type { ModHit } from "@/lib/core/types";
+import type { FomoFollowedAuthor, FomoFavoriteItem, FomoCommunityShare, FomoCategory } from "@/types/fomo";
+
+export interface ModHeaderProps {
+  mod: ModHit & { id?: string; sharingInfo?: any; [key: string]: any };
+  bannerUrl?: string;
+  bannerProjectType?: string;
+  onSearchAuthor?: (author: string, platform?: string) => void;
+  onSearchMod?: (title: string) => void;
+  followedAuthors: FomoFollowedAuthor[];
+  followedMods: FomoFavoriteItem[];
+  toggleFollowAuthor?: (author: string) => void;
+  toggleFollowMod?: (mod: ModHit) => void;
+  selectedProjectType?: string;
+  onSelectProjectType?: (type: string) => void;
+  communitySharers?: any[];
+  communitySharedByMe?: boolean;
+  currentUserCommunityColor?: string | null;
+}
+
+export function ModHeader({
+  mod,
+  bannerUrl,
+  bannerProjectType,
+  onSearchAuthor,
+  onSearchMod,
+  followedAuthors,
+  followedMods,
+  toggleFollowAuthor,
+  toggleFollowMod,
+  selectedProjectType,
+  onSelectProjectType,
+  communitySharers = [],
+  communitySharedByMe = false,
+  currentUserCommunityColor = null
+}: ModHeaderProps) {
   const [currentTheme, setCurrentTheme] = React.useState("official");
   const { isProjectInDraft } = useActiveDraft();
   
@@ -18,9 +53,9 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
     return () => obs.disconnect();
   }, []);
 
-  const getProjectTypeIcon = (type: string, categories: string[] = []) => {
+  const getProjectTypeIcon = (type: string, categories: (string | FomoCategory)[] = []) => {
     const t = type.toLowerCase();
-    const cats = categories.map((c: any) => {
+    const cats = categories.map((c: FomoCategory) => {
       if (typeof c === "string") return c.toLowerCase();
       if (c && typeof c === "object") {
         if (typeof c.name === "string") return c.name.toLowerCase();
@@ -67,7 +102,13 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
 
   const sharersToShow: { username: string; color?: string | null; avatar_url?: string | null }[] =
     Array.isArray(communitySharers) && communitySharers.length > 0
-      ? communitySharers.filter((u: any) => u?.username)
+      ? communitySharers
+          .filter((u): u is typeof u & { username: string } => typeof u?.username === "string")
+          .map((u) => ({
+            username: u.username,
+            color: u.color,
+            avatar_url: u.avatar_url,
+          }))
       : mod.sharingInfo?.profiles?.username
         ? [{
             username: mod.sharingInfo.profiles.username,
@@ -185,7 +226,7 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
                   ))}
                 </div>
               )}
-              {mod.categories?.map((c: any) => {
+              {mod.categories?.map((c: FomoCategory) => {
                 if (typeof c === "string") return c.toLowerCase();
                 if (c && typeof c === "object") {
                   if (typeof c.name === "string") return c.name.toLowerCase();
@@ -209,15 +250,15 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
           
           <div className={`flex items-center gap-2 text-xs font-semibold mb-3 transition-opacity ${isModern ? "opacity-80" : "opacity-60"}`} style={{ color: "var(--fomo-text-muted)" }}>
             <span>por</span>
-            <button onClick={() => onSearchAuthor((mod.author || "").trim())} className={`font-extrabold hover:underline ${isModern ? "text-primary" : "text-primary"}`}>{(mod.author || "").trim() || "Autor Desconocido"}</button>
+            <button onClick={() => onSearchAuthor?.((mod.author || "").trim())} className={`font-extrabold hover:underline ${isModern ? "text-primary" : "text-primary"}`}>{(mod.author || "").trim() || "Autor Desconocido"}</button>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button 
-              onClick={() => toggleFollowAuthor((mod.author || "").trim())} 
-              className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${followedAuthors.some((a: any) => a?.name === (mod.author || "").trim()) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
+              onClick={() => toggleFollowAuthor?.((mod.author || "").trim())} 
+              className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${followedAuthors.some((a: FomoFollowedAuthor) => (a?.name || a?.author_name || "").trim() === (mod.author || "").trim()) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
             >
-              {followedAuthors.some((a: any) => a?.name === (mod.author || "").trim()) ? <HeartCrack className="w-3.5 h-3.5 fill-current" /> : <Heart className="w-3.5 h-3.5" />} {followedAuthors.some((a: any) => a?.name === (mod.author || "").trim()) ? "Dejar de Seguir" : "Seguir Autor"}
+              {followedAuthors.some((a: FomoFollowedAuthor) => (a?.name || a?.author_name || "").trim() === (mod.author || "").trim()) ? <HeartCrack className="w-3.5 h-3.5 fill-current" /> : <Heart className="w-3.5 h-3.5" />} {followedAuthors.some((a: FomoFollowedAuthor) => (a?.name || a?.author_name || "").trim() === (mod.author || "").trim()) ? "Dejar de Seguir" : "Seguir Autor"}
             </button>
             <button 
               onClick={() => onSearchMod?.(mod.title)} 
@@ -226,10 +267,10 @@ export function ModHeader({ mod, bannerUrl, bannerProjectType, onSearchAuthor, o
               <Workflow className="w-3.5 h-3.5" /> Comparar
             </button>
             <button 
-              onClick={() => toggleFollowMod(mod)} 
-              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${followedMods.some((m: any) => m.projectId === mod.projectId) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
+              onClick={() => toggleFollowMod?.(mod)} 
+              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
             >
-               {followedMods.some((m: any) => m.projectId === mod.projectId) ? <HeartCrack className="w-3.5 h-3.5 mr-1.5 fill-current" /> : <Heart className="w-3.5 h-3.5 mr-1.5" />} {followedMods.some((m: any) => m.projectId === mod.projectId) ? "Quitar Favorito" : "Favorito"}
+               {followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? <HeartCrack className="w-3.5 h-3.5 mr-1.5 fill-current" /> : <Heart className="w-3.5 h-3.5 mr-1.5" />} {followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? "Quitar Favorito" : "Favorito"}
             </button>
             {isProjectInDraft(mod.projectId || mod.id || mod.slug) ? (
               <button 

@@ -28,8 +28,11 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Verify TypeScript Types
+      - name: Verify Root TypeScript Types
         run: npx tsc --noEmit
+
+      - name: Verify MIMweb TypeScript Types
+        run: npx tsc --project web/tsconfig.json --noEmit
 
       - name: Run Linter
         run: npm run lint
@@ -60,10 +63,30 @@ jobs:
           name: mim-engine-coverage
           path: coverage/
 
+  dast-security-audit:
+    name: Dynamic Application Security Testing (DAST) Baseline
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run DAST Security Audit
+        run: node scripts/security/dast-scan.js
+
   build-production:
     name: Next.js Production Build Verification
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck
+    needs: [test-and-evaluate, dast-security-audit]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

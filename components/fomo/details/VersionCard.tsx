@@ -2,14 +2,17 @@ import React from "react";
 import { Download, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 
+import type { ModHit } from "@/lib/core/types";
+import type { FomoVersion, FomoDependencyItem } from "@/types/fomo";
+
 interface VersionCardProps {
-  v: any;
-  mod: any;
+  v: FomoVersion;
+  mod: ModHit;
   isCompatible: boolean;
   isMainVersion: boolean;
   expanded: boolean;
   onToggle: () => void;
-  onDownload: (mod: any, v: any) => void;
+  onDownload: (mod: ModHit, v: FomoVersion) => void;
   downloading: boolean;
   gameVersions: string[];
   activeLoader: string;
@@ -24,7 +27,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
   const isNotMod = ["resourcepack", "shader", "datapack", "plugin"].includes(pType.toLowerCase());
   const isMod = !isNotMod && (!pType || pType.toLowerCase() === "mod");
   
-  const isCompatibleLoader = !isMod || !activeLoader || activeLoader === "all" || activeLoader === "unknown" || modLoaders.some((l: string) => l.toLowerCase().includes(activeLoader.toLowerCase()));
+  const isCompatibleLoader = !isMod || !activeLoader || activeLoader === "all" || activeLoader === "unknown" || modLoaders.some((l) => Boolean(l && l.toLowerCase().includes(activeLoader.toLowerCase())));
   const canDownload = isCompatibleLoader;
 
   const [translatedChangelog, setTranslatedChangelog] = React.useState<string | null>(null);
@@ -100,7 +103,9 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
                   <span className="uppercase">{modLoaders.join(', ')}</span>
                 </div>
              )}
-             <span className="text-[10px] opacity-30 font-medium">{new Date(v.datePublished).toLocaleDateString()}</span>
+             <span className="text-[10px] opacity-30 font-medium">
+               {(v.datePublished || v.date_published) ? new Date(v.datePublished || v.date_published || "").toLocaleDateString() : ""}
+             </span>
           </div>
         </div>
         <div className="flex items-center gap-3 ml-4">
@@ -140,18 +145,19 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
               )}
             </div>
           </div>
-          {v.dependencies?.length > 0 && (
+          {(v.dependencies?.length ?? 0) > 0 && (
             <div>
               <p className="text-[0.65rem] font-bold uppercase tracking-wider mb-2" style={{ color: COLORS.muted }}>Dependencias</p>
               <div className="flex flex-col gap-1.5">
-                {v.dependencies.map((dep: any) => {
+                {(v.dependencies || []).map((dep: FomoDependencyItem) => {
                   const depTypeMap: Record<string, { label: string; color: string; bg: string }> = {
                     required:     { label: "Requerida",    color: "#f87171", bg: "rgba(239,68,68,0.12)" },
                     optional:     { label: "Opcional",     color: "#63b3ed", bg: "rgba(99,179,237,0.12)" },
                     incompatible: { label: "Incompatible", color: "#fb923c", bg: "rgba(249,115,22,0.12)" },
                     embedded:     { label: "Incluida",     color: "#34d399", bg: "rgba(52,211,153,0.12)" },
                   };
-                  const dt = depTypeMap[dep.dependencyType] ?? { label: dep.dependencyType, color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.05)" };
+                  const dtKey = dep.dependencyType || "embedded";
+                  const dt = depTypeMap[dtKey] ?? { label: dtKey, color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.05)" };
                   return (
                     <div key={dep.projectId} className="flex items-center justify-between px-3 py-2 rounded-xl border" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
                       <div className="flex items-center gap-2 min-w-0">

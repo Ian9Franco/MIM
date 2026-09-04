@@ -82,7 +82,7 @@ export function analyzeMinecraftLog(rawText: string): SageAnalysisResult {
   }
 
   // Delegate to SAGE 2.0 Engine
-  const report = SageCrashEngine.diagnose(rawText);
+  const report = SageCrashEngine.diagnose(rawText, { locale: "es" });
 
   // Map to legacy actionable fixes
   const actionableFixes: SageActionableFix[] = report.remediation.allActions

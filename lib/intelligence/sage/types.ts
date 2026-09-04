@@ -73,6 +73,8 @@ export interface RemediationPlan {
   summary: string;
 }
 
+export type SageLocale = "en" | "es";
+
 export interface StructuredCrashReport {
   id: string;
   category: CrashCategory;
@@ -87,4 +89,5 @@ export interface StructuredCrashReport {
   rawException?: string;
   timestamp: string;
   inferenceDurationMs: number;
+  locale?: SageLocale;
 }

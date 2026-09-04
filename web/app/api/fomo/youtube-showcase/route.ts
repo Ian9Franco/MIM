@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * Web-compatible YouTube showcase API using ytInitialData scraping.
@@ -241,36 +243,32 @@ async function scrapeVideosFromChannel(channelUrl: string, limit: number): Promi
   return results;
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const channelUrl = searchParams.get("channel") ?? DEFAULT_CHANNELS[0];
-  const limitParam = parseInt(searchParams.get("limit") ?? "3", 10);
-  const limit = isNaN(limitParam) || limitParam < 1 ? 3 : Math.min(limitParam, 15);
+const querySchema = z.object({
+  channel: z.string().trim().max(200).optional().default(DEFAULT_CHANNELS[0]),
+  limit: z.coerce.number().int().min(1).max(15).optional().default(3),
+});
 
-  const cacheKey = crypto
-    .createHash("md5")
-    .update(`${channelUrl}_${limit}`)
-    .digest("hex")
-    .substring(0, 12);
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { channel: channelUrl, limit } }) => {
+    const cacheKey = crypto
+      .createHash("md5")
+      .update(`${channelUrl}_${limit}`)
+      .digest("hex")
+      .substring(0, 12);
 
-  // Return from cache if fresh (bypassed in development mode if user requests it, but let's keep it clean)
-  const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return NextResponse.json(cached.data);
-  }
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return NextResponse.json(cached.data);
+    }
 
-  try {
     const videos = await scrapeVideosFromChannel(channelUrl, limit);
     const responseData = { mode: "spotlight", showcases: videos };
     
     cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
     return NextResponse.json(responseData);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Error desconocido";
-    console.error("[youtube-showcase-web] Error:", message);
-    return NextResponse.json(
-      { error: message, showcases: [] },
-      { status: 500 }
-    );
   }
-}
+);

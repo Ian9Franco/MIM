@@ -1,14 +1,22 @@
 import React from "react";
 import { Download, Heart } from "lucide-react";
+import type { ModHit } from "@/lib/core/types";
+import type { FomoCategory } from "@/types/fomo";
 
-export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { mod: any, onSelectLoader?: (l: string) => void, selectedLoader?: string | null }) {
+export interface CompatibilitySectionProps {
+  mod: ModHit;
+  onSelectLoader?: (l: string) => void;
+  selectedLoader?: string | null;
+}
+
+export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: CompatibilitySectionProps) {
   // Intelligent Loader Detection (Modrinth & CurseForge fallback)
   const loaderSet = new Set<string>(mod.loaders || []);
   
   // If no loaders found (common in CurseForge hits), check categories
   if (loaderSet.size === 0 || (loaderSet.size === 1 && loaderSet.has("datapack"))) {
     const loaderKeywords = ["fabric", "forge", "neoforge", "quilt", "bukkit", "spigot", "paper"];
-    mod.categories?.forEach((c: any) => {
+    mod.categories?.forEach((c: FomoCategory) => {
       const cat = typeof c === "string" 
         ? c.toLowerCase() 
         : (c && typeof c === "object" && typeof c.name === "string" ? c.name.toLowerCase() : "");
@@ -24,8 +32,8 @@ export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { 
 
   const platforms = Array.from(loaderSet).filter(p => ["fabric", "forge", "neoforge", "quilt", "bukkit", "spigot", "paper"].includes(p.toLowerCase()));
 
-  const cs = mod.client_side || mod.clientSide;
-  const ss = mod.server_side || mod.serverSide;
+  const cs = mod.client_side || (mod as any).clientSide;
+  const ss = mod.server_side || (mod as any).serverSide;
 
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-3 border-y border-white/5 my-2">
@@ -34,12 +42,12 @@ export function CompatibilitySection({ mod, onSelectLoader, selectedLoader }: { 
         <div className="flex flex-wrap gap-1 max-w-[160px]">
           {(() => {
             const noise = ["fabric", "forge", "neoforge", "quilt", "datapack", "mod", "client", "server", "universal", "locale", "minecraft", "modded", "babric"];
-            const filtered = mod.categories?.filter((c: any) => {
+            const filtered = mod.categories?.filter((c: FomoCategory) => {
               const cat = typeof c === "string" 
                 ? c.toLowerCase() 
                 : (c && typeof c === "object" && typeof c.name === "string" ? c.name.toLowerCase() : "");
               return cat && !noise.includes(cat);
-            }).map((c: any) => typeof c === "string" ? c : (c.name || "")) || [];
+            }).map((c: FomoCategory) => typeof c === "string" ? c : (c.name || "")) || [];
             
             return (
               <>

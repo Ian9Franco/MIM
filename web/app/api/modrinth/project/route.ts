@@ -1,22 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const querySchema = z.object({
   projectId: z.string().trim().min(1, "Missing or empty projectId parameter"),
 });
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const parsed = querySchema.safeParse({ projectId: searchParams.get("projectId") });
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Invalid projectId parameter" },
-        { status: 400 }
-      );
-    }
-    const { projectId } = parsed.data;
-
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { projectId } }) => {
     const headers: Record<string, string> = {
       "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
       "Content-Type": "application/json"
@@ -50,8 +45,5 @@ export async function GET(request: NextRequest) {
       }
     }
     return NextResponse.json(data);
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+);

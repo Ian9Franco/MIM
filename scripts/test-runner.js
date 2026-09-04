@@ -37,7 +37,8 @@ function runSuite(name, command, args) {
     const proc = spawn(command, args, {
       stdio: "inherit",
       shell: true,
-      cwd: path.join(__dirname, "..")
+      cwd: path.join(__dirname, ".."),
+      env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" }
     });
 
     proc.on("close", (code) => {
@@ -113,6 +114,16 @@ async function main() {
       name: "Third-Party Modpack License Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/license-auditor.test.ts"]
+    },
+    {
+      name: "API Guard Universal Defense Perimeter",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/api-guard.test.ts"]
+    },
+    {
+      name: "SAGE 3.0 MIM-Bot Copilot & Graph Intelligence",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-mimbot.test.ts"]
     }
   ];
 

@@ -13,7 +13,12 @@ import { classifyCrash } from "./classifier";
 import { correlateCulprits } from "./correlator";
 import { computeConfidenceScore } from "./scorer";
 import { planRemediation } from "./remediation";
-import { StructuredCrashReport } from "./types";
+import { StructuredCrashReport, SageLocale } from "./types";
+import { formatLocalizedRootCause } from "./i18n";
+
+export interface SageDiagnoseOptions {
+  locale?: SageLocale;
+}
 
 export class SageCrashEngine {
   /**
@@ -26,8 +31,9 @@ export class SageCrashEngine {
    * 4. Multi-Factor Confidence Scoring
    * 5. Structured Remediation Plan Formulation
    */
-  public static diagnose(rawLog: string): StructuredCrashReport {
+  public static diagnose(rawLog: string, options?: SageDiagnoseOptions): StructuredCrashReport {
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const locale: SageLocale = options?.locale || "en";
 
     // 1. Environment & Stack Normalization
     const environment = parseCrashEnvironment(rawLog);
@@ -54,45 +60,15 @@ export class SageCrashEngine {
       classification.category,
       culpritMod,
       suspectedMods,
-      environment
+      environment,
+      locale
     );
 
     const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const inferenceDurationMs = Math.round((endTime - startTime) * 100) / 100;
 
-    // Build descriptive root cause statement
-    let rootCause = "Unrecognized application error";
-    switch (classification.category) {
-      case "MISSING_DEPENDENCY":
-        rootCause = culpritMod
-          ? `Missing required dependency mod: '${culpritMod}'`
-          : "Required library or dependency is missing from the active environment";
-        break;
-      case "OUT_OF_MEMORY":
-        rootCause = "JVM Heap Space or Metaspace exhaustion (OutOfMemoryError)";
-        break;
-      case "JAVA_INCOMPATIBILITY":
-        rootCause = "Java bytecode version incompatibility with current JVM runtime";
-        break;
-      case "MOD_CONFLICT":
-        rootCause = culpritMod
-          ? `Duplicate mod instance or ID collision on '${culpritMod}'`
-          : "Mod ID conflict or duplicate JAR files in mods directory";
-        break;
-      case "MIXIN_FAILURE":
-        rootCause = culpritMod
-          ? `Mixin bytecode transformation failure caused by '${culpritMod}'`
-          : "ASM Mixin injection failure during class loading";
-        break;
-      case "VERSION_CONFLICT":
-        rootCause = culpritMod
-          ? `Dependency version mismatch for mod '${culpritMod}'`
-          : "Mod requires a different version of Minecraft or loader library";
-        break;
-      case "CORRUPTED_WORLD":
-        rootCause = "Corrupted chunk, player NBT save file, or dimension registry";
-        break;
-    }
+    // Build descriptive root cause statement using locale
+    const rootCause = formatLocalizedRootCause(classification.category, culpritMod, locale);
 
     return {
       id: crypto.randomUUID(),
@@ -107,7 +83,8 @@ export class SageCrashEngine {
       remediation,
       rawException: classification.primaryException,
       timestamp: new Date().toISOString(),
-      inferenceDurationMs
+      inferenceDurationMs,
+      locale
     };
   }
 }

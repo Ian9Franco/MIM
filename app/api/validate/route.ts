@@ -24,11 +24,16 @@ import { getSettings } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/modding/packValidator";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const BUILD_TARGETS = ["alluser", "allhost", "both"] as const;
 type BuildTarget = (typeof BUILD_TARGETS)[number];
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
     const {
@@ -184,4 +189,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/validate] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

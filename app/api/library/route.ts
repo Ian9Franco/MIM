@@ -22,6 +22,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import AdmZip from "adm-zip";
+import { withApiGuard } from "@/lib/apiGuard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,11 @@ const UNKNOWN_META: ModMeta = {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const version = searchParams.get("version");
   const loader = searchParams.get("loader");
@@ -252,4 +257,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ library });
-}
+
+  }
+);

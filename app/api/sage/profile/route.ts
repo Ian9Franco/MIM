@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrimaryMinecraftProfile } from "@/lib/minecraft/usercache";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const minecraftDir = searchParams.get("minecraftDir") || undefined;
@@ -23,4 +28,6 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+
+  }
+);

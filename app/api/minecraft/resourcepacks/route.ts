@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const settings = getSettings();
     const packsPath = path.join(settings.minecraftPath, "resourcepacks");
@@ -41,4 +46,6 @@ export async function GET(req: NextRequest) {
     console.error("[/api/minecraft/resourcepacks] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

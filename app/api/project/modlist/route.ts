@@ -3,8 +3,13 @@ import path from "path";
 import fs from "fs";
 import { getSettings } from "@/lib/core/settings";
 import { collectJars } from "@/lib/modding/builder";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project");
   const version = searchParams.get("version");
@@ -163,4 +168,6 @@ export async function GET(req: NextRequest) {
     html: htmlContent,
     savedPath: savedPath || "No se pudo guardar (proyecto no encontrado en disco)"
   });
-}
+
+  }
+);

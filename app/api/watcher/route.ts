@@ -29,6 +29,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { getSettings } from "@/lib/core/settings";
 import { SOURCE_BASE } from "@/lib/core/constants";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
 
@@ -88,7 +89,11 @@ function cleanFilenameForDisplay(fileName: string): string {
 /** Interval between SSE keepalive pings (ms). */
 const KEEPALIVE_INTERVAL_MS = 30_000;
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { downloadsPath } = getSettings();
   startWatcher(downloadsPath);
 
@@ -208,4 +213,6 @@ export async function GET(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
-}
+
+  }
+);

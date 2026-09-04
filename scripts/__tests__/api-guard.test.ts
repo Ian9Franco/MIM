@@ -112,6 +112,18 @@ function assertStructuralEnforcement() {
       "Auditor rejects a deliberately unsafe discovered route for its GET handler",
       audit
     );
+
+    const exemptAudit = auditApiGuard(tempRoot, {
+      "app/api/negative-probe/route.ts": {
+        reason: "Test probe deliberately exempted for testing",
+        methods: ["GET"],
+      },
+    });
+    assert(
+      exemptAudit.violations.length === 0,
+      "Auditor respects explicit allowlist exceptions with documented reasons",
+      exemptAudit
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

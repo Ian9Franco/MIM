@@ -16,6 +16,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { SOURCE_BASE } from "@/lib/core/constants";
+import { withApiGuard } from "@/lib/apiGuard";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,10 @@ function saveLocalCollections(data: LocalCollection[]): void {
 
 // ── GET — Listar colecciones ───────────────────────────────────────────────────
 
-export async function GET() {
+export const GET = withApiGuard(
+  {},
+  async () => {
+
   const collections = getLocalCollections().map((coll) => ({
     ...coll,
     // Recalcular projectCount a partir del array real por si se desincronizó
@@ -84,11 +88,17 @@ export async function GET() {
     source: "local" as const,
   }));
   return NextResponse.json({ collections });
-}
+
+  }
+);
 
 // ── POST — Acciones sobre colecciones ─────────────────────────────────────────
 
-export async function POST(req: Request) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   try {
     const body = await req.json();
     const collections = getLocalCollections();
@@ -201,11 +211,17 @@ export async function POST(req: Request) {
     console.error("[/api/local-collections] POST error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);
 
 // ── DELETE — Eliminar colección completa ──────────────────────────────────────
 
-export async function DELETE(req: Request) {
+export const DELETE = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   try {
     const { collectionId } = await req.json();
 
@@ -229,4 +245,6 @@ export async function DELETE(req: Request) {
     console.error("[/api/local-collections] DELETE error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const BACKUP_REGEX = /-[0-9]{10,}\.dat$/;
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { minecraftPath } = getSettings();
     const logs: string[] = [];
@@ -48,4 +53,6 @@ export async function POST(req: NextRequest) {
     console.error("Error cleaning player backups:", errorMsg);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

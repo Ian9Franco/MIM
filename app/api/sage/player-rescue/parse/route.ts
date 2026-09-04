@@ -3,6 +3,7 @@ import { readNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import { resolveUuidToUsername } from "@/lib/minecraft/usercache";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * GET /api/sage/player-rescue/parse
@@ -95,7 +96,11 @@ function findBackupFiles(playerDataDir: string, baseFilename: string): string[] 
   return backups;
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get("filePath");
@@ -211,4 +216,6 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+
+  }
+);

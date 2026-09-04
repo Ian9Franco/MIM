@@ -13,6 +13,7 @@ import { scanMod, type ModMeta } from "@/lib/scanner";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 interface DownloadHistoryEntry {
   fileName?: string;
@@ -23,7 +24,10 @@ interface DownloadHistoryEntry {
   projectType?: string;
 }
 
-export async function GET() {
+export const GET = withApiGuard(
+  {},
+  async () => {
+
   try {
     const { downloadsPath } = getSettings();
     if (!fs.existsSync(downloadsPath)) {
@@ -75,4 +79,6 @@ export async function GET() {
     console.error("[/api/pending-files] Error fatal:", errorMsg);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

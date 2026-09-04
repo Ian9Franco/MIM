@@ -3,8 +3,12 @@ import { scanExistingFiles } from "@/lib/core/watcher";
 import { scanMod, type ModMeta } from "@/lib/scanner";
 import path from "path";
 import os from "os";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET() {
+export const GET = withApiGuard(
+  {},
+  async () => {
+
   const downloadsPath = path.join(os.homedir(), "Downloads");
   const files = scanExistingFiles(downloadsPath);
   
@@ -21,4 +25,6 @@ export async function GET() {
   });
 
   return NextResponse.json({ pending });
-}
+
+  }
+);

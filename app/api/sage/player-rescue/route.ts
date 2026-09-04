@@ -4,6 +4,7 @@ import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
 import { loadUsercacheEntries } from "@/lib/minecraft/usercache";
+import { withApiGuard } from "@/lib/apiGuard";
 
 // Extract player compound tag from NBT tag depending on whether it's level.dat or UUID.dat
 function getPlayerCompound(rootTag: NBTTag): { compound: Record<string, NBTTag> | null, isLevelDat: boolean } {
@@ -31,7 +32,11 @@ function getPlayerCompound(rootTag: NBTTag): { compound: Record<string, NBTTag> 
 // Regex to detect files with long numeric suffixes (backups)
 const BACKUP_REGEX = /-[0-9]{10,}\.dat$/;
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const customFilePath = searchParams.get("filePath");
@@ -217,9 +222,15 @@ export async function GET(req: NextRequest) {
     console.error("Error listing player files:", errorMsg);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
 
-export async function POST(req: NextRequest) {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { filePath, resetCoords, clearInventory, newCoords, changeDimension, newDimension } = await req.json();
 
@@ -333,4 +344,6 @@ export async function POST(req: NextRequest) {
     console.error("Error modifying player NBT file:", errorMsg);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

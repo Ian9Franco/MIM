@@ -28,6 +28,7 @@ import { getSettings } from "@/lib/core/settings";
 import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 // ── Allowed extensions ───────────────────────────────────────────────────────
 
@@ -80,7 +81,11 @@ function isAllowedPath(filePath: string): boolean {
 
 // ── GET Handler — List all scannable files for a project ────────────────────────
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project");
   const version = searchParams.get("version");
@@ -296,11 +301,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.json({ success: true, scannable, total: scannable.length });
-}
+
+  }
+);
 
 // ── POST Handler ─────────────────────────────────────────────────────────────────
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
 
@@ -378,4 +389,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+
+  }
+);

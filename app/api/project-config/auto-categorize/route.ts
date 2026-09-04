@@ -4,6 +4,7 @@ import path from "path";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
 import { scanMod } from "@/lib/scanner";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * Intelligent Auto-Categorization API
@@ -12,7 +13,11 @@ import { scanMod } from "@/lib/scanner";
  * based on their metadata (stored in mim-project.json or scanned from JAR).
  */
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
     const { project } = body;
@@ -105,4 +110,6 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+
+  }
+);

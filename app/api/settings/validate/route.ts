@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const requestSchema = z.object({
   paths: z.array(z.string()).min(1, "Paths must contain at least one path"),
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     let body: unknown;
     try {
@@ -43,4 +48,6 @@ export async function POST(req: NextRequest) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

@@ -17,8 +17,13 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { sourcePaths } = await req.json();
 
@@ -76,4 +81,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/unclassify] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

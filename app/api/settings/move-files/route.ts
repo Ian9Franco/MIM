@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { mimMsg } from "@/lib/core/voice";
 import fs from "fs";
 import path from "path";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * Mueve recursivamente el contenido de `src` a `dest`.
@@ -46,7 +47,11 @@ function moveDirectorySync(src: string, dest: string): void {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   try {
     const { sourcePath, targetPath } = await req.json();
 
@@ -66,4 +71,6 @@ export async function POST(req: Request) {
     console.error("[/api/settings/move-files] Error:", message);
     return NextResponse.json({ error: mimMsg.internalError("/api/settings/move-files") }, { status: 500 });
   }
-}
+
+  }
+);

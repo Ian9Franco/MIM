@@ -9,6 +9,7 @@ import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
@@ -254,7 +255,11 @@ async function writeToDownloads(
   return destPath;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { mods, loader, gameVersion } = await req.json();
     if (!Array.isArray(mods) || mods.length === 0) {
@@ -309,4 +314,6 @@ export async function POST(req: NextRequest) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

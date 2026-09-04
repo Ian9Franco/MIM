@@ -19,11 +19,16 @@ import { mimMsg } from "@/lib/core/voice";
 import type { Loader } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const BUILD_TYPES = ["alluser", "allhost"] as const;
 type BuildType = (typeof BUILD_TYPES)[number];
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { version, loader, projectName, buildType } = await req.json();
 
@@ -86,4 +91,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/build] Unhandled error:", message);
     return NextResponse.json({ error: mimMsg.internalError("/api/build") }, { status: 500 });
   }
-}
+
+  }
+);

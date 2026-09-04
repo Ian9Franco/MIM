@@ -3,8 +3,13 @@ import path from "path";
 import fs from "fs";
 import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/core/constants";
 import { updateModOverride } from "@/lib/modding/projectConfig";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
     const { projectName, version, loader, fileName, action, payload } = body;
@@ -82,4 +87,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/project/fix-issue] Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

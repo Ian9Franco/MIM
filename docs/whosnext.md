@@ -10,39 +10,39 @@ Roadmap de lo que sigue, basado en revisión de código real (v11.2.0). Dividido
   - [x] Regla de CI o lint que falle el build si un route.ts nuevo no importa withApiGuard (`npm run lint:api-guard`).
   - [x] Ítem de checklist y guía estándar en CONTRIBUTING.md.
 
-- [ ] **Cerrar el enforcement real de `withApiGuard` — follow-up de auditoría v11.3.0.**
+- [x] **Cerrar el enforcement real de `withApiGuard` — follow-up de auditoría v11.3.0.**
   El objetivo es que CI no pueda aprobar una ruta desprotegida por falso positivo ni porque quedó fuera de una lista manual.
 
-  - [ ] **Reemplazar la detección textual por validación estructural.**
+  - [x] **Reemplazar la detección textual por validación estructural.**
     `verify-api-guard.ts` hoy acepta cualquier archivo que contenga `withApiGuard(`.
     Validar que cada handler HTTP exportado (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, etc.) esté realmente envuelto.
     Preferir AST con TypeScript Compiler API o `ts-morph` para evitar falsos positivos por comentarios, imports, strings o código muerto.
 
-  - [ ] **Hacer fail-closed todas las rutas Desktop.**
+  - [x] **Hacer fail-closed todas las rutas Desktop.**
     Toda ruta `app/api/**/route.ts` debe requerir `withApiGuard` por defecto.
     No depender de `CRITICAL_DESKTOP_PATTERNS` para decidir cuáles son críticas.
 
-  - [ ] **Reemplazar la inclusión manual por una allowlist de excepciones.**
+  - [x] **Reemplazar la inclusión manual por una allowlist de excepciones.**
     Si una ruta legítimamente no debe usar `withApiGuard`, declararla explícitamente en una allowlist y documentar el motivo.
     Una ruta nueva debe fallar CI por defecto hasta quedar protegida o exceptuada de forma consciente.
 
-  - [ ] **Agregar casos negativos al auditor.**
+  - [x] **Agregar casos negativos al auditor.**
     CI debe fallar si una ruta:
     - solo tiene el texto `withApiGuard(` en un comentario o string;
     - lo importa pero no lo usa;
     - lo invoca en código que no corresponde al handler exportado.
 
-  - [ ] **Convertir `scripts/__tests__/api-guard.test.ts` en tests reales del wrapper.**
+  - [x] **Convertir `scripts/__tests__/api-guard.test.ts` en tests reales del wrapper.**
     Importar y ejecutar `withApiGuard` sobre handlers de prueba, en vez de validar únicamente `checkRateLimit`, `getClientIp` y schemas Zod aislados.
 
-    - [ ] Rate limit real: respuesta `429`, `Retry-After` y bloqueo efectivo del handler.
-    - [ ] Headers defensivos: `X-Content-Type-Options` y `X-RateLimit-*`.
-    - [ ] Query inválida, body inválido y JSON malformado → `400`.
-    - [ ] `paramsSchema` dinámico: caso válido e inválido.
-    - [ ] Excepción dentro del handler → `500` estructurado.
-    - [ ] Happy path: query/body/params parseados y tipados llegan correctamente al handler.
+    - [x] Rate limit real: respuesta `429`, `Retry-After` y bloqueo efectivo del handler.
+    - [x] Headers defensivos: `X-Content-Type-Options` y `X-RateLimit-*`.
+    - [x] Query inválida, body inválido y JSON malformado → `400`.
+    - [x] `paramsSchema` dinámico: caso válido e inválido.
+    - [x] Excepción dentro del handler → `500` estructurado.
+    - [x] Happy path: query/body/params parseados y tipados llegan correctamente al handler.
 
-  - [ ] **Criterio de cierre.**
+  - [x] **Criterio de cierre.**
     Una ruta API nueva sin guard debe romper CI automáticamente;
     una ruta con guard falso/decorativo también;
     y los comportamientos principales de `withApiGuard` deben estar cubiertos ejecutando el wrapper real.

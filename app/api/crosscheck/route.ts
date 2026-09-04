@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/core/env";
 import { getApiKey } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const title = searchParams.get("title")?.trim();
   const source = searchParams.get("source"); // El origen actual del mod
@@ -65,4 +70,6 @@ export async function GET(req: NextRequest) {
     console.error("[CrossCheck] Error checking existence:", err);
     return NextResponse.json({ exists: false }, { status: 500 });
   }
-}
+
+  }
+);

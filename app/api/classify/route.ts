@@ -29,8 +29,13 @@ import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment, toGame, worldName } =
       await req.json();
@@ -342,4 +347,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/classify] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

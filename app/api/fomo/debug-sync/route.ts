@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { getPortableDir } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const DATA_DIR = path.join(getPortableDir(), "data");
 const CHANNELS_FILE = path.join(DATA_DIR, "showcase_channels.json");
@@ -24,7 +25,9 @@ function getChannels(): string[] {
   return ["https://www.youtube.com/@EnderVerseMC"];
 }
 
-export async function GET(request: Request) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
 
@@ -184,3 +187,4 @@ export async function GET(request: Request) {
     ],
   });
 }
+);

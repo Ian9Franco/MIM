@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const validateKeysSchema = z.object({
   curseforge: z.string().optional().nullable(),
@@ -7,7 +8,11 @@ const validateKeysSchema = z.object({
   virusTotal: z.string().optional().nullable(),
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     let body: unknown;
     try {
@@ -82,4 +87,6 @@ export async function POST(req: NextRequest) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

@@ -4,13 +4,17 @@ import { getSettings } from "@/lib/core/settings";
 import { mimMsg } from "@/lib/core/voice";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const stagingPostSchema = z.object({
   action: z.enum(["resolve", "clear"]),
   filePath: z.string().optional().nullable(),
 });
 
-export async function GET() {
+export const GET = withApiGuard(
+  {},
+  async () => {
+
   try {
     const settings = getSettings();
     const stagingDir = settings.stagingPath;
@@ -46,9 +50,15 @@ export async function GET() {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
 
-export async function POST(req: NextRequest) {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     let body: unknown;
     try {
@@ -140,4 +150,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/staging POST] Error:", errorMsg);
     return NextResponse.json({ error: mimMsg.internalError("/api/staging") }, { status: 500 });
   }
-}
+
+  }
+);

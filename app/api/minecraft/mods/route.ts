@@ -3,8 +3,13 @@ import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import { scanMod } from "@/lib/modding/enhanced-mod-scanner";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const settings = getSettings();
     const modsPath = path.join(settings.minecraftPath, "mods");
@@ -98,4 +103,6 @@ export async function GET(req: NextRequest) {
     console.error("[/api/minecraft/mods] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

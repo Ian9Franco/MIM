@@ -3,8 +3,13 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import crypto from "crypto";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -45,4 +50,6 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+
+  }
+);

@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/core/env";
 import { getApiKey } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
@@ -27,7 +28,11 @@ interface BatchRequest {
   }>;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { mods } = (await req.json()) as BatchRequest;
     
@@ -200,4 +205,6 @@ export async function POST(req: NextRequest) {
     console.error("[BatchCrossCheck] Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+
+  }
+);

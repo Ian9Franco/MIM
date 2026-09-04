@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { scanMod } from "@/lib/modding/enhanced-mod-scanner";
 import fs from "fs";
 import path from "path";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get("path");
@@ -60,4 +65,6 @@ export async function GET(req: NextRequest) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

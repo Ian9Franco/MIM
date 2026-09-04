@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scanModEnhanced } from "@/lib/modding/enhanced-mod-scanner";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * /api/scan — GET
@@ -9,7 +10,11 @@ import fs from "fs";
  * Devuelve metadata enriquecida (ID, versión, loader, dependencias, icono, etc.)
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const filePath = searchParams.get("path");
 
@@ -29,4 +34,6 @@ export async function GET(req: NextRequest) {
     console.error("[/api/scan] Error scanning mod:", error);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+
+  }
+);

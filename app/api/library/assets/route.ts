@@ -5,6 +5,7 @@ import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 interface AssetEntry {
   path: string;
@@ -23,7 +24,11 @@ const UNKNOWN_META = (fileName: string, type: "shader" | "resourcepack"): ModMet
   isCompatibleWithConnector: false,
 });
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const projectName = searchParams.get("project");
@@ -124,4 +129,6 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+
+  }
+);

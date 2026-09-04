@@ -16,8 +16,13 @@ import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
 import { getSettings } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { folderPath } = await req.json();
 
@@ -70,4 +75,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/open-folder] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

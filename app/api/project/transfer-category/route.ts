@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 function copyFolderRecursive(src: string, dest: string): number {
   if (!fs.existsSync(src)) return 0;
@@ -35,7 +36,11 @@ function copyFolderRecursive(src: string, dest: string): number {
   return count;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { sourceProject, targetProject, version, category, loader } = await req.json();
 
@@ -111,4 +116,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/project/transfer-category] Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

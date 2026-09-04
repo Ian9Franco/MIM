@@ -15,8 +15,13 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { version, projectName } = await req.json();
 
@@ -59,4 +64,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/project/open] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

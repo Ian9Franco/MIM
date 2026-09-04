@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { SOURCE_BASE } from "@/lib/core/constants";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
 
@@ -19,7 +20,11 @@ function saveDownloadHistory(data: any[]): void {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
-export async function GET(req: Request) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
@@ -62,9 +67,15 @@ export async function GET(req: Request) {
     hasMore: end < total,
     total
   });
-}
 
-export async function POST(req: Request) {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   try {
     const body = await req.json();
     const history = getDownloadHistory();
@@ -97,4 +108,6 @@ export async function POST(req: Request) {
     console.error("[/api/fomo/download-history] POST error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

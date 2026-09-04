@@ -12,10 +12,15 @@
 import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import util from "util";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const execPromise = util.promisify(exec);
 
-export async function GET(req: Request) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as Request;
+
   const { searchParams } = new URL(req.url);
   const initialPath = searchParams.get("initialPath");
 
@@ -44,4 +49,6 @@ export async function GET(req: Request) {
     console.error("[/api/settings/pick-folder] Error:", message);
     return NextResponse.json({ error: "Error abriendo el selector" }, { status: 500 });
   }
-}
+
+  }
+);

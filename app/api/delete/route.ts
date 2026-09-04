@@ -12,8 +12,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mimMsg } from "@/lib/core/voice";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { path, paths } = await req.json();
 
@@ -46,4 +51,6 @@ export async function POST(req: NextRequest) {
     console.error("[/api/delete] Unhandled error:", message);
     return NextResponse.json({ error: mimMsg.internalError("/api/delete") }, { status: 500 });
   }
-}
+
+  }
+);

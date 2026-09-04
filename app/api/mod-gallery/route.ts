@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiKey } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
 function normalizeGalleryItem(g: any) {
   if (!g) return null;
@@ -22,7 +23,11 @@ function normalizeGalleryItem(g: any) {
   };
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
   const source = searchParams.get("source") || "modrinth";
@@ -121,4 +126,6 @@ export async function GET(req: NextRequest) {
       _debug: { source, projectId, error: e.message }
     }, { status: 500 });
   }
-}
+
+  }
+);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * DELETE /api/sage/player-rescue/purge-backups
@@ -19,7 +20,11 @@ import fs from "fs";
  * }
  */
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get("filePath");
@@ -108,4 +113,6 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+
+  }
+);

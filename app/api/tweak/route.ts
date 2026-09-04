@@ -18,8 +18,13 @@ import { analyzeKeybindIntelligence } from "./lib/KeybindIntelligence";
 import { calculateModpackHash, getModCount } from "./lib/SnapshotSystem";
 import { getRecommendations } from "./lib/RecommendationEngine";
 import { readProjectConfig, saveProjectConfig } from "@/lib/modding/projectSubcategories";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const { searchParams } = new URL(req.url);
     const projectName = searchParams.get("projectName");
@@ -282,9 +287,15 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
-}
 
-export async function POST(req: NextRequest) {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
     const { action, projectName, keybinds, resourcePacks, settings, activePacks } = body;
@@ -631,6 +642,8 @@ export async function POST(req: NextRequest) {
     console.error("[/api/tweak] Unhandled error:", e);
     return NextResponse.json({ error: mimMsg.internalError("/api/tweak") }, { status: 500 });
   }
-}
+
+  }
+);
 
 

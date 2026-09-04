@@ -6,6 +6,7 @@ import { isLibrary, resolveDependencyScopes } from "@/lib/modding/dependencyReso
 import type { DependencyNode } from "@/lib/modding/dependencyResolver";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 interface ScannedModItem {
   path: string;
@@ -25,7 +26,11 @@ const UNKNOWN_META: ModMeta = {
   isCompatibleWithConnector: false,
 };
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const version = searchParams.get("version");
   const loader = searchParams.get("loader");
@@ -184,4 +189,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, actions });
-}
+
+  }
+);

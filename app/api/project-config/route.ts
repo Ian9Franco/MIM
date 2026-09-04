@@ -22,8 +22,13 @@ import {
   resetProjectSubcategories,
   getProjectSubcategories,
 } from "@/lib/modding/projectSubcategories";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project");
   
@@ -37,9 +42,15 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
 
-export async function POST(req: NextRequest) {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const body = await req.json();
     const { project, action, category, subcategory } = body;
@@ -117,4 +128,6 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+
+  }
+);

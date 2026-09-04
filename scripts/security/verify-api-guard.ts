@@ -289,7 +289,19 @@ function findRouteFiles(dir: string, rootDir: string): string[] {
   return results;
 }
 
-export function auditApiGuard(rootDir = process.cwd()): {
+export interface ApiGuardAllowlistEntry {
+  reason: string;
+  methods?: string[];
+}
+
+export const API_GUARD_ALLOWLIST: Record<string, ApiGuardAllowlistEntry> = {
+  // Any explicitly exempted routes must be declared here with a documented reason.
+};
+
+export function auditApiGuard(
+  rootDir = process.cwd(),
+  allowlist: Record<string, ApiGuardAllowlistEntry> = API_GUARD_ALLOWLIST
+): {
   totalRoutes: number;
   totalHandlers: number;
   guardedHandlers: number;
@@ -322,7 +334,14 @@ export function auditApiGuard(rootDir = process.cwd()): {
     guardedHandlers += analysis.guardedHandlers.length;
 
     for (const violation of analysis.violations) {
-      violations.push(`${route} [${violation.method}] — ${violation.reason}`);
+      const exemption = allowlist[route];
+      const isExempt = Boolean(
+        exemption &&
+        (!exemption.methods || exemption.methods.includes(violation.method))
+      );
+      if (!isExempt) {
+        violations.push(`${route} [${violation.method}] — ${violation.reason}`);
+      }
     }
   }
 

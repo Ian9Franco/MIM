@@ -3,6 +3,7 @@ import { z } from "zod";
 import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const savePlayerSchema = z.object({
   filePath: z.string().min(1, "filePath is required"),
@@ -10,7 +11,11 @@ const savePlayerSchema = z.object({
   createBackup: z.boolean().optional().default(true),
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     let body: unknown;
     try {
@@ -77,4 +82,6 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+
+  }
+);

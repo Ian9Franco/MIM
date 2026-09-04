@@ -3,8 +3,13 @@ import { getSettings } from "@/lib/core/settings";
 import { readNBT } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   try {
     const settings = getSettings();
     const savesPath = path.join(settings.minecraftPath, "saves");
@@ -90,4 +95,6 @@ export async function GET(req: NextRequest) {
     console.error("[/api/minecraft/worlds] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  }
+);

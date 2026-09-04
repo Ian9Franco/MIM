@@ -8,8 +8,12 @@
 
 import { NextResponse } from "next/server";
 import { checkYtdlpUpdate, updateYtdlp } from "@/lib/ytdlp/updater";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET() {
+export const GET = withApiGuard(
+  {},
+  async () => {
+
   try {
     const info = await checkYtdlpUpdate();
     return NextResponse.json(info);
@@ -20,9 +24,14 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
 
-export async function POST() {
+  }
+);
+
+export const POST = withApiGuard(
+  {},
+  async () => {
+
   try {
     const result = await updateYtdlp();
     if (result.success) {
@@ -44,4 +53,6 @@ export async function POST() {
       { status: 500 }
     );
   }
-}
+
+  }
+);

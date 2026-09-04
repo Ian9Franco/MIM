@@ -11,10 +11,15 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { getSettings } from "@/lib/core/settings";
+import { withApiGuard } from "@/lib/apiGuard";
 
 // Se eliminó getGlobalMcPath ya que ahora usamos globalSettings.minecraftPath
 
-export async function GET(req: NextRequest) {
+export const GET = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project") || "";
   const version = searchParams.get("version") || "";
@@ -243,9 +248,15 @@ export async function GET(req: NextRequest) {
     projectLogsExists,
     projectCrashesExists
   });
-}
 
-export async function DELETE(req: NextRequest) {
+  }
+);
+
+export const DELETE = withApiGuard(
+  {},
+  async ({ request }) => {
+    const req = request as NextRequest;
+
   const { searchParams } = new URL(req.url);
   const project = searchParams.get("project") || "";
   const version = searchParams.get("version") || "";
@@ -293,4 +304,6 @@ export async function DELETE(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: `Error al eliminar el archivo: ${err.message}` }, { status: 500 });
   }
-}
+
+  }
+);

@@ -1,26 +1,67 @@
-# 🚀 Guía de Despliegue, Releases y Creación de Standalone — MIM
+# 🚀 Guía de Despliegue, Releases, Flujo con IAs y Standalone — MIM
 
-Esta guía es tu manual rápido paso a paso para verificar cambios, crear releases automáticas con GitHub Actions y compilar el ejecutable nativo `.exe` para usarlo en tu máquina local.
+Esta guía es tu manual rápido personal para verificar cambios, gestionar el flujo de PRs con IAs externas, crear releases automáticas en GitHub y compilar el ejecutable `.exe` nativo en tu máquina local.
 
 ---
 
 ## 📋 1. Verificación Rápida Post-Edición (Chequeo Previo)
 
-Antes de crear una release o hacer commit, ejecutá estos dos comandos para asegurar que el código compila y pasa todas las pruebas sin errores:
+Antes de hacer commit, crear una release o dar por terminada una tarea, ejecutá estos comandos para asegurar que el código compila, está blindado y pasa todas las pruebas:
 
 ```bash
 # 1. Chequeo estricto de tipos de TypeScript (Desktop y Web)
 npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit
 
-# 2. Correr la suite de pruebas automatizadas (12/12 suites)
+# 2. Verificación de blindaje estructural de APIs (Fail-Closed)
+npm run lint:api-guard
+
+# 3. Correr la suite de pruebas unificada (13 suites, 144 escenarios)
 npm test
 ```
 
-*Si ambos comandos terminan sin errores, el proyecto está 100% listo para producción.*
+*Si estos comandos terminan sin errores, el proyecto está 100% listo para producción.*
 
 ---
 
-## 🏷️ 2. Crear la Release con el Asistente
+## 🤖 2. Flujo con IAs: Revisión y Promoción Rápida de PRs
+
+MIM tiene configurado un flujo profesional de ingeniería donde **vos sos el Gatekeeper**:
+- **La IA externa:** Trabaja en ramas y abre Pull Requests. No puede pushear a `main` porque GitHub Rulesets la frena hasta pasar CI.
+- **Vos con Antigravity en local:** Tenés permiso de **Bypass de Administrador**. Tus pushes directos a `main` entran sin trabas.
+
+### ¿Cómo auditar y mergear un PR de la IA en 1 paso?
+
+Usá tu helper local interactivo [`npm run pr:review`](file:///d:/Dev/CodeProjects/MIM/scripts/workflow/review-pr.js):
+
+#### Paso A: Inspeccionar el PR
+Pasale el número de PR o el nombre de la rama:
+```bash
+npm run pr:review 15
+# o también con el nombre de la rama:
+npm run pr:review feat/nueva-funcion
+```
+**¿Qué hace automáticamente?**
+1. **Pre-flight:** Verifica que no tengas cambios sin commitear en tu rama para no perder nada.
+2. **Checkout:** Se descarga el PR de GitHub y se para en esa rama.
+3. **Diff & Commits:** Te muestra en pantalla los commits agregados y qué archivos se tocaron contra `main`.
+4. **Compuertas de Calidad:** Corre `lint:api-guard`, `tsc --noEmit` y `npm test`.
+5. **Veredicto:** Te confirma en verde si superó todos los controles o te avisa en rojo qué falló.
+
+#### Paso B: Si te gusta y pasó los tests ➔ Subir a `main`
+```bash
+npm run pr:review --promote
+```
+*Automáticamente vuelve a `main`, se sincroniza con origin, mergea la rama del PR y **pushea a `origin/main`** con tu bypass de admin.*
+
+#### Paso C: Si no te gustó o querés volver sin tocar nada
+```bash
+npm run pr:review --return
+```
+*Te devuelve a tu `main` intacto.*
+
+---
+
+## 🏷️ 3. Crear la Release con el Asistente
 
 Para gestionar la versión semántica y preparar el tag de Git de forma interactiva:
 
@@ -31,15 +72,15 @@ npm run release
 ### ¿Qué hace este comando?
 1. **Detecta cambios**: Revisa el estado de tu Git (`git status`).
 2. **Te pide el tipo de versión**:
-   * `patch` (ej. 10.5.2 ➔ 10.5.3): Para corrección de errores menores.
-   * `minor` (ej. 10.5.2 ➔ 10.6.0): Para nuevas funciones o módulos.
-   * `major` (ej. 10.5.2 ➔ 11.0.0): Para grandes saltos arquitectónicos (como SAGE 3.0).
+   * `patch` (ej. 11.3.0 ➔ 11.3.1): Para corrección de errores menores.
+   * `minor` (ej. 11.3.0 ➔ 11.4.0): Para nuevas funciones o módulos.
+   * `major` (ej. 11.3.0 ➔ 12.0.0): Para grandes saltos arquitectónicos.
 3. **Crea un backup automático**: Guarda una rama de seguridad local (`backup/YYYY-MM-DDTHH-mm-ss`).
-4. **Crea el commit y el tag**: Actualiza el número de versión en `package.json`, hace el commit y crea el tag de git local (ej. `v11.0.0`).
+4. **Crea el commit y el tag**: Actualiza el número de versión en `package.json`, sincroniza `docs/architecture/MIM.md` y `docs/releases/CHANGELOG.md`, hace el commit y crea el tag de git local (ej. `v11.4.0`).
 
 ---
 
-## ☁️ 3. Subir la Release con GitHub Actions (Publicación en la Nube)
+## ☁️ 4. Subir la Release con GitHub Actions (Publicación en la Nube)
 
 Una vez que `npm run release` creó el tag local, solo debés subirlo a GitHub:
 
@@ -48,7 +89,7 @@ Una vez que `npm run release` creó el tag local, solo debés subirlo a GitHub:
 git push origin main --tags
 ```
 
-*(Si querés subir solo el tag específico: `git push origin v11.0.0`)*
+*(Si querés subir solo el tag específico: `git push origin v11.4.0`)*
 
 ### ¿Qué pasa en GitHub automáticamente?
 1. GitHub Actions detecta el tag `v*` y activa [.github/workflows/release.yml](file:///.github/workflows/release.yml).
@@ -57,11 +98,9 @@ git push origin main --tags
 4. `electron-builder` compila y firma el instalador de Windows.
 5. Se publica automáticamente la **Release Oficial** en la pestaña *Releases* de tu repositorio con el instalador `.exe` listo para que cualquiera lo descargue.
 
-> **Tip:** También podés disparar la release manualmente desde la web de GitHub yendo a **Actions** ➔ **Release MIM Desktop** ➔ **Run workflow**.
-
 ---
 
-## 💻 4. Crear el `.exe` para Usarlo en Local (En tu PC)
+## 💻 5. Crear el `.exe` para Usarlo en Local (En tu PC)
 
 Si querés probar la aplicación de escritorio en tu máquina o generar el `.exe` directamente sin esperar a GitHub Actions:
 
@@ -71,10 +110,6 @@ Si querés probar la aplicación de escritorio en tu máquina o generar el `.exe
 npm run package:win
 ```
 
-* **¿Qué hace?**
-  1. Ejecuta `next build` con Turbopack.
-  2. Corre `node standalone/prepare.js` para copiar los assets a la carpeta standalone.
-  3. Ejecuta `electron-builder` para empaquetar el binario final.
 * **¿Dónde queda el archivo listo?**
   * Al finalizar, el instalador se guarda en la carpeta:
     `dist/MIM Setup <version>.exe`
@@ -97,12 +132,16 @@ npm run start:standalone
 
 ---
 
-## 🛠️ 5. Resumen de Comandos Frecuentes
+## 🛠️ 6. Resumen de Comandos Frecuentes
 
 | Objetivo | Comando |
 | :--- | :--- |
 | **Verificar compilación y tipos** | `npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit` |
-| **Correr todas las pruebas (12 suites)** | `npm test` |
+| **Verificar blindaje estructural API Guard** | `npm run lint:api-guard` |
+| **Correr todas las pruebas (13 suites)** | `npm test` |
+| **Auditar un PR o rama de la IA** | `npm run pr:review <numero_o_rama>` |
+| **Promover y mergear el PR a main** | `npm run pr:review --promote` |
+| **Volver a main sin mergear** | `npm run pr:review --return` |
 | **Build + preparar assets (local/standalone)** | `npm run build:standalone` |
 | **Lanzar Electron localmente** | `npm run start:standalone` |
 | **Iniciar asistente de nueva Release** | `npm run release` |

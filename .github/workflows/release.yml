@@ -44,8 +44,6 @@ jobs:
           FILE="docs/releases/release-notes-${TAG}.md"
           if [ -f "$FILE" ]; then
             echo "path=$FILE" >> $GITHUB_OUTPUT
-          elif [ -f "docs/releases/release-notes-v10.5.1.md" ]; then
-            echo "path=docs/releases/release-notes-v10.5.1.md" >> $GITHUB_OUTPUT
           elif [ -f "docs/releases/CHANGELOG.md" ]; then
             echo "path=docs/releases/CHANGELOG.md" >> $GITHUB_OUTPUT
           else

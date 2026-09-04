@@ -9,7 +9,7 @@ on:
       tag_name:
         description: 'Tag name for release'
         required: false
-        default: 'v10.5.1'
+        default: 'v11.3.0'
 
 permissions:
   contents: write
@@ -40,12 +40,14 @@ jobs:
         id: notes
         shell: bash
         run: |
-          TAG="${{ github.ref_name || inputs.tag_name || 'v10.5.1' }}"
-          FILE="docs/release-notes-${TAG}.md"
+          TAG="${{ github.ref_name || inputs.tag_name || 'v11.3.0' }}"
+          FILE="docs/releases/release-notes-${TAG}.md"
           if [ -f "$FILE" ]; then
             echo "path=$FILE" >> $GITHUB_OUTPUT
-          elif [ -f "docs/release-notes-v10.5.1.md" ]; then
-            echo "path=docs/release-notes-v10.5.1.md" >> $GITHUB_OUTPUT
+          elif [ -f "docs/releases/release-notes-v10.5.1.md" ]; then
+            echo "path=docs/releases/release-notes-v10.5.1.md" >> $GITHUB_OUTPUT
+          elif [ -f "docs/releases/CHANGELOG.md" ]; then
+            echo "path=docs/releases/CHANGELOG.md" >> $GITHUB_OUTPUT
           else
             echo "path=" >> $GITHUB_OUTPUT
           fi
@@ -53,8 +55,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: MIM ${{ github.ref_name || inputs.tag_name || 'v10.5.1' }} — Systems Platform & MIM-Bot
-          tag_name: ${{ github.ref_name || inputs.tag_name || 'v10.5.1' }}
+          name: MIM ${{ github.ref_name || inputs.tag_name || 'v11.3.0' }} — Systems Platform & MIM-Bot
+          tag_name: ${{ github.ref_name || inputs.tag_name || 'v11.3.0' }}
           body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
           draft: false

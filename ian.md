@@ -27,18 +27,26 @@ npm test
 
 MIM tiene configurado un flujo profesional de ingeniería donde **vos sos el Gatekeeper**:
 - **La IA externa:** Trabaja en ramas y abre Pull Requests. No puede pushear a `main` porque GitHub Rulesets la frena hasta pasar CI.
-- **Vos con Antigravity en local:** Tenés permiso de **Bypass de Administrador**. Tus pushes directos a `main` entran sin trabas.
+- **Vos en local:** Tenés permiso de **Bypass de Administrador**. Tus pushes directos a `main` entran sin trabas.
 
-### ¿Cómo auditar y mergear un PR de la IA en 1 paso?
+### ¿Cómo saber qué PR o rama revisar?
+
+Tenés dos formas facilísimas:
+1. **Desde tu consola (Modo automático):** Ejecutá `npm run pr:review` (sin parámetros). Te lista al instante todos los PRs abiertos (`PR #1`, `PR #2`) y todas las ramas activas en GitHub con el comando listo para copiar y pegar.
+2. **Desde la web de GitHub:** Entrá a la pestaña **[Pull requests](https://github.com/Ian9Franco/MIM/pulls)** de tu repositorio. Cada PR tiene un número gigante al lado del título (ej: `#2`) y el nombre de la rama justo debajo.
+
+---
+
+### ¿Cómo auditar y mergear un PR en 1 paso?
 
 Usá tu helper local interactivo [`npm run pr:review`](file:///d:/Dev/CodeProjects/MIM/scripts/workflow/review-pr.js):
 
 #### Paso A: Inspeccionar el PR
-Pasale el número de PR o el nombre de la rama:
+Pasale el número de PR o el nombre de la rama que viste en la lista:
 ```bash
-npm run pr:review 15
+npm run pr:review 2
 # o también con el nombre de la rama:
-npm run pr:review feat/nueva-funcion
+npm run pr:review audit/pr-review-shell-safety
 ```
 **¿Qué hace automáticamente?**
 1. **Pre-flight:** Verifica que no tengas cambios sin commitear en tu rama para no perder nada.

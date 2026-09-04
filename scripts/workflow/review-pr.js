@@ -246,17 +246,76 @@ function printFailureReport(reason) {
   process.exit(1);
 }
 
+function listAvailableTargets() {
+  log("\n📡 Consultando ramas y PRs remotos disponibles en GitHub...", "cyan");
+  try {
+    runGit("fetch origin");
+  } catch {}
+
+  // PRs remotos
+  const prs = [];
+  try {
+    const rawPrs = runGit("ls-remote origin refs/pull/*/head");
+    const lines = rawPrs.split("\n").filter(Boolean);
+    for (const line of lines) {
+      const parts = line.split("\t");
+      if (parts.length >= 2) {
+        const match = parts[1].match(/refs\/pull\/(\d+)\/head/);
+        if (match) prs.push(match[1]);
+      }
+    }
+  } catch {}
+
+  // Ramas remotas activas
+  let branches = [];
+  try {
+    const rawBranches = runGit("branch -r");
+    branches = rawBranches
+      .split("\n")
+      .map((b) => b.trim().replace(/^origin\//, ""))
+      .filter((b) => b && !b.startsWith("HEAD") && b !== "main" && b !== "master" && !b.startsWith("backup/"));
+  } catch {}
+
+  if (prs.length > 0 || branches.length > 0) {
+    log("\n📌 PRs y Ramas Detectados para Revisar:", "bold");
+    if (prs.length > 0) {
+      log("\n  🔢 Por Número de Pull Request:", "cyan");
+      for (const pr of prs) {
+        log(`     • PR #${pr}  ➔  npm run pr:review ${pr}`, "green");
+      }
+    }
+    if (branches.length > 0) {
+      log("\n  🌿 Por Nombre de Rama:", "cyan");
+      for (const br of branches) {
+        log(`     • ${br}  ➔  npm run pr:review ${br}`, "green");
+      }
+    }
+    log("");
+  } else {
+    log("\n(No se detectaron PRs ni ramas de features pendientes en origin).\n", "dim");
+  }
+}
+
 async function main() {
   const rawArgs = process.argv.slice(2).filter((arg) => arg !== "--");
 
-  if (rawArgs.length === 0 || rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  if (
+    rawArgs.length === 0 ||
+    rawArgs.includes("--help") ||
+    rawArgs.includes("-h") ||
+    rawArgs.includes("--list") ||
+    rawArgs.includes("-l")
+  ) {
     log("\n📖 Uso de MIM AI PR Inspector:", "bold");
+    log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para revisar.");
     log("  npm run pr:review <numero_o_rama>   Inspecciona y audita un PR o rama de la IA.");
     log("  npm run pr:review --promote         Mergea la rama inspeccionada a main y la pushea.");
     log("  npm run pr:review --return          Vuelve a main de forma segura.\n");
     log("Ejemplos:");
-    log("  npm run pr:review 15");
-    log("  npm run pr:review audit/api-guard-fail-closed\n");
+    log("  npm run pr:review 2");
+    log("  npm run pr:review audit/pr-review-shell-safety");
+
+    listAvailableTargets();
     process.exit(0);
   }
 

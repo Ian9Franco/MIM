@@ -252,7 +252,7 @@ function listAvailableTargets() {
     runGit("fetch origin");
   } catch {}
 
-  // PRs remotos
+  // PRs remotos no mergeados en main
   const prs = [];
   try {
     const rawPrs = runGit("ls-remote origin refs/pull/*/head");
@@ -260,16 +260,28 @@ function listAvailableTargets() {
     for (const line of lines) {
       const parts = line.split("\t");
       if (parts.length >= 2) {
+        const hash = parts[0].trim();
         const match = parts[1].match(/refs\/pull\/(\d+)\/head/);
-        if (match) prs.push(match[1]);
+        if (match) {
+          let isMerged = false;
+          try {
+            execSync(`git merge-base --is-ancestor ${hash} main`, { cwd: REPO_ROOT, stdio: "ignore" });
+            isMerged = true;
+          } catch {
+            isMerged = false;
+          }
+          if (!isMerged) {
+            prs.push(match[1]);
+          }
+        }
       }
     }
   } catch {}
 
-  // Ramas remotas activas
+  // Ramas remotas activas que NO están mergeadas en main
   let branches = [];
   try {
-    const rawBranches = runGit("branch -r");
+    const rawBranches = runGit("branch -r --no-merged main");
     branches = rawBranches
       .split("\n")
       .map((b) => b.trim().replace(/^origin\//, ""))

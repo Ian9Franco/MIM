@@ -19,6 +19,7 @@
     "test": "node scripts/test-runner.js",
     "test:quick": "node scripts/test-runner.js",
     "lint:api-guard": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/security/verify-api-guard.ts",
+    "pr:review": "node scripts/workflow/review-pr.js",
     "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "demo": "node scripts/demo-tour.js",

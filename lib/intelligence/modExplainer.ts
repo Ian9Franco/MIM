@@ -274,8 +274,11 @@ export async function explainModWithGemini(
   const inlineImages = await fetchImagesAsInlineData(input.galleryUrls, 3, 2000);
   const imagesCount = inlineImages.length;
   const promptText = buildMultimodalPrompt(input, imagesCount);
+  type GeminiPart =
+    | { text: string }
+    | { inlineData: { mimeType: string; data: string } };
 
-  const contentParts: any[] = [{ text: promptText }];
+  const contentParts: GeminiPart[] = [{ text: promptText }];
   for (const img of inlineImages) {
     contentParts.push({
       inlineData: {
@@ -358,8 +361,9 @@ export async function explainModWithGemini(
 
       const errText = await response.text();
       console.warn(`[ModExplainer] Modelo ${currentModel} respondió ${response.status}: ${errText.substring(0, 100)}. Probando modelo de respaldo...`);
-    } catch (fetchErr: any) {
-      console.warn(`[ModExplainer] Error con modelo ${currentModel}:`, fetchErr.message);
+    } catch (fetchErr: unknown) {
+      const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      console.warn(`[ModExplainer] Error con modelo ${currentModel}:`, errMsg);
     }
   }
 
@@ -504,8 +508,9 @@ PAUTAS DE BULLY:
       }
 
       console.warn(`[ProjectChat] Modelo ${currentModel} respondió ${response.status}. Probando modelo de respaldo...`);
-    } catch (e: any) {
-      console.warn(`[ProjectChat] Error con modelo ${currentModel}:`, e.message);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.warn(`[ProjectChat] Error con modelo ${currentModel}:`, errMsg);
     }
   }
 

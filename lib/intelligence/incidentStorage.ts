@@ -6,6 +6,25 @@
 import { Incident } from "@/lib/intelligence/incidentManager";
 import { StorageFallback } from "@/lib/storage/storage-fallback";
 
+export interface GetIncidentsOptions {
+  status?: string;
+  module?: string;
+  severity?: string;
+  limit?: number;
+  offset?: number;
+  orderBy?: string;
+  orderDirection?: "asc" | "desc";
+}
+
+export interface IncidentStats {
+  total: number;
+  active: number;
+  resolved: number;
+  unseen: number;
+  byModule: Record<string, number>;
+  bySeverity: Record<string, number>;
+}
+
 const DB_NAME = "MIMIncidents", DB_VERSION = 1, STORE_NAME = "incidents";
 
 class IncidentStorage {
@@ -20,7 +39,7 @@ class IncidentStorage {
       req.onerror = () => rej(req.error);
       req.onsuccess = () => { this.db = req.result; res(); };
       req.onupgradeneeded = (e) => {
-        const db = (e.target as any).result;
+        const db = (e.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const s = db.createObjectStore(STORE_NAME, { keyPath: "id" });
           ["status", "severity", "module", "timestamp", "seen"].forEach(i => s.createIndex(i, i));
@@ -41,14 +60,15 @@ class IncidentStorage {
     });
   }
 
-  async getIncidents(options: any = {}): Promise<Incident[]> {
+  async getIncidents(options: GetIncidentsOptions = {}): Promise<Incident[]> {
     await this.initDB();
     if (!this.db) return StorageFallback.getAll(options);
 
     const { status = "all", module, severity, limit = 100, offset = 0, orderDirection = "desc" } = options;
     return new Promise((res, rej) => {
       const store = this.db!.transaction([STORE_NAME], "readonly").objectStore(STORE_NAME);
-      let idx: any = null, range: any = null;
+      let idx: IDBIndex | null = null;
+      let range: IDBKeyRange | null = null;
 
       if (status !== "all" && severity) { idx = store.index("status-severity"); range = IDBKeyRange.only([status, severity]); }
       else if (status !== "all") { idx = store.index("status"); range = IDBKeyRange.only(status); }
@@ -58,10 +78,10 @@ class IncidentStorage {
       const results: Incident[] = [];
       let skipped = 0;
 
-      req.onsuccess = (e: any) => {
-        const cursor = e.target.result;
+      req.onsuccess = () => {
+        const cursor = req.result;
         if (cursor && results.length < limit) {
-          const i = cursor.value;
+          const i = cursor.value as Incident;
           if ((status !== "all" && i.status !== status) || (module && i.module !== module) || (severity && i.severity !== severity)) { cursor.continue(); return; }
           if (skipped < offset) { skipped++; cursor.continue(); return; }
           results.push(i); cursor.continue();
@@ -76,12 +96,30 @@ class IncidentStorage {
     if (!this.db) return StorageFallback.markAsSeen(ids);
     return new Promise((res) => {
       const store = this.db!.transaction([STORE_NAME], "readwrite").objectStore(STORE_NAME);
-      const req = ids ? null : store.openCursor();
       if (ids) {
         let done = 0;
-        ids.forEach(id => store.get(id).onsuccess = (e: any) => { if (e.target.result) { e.target.result.seen = true; store.put(e.target.result); } if (++done === ids.length) res(); });
+        ids.forEach(id => {
+          const getReq = store.get(id);
+          getReq.onsuccess = () => {
+            const item = getReq.result as Incident | undefined;
+            if (item) {
+              item.seen = true;
+              store.put(item);
+            }
+            if (++done === ids.length) res();
+          };
+        });
       } else {
-        req!.onsuccess = (e: any) => { const c = e.target.result; if (c) { c.value.seen = true; c.update(c.value); c.continue(); } else res(); };
+        const openReq = store.openCursor();
+        openReq.onsuccess = () => {
+          const c = openReq.result;
+          if (c) {
+            const val = c.value as Incident;
+            val.seen = true;
+            c.update(val);
+            c.continue();
+          } else res();
+        };
       }
     });
   }
@@ -91,19 +129,29 @@ class IncidentStorage {
     if (!this.db) return StorageFallback.resolve(id);
     return new Promise((res) => {
       const store = this.db!.transaction([STORE_NAME], "readwrite").objectStore(STORE_NAME);
-      store.get(id).onsuccess = (e: any) => { if (e.target.result) { e.target.result.status = "resolved"; store.put(e.target.result); } res(); };
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const item = getReq.result as Incident | undefined;
+        if (item) {
+          item.status = "resolved";
+          store.put(item);
+        }
+        res();
+      };
     });
   }
 
-  async getStats(): Promise<any> {
+  async getStats(): Promise<IncidentStats> {
     await this.initDB();
     if (!this.db) return StorageFallback.getStats();
     return new Promise((res) => {
-      const stats = { total: 0, active: 0, resolved: 0, unseen: 0, byModule: {} as any, bySeverity: {} as any };
-      this.db!.transaction([STORE_NAME], "readonly").objectStore(STORE_NAME).openCursor().onsuccess = (e: any) => {
-        const c = e.target.result;
+      const stats: IncidentStats = { total: 0, active: 0, resolved: 0, unseen: 0, byModule: {}, bySeverity: {} };
+      const req = this.db!.transaction([STORE_NAME], "readonly").objectStore(STORE_NAME).openCursor();
+      req.onsuccess = () => {
+        const c = req.result;
         if (c) {
-          const i = c.value; stats.total++;
+          const i = c.value as Incident;
+          stats.total++;
           if (i.status === "active") stats.active++; else stats.resolved++;
           if (!i.seen) stats.unseen++;
           stats.byModule[i.module] = (stats.byModule[i.module] || 0) + 1;

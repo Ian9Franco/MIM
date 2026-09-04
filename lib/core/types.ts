@@ -328,7 +328,7 @@ export interface RecoveryAction {
   automated: boolean;
   priority: number;
   risk: "low" | "medium" | "high";
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 export interface RecoverySession {

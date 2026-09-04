@@ -105,7 +105,7 @@ export function withApiGuard<
     }
 
     // 2. Validate Dynamic Route Params (if paramsSchema is configured)
-    let parsedParams: any = {};
+    let parsedParams: unknown = {};
     if (context?.params) {
       const rawParams = context.params instanceof Promise ? await context.params : context.params;
       if (config.paramsSchema) {
@@ -132,7 +132,7 @@ export function withApiGuard<
     }
 
     // 3. Validate Query Parameters (if querySchema is configured)
-    let parsedQuery: any = {};
+    let parsedQuery: unknown = {};
     if (config.querySchema) {
       try {
         const url = new URL(request.url);
@@ -145,7 +145,7 @@ export function withApiGuard<
         if (!queryValidation.success) {
           return new Response(
             JSON.stringify({
-              error: "INVALID_QUERY_PARAMETERS",
+              error: "INVALID_QUERY_PARAMS",
               details: queryValidation.error.flatten(),
             }),
             {
@@ -161,8 +161,8 @@ export function withApiGuard<
       } catch {
         return new Response(
           JSON.stringify({
-            error: "MALFORMED_URL",
-            message: "No se pudo interpretar la URL de la petición.",
+            error: "MALFORMED_QUERY_PARAMS",
+            message: "No se pudieron procesar los parámetros de consulta.",
           }),
           {
             status: 400,
@@ -176,7 +176,7 @@ export function withApiGuard<
     }
 
     // 4. Validate Request Body (if bodySchema is configured)
-    let parsedBody: any = {};
+    let parsedBody: unknown = {};
     if (config.bodySchema) {
       try {
         const rawJson = await request.json();
@@ -218,9 +218,9 @@ export function withApiGuard<
     try {
       const response = await handler({
         request,
-        query: parsedQuery,
-        body: parsedBody,
-        params: parsedParams,
+        query: parsedQuery as z.infer<TQuery>,
+        body: parsedBody as z.infer<TBody>,
+        params: parsedParams as z.infer<TParams>,
         clientIp,
       });
 
@@ -237,7 +237,7 @@ export function withApiGuard<
         statusText: response.statusText,
         headers: responseHeaders,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`[ApiGuard] Error procesando ruta ${request.url}:`, err);
       return new Response(
         JSON.stringify({

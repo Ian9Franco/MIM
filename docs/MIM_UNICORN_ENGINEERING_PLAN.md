@@ -20,6 +20,26 @@ No agregar microservicios, Kubernetes, colas o capas sólo para sumar buzzwords.
 
 La ingeniería extra debe resolver problemas reales de MIM.
 
+### Estrategia: Demostración de Criterio vs. Infraestructura Vacía
+
+> *"Esto nunca va a tener ese caudal de usuarios, pero quiero jugar a que sí."*
+
+Un revisor técnico senior o recruiter no busca 9 subsistemas a medio terminar ni arquitecturas distribuidas innecesarias. Busca **2 o 3 piezas construidas de forma impecable**, respaldadas por una base de código limpia y documentadas con criterio de trade-offs.
+
+La senioridad no se demuestra inventando complejidad, sino **demostrando por qué se elige o se descarta cada tecnología**.
+
+### Decisiones conscientes de diseño (Qué NO construir y por qué)
+
+1. **Sync Distribuido multi-master / CRDT:**  
+   *Decisión:* **Descartado / Pospuesto.**  
+   *Fundamento:* Un algoritmo CRDT resuelve conflictos concurrentes entre miles de usuarios simultáneos. MIM sincroniza el perfil de una sola persona entre dos dispositivos propios (Desktop y Laptop). Implementar Last-Write-Wins (LWW) con timestamps y revision hashes resuelve el 99% de los escenarios reales con una fracción ínfima de código y complejidad.
+2. **Chaos Lab como producto / UI interactiva:**  
+   *Decisión:* **Descartado de la UI.**  
+   *Fundamento:* Una UI de "caos" es código descartable de mantenimiento visual. El valor técnico reside en una **suite de Fault Injection automatizada en CI/tests** (`scripts/__tests__`) que simule fallos de proveedores (429, timeouts, disco lleno) de forma determinista y reproducible.
+3. **Circuit Breaker complejo con sondas Half-Open distribuidas:**  
+   *Decisión:* **Simplificado.**  
+   *Fundamento:* Un cliente HTTP unificado con timeouts estrictos, retry con exponential backoff + full jitter, y caché en memoria/disco entrega el 95% de la resiliencia operativa necesaria para Modrinth, CurseForge y Gemini sin añadir máquinas de estado asíncronas frágiles.
+
 ---
 
 # Campos a reforzar
@@ -918,61 +938,58 @@ Esto representa muy bien la filosofía "overengineered por dentro, correcto por 
 
 No es una orden rígida. PR Cycle debe validar siempre contra el código actual.
 
-## Fase 1 — Reliability Foundation
+## Fase 0 — Foundational Rigor & Type Hygiene (Prioridad Cero)
 
-1. Secret management (`safeStorage`)
-2. Error taxonomy
-3. Shared network client básico
-4. timeout + retry + cancellation
-5. fault fixtures iniciales
-6. architecture dependency checks
+Antes de construir abstracciones avanzadas, la base de código debe reflejar solidez profesional:
+1. Saneamiento de `any` en módulos core (`lib/apiGuard.ts`, `lib/intelligence`, `lib/security`).
+2. Reducción y saneamiento de warnings de linter (abandonar gradualmente `--max-warnings=9999`).
+3. Ampliación de tests unitarios en la lógica dura (`lib/intelligence/sage`, sanitización y seguridad).
+4. Tipado estricto con schemas Zod como single source of truth.
 
-## Fase 2 — Network & Backend Maturity
+## Fase 1 — Network Resilience & Error Taxonomy (Alta Señal)
 
-1. Circuit breaker
-2. rate-limit awareness
-3. idempotency
-4. jobs/progress abstraction
-5. resumable downloads
-6. golden fixtures
+1. MIM Network Core unificado (timeout, retry, exponential backoff, full jitter, cache).
+2. Rate-limit awareness para APIs externas (Modrinth, CurseForge, Gemini).
+3. Taxonomía de errores formal (`MIM_PROVIDER_RATE_LIMIT`, `MIM_FILE_LOCKED`, etc.) con códigos y flags `retryable`.
+4. Idempotencia básica en operaciones de descarga e instalación.
 
-## Fase 3 — Storage & Trusted Pipeline
+## Fase 2 — Security Baseline
 
-1. provenance
-2. hash identity
-3. content references
-4. integrity scrub
-5. safe GC
-6. versioned migrations
-7. supply-chain pipeline
+1. Secret management en Electron: migración de API keys y tokens a `safeStorage`.
+2. Prohibición de persistencia de secretos en texto plano.
+3. Provenance y verificación SHA256 estricta en descargas de artefactos externos.
+4. Security regression fixtures (ZIP bomb, path traversal, malformed JARs).
 
-## Fase 4 — Cloud / Distributed
+## Fase 3 — AI Engineering Evals
 
-1. operation log
-2. revisions
-3. device awareness
-4. incremental sync
-5. conflict policies
-6. offline replay
-7. audit trail
+1. Dataset fijo de evaluación para MimBot (15 a 20 casos de prueba con crash logs reales y ground truth).
+2. Benchmark automatizado midiendo exactitud diagnóstica, alucinación y latencia/costo.
+3. Tool calling controlado para consulta de dependencias y estado del sistema.
+4. Distinción explícita de respuestas con evidencia vs. inferencia.
 
-## Fase 5 — AI Engineering
+## Fase 4 — Fault Injection Suite (Testing Realista)
 
-1. MimBot tool interface
-2. local/context RAG
-3. evidence tagging
-4. evaluation dataset
-5. model routing
-6. multimodal explainer
+1. Tests automatizados de fallos provocados en `scripts/__tests__`:
+   - Modrinth caído / offline.
+   - Proveedores con HTTP 429 (Rate Limit).
+   - Gemini cuota agotada.
+   - Disco lleno / filesystem read-only.
+   - Archivo JAR bloqueado por otro proceso.
+2. Golden fixtures para logs de crash y árboles de dependencias.
 
-## Fase 6 — Reliability Lab
+## Fase 5 — Storage Integrity & Pipelines Avanzados
 
-1. network failure injection
-2. provider 429 injection
-3. filesystem failures
-4. corrupted state fixtures
-5. interrupted operation tests
-6. mutation testing
+1. Hash identity y content references para modpacks y mods compartidos.
+2. Garbage collection seguro con período de cuarentena / ventana de retención.
+3. Integrity scrub programable para detectar corrupción o metadata huérfana.
+4. Versioned storage migrations idempotentes y reproducibles.
+
+## Fase 6 — Evaluado y Pospuesto (Considered & Deferred)
+
+Arquitecturas documentadas para justificar decisiones de diseño, pero congeladas por relación señal/costo:
+- **Sync distribuido multi-master con CRDT**: Reemplazado por Last-Write-Wins con revision timestamps para 1 usuario en 2 dispositivos.
+- **Chaos Lab interactivo con UI**: Reemplazado por la suite de tests de Fault Injection en CI.
+- **RAG vectorial local masivo**: Pospuesto en favor de evaluación sistemática sobre prompts estructurados y datos contextuales directos.
 
 ---
 

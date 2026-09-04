@@ -19,7 +19,7 @@ export interface Incident {
   module: "SAGE" | "FOMO" | "TWEAK" | "CONFIG" | "SYSTEM";
   status: "active" | "resolved";
   seen: boolean;
-  meta?: any;
+  meta?: Record<string, unknown>;
 }
 
 class IncidentManager {

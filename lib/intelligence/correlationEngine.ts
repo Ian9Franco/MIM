@@ -15,7 +15,7 @@ interface CorrelationRule {
   name: string;
   enabled: boolean;
   priority: number;
-  condition: (events: Array<{ name: string; payload: any; timestamp: number }>) => { title: string; detail: string; severity: "danger" | "warning" | "info" } | null;
+  condition: (events: Array<{ name: string; payload: unknown; timestamp: number }>) => { title: string; detail: string; severity: "danger" | "warning" | "info" } | null;
 }
 
 interface RuleResult {
@@ -26,7 +26,7 @@ interface RuleResult {
 }
 
 class CorrelationEngine {
-  private eventHistory: Array<{ name: string; payload: any; timestamp: number }> = [];
+  private eventHistory: Array<{ name: string; payload: unknown; timestamp: number }> = [];
   private readonly WINDOW_MS = 30000; // Ventana de 30 segundos para correlación
   
   // Memoización y cache
@@ -98,21 +98,12 @@ class CorrelationEngine {
     }
   }
   private setupListeners() {
-    // Escuchar TODOS los eventos del bus para el historial
-    const allEvents: Array<keyof MimEventMap> = [
-      "fomo:download-completed", 
-      "sage:crash-detected", 
-      "sage:security-risk", 
-      "tweak:config-updated"
-    ];
-
-    allEvents.forEach(eventName => {
-      eventBus.subscribe(eventName as any, (payload: any) => {
-        this.addEvent(String(eventName), payload);
-      });
-    });
+    eventBus.subscribe("fomo:download-completed", (payload) => this.addEvent("fomo:download-completed", payload));
+    eventBus.subscribe("sage:crash-detected", (payload) => this.addEvent("sage:crash-detected", payload));
+    eventBus.subscribe("sage:security-risk", (payload) => this.addEvent("sage:security-risk", payload));
+    eventBus.subscribe("tweak:config-updated", (payload) => this.addEvent("tweak:config-updated", payload));
   }
-  private addEvent(name: string, payload: any) {
+  private addEvent(name: string, payload: unknown) {
     const now = Date.now();
     this.eventHistory.push({ name, payload, timestamp: now });
 

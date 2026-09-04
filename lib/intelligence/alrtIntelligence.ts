@@ -34,7 +34,7 @@ class AlrtIntelligence {
   }
 
   private initializePatterns() {
-    DEFAULT_PATTERNS.forEach((p: any) => {
+    DEFAULT_PATTERNS.forEach((p) => {
       this.behavioralPatterns.set(p.id, {
         id: p.id, description: p.description, frequency: 0,
         riskLevel: p.severity === "danger" ? "high" : p.severity === "warning" ? "medium" : "low",
@@ -43,7 +43,7 @@ class AlrtIntelligence {
     });
   }
 
-  private processEvent(type: keyof MimEventMap, payload: any) {
+  private processEvent(type: keyof MimEventMap, payload: unknown) {
     const event: OperationalEvent = {
       id: `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type, timestamp: Date.now(), payload, source: this.determineSource(type)
@@ -54,7 +54,7 @@ class AlrtIntelligence {
     eventBus.emit("system:refresh", { trigger: "auto", scope: "module", timestamp: new Date().toISOString() });
   }
 
-  private determineSource(type: string): any {
+  private determineSource(type: string): OperationalEvent["source"] {
     if (type.startsWith("fomo:")) return "FOMO";
     if (type.startsWith("sage:")) return "SAGE";
     if (type.startsWith("tweak:")) return "TWEAK";
@@ -72,7 +72,7 @@ class AlrtIntelligence {
   }
 
   private checkPattern(pattern: EventPattern) {
-    const relevant = this.eventBuffer.filter(e => pattern.eventSequence.some((s: any) => s.eventType === e.type));
+    const relevant = this.eventBuffer.filter(e => pattern.eventSequence.some((s) => s.eventType === e.type));
     if (relevant.length < pattern.eventSequence.length) return;
 
     const sorted = relevant.sort((a, b) => a.timestamp - b.timestamp);
@@ -88,11 +88,12 @@ class AlrtIntelligence {
 
   private matchesPattern(events: OperationalEvent[], pattern: EventPattern): boolean {
     if (events[events.length - 1].timestamp - events[0].timestamp > pattern.eventSequence[0].timeWindow) return false;
-    return pattern.eventSequence.every((seq: any, i: number) => {
+    return pattern.eventSequence.every((seq, i: number) => {
       const e = events[i];
       if (e.type !== seq.eventType) return false;
       if (seq.conditions) {
-        return Object.entries(seq.conditions).every(([k, v]) => e.payload[k] === v);
+        const payloadObj = (e.payload && typeof e.payload === "object") ? (e.payload as Record<string, unknown>) : null;
+        return Object.entries(seq.conditions).every(([k, v]) => payloadObj?.[k] === v);
       }
       return true;
     });

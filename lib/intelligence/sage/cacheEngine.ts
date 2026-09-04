@@ -42,10 +42,14 @@ export interface SageCacheEntry {
 
 export type SageCacheStore = Record<string, SageCacheEntry>;
 
+type NodeFs = typeof import("fs");
+type NodePath = typeof import("path");
+type NodeCrypto = typeof import("crypto");
+
 // Dynamic Node loader to keep frontend bundlers clean
-let nodeFs: any = null;
-let nodePath: any = null;
-let nodeCrypto: any = null;
+let nodeFs: NodeFs | null = null;
+let nodePath: NodePath | null = null;
+let nodeCrypto: NodeCrypto | null = null;
 
 if (typeof window === "undefined") {
   try {
@@ -203,9 +207,10 @@ export function saveSageCacheEntry(entry: SageCacheEntry): Promise<void> {
         try {
           nodeFs.renameSync(tempFile, cacheFile);
           renamed = true;
-        } catch (renameErr: any) {
+        } catch (renameErr: unknown) {
           attempts++;
-          if (renameErr.code === "EBUSY" || renameErr.code === "EPERM") {
+          const errCode = (renameErr as { code?: string })?.code;
+          if (errCode === "EBUSY" || errCode === "EPERM") {
             await new Promise((r) => setTimeout(r, 20 * attempts));
           } else {
             throw renameErr;

@@ -7,7 +7,7 @@ export interface EventPattern {
   eventSequence: Array<{
     eventType: keyof MimEventMap;
     timeWindow: number; // milisegundos
-    conditions?: Record<string, any>;
+    conditions?: Record<string, unknown>;
   }>;
   severity: "info" | "warning" | "danger";
   confidence: number; // 0-100
@@ -18,7 +18,7 @@ export interface OperationalEvent {
   id: string;
   type: keyof MimEventMap;
   timestamp: number;
-  payload: any;
+  payload: unknown;
   source: "FOMO" | "SAGE" | "TWEAK" | "CONFIG" | "SYSTEM";
   correlationId?: string;
 }
@@ -48,5 +48,5 @@ export interface BehavioralPattern {
   frequency: number; // ocurrencias por hora
   riskLevel: "low" | "medium" | "high";
   lastSeen: number;
-  context: Record<string, any>;
+  context: Record<string, unknown> | EventPattern;
 }

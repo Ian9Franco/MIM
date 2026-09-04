@@ -11,6 +11,15 @@ import crypto from "crypto";
 import { CRASH_PATTERNS, SEVERITY_MAP } from "@/lib/intelligence/sage-data";
 import type { CrashAnalysis, RecoveryAction, RecoverySession } from "@/lib/core/types";
 
+interface CrashDetectionPayload {
+  logFile?: string;
+  sessionId?: string;
+  projectPath?: string;
+  crashType?: string;
+  severity?: string;
+  [key: string]: unknown;
+}
+
 class SageRecoveryEngine {
   private activeSessions = new Map<string, RecoverySession>();
   private projectPath = "";
@@ -25,12 +34,12 @@ class SageRecoveryEngine {
     });
   }
 
-  private async handleCrashDetection(data: any) {
+  private async handleCrashDetection(data: CrashDetectionPayload) {
     const sessionId = crypto.randomUUID();
     const analysis = await this.analyzeCrash(data);
     const session: RecoverySession = {
       id: sessionId, crashAnalysis: analysis, actions: this.generateRecoveryActions(analysis),
-      appliedActions: [], status: "ready", timestamp: new Date().toISOString(), projectPath: data.projectPath || this.projectPath
+      appliedActions: [], status: "ready", timestamp: new Date().toISOString(), projectPath: (data.projectPath as string) || this.projectPath
     };
     this.activeSessions.set(sessionId, session);
 
@@ -45,7 +54,7 @@ class SageRecoveryEngine {
     eventBus.emit("system:refresh", { trigger: "auto", scope: "project", timestamp: new Date().toISOString() });
   }
 
-  private async analyzeCrash(crashData: any): Promise<CrashAnalysis> {
+  private async analyzeCrash(crashData: CrashDetectionPayload): Promise<CrashAnalysis> {
     const logFile = crashData.logFile || "latest.log";
     const logPath = path.join(this.projectPath, "logs", logFile);
     let logContent = ""; 
@@ -79,7 +88,7 @@ class SageRecoveryEngine {
 
   private generateRecoveryActions(analysis: CrashAnalysis): RecoveryAction[] {
     const actions: RecoveryAction[] = [];
-    const add = (id: string, type: RecoveryAction["type"], desc: string, priority = 2, automated = true, risk: RecoveryAction["risk"] = "medium", params?: any) => 
+    const add = (id: string, type: RecoveryAction["type"], desc: string, priority = 2, automated = true, risk: RecoveryAction["risk"] = "medium", params?: Record<string, unknown>) => 
       actions.push({ id, type, description: desc, automated, priority, risk, params });
 
     if (analysis.crashType === "dependency_missing") analysis.missingDependencies?.forEach((dep: string) => add(`install-${dep}`, "install_dependency", `Instalar: ${dep}`, 1, true, "low", { dependency: dep }));
@@ -101,7 +110,7 @@ class SageRecoveryEngine {
     session.status = "applying";
     try {
       let success = false;
-      const p = action.params || {};
+      const p = (action.params || {}) as Record<string, string>;
       if (action.type === "install_dependency") { eventBus.emit("fomo:version-selected", { projectId: p.dependency, versionId: "latest", versionNumber: "latest", minecraftVersion: "1.20.1", loader: "forge" }); success = true; }
       else if (action.type === "disable_mod") {
         const mPath = path.join(this.projectPath, "mods");
@@ -122,13 +131,15 @@ class SageRecoveryEngine {
     } catch { session.status = "failed"; return false; }
   }
 
-  private async handleMissingDependency(data: any) {
-    await incidentManager.createIncident({ id: `sage-dep-${Date.now()}`, title: "Falta Dependencia", detail: data.dependency, severity: "warning", module: "SAGE" });
-    eventBus.emit("fomo:version-selected", { projectId: data.dependency, versionId: "latest", versionNumber: "latest", minecraftVersion: "1.20.1", loader: "forge" });
+  private async handleMissingDependency(data: { dependency?: string; message?: string; context?: Record<string, unknown>; [key: string]: unknown }) {
+    const dep = data.dependency || (data.context?.dependency as string) || "unknown-dependency";
+    await incidentManager.createIncident({ id: `sage-dep-${Date.now()}`, title: "Falta Dependencia", detail: dep, severity: "warning", module: "SAGE" });
+    eventBus.emit("fomo:version-selected", { projectId: dep, versionId: "latest", versionNumber: "latest", minecraftVersion: "1.20.1", loader: "forge" });
   }
 
-  private async handleConflictDetection(data: any) {
-    await incidentManager.createIncident({ id: `sage-conf-${Date.now()}`, title: "Conflicto", detail: data.conflictType, severity: "warning", module: "SAGE", meta: data });
+  private async handleConflictDetection(data: { conflictType?: string; message?: string; context?: Record<string, unknown>; [key: string]: unknown }) {
+    const conflictType = data.conflictType || (data.context?.conflictType as string) || data.message || "unknown-conflict";
+    await incidentManager.createIncident({ id: `sage-conf-${Date.now()}`, title: "Conflicto", detail: conflictType, severity: "warning", module: "SAGE", meta: data as Record<string, unknown> });
   }
 
   getRecoverySession(id: string) { return this.activeSessions.get(id); }

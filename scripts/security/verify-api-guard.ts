@@ -3,8 +3,8 @@
 /**
  * MIM — API Guard structural enforcement
  *
- * Every Next.js App Router HTTP handler exported from app/api/**/route.ts or
- * web/app/api/**/route.ts must be provably wrapped by the real withApiGuard.
+ * Every Next.js App Router HTTP handler exported from API route modules under
+ * app/api or web/app/api must be provably wrapped by the real withApiGuard.
  *
  * This verifier intentionally fails closed: comments, strings, imports alone,
  * direct function exports, unknown aliases, and re-exports do not count as

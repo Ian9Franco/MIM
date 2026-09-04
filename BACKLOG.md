@@ -57,6 +57,9 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
   - [x] **Profiler Preventivo de Logs en Vivo (`latest.log`, `debug.log`)**: Análisis de estado del juego en cliente y servidor para detectar memory leaks, packet/entity spam, tick-lag y sugerir stacks de optimización (Sodium, Lithium, FerriteCore, ModernFix, flags JVM) ([`lib/intelligence/sage/logProfiler.ts`](file:///d:/.mine/manager/lib/intelligence/sage/logProfiler.ts)).
   - [x] **UI Interactivo con Icono Saltarín**: Panel interactivo del copiloto y disparador en SAGE con animación `.animate-slime` ([`components/sage/parts/SageMimbotCopilot.tsx`](file:///d:/.mine/manager/components/sage/parts/SageMimbotCopilot.tsx)).
   - *Documento de arquitectura formal:* [`docs/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md`](file:///d:/.mine/manager/docs/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md).
+- [x] **Modularización de Componentes Gigantes (`ModDetailsSheet.tsx`)**:
+  - [x] Desacoplamiento de componente monolítico de 2,347 líneas en submódulos especializados en [`web/components/mod-details/`](file:///d:/.mine/manager/web/components/mod-details/).
+  - [x] Todos los submódulos cumplen la regla estricta de permanecer por debajo de 500 líneas de código funcional.
 - [ ] **Cache Distribuido Redis/Upstash (Opcional)**:
   - Para entornos serverless con múltiples réplicas independientes en Vercel donde el rate limiter en memoria local de Node.js pueda requerir sincronización global.
   - Driver desacoplado en [`web/lib/rateLimiter.ts`](file:///d:/.mine/manager/web/lib/rateLimiter.ts) con fallback transparente a Map local en ausencia de variables de entorno.

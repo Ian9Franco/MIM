@@ -70,6 +70,10 @@ curseforge_picks_cache.json
 brain/
 /brain/
 **/scratch/
+.mim-index/
+lib/.mim-index/
+docs/ADUANA_BENCHMARKS.md
+docs/SAGE_EVALUATION.md
 
 # Web subproject ignores
 /web/node_modules/

@@ -57,13 +57,13 @@ npm run pr:review audit/pr-review-shell-safety
 
 #### Paso B: Si te gusta y pasó los tests ➔ Subir a `main`
 ```bash
-npm run pr:review --promote
+npm run pr:promote
 ```
 *Automáticamente vuelve a `main`, se sincroniza con origin, mergea la rama del PR y **pushea a `origin/main`** con tu bypass de admin.*
 
 #### Paso C: Si no te gustó o querés volver sin tocar nada
 ```bash
-npm run pr:review --return
+npm run pr:return
 ```
 *Te devuelve a tu `main` intacto.*
 
@@ -148,8 +148,8 @@ npm run start:standalone
 | **Verificar blindaje estructural API Guard** | `npm run lint:api-guard` |
 | **Correr todas las pruebas (13 suites)** | `npm test` |
 | **Auditar un PR o rama de la IA** | `npm run pr:review <numero_o_rama>` |
-| **Promover y mergear el PR a main** | `npm run pr:review --promote` |
-| **Volver a main sin mergear** | `npm run pr:review --return` |
+| **Promover y mergear el PR a main** | `npm run pr:promote` |
+| **Volver a main sin mergear** | `npm run pr:return` |
 | **Build + preparar assets (local/standalone)** | `npm run build:standalone` |
 | **Lanzar Electron localmente** | `npm run start:standalone` |
 | **Iniciar asistente de nueva Release** | `npm run release` |

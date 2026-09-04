@@ -236,11 +236,10 @@ async function reviewTarget(target) {
   log(`✅ VEREDICTO: EL PR CUMPLE 100% DE LOS ESTÁNDARES DE INGENIERÍA`, "green");
   log(`─────────────────────────────────────────────────────────────────────────────`, "green");
   log(`Todas las compuertas pasaron en verde. Podés revisar los archivos si querés.`);
-  log(`\nOpciones siguientes:`);
   log(`  👉 Para mergear y subir a main:`, "cyan");
-  log(`     npm run pr:review --promote\n`);
+  log(`     npm run pr:promote  (o npm run pr:review promote)\n`);
   log(`  👉 Para descartar o volver a main sin mergear:`, "yellow");
-  log(`     npm run pr:review --return\n`);
+  log(`     npm run pr:return   (o npm run pr:review return)\n`);
 }
 
 function printFailureReport(reason) {
@@ -251,7 +250,7 @@ function printFailureReport(reason) {
   log(`\nEl código contiene fallas o no cumple con las políticas de seguridad de MIM.`);
   log(`Opciones siguientes:`);
   log(`  👉 Para volver a main sin mergear:`, "yellow");
-  log(`     npm run pr:review --return\n`);
+  log(`     npm run pr:return\n`);
   process.exit(1);
 }
 
@@ -359,8 +358,8 @@ async function main() {
     log("\n📖 Uso de MIM AI PR Inspector:", "bold");
     log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para revisar.");
     log("  npm run pr:review <numero_o_rama>   Inspecciona y audita un PR o rama de la IA.");
-    log("  npm run pr:review --promote         Mergea la rama inspeccionada a main y la pushea.");
-    log("  npm run pr:review --return          Vuelve a main de forma segura.\n");
+    log("  npm run pr:promote                  Mergea la rama inspeccionada a main y la pushea.");
+    log("  npm run pr:return                   Vuelve a main de forma segura.\n");
     log("Ejemplos:");
     log("  npm run pr:review 2");
     log("  npm run pr:review audit/pr-review-shell-safety");
@@ -371,12 +370,12 @@ async function main() {
 
   const firstArg = rawArgs[0];
 
-  if (firstArg === "--promote" || firstArg === "-m" || firstArg === "--merge") {
+  if (firstArg === "promote" || firstArg === "--promote" || firstArg === "-m" || firstArg === "--merge") {
     await handlePromote();
     return;
   }
 
-  if (firstArg === "--return" || firstArg === "-r" || firstArg === "--back" || firstArg === "--abort") {
+  if (firstArg === "return" || firstArg === "--return" || firstArg === "-r" || firstArg === "--back" || firstArg === "--abort") {
     handleReturn();
     return;
   }

@@ -1,15 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const validateKeysSchema = z.object({
+  curseforge: z.string().optional().nullable(),
+  modrinth: z.string().optional().nullable(),
+  virusTotal: z.string().optional().nullable(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const { curseforge, modrinth, virusTotal } = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body payload" }, { status: 400 });
+    }
+
+    const parsed = validateKeysSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Validation error", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { curseforge, modrinth, virusTotal } = parsed.data;
     const results: Record<string, boolean | null> = {};
 
     // 1. CurseForge Validation (Required)
-    if (curseforge) {
+    if (curseforge?.trim()) {
       try {
         const cfRes = await fetch("https://api.curseforge.com/v1/games/432", {
-          headers: { "x-api-key": curseforge }
+          headers: { "x-api-key": curseforge.trim() },
         });
         results.curseforge = cfRes.ok;
       } catch {
@@ -20,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Modrinth Validation (Optional)
-    if (modrinth) {
+    if (modrinth?.trim()) {
       try {
         let token = modrinth.trim();
         if (!token.startsWith("mrp_") && !token.startsWith("Bearer ") && token.length < 100) {
@@ -28,10 +50,10 @@ export async function POST(req: NextRequest) {
         }
 
         const modRes = await fetch("https://api.modrinth.com/v2/user", {
-          headers: { 
+          headers: {
             "User-Agent": "MIM-App/1.0 (contact@mim.local)",
-            "Authorization": token 
-          }
+            "Authorization": token,
+          },
         });
         results.modrinth = modRes.ok;
       } catch {
@@ -42,10 +64,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. VirusTotal Validation (Optional)
-    if (virusTotal) {
+    if (virusTotal?.trim()) {
       try {
         const vtRes = await fetch("https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8", {
-          headers: { "x-apikey": virusTotal }
+          headers: { "x-apikey": virusTotal.trim() },
         });
         results.virusTotal = vtRes.ok;
       } catch {
@@ -56,7 +78,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ results });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

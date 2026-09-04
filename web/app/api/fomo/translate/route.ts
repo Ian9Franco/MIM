@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 import { mimMsg } from "@/lib/voice";
-
+import { translateText } from "@/lib/translator";
 
 /**
  * Strict schema validation for incoming translation requests.
@@ -15,80 +15,6 @@ const requestSchema = z.object({
     .min(1, "Text payload cannot be empty")
     .max(3000, "Text exceeds maximum allowed length of 3000 characters"),
 });
-
-/**
- * Translates a single text block using the endpoint with strict timeout.
- */
-async function translateBlock(text: string): Promise<string> {
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(text)}`;
-  
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
-
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) {
-      throw new Error(`Google Translate upstream returned HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    if (!data || !Array.isArray(data[0])) return text;
-
-    return data[0]
-      .map((item: any) => (Array.isArray(item) && typeof item[0] === "string" ? item[0] : ""))
-      .join("");
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-/**
- * Splits lines and groups them into moderate batches (up to 1000 characters)
- * to prevent hammering the upstream endpoint with 50+ concurrent requests.
- */
-async function translateBatchedLines(source: string): Promise<string> {
-  const lines = source.split("\n");
-  const translatedLines: string[] = [];
-
-  // Group lines into chunks under 1000 characters
-  let currentChunk: string[] = [];
-  let currentLength = 0;
-
-  for (const line of lines) {
-    if (!line.trim()) {
-      // Flush current chunk if empty line encountered
-      if (currentChunk.length > 0) {
-        const chunkText = currentChunk.join("\n");
-        const translatedChunk = await translateBlock(chunkText);
-        translatedLines.push(translatedChunk);
-        currentChunk = [];
-        currentLength = 0;
-      }
-      translatedLines.push("");
-      continue;
-    }
-
-    if (currentLength + line.length > 1000 && currentChunk.length > 0) {
-      const chunkText = currentChunk.join("\n");
-      const translatedChunk = await translateBlock(chunkText);
-      translatedLines.push(translatedChunk);
-      currentChunk = [];
-      currentLength = 0;
-    }
-
-    currentChunk.push(line);
-    currentLength += line.length + 1;
-  }
-
-  // Flush remaining
-  if (currentChunk.length > 0) {
-    const chunkText = currentChunk.join("\n");
-    const translatedChunk = await translateBlock(chunkText);
-    translatedLines.push(translatedChunk);
-  }
-
-  return translatedLines.join("\n");
-}
 
 export async function POST(request: Request) {
   // 1. Enforce strict rate limiting per IP (20 requests per minute)
@@ -134,19 +60,27 @@ export async function POST(request: Request) {
 
   const cleanText = parsed.data.text.replace(/\r\n/g, "\n");
 
-  // 3. Batched execution with graceful degradation
+  // 3. Execution via official translation service with graceful degradation
   try {
-    const translatedText = await translateBatchedLines(cleanText);
+    const result = await translateText(cleanText, "es");
+
     return NextResponse.json(
-      { translatedText, degraded: false },
+      {
+        translatedText: result.translatedText,
+        degraded: result.degraded,
+        provider: result.provider,
+        reason: result.reason,
+      },
       {
         headers: {
           "X-RateLimit-Remaining": String(rateLimit.remaining),
         },
       }
     );
-  } catch (error: any) {
-    console.warn(`[/api/fomo/translate] Upstream translation degraded for IP ${clientIp}:`, error?.message || error);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn(`[/api/fomo/translate] Official translation degraded for IP ${clientIp}:`, errorMsg);
+
     // Graceful fallback: return original text rather than a fatal 500 error that crashes the UI
     return NextResponse.json(
       {

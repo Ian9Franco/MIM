@@ -50,6 +50,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const headerPersonality = request.headers.get("x-bot-personality");
+    const requestedPersonality =
+      body.personality ||
+      (headerPersonality === "standard" || headerPersonality === "bully" ? headerPersonality : undefined) ||
+      (process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully");
+
     // Modo Mini-Chat: Responder pregunta de seguimiento
     if (body.question || body.mode === "chat") {
       const chatRes = await chatWithProjectAssistant(
@@ -68,6 +74,7 @@ export async function POST(request: Request) {
           messages: Array.isArray(body.messages) ? body.messages : [],
           question: body.question,
           model,
+          personality: requestedPersonality,
         },
         resolvedApiKey
       );
@@ -86,6 +93,7 @@ export async function POST(request: Request) {
       loaders,
       galleryUrls: Array.isArray(galleryUrls) ? galleryUrls : [],
       model,
+      personality: requestedPersonality,
     };
 
     const result = await explainModWithGemini(input, resolvedApiKey);

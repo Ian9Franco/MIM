@@ -41,17 +41,20 @@ function isTrustedMod(modId: string, filename: string): boolean {
 }
 
 // ── Cloud API & Cache with Serialized Mutex / Concurrency Control ─────────
+export type VirusTotalCachedEntry = NonNullable<SecurityScanResult["virusTotal"]>;
+export type VirusTotalCache = Record<string, VirusTotalCachedEntry>;
+
 const CACHE_FILE = path.join(path.dirname(path.dirname(__filename)), ".mim-index", "cache", "vt-cache.json");
-let inMemoryVTCache: Record<string, any> | null = null;
+let inMemoryVTCache: VirusTotalCache | null = null;
 let vtWriteQueue: Promise<void> = Promise.resolve();
 
-export function loadVTCache(): Record<string, any> {
+export function loadVTCache(): VirusTotalCache {
   if (inMemoryVTCache !== null) {
     return inMemoryVTCache;
   }
   if (fs.existsSync(CACHE_FILE)) {
     try {
-      inMemoryVTCache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+      inMemoryVTCache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8")) as VirusTotalCache;
       return inMemoryVTCache || {};
     } catch (err) {
       console.warn("[/lib/security-scanner] Corrupted VT cache file, starting with empty cache:", err);
@@ -63,7 +66,7 @@ export function loadVTCache(): Record<string, any> {
   return inMemoryVTCache;
 }
 
-export function saveVTCache(newEntries: Record<string, any>): Promise<void> {
+export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
   // 1. In-memory synchronous update: ensures concurrent reads in the same tick immediately see fresh entries
   const current = loadVTCache();
   Object.assign(current, newEntries);
@@ -75,16 +78,16 @@ export function saveVTCache(newEntries: Record<string, any>): Promise<void> {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     // Read on-disk state to merge in case another process modified the file
-    let diskData: Record<string, any> = {};
+    let diskData: VirusTotalCache = {};
     if (fs.existsSync(CACHE_FILE)) {
       try {
-        diskData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+        diskData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8")) as VirusTotalCache;
       } catch (err) {
         console.warn("[/lib/security-scanner] Failed to read existing VT cache during merge:", err);
       }
     }
 
-    const merged = { ...diskData, ...inMemoryVTCache };
+    const merged: VirusTotalCache = { ...diskData, ...inMemoryVTCache };
     inMemoryVTCache = merged;
 
     const tempFile = `${CACHE_FILE}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
@@ -98,9 +101,10 @@ export function saveVTCache(newEntries: Record<string, any>): Promise<void> {
         try {
           fs.renameSync(tempFile, CACHE_FILE);
           break;
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const nodeErr = err as NodeJS.ErrnoException;
           retries--;
-          if ((err.code === "EBUSY" || err.code === "EPERM") && retries > 0) {
+          if ((nodeErr?.code === "EBUSY" || nodeErr?.code === "EPERM") && retries > 0) {
             await new Promise(r => setTimeout(r, 50));
           } else if (retries === 0) {
             // Windows fallback: copy and unlink
@@ -152,13 +156,22 @@ async function checkVirusTotalHash(sha256: string): Promise<SecurityScanResult["
       return null;
     }
     
-    const json = await res.json();
+    const json = (await res.json()) as {
+      data?: {
+        attributes?: {
+          last_analysis_stats?: Record<string, number>;
+        };
+      };
+    };
     const s = json?.data?.attributes?.last_analysis_stats;
     if (!s) return null;
+
+    const statsValues = Object.values(s);
+    const totalEngineCount = statsValues.reduce((acc, count) => acc + (typeof count === "number" ? count : 0), 0);
     
     const result = {
       maliciousCount: (s.malicious || 0) + (s.suspicious || 0),
-      totalEngineCount: Object.values(s).reduce((a: any, b: any) => a + b, 0) as number,
+      totalEngineCount,
       detailsUrl: `https://www.virustotal.com/gui/file/${sha256}`,
       fromCache: false
     };
@@ -277,8 +290,9 @@ export async function scanSecurity(filePath: string, localOnly = false): Promise
     if (classCount > 5 && obfuscatedCount / classCount > 0.5) {
       findings.push({ category: "obfuscation", severity: "high", description: "Heavy obfuscation", scoreImpact: 20 });
     }
-  } catch (zipErr: any) {
-    console.warn(`[/lib/security-scanner] AdmZip failed to inspect archive ${filePath}:`, zipErr?.message || zipErr);
+  } catch (zipErr: unknown) {
+    const zipErrMsg = zipErr instanceof Error ? zipErr.message : String(zipErr);
+    console.warn(`[/lib/security-scanner] AdmZip failed to inspect archive ${filePath}:`, zipErrMsg);
     findings.push({
       category: "manifest_anomaly",
       severity: "high",
@@ -294,12 +308,20 @@ export async function scanSecurity(filePath: string, localOnly = false): Promise
   return buildResult(score, findings, sha1, scannedAt, sha256, vt);
 }
 
-function buildResult(score: number, findings: SecurityFinding[], sha1: string, scannedAt: string, sha256: string, vt: any, whitelisted?: boolean): SecurityScanResult {
-  const level = score <= 30 ? "clean" : score <= 60 ? "caution" : score <= 85 ? "suspicious" : "critical";
+function buildResult(
+  score: number,
+  findings: SecurityFinding[],
+  sha1: string,
+  scannedAt: string,
+  sha256: string,
+  vt: SecurityScanResult["virusTotal"],
+  whitelisted?: boolean
+): SecurityScanResult {
+  const level: SecurityScanResult["riskLevel"] = score <= 30 ? "clean" : score <= 60 ? "caution" : score <= 85 ? "suspicious" : "critical";
   const sevOrder = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
   return {
     riskScore: score,
-    riskLevel: level as any,
+    riskLevel: level,
     sha1, sha256, virusTotal: vt,
     findings: findings.sort((a, b) => sevOrder[b.severity] - sevOrder[a.severity]),
     summary: level === "clean" ? "File appears safe." : `${level.toUpperCase()}: ${findings.length} findings.`,

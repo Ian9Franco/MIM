@@ -43,18 +43,20 @@ export function parseCrashEnvironment(rawLog: string): CrashEnvironment {
     if (loader === "unknown") {
       if (line.includes("Fabric Loader") || line.includes("net.fabricmc.loader")) {
         loader = "fabric";
-        const vMatch = line.match(/Fabric Loader\s*([0-9.]+)/i);
+        const vMatch = line.match(/Fabric Loader\s*([0-9a-zA-Z._-]+)/i);
         if (vMatch) loaderVersion = vMatch[1];
       } else if (line.includes("NeoForge") || line.includes("net.neoforged")) {
         loader = "neoforge";
-        const vMatch = line.match(/NeoForge:\s*([0-9.]+)/i);
+        const vMatch = line.match(/NeoForge:\s*([0-9a-zA-Z._-]+)/i);
         if (vMatch) loaderVersion = vMatch[1];
       } else if (line.includes("Minecraft Forge") || line.includes("net.minecraftforge")) {
         loader = "forge";
-        const vMatch = line.match(/Minecraft Forge:\s*([0-9.]+)/i);
+        const vMatch = line.match(/Minecraft Forge:\s*([0-9a-zA-Z._-]+)/i);
         if (vMatch) loaderVersion = vMatch[1];
       } else if (line.includes("Quilt Loader") || line.includes("org.quiltmc.loader")) {
         loader = "quilt";
+        const vMatch = line.match(/Quilt Loader\s*([0-9a-zA-Z._-]+)/i);
+        if (vMatch) loaderVersion = vMatch[1];
       }
     }
 

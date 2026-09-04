@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { scanExistingFiles } from "@/lib/core/watcher";
-import { scanMod } from "@/lib/scanner";
+import { scanMod, type ModMeta } from "@/lib/scanner";
 import path from "path";
 import os from "os";
 
@@ -10,7 +10,7 @@ export async function GET() {
   
   const pending = files.map(filePath => {
     const fileName = path.basename(filePath);
-    let meta: any = {};
+    let meta: ModMeta | { status: string; error: string };
     try {
       meta = scanMod(filePath);
     } catch (err) {

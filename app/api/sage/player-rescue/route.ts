@@ -56,8 +56,9 @@ export async function GET(req: NextRequest) {
             nbt: includeNbt ? root : undefined
           }]
         });
-      } catch (err: any) {
-        return NextResponse.json({ error: "No se pudo leer el archivo NBT: " + err.message }, { status: 400 });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ error: "No se pudo leer el archivo NBT: " + errMsg }, { status: 400 });
       }
     }
 
@@ -73,7 +74,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const playersList: any[] = [];
+    interface DiscoveredPlayerFile {
+      fileName: string;
+      filePath: string;
+      isHost: boolean;
+      worldName: string;
+      isBackup?: boolean;
+    }
+    const playersList: DiscoveredPlayerFile[] = [];
     const { minecraftPath } = getSettings();
  
     // 1. Scan portable player-rescue folder
@@ -129,7 +137,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Process details for each player file
-    let usercache: any[] = [];
+    let usercache: Awaited<ReturnType<typeof loadUsercacheEntries>> = [];
     try {
       usercache = await loadUsercacheEntries(minecraftPath);
     } catch (err) {
@@ -147,7 +155,7 @@ export async function GET(req: NextRequest) {
           // Get position [X, Y, Z]
           let coords = [0, 80, 0];
           if (playerCompound["Pos"] && playerCompound["Pos"].type === TagType.List) {
-            const listData = playerCompound["Pos"].value as { itemType: TagType, list: any[] };
+            const listData = playerCompound["Pos"].value as { itemType: TagType; list: unknown[] };
             if (listData.list.length === 3) {
               coords = [
                 Number(listData.list[0]),
@@ -160,7 +168,7 @@ export async function GET(req: NextRequest) {
           // Get inventory count
           let invCount = 0;
           if (playerCompound["Inventory"] && playerCompound["Inventory"].type === TagType.List) {
-            const listData = playerCompound["Inventory"].value as { itemType: TagType, list: any[] };
+            const listData = playerCompound["Inventory"].value as { itemType: TagType; list: unknown[] };
             invCount = listData.list.length;
           }
 
@@ -204,9 +212,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ players: activePlayers });
-  } catch (error: any) {
-    console.error("Error listing player files:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error listing player files:", errorMsg);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -280,7 +289,7 @@ export async function POST(req: NextRequest) {
     // 2. Clear Inventory
     if (clearInventory) {
       if (playerCompound["Inventory"] && playerCompound["Inventory"].type === TagType.List) {
-        const countBefore = (playerCompound["Inventory"].value as any).list.length;
+        const countBefore = (playerCompound["Inventory"].value as { list: unknown[] }).list.length;
         playerCompound["Inventory"].value = {
           itemType: TagType.Compound,
           list: []
@@ -319,8 +328,9 @@ export async function POST(req: NextRequest) {
       backupCreated: !fs.existsSync(backupPath),
       logs
     });
-  } catch (error: any) {
-    console.error("Error modifying player NBT file:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error modifying player NBT file:", errorMsg);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

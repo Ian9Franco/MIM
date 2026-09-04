@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getSettings } from "@/lib/core/settings";
 import { mimMsg } from "@/lib/core/voice";
 import path from "path";
 import fs from "fs";
+
+const stagingPostSchema = z.object({
+  action: z.enum(["resolve", "clear"]),
+  filePath: z.string().optional().nullable(),
+});
 
 export async function GET() {
   try {
@@ -36,14 +42,30 @@ export async function GET() {
     }));
 
     return NextResponse.json({ files: fileInfos });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, filePath } = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body payload" }, { status: 400 });
+    }
+
+    const parsed = stagingPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Validation error", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { action, filePath } = parsed.data;
     const settings = getSettings();
     const stagingDir = settings.stagingPath;
     const mcPath = settings.minecraftPath;
@@ -87,8 +109,9 @@ export async function POST(req: NextRequest) {
           fs.copyFileSync(f, target);
           fs.unlinkSync(f);
           moved.push(rel);
-        } catch (e: any) {
-          errors.push(`${f}: ${e.message}`);
+        } catch (e: unknown) {
+          const eMsg = e instanceof Error ? e.message : String(e);
+          errors.push(`${f}: ${eMsg}`);
         }
       }
 
@@ -112,8 +135,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: mimMsg.stagingInvalidAction() }, { status: 400 });
-  } catch (error: any) {
-    console.error("[/api/staging POST] Error:", error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[/api/staging POST] Error:", errorMsg);
     return NextResponse.json({ error: mimMsg.internalError("/api/staging") }, { status: 500 });
   }
 }

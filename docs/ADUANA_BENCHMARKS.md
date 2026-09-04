@@ -1,6 +1,6 @@
 # Aduana Deduplication Engine — Empirical Performance Benchmarks
 
-> **Benchmark Date:** 2026-09-03  
+> **Benchmark Date:** 2026-09-04  
 > **Platform:** Windows x64 / Node.js V8 Engine  
 > **Target Module:** `lib/fomo/aduana.ts`  
 
@@ -9,11 +9,11 @@
 ## ⚡ Key Results & Performance Highlights
 
 - **Cryptographic Hashing Throughput:**
-  - **SHA-1:** **2093.6 MB/s**
-  - **SHA-512:** **939.9 MB/s**
-- **Fast-Path Lookup Latency (Filename Hint):** **220.15 µs/operation** ($O(1)$ direct hit)
-- **Full Candidate Scan Latency:** **216.73 µs/operation** ($O(N)$ candidate scan)
-- **Cache Acceleration:** Up to **7.5x speedup** on warm scans.
+  - **SHA-1:** **2086.5 MB/s**
+  - **SHA-512:** **932.7 MB/s**
+- **Fast-Path Lookup Latency (Filename Hint):** **229.37 µs/operation** ($O(1)$ direct hit)
+- **Full Candidate Scan Latency:** **220.07 µs/operation** ($O(N)$ candidate scan)
+- **Cache Acceleration:** Up to **7.6x speedup** on warm scans.
 - **Cache Hit Rate Across Repeated Modpack Builds:** **99.4%**
 
 ---
@@ -22,10 +22,10 @@
 
 | File Count | Traversal Latency | Cold Scan (0% Cache) | Warm Scan (100% Cache) | Cache Speedup | Memory Overhead |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **1.000** | 5.48 ms | 572.65 ms | 70.26 ms | **8.2x** | 5.38 MB |
-| **5.000** | 18.32 ms | 2739.92 ms | 337.28 ms | **8.1x** | 25.52 MB |
-| **10.000** | 20 ms | 5056.24 ms | 669.04 ms | **7.6x** | -7.68 MB |
-| **25.000** | 47.87 ms | 12892.26 ms | 1719.3 ms | **7.5x** | -3 MB |
+| **1.000** | 4.16 ms | 574.26 ms | 74.93 ms | **7.7x** | 5.38 MB |
+| **5.000** | 24.53 ms | 2597.12 ms | 333.55 ms | **7.8x** | 25.49 MB |
+| **10.000** | 28.8 ms | 5015.05 ms | 659.3 ms | **7.6x** | -7.63 MB |
+| **25.000** | 53.05 ms | 12643.61 ms | 1668.76 ms | **7.6x** | -2.96 MB |
 
 ---
 

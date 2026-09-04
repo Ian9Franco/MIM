@@ -67,27 +67,52 @@ async function main() {
     {
       name: "SAGE NBT Binary Safe Recovery (12 Tests)",
       cmd: "npx",
-      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/nbt-integration.test.ts"]
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/nbt-integration.test.ts"]
     },
     {
       name: "SAGE 2.0 Diagnostic Evaluation (125 Cases)",
       cmd: "npx",
-      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/evaluation/sage-eval.ts"]
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/evaluation/sage-eval.ts"]
+    },
+    {
+      name: "SAGE 2.0 Core Taxonomy & Parser Unit Suite",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-unit.test.ts"]
     },
     {
       name: "SAGE 2.0 AI & RAG Layer (Retrieval + Guardrails)",
       cmd: "npx",
-      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/evaluation/test-rag.ts"]
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/evaluation/test-rag.ts"]
     },
     {
       name: "Aduana Deduplication & Storage Verification",
       cmd: "npx",
-      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/benchmarks/aduana-benchmark.ts"]
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/benchmarks/aduana-benchmark.ts"]
+    },
+    {
+      name: "Security Static Bytecode & Threat Engine Unit Suite",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/security-scanner.test.ts"]
     },
     {
       name: "Security Threat Intelligence & Rate Limiter",
       cmd: "npx",
-      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/security-malware-and-ratelimit.test.ts"]
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/security-malware-and-ratelimit.test.ts"]
+    },
+    {
+      name: "Critical API Integration & Zod Schema Contracts",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/critical-api-integration.test.ts"]
+    },
+    {
+      name: "MIM-Bot Personality & Heuristic Fallback Engine",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/bot-personality.test.ts"]
+    },
+    {
+      name: "Third-Party Modpack License Auditor",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/license-auditor.test.ts"]
     }
   ];
 

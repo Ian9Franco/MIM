@@ -38,5 +38,11 @@
   "test_concurrent_hash_9": {
     "maliciousCount": 9,
     "totalEngineCount": 72
+  },
+  "deadbeefcafebabe0123456789abcdef0123456789abcdef0123456789abcdef": {
+    "maliciousCount": 0,
+    "totalEngineCount": 72,
+    "detailsUrl": "https://virustotal.com/gui/file/deadbeefcafebabe0123456789abcdef0123456789abcdef0123456789abcdef",
+    "fromCache": false
   }
 }

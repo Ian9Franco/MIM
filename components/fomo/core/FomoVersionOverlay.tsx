@@ -62,6 +62,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     explainedBody, setExplainedBody, isExplaining, explanationSources, explanationSearchUsed,
     explanationImagesAnalyzed,
     explainError, showGeminiKeyInput, setShowGeminiKeyInput, handleExplain,
+    botPersonality, handleTogglePersonality,
     chatMessages, chatInput, setChatInput, isChatSending, handleSendChatMessage,
   } = useFomoOverlayManager(mod, versions, hideVersions);
 
@@ -404,7 +405,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       <div className="flex items-center gap-2">
                         <span className="flex items-center gap-1.5 text-purple-300 font-bold">
                           <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
-                          <span>MIM-Bot · Análisis de Proyecto</span>
+                          <span>MIM-Bot · Análisis</span>
                         </span>
                         <button
                           type="button"
@@ -417,9 +418,36 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                         </button>
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Toggle interactivo de Personalidad */}
+                        <div className="inline-flex items-center p-0.5 rounded-md bg-black/50 border border-purple-500/30 text-[9px] shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePersonality("bully")}
+                            className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                              botPersonality === "bully"
+                                ? "bg-purple-600 text-white shadow-sm"
+                                : "text-purple-300/70 hover:text-purple-200"
+                            }`}
+                            title="Modo Bully: Tono incisivo, satírico e irónico gamer"
+                          >
+                            🔥 Bully
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePersonality("standard")}
+                            className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                              botPersonality === "standard"
+                                ? "bg-purple-600 text-white shadow-sm"
+                                : "text-purple-300/70 hover:text-purple-200"
+                            }`}
+                            title="Modo Estándar: Tono neutro, cordial y rigurosamente técnico"
+                          >
+                            🛡️ Estándar
+                          </button>
+                        </div>
                         {explanationImagesAnalyzed > 0 && (
                           <span className="flex items-center gap-1 text-sky-400 font-medium text-[9px] bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                            <Images className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas analizadas
+                            <Images className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas
                           </span>
                         )}
                         {explanationSearchUsed && (

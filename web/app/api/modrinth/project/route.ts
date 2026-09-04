@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const querySchema = z.object({
+  projectId: z.string().trim().min(1, "Missing or empty projectId parameter"),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get("projectId");
-    if (!projectId) {
-      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+    const parsed = querySchema.safeParse({ projectId: searchParams.get("projectId") });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid projectId parameter" },
+        { status: 400 }
+      );
     }
+    const { projectId } = parsed.data;
 
     const headers: Record<string, string> = {
       "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
@@ -35,12 +44,14 @@ export async function GET(request: NextRequest) {
         if (orgRes.ok) {
           data.organization_info = await orgRes.json();
         }
-      } catch (err: any) {
-        console.error("[Modrinth Project Proxy] Organization fetch error:", err.message);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error("[Modrinth Project Proxy] Organization fetch error:", errMsg);
       }
     }
     return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

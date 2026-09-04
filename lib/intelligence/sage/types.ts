@@ -64,7 +64,7 @@ export interface RemediationAction {
   targetMod?: string;
   requiredVersion?: string;
   instructions: string[];
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 export interface RemediationPlan {

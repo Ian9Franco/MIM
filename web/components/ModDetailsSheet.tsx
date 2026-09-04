@@ -424,8 +424,16 @@ export function ModDetailsSheet({
   const [explanationSearchUsed, setExplanationSearchUsed] = useState(false);
   const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
   const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
-  const [geminiKeyVal, setGeminiKeyVal] = useState("");
   const [explainError, setExplainError] = useState<string | null>(null);
+  const [botPersonality, setBotPersonality] = useState<"bully" | "standard">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("mim_bot_personality");
+        if (saved === "bully" || saved === "standard") return saved;
+      } catch {}
+    }
+    return process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully";
+  });
   // Project Mini-Chat
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
@@ -695,18 +703,19 @@ export function ModDetailsSheet({
     }
   }, [descriptionBody, isTranslating, selectedMod, translatedBody]);
 
-  const handleExplain = useCallback(async (customKey?: string, forceRefresh?: boolean) => {
+  const handleExplain = useCallback(async (customKey?: string, forceRefresh?: boolean, personalityOverride?: "bully" | "standard") => {
     if (!selectedMod || isExplaining) return;
-    if (explainedBody && !customKey && !forceRefresh) {
+    if (explainedBody && !customKey && !forceRefresh && !personalityOverride) {
       setExplainedBody(null);
       return;
     }
 
+    const targetPersonality = personalityOverride || botPersonality;
     const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
 
     // Revisar caché si no estamos forzando una clave nueva ni refresco
-    const cacheKey = `mim_explain_${selectedMod.projectId}`;
-    if (!customKey && !forceRefresh) {
+    const cacheKey = `mim_explain_${selectedMod.projectId}_${targetPersonality}`;
+    if (!customKey && !forceRefresh && !personalityOverride) {
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
@@ -751,6 +760,7 @@ export function ModDetailsSheet({
           loaders: selectedMod.loaders || [],
           galleryUrls,
           clientApiKey: savedKey,
+          personality: targetPersonality,
         }),
       });
 
@@ -789,7 +799,18 @@ export function ModDetailsSheet({
     } finally {
       setIsExplaining(false);
     }
-  }, [descriptionBody, explainedBody, isExplaining, selectedMod]);
+  }, [botPersonality, descriptionBody, explainedBody, isExplaining, selectedMod]);
+
+  const handleTogglePersonality = useCallback((newPersonality: "bully" | "standard") => {
+    if (newPersonality === botPersonality) return;
+    setBotPersonality(newPersonality);
+    try {
+      localStorage.setItem("mim_bot_personality", newPersonality);
+    } catch {}
+    if (selectedMod) {
+      handleExplain(undefined, true, newPersonality);
+    }
+  }, [botPersonality, handleExplain, selectedMod]);
 
   const handleSaveGeminiKey = useCallback(() => {
     if (!geminiKeyVal.trim()) return;
@@ -828,6 +849,7 @@ export function ModDetailsSheet({
           clientApiKey: savedKey,
           messages: chatMessages,
           question: query,
+          personality: botPersonality,
         }),
       });
 
@@ -1682,7 +1704,7 @@ export function ModDetailsSheet({
                               <div className="flex items-center gap-2">
                                 <span className="flex items-center gap-1.5 text-purple-300 font-bold">
                                   <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
-                                  <span>MIM-Bot · Análisis de Proyecto</span>
+                                  <span>MIM-Bot · Análisis</span>
                                 </span>
                                 <button
                                   type="button"
@@ -1695,9 +1717,36 @@ export function ModDetailsSheet({
                                 </button>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
+                                {/* Toggle interactivo de Personalidad */}
+                                <div className="inline-flex items-center p-0.5 rounded-md bg-black/50 border border-purple-500/30 text-[9px] shadow-sm">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePersonality("bully")}
+                                    className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                                      botPersonality === "bully"
+                                        ? "bg-purple-600 text-white shadow-sm"
+                                        : "text-purple-300/70 hover:text-purple-200"
+                                    }`}
+                                    title="Modo Bully: Tono incisivo, satírico e irónico gamer"
+                                  >
+                                    🔥 Bully
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePersonality("standard")}
+                                    className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                                      botPersonality === "standard"
+                                        ? "bg-purple-600 text-white shadow-sm"
+                                        : "text-purple-300/70 hover:text-purple-200"
+                                    }`}
+                                    title="Modo Estándar: Tono neutro, cordial y rigurosamente técnico"
+                                  >
+                                    🛡️ Estándar
+                                  </button>
+                                </div>
                                 {explanationImagesAnalyzed > 0 && (
                                   <span className="flex items-center gap-1 text-sky-400 font-medium text-[9px] bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                                    <ImageIcon className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas analizadas
+                                    <ImageIcon className="w-2.5 h-2.5" /> {explanationImagesAnalyzed} capturas
                                   </span>
                                 )}
                                 {explanationSearchUsed && (

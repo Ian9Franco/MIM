@@ -1,5 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 
+interface ModrinthProject {
+  id: string;
+  title: string;
+  description: string;
+  icon_url: string | null;
+  author?: string;
+  project_type: string;
+  categories?: string[];
+  slug: string;
+  gallery?: unknown[];
+}
+
+interface ModrinthCollection {
+  id: string;
+  name: string;
+  description?: string;
+  projects?: string[];
+  project_count?: number;
+  icon_url?: string | null;
+  slug?: string;
+  status?: string;
+  created: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,26 +47,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: `Modrinth API error: ${res.status}` }, { status: 502 });
     }
 
-    const data = await res.json();
+    const data = ((await res.json()) as ModrinthCollection[]);
     
     // Sort collections by creation date descending so the latest is first
-    data.sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    data.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
 
     // If a specific collection ID is requested, only fetch and return the mods of that collection
     if (collectionId) {
-      const targetColl = data.find((c: any) => c.id === collectionId);
+      const targetColl = data.find((c) => c.id === collectionId);
       if (!targetColl) {
         return NextResponse.json({ error: "Collection not found" }, { status: 404 });
       }
       const projectIds = targetColl.projects || [];
-      let mods: any[] = [];
+      let mods: Array<{
+        projectId: string;
+        title: string;
+        description: string;
+        iconUrl: string | null;
+        author: string;
+        projectType: string;
+        categories?: string[];
+        url: string;
+        _source: string;
+        gallery?: unknown[];
+      }> = [];
+
       if (projectIds.length > 0) {
         const resProjects = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(projectIds.slice(0, 15))}`, {
           headers
         });
         if (resProjects.ok) {
-          const projects = await resProjects.json();
-          mods = projects.map((m: any) => ({
+          const projects = ((await resProjects.json()) as ModrinthProject[]);
+          mods = projects.map((m) => ({
             projectId: m.id,
             title: m.title,
             description: m.description,
@@ -61,14 +97,26 @@ export async function GET(request: NextRequest) {
 
     // Default flow: Fetch all collections and load the mods of the latest collection
     const latestColl = data[0];
-    let latestFeaturedMods: any[] = [];
-    if (latestColl && latestColl.projects?.length > 0) {
+    let latestFeaturedMods: Array<{
+      projectId: string;
+      title: string;
+      description: string;
+      iconUrl: string | null;
+      author: string;
+      projectType: string;
+      categories?: string[];
+      url: string;
+      _source: string;
+      gallery?: unknown[];
+    }> = [];
+
+    if (latestColl && latestColl.projects && latestColl.projects.length > 0) {
       const resProjects = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(latestColl.projects.slice(0, 15))}`, {
         headers
       });
       if (resProjects.ok) {
-        const projects = await resProjects.json();
-        latestFeaturedMods = projects.map((m: any) => ({
+        const projects = ((await resProjects.json()) as ModrinthProject[]);
+        latestFeaturedMods = projects.map((m) => ({
           projectId: m.id,
           title: m.title,
           description: m.description,
@@ -85,7 +133,7 @@ export async function GET(request: NextRequest) {
 
     // Build preview icons for collections list
     const allProjectIds = new Set<string>();
-    const collectionsWithPreview = data.map((coll: any) => {
+    const collectionsWithPreview = data.map((coll) => {
       const pIds = coll.projects || [];
       const previewIds = pIds.slice(0, 10);
       previewIds.forEach((id: string) => allProjectIds.add(id));
@@ -93,21 +141,21 @@ export async function GET(request: NextRequest) {
     });
     
     const idArray = Array.from(allProjectIds);
-    const projectsMap: Record<string, any> = {};
+    const projectsMap: Record<string, { iconUrl: string | null }> = {};
     
     if (idArray.length > 0) {
       const resProjects = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(idArray)}`, {
         headers
       });
       if (resProjects.ok) {
-        const projects = await resProjects.json();
-        projects.forEach((p: any) => {
+        const projects = ((await resProjects.json()) as ModrinthProject[]);
+        projects.forEach((p) => {
           projectsMap[p.id] = { iconUrl: p.icon_url };
         });
       }
     }
     
-    const finalCollections = collectionsWithPreview.map((coll: any) => {
+    const finalCollections = collectionsWithPreview.map((coll) => {
       const previewIcons = coll.previewIds.map((id: string) => projectsMap[id]?.iconUrl).filter(Boolean);
       return {
         id: coll.id,
@@ -128,8 +176,9 @@ export async function GET(request: NextRequest) {
       collections: finalCollections,
       latestFeaturedMods
     });
-  } catch (err: any) {
-    console.error("[Modrinth Official Proxy Fail]:", err.message);
-    return NextResponse.json({ error: err.message || "Failed to fetch collections" }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to fetch collections";
+    console.error("[Modrinth Official Proxy Fail]:", errorMsg);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

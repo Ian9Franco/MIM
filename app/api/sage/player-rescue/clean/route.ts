@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
       deletedCount,
       sizeSaved: totalSizeSaved 
     });
-  } catch (error: any) {
-    console.error("Error cleaning player backups:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error cleaning player backups:", errorMsg);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

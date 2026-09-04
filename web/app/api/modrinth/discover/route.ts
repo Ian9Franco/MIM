@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const DEFAULT_PAGE_SIZE = 21;
+
+const discoverQuerySchema = z.object({
+  loader: z.string().optional().default("any"),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(DEFAULT_PAGE_SIZE),
+  sort: z.enum(["updated", "relevance", "downloads", "newest", "follows"]).optional().default("newest"),
+  projectType: z.string().optional().default("mod"),
+  q: z.string().optional().default(""),
+});
 
 const MODRINTH_CATEGORIES = [
   "adventure", "cursed", "decoration", "economy", "equipment", "food", 
@@ -23,20 +33,98 @@ const SHADER_FILTERS = {
   loaders: ["iris", "optifine", "vanilla"]
 };
 
+interface ModrinthGalleryItem {
+  url: string;
+  title?: string;
+  featured?: boolean;
+}
+
+interface ModrinthProjectItem {
+  id: string;
+  slug: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  summary?: string;
+  icon_url?: string | null;
+  downloads?: number;
+  followers?: number;
+  categories?: string[];
+  published?: string;
+  project_type?: string;
+  project_types?: string[];
+  client_side?: string | null;
+  server_side?: string | null;
+  organization?: string;
+  environment?: { client?: string | null; server?: string | null };
+  gallery?: Array<string | ModrinthGalleryItem>;
+}
+
+interface ModrinthSearchHit {
+  project_id: string;
+  slug: string;
+  title: string;
+  description: string;
+  icon_url?: string | null;
+  author: string;
+  downloads: number;
+  follows: number;
+  latest_version?: string | null;
+  categories?: string[];
+  date_created: string;
+  project_type?: string;
+  client_side?: string;
+  server_side?: string;
+  featured_gallery?: string | null;
+  gallery?: string[];
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const loader       = searchParams.get("loader") ?? "any";
-  const gameVersionsJson = searchParams.get("gameVersions");
-  const gameVersions = gameVersionsJson ? JSON.parse(gameVersionsJson) : [];
-  const categories   = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
-  const environments = searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : [];
-  const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize     = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
-  const sortParam    = searchParams.get("sort") ?? "newest";
-  const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "newest";
-  const projectType  = searchParams.get("projectType") ?? "mod";
-  const q            = searchParams.get("q")?.trim() ?? "";
-  const offset       = (page - 1) * pageSize;
+
+  const parsedQuery = discoverQuerySchema.safeParse({
+    loader: searchParams.get("loader") ?? undefined,
+    page: searchParams.get("page") ?? undefined,
+    pageSize: searchParams.get("pageSize") ?? undefined,
+    sort: searchParams.get("sort") ?? undefined,
+    projectType: searchParams.get("projectType") ?? undefined,
+    q: searchParams.get("q")?.trim() ?? undefined,
+  });
+
+  if (!parsedQuery.success) {
+    return NextResponse.json(
+      { error: parsedQuery.error.issues[0]?.message || "Invalid query parameters" },
+      { status: 400 }
+    );
+  }
+
+  const { loader, page, pageSize, sort, projectType, q } = parsedQuery.data;
+
+  let gameVersions: string[] = [];
+  try {
+    const raw = searchParams.get("gameVersions");
+    if (raw) gameVersions = JSON.parse(raw);
+  } catch {
+    gameVersions = [];
+  }
+
+  let categories: string[] = [];
+  try {
+    const raw = searchParams.get("categories");
+    if (raw) categories = JSON.parse(raw);
+  } catch {
+    categories = [];
+  }
+
+  let environments: string[] = [];
+  try {
+    const raw = searchParams.get("environments");
+    if (raw) environments = JSON.parse(raw);
+  } catch {
+    environments = [];
+  }
+
+  const offset = (page - 1) * pageSize;
 
   const headers: Record<string, string> = {
     "User-Agent": "MIM-Web-App/1.0 (contact@mim.local)",
@@ -68,14 +156,14 @@ export async function GET(req: NextRequest) {
           const paginated = filtered.slice(offset, offset + pageSize);
           
           // Map to same ModHit structure as Search Hits
-          const mods = paginated.map((p: any) => ({
+          const mods = paginated.map((p: ModrinthProjectItem) => ({
             projectId:   p.id,
             externalProjectId: p.id,
             sourceProjectId: p.id,
             platformId: p.id,
             slug:        p.slug,
-            title:       p.title,
-            description: p.description || "",
+            title:       p.title || p.name || "",
+            description: p.description || p.summary || "",
             iconUrl:     p.icon_url ?? null,
             author:      authorName,
             downloads:   p.downloads || 0,
@@ -87,7 +175,7 @@ export async function GET(req: NextRequest) {
             projectType: p.project_type ?? "mod",
             client_side: p.client_side,
             server_side: p.server_side,
-            gallery:     (p.gallery ?? []).map((img: any) => {
+            gallery:     (p.gallery ?? []).map((img) => {
               const urlStr = typeof img === "string" ? img : img.url;
               return {
                 url: urlStr,
@@ -95,7 +183,7 @@ export async function GET(req: NextRequest) {
                 title: typeof img === "string" ? "" : img.title || "",
                 featured: typeof img === "string" ? false : img.featured || false
               };
-            }).filter((g: any) => g.url),
+            }).filter((g) => g.url),
           }));
           
           return NextResponse.json({
@@ -127,7 +215,7 @@ export async function GET(req: NextRequest) {
           const paginated = filtered.slice(offset, offset + pageSize);
           
           // Map to same ModHit structure as Search Hits, resolving V3 fields
-          const mods = paginated.map((p: any) => {
+          const mods = paginated.map((p: ModrinthProjectItem) => {
             const pType = (p.project_types && p.project_types[0]) || p.project_type || "mod";
             return {
               projectId:   p.id,
@@ -148,7 +236,7 @@ export async function GET(req: NextRequest) {
               projectType: pType,
               client_side: p.client_side || (p.environment ? p.environment.client : null),
               server_side: p.server_side || (p.environment ? p.environment.server : null),
-              gallery:     (p.gallery ?? []).map((img: any) => {
+              gallery:     (p.gallery ?? []).map((img) => {
                 const urlStr = typeof img === "string" ? img : img.url;
                 return {
                   url: urlStr,
@@ -156,7 +244,7 @@ export async function GET(req: NextRequest) {
                   title: typeof img === "string" ? "" : img.title || "",
                   featured: typeof img === "string" ? false : img.featured || false
                 };
-              }).filter((g: any) => g.url),
+              }).filter((g) => g.url),
             };
           });
           
@@ -243,7 +331,7 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
 
     const mods = (data.hits ?? [])
-      .map((h: any) => ({
+      .map((h: ModrinthSearchHit) => ({
         projectId:   h.project_id,
         externalProjectId: h.project_id,
         sourceProjectId: h.project_id,
@@ -269,7 +357,7 @@ export async function GET(req: NextRequest) {
             title: "Featured",
             featured: true
           }] : []),
-          ...(h.gallery ?? []).map((g: any) => ({
+          ...(h.gallery ?? []).map((g) => ({
             url: g,
             thumbnailUrl: g,
             title: "",

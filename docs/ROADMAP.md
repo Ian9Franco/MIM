@@ -23,7 +23,7 @@
 - **Documentación Bilingüe & Standalone Release**: Paridad total inglés/español y empaquetado de producción Windows NSIS / Portable.
 
 ## 🚀 Versión 10.4.0 — Suite Ecosistema Unificada & MIMweb Mobile (2026-05-30)
-- **MIM Desktop (Electron 42)**: Runtime nativo de escritorio 100% completo, con backend Next.js Standalone, empaquetado para Windows con Electron Builder y cero dependencias de Rust/Tauri.
+- **MIM Desktop (Electron 42)**: Runtime nativo de escritorio funcional y verificado, con backend Next.js Standalone, empaquetado para Windows con Electron Builder y cero dependencias de Rust/Tauri.
 - **MIMweb (FOMO Hub)**: Aplicación web complementaria mobile-first totalmente operativa, con curación remota de drafts, traductor inteligente de descripciones y reproductor PiP adaptativo.
 - **FOMO Cloud & Supabase**: Sincronización en la nube en tiempo real con autenticación, clubes comunitarios, favoritos fijados y pool compartido de mods.
 - **SAGE Forensics & NBT Player Rescue**: Diagnóstico automatizado de stacktraces de crashes y editor visual interactivo de archivos `.dat` de inventario de jugadores.

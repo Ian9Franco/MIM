@@ -322,20 +322,20 @@ manager/
 
 ---
 
-## 🔒 Contrato de Cierre y Definición de Terminado (Definition of Done)
+## 🔒 Verificación de Calidad y Alcance de Arquitectura
 
-MIM se encuentra finalizado como un artefacto de portfolio de ingeniería bajo estrictos estándares de verificación:
+MIM se mantiene como una plataforma modular de ingeniería de sistemas y proyecto de portfolio bajo estrictos estándares de verificación. Para un desglose honesto de la realidad de desarrollo solo-dev, benchmarks empíricos y gestión de deuda técnica, consultar [**Estado Real del Proyecto**](./docs/PROJECT_STATUS.md):
 
-- [x] **Cero Scope Creep:** Alcance de features permanentemente congelado; no se agregan funciones especulativas.
+- [x] **Gestión Disciplinada del Alcance:** Evolución controlada de funcionalidades sin desvíos especulativos; cada decisión arquitectónica está respaldada por ADRs, años de experiencia operativa en modding y benchmarks reales.
 - [x] **Afirmaciones Técnicas Defendibles:** Todas las afirmaciones de rendimiento, seguridad y algoritmos se verifican contra código y tests.
 - [x] **SAGE Evaluado y Delimitado:** 125 casos de crashes canónicos evaluados (100% Macro F1, 84% Top-1, 100% Top-3 en benchmark corpus, 0.06 ms). Non-goals documentados.
 - [x] **Aduana Verificada a Escala:** Deduplicación criptográfica benchmarkeada de 1K a 25K archivos (aceleración de 8.0× a 8.5×, > 2.0 GB/s hashing).
 - [x] **Modos de Fallo Distribuido Documentados:** Desconexión de red, Last-Write-Wins con timestamps y desempate por UUID, rollback optimista y cola de replay idempotente.
 - [x] **Motor de Seguridad Calibrado:** Denominado con precisión como *Análisis Estático de Amenazas en Bytecode Java* con heurísticas y límites transparentes.
 - [x] **Invariante de Cero Pérdida de Datos:** Formalizado y verificado con 12/12 integration tests pasando.
-- [x] **Suite Automatizada de Tests Aprobada:** `npm test` pasa al 100% (144 escenarios en 4 suites).
+- [x] **Suite Automatizada de Tests Aprobada:** `npm test` pasa al 100% a través de todos los motores de dominio y suites de seguridad.
 - [x] **Benchmark Empírico Aprobado:** `npm run benchmark:aduana` pasa en todos los niveles.
-- [x] **Compilación de Producción Aprobada:** `npm run build` compila con 0 errores TypeScript en 79 rutas.
+- [x] **Compilación y Verificación de Tipos Limpia:** `npm run build` y `tsc --noEmit` compilan con 0 errores TypeScript en todas las rutas y motores.
 - [x] **Tour Técnico Aprobado:** `npm run demo` ejecuta la demostración multimotor limpia y sin warnings.
 - [x] **Lectura Rápida de Arquitectura en 30–90 Segundos:** Titular claro, matriz de rendimiento medido, diagramas de motores desacoplados e índice profundo de documentación.
 

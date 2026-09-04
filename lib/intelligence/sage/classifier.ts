@@ -42,7 +42,27 @@ export function classifyCrash(rawLog: string): ClassificationResult {
     };
   }
 
-  // ── 2. MISSING DEPENDENCY CHECK ─────────────────────────────────────────────
+  // ── 2. JAVA INCOMPATIBILITY CHECK ─────────────────────────────────────────
+  if (
+    clean.includes("UnsupportedClassVersionError") ||
+    clean.includes("has been compiled by a more recent version of the Java Runtime") ||
+    (clean.includes("class file version") && clean.includes("recognizes up to"))
+  ) {
+    evidence.push({
+      code: "JAVA_VERSION_MISMATCH",
+      weight: 96,
+      description: "A mod was compiled with a higher Java version than the active runtime.",
+      snippet: clean.match(/(?:UnsupportedClassVersionError|has been compiled by a more recent version)[^\r\n]*/)?.[0] || "UnsupportedClassVersionError"
+    });
+    return {
+      category: "JAVA_INCOMPATIBILITY",
+      primaryException: "java.lang.UnsupportedClassVersionError",
+      evidence,
+      candidateCulprits: []
+    };
+  }
+
+  // ── 3. MISSING DEPENDENCY CHECK ─────────────────────────────────────────────
   // A. Fabric Dependency Block
   const fabricDepMatch =
     clean.match(/Mod\s+['"]?([a-zA-Z0-9_-]+)['"]?\s+requires\s+any\s+version\s+of\s+([a-zA-Z0-9_-]+)/i) ||

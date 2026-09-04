@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
 
-/**
- * POST /api/sage/player-rescue/save
- * 
- * Saves modified NBT data back to the .dat file.
- * 
- * Body:
- * {
- *   filePath: string,
- *   nbtData: NBTTag,
- *   createBackup?: boolean (default: true)
- * }
- */
+const savePlayerSchema = z.object({
+  filePath: z.string().min(1, "filePath is required"),
+  nbtData: z.custom<NBTTag>((val) => typeof val === "object" && val !== null, "Invalid NBT data structure"),
+  createBackup: z.boolean().optional().default(true),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { filePath, nbtData, createBackup = true } = body;
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body payload" }, { status: 400 });
+    }
 
-    if (!filePath || !nbtData) {
+    const parsed = savePlayerSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "filePath and nbtData are required" },
+        { error: parsed.error.issues[0]?.message || "Validation error", details: parsed.error.format() },
         { status: 400 }
       );
     }
+
+    const { filePath, nbtData, createBackup } = parsed.data;
 
     if (!fs.existsSync(filePath)) {
       return NextResponse.json(
@@ -43,8 +44,9 @@ export async function POST(req: NextRequest) {
         const backupPath = `${filePath}.mim_bak`;
         fs.copyFileSync(filePath, backupPath);
         logs.push(`✓ Backup created: ${path.basename(backupPath)}`);
-      } catch (err: any) {
-        logs.push(`⚠ Warning: Could not create backup: ${err.message}`);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        logs.push(`⚠ Warning: Could not create backup: ${errMsg}`);
       }
     }
 
@@ -53,9 +55,10 @@ export async function POST(req: NextRequest) {
       const buffer = await writeNBT(nbtData, true);
       fs.writeFileSync(filePath, buffer);
       logs.push(`✓ File saved successfully: ${path.basename(filePath)}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       return NextResponse.json(
-        { error: `Failed to write NBT data: ${err.message}` },
+        { error: `Failed to write NBT data: ${errMsg}` },
         { status: 500 }
       );
     }
@@ -66,10 +69,11 @@ export async function POST(req: NextRequest) {
       logs,
       message: "Player data saved. Ensure the Minecraft server/client is closed before the next world load."
     });
-  } catch (error: any) {
-    console.error("Error saving player rescue file:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error saving player rescue file:", errorMsg);
     return NextResponse.json(
-      { error: `Failed to save file: ${error.message}` },
+      { error: `Failed to save file: ${errorMsg}` },
       { status: 500 }
     );
   }

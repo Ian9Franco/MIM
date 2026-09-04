@@ -84,3 +84,31 @@ Incoming Mod (.jar)
 
 1. **Pure String Encryption / Dynamic Obfuscation:** Heavily encrypted reflection payloads using AES/XOR strings cannot always be demangled via static heuristics alone without dynamic runtime instrumentation (JVM Sandboxing / Agent).
 2. **Third-Party API Dependency:** VirusTotal enrichment is constrained by public API quotas (4 req/min); background rate-limiting and local SQLite/JSON caching mitigate starvation.
+
+---
+
+## 🛡️ Dynamic Application Security Testing (DAST) & Live Traffic Pentesting
+
+Beyond zero-execution static bytecode analysis, active cloud and web surface endpoints (`mim-hub.vercel.app`) undergo continuous dynamic testing:
+
+### 1. Automated Baseline DAST Runner (`scripts/security/dast-scan.js`)
+- **HTTP Hardening Audit:** Evaluates CSP, HSTS, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY`.
+- **CORS Misconfiguration:** Verifies strict rejection of arbitrary origins on stateful and translation routes.
+- **Rate-Limiter Boundary:** Asserts HTTP 429 throttling and `Retry-After` headers under traffic spikes.
+
+### 2. Live Environment Scanning Specifications
+- **OWASP ZAP Baseline Scan:**
+  ```bash
+  docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+    -t https://mim-hub.vercel.app -r docs/security/zap-baseline-report.html
+  ```
+- **ProjectDiscovery Nuclei Vulnerability Assessment:**
+  ```bash
+  nuclei -u https://mim-hub.vercel.app \
+    -tags cve,misconfig,exposure,rate-limit -severity medium,high,critical
+  ```
+
+### Acceptance Criteria:
+- **Zero Critical / High Severity Findings:** Any reported injection, privilege escalation, or CORS bypass halts release staging.
+- **Idempotent Rate Limiting:** Public proxy routes must never pass upstream traffic unbounded.
+

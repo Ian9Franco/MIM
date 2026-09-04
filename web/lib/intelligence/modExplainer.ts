@@ -14,6 +14,21 @@ export const GEMINI_MODEL_CASCADE = [
   "gemini-3.6-flash",
 ];
 
+export type BotPersonality = "bully" | "standard";
+
+export function resolveBotPersonality(preferred?: string): BotPersonality {
+  if (preferred === "standard" || preferred === "bully") return preferred;
+  if (typeof process !== "undefined" && process.env) {
+    if (
+      process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ||
+      process.env.BOT_PERSONALITY === "standard"
+    ) {
+      return "standard";
+    }
+  }
+  return "bully";
+}
+
 export function getGeminiModel(preferredModel?: string): string {
   if (preferredModel && preferredModel.trim()) {
     return preferredModel.trim();
@@ -38,6 +53,7 @@ export interface ModExplainerInput {
   galleryUrls?: string[];
   model?: string;
   clientApiKey?: string;
+  personality?: BotPersonality;
 }
 
 export interface GroundedSource {
@@ -128,7 +144,12 @@ export async function fetchImagesAsInlineData(
   return validImages;
 }
 
-export function buildMultimodalPrompt(input: ModExplainerInput, imagesCount: number): string {
+export function buildMultimodalPrompt(
+  input: ModExplainerInput,
+  imagesCount: number,
+  personalityOverride?: BotPersonality
+): string {
+  const personality = resolveBotPersonality(personalityOverride || input.personality);
   const hasRichDescription = input.description && input.description.trim().length > 25;
   const descSnippet = hasRichDescription
     ? input.description!.trim().substring(0, 2500)
@@ -138,6 +159,32 @@ export function buildMultimodalPrompt(input: ModExplainerInput, imagesCount: num
     imagesCount > 0
       ? `\nEVIDENCIA VISUAL: Se adjuntan ${imagesCount} captura(s) de pantalla oficiales de la galería. Si observas shaders, texturas, interfaces, mobs o biomas, menciónalo en una viñeta corta.`
       : "";
+
+  if (personality === "standard") {
+    return `Eres MIM-Bot, el asistente de análisis técnico de mods en MIM (Minecraft Intelligent Manager).
+PERSONALIDAD: Modo Estándar / Profesional. Sos claro, conciso, objetivo y riguroso. Tu objetivo es explicarle al jugador con precisión técnica qué hace el mod, cómo se configura, su rendimiento y compatibilidad.
+CERO INSULTOS, CERO ROAST, CERO BARDERA. Tono profesional, constructivo y enfocado en el valor técnico del mod para la experiencia de juego.
+REGLA INQUEBRANTABLE: Tu información técnica es 100% exacta, verificada y al hueso.${multimodalSection}
+
+PROYECTO:
+- Nombre: ${input.title}
+- Autor: ${input.author || "Desconocido"}
+- Plataforma: ${input.source || "N/A"} (${input.slug || input.projectId})
+- Categorías: ${(input.categories || []).join(", ") || "No especificadas"}
+- Loaders: ${(input.loaders || []).join(", ") || "No especificados"}
+- Descripción: ${descSnippet}
+
+REGLA DE ORO: SÉ CORTO Y PRECISO (60-80 PALABRAS MÁXIMO).
+
+Estructura obligatoria:
+### 🎮 Resumen Técnico de MIM-Bot
+(1 o 2 oraciones concisas explicando la propuesta central del mod).
+
+- **Propósito y Loaders:** (Dato técnico claro de qué añade y en qué loaders opera).
+${imagesCount > 0 ? `- **📸 En capturas:** (Breve observación técnica sobre las capturas oficiales).` : ""}
+- **Rendimiento e Impacto:** (Estimación técnica objetiva de consumo de recursos y FPS).
+- **Veredicto:** (Recomendación constructiva de para quién está pensado este proyecto).`;
+  }
 
   return `Eres MIM-Bot, el asistente y bully oficial de mods en MIM (Minecraft Intelligent Manager).
 PERSONALIDAD: Sos un BULLY total, insoportable, creído, agresivo, ácido y condescendiente. Tu misión es MOLESTAR e incomodar al lector, descansarlo, burlarte de su falta de neuronas, de que seguro no sabe ni qué es un loader, de su PC que parece un ladrillo recalentado y de que necesita mods porque es incapaz de jugar sin que le lleven la manito.
@@ -166,14 +213,37 @@ ${imagesCount > 0 ? `- **📸 En capturas:** (Bardeada sobre las fotos: lo lindo
 
 export function generateLocalFallbackExplanation(
   input: ModExplainerInput,
-  imagesCount: number
+  imagesCount: number,
+  personalityOverride?: BotPersonality
 ): ModExplanationResult {
+  const personality = resolveBotPersonality(personalityOverride || input.personality);
   const title = input.title || "Proyecto";
   const author = input.author || "desconocido";
   const categories = (input.categories || []).join(", ") || "General";
   const loaders = (input.loaders || []).join(", ") || "Cualquiera";
   const rawDesc = input.description ? input.description.replace(/<[^>]+>|!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)/g, "").trim() : "";
   const descSnippet = rawDesc.length > 0 ? rawDesc.substring(0, 180) : "Sin descripción detallada provista.";
+
+  if (personality === "standard") {
+    const summaryMarkdown = `### 🎮 Resumen Técnico de MIM-Bot
+**${title}** (*${author}*): ${descSnippet.length > 15 ? descSnippet + "..." : `Proyecto que añade funcionalidades de **${categories}** para **${loaders}**.`}
+
+- **Propósito y Loaders:** Es de tipo **${categories}** y opera en **${loaders}** (${input.source || "Minecraft"}).
+${imagesCount > 0 ? `- **📸 En capturas:** Se analizaron ${imagesCount} captura(s) oficiales de referencia.` : ""}
+- **Rendimiento e Impacto:** Consumo de recursos moderado, sujeto a los mods complementarios instalados.
+- **Veredicto:** Recomendado si buscás ampliar tu instalación con contenido de tipo ${categories}.
+
+> ⚡ *Nota de MIM-Bot: Modo de respuesta técnica local estándar activo.*`;
+
+    return {
+      projectId: input.projectId,
+      summaryMarkdown,
+      groundedSources: [],
+      searchUsed: false,
+      imagesAnalyzed: imagesCount,
+      model: "mim-bot-offline-fallback-standard",
+    };
+  }
 
   const summaryMarkdown = `### 🎮 El Resumen de MIM-Bot
 A ver si te da la cabeza para entenderlo, pedazo de manco: **${title}** (*${author}*). ${descSnippet.length > 15 ? descSnippet + "..." : `Esto mete **${categories}** para **${loaders}**, a ver si con eso dejás de morir en la primera noche.`}
@@ -325,6 +395,7 @@ export interface ProjectChatInput {
   messages: ProjectChatMessage[];
   question: string;
   model?: string;
+  personality?: BotPersonality;
 }
 
 export interface ProjectChatResult {
@@ -340,11 +411,28 @@ export async function chatWithProjectAssistant(
     throw new Error("NO_API_KEY");
   }
 
+  const personality = resolveBotPersonality(input.personality);
   const baseModel = getGeminiModel(input.model);
   const modelsToTry = [baseModel, ...GEMINI_MODEL_CASCADE.filter((m) => m !== baseModel)];
 
   const ctx = input.projectContext;
-  const systemInstruction = `Eres MIM-Bot, el asistente y bully oficial de MIM (Minecraft Intelligent Manager).
+  const systemInstruction = personality === "standard"
+    ? `Eres MIM-Bot, el asistente de soporte técnico en MIM (Minecraft Intelligent Manager).
+PERSONALIDAD: Modo Estándar / Profesional. Sos cordial, claro, directo y con alto conocimiento técnico de Minecraft y mods. Tu misión es responder las dudas del usuario con precisión técnica, explicando compatibilidad, dependencias y configuración.
+CERO INSULTOS, CERO ROAST, CERO AGRESIVIDAD. Tono respetuoso y constructivo.
+
+Estás respondiendo preguntas de un jugador sobre el mod: "${ctx.title}" (creado por ${ctx.author || "desconocido"}).
+
+CONTEXTO TÉCNICO DEL PROYECTO:
+- Loaders: ${(ctx.loaders || []).join(", ") || "No especificados"}
+- Categorías: ${(ctx.categories || []).join(", ") || "Generales"}
+- Descripción / Síntesis previa: ${ctx.initialSummary || ctx.descriptionSnippet || "No disponible"}
+
+PAUTAS DE RESPUESTA:
+1. Responde de forma clara y directa a la pregunta en 1 o 2 párrafos concisos.
+2. Explica compatibilidades y requisitos de manera comprensible y rigurosa.
+3. Si requiere configuración adicional o dependencias, indícalo con claridad.`
+    : `Eres MIM-Bot, el asistente y bully oficial de MIM (Minecraft Intelligent Manager).
 PERSONALIDAD: Sos un BULLY insoportable, creído, provocador, burlón y sin paciencia. Tu objetivo es MOLESTAR y humillar al lector haciéndole notar lo manco que es, su nula compresión lectora y sus preguntas redundantes. Lo tratás de burro, de vago que no lee logs ni la descripción del mod, y te mofás de que necesite que una IA le explique cosas obvias de Minecraft.
 IMPORTANTE: A pesar del bullying y la forreada constante, sos un genio técnico absoluto: tus respuestas son 100% certeras, directas, concisas y le resuelven la duda técnica aunque se vaya ofendido y llorando.
 
@@ -371,7 +459,11 @@ PAUTAS DE BULLY:
 
   formattedContents.push({
     role: "model",
-    parts: [{ text: `¿Qué querés ahora? Dale, preguntá rápido antes de que me aburra de tus dudas de manco sobre **${ctx.title}**. Y hacete un favor: no preguntes idioteces que están en la primera línea de la descripción.` }],
+    parts: [{
+      text: personality === "standard"
+        ? `¡Hola! Soy MIM-Bot en modo estándar. ¿Qué consulta técnica tenés sobre **${ctx.title}**?`
+        : `¿Qué querés ahora? Dale, preguntá rápido antes de que me aburra de tus dudas de manco sobre **${ctx.title}**. Y hacete un favor: no preguntes idioteces que están en la primera línea de la descripción.`
+    }],
   });
 
   for (const m of input.messages) {
@@ -391,7 +483,7 @@ PAUTAS DE BULLY:
   const requestPayload = {
     contents: formattedContents,
     generationConfig: {
-      temperature: 0.7,
+      temperature: personality === "standard" ? 0.3 : 0.7,
       maxOutputTokens: 320,
     },
   };
@@ -427,6 +519,13 @@ PAUTAS DE BULLY:
   }
 
   // Fallback conversacional si todos los modelos alcanzan el límite de cuota
+  if (personality === "standard") {
+    return {
+      reply: `El servicio de IA está experimentando alta demanda momentáneamente. En relación a **${ctx.title}**, recordá verificar que el loader coincida con tu perfil (${(ctx.loaders || []).join(", ") || "Forge/Fabric"}) y revisar las dependencias requeridas en la descripción del mod.`,
+      modelUsed: "mim-bot-chat-fallback-standard",
+    };
+  }
+
   return {
     reply: `Pará un poco la ansiedad, enfermo del teclado. Saturaste la API de Google de tanto spamear preguntas boludas. Bancá 20 segundos antes de volver a molestar. Igual sobre **${ctx.title}** te voy avisando: si vas a llorar porque crashea, fijate que el loader (${(ctx.loaders || []).join(", ") || "Forge/Fabric"}) coincida y aprendé a leer un crash report antes de pedir ayuda como un nene chiquito.`,
     modelUsed: "mim-bot-chat-fallback",

@@ -53,29 +53,28 @@ No hay inversores que engañar ni equipo que impresionar. Esta honestidad es lo 
 
 ## Lo que está en deuda (documentado honestamente)
 
-### Testing — La deuda más grave
+### Testing Automatizado (Resuelto — Sep 2026)
 
-**Número actual:** 4 tests para ~85k líneas de código.  
-**Por qué es grave:** Si la lógica del escáner de seguridad falla silenciosamente, nadie se entera. Si SAGE mal-clasifica un nuevo tipo de crash, tampoco.  
-**Por qué existe:** Testing es lo primero que se sacrifica cuando uno es su propio dev y tester y está enfocado en que las features funcionen.  
-**Plan:** Empezar por SAGE (parser, classifier, scorer — lógica pura, sin IO), luego security-scanner, luego integration tests por API route crítica.
+**Estado:** ✅ Suites automatizadas implementadas y pasando al 100% (`npm test` — 8 suites, 144 escenarios, 0 fallos).  
+**Cobertura alcanzada:**
+- `lib/intelligence/sage/`: Unit tests puros para desinfección ANSI, loader fingerprinting (Forge, Fabric, NeoForge, Quilt), mixin frames, categorización y correlación de mods.
+- `lib/security/`: Unit tests para JARs limpios, detección dual de firmas Fracturiser (SHA-1/SHA-256), mitigación de archivos corruptos y fallback de VirusTotal.
+- Endpoints API críticos: Tests de integración para validación de contratos, manejo de errores tipados y fallback de IA en `/api/sage/`, `/api/security/` y `/api/fomo/translate`.
 
 ### 69 catch{} vacíos (Resuelto — Sep 2026)
 
-**Estado:** 100% auditados y erradicados en toda la base de código (`lib/`, `app/api/`, `services/`, `hooks/`, `components/` y `web/`).  
+**Estado:** ✅ 100% auditados y erradicados en toda la base de código (`lib/`, `app/api/`, `services/`, `hooks/`, `components/` y `web/`).  
 **Resultado:** En escaneo de seguridad y I/O, los fallos ya no asumen éxito ciego; se registran advertencias contextuales y se marcan como `UNVERIFIED` o anomalías. En UI, los fallos de parseo de localStorage se advierten explícitamente en consola en lugar de silenciarse.
 
-### Validación de input API routes
+### Validación de input API routes (En progreso — Zod aplicado a rutas críticas)
 
-**Número actual:** 78 endpoints, 0 con validación de esquema (zod o similar).  
-**Riesgo real:** Un endpoint público malformado puede causar errores no manejados o comportamiento inesperado.  
-**Prioridad:** Empezar por los endpoints expuestos en Vercel (mim-hub.vercel.app), especialmente los que son proxies a terceros.
+**Estado:** Schemas de Zod implementados en endpoints de MIMweb expuestos (`/api/fomo/translate`, `/api/fomo/community-rankings`, `/api/fomo/explain`) y en rutas locales de mutación de Electron (`/api/security/scan`, `/api/sage/diagnose`, `/api/modding/download-queue`).  
+**Resultado:** Payloads malformados o con tipos inválidos son rechazados de inmediato con HTTP 400 y mensaje descriptivo estructurado.
 
 ### Rate limiting & Blindaje de Proxies
 
-**Estado:** Implementado en `web/app/api/fomo/translate` mediante `web/lib/rateLimiter.ts` (máx 20 req/min por IP, cabeceras `Retry-After`, HTTP 429).  
-**Eliminación de DoS:** Se erradicó el `Promise.all` por línea que bombardeaba Google Translate; ahora procesa chunks semánticos y cuenta con degradación elegante si upstream falla.  
-**Pendiente:** Extender a los endpoints de proxy a CurseForge/Modrinth.
+**Estado:** ✅ Implementado en `web/app/api/fomo/translate` mediante `web/lib/rateLimiter.ts` (máx 20 req/min por IP, cabeceras `Retry-After`, HTTP 429).  
+**Eliminación de DoS:** Se erradicó el `Promise.all` por línea que bombardeaba Google Translate; ahora procesa chunks semánticos y cuenta con soporte para proveedores oficiales (DeepL Free, Google Cloud Translation v2, LibreTranslate) con degradación elegante.
 
 ### KNOWN_MALWARE_HASHES — base real de firmas
 
@@ -83,11 +82,9 @@ No hay inversores que engañar ni equipo que impresionar. Esta honestidad es lo 
 `lib/security/security-data.ts` ahora cuenta con 19 firmas SHA-1 y SHA-256 documentadas del incidente **Fracturiser** (Stage 0 droppers, Stage 1 utility, Stage 2 harvesters) y troyanos/stealers de Minecraft (Necro RAT, Discord token stealers).  
 El escáner (`lib/security/security-scanner.ts`) evalúa dualmente SHA-1/SHA-256 y atribuye el nombre e IOC exacto de la amenaza con score crítico (100). Validado en suite automatizada.
 
-### ~1023 usos de `any` en TypeScript
+### Erradicación de `any` en zonas críticas (Resuelto — Sep 2026)
 
-**Contexto:** No todos son igualmente problemáticos. En componentes de UI y refs de animación, `any` es a veces necesario o aceptable.  
-**Los que sí importan:** En `lib/security/`, `lib/intelligence/sage/` y las API routes, un tipo mal inferido puede esconder un bug real.  
-**Plan:** No perseguir todos de una. Priorizar las zonas críticas.
+**Estado:** ✅ Erradicado en `lib/security/`, `lib/intelligence/sage/` y API routes de entrada de red (`app/api/` y `web/app/api/`). Se reemplazó por tipos e interfaces fuertemente tipadas y type guards seguros.
 
 ---
 

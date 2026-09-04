@@ -48,6 +48,15 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
   const [explainError, setExplainError] = useState<string | null>(null);
   const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
+  const [botPersonality, setBotPersonality] = useState<"bully" | "standard">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("mim_bot_personality");
+        if (saved === "bully" || saved === "standard") return saved;
+      } catch {}
+    }
+    return process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully";
+  });
   // Project Mini-Chat
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
@@ -78,7 +87,9 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     setDepSearchQuery("");
 
     try {
-      const cached = localStorage.getItem(`mim_explain_${mod.projectId}`);
+      const cached =
+        localStorage.getItem(`mim_explain_${mod.projectId}_${botPersonality}`) ||
+        localStorage.getItem(`mim_explain_${mod.projectId}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.summaryMarkdown) {
@@ -91,7 +102,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     } catch {
       // ignore
     }
-  }, [mod.projectId, mod.gallery]);
+  }, [mod.projectId, mod.gallery, botPersonality]);
 
   useEffect(() => {
     if (mod._source === "chunk") {
@@ -334,17 +345,18 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
   };
 
-  const handleExplain = async (customKey?: string, forceRefresh?: boolean) => {
+  const handleExplain = async (customKey?: string, forceRefresh?: boolean, personalityOverride?: "bully" | "standard") => {
     if (isExplaining) return;
-    if (explainedBody && !customKey && !forceRefresh) {
+    if (explainedBody && !customKey && !forceRefresh && !personalityOverride) {
       setExplainedBody(null);
       return;
     }
 
+    const targetPersonality = personalityOverride || botPersonality;
     const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
-    const cacheKey = `mim_explain_${mod.projectId}`;
+    const cacheKey = `mim_explain_${mod.projectId}_${targetPersonality}`;
 
-    if (!customKey && !forceRefresh) {
+    if (!customKey && !forceRefresh && !personalityOverride) {
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
@@ -390,6 +402,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           loaders: mod.loaders || [],
           galleryUrls,
           clientApiKey: savedKey,
+          personality: targetPersonality,
         }),
       });
 
@@ -429,6 +442,17 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
   };
 
+  const handleTogglePersonality = (newPersonality: "bully" | "standard") => {
+    if (newPersonality === botPersonality) return;
+    setBotPersonality(newPersonality);
+    try {
+      localStorage.setItem("mim_bot_personality", newPersonality);
+    } catch {}
+    if (mod) {
+      handleExplain(undefined, true, newPersonality);
+    }
+  };
+
   const handleSendChatMessage = async (textToSend?: string) => {
     const query = (textToSend || chatInput).trim();
     if (!query || isChatSending || !mod) return;
@@ -458,6 +482,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           clientApiKey: savedKey,
           messages: chatMessages,
           question: query,
+          personality: botPersonality,
         }),
       });
 
@@ -474,7 +499,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
       console.error("[ProjectChat] Error:", err);
       setChatMessages([
         ...newMessages,
-        { role: "model" as const, text: `⚠️ Error de conexión: ${err?.message || "Intenta de nuevo."}` },
+        { role: "model" as const, text: `⚠️ Error de red al consultar el asistente.` },
       ]);
     } finally {
       setIsChatSending(false);
@@ -513,6 +538,8 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     showGeminiKeyInput,
     setShowGeminiKeyInput,
     handleExplain,
+    botPersonality,
+    handleTogglePersonality,
     // Mini-Chat additions:
     chatMessages,
     chatInput,

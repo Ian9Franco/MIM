@@ -1,7 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const CF_LOADER_NAMES = ["forge", "fabric", "neoforge", "quilt", "cauldron", "liteloader"];
+
+const querySchema = z.object({
+  projectId: z.string().trim().min(1, "Missing or empty projectId parameter"),
+});
+
+interface CurseForgeCategory {
+  name: string;
+}
+
+interface CurseForgeScreenshot {
+  url: string;
+  title?: string;
+}
+
+interface CurseForgeFileIndex {
+  gameVersion: string;
+}
+
+interface CurseForgeRawFile {
+  id?: number | string;
+  fileName: string;
+  displayName?: string;
+  gameVersions?: string[];
+  fileDate?: string;
+  downloadCount?: number;
+  releaseType: number;
+}
+
+interface CurseForgeDependency {
+  modId: number;
+  relationType: number;
+}
+
+interface CurseForgeMod {
+  id: number;
+  name: string;
+  classId?: number;
+  dateModified?: string;
+  dateReleased?: string;
+  links?: {
+    wikiUrl?: string;
+    sourceUrl?: string;
+    issuesUrl?: string;
+  };
+  logo?: {
+    thumbnailUrl?: string;
+    url?: string;
+  };
+  authors?: Array<{ name: string }>;
+  categories?: CurseForgeCategory[];
+  screenshots?: CurseForgeScreenshot[];
+  latestFilesIndexes?: CurseForgeFileIndex[];
+  dependencies?: CurseForgeDependency[];
+  summary?: string;
+  slug?: string;
+}
 
 function isMinecraftVersion(value: string) {
   return /^\d+(?:\.\d+){1,3}(?:[-+][\w.-]+)?$/.test(value);
@@ -20,11 +77,16 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get("projectId");
+  const parsed = querySchema.safeParse({ projectId: searchParams.get("projectId") });
 
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || "Invalid projectId parameter" },
+      { status: 400 }
+    );
   }
+
+  const { projectId } = parsed.data;
 
   try {
     const headers = {
@@ -32,14 +94,14 @@ export async function GET(req: NextRequest) {
       "x-api-key": apiKey,
     };
 
-    let m: any;
+    let m: CurseForgeMod | undefined;
     let numericId = projectId;
 
     if (isNaN(Number(projectId))) {
       // It's a slug! Search by slug first to resolve to numeric ID
       const searchRes = await fetch(`${CURSEFORGE_API}/mods/search?gameId=432&slug=${projectId}`, { headers });
       if (searchRes.ok) {
-        const searchData = await searchRes.json();
+        const searchData = (await searchRes.json()) as { data?: CurseForgeMod[] };
         m = searchData.data?.[0];
         if (m) {
           numericId = m.id.toString();
@@ -55,17 +117,21 @@ export async function GET(req: NextRequest) {
       if (!modRes.ok) {
         return NextResponse.json({ error: `CurseForge API Error: ${modRes.status}` }, { status: modRes.status });
       }
-      const modData = await modRes.json();
+      const modData = (await modRes.json()) as { data: CurseForgeMod };
       m = modData.data;
+    }
+
+    if (!m) {
+      return NextResponse.json({ error: `CurseForge mod not found: ${projectId}` }, { status: 404 });
     }
 
     // 2. Fetch description HTML using resolved numeric ID
     const descRes = await fetch(`${CURSEFORGE_API}/mods/${numericId}/description`, { headers });
-    const descData = await descRes.json().catch(() => ({ data: "" }));
+    const descData = ((await descRes.json().catch(() => ({ data: "" }))) as { data?: string });
 
     const filesRes = await fetch(`${CURSEFORGE_API}/mods/${numericId}/files?pageSize=50`, { headers });
-    const filesData = filesRes.ok ? await filesRes.json().catch(() => ({ data: [] })) : { data: [] };
-    const versions = (filesData.data || []).map((file: any) => {
+    const filesData = filesRes.ok ? ((await filesRes.json().catch(() => ({ data: [] }))) as { data?: CurseForgeRawFile[] }) : { data: [] };
+    const versions = (filesData.data || []).map((file: CurseForgeRawFile) => {
       const rawVersions = Array.isArray(file.gameVersions) ? file.gameVersions : [];
       const loaders = rawVersions
         .map((value: string) => value.toLowerCase())
@@ -86,10 +152,10 @@ export async function GET(req: NextRequest) {
     });
 
     // Infer client/server side requirements based on categories
-    const cats = (m.categories || []).map((c: any) => c.name.toLowerCase());
-    const isWorld = cats.some((c: any) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
-    const isClient = cats.some((c: any) => ["optimization", "performance", "visuals", "cosmetic", "map and information", "chat"].includes(c));
-    const isServer = cats.some((c: any) => ["server utility", "management"].includes(c));
+    const cats = (m.categories || []).map((c: CurseForgeCategory) => c.name.toLowerCase());
+    const isWorld = cats.some((c: string) => ["world gen", "biomes", "dimensions", "structures", "ores and resources"].includes(c));
+    const isClient = cats.some((c: string) => ["optimization", "performance", "visuals", "cosmetic", "map and information", "chat"].includes(c));
+    const isServer = cats.some((c: string) => ["server utility", "management"].includes(c));
     const client_side = isWorld ? "required" : (isClient ? "required" : (isServer ? "optional" : "unknown"));
     const server_side = isWorld ? "required" : (isClient ? "unsupported" : (isServer ? "required" : "unknown"));
 
@@ -109,15 +175,15 @@ export async function GET(req: NextRequest) {
       authors: m.authors || [],
       project_type: m.classId === 12 ? "resourcepack" : m.classId === 6552 ? "shader" : m.classId === 6945 ? "datapack" : m.classId === 4471 ? "modpack" : "mod",
       updated_at: m.dateModified || m.dateReleased || versions[0]?.date_published || null,
-      gallery: (m.screenshots || []).map((s: any) => ({
+      gallery: (m.screenshots || []).map((s: CurseForgeScreenshot) => ({
         url: s.url,
         title: s.title || ""
-      })).filter((s: any) => s.url),
+      })).filter((s: { url: string }) => s.url),
       game_versions: Array.from(new Set([
-        ...(m.latestFilesIndexes?.map((idx: any) => idx.gameVersion) || []),
-        ...versions.flatMap((v: any) => v.game_versions || []),
-      ])) as string[],
-      loaders: Array.from(new Set(versions.flatMap((v: any) => v.loaders || []))),
+        ...(m.latestFilesIndexes?.map((idx: CurseForgeFileIndex) => idx.gameVersion) || []),
+        ...versions.flatMap((v: { game_versions: string[] }) => v.game_versions || []),
+      ])),
+      loaders: Array.from(new Set(versions.flatMap((v: { loaders: string[] }) => v.loaders || []))),
       versions,
     };
 
@@ -130,17 +196,30 @@ export async function GET(req: NextRequest) {
       return "embedded";
     };
     const dependencyTypeById = new Map(
-      cfDeps.map((d: any) => [String(d.modId), relationToDependencyType(d.relationType)])
+      cfDeps.map((d: CurseForgeDependency) => [String(d.modId), relationToDependencyType(d.relationType)])
     );
     const depIds = Array.from(
       new Set(
         cfDeps
-          .filter((d: any) => [2, 3, 5].includes(d.relationType))
-          .map((d: any) => d.modId)
+          .filter((d: CurseForgeDependency) => [2, 3, 5].includes(d.relationType))
+          .map((d: CurseForgeDependency) => d.modId)
       )
     );
 
-    let dependencies: any[] = [];
+    let dependencies: Array<{
+      id: string;
+      project_id: string;
+      dependency_type: string;
+      title: string;
+      description: string;
+      icon_url: string | null;
+      author: string;
+      project_type: string;
+      categories: string[];
+      slug: string;
+      _source: string;
+    }> = [];
+
     if (depIds.length > 0) {
       const depsRes = await fetch(`${CURSEFORGE_API}/mods`, {
         method: "POST",
@@ -152,8 +231,8 @@ export async function GET(req: NextRequest) {
       });
 
       if (depsRes.ok) {
-        const depsJson = await depsRes.json();
-        dependencies = (depsJson.data || []).map((dep: any) => ({
+        const depsJson = (await depsRes.json()) as { data?: CurseForgeMod[] };
+        dependencies = (depsJson.data || []).map((dep: CurseForgeMod) => ({
           id: dep.id.toString(),
           project_id: dep.id.toString(),
           dependency_type: dependencyTypeById.get(String(dep.id)) || "required",
@@ -162,8 +241,8 @@ export async function GET(req: NextRequest) {
           icon_url: dep.logo?.thumbnailUrl || dep.logo?.url || null,
           author: dep.authors?.[0]?.name || "Desconocido",
           project_type: "mod",
-          categories: dep.categories?.map((c: any) => c.name) || [],
-          slug: dep.slug,
+          categories: dep.categories?.map((c: CurseForgeCategory) => c.name) || [],
+          slug: dep.slug || "",
           _source: "curseforge",
         }));
       }
@@ -173,7 +252,8 @@ export async function GET(req: NextRequest) {
       details: projectDetails,
       dependencies,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to load project details" }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to load project details";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

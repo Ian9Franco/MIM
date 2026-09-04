@@ -15,10 +15,11 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, profile });
-  } catch (error: any) {
-    console.error("Error resolving Minecraft profile:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error resolving Minecraft profile:", errorMsg);
     return NextResponse.json(
-      { success: false, error: `Failed to resolve Minecraft profile: ${error.message}` },
+      { success: false, error: `Failed to resolve Minecraft profile: ${errorMsg}` },
       { status: 500 }
     );
   }

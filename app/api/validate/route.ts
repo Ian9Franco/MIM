@@ -19,8 +19,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE, isValidLoader, SUBCATEGORIES } from "@/lib/core/constants";
-import type { Loader } from "@/lib/core/constants";
+import { SOURCE_BASE, isValidLoader, SUBCATEGORIES, type Loader } from "@/lib/core/constants";
+import { getSettings } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/modding/packValidator";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
@@ -65,11 +65,7 @@ export async function POST(req: NextRequest) {
 
     const validatorMods: ValidatorMod[] = [];
     
-    const SETTINGS_FILE = path.join(SOURCE_BASE, ".mim-index", "settings.json");
-    let settings: any = {};
-    if (fs.existsSync(SETTINGS_FILE)) {
-      settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
-    }
+    const settings = getSettings();
 
     const isMimu = projectName === "MIMU";
 

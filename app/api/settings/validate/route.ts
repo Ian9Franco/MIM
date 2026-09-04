@@ -1,17 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import fs from "fs";
-import path from "path";
+
+const requestSchema = z.object({
+  paths: z.array(z.string()).min(1, "Paths must contain at least one path"),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const { paths } = await req.json();
-    if (!paths || !Array.isArray(paths)) {
-      return NextResponse.json({ error: "Paths must be an array" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body payload" }, { status: 400 });
     }
 
+    const parsed = requestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Validation error", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { paths } = parsed.data;
     const results: Record<string, boolean> = {};
+
     for (const p of paths) {
-      if (!p) {
+      if (!p.trim()) {
         results[p] = false;
         continue;
       }
@@ -23,7 +39,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ results });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

@@ -71,14 +71,16 @@ export async function DELETE(req: NextRequest) {
             deletedCount++;
             deletedFiles.push(file);
             logs.push(`✓ Deleted: ${file}`);
-          } catch (err: any) {
-            logs.push(`✗ Failed to delete ${file}: ${err.message}`);
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            logs.push(`✗ Failed to delete ${file}: ${errMsg}`);
           }
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       return NextResponse.json(
-        { error: `Error scanning directory: ${err.message}` },
+        { error: `Error scanning directory: ${errMsg}` },
         { status: 500 }
       );
     }
@@ -98,10 +100,11 @@ export async function DELETE(req: NextRequest) {
         ? `Deleted ${deletedCount} backup files. Player will not rollback on next load.`
         : "No backup files found."
     });
-  } catch (error: any) {
-    console.error("Error purging player backups:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error purging player backups:", errorMsg);
     return NextResponse.json(
-      { error: `Failed to purge backups: ${error.message}` },
+      { error: `Failed to purge backups: ${errorMsg}` },
       { status: 500 }
     );
   }

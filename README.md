@@ -322,20 +322,20 @@ manager/
 
 ---
 
-## 🔒 Definition of Done & Scope Freeze Contract
+## 🔒 Quality Verification & Architecture Scope
 
-MIM is finalized as an engineering portfolio artifact under strict verification standards:
+MIM is maintained as an active modular systems engineering platform and portfolio artifact under strict verification standards. For an honest analysis of solo-developer realities, empirical benchmarks, and managed technical debt, see [**Project Reality & Status**](./docs/PROJECT_STATUS.md):
 
-- [x] **Zero Scope Creep:** Feature scope permanently frozen; no speculative or unneeded features added.
+- [x] **Disciplined Scope Management:** Controlled feature evolution avoiding speculative bloat; architecture choices are backed by ADRs, real-world community modding experience, and empirical benchmarks.
 - [x] **Defendable Engineering Claims:** All performance, security, and algorithmic claims verified directly against source code and benchmarks.
 - [x] **SAGE Evaluated & Scoped:** 125 canonical crash logs evaluated (100% Macro F1, 84% Top-1, 100% Top-3 on benchmark corpus, 0.06 ms latency). Non-goals explicitly documented.
 - [x] **Aduana Multi-Scale Verified:** Cryptographic deduplication benchmarked from 1K to 25K files (8.0×–8.5× cache speedup, > 2.0 GB/s hashing throughput).
 - [x] **FOMO Distributed Failure Modes Documented:** Network disconnection, Last-Write-Wins with client timestamps and UUID tie-breaking, optimistic UI rollback, and idempotent replay queues formally solved.
 - [x] **Security Engine Appropriately Framed:** Accurately presented as *Static Java Bytecode Threat Analysis* with transparent static heuristics and non-goals.
 - [x] **Zero-Data-Loss Invariant:** Formalized and verified with 12/12 passing integration tests.
-- [x] **Automated Test Suite Passing:** `npm test` passes 100% (144 scenarios across 4 suites).
+- [x] **Automated Test Suite Passing:** `npm test` passes 100% across all domain engines and security suites.
 - [x] **Empirical Benchmark Passing:** `npm run benchmark:aduana` passes across all tiers.
-- [x] **Production Compilation Passing:** `npm run build` passes with zero TypeScript errors across 79 routes.
+- [x] **Zero-Error Type & Build Verification:** `npm run build` and `tsc --noEmit` pass with zero errors across all routes and engines.
 - [x] **Technical Tour Passing:** `npm run demo` executes clean multi-engine showcase without warnings.
 - [x] **30–90s Recruiter & Architecture Readability:** Clear headline, measured performance matrix, decoupled domain engine diagrams, and deep-dive documentation index.
 

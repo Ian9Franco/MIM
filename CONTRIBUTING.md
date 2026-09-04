@@ -59,62 +59,76 @@ d:\.mine\manager\
 ├── app/                    → Next.js App Router (páginas y API routes)
 │   ├── api/                → 78 endpoints (Electron + Vercel)
 │   │   ├── fomo/           → Endpoints de FOMO Cloud (algunos públicos vía Vercel)
-│   │   ├── sage/           → API de diagnóstico de crashes
-│   │   └── security/       → API del escáner de bytecode
+│   │   ├── sage/           → API de diagnóstico de crashes y player rescue
+│   │   ├── security/       → API del escáner de bytecode y VirusTotal
+│   │   └── settings/       → API de validación de rutas y API keys
 │   └── (desktop)/          → Layout principal del cliente Electron
 │
-├── lib/                    → Lógica de negocio (NO tiene componentes de UI)
+├── lib/                    → Motores de dominio y lógica de negocio (sin UI)
 │   ├── intelligence/
-│   │   └── sage/           → SAGE Engine — el corazón del producto
-│   │       ├── index.ts    → Orchestrator principal
-│   │       ├── parser.ts   → Normalización de logs crudos
-│   │       ├── classifier.ts → Taxonomía de 8 categorías
-│   │       ├── correlator.ts → Atribución de mods culpables
-│   │       ├── scorer.ts   → Scoring de confianza (0–100)
-│   │       └── knowledgeBase.ts → RAG: base de conocimiento de compatibilidad
+│   │   ├── sage/           → SAGE Engine (parser, classifier, correlator, scorer, RAG)
+│   │   └── modExplainer.ts → Asistente MIM-Bot multimodal (modo bully / standard)
 │   │
 │   ├── security/           → Escáner estático de bytecode Java
-│   │   ├── bytecodeScanner.ts  → Inspección de JARs sin ejecución
-│   │   ├── security-scanner.ts → Orquestador (VirusTotal + hash)
-│   │   └── whitelist.ts    → Hashes conocidos limpios
+│   │   ├── bytecodeScanner.ts  → Inspección AST sin ejecución
+│   │   ├── security-scanner.ts → Orquestador (dual hash + VirusTotal + caché)
+│   │   ├── security-data.ts    → 19 firmas reales (Fracturiser, Necro RAT, stealers)
+│   │   └── whitelist.ts        → Hashes conocidos limpios
 │   │
-│   ├── fomo/               → FOMO Cloud (Supabase sync, Aduana)
+│   ├── fomo/               → FOMO Cloud y almacenamiento
 │   │   ├── aduana.ts       → Deduplicación CAS (SHA-512 / SHA-1)
-│   │   └── ...
+│   │   └── supabaseClient.ts → Conector a base de datos PostgreSQL RLS
 │   │
-│   ├── modding/            → Builder, validator, cola de descargas
-│   │   ├── builder.ts      → Construcción de modpacks (ZIP, manifests)
-│   │   ├── nbt.ts          → Parser NBT binario (v19133)
+│   ├── modding/            → Builder, validator, licencias y descargas
+│   │   ├── builder.ts      → Empaquetador de modpacks (AllUser ZIP, AllHost)
+│   │   ├── licenseAuditor.ts → Auditoría y detección de licencias (ARR vs MIT/LGPL)
+│   │   ├── nbt.ts          → Parser NBT binario v19133 con atomic swaps
 │   │   └── downloadQueue.ts → Cola priorizada de descargas
 │   │
 │   ├── storage/            → Persistencia asíncrona
-│   │   └── indexeddb.ts    → SmartCache + cola offline (IndexedDB)
+│   │   └── indexeddb.ts    → SmartCache + cola offline FIFO (IndexedDB)
 │   │
-│   ├── events/             → Event Bus tipado
-│   │   └── eventContract.ts → MimEventMap — contrato de eventos entre motores
+│   ├── events/             → Event Bus reactivo tipado
+│   │   └── eventContract.ts → MimEventMap — contrato desacoplado entre motores
 │   │
-│   └── core/               → Tipos transversales, supabaseClient, constantes
+│   └── core/               → Logger estructurado, settings, voice contracts
 │
-├── components/             → UI (React 19 + Framer Motion)
-│   ├── fomo/               → FOMO Cloud UI (community, discover, showcase...)
-│   ├── sage/               → UI de diagnóstico de crashes
-│   ├── security/           → UI del escáner
-│   └── ui/                 → Primitivos de diseño compartidos
+├── components/             → UI Desktop (React 19 + Framer Motion)
+│   ├── fomo/               → FOMO Cloud UI (community, discover, showcase, overlay...)
+│   ├── sage/               → UI interactiva de diagnóstico y rescate de jugadores
+│   ├── security/           → UI del escáner estático y reportes de riesgo
+│   └── ui/                 → Primitivos de diseño compartidos y animaciones
 │
-├── web/                    → Subproyecto MIMweb (Next.js independiente, Vercel)
-│   ├── app/api/            → API routes públicas (expuestas en mim-hub.vercel.app)
-│   └── components/         → Componentes del hub web
+├── hooks/                  → Hooks reactivos de estado y gestión de UI
+│   ├── useFomoOverlayManager.ts → Gestión de overlay, mod details y MIM-Bot
+│   └── ...
 │
-├── standalone/             → Electron shell
-│   └── main.js             → Entry point de Electron
+├── services/               → Servicios cliente de integración y sincronización
+├── sql/                    → Esquemas DDL y políticas de seguridad RLS de PostgreSQL
+├── constants/              → Constantes del ecosistema, categorías y loaders
 │
-├── scripts/                → Herramientas de soporte (NO van a producción)
-│   └── test-runner.js      → Runner de tests personalizado
+├── web/                    → Subproyecto MIMweb (Next.js independiente en Vercel)
+│   ├── app/api/            → API routes públicas (explain, translate, community...)
+│   ├── components/         → Componentes del hub web (ModDetailsSheet, marquees...)
+│   └── lib/                → Rate limiter sliding window, traductor oficial y voice
 │
-└── docs/                   → Documentación técnica completa
+├── standalone/             → Electron shell nativo
+│   └── main.js             → Entry point con sandbox OS y contextIsolation
+│
+├── scripts/                → Tooling, evaluación y tests (NO van a producción)
+│   ├── __tests__/          → Suites automatizadas (SAGE, seguridad, APIs, personalidad)
+│   ├── benchmarks/         → Stress tests empíricos de Aduana (1k a 25k)
+│   ├── evaluation/         → Runner de evaluación SAGE (125 casos) y RAG
+│   ├── security/           → DAST dynamic security testing y comprobaciones de headers
+│   ├── audit-licenses.ts   → CLI de auditoría de licencias de mods
+│   └── test-runner.js      → Orquestador de testing unificado headless
+│
+└── docs/                   → Documentación técnica completa del ciclo de vida
     ├── adr/                → Architecture Decision Records (ADRs)
-    ├── SAGE_EVALUATION.md  → Reporte de evaluación cuantitativa
-    └── THREAT_MODEL.md     → Modelo de amenazas STRIDE
+    ├── PROJECT_STATUS.md   → Estado real del proyecto y contexto solo-dev
+    ├── SAGE_EVALUATION.md  → Reporte de evaluación cuantitativa (125 casos)
+    ├── THREAT_MODEL.md     → Modelo de amenazas STRIDE y auditoría DAST
+    └── ADUANA_BENCHMARKS.md→ Benchmarks formales de throughput y caché
 ```
 
 ### El Event Bus — cómo se comunican los motores
@@ -227,33 +241,53 @@ MIMweb es un Next.js separado que se deploya en Vercel independientemente.
 
 ## Convenciones y Reglas del Código
 
-### Commits — Conventional Commits
+### Disciplina de Commits (Conventional Commits Obligatorio)
+
+Todo commit en el repositorio debe seguir estrictamente la especificación [Conventional Commits v1.0.0](https://www.conventionalcommits.org/):
 
 ```
-feat(sage): add MIXIN_FAILURE subtype detection
-fix(aduana): handle concurrent cache writes with mutex
-docs(contributing): add architecture internal map
+<tipo>(<ámbito opcional>): <descripción concisa en minúsculas>
+
+[cuerpo opcional explicando la motivación técnica]
+
+[pie de commit opcional]
+```
+
+**Tipos válidos:**
+- `feat`: Nueva funcionalidad o capacidad para el usuario final o motor.
+- `fix`: Corrección de un error o anomalía de comportamiento.
+- `chore`: Tareas de mantenimiento, dependencias o tooling que no alteran producción.
+- `docs`: Modificaciones exclusivas de documentación técnica.
+- `test`: Incorporación o refactorización de suites de pruebas.
+- `refactor`: Cambios de estructura de código sin alterar comportamiento externo.
+- `perf`: Mejoras de rendimiento o reducción de latencia/memoria.
+
+**Ámbitos principales recomendados:** `sage`, `aduana`, `security`, `fomo`, `nbt`, `mimweb`, `electron`, `deps`.
+
+**Ejemplos estándar:**
+```
+feat(sage): add MIXIN_FAILURE subtype detection for NeoForge 1.21
+fix(aduana): handle concurrent cache writes with atomic swap buffers
+feat(bot): add personality toggle between bully and standard modes
+docs(contributing): add architecture internal map and commit conventions
 test(sage): add unit tests for classifier edge cases
 refactor(security): remove silent catch blocks in bytecode scanner
 chore(deps): update electron to 42.1.0
 ```
 
-**No usar:** `web19`, `update`, `fix stuff`, `changes`. El historial de commits es documentación.
+**Prohibido terminantemente:** Mensajes genéricos como `update`, `fix stuff`, `changes`, `wip`, `web19`. El historial de Git es un documento vivo de auditoría de ingeniería.
 
-### TypeScript — zonas sin any
+### TypeScript — zonas estrictamente sin `any`
 
-Hay ~1023 usos de `any`. No hay que perseguirlos todos. En código **nuevo**, no se acepta `any` en:
-- `lib/intelligence/sage/` — lógica pura, tipado total
-- `lib/security/` — manejo de datos no confiables
-- `app/api/*/route.ts` — entradas de la API
+En `lib/intelligence/sage/`, `lib/security/` y las API routes (`app/api/*/route.ts`, `web/app/api/*/route.ts`), está prohibido el uso de `any`. Se deben utilizar interfaces bien delimitadas, genéricos o `unknown` con type guards.
 
 ### Error handling — regla mínima
 
 ```typescript
-// Mal — silencia el error
+// Mal — silencia el error y asume éxito ciego
 try { await saveVTCache(data); } catch {}
 
-// Bien — loggea con contexto
+// Bien — loggea con contexto y degrada elegantemente
 try {
   await saveVTCache(data);
 } catch (err) {
@@ -264,34 +298,18 @@ try {
 
 ### Componentes — límite de 600 líneas
 
-Ningún componente debería superar 600 líneas de código funcional. Si crece, extraer subcomponentes.
+Ningún componente debería superar 600 líneas de código funcional (sin contar comentarios/bloques de documentación). Si crece, extraer subcomponentes para preservar una arquitectura limpia y modular.
 
 ---
 
-## Zonas de Alta Deuda Técnica (Trabajo Pendiente Documentado)
+## Estado de Deuda Técnica & Endurecimiento (Septiembre 2026)
 
-### 1. Testing — Urgente
-
-**Estado:** 4 tests para ~85k líneas.  
-**Plan:** Empezar por lógica pura — SAGE classifier, scorer, parser no tienen dependencias de IO. Luego security-scanner. Luego integration tests por API route.
-
-### 2. Validación de input en API routes
-
-**Estado:** 78 endpoints, cero validación con zod.  
-**Riesgo:** Endpoints públicos de MIMweb sin defensa contra input malformado.  
-**Plan:** Empezar por los que son proxies a terceros (fomo/translate, curseforge/*, modrinth/*).
-
-### 3. Rate limiting
-
-**Estado:** No implementado.  
-**Riesgo:** `fomo/translate` es proxy abierto a Google Translate (API no oficial). Vector de abuso.  
-**Plan:** Upstash Rate Limiting o middleware de Vercel.
-
-### 4. KNOWN_MALWARE_HASHES
-
-**Estado:** Array vacío en `lib/security/whitelist.ts`.  
-**Problema:** El README menciona detección por hash de malware como feature. No existe.  
-**Opción más honesta:** Remover la promesa hasta que exista la integración real con feeds de threat intelligence.
+- [x] **Testing Automatizado**: 8 suites de pruebas unitarias y de integración (`npm test` — 144 escenarios pasando al 100%, 0 fallos).
+- [x] **Catch Silenciados**: 69 bloques `catch {}` auditados y reemplazados por manejo de errores contextual en Web y Desktop.
+- [x] **Rate Limiting**: Implementado en `/api/fomo/translate` con sliding window por IP y degradación elegante.
+- [x] **Firmas de Malware Reales**: Integradas 19 firmas SHA-1/SHA-256 del incidente Fracturiser y troyanos en `lib/security/security-data.ts`.
+- [x] **Validación Zod**: Schemas de validación en rutas públicas y locales de mutación.
+- [x] **Toggle de Personalidad MIM-Bot**: Modos `bully` y `standard` integrados en frontend y backend.
 
 ---
 

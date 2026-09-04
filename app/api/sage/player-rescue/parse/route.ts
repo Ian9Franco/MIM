@@ -157,7 +157,7 @@ export async function GET(req: NextRequest) {
     // Extract key player data
     let pos = [0, 80, 0];
     if (playerCompound["Pos"] && playerCompound["Pos"].type === TagType.List) {
-      const listData = playerCompound["Pos"].value as { itemType: TagType; list: any[] };
+      const listData = playerCompound["Pos"].value as { itemType: TagType; list: unknown[] };
       pos = listData.list.map(v => Number(v));
     }
 
@@ -177,9 +177,9 @@ export async function GET(req: NextRequest) {
       spawnZ = Number(playerCompound["SpawnZ"].value);
     }
 
-    let inventory: any[] = [];
+    let inventory: unknown[] = [];
     if (playerCompound["Inventory"] && playerCompound["Inventory"].type === TagType.List) {
-      const listData = playerCompound["Inventory"].value as { itemType: TagType; list: any[] };
+      const listData = playerCompound["Inventory"].value as { itemType: TagType; list: unknown[] };
       inventory = listData.list;
     }
 
@@ -203,10 +203,11 @@ export async function GET(req: NextRequest) {
         ? [`Found ${backupFiles.length} backup files. Consider purging before saving to prevent mod rollbacks.`]
         : []
     });
-  } catch (error: any) {
-    console.error("Error parsing player rescue file:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error parsing player rescue file:", errorMsg);
     return NextResponse.json(
-      { error: `Failed to parse NBT file: ${error.message}` },
+      { error: `Failed to parse NBT file: ${errorMsg}` },
       { status: 500 }
     );
   }

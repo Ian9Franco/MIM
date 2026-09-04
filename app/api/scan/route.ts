@@ -24,8 +24,9 @@ export async function GET(req: NextRequest) {
   try {
     const meta = await scanModEnhanced(filePath);
     return NextResponse.json(meta);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("[/api/scan] Error scanning mod:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

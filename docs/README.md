@@ -1,80 +1,139 @@
-# MIM Documentation & Engineering Specifications / Documentación Técnica
+# 🗺️ MIM Documentation & Master Map / Mapa Maestro de Documentación
 
 <div align="center">
 
-**[English Documentation](#english)** • **[Documentación en Español](#español)**
+**[Documentación en Español](#-mapa-maestro-en-español)** • **[English Documentation](#-master-map-in-english)**
 
 </div>
 
-> **Estado honesto:** MIM es un proyecto de un solo desarrollador. La documentación técnica es detallada y los benchmarks son reales, pero el proyecto está en **beta activa** — no en producción empresarial. Ver [PROJECT_STATUS.md](./PROJECT_STATUS.md) para el estado real de calidad técnica.
+> **Estado del Proyecto:** MIM es un sistema de ingeniería modular para Minecraft en **desarrollo activo y beta avanzada** (v11.3.0).  
+> Ver [PROJECT_STATUS.md](./PROJECT_STATUS.md) para el informe de madurez técnica real y zonas de deuda asumida.
 
 ---
 
-## English
+## 🇪🇸 Mapa Maestro en Español
 
-Welcome to the technical documentation of **MIM (Minecraft Intelligent Manager)**. Below is the organized directory of systems engineering specifications, benchmarks, threat models, and architectural decisions.
+Para no perderte entre los documentos, esta guía clasifica cada archivo por su **función exacta y cuándo debés abrirlo**:
 
-### 📋 Project Transparency & Contributing
-- **[Honest Project Status](./PROJECT_STATUS.md)**: Real quality state — what works, known technical debt, and the solo-dev context. Read before making assumptions about production readiness.
-- **[Technical Backlog (TODO)](../TODO.md)**: Prioritized list of real technical debt — tests, error handling, validation, rate limiting — with concrete action items.
-- **[Contributing Guide](../CONTRIBUTING.md)**: Internal architecture map, SAGE pipeline deep-dive, code directory, conventions, and known debt zones. Essential for onboarding.
+### 1. 🎯 Planificación & Día a Día (¿Qué hacer ahora?)
+| Documento | Propósito | ¿Cuándo leerlo? |
+| :--- | :--- | :--- |
+| **[whosnext.md](./whosnext.md)** 🟢 | **Checklist táctico del sprint activo (v11.3.0).** Tareas inmediatas de MimBot, seguridad, optimizaciones de UI y deuda técnica urgente. | **Siempre.** Es el archivo vivo de trabajo diario. |
+| **[ROADMAP.md](./ROADMAP.md)** | **Hitos y evolución estratégica.** Registro de versiones completadas (v9, v10, v11) y visión de largo plazo. | Para entender de dónde viene el proyecto y hacia dónde va. |
+| **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** | **Auditoría de madurez honesta.** Qué funciona al 100%, qué es experimental y contexto de desarrollo solo-dev. | Antes de tomar decisiones de arquitectura pesadas. |
+| **[BACKLOG.md](./BACKLOG.md)** | **Banco de ideas y mejoras diferidas.** Tareas no urgentes anotadas para el futuro. | Al planificar nuevas iteraciones. |
+
+---
+
+### 2. 🏛️ Arquitectura & Sistema General (¿Cómo funciona MIM?)
+| Documento | Propósito | ¿Cuándo leerlo? |
+| :--- | :--- | :--- |
+| **[MIM.md](./MIM.md)** 📘 | **Manual Técnico Maestro.** La explicación más completa de MIM: flujos de datos, estructura de carpetas, frontend, backend y ciclo de vida. | Para entender el sistema completo de punta a punta. |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | **Topología y Motores.** Los 7 dominios de `lib/` desacoplados y el bus de eventos reactivo (`MimEventMap`). | Al crear nuevos módulos o modificar la comunicación interna. |
+| **[DISTRIBUTED_ARCHITECTURE.md](./DISTRIBUTED_ARCHITECTURE.md)** | **Sistemas Distribuidos & Sincronización.** Modelo Offline-First, Last-Write-Wins (LWW) y sincronización con Supabase. | Al tocar lógica de sincronización entre Desktop y Web. |
+| **[API.md](./API.md)** | **Catálogo de Endpoints HTTP.** Referencia de rutas REST en `app/api` con sus métodos, parámetros y respuestas. | Al conectar pantallas o servicios con el backend de Next.js. |
+| **[SYSTEMS_SUMMARY.md](./SYSTEMS_SUMMARY.md)** | **Ficha Técnica Ejecutiva.** Métricas de rendimiento, latencias y consumo de recursos de los motores. | Para consultas rápidas de specs y límites. |
+
+---
+
+### 3. 🛡️ Seguridad & Blindaje Perimetral
+| Documento | Propósito | ¿Cuándo leerlo? |
+| :--- | :--- | :--- |
+| **[SECURITY_ENGINE.md](./SECURITY_ENGINE.md)** | **Análisis Estático de Bytecode.** Cómo inspecciona MIM los archivos `.jar` en busca de malware sin ejecutarlos. | Al modificar el escáner de mods o reglas de detección. |
+| **[THREAT_MODEL.md](./THREAT_MODEL.md)** | **Modelo de Amenazas STRIDE.** Análisis formal de seguridad, vectores de ataque mitigados y superficies expuestas. | En auditorías de seguridad y revisiones de infraestructura. |
+| **[WEB_HARDENING.md](./WEB_HARDENING.md)** | **Perímetro Edge de MIMweb.** Reglas de rate limiting, headers defensivos y blindaje de la versión web pública. | Al desplegar o tocar rutas públicas en Vercel/Edge. |
+
+---
+
+### 4. 🧠 Motores de Dominio & Benchmarks
+| Documento | Propósito | ¿Cuándo leerlo? |
+| :--- | :--- | :--- |
+| **[SAGE_RESCUE.md](./SAGE_RESCUE.md)** 🩺 | **Guía Maestra de SAGE.** Diagnóstico forense de crashes, árbol de eliminación y rescate de jugadores. | Al trabajar en la inteligencia de diagnóstico o MimBot. |
+| **[SAGE_EVALUATION.md](./SAGE_EVALUATION.md)** | **Benchmark Cuantitativo de SAGE.** Evaluación sobre dataset de 125 crashes reales (F1 100%, latencia 0.05ms). | Para verificar que los cambios en SAGE no degraden la precisión. |
+| **[NBT_RESCUE_SPEC.md](./NBT_RESCUE_SPEC.md)** | **Especificación Binaria NBT.** Protocolo v19133, compresión gzip y el Invariante de Cero Pérdida de Datos. | Al tocar código de lectura/escritura de archivos `.dat`. |
+| **[ADUANA_BENCHMARKS.md](./ADUANA_BENCHMARKS.md)** | **Benchmark de Almacenamiento Aduana.** Rendimiento de Content-Addressed Storage y deduplicación (>2.0 GB/s). | Para optimizaciones de I/O y caché en disco. |
+| **[FOMO_CLOUD.md](./FOMO_CLOUD.md)** | **Módulo FOMO & Media.** Descargas vía yt-dlp, curación de modpacks comunitarios y showcase de YouTube. | Al trabajar en componentes o servicios de la pestaña FOMO. |
+
+---
+
+### 5. ☁️ Base de Datos & Backend Cloud
+| Documento | Propósito | ¿Cuándo leerlo? |
+| :--- | :--- | :--- |
+| **[supabase_setup_and_api.md](./supabase_setup_and_api.md)** | **Guía de Supabase.** Esquema SQL, políticas RLS, autenticación y configuración de credenciales. | Al crear tablas, migraciones o tocar queries remotas. |
+
+---
+
+### 6. 💡 Propuestas Técnicas & RFCs (Diseños de Futuro)
+| Documento | Propósito |
+| :--- | :--- |
+| **[PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md](./PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md)** | Diseño conceptual para potenciar MimBot con grafos y cascada de modelos. |
+| **[PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)** | Diseño para generar resúmenes con IA mediante Gemini Search Grounding. |
+| **[PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)** | Propuesta de baúl criptográfico para soberanía total de datos locales. |
+
+---
+
+### 7. 🚀 Guías de Operación & Herramientas
+| Documento | Propósito |
+| :--- | :--- |
+| **[ONBOARDING.md](./ONBOARDING.md)** | Guía de configuración inicial para desarrolladores y nuevos entornos. |
+| **[REPRODUCIBILITY.md](./REPRODUCIBILITY.md)** | Instrucciones para reproducir builds, Docker y tests de forma determinista. |
+| **[DEMO.md](./DEMO.md)** | Guía interactiva para correr el showcase por consola (`npm run demo`). |
+
+---
+
+### 8. 📑 Decisiones de Arquitectura Inmutables (ADRs)
+Ubicadas en [docs/adr/](./adr/README.md):
+- **[ADR-001](./adr/ADR-001-deterministic-diagnosis-vs-llm.md)**: Diagnóstico Determinista vs. LLM
+- **[ADR-002](./adr/ADR-002-content-addressed-caching.md)**: Almacenamiento Direccionado por Contenido (CAS)
+- **[ADR-003](./adr/ADR-003-offline-first-synchronization.md)**: Sincronización Offline-First y LWW
+- **[ADR-004](./adr/ADR-004-atomic-writes-nbt-recovery.md)**: Escrituras Atómicas y Recuperación Segura NBT
+- **[ADR-005](./adr/ADR-005-static-bytecode-inspection-vs-execution.md)**: Inspección Estática de Bytecode vs. Ejecución
+- **[ADR-006](./adr/ADR-006-typed-event-bus.md)**: Bus Reactivo de Eventos Tipado
+
+---
+
+### 9. 📜 Histórico
+- **[CHANGELOG.md](./CHANGELOG.md)**: Historial completo de versiones y cambios.
+- **[release-notes-v10.5.0.md](./release-notes-v10.5.0.md)** / **[release-notes-v10.5.1.md](./release-notes-v10.5.1.md)**: Notas de versiones anteriores.
+
+---
+
+<br/>
+
+## 🇬🇧 Master Map in English
+
+A comprehensive index mapping every engineering specification, benchmark, and architectural document in MIM:
+
+### 📋 Project Status & Daily Workflow
+- **[whosnext.md](./whosnext.md)**: Active tactical sprint checklist (v11.3.0). Current engineering priorities.
+- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)**: Honest engineering state, known technical debt, and solo-dev context.
+- **[ROADMAP.md](./ROADMAP.md)**: Multi-version strategic roadmap and milestones (v9 to v11).
+- **[BACKLOG.md](./BACKLOG.md)**: Long-term technical backlog and deferred items.
 
 ### 🏛️ Core Architecture & Distributed Systems
-- **[System Architecture (7 Domain Engines)](./ARCHITECTURE.md)**: Full topology, decoupled engines, and typed event bus (`MimEventMap`).
-- **[Distributed Systems Architecture (FOMO Cloud)](./DISTRIBUTED_ARCHITECTURE.md)**: Offline-first state sync, Last-Write-Wins (LWW) conflict resolution, optimistic UI rollback, and PostgreSQL Row-Level Security (RLS).
-- **[Live Demo Tour Specification](./DEMO.md)**: Step-by-step walkthrough of the interactive headless CLI showcase (`npm run demo`).
-- **[Reproducibility Guide](./REPRODUCIBILITY.md)**: Local, Docker, and CI reproducible environments.
+- **[MIM.md](./MIM.md)**: Master technical document covering end-to-end data flows, lifecycle, and component structure.
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Decoupled 7-engine domain topology and typed reactive event bus (`MimEventMap`).
+- **[DISTRIBUTED_ARCHITECTURE.md](./DISTRIBUTED_ARCHITECTURE.md)**: Offline-first synchronization, Last-Write-Wins (LWW) conflict resolution, and PostgreSQL RLS.
+- **[API.md](./API.md)**: HTTP REST endpoint specification and request/response contracts.
+- **[SYSTEMS_SUMMARY.md](./SYSTEMS_SUMMARY.md)**: Executive hardware profile, memory footprints, and engine latency summary.
 
-### 🔬 Subsystem Specifications & Empirical Benchmarks
-- **[SAGE 2.0 Crash Intelligence Evaluation](./SAGE_EVALUATION.md)**: 125-case quantitative evaluation report (100% Macro F1, 84% Top-1, 100% Top-3, 0.06 ms latency, RAG, and guardrails).
-- **[Aduana Storage Engine Benchmarks](./ADUANA_BENCHMARKS.md)**: Content-addressed storage, SHA-1/SHA-512 throughput (> 2.0 GB/s), and empirical scaling from 1K to 25K files (8× speedup).
-- **[Static Java Bytecode Threat Analysis](./SECURITY_ENGINE.md)**: AST inspection rules (process execution, shell droppers, native JNI, reflection evasion), bounded worker pools, and threat scoring.
-- **[STRIDE Threat Model & Attack Trees](./THREAT_MODEL.md)**: Formal AppSec analysis across Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege.
-- **[NBT Binary Safe Recovery Specification](./NBT_RESCUE_SPEC.md)**: Named Binary Tag protocol (NBT v19133), RFC 1952 Gzip decompression, mandatory `.mim_bak` snapshot, and the Zero-Data-Loss Invariant.
-- **[MIM Sovereign Vault Architecture Proposal](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)**: Data sovereignty specification, SHA-256 integrity, idempotent account re-seeding, and cloud dormancy mitigation.
-- **[MIM Intelligent Mod Explainer Proposal](./PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)**: On-demand AI synthesis, public Gemini Search Grounding for sparse/empty metadata, and zero-server architecture.
+### 🛡️ AppSec & Perimeter Defense
+- **[SECURITY_ENGINE.md](./SECURITY_ENGINE.md)**: Static bytecode scanner for untrusted Java `.jar` archives without execution.
+- **[THREAT_MODEL.md](./THREAT_MODEL.md)**: Formal STRIDE threat modeling and mitigation matrix.
+- **[WEB_HARDENING.md](./WEB_HARDENING.md)**: Edge defense rules, IP rate limiting, and defensive response headers for MIMweb.
+
+### 🔬 Empirical Benchmarks & Subsystem Specs
+- **[SAGE_RESCUE.md](./SAGE_RESCUE.md)**: SAGE crash intelligence forensics and player recovery engine.
+- **[SAGE_EVALUATION.md](./SAGE_EVALUATION.md)**: 125-case empirical evaluation report (100% Macro F1, 0.05ms latency).
+- **[NBT_RESCUE_SPEC.md](./NBT_RESCUE_SPEC.md)**: NBT binary safe recovery protocol (v19133) and Zero-Data-Loss Invariant.
+- **[ADUANA_BENCHMARKS.md](./ADUANA_BENCHMARKS.md)**: Content-addressed caching throughput benchmarks (>2.0 GB/s).
+- **[FOMO_CLOUD.md](./FOMO_CLOUD.md)**: Community pool, yt-dlp media engine, and showcase sync.
 
 ### 📑 Architecture Decision Records (ADRs)
-- **[ADR Index](./adr/README.md)**: Overview of foundational design decisions.
-  - [ADR-001: Deterministic Diagnosis vs. LLM](./adr/ADR-001-deterministic-diagnosis-vs-llm.md)
-  - [ADR-002: Content-Addressed Caching](./adr/ADR-002-content-addressed-caching.md)
-  - [ADR-003: Offline-First Synchronization & LWW](./adr/ADR-003-offline-first-synchronization.md)
-  - [ADR-004: Atomic Writes & Zero-Loss NBT Recovery](./adr/ADR-004-atomic-writes-nbt-recovery.md)
-  - [ADR-005: Static Bytecode Inspection vs. Execution](./adr/ADR-005-static-bytecode-inspection-vs-execution.md)
-  - [ADR-006: Reactive Typed Event Bus](./adr/ADR-006-typed-event-bus.md)
-
----
-
-## Español
-
-Bienvenido a la documentación técnica de **MIM (Minecraft Intelligent Manager)**. A continuación se detalla el índice de especificaciones de ingeniería, benchmarks, modelos de amenazas y decisiones arquitectónicas.
-
-### 📋 Transparencia del Proyecto
-- **[Estado Real del Proyecto](./PROJECT_STATUS.md)**: Estado honesto de calidad — qué funciona, deuda técnica conocida y contexto de solo-dev. Leer antes de asumir madurez de producción.
-- **[Backlog Técnico (TODO)](../TODO.md)**: Lista priorizada de deuda técnica real — tests, manejo de errores, validación, rate limiting — con acciones concretas.
-- **[Guía de Contribución](../CONTRIBUTING.md)**: Mapa del código, pipeline interno de SAGE, convenciones y zonas de deuda conocida. Esencial para orientarse.
-
-### 🏛️ Arquitectura Central y Sistemas Distribuidos
-- **[Arquitectura del Sistema (7 Motores de Dominio)](./ARCHITECTURE.md)**: Topología completa, motores desacoplados y bus de eventos tipado (`MimEventMap`).
-- **[Arquitectura de Sistemas Distribuidos (FOMO Cloud)](./DISTRIBUTED_ARCHITECTURE.md)**: Sincronización offline-first, resolución de conflictos Last-Write-Wins (LWW), rollback optimista y Row-Level Security (RLS) en PostgreSQL.
-- **[Documentación Técnica Maestra (MIM.md)](./MIM.md)**: Documento integral en español sobre flujos de datos, componentes y funcionamiento de la aplicación.
-- **[Guía de Reproducibilidad](./REPRODUCIBILITY.md)**: Entornos reproducibles en local, Docker y CI.
-- **[Demostración de Sistemas en Vivo](./DEMO.md)**: Guía paso a paso del showcase interactivo por consola (`npm run demo`).
-
-### 🔬 Especificaciones de Subsistemas y Benchmarks
-- **[Evaluación de Inteligencia de Crashes SAGE 2.0](./SAGE_EVALUATION.md)**: Reporte cuantitativo sobre 125 casos canónicos (100% Macro F1, 84% Top-1, 100% Top-3, latencia de 0.06 ms, RAG y guardrails).
-- **[Benchmarks del Motor de Almacenamiento Aduana](./ADUANA_BENCHMARKS.md)**: Almacenamiento direccionado por contenido, hashing a > 2.0 GB/s y aceleración de 8× de 1K a 25K archivos.
-- **[Análisis Estático de Amenazas en Bytecode Java](./SECURITY_ENGINE.md)**: Reglas de inspección AST (procesos externos, droppers, JNI, evasión por reflexión) y puntuación de riesgo.
-- **[Modelo de Amenazas STRIDE y Árboles de Ataque](./THREAT_MODEL.md)**: Análisis formal de seguridad de aplicaciones.
-- **[Especificación de Recuperación Binaria NBT](./NBT_RESCUE_SPEC.md)**: Protocolo NBT v19133 de Mojang, descompresión RFC 1952, snapshot `.mim_bak` e invariante de cero pérdida de datos.
-- **[Propuesta Arquitectónica: MIM Sovereign Vault](./PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)**: Soberanía de datos, verificación de integridad SHA-256, migración de cuentas y mitigación de pausas en la nube.
-- **[Propuesta: Explicador Inteligente de Mods](./PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)**: Síntesis de proyectos on-demand con Gemini Search Grounding para metadatos vacíos sin requerir servidor backend.
-
-### 📑 Registro de Decisiones de Arquitectura (ADRs)
-- **[Índice de ADRs](./adr/README.md)**: Decisiones fundacionales de diseño.
-  - [ADR-001: Diagnóstico Determinista vs. LLM](./adr/ADR-001-deterministic-diagnosis-vs-llm.md)
-  - [ADR-002: Almacenamiento Direccionado por Contenido](./adr/ADR-002-content-addressed-caching.md)
-  - [ADR-003: Sincronización Offline-First y LWW](./adr/ADR-003-offline-first-synchronization.md)
-  - [ADR-004: Escrituras Atómicas y Recuperación NBT](./adr/ADR-004-atomic-writes-nbt-recovery.md)
-  - [ADR-005: Inspección Estática de Bytecode vs. Ejecución](./adr/ADR-005-static-bytecode-inspection-vs-execution.md)
-  - [ADR-006: Bus Reactivo de Eventos Tipado](./adr/ADR-006-typed-event-bus.md)
+Located under [docs/adr/](./adr/README.md):
+- [ADR-001: Deterministic Diagnosis vs. LLM](./adr/ADR-001-deterministic-diagnosis-vs-llm.md)
+- [ADR-002: Content-Addressed Caching](./adr/ADR-002-content-addressed-caching.md)
+- [ADR-003: Offline-First Synchronization & LWW](./adr/ADR-003-offline-first-synchronization.md)
+- [ADR-004: Atomic Writes & Zero-Loss NBT Recovery](./adr/ADR-004-atomic-writes-nbt-recovery.md)
+- [ADR-005: Static Bytecode Inspection vs. Execution](./adr/ADR-005-static-bytecode-inspection-vs-execution.md)
+- [ADR-006: Reactive Typed Event Bus](./adr/ADR-006-typed-event-bus.md)

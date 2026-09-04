@@ -254,7 +254,7 @@ export async function scanSecurity(filePath: string, localOnly = false): Promise
         category: "known_malware", 
         severity: "critical", 
         description: `🚨 VirusTotal: ${vt.maliciousCount} detecciones`, 
-        details: vt.detailsUrl ? [vt.detailsUrl] : [],
+        details: vt.detailsUrl ? [vt.detailsUrl] : [], 
         scoreImpact: Math.min(100, vt.maliciousCount * 30) 
       });
     } else if (vt.totalEngineCount > 0) {

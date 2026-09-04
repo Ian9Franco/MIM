@@ -25,6 +25,13 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
 
   useEffect(() => {
     localStorage.setItem("sage_mode", mode);
+    // Al cambiar de modo, limpiamos el análisis anterior para no mostrar resultados incorrectos
+    setCrashAnalysis(null);
+    setCrashRawText("");
+    setLogAnalysis(null);
+    setLogRawText("");
+    setSelectedCrashFile(null);
+    setLatestLogFile(null);
   }, [mode]);
 
   // ── Player Rescue logic ──

@@ -22,25 +22,14 @@ export function SageAnalysisView({ analysis, onAutoFix, rawText }: any) {
     <div className="space-y-6 animate-fade-up">
       <DiagnosisCard analysis={analysis} severityStyle={severityStyle} />
 
-      {/* MIM-Bot Copilot Action Banner with Bouncing Slime Icon */}
-      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 backdrop-blur-md shadow-lg shadow-purple-500/5">
-        <div className="flex items-center gap-3">
-          <img src="/icon.png" alt="MIM-Bot" className="w-5 h-5 object-contain animate-slime shrink-0" />
-          <div>
-            <p className="text-xs font-bold text-white flex items-center gap-1.5">
-              Copiloto Inteligente MIM-Bot
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">PRO</span>
-            </p>
-            <p className="text-[11px] text-white/50">Deducción de dependencias, descarte lógico y soluciones en 1-clic.</p>
-          </div>
-        </div>
+      {/* MIM-Bot Copilot toggle — sin banner duplicado, el header real está dentro de SageMimbotCopilot */}
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={() => setShowMimbot(!showMimbot)}
-          className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-purple-600/20 active:scale-95"
+          className="px-3.5 py-2 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-purple-600/20 active:scale-95 border border-purple-500/30"
         >
-          <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
-          {showMimbot ? "Ocultar Copiloto" : "Consultar a MIM-Bot"}
+          {showMimbot ? "Ocultar MIM-Bot" : "Consultar a MIM-Bot ✦"}
         </button>
       </div>
 

@@ -32,8 +32,8 @@ MIM tiene configurado un flujo profesional de ingeniería donde **vos sos el Gat
 ### ¿Cómo saber qué PR o rama revisar?
 
 Tenés dos formas facilísimas:
-1. **Desde tu consola (Modo automático):** Ejecutá `npm run pr:review` (sin parámetros). Te lista al instante todos los PRs abiertos (`PR #1`, `PR #2`) y todas las ramas activas en GitHub con el comando listo para copiar y pegar.
-2. **Desde la web de GitHub:** Entrá a la pestaña **[Pull requests](https://github.com/Ian9Franco/MIM/pulls)** de tu repositorio. Cada PR tiene un número gigante al lado del título (ej: `#2`) y el nombre de la rama justo debajo.
+1. **Desde tu consola (Modo automático):** Ejecutá `npm run pr:review` (sin parámetros). Te separa limpiamente en dos bloques: los **🟢 PENDIENTES / ABIERTOS** (con el comando listo para auditar) y los **⚪ CERRADOS / RESUELTOS** (que ya están en `main`).
+2. **Desde la web de GitHub:** Entrá a la pestaña **[Pull requests](https://github.com/Ian9Franco/MIM/pulls)** de tu repositorio. Cada PR tiene su estado (`Open` o `Closed`), un número gigante al lado del título (ej: `#2`) y el nombre de la rama.
 
 ---
 

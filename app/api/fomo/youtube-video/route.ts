@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import YTDlpWrap from "yt-dlp-wrap";
 import path from "path";
 import fs from "fs";
+import { withApiGuard } from "@/lib/apiGuard";
 import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
 
 const binDir = path.join(process.cwd(), "standalone");
@@ -58,47 +60,54 @@ function extractModSlugs(description: string): string[] {
   return [...new Set(found)];
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const videoId = searchParams.get("videoId");
-  if (!videoId) return NextResponse.json({ error: "videoId is required" }, { status: 400 });
+const querySchema = z.object({
+  videoId: z.string().trim().min(1, "videoId is required"),
+});
 
-  try {
-    await ensureYtDlp();
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const detailOut = await ytDlpWrap.execPromise([videoUrl, "--dump-json", "--no-playlist"]);
-    const detail = JSON.parse(detailOut.trim());
-    
-    return NextResponse.json({
-      title: detail.title,
-      thumbnail: detail.thumbnail,
-      videoUrl,
-      videoId: detail.id,
-      modSlugs: extractModSlugs(detail.description || ""),
-      publishedAt: detail.upload_date ?? "",
-      channelUrl: detail.uploader_url || (detail.uploader_id ? `https://www.youtube.com/@${detail.uploader_id.replace(/^@/, "")}` : detail.channel_url) || "",
-      channelName: detail.uploader ?? ""
-    });
-  } catch (err: any) {
-    console.error("[youtube-video] Error:", err.message);
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    const { videoId } = query;
 
-    // Check if a yt-dlp update might fix the issue
-    let updateInfo = { needsUpdate: false, latest: "", current: "" };
     try {
-      const info = await checkYtdlpUpdate();
-      updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
-    } catch {
-      // Non-critical
-    }
+      await ensureYtDlp();
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const detailOut = await ytDlpWrap.execPromise([videoUrl, "--dump-json", "--no-playlist"]);
+      const detail = JSON.parse(detailOut.trim());
+      
+      return NextResponse.json({
+        title: detail.title,
+        thumbnail: detail.thumbnail,
+        videoUrl,
+        videoId: detail.id,
+        modSlugs: extractModSlugs(detail.description || ""),
+        publishedAt: detail.upload_date ?? "",
+        channelUrl: detail.uploader_url || (detail.uploader_id ? `https://www.youtube.com/@${detail.uploader_id.replace(/^@/, "")}` : detail.channel_url) || "",
+        channelName: detail.uploader ?? "",
+      });
+    } catch (err: any) {
+      console.error("[youtube-video] Error:", err.message);
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch video details",
-        updateAvailable: updateInfo.needsUpdate,
-        latestVersion: updateInfo.latest,
-        currentVersion: updateInfo.current,
-      },
-      { status: 500 }
-    );
+      let updateInfo = { needsUpdate: false, latest: "", current: "" };
+      try {
+        const info = await checkYtdlpUpdate();
+        updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
+      } catch {
+        // Non-critical
+      }
+
+      return NextResponse.json(
+        {
+          error: "Failed to fetch video details",
+          updateAvailable: updateInfo.needsUpdate,
+          latestVersion: updateInfo.latest,
+          currentVersion: updateInfo.current,
+        },
+        { status: 500 }
+      );
+    }
   }
-}
+);

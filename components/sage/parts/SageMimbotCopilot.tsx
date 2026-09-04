@@ -7,18 +7,24 @@
  * MIM-Bot es la IA interactiva que responde dudas técnicas adicionales
  * sobre el incidente, idéntica a la implementación de FOMO / Mod Details.
  *
- * Persistencia de API Key:
- *  - Guarda y lee en localStorage ("mim_gemini_api_key")
- *  - Sincroniza y persiste permanentemente en /api/settings (mim-settings.json)
+ * Arquitectura modular (< 400 líneas):
+ *  - Submódulos en ./mimbot (MimbotConfigModal, MimbotMessageBubble, MimbotQuickQuestions).
+ *  - Copiado de respuestas y bloques de código al portapapeles.
+ *  - Protección contra reinicio accidental con Undo.
+ *  - Distinción de errores (429 Rate Limit vs 401 Auth).
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   Send, Loader2, Key, Settings2, X, RotateCcw, 
-  ExternalLink, MessageSquare, Sparkles 
+  MessageSquare, Undo2
 } from "lucide-react";
 import { SageAnalysisResult } from "@/utils/sageAnalyzer";
-import { markdownToHtml } from "@/utils/markdown";
+import {
+  MimbotConfigModal,
+  MimbotMessageBubble,
+  MimbotQuickQuestions,
+} from "./mimbot";
 
 export interface SageMimbotCopilotProps {
   analysis: SageAnalysisResult;
@@ -56,9 +62,13 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
-  // Tracking para resetear chat si cambia el crash
+  // Mecanismo de deshacer al reiniciar conversación
+  const [undoMessages, setUndoMessages] = useState<ChatMessage[] | null>(null);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const prevSigRef = useRef("");
 
   const hasKey = savedKey.trim().length > 0;
@@ -74,7 +84,6 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       }
     } catch {}
 
-    // Consultar settings guardados en disco
     fetch("/api/settings")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -100,6 +109,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
     setChatMessages([]);
     setChatInput("");
     setChatError(null);
+    setUndoMessages(null);
   }, [analysis]);
 
   // Auto-scroll al último mensaje
@@ -107,7 +117,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isSending]);
 
-  // Guardar clave tanto en localStorage como en /api/settings (mim-settings.json)
+  // Guardar clave en localStorage y en /api/settings
   const handleSaveKey = async () => {
     const clean = geminiKeyVal.trim();
     if (!clean) return;
@@ -141,6 +151,38 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
     } catch {}
   };
 
+  // Reiniciar chat con soporte de Deshacer
+  const handleResetChat = () => {
+    if (chatMessages.length === 0) return;
+    setUndoMessages(chatMessages);
+    setChatMessages([]);
+    setChatError(null);
+
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    undoTimeoutRef.current = setTimeout(() => {
+      setUndoMessages(null);
+    }, 4500);
+  };
+
+  const handleUndoReset = () => {
+    if (undoMessages) {
+      setChatMessages(undoMessages);
+      setUndoMessages(null);
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    }
+  };
+
+  // Copiar respuesta al portapapeles
+  const handleCopyMessage = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch (err) {
+      console.warn("[SageMimbotCopilot] Fallo al copiar al portapapeles:", err);
+    }
+  };
+
   const handleSend = useCallback(
     async (textOverride?: string) => {
       const question = (textOverride || chatInput).trim();
@@ -156,6 +198,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       setChatInput("");
       setIsSending(true);
       setChatError(null);
+      setUndoMessages(null);
 
       try {
         const res = await fetch("/api/sage/chat", {
@@ -182,10 +225,26 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
         const data = await res.json();
 
+        // 401: Falta de key o clave inválida
         if (res.status === 401 || data.error === "NO_API_KEY") {
           setShowConfig(true);
           setChatError("Clave de Gemini API inválida o expirada. Por favor configúrala de nuevo.");
           setChatMessages(chatMessages);
+          return;
+        }
+
+        // 429: Rate limit o cuota de Google
+        if (res.status === 429 || data.error === "RATE_LIMITED") {
+          setChatMessages([
+            ...newMessages,
+            {
+              role: "model",
+              text: `⚠️ **Límite de peticiones alcanzado**: ${
+                data.message ||
+                "Se superó el límite de consultas por minuto (RPM) o la cuota de la API gratuita de Google. Aguardá unos segundos antes de volver a preguntar."
+              }`,
+            },
+          ]);
           return;
         }
 
@@ -194,7 +253,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         } else {
           setChatMessages([
             ...newMessages,
-            { role: "model", text: `Error: ${data.error || "No se obtuvo respuesta del bot."}` },
+            { role: "model", text: `Error: ${data.message || data.error || "No se obtuvo respuesta del bot."}` },
           ]);
         }
       } catch (err: any) {
@@ -240,38 +299,6 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
     }
   };
 
-  const extractFomoRecommendations = (text: string): Array<{ label: string; query: string }> => {
-    const results: Array<{ label: string; query: string }> = [];
-    const seen = new Set<string>();
-
-    // 1. Extraer links explícitos fomo:query
-    const fomoRegex = /\[([^\]]+)\]\(fomo:(?:\/\/)?([^)]+)\)/gi;
-    let match;
-    while ((match = fomoRegex.exec(text)) !== null) {
-      const label = match[1].trim();
-      const query = match[2].trim();
-      const key = query.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        results.push({ label, query });
-      }
-    }
-
-    // 2. Si no hubo links explícitos, verificar si menciona sospechosos del crash report
-    if (analysis.suspectedMods && Array.isArray(analysis.suspectedMods)) {
-      for (const modId of analysis.suspectedMods) {
-        const cleanMod = modId.trim();
-        if (cleanMod && !seen.has(cleanMod.toLowerCase()) && text.toLowerCase().includes(cleanMod.toLowerCase())) {
-          seen.add(cleanMod.toLowerCase());
-          results.push({ label: cleanMod, query: cleanMod });
-        }
-      }
-    }
-
-    return results;
-  };
-
-  // Sugerencias rápidas contextuales sobre el crash
   const quickQuestions = [
     analysis.suspectedMods?.length
       ? `¿Cómo resuelvo el conflicto con ${analysis.suspectedMods[0]}?`
@@ -283,7 +310,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
   return (
     <div className="rounded-2xl border border-purple-500/25 bg-black/40 backdrop-blur-md p-4 space-y-3.5 shadow-xl">
-      {/* Header con identidad oficial de MIM-Bot (igual que en descripción de mods) */}
+      {/* Header con identidad oficial de MIM-Bot */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 text-purple-300 font-bold text-xs">
@@ -300,8 +327,9 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           {chatMessages.length > 0 && (
             <button
               type="button"
-              onClick={() => setChatMessages([])}
+              onClick={handleResetChat}
               title="Reiniciar chat"
+              aria-label="Reiniciar conversación"
               className="p-1 rounded hover:bg-purple-500/20 text-purple-300/60 hover:text-white transition-all active:scale-95"
             >
               <RotateCcw className="w-3 h-3" />
@@ -310,7 +338,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Toggle de personalidad (Bully / Estándar) idéntico a FOMO */}
+          {/* Toggle de personalidad (Bully / Estándar) */}
           <div className="inline-flex items-center p-0.5 rounded-md bg-black/60 border border-purple-500/30 text-[9px] shadow-sm">
             <button
               type="button"
@@ -321,6 +349,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
                   : "text-purple-300/70 hover:text-purple-200"
               }`}
               title="Modo Bully: Tono sarcástico, irónico y mordaz con soluciones exactas"
+              aria-label="Seleccionar modo Bully"
             >
               🔥 Bully
             </button>
@@ -332,7 +361,8 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-purple-300/70 hover:text-purple-200"
               }`}
-              title="Modo Estándar: Tono neutro, directo e ingenieril"
+              title="Modo Estándar: Tono neutro, estructurado e ingenieril"
+              aria-label="Seleccionar modo Estándar"
             >
               🛡️ Estándar
             </button>
@@ -341,6 +371,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           <button
             type="button"
             onClick={() => setShowConfig(!showConfig)}
+            aria-label="Configurar clave de Gemini API"
             className={`p-1.5 rounded-lg border transition-all ${
               !hasKey
                 ? "border-amber-500/50 bg-amber-500/20 text-amber-300 animate-pulse"
@@ -355,6 +386,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cerrar asistente MIM-Bot"
               className="p-1.5 rounded-lg border border-white/10 bg-white/5 text-white/40 hover:text-white transition-all"
               title="Cerrar MIM-Bot"
             >
@@ -364,55 +396,30 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         </div>
       </div>
 
-      {/* Panel de Entrada de Gemini API Key si falta o se solicita (idéntico a FOMO / Mod Details) */}
-      {(showConfig || !hasKey) && (
-        <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2 text-xs animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-purple-300 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5" /> Clave de Gemini API Requerida
-            </span>
-            {hasKey && (
-              <button
-                type="button"
-                onClick={() => setShowConfig(false)}
-                className="text-white/40 hover:text-white text-[10px]"
-              >
-                Cerrar
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-white/60 leading-relaxed">
-            Para consultar a MIM-Bot sobre crashes y recibir diagnósticos inteligentes, se utiliza la API gratuita de Google Gemini. Se guardará permanentemente en tus ajustes de configuración.
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="password"
-              value={geminiKeyVal}
-              onChange={(e) => setGeminiKeyVal(e.target.value)}
-              placeholder="AIzaSy..."
-              className="flex-1 px-2.5 py-1.5 rounded-lg bg-black/40 border border-purple-500/30 text-xs text-white placeholder-white/20 focus:outline-none focus:border-purple-400 font-mono"
-            />
-            <button
-              type="button"
-              onClick={handleSaveKey}
-              disabled={!geminiKeyVal.trim() || isSavingKey}
-              className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap flex items-center gap-1"
-            >
-              {isSavingKey ? <Loader2 className="w-3 h-3 animate-spin" /> : "Guardar en Ajustes"}
-            </button>
-          </div>
-          <div className="flex items-center justify-between text-[10px] pt-1">
-            <a
-              href="https://aistudio.google.com/app/apikey"
-              target="_blank"
-              rel="noreferrer"
-              className="text-purple-400 hover:underline flex items-center gap-1"
-            >
-              <ExternalLink className="w-3 h-3" /> Obtener clave gratuita en Google AI Studio
-            </a>
-          </div>
+      {/* Snackbar temporal de Deshacer reinicio */}
+      {undoMessages && (
+        <div className="flex items-center justify-between p-2 rounded-xl bg-purple-900/40 border border-purple-500/30 text-xs text-purple-200 animate-in fade-in duration-200">
+          <span>Conversación reiniciada.</span>
+          <button
+            type="button"
+            onClick={handleUndoReset}
+            className="flex items-center gap-1 font-bold text-purple-300 hover:text-white underline text-[11px]"
+          >
+            <Undo2 className="w-3 h-3" /> Deshacer
+          </button>
         </div>
       )}
+
+      {/* Panel de Configuración de API Key */}
+      <MimbotConfigModal
+        showConfig={showConfig}
+        hasKey={hasKey}
+        geminiKeyVal={geminiKeyVal}
+        setGeminiKeyVal={setGeminiKeyVal}
+        isSavingKey={isSavingKey}
+        handleSaveKey={handleSaveKey}
+        onClose={() => setShowConfig(false)}
+      />
 
       {chatError && !showConfig && hasKey && (
         <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center justify-between gap-2">
@@ -446,60 +453,16 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         {chatMessages.length > 0 && (
           <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
             {chatMessages.map((msg, idx) => (
-              <div
+              <MimbotMessageBubble
                 key={idx}
-                className={`flex flex-col text-xs rounded-2xl p-3 max-w-[90%] shadow-sm ${
-                  msg.role === "user"
-                    ? "ml-auto bg-purple-600/30 text-purple-100 border border-purple-500/30 rounded-br-sm"
-                    : "mr-auto bg-black/50 text-white/90 border border-white/5 rounded-bl-sm"
-                }`}
-              >
-                <span className="text-[9px] font-mono uppercase text-white/40 mb-1 flex items-center gap-1.5">
-                  {msg.role === "user" ? (
-                    "Vos"
-                  ) : (
-                    <>
-                      <img
-                        src="/icon.png"
-                        alt=""
-                        className="w-3.5 h-3.5 object-contain animate-slime shrink-0"
-                      />
-                      <span className="text-purple-300 font-bold">MIM-Bot</span>
-                    </>
-                  )}
-                </span>
-                <div
-                  onClick={handleMessageContainerClick}
-                  className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
-                  dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
-                />
-
-                {/* Acciones de 1-clic para abrir en FOMO si MIM-Bot recomendó o mencionó mods */}
-                {msg.role === "model" && (() => {
-                  const recs = extractFomoRecommendations(msg.text);
-                  if (recs.length === 0) return null;
-                  return (
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-white/5">
-                      <span className="text-[10px] text-purple-300/70 font-mono flex items-center gap-1 font-semibold">
-                        <Sparkles className="w-3 h-3 text-purple-400" /> Abrir en FOMO:
-                      </span>
-                      {recs.map((rec, rIdx) => (
-                        <button
-                          key={rIdx}
-                          type="button"
-                          onClick={() => handleOpenInFomo(rec.query)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600/25 hover:bg-purple-600/45 text-purple-200 hover:text-white border border-purple-500/40 text-[11px] font-bold transition-all active:scale-95 shadow-sm"
-                          title={`Buscar y abrir ${rec.label} en FOMO`}
-                        >
-                          <span>📦</span>
-                          <span>{rec.label}</span>
-                          <span className="text-[9px] opacity-70 font-mono">↗</span>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
+                msg={msg}
+                idx={idx}
+                copiedIdx={copiedIdx}
+                onCopy={handleCopyMessage}
+                onMessageContainerClick={handleMessageContainerClick}
+                onOpenInFomo={handleOpenInFomo}
+                suspectedMods={analysis.suspectedMods}
+              />
             ))}
 
             {isSending && (
@@ -523,18 +486,10 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
         {/* Chips de sugerencias rápidas si el chat está vacío */}
         {chatMessages.length === 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {quickQuestions.map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSend(chip)}
-                className="px-2.5 py-1 rounded-lg bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 hover:text-white text-[11px] border border-purple-500/20 transition-all text-left"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
+          <MimbotQuickQuestions
+            quickQuestions={quickQuestions}
+            onSelectQuestion={(chip) => handleSend(chip)}
+          />
         )}
 
         {/* Formulario de envío */}
@@ -550,6 +505,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
             type="submit"
             disabled={isSending || (!chatInput.trim() && hasKey)}
             className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shrink-0 active:scale-95"
+            aria-label="Enviar mensaje"
           >
             {!hasKey ? (
               <>

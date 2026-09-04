@@ -60,6 +60,16 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
 - [x] **Modularización de Componentes Gigantes (`ModDetailsSheet.tsx`)**:
   - [x] Desacoplamiento de componente monolítico de 2,347 líneas en submódulos especializados en [`web/components/mod-details/`](file:///d:/.mine/manager/web/components/mod-details/).
   - [x] Todos los submódulos cumplen la regla estricta de permanecer por debajo de 500 líneas de código funcional.
+- [ ] **Modularización Progresiva de Monolitos (> 500 líneas)**:
+  - [x] **Fase 1: `web/components/tabs/ProfileTab.tsx` (1,310 líneas)**:
+    - Descompuesto en 11 submódulos en [`web/components/profile/`](file:///d:/.mine/manager/web/components/profile/) (`ProfileAuthForm`, `ProfileHeader`, `ProfileDraftsSection`, `ProfileFavoritesSection`, `ProfileSharesSection`, `ProfileFollowedAuthorsSection`, `ProfileSovereignVaultCard`, `ProfileVaultModals`, `useProfileVault`, `utils`, `types`).
+    - Orquestador reducido a 283 líneas; todos los submódulos por debajo de 300 líneas.
+  - [ ] **Fase 2: `web/components/tabs/DiscoverTab.tsx` (862 líneas)** y **`web/components/DraftDetailView.tsx` (819 líneas)**:
+    - Extraer subcomponentes atómicos para reducir la complejidad ciclomática de las vistas clave.
+  - [ ] **Fase 3: `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas)**:
+    - Desacoplar selectores de versiones de Minecraft y loaders en subcomponentes modulares.
+  - [ ] **Fase 4: `web/hooks/useHomeController.ts` (1,525 líneas)**:
+    - Modularizar en sub-hooks de dominio (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
 - [ ] **Cache Distribuido Redis/Upstash (Opcional)**:
   - Para entornos serverless con múltiples réplicas independientes en Vercel donde el rate limiter en memoria local de Node.js pueda requerir sincronización global.
   - Driver desacoplado en [`web/lib/rateLimiter.ts`](file:///d:/.mine/manager/web/lib/rateLimiter.ts) con fallback transparente a Map local en ausencia de variables de entorno.
@@ -77,3 +87,5 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
 
 - **Inspección en Runtime de Navegadores Automatizados**: La interacción visual en localhost está reservada exclusivamente a la experiencia y testing del desarrollador humano.
 - **Carpeta `src/`**: La arquitectura del repositorio se mantendrá estrictamente en la raíz de App Router y directorios funcionales modulares.
+- **SAGE Copilot en MIMHub (Web)**: Descartado deliberadamente por diseño arquitectónico; SAGE depende de operaciones intensivas de filesystem local (lectura de `crash-reports/`, `latest.log`, `options.txt`, inspección de bytecode de JARs y caché `safeStorage`), las cuales son exclusivas y nativas del entorno Desktop/Electron y no aplican al catálogo web.
+

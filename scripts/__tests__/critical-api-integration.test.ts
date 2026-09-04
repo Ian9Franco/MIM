@@ -15,6 +15,7 @@ import { POST as validatePost } from "../../app/api/settings/validate/route";
 import { POST as validateKeysPost } from "../../app/api/settings/validate-keys/route";
 import { POST as stagingPost } from "../../app/api/staging/route";
 import { POST as savePlayerPost } from "../../app/api/sage/player-rescue/save/route";
+import { POST as sageChatPost } from "../../app/api/sage/chat/route";
 import { translateText } from "../../web/lib/translator";
 
 const colors = {
@@ -144,6 +145,32 @@ async function run() {
   } else {
     pass(`Official translation executed via provider: ${transResult.provider}`);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 6. SAGE MIM-Bot Chat Defense & Schema Contract (app/api/sage/chat)
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log(`\n${colors.bold}6. Endpoint: /api/sage/chat Defense Perimeter & Contracts${colors.reset}`);
+
+  // Rejection when question is missing
+  const emptyChatReq = createJsonRequest("/api/sage/chat", {
+    personality: "bully"
+  });
+  const resEmptyChat = await sageChatPost(emptyChatReq);
+  assert(resEmptyChat.status === 400, "Rejects request missing question parameter with HTTP 400");
+  assert(resEmptyChat.headers.has("X-RateLimit-Limit"), "Response includes X-RateLimit-Limit header");
+
+  // Rejection when personality is invalid enum
+  const badPersonalityReq = createJsonRequest("/api/sage/chat", {
+    question: "¿Qué pasó?",
+    personality: "super_aggressive"
+  });
+  const resBadPersonality = await sageChatPost(badPersonalityReq);
+  assert(resBadPersonality.status === 400, "Rejects invalid personality enum with HTTP 400");
+
+  // Rejection when JSON is malformed
+  const malformedChatReq = createMalformedRequest("/api/sage/chat");
+  const resMalformedChat = await sageChatPost(malformedChatReq);
+  assert(resMalformedChat.status === 400, "Rejects malformed JSON body with HTTP 400");
 
   console.log(`\n${colors.green}${colors.bold}✓ All Critical API integration & schema tests passed successfully!${colors.reset}\n`);
 }

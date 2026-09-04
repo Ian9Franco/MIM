@@ -1,11 +1,18 @@
 /**
  * /api/sage/chat — POST
  * Chat interactivo de MIM-Bot con contexto de crash report (SAGE).
- * Usa el mismo pool de modelos y fallback resiliente que modExplainer (FOMO / Mod Details).
+ * Protegido con withApiGuard, validación Zod, memoria de cascada de modelos
+ * y conexión a caché de diagnóstico de SAGE.
  */
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
+import {
+  computeCrashSignature,
+  getCachedDiagnosis,
+} from "@/lib/intelligence/sage/cacheEngine";
 
 const GEMINI_MODELS = [
   "gemini-flash-lite-latest",
@@ -14,23 +21,50 @@ const GEMINI_MODELS = [
   "gemini-3.6-flash",
 ];
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { crashContext, messages, question, personality = "bully" } = body || {};
+// Memoria en caliente del último modelo que respondió exitosamente
+let lastSuccessfulModel = GEMINI_MODELS[0];
 
-    if (!question) {
-      return NextResponse.json({ error: "Falta el parámetro question" }, { status: 400 });
-    }
+const bodySchema = z.object({
+  question: z.string().trim().min(1, "Falta el parámetro question"),
+  personality: z.enum(["bully", "standard"]).optional().default("bully"),
+  clientApiKey: z.string().optional().default(""),
+  messages: z
+    .array(
+      z.object({
+        role: z.string(),
+        text: z.string(),
+      })
+    )
+    .optional()
+    .default([]),
+  crashContext: z
+    .object({
+      category: z.string().optional(),
+      exceptionType: z.string().optional(),
+      suspectedMods: z.array(z.string()).optional(),
+      loader: z.string().optional(),
+      gameVersion: z.string().optional(),
+      explanation: z.string().optional(),
+      stackTraceSnippet: z.string().optional(),
+    })
+    .optional(),
+});
 
-    // Prioridad de clave API (igual que /api/fomo/explain):
-    // 1. clientApiKey en el body
+export const POST = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 25 },
+    bodySchema,
+  },
+  async ({ request, body }) => {
+    const { crashContext, messages, question, personality, clientApiKey } = body;
+
+    // Prioridad de clave API:
+    // 1. clientApiKey provista en el body
     // 2. Header x-gemini-key
     // 3. Settings MIM Desktop / process.env
     const headerKey = request.headers.get("x-gemini-key") || "";
-    const clientApiKey = (body.clientApiKey || "").trim();
     const resolvedApiKey =
-      clientApiKey ||
+      (clientApiKey || "").trim() ||
       (headerKey && headerKey.trim()) ||
       process.env.GEMINI_API_KEY ||
       process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
@@ -45,14 +79,36 @@ export async function POST(request: Request) {
 
     const isBully = personality === "bully";
 
-    // System context con datos del crash
+    // ── 1. Verificación en Caché Determinista SAGE ──
+    let cachedContextHint = "";
+    if (crashContext) {
+      try {
+        const sig = computeCrashSignature(
+          crashContext.loader || "",
+          crashContext.gameVersion || "",
+          crashContext.stackTraceSnippet || crashContext.explanation || "",
+          crashContext.suspectedMods || []
+        );
+        const cached = getCachedDiagnosis(sig);
+        if (cached && cached.culprit) {
+          cachedContextHint = `\n- Culprit confirmado previamente en caché: ${cached.culprit} (Certeza: ${cached.severity})`;
+        }
+      } catch (err) {
+        console.debug("[/api/sage/chat] Cache signature evaluation skipped:", err);
+      }
+    }
+
+    // ── 2. System Context con datos del crash y formateo FOMO ──
     const systemContext = `
 Sos MIM-Bot, el asistente técnico de diagnóstico de SAGE (Systematic Analyzer for Glitches & Exceptions) de MIM (Minecraft Intelligent Manager).
 ${
   isBully
     ? `Tu personalidad es la de un gamer bully técnico: satírico, mordaz, burlón con las cagadas de configuración del usuario, pero con información 100% verídica, exacta y soluciones concretas.
 Tirale la respuesta técnica certera en 1 o 2 párrafos filosos, sin pelos en la lengua. Cero saludos formales.`
-    : `Tu personalidad es la de un ingeniero de software profesional: sobrio, cordial, empático, preciso y directo al grano.`
+    : `Tu personalidad es la de un ingeniero de software profesional: sobrio, cordial, empático, preciso y directo al grano estructurado en:
+1. Resumen técnico
+2. Causa raíz identificada
+3. Acciones de mitigación`
 }
 
 CONTEXTO DEL CRASH REPORT ANALIZADO POR SAGE:
@@ -61,7 +117,7 @@ CONTEXTO DEL CRASH REPORT ANALIZADO POR SAGE:
 - Mods sospechosos identificados: ${(crashContext?.suspectedMods || []).join(", ") || "Ninguno"}
 - Loader: ${crashContext?.loader || "Desconocido"}
 - Versión de Minecraft: ${crashContext?.gameVersion || "Desconocida"}
-- Diagnóstico previo de SAGE: ${crashContext?.explanation || "Sin diagnóstico previo"}
+- Diagnóstico previo de SAGE: ${crashContext?.explanation || "Sin diagnóstico previo"}${cachedContextHint}
 
 REGLA CLAVE PARA ENLACES A FOMO:
 Siempre que nombres, sugieras o recomiendes un mod, dependencia requerida, biblioteca, texture pack, resource pack o shader para solucionar el problema, formatalo OBLIGATORIAMENTE con link a FOMO usando esta sintaxis:
@@ -71,6 +127,9 @@ Esto genera automáticamente un botón interactivo para que el usuario pueda abr
 
 Respondé a la consulta del usuario de forma concisa y accionable.
 `.trim();
+
+    // ── 3. Truncado de Historial a los últimos 6 turnos para optimizar tokens ──
+    const recentMessages = Array.isArray(messages) ? messages.slice(-6) : [];
 
     const geminiContents = [
       { role: "user", parts: [{ text: `${systemContext}\n\n[INICIO DE LA CONSULTA]` }] },
@@ -84,28 +143,34 @@ Respondé a la consulta del usuario de forma concisa y accionable.
           },
         ],
       },
-      ...(Array.isArray(messages)
-        ? messages
-            .filter((m: any) => m?.text && m.text.trim())
-            .map((m: { role: string; text: string }) => ({
-              role: m.role === "model" ? "model" : "user",
-              parts: [{ text: m.text.trim() }],
-            }))
-        : []),
+      ...recentMessages
+        .filter((m) => m?.text && m.text.trim())
+        .map((m) => ({
+          role: m.role === "model" ? "model" : "user",
+          parts: [{ text: m.text.trim() }],
+        })),
       { role: "user", parts: [{ text: question.trim() }] },
     ];
 
+    // Presupuesto diferenciado de tokens y temperatura ajustada
     const requestPayload = {
       contents: geminiContents,
       generationConfig: {
-        temperature: isBully ? 0.7 : 0.3,
-        maxOutputTokens: 400,
+        temperature: isBully ? 0.5 : 0.2,
+        maxOutputTokens: isBully ? 280 : 700,
       },
     };
 
-    let lastErrorMsg = "";
+    // ── 4. Cascada de modelos ordenada priorizando el último exitoso ──
+    const prioritizedModels = [
+      lastSuccessfulModel,
+      ...GEMINI_MODELS.filter((m) => m !== lastSuccessfulModel),
+    ];
 
-    for (const modelName of GEMINI_MODELS) {
+    let lastErrorMsg = "";
+    let isRateLimited = false;
+
+    for (const modelName of prioritizedModels) {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(
         resolvedApiKey
       )}`;
@@ -122,6 +187,7 @@ Respondé a la consulta del usuario de forma concisa y accionable.
           const candidate = data.candidates?.[0];
           const reply = candidate?.content?.parts?.[0]?.text;
           if (reply && reply.trim()) {
+            lastSuccessfulModel = modelName;
             return NextResponse.json({
               reply: reply.trim(),
               modelUsed: modelName,
@@ -130,45 +196,54 @@ Respondé a la consulta del usuario de forma concisa y accionable.
         }
 
         const errData = await res.json().catch(() => ({}));
-        const errMsg = errData?.error?.message || res.statusText;
+        const errMsg = errData?.error?.message || res.statusText || "";
         lastErrorMsg = errMsg;
 
-        // Si la clave es inválida, no tiene sentido probar los otros modelos
-        if (res.status === 400 && (errMsg.toLowerCase().includes("api_key") || errMsg.toLowerCase().includes("api key"))) {
+        // Caso A: Clave API inválida o expirada (400/401/403)
+        if (
+          res.status === 400 &&
+          (errMsg.toLowerCase().includes("api_key") || errMsg.toLowerCase().includes("api key"))
+        ) {
           return NextResponse.json(
             { error: "NO_API_KEY", message: "Clave de Gemini API inválida o expirada." },
             { status: 401 }
           );
         }
 
-        console.warn(`[/api/sage/chat] Modelo ${modelName} falló con status ${res.status}: ${errMsg}. Probando siguiente modelo...`);
+        // Caso B: Rate Limit / Quota Exceeded (429)
+        if (res.status === 429 || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource_exhausted")) {
+          isRateLimited = true;
+          console.warn(`[/api/sage/chat] Modelo ${modelName} devolvió 429 (Cuota/Rate Limit): ${errMsg}. Probando fallback...`);
+          continue;
+        }
+
+        console.warn(`[/api/sage/chat] Modelo ${modelName} falló (Status ${res.status}): ${errMsg}. Probando siguiente modelo...`);
       } catch (err: any) {
-        console.warn(`[/api/sage/chat] Error de conexión con modelo ${modelName}:`, err.message);
+        console.warn(`[/api/sage/chat] Error de red con modelo ${modelName}:`, err.message);
         lastErrorMsg = err.message;
       }
     }
 
-    // Fallback heurístico inteligente si todos los modelos fallan por cuota o indisponibilidad
-    const culprits = (crashContext?.suspectedMods || []).join(", ");
-    if (isBully) {
-      return NextResponse.json({
-        reply: `Pará un toque con las preguntas, saturaste la API de Google de tanto insistir. Igual sobre este crash te tiro la posta: revisá ${
-          culprits ? `**${culprits}**` : "los logs"
-        }, que es donde saltó la bronca (${crashContext?.exceptionType || "error desconocido"}). Desactivá el mod o fijate las dependencias antes de que explote todo.`,
-        modelUsed: "mim-bot-chat-fallback",
-      });
+    // Si fallaron todos los modelos por cuota/rate limit
+    if (isRateLimited) {
+      return NextResponse.json(
+        {
+          error: "RATE_LIMITED",
+          message:
+            "Se alcanzó temporalmente el límite de consultas por minuto (RPM) o cuota de la API de Gemini. Esperá unos segundos antes de volver a preguntar.",
+          details: lastErrorMsg,
+        },
+        { status: 429 }
+      );
     }
 
-    return NextResponse.json({
-      reply: `El servicio de IA se encuentra momentáneamente saturado. De acuerdo al diagnóstico de SAGE, el incidente principal involucra a **${
-        culprits || "un mod no identificado"
-      }** con la excepción \`${crashContext?.exceptionType || "desconocida"}\`. Se recomienda verificar que las dependencias requeridas coincidan con ${
-        crashContext?.loader || "tu mod loader"
-      } en Minecraft ${crashContext?.gameVersion || ""}.`,
-      modelUsed: "mim-bot-chat-fallback-standard",
-    });
-  } catch (error: any) {
-    console.error("[/api/sage/chat] Error inesperado:", error);
-    return NextResponse.json({ error: error?.message || "Error interno del servidor" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "GENERATION_FAILED",
+        message: `MIM-Bot no pudo generar respuesta tras probar ${prioritizedModels.length} modelos.`,
+        details: lastErrorMsg,
+      },
+      { status: 502 }
+    );
   }
-}
+);

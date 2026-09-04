@@ -3,25 +3,14 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Devuelve colecciones públicas populares de Modrinth que sirven como
  * "plantillas" o presets para iniciar nuevos proyectos.
- *
- * Estas colecciones son curadas externamente (ej: "Starter Tech Pack",
- * "Vanilla Enhancements", "Magic Adventure") y permiten a los usuarios
- * descargar un conjunto completo de mods con un solo clic.
- *
- * GET — sin body, sin params.
- * Respuesta: { presets: PresetCollection[] }
- *
- * Las colecciones preset son IDs públicos de colecciones populares en Modrinth.
- * Se obtienen sus metadatos y se presentan como plantillas externas.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface PresetCollection {
   id: string;
@@ -29,18 +18,12 @@ interface PresetCollection {
   description: string;
   projectCount: number;
   iconUrl: string | null;
-  tags: string[]; // Ej: ["tech", "beginner", "1.20.1"]
+  tags: string[];
   recommendedLoader: string;
   recommendedVersion: string;
 }
 
-// ── Colecciones Preset Curadas ────────────────────────────────────────────────
-// IDs de colecciones públicas populares en Modrinth
-// Estas actúan como "plantillas" para usuarios que quieren empezar rápido
-
 const PRESET_COLLECTION_IDS = [
-  // Nota: Estos son IDs de ejemplo. En producción, serían colecciones reales.
-  // Para testing/demo, podemos usar IDs de proyectos populares como "preset"
   {
     id: "starter-tech",
     name: "⚡ Starter Tech Pack",
@@ -88,74 +71,73 @@ const PRESET_COLLECTION_IDS = [
   },
 ];
 
-// ── Handler ───────────────────────────────────────────────────────────────────
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+  },
+  async () => {
+    const headers: Record<string, string> = {
+      "User-Agent": "MIM-App/1.0 (contact@mim.local)",
+    };
+    const apiKey = getApiKey("modrinth");
+    if (apiKey) {
+      headers["Authorization"] = apiKey;
+    }
 
-export async function GET(_req: NextRequest) {
-  const headers: Record<string, string> = {
-    "User-Agent": "MIM-App/1.0 (contact@mim.local)",
-  };
-  const apiKey = getApiKey("modrinth");
-  if (apiKey) {
-    headers["Authorization"] = apiKey;
-  }
-
-  try {
-    // Enriquecer los presets con datos actuales de Modrinth
-    const presets: PresetCollection[] = await Promise.all(
-      PRESET_COLLECTION_IDS.map(async (preset) => {
-        // Obtener metadatos de los proyectos para contar cuántos están disponibles
-        const validProjects: string[] = [];
-        
-        for (const projectId of preset.projectIds) {
-          try {
-            const res = await fetch(`${MODRINTH_API}/project/${projectId}`, {
-              headers,
-              // Cache corto para no saturar la API
-              next: { revalidate: 3600 },
-            });
-            if (res.ok) {
-              validProjects.push(projectId);
+    try {
+      // Enriquecer los presets con datos actuales de Modrinth
+      const presets: PresetCollection[] = await Promise.all(
+        PRESET_COLLECTION_IDS.map(async (preset) => {
+          const validProjects: string[] = [];
+          
+          for (const projectId of preset.projectIds) {
+            try {
+              const res = await fetch(`${MODRINTH_API}/project/${projectId}`, {
+                headers,
+                next: { revalidate: 3600 },
+              });
+              if (res.ok) {
+                validProjects.push(projectId);
+              }
+            } catch {
+              // Proyecto no disponible, lo saltamos
             }
-          } catch {
-            // Proyecto no disponible, lo saltamos
           }
-        }
 
-        // Retornar objeto enriquecido con metadatos
-        const enriched: PresetCollection & { _projectIds: string[] } = {
-          id: preset.id,
-          name: preset.name,
-          description: preset.description,
-          projectCount: validProjects.length,
-          iconUrl: null, // Podríamos obtener el icon del primer proyecto
-          tags: preset.tags,
-          recommendedLoader: preset.recommendedLoader,
-          recommendedVersion: preset.recommendedVersion,
-          _projectIds: validProjects,
-        };
-        return enriched;
-      })
-    );
+          const enriched: PresetCollection & { _projectIds: string[] } = {
+            id: preset.id,
+            name: preset.name,
+            description: preset.description,
+            projectCount: validProjects.length,
+            iconUrl: null,
+            tags: preset.tags,
+            recommendedLoader: preset.recommendedLoader,
+            recommendedVersion: preset.recommendedVersion,
+            _projectIds: validProjects,
+          };
+          return enriched;
+        })
+      );
 
-    // Limpiar el campo interno antes de enviar
-    const cleanPresets: PresetCollection[] = presets.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      projectCount: p.projectCount,
-      iconUrl: p.iconUrl,
-      tags: p.tags,
-      recommendedLoader: p.recommendedLoader,
-      recommendedVersion: p.recommendedVersion,
-    }));
+      const cleanPresets: PresetCollection[] = presets.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        projectCount: p.projectCount,
+        iconUrl: p.iconUrl,
+        tags: p.tags,
+        recommendedLoader: p.recommendedLoader,
+        recommendedVersion: p.recommendedVersion,
+      }));
 
-    return NextResponse.json({ 
-      presets: cleanPresets,
-      total: cleanPresets.length,
-    });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Error desconocido";
-    console.error("[/api/modrinth/presets] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json({ 
+        presets: cleanPresets,
+        total: cleanPresets.length,
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Error desconocido";
+      console.error("[/api/modrinth/presets] Error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
-}
+);

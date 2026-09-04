@@ -32,9 +32,8 @@ Siendo directo: esto es un proyecto en **beta activa**, no un producto de produc
 | Supabase RLS | ✅ Políticas reales con `auth.uid()`, no placeholders. |
 | Manejo de errores en catch{} | ✅ 0 bloques vacíos. Auditados y reemplazados por logs contextuales y advertencias explícitas. |
 | KNOWN_MALWARE_HASHES | ✅ 19 firmas reales (Fracturiser, Necro, etc.) con chequeo dual SHA-1 y SHA-256 en O(1). |
-| Rate limiting (endpoints web) | ✅ Implementado en `/api/fomo/translate` con aislamiento estricto por IP y sliding window. |
-| Tests unitarios (SAGE, scanner) | ⚠️ En expansión. Suites de NBT, SAGE RAG, Aduana y Seguridad/RateLimit agregadas. |
-| Validación de input API routes | ⚠️ Blindado `/api/fomo/translate` con Zod; pendiente expandir al resto de mutaciones. |
+| Rate limiting & API Guard | ✅ Universal en 100% de endpoints web y llamadas a APIs externas/IA. |
+| Validación de input API routes | ✅ Mandatorio con `withApiGuard` + Zod schemas auditado en CI. |
 
 Esto no es una lista de vergüenzas — es una lista de trabajo pendiente con prioridades claras. El punto es que la documentación lo diga abiertamente en vez de esconderlo detrás de "v10.5.0 — Production Ready".
 
@@ -296,6 +295,34 @@ try {
 }
 ```
 
+### Blindaje de Rutas API (`withApiGuard`) — Mandatorio
+
+Toda nueva ruta API (`route.ts`) que consuma APIs externas (Modrinth, CurseForge, YouTube), modelos de IA (SAGE, Bedrock, Copilot) o que esté expuesta en MIMweb (`web/app/api/`) **DEBE** estar blindada con `withApiGuard`.
+
+La regla es auditada en CI por `npm run lint:api-guard`, fallando automáticamente el build si se detecta un `route.ts` crítico desprotegido.
+
+#### Plantilla estándar para nuevas rutas:
+```typescript
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
+
+const querySchema = z.object({
+  projectId: z.string().min(1, "Missing projectId"),
+});
+
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    // query está estrictamente tipado y validado
+    return NextResponse.json({ success: true, id: query.projectId });
+  }
+);
+```
+
 ### Componentes — límite de 600 líneas
 
 Ningún componente debería superar 600 líneas de código funcional (sin contar comentarios/bloques de documentación). Si crece, extraer subcomponentes para preservar una arquitectura limpia y modular.
@@ -310,6 +337,7 @@ Ningún componente debería superar 600 líneas de código funcional (sin contar
 - [x] **Firmas de Malware Reales**: Integradas 19 firmas SHA-1/SHA-256 del incidente Fracturiser y troyanos en `lib/security/security-data.ts`.
 - [x] **Validación Zod**: Schemas de validación en rutas públicas y locales de mutación.
 - [x] **Toggle de Personalidad MIM-Bot**: Modos `bully` y `standard` integrados en frontend y backend.
+- [x] **withApiGuard Universal & CI Guard**: 100% de endpoints web y rutas críticas externas/IA blindadas (40/40). Regla de CI (`lint:api-guard`) bloquea PRs sin withApiGuard.
 
 ---
 

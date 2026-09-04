@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import YTDlpWrap from "yt-dlp-wrap";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getPortableDir } from "@/lib/core/settings";
 import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
 
@@ -17,7 +19,6 @@ const ytDlpWrap = new YTDlpWrap(binPath);
 async function ensureYtDlp() {
   if (!fs.existsSync(binPath)) {
     console.log("[youtube-showcase] No se encontró yt-dlp. Descargando desde GitHub...");
-    // Asegurar que la carpeta existe
     if (!fs.existsSync(binDir)) {
       fs.mkdirSync(binDir, { recursive: true });
     }
@@ -137,140 +138,145 @@ async function scrapeLatestVideo(channelUrl: string) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/fomo/youtube-showcase?channel=<url>&limit=<1|n>
 // ─────────────────────────────────────────────────────────────────────────────
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const channelUrl = searchParams.get("channel") ?? "https://www.youtube.com/@EnderVerseMC";
-  const limitParam = parseInt(searchParams.get("limit") ?? "1", 10);
-  const limit = isNaN(limitParam) || limitParam < 1 ? 1 : Math.min(limitParam, 20);
-  const cursorParam = parseInt(searchParams.get("cursor") ?? searchParams.get("page") ?? "1", 10);
-  const cursor = isNaN(cursorParam) || cursorParam < 1 ? 1 : cursorParam;
+const querySchema = z.object({
+  channel: z.string().optional().default("https://www.youtube.com/@EnderVerseMC"),
+  limit: z.coerce.number().int().min(1).max(20).optional().default(1),
+  cursor: z.coerce.number().int().min(1).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  type: z.string().optional(),
+});
 
-  const type = searchParams.get("type") ?? (channelUrl.includes("/shorts") ? "shorts" : "videos");
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    const channelUrl = query.channel;
+    const limit = query.limit;
+    const cursor = query.cursor ?? query.page ?? 1;
+    const type = query.type ?? (channelUrl.includes("/shorts") ? "shorts" : "videos");
 
-  // Normalizar cualquier URL de canal de YouTube para asegurar que apunte a /videos o /shorts
-  let targetUrl = channelUrl.replace(/\/$/, "");
-  
-  if (targetUrl.startsWith("http")) {
-    // Remover sufijos existentes para evitar duplicados
-    targetUrl = targetUrl.replace(/\/(videos|shorts|featured|streams|playlists)$/, "");
-    // Añadir el sufijo correcto
-    targetUrl = targetUrl + (type === "shorts" ? "/shorts" : "/videos");
-  } else {
-    // Si es un handle o nombre de usuario simple
-    targetUrl = `https://www.youtube.com/${targetUrl.startsWith("@") ? "" : "@"}${targetUrl}${type === "shorts" ? "/shorts" : "/videos"}`;
-  }
+    // Normalizar cualquier URL de canal de YouTube para asegurar que apunte a /videos o /shorts
+    let targetUrl = channelUrl.replace(/\/$/, "");
+    
+    if (targetUrl.startsWith("http")) {
+      // Remover sufijos existentes para evitar duplicados
+      targetUrl = targetUrl.replace(/\/(videos|shorts|featured|streams|playlists)$/, "");
+      // Añadir el sufijo correcto
+      targetUrl = targetUrl + (type === "shorts" ? "/shorts" : "/videos");
+    } else {
+      // Si es un handle o nombre de usuario simple
+      targetUrl = `https://www.youtube.com/${targetUrl.startsWith("@") ? "" : "@"}${targetUrl}${type === "shorts" ? "/shorts" : "/videos"}`;
+    }
 
-  const channelHash = crypto.createHash("md5").update(targetUrl).digest("hex").substring(0, 10);
-  const cacheDir = path.join(getPortableDir(), "cache");
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-  }
-  const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_cursor_${cursor}_limit_${limit}.json`);
+    const channelHash = crypto.createHash("md5").update(targetUrl).digest("hex").substring(0, 10);
+    const cacheDir = path.join(getPortableDir(), "cache");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    const cacheFile = path.join(cacheDir, `showcase_cache_${channelHash}_${type}_cursor_${cursor}_limit_${limit}.json`);
 
-  if (fs.existsSync(cacheFile)) {
-    try {
-      const stats = fs.statSync(cacheFile);
-      const now = new Date().getTime();
-      const mtime = new Date(stats.mtime).getTime();
-      const ageHours = (now - mtime) / (1000 * 60 * 60);
+    if (fs.existsSync(cacheFile)) {
+      try {
+        const stats = fs.statSync(cacheFile);
+        const now = new Date().getTime();
+        const mtime = new Date(stats.mtime).getTime();
+        const ageHours = (now - mtime) / (1000 * 60 * 60);
 
-      // Expirar la caché cada 6 horas para buscar videos nuevos
-      if (ageHours < 6) {
-        const cachedData = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
-        return NextResponse.json(cachedData);
-      } else {
-        console.log(`[youtube-showcase] Caché expirada (${ageHours.toFixed(1)}h), buscando nuevos videos...`);
+        // Expirar la caché cada 6 horas para buscar videos nuevos
+        if (ageHours < 6) {
+          const cachedData = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
+          return NextResponse.json(cachedData);
+        } else {
+          console.log(`[youtube-showcase] Caché expirada (${ageHours.toFixed(1)}h), buscando nuevos videos...`);
+        }
+      } catch (e) {
+        console.error("Error reading cache file", e);
       }
-    } catch (e) {
-      console.error("Error reading cache file", e);
-    }
-  }
-
-  try {
-    await ensureYtDlp();
-
-    if (limit === 1 && cursor === 1) {
-      const showcase = await scrapeLatestVideo(targetUrl);
-      const responseData = { mode: "spotlight", showcases: [showcase] };
-      fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
-      return NextResponse.json(responseData);
     }
 
+    try {
+      await ensureYtDlp();
 
-    // To fulfill the limit, we fetch a larger window from the playlist (e.g. 15 items).
-    // We will stop processing once we have exactly `limit` successful items.
-    const start = cursor;
-    const end = cursor + 14; 
+      if (limit === 1 && cursor === 1) {
+        const showcase = await scrapeLatestVideo(targetUrl);
+        const responseData = { mode: "spotlight", showcases: [showcase] };
+        fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
+        return NextResponse.json(responseData);
+      }
 
-    // Modo Archivo (Seguidos) — paginado por cursor
-    const flatOut = await ytDlpWrap.execPromise([
-      targetUrl,
-      "--flat-playlist",
-      "--playlist-start", start.toString(),
-      "--playlist-end", end.toString(),
-      "--dump-json"
-    ]);
+      const start = cursor;
+      const end = cursor + 14; 
 
-    const lines = flatOut.trim().split("\n").filter(Boolean);
-    const videoEntries = lines.map((line) => {
-      try { return JSON.parse(line); } catch (e) { return null; }
-    }).filter(Boolean);
+      // Modo Archivo (Seguidos) — paginado por cursor
+      const flatOut = await ytDlpWrap.execPromise([
+        targetUrl,
+        "--flat-playlist",
+        "--playlist-start", start.toString(),
+        "--playlist-end", end.toString(),
+        "--dump-json"
+      ]);
 
-    const results: any[] = [];
-    let itemsProcessed = 0;
+      const lines = flatOut.trim().split("\n").filter(Boolean);
+      const videoEntries = lines.map((line) => {
+        try { return JSON.parse(line); } catch { return null; }
+      }).filter(Boolean);
 
-    // Resolve in chunks of 3, but stop as soon as we hit the limit.
-    const CONCURRENCY = 3;
-    for (let i = 0; i < videoEntries.length; i += CONCURRENCY) {
-      if (results.length >= limit) break;
+      const results: any[] = [];
+      let itemsProcessed = 0;
 
-      const batch = videoEntries.slice(i, i + CONCURRENCY);
-      const settled = await Promise.allSettled(
-        batch.map((entry) => {
-          const vUrl = entry.url || `https://www.youtube.com/watch?v=${entry.id}`;
-          return scrapeVideoDetail(vUrl);
-        })
-      );
+      const CONCURRENCY = 3;
+      for (let i = 0; i < videoEntries.length; i += CONCURRENCY) {
+        if (results.length >= limit) break;
 
-      for (let j = 0; j < settled.length; j++) {
-        itemsProcessed++;
-        const res = settled[j];
-        if (res.status === "fulfilled") {
-          results.push(res.value);
-          if (results.length === limit) {
-            // We reached the limit, stop adding more even if the batch had more successes.
-            break;
+        const batch = videoEntries.slice(i, i + CONCURRENCY);
+        const settled = await Promise.allSettled(
+          batch.map((entry) => {
+            const vUrl = entry.url || `https://www.youtube.com/watch?v=${entry.id}`;
+            return scrapeVideoDetail(vUrl);
+          })
+        );
+
+        for (let j = 0; j < settled.length; j++) {
+          itemsProcessed++;
+          const res = settled[j];
+          if (res.status === "fulfilled") {
+            results.push(res.value);
+            if (results.length === limit) {
+              break;
+            }
           }
         }
       }
+
+      const nextCursor = cursor + itemsProcessed;
+      const hasMore = (videoEntries.length > 0 && itemsProcessed < videoEntries.length) || results.length === limit;
+
+      const responseData = { mode: "archive", showcases: results, nextCursor, hasMore };
+      fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
+      return NextResponse.json(responseData);
+    } catch (err: any) {
+      console.error("[youtube-showcase] Error:", err.message);
+
+      // Before failing, check if a yt-dlp update might fix the issue
+      let updateInfo = { needsUpdate: false, latest: "", current: "" };
+      try {
+        const info = await checkYtdlpUpdate();
+        updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
+      } catch {
+        // Non-critical
+      }
+
+      return NextResponse.json(
+        {
+          error: "No se pudo obtener el showcase de YouTube. Verificá que yt-dlp-wrap funcione correctamente.",
+          updateAvailable: updateInfo.needsUpdate,
+          latestVersion: updateInfo.latest,
+          currentVersion: updateInfo.current,
+        },
+        { status: 500 }
+      );
     }
-
-    const nextCursor = cursor + itemsProcessed;
-    const hasMore = videoEntries.length > 0 && itemsProcessed < videoEntries.length || results.length === limit;
-
-    const responseData = { mode: "archive", showcases: results, nextCursor, hasMore };
-    fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
-    return NextResponse.json(responseData);
-  } catch (err: any) {
-    console.error("[youtube-showcase] Error:", err.message);
-
-    // Before failing, check if a yt-dlp update might fix the issue
-    let updateInfo = { needsUpdate: false, latest: "", current: "" };
-    try {
-      const info = await checkYtdlpUpdate();
-      updateInfo = { needsUpdate: info.needsUpdate, latest: info.latest, current: info.current };
-    } catch {
-      // Non-critical — don't let update check failure mask the original error
-    }
-
-    return NextResponse.json(
-      {
-        error: "No se pudo obtener el showcase de YouTube. Verificá que yt-dlp-wrap funcione correctamente.",
-        updateAvailable: updateInfo.needsUpdate,
-        latestVersion: updateInfo.latest,
-        currentVersion: updateInfo.current,
-      },
-      { status: 500 }
-    );
   }
-}
+);

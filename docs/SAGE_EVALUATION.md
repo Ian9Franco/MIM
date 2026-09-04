@@ -14,7 +14,7 @@
 | **Macro F1-Score** | **100.0%** | > 85.0% | ✅ Exceeded (100.0%) |
 | **Top-1 Culprit Diagnosis** | **84.0%** | > 80.0% | ✅ Exceeded (84.0%) |
 | **Top-3 Culprit Diagnosis** | **100.0%** | > 95.0% | ✅ Exceeded (100.0%) |
-| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ⚡ Ultra-fast |
+| **Mean Inference Latency** | **0.06 ms** | < 15.0 ms | ⚡ Ultra-fast |
 
 ---
 

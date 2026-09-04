@@ -124,6 +124,11 @@ async function main() {
       name: "SAGE 3.0 MIM-Bot Copilot & Graph Intelligence",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-mimbot.test.ts"]
+    },
+    {
+      name: "API Guard Systemic Route Perimeter Auditor",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/security/verify-api-guard.ts"]
     }
   ];
 

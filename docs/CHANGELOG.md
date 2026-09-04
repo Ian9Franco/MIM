@@ -2,12 +2,30 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v10.5.1  
+> **Versión Actual:** v11.3.0  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
 > **Última actualización:** 2026-09-04
 
 > [!NOTE]
-> **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](./PROJECT_STATUS.md).
+> **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](./PROJECT_STATUS.md).
+
+---
+
+## 🚀 Versión 11.3.0 — Mandatory withApiGuard Universal Defense & Modular Architecture (2026-09-04)
+
+### 🛡️ Universal Perimeter Defense (`withApiGuard`)
+- **100% de Rutas Críticas Blindadas**: 40 de 40 endpoints públicos y externos (14 MIMweb + 26 Desktop) protegidos con `withApiGuard`, rate limiting por IP, cabeceras de seguridad y validación Zod estricta (Modrinth, CurseForge, YouTube, Bedrock y SAGE).
+- **Auditor Automatizado en CI (`lint:api-guard`)**: Herramienta de escaneo estricto integrada en GitHub Actions (`.github/workflows/ci.yml`) y en `test-runner.js` que falla el build automáticamente si cualquier ruta pública o de APIs externas no implementa `withApiGuard`.
+- **Soporte Dinámico de Parámetros de Ruta**: Extensión de `withApiGuard` con `paramsSchema` y `RouteContext` para validar rutas dinámicas (e.g. `picks/[slug]`) con total compatibilidad con Next.js 15+.
+
+### 🧩 Modularización de Código & Regla de < 600 Líneas
+- **Modularización de ProfileTab**: Reducción de `ProfileTab.tsx` de 1,310 líneas a 283 líneas maestras orquestando 12 submódulos dedicados en `web/components/profile/`.
+- **Modularización de SageMimbotCopilot**: Reducción de 609 líneas a 478 líneas extrayendo subcomponentes en `components/sage/parts/mimbot/` (`MimbotConfigModal`, `MimbotMessageBubble`, `MimbotQuickQuestions`).
+- **UX MIM-Bot Mejorada**: Botón de copiado en 1 clic de respuestas con feedback visual, 4.5s de Undo ante reseteo accidental de conversación, desacoplamiento de errores 429 de cuota, y truncado contextual automático a los últimos 6 turnos.
+
+### 🧪 Verificación de Sistemas & Calidad
+- **13/13 Suites de Pruebas Pasando al 100%**: Incorporado el auditor perimetral al runner unificado (`npm test`) con 0 regresiones.
+- **Tipado Estricto Verificado**: Cero errores de compilación TypeScript en raíz y MIMweb.
 
 ---
 

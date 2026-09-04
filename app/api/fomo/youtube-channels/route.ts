@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import fs from "fs";
 import path from "path";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getPortableDir } from "@/lib/core/settings";
 
 const DATA_DIR = path.join(getPortableDir(), "data");
@@ -18,20 +20,32 @@ function getChannels(): string[] {
   return ["https://www.youtube.com/@EnderVerseMC"];
 }
 
-export async function GET() {
-  return NextResponse.json({ channels: getChannels() });
-}
-
-export async function POST(request: Request) {
-  try {
-    const { channels } = await request.json();
-    if (!Array.isArray(channels)) {
-      return NextResponse.json({ error: "Invalid channels data" }, { status: 400 });
-    }
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(CHANNELS_FILE, JSON.stringify(channels, null, 2), "utf-8");
-    return NextResponse.json({ success: true, channels });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+  },
+  async () => {
+    return NextResponse.json({ channels: getChannels() });
   }
-}
+);
+
+const postBodySchema = z.object({
+  channels: z.array(z.string()),
+});
+
+export const POST = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    bodySchema: postBodySchema,
+  },
+  async ({ body }) => {
+    try {
+      const { channels } = body;
+      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(CHANNELS_FILE, JSON.stringify(channels, null, 2), "utf-8");
+      return NextResponse.json({ success: true, channels });
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+);

@@ -6,62 +6,68 @@
  * descripción completa, compatibilidad cliente/servidor y cuerpo del proyecto.
  *
  * Query params: ?projectId=<id_o_slug>
- * Respuesta: { body: string, client_side: string, server_side: string }
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get("projectId");
+const querySchema = z.object({
+  projectId: z.string().trim().min(1, "Missing or empty projectId parameter"),
+});
 
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
-  }
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query }) => {
+    const { projectId } = query;
 
-  const headers: Record<string, string> = {
-    "User-Agent": "MIM-App/1.0 (contact@mim.local)",
-  };
-  const apiKey = getApiKey("modrinth");
-  if (apiKey) {
-    headers["Authorization"] = apiKey;
-  }
-
-  try {
-    const [projectRes, membersRes] = await Promise.all([
-      fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}`, { headers }),
-      fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/members`, { headers })
-    ]);
-
-    if (!projectRes.ok) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const headers: Record<string, string> = {
+      "User-Agent": "MIM-App/1.0 (contact@mim.local)",
+    };
+    const apiKey = getApiKey("modrinth");
+    if (apiKey) {
+      headers["Authorization"] = apiKey;
     }
 
-    const data = await projectRes.json();
-    
-    let members: any[] = [];
-    if (membersRes.ok) {
-      const membersData = await membersRes.json();
-      members = (membersData ?? []).map((m: any) => ({
-        id: m.user.id,
-        username: m.user.username,
-        name: m.user.name || m.user.username,
-        avatarUrl: m.user.avatar_url ?? null,
-        role: m.role || "Member"
-      }));
-    }
+    try {
+      const [projectRes, membersRes] = await Promise.all([
+        fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}`, { headers }),
+        fetch(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/members`, { headers }),
+      ]);
 
-    return NextResponse.json({ 
-      ...data,
-      iconUrl: data.icon_url,
-      members
-    });
-  } catch (e) {
-    console.error("[/api/modrinth/project] Error:", e);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      if (!projectRes.ok) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+
+      const data = await projectRes.json();
+
+      let members: any[] = [];
+      if (membersRes.ok) {
+        const membersData = await membersRes.json();
+        members = (membersData ?? []).map((m: any) => ({
+          id: m.user.id,
+          username: m.user.username,
+          name: m.user.name || m.user.username,
+          avatarUrl: m.user.avatar_url ?? null,
+          role: m.role || "Member",
+        }));
+      }
+
+      return NextResponse.json({
+        ...data,
+        iconUrl: data.icon_url,
+        members,
+      });
+    } catch (e) {
+      console.error("[/api/modrinth/project] Error:", e);
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    }
   }
-}
+);

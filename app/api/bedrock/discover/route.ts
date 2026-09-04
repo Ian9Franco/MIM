@@ -2,14 +2,23 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getPortableDir } from "@/lib/core/settings";
 
 const CACHE_DIR = path.join(getPortableDir(), "cache");
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-  const page = parseInt(searchParams.get("page") || "1", 10);
+const querySchema = z.object({
+  q: z.string().trim().max(120).optional().default(""),
+  page: z.coerce.number().int().min(1).max(100).optional().default(1),
+});
+
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema,
+  },
+  async ({ query: { q: query, page } }) => {
 
   // Cachear los resultados por 6 horas para ser amigables con chunk.gg
   const cacheKey = `chunk_discover_${crypto
@@ -158,3 +167,4 @@ export async function GET(request: Request) {
     );
   }
 }
+);

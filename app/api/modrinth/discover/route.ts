@@ -11,27 +11,40 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
 import { MODRINTH_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS } from "@/constants/app";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const DEFAULT_PAGE_SIZE = 21;
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const loader       = searchParams.get("loader") ?? "forge";
-  const gameVersionsJson = searchParams.get("gameVersions");
-  const gameVersions = gameVersionsJson ? JSON.parse(gameVersionsJson) : [];
-  const categories   = searchParams.get("categories") ? JSON.parse(searchParams.get("categories")!) : [];
-  const environments = searchParams.get("environments") ? JSON.parse(searchParams.get("environments")!) : [];
-  const page         = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize     = parseInt(searchParams.get("pageSize") ?? String(DEFAULT_PAGE_SIZE), 10);
-  const sortParam    = searchParams.get("sort") ?? "relevance";
-  const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "relevance";
-  const projectType  = searchParams.get("projectType") ?? "mod";
-  const q            = searchParams.get("q")?.trim() ?? "";
-  const offset       = (page - 1) * pageSize;
+const discoverQuerySchema = z.object({
+  loader: z.string().optional().default("forge"),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(DEFAULT_PAGE_SIZE),
+  sort: z.string().optional().default("relevance"),
+  projectType: z.string().optional().default("mod"),
+  q: z.string().optional().default(""),
+  gameVersions: z.string().optional(),
+  categories: z.string().optional(),
+  environments: z.string().optional(),
+});
+
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    querySchema: discoverQuerySchema,
+  },
+  async ({ query }) => {
+    const { loader, page, pageSize, projectType, q, gameVersions: gameVersionsJson, categories: categoriesJson, environments: environmentsJson } = query;
+    const gameVersions = gameVersionsJson ? JSON.parse(gameVersionsJson) : [];
+    const categories   = categoriesJson ? JSON.parse(categoriesJson) : [];
+    const environments = environmentsJson ? JSON.parse(environmentsJson) : [];
+    const sortParam    = query.sort ?? "relevance";
+    const sort         = ["updated", "relevance", "downloads", "newest", "follows"].includes(sortParam) ? sortParam : "relevance";
+    const offset       = (page - 1) * pageSize;
 
   const headers: Record<string, string> = {
     "User-Agent": "MIM-App/1.0 (contact@mim.local)",
@@ -226,3 +239,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+);

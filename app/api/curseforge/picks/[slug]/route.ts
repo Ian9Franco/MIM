@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
 
 /**
@@ -42,7 +44,7 @@ async function scrapeModSlugs(collectionSlug: string): Promise<string[]> {
     const slugs = [...new Set(matches.map((m) => m[1]))];
     const blocked = new Set(["files", "download", "all", "install", "external", "discord", "settings"]);
     return slugs.filter((s) => s.length > 2 && !blocked.has(s));
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -80,100 +82,107 @@ function normalizeMod(m: any) {
   };
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await params;
-  const apiKey = getApiKey("curseforge");
+const paramsSchema = z.object({
+  slug: z.string().min(1, "Missing slug"),
+});
 
-  // 1. Prioridad: Base de datos curada
-  let modSlugs = CURATED_MODS[slug] || [];
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+    paramsSchema,
+  },
+  async ({ params: routeParams }) => {
+    const { slug } = routeParams;
+    const apiKey = getApiKey("curseforge");
 
-  // 2. Fallback: Scraping si no está en la base de datos
-  if (modSlugs.length === 0) {
-    if (process.send && process.env.NODE_ENV === 'production') {
-      // Estamos en Electron (PROD) - Usamos el scraper indestructible por IPC
-      modSlugs = await new Promise<string[]>((resolve) => {
-        const listener = (msg: any) => {
-          if (msg.type === 'scrape_mods_response' && msg.slug === slug) {
+    // 1. Prioridad: Base de datos curada
+    let modSlugs = CURATED_MODS[slug] || [];
+
+    // 2. Fallback: Scraping si no está en la base de datos
+    if (modSlugs.length === 0) {
+      if (process.send && process.env.NODE_ENV === 'production') {
+        // Estamos en Electron (PROD) - Usamos el scraper indestructible por IPC
+        modSlugs = await new Promise<string[]>((resolve) => {
+          const listener = (msg: any) => {
+            if (msg.type === 'scrape_mods_response' && msg.slug === slug) {
+              process.off('message', listener);
+              resolve(msg.mods || []);
+            }
+          };
+          process.on('message', listener);
+          process.send!({ type: 'scrape_mods', slug });
+          
+          // Timeout de seguridad de 15 segundos
+          setTimeout(() => {
             process.off('message', listener);
-            resolve(msg.mods || []);
-          }
-        };
-        process.on('message', listener);
-        process.send!({ type: 'scrape_mods', slug });
+            resolve([]);
+          }, 15000);
+        });
+      } else {
+        // Estamos en DEV (npm run dev) - Fallback al fetch directo
+        modSlugs = await scrapeModSlugs(slug);
         
-        // Timeout de seguridad de 15 segundos
-        setTimeout(() => {
-          process.off('message', listener);
-          resolve([]);
-        }, 15000);
-      });
-    } else {
-      // Estamos en DEV (npm run dev) - Fallback al fetch directo
-      modSlugs = await scrapeModSlugs(slug);
-      
-      // Si el fetch directo falla (403) en DEV, usamos mock data específica por slug
-      if (modSlugs.length === 0) {
-        const DEV_MOCKS: Record<string, string[]> = {
-          // May 2026
-          "may-collection-2026":      ["star-wars-mod", "galacticraft-legacy", "immersive-portals-mod", "sodium", "iris"],
-          "lupin-may26":              ["mekanism", "thermal-expansion", "applied-energistics-2", "refined-storage", "create"],
-          // April 2026
-          "curseforge-apr26":         ["blocks-previewer", "msu", "seeds-bag", "thewasteland", "the-zenith-sword"],
-          "apr-collection-2026":      ["egg-item", "bunny-overload", "easter-eggs", "springtime", "jei"],
-          // March 2026
-          "lupin-mar26":              ["zombie-apocalypse", "lost-cities", "torchmaster", "tough-as-nails", "sophisticated-backpacks"],
-          "curseforge-mar26":         ["exposure", "trowel", "better-than-mending", "supplementaries", "farmers-delight"],
-          "mar-collection-2026":      ["alexsmobs", "exotic-birds", "the-zoo", "creature-mod", "waddles"],
-          // February 2026
-          "feb-collection-2026":      ["biomes-o-plenty", "serene-seasons", "tough-as-nails", "xaeros-minimap", "journeymap"],
-          "infernal-studios-feb26":   ["hytale-reborn", "player-animator", "geckolib", "fabric-api", "cloth-config"],
-          // January 2026
-          "curseforge-jan26":         ["trepidation", "dungeons-arise", "when-dungeons-arise", "raid-mod", "goblin-traders"],
-          "doublesal-jan26":          ["neep-meat", "mite-beyond", "neep-meat-trifecta", "pam-harvestcraft-2", "spice-of-life"],
-          "jan-collection-2026":      ["education-mod", "scicraft", "computercraft", "mathematics-mod", "physics-mod"],
-          // December 2025
-          "curseforge-dec25":         ["valhelsia-structures", "moog-voyager-structures", "dungeons-arise", "repurposed-structures", "yung-extras"],
-          "noxus-dec25":              ["create", "alexsmobs", "supplementaries", "farmers-delight", "serene-seasons"],
-          "sircolor-dec25":           ["aquaculture", "fins-and-tails", "drowned-expansion", "better-diving", "water-strainer"],
-        };
-        modSlugs = DEV_MOCKS[slug] || [];
+        // Si el fetch directo falla (403) en DEV, usamos mock data específica por slug
         if (modSlugs.length === 0) {
-          console.log(`[DEV] Sin mock data para "${slug}". Retornando vacío (normal en dev por el 403 de Cloudflare).`);
-        } else {
-          console.log(`[DEV] Usando mock data para "${slug}"`);
+          const DEV_MOCKS: Record<string, string[]> = {
+            // May 2026
+            "may-collection-2026":      ["star-wars-mod", "galacticraft-legacy", "immersive-portals-mod", "sodium", "iris"],
+            "lupin-may26":              ["mekanism", "thermal-expansion", "applied-energistics-2", "refined-storage", "create"],
+            // April 2026
+            "curseforge-apr26":         ["blocks-previewer", "msu", "seeds-bag", "thewasteland", "the-zenith-sword"],
+            "apr-collection-2026":      ["egg-item", "bunny-overload", "easter-eggs", "springtime", "jei"],
+            // March 2026
+            "lupin-mar26":              ["zombie-apocalypse", "lost-cities", "torchmaster", "tough-as-nails", "sophisticated-backpacks"],
+            "curseforge-mar26":         ["exposure", "trowel", "better-than-mending", "supplementaries", "farmers-delight"],
+            "mar-collection-2026":      ["alexsmobs", "exotic-birds", "the-zoo", "creature-mod", "waddles"],
+            // February 2026
+            "feb-collection-2026":      ["biomes-o-plenty", "serene-seasons", "tough-as-nails", "xaeros-minimap", "journeymap"],
+            "infernal-studios-feb26":   ["hytale-reborn", "player-animator", "geckolib", "fabric-api", "cloth-config"],
+            // January 2026
+            "curseforge-jan26":         ["trepidation", "dungeons-arise", "when-dungeons-arise", "raid-mod", "goblin-traders"],
+            "doublesal-jan26":          ["neep-meat", "mite-beyond", "neep-meat-trifecta", "pam-harvestcraft-2", "spice-of-life"],
+            "jan-collection-2026":      ["education-mod", "scicraft", "computercraft", "mathematics-mod", "physics-mod"],
+            // December 2025
+            "curseforge-dec25":         ["valhelsia-structures", "moog-voyager-structures", "dungeons-arise", "repurposed-structures", "yung-extras"],
+            "noxus-dec25":              ["create", "alexsmobs", "supplementaries", "farmers-delight", "serene-seasons"],
+            "sircolor-dec25":           ["aquaculture", "fins-and-tails", "drowned-expansion", "better-diving", "water-strainer"],
+          };
+          modSlugs = DEV_MOCKS[slug] || [];
+          if (modSlugs.length === 0) {
+            console.log(`[DEV] Sin mock data para "${slug}". Retornando vacío (normal en dev por el 403 de Cloudflare).`);
+          } else {
+            console.log(`[DEV] Usando mock data para "${slug}"`);
+          }
         }
       }
     }
-  }
 
-  if (modSlugs.length === 0) {
-    return NextResponse.json({ mods: [], message: "No se encontraron mods para esta colección." });
-  }
+    if (modSlugs.length === 0) {
+      return NextResponse.json({ mods: [], message: "No se encontraron mods para esta colección." });
+    }
 
-  if (!apiKey) {
-    return NextResponse.json({
-      mods: modSlugs.map(s => ({
-        projectId: s,
-        slug: s,
-        title: s.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-        author: "CurseForge",
-        _source: "curseforge"
-      }))
-    });
-  }
+    if (!apiKey) {
+      return NextResponse.json({
+        mods: modSlugs.map(s => ({
+          projectId: s,
+          slug: s,
+          title: s.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+          author: "CurseForge",
+          _source: "curseforge"
+        }))
+      });
+    }
 
-  const results: any[] = [];
-  const BATCH_SIZE = 5;
-  for (let i = 0; i < modSlugs.length; i += BATCH_SIZE) {
-    const batch = modSlugs.slice(i, i + BATCH_SIZE);
-    const settled = await Promise.allSettled(batch.map(s => fetchModBySlug(s, apiKey)));
-    settled.forEach(r => {
-      if (r.status === "fulfilled" && r.value) results.push(normalizeMod(r.value));
-    });
-  }
+    const results: any[] = [];
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < modSlugs.length; i += BATCH_SIZE) {
+      const batch = modSlugs.slice(i, i + BATCH_SIZE);
+      const settled = await Promise.allSettled(batch.map(s => fetchModBySlug(s, apiKey)));
+      settled.forEach(r => {
+        if (r.status === "fulfilled" && r.value) results.push(normalizeMod(r.value));
+      });
+    }
 
-  return NextResponse.json({ mods: results });
-}
+    return NextResponse.json({ mods: results });
+  }
+);

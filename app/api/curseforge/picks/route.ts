@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { withApiGuard } from "@/lib/apiGuard";
 
 /**
  * Registro de colecciones conocidas y sus metadatos.
@@ -78,14 +79,8 @@ async function scrapeCollections() {
     if (!res.ok) return [];
 
     const html = await res.text();
-    
-    // Buscamos el patrón de las tarjetas de colecciones.
-    // Usamos una regex que capture el slug y el título si es posible.
-    // Basado en el doc del usuario, los slugs están en links que dicen "View Community Picks"
     const slugMatches = [...html.matchAll(/href="\/community-picks\/minecraft\/([a-z0-9-]+)"[^>]*>View Community Picks/gi)];
     
-    // Para cada slug, intentamos buscar el título y la imagen asociados en el HTML (esto es más complejo con regex)
-    // Pero podemos intentar capturar bloques de tarjetas.
     const collections = slugMatches.map(match => {
       const slug = match[1];
       
@@ -125,31 +120,36 @@ function getCachedPicks() {
   return [];
 }
 
-export async function GET(req: NextRequest) {
-  // 1. Intentamos leer de la caché generada por Electron (Indestructible)
-  let discovered = getCachedPicks();
-  
-  // 2. Si no hay caché, fallback al scraping ligero (v1)
-  if (discovered.length === 0) {
-    discovered = await scrapeCollections();
-  }
-
-  // Map discovered picks to assign their correct projectCount instead of a generic 0
-  const allPicks = discovered.map((p: any) => ({
-    ...p,
-    projectCount: p.projectCount || CURSEFORGE_PROJECT_COUNTS[p.slug] || 5
-  }));
-  
-  // 3. Mezclamos con las conocidas evitando duplicados
-  KNOWN_PICKS.forEach(k => {
-    if (!allPicks.find((p: any) => p.slug === k.slug)) {
-      allPicks.push(k as any);
+export const GET = withApiGuard(
+  {
+    rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
+  },
+  async () => {
+    // 1. Intentamos leer de la caché generada por Electron (Indestructible)
+    let discovered = getCachedPicks();
+    
+    // 2. Si no hay caché, fallback al scraping ligero (v1)
+    if (discovered.length === 0) {
+      discovered = await scrapeCollections();
     }
-  });
 
-  return NextResponse.json({ picks: allPicks }, {
-    headers: {
-      "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200",
-    },
-  });
-}
+    // Map discovered picks to assign their correct projectCount instead of a generic 0
+    const allPicks = discovered.map((p: any) => ({
+      ...p,
+      projectCount: p.projectCount || CURSEFORGE_PROJECT_COUNTS[p.slug] || 5
+    }));
+    
+    // 3. Mezclamos con las conocidas evitando duplicados
+    KNOWN_PICKS.forEach(k => {
+      if (!allPicks.find((p: any) => p.slug === k.slug)) {
+        allPicks.push(k as any);
+      }
+    });
+
+    return NextResponse.json({ picks: allPicks }, {
+      headers: {
+        "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200",
+      },
+    });
+  }
+);

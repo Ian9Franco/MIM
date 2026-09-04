@@ -77,6 +77,18 @@ export function ModDetailsDescTab({
   handleSendChatMessage,
   chatBottomRef,
 }: ModDetailsDescTabProps) {
+  const handleFomoLinkClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest("[data-fomo-query]") as HTMLElement;
+    if (target) {
+      e.preventDefault();
+      e.stopPropagation();
+      const query = target.getAttribute("data-fomo-query");
+      if (query) {
+        window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query: query.trim() } }));
+      }
+    }
+  };
+
   return (
     <motion.div
       key="desc"
@@ -278,7 +290,8 @@ export function ModDetailsDescTab({
           </div>
 
           <div
-            className="mim-rich-description text-xs text-white/80 leading-relaxed space-y-2.5 break-words bg-black/20 p-3 rounded-xl border border-white/5"
+            onClick={handleFomoLinkClick}
+            className="mim-rich-description text-xs text-white/80 leading-relaxed space-y-2.5 break-words bg-black/20 p-3 rounded-xl border border-white/5 cursor-pointer"
             dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
           />
 
@@ -340,7 +353,8 @@ export function ModDetailsDescTab({
                       )}
                     </span>
                     <div
-                      className="mim-rich-description text-xs leading-relaxed space-y-1.5 break-words"
+                      onClick={handleFomoLinkClick}
+                      className="mim-rich-description text-xs leading-relaxed space-y-1.5 break-words cursor-pointer"
                       dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
                     />
                   </div>

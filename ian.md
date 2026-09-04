@@ -103,7 +103,10 @@ npm run start:standalone
 | :--- | :--- |
 | **Verificar compilación y tipos** | `npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit` |
 | **Correr todas las pruebas (12 suites)** | `npm test` |
+| **Build + preparar assets (local/standalone)** | `npm run build:standalone` |
+| **Lanzar Electron localmente** | `npm run start:standalone` |
 | **Iniciar asistente de nueva Release** | `npm run release` |
 | **Subir la Release a GitHub Actions** | `git push origin main --tags` |
 | **Compilar el instalador `.exe` local** | `npm run package:win` |
-| **Lanzar Electron localmente** | `npm run start:standalone` |
+
+> ⚠️ Siempre usar `build:standalone` (no `build`) para testear en Electron. El paso extra corre `prepare.js` que copia `.next/static` y `public/` al directorio standalone — sin eso los CSS y assets no cargan.

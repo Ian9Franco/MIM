@@ -197,6 +197,18 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const rawDesc = descText.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(descText) : markdownToHtml(descText)) : "Sin descripción.";
   const descHtml = translatedBody ? translatedBody : rawDesc;
 
+  const handleFomoLinkClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest("[data-fomo-query]") as HTMLElement;
+    if (target) {
+      e.preventDefault();
+      e.stopPropagation();
+      const query = target.getAttribute("data-fomo-query");
+      if (query) {
+        window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query: query.trim() } }));
+      }
+    }
+  };
+
   const mainContent = (
     <div className="flex-1 flex flex-col min-h-0 animate-fade-in text-foreground relative">
       {loading ? (
@@ -459,7 +471,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     </div>
 
                     <div
-                      className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed"
+                      onClick={handleFomoLinkClick}
+                      className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer"
                       dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
                     />
 
@@ -521,6 +534,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                                 )}
                               </span>
                               <div
+                                onClick={handleFomoLinkClick}
                                 className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
                                 dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
                               />

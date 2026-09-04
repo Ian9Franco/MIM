@@ -82,7 +82,8 @@ export function getSettings(): MimSettings {
         validated: !!data.validated,
         modrinthApiKey: data.modrinthApiKey || "",
         curseforgeApiKey: data.curseforgeApiKey || "",
-        virusTotalApiKey: data.virusTotalApiKey || ""
+        virusTotalApiKey: data.virusTotalApiKey || "",
+        geminiApiKey: data.geminiApiKey || ""
       };
     } catch (e) {
       console.warn(`[/lib/core/settings] Corrupted or unreadable settings file at ${settingsFile}, falling back to defaults:`, e);

@@ -36,9 +36,14 @@ export function DiagnosisCard({ analysis, severityStyle }: any) {
             )}
           </div>
           <div>
-            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest bg-white/90 text-black">
-              {analysis.category}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                SAGE ENGINE
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest bg-white/90 text-black">
+                {analysis.category}
+              </span>
+            </div>
             <h3 className="text-base font-bold mt-1.5" style={{ color: severityStyle.text }}>
               {analysis.title}
             </h3>

@@ -181,6 +181,11 @@ export function markdownToHtml(md: string): string {
       return `<img src="${cleanSrc}" alt="${safeAlt}" referrerpolicy="no-referrer" onerror="this.style.display='none'" class="${cls}" loading="lazy" />`;
     })
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) => {
+      const trimmedHref = href.trim();
+      if (trimmedHref.startsWith("fomo:") || trimmedHref.startsWith("fomo://")) {
+        const query = trimmedHref.replace(/^fomo:(\/\/)?/, "").trim();
+        return `<span data-fomo-query="${escapeHtml(query)}" class="fomo-open-trigger inline-flex items-center gap-1 px-2 py-0.5 my-0.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/35 text-purple-200 hover:text-white border border-purple-500/40 font-bold transition-all active:scale-95 text-xs shadow-sm cursor-pointer select-none"><span>📦</span><span>${text}</span><span class="text-[9px] opacity-70 font-mono">↗ FOMO</span></span>`;
+      }
       const cleanHref = cleanEmbeddedUrl(href, "https://modrinth.com");
       return `<a href="${cleanHref}" data-external-link="true" class="text-primary hover:underline" rel="noopener noreferrer">${text}</a>`;
     })

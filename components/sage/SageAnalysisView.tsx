@@ -22,27 +22,10 @@ export function SageAnalysisView({ analysis, onAutoFix, rawText }: any) {
     <div className="space-y-6 animate-fade-up">
       <DiagnosisCard analysis={analysis} severityStyle={severityStyle} />
 
-      {/* MIM-Bot Copilot toggle — sin banner duplicado, el header real está dentro de SageMimbotCopilot */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setShowMimbot(!showMimbot)}
-          className="px-3.5 py-2 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-purple-600/20 active:scale-95 border border-purple-500/30"
-        >
-          {showMimbot ? "Ocultar MIM-Bot" : "Consultar a MIM-Bot ✦"}
-        </button>
-      </div>
+      {/* Acciones de Resolución en 1-Clic de SAGE */}
+      <SageActionableFixes actionableFix={analysis.actionableFix} actionableFixes={analysis.actionableFixes} onAutoFix={onAutoFix} />
 
-      {showMimbot && (
-        <SageMimbotCopilot
-          analysis={analysis}
-          rawText={rawText || analysis.technicalSummary || analysis.explanation || ""}
-          onAutoFix={onAutoFix}
-          onClose={() => setShowMimbot(false)}
-        />
-      )}
-
-      {/* Sospechosos */}
+      {/* Mods Sospechosos identificados por SAGE */}
       {analysis.suspectedMods.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-30">Mods Sospechosos</h4>
@@ -54,10 +37,9 @@ export function SageAnalysisView({ analysis, onAutoFix, rawText }: any) {
         </div>
       )}
 
-      <SageActionableFixes actionableFix={analysis.actionableFix} actionableFixes={analysis.actionableFixes} onAutoFix={onAutoFix} />
-
+      {/* Explicación heurística y soluciones de SAGE */}
       <div className="space-y-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-30">Explicación</h4>
+        <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-30">Diagnóstico Heurístico SAGE</h4>
         <div className="p-4 rounded-2xl bg-white/2 border border-white/5 text-sm leading-relaxed opacity-80">{analysis.explanation}</div>
       </div>
 
@@ -81,6 +63,34 @@ export function SageAnalysisView({ analysis, onAutoFix, rawText }: any) {
       {analysis.technicalSummary && (
         <pre className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] text-indigo-300/60 overflow-x-auto whitespace-pre-wrap">{analysis.technicalSummary}</pre>
       )}
+
+      {/* Barra divisoria y acceso a MIM-Bot (Asistente de IA) */}
+      <div className="pt-2 border-t border-white/5 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <img src="/icon.png" alt="" className="w-4 h-4 object-contain animate-slime shrink-0" />
+            <span className="text-xs font-bold text-purple-300">¿Dudas sobre este incidente?</span>
+            <span className="text-[10px] text-white/40">Consultale a MIM-Bot</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMimbot(!showMimbot)}
+            className="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-purple-600/20 active:scale-95 border border-purple-500/30"
+          >
+            <img src="/icon.png" alt="" className="w-3.5 h-3.5 object-contain animate-slime shrink-0" />
+            {showMimbot ? "Ocultar MIM-Bot" : "Abrir MIM-Bot"}
+          </button>
+        </div>
+
+        {showMimbot && (
+          <SageMimbotCopilot
+            analysis={analysis}
+            rawText={rawText || analysis.technicalSummary || analysis.explanation || ""}
+            onAutoFix={onAutoFix}
+            onClose={() => setShowMimbot(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -176,6 +176,7 @@ export function useSettingsManager(onClose: () => void) {
       setModrinthApiKey(originalSettings.modrinthApiKey || "");
       setCurseforgeApiKey(originalSettings.curseforgeApiKey || "");
       setVirusTotalApiKey(originalSettings.virusTotalApiKey || "");
+      setGeminiApiKey(originalSettings.geminiApiKey || "");
     }
     setCanEdit(false);
   };

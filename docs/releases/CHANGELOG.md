@@ -180,4 +180,4 @@
 
 ---
 
-*Minecraft Intelligent Manager — Hecho con ⚡ para la comunidad.*
+*Minecraft Intelligent Manager — Hecho con ganas para la MI.*

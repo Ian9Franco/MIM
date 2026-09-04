@@ -247,13 +247,14 @@ function printFailureReport(reason) {
 }
 
 function listAvailableTargets() {
-  log("\n📡 Consultando ramas y PRs remotos disponibles en GitHub...", "cyan");
+  log("\n📡 Consultando ramas y PRs en GitHub...", "cyan");
   try {
     runGit("fetch origin");
   } catch {}
 
-  // PRs remotos no mergeados en main
-  const prs = [];
+  const openPrs = [];
+  const closedPrs = [];
+
   try {
     const rawPrs = runGit("ls-remote origin refs/pull/*/head");
     const lines = rawPrs.split("\n").filter(Boolean);
@@ -270,42 +271,70 @@ function listAvailableTargets() {
           } catch {
             isMerged = false;
           }
-          if (!isMerged) {
-            prs.push(match[1]);
+          if (isMerged) {
+            closedPrs.push(match[1]);
+          } else {
+            openPrs.push(match[1]);
           }
         }
       }
     }
   } catch {}
 
-  // Ramas remotas activas que NO están mergeadas en main
-  let branches = [];
+  let openBranches = [];
   try {
     const rawBranches = runGit("branch -r --no-merged main");
-    branches = rawBranches
+    openBranches = rawBranches
       .split("\n")
       .map((b) => b.trim().replace(/^origin\//, ""))
       .filter((b) => b && !b.startsWith("HEAD") && b !== "main" && b !== "master" && !b.startsWith("backup/"));
   } catch {}
 
-  if (prs.length > 0 || branches.length > 0) {
-    log("\n📌 PRs y Ramas Detectados para Revisar:", "bold");
-    if (prs.length > 0) {
-      log("\n  🔢 Por Número de Pull Request:", "cyan");
-      for (const pr of prs) {
+  let mergedBranches = [];
+  try {
+    const rawMerged = runGit("branch -r --merged main");
+    mergedBranches = rawMerged
+      .split("\n")
+      .map((b) => b.trim().replace(/^origin\//, ""))
+      .filter((b) => b && !b.startsWith("HEAD") && b !== "main" && b !== "master" && !b.startsWith("backup/"));
+  } catch {}
+
+  log("\n─────────────────────────────────────────────────────────────────────────────", "dim");
+  log("🟢 PENDIENTES / ABIERTAS (Esperando tu revisión):", "green");
+  log("─────────────────────────────────────────────────────────────────────────────", "dim");
+
+  if (openPrs.length > 0 || openBranches.length > 0) {
+    if (openPrs.length > 0) {
+      log("  🔢 Pull Requests:", "bold");
+      for (const pr of openPrs) {
         log(`     • PR #${pr}  ➔  npm run pr:review ${pr}`, "green");
       }
     }
-    if (branches.length > 0) {
-      log("\n  🌿 Por Nombre de Rama:", "cyan");
-      for (const br of branches) {
+    if (openBranches.length > 0) {
+      log("\n  🌿 Ramas:", "bold");
+      for (const br of openBranches) {
         log(`     • ${br}  ➔  npm run pr:review ${br}`, "green");
       }
     }
-    log("");
   } else {
-    log("\n(No se detectaron PRs ni ramas de features pendientes en origin).\n", "dim");
+    log("  (No hay PRs ni ramas pendientes. ¡Todo al día!)", "dim");
   }
+
+  log("\n─────────────────────────────────────────────────────────────────────────────", "dim");
+  log("⚪ CERRADAS / RESUELTAS (Ya incorporadas en main):", "dim");
+  log("─────────────────────────────────────────────────────────────────────────────", "dim");
+
+  if (closedPrs.length > 0 || mergedBranches.length > 0) {
+    if (closedPrs.length > 0) {
+      log(`  🔢 PRs resueltos: ${closedPrs.map((p) => `#${p}`).join(", ")}`, "dim");
+    }
+    if (mergedBranches.length > 0) {
+      log(`  🌿 Ramas ya mergeadas: ${mergedBranches.join(", ")}`, "dim");
+    }
+  } else {
+    log("  (Sin historial reciente de merges)", "dim");
+  }
+  log("");
 }
 
 async function main() {

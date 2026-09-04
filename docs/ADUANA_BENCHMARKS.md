@@ -9,11 +9,11 @@
 ## ⚡ Key Results & Performance Highlights
 
 - **Cryptographic Hashing Throughput:**
-  - **SHA-1:** **2089.9 MB/s**
-  - **SHA-512:** **946.4 MB/s**
-- **Fast-Path Lookup Latency (Filename Hint):** **215.64 µs/operation** ($O(1)$ direct hit)
-- **Full Candidate Scan Latency:** **224.40 µs/operation** ($O(N)$ candidate scan)
-- **Cache Acceleration:** Up to **7.3x speedup** on warm scans.
+  - **SHA-1:** **2081.4 MB/s**
+  - **SHA-512:** **896.7 MB/s**
+- **Fast-Path Lookup Latency (Filename Hint):** **223.74 µs/operation** ($O(1)$ direct hit)
+- **Full Candidate Scan Latency:** **220.51 µs/operation** ($O(N)$ candidate scan)
+- **Cache Acceleration:** Up to **7.2x speedup** on warm scans.
 - **Cache Hit Rate Across Repeated Modpack Builds:** **99.4%**
 
 ---
@@ -22,10 +22,10 @@
 
 | File Count | Traversal Latency | Cold Scan (0% Cache) | Warm Scan (100% Cache) | Cache Speedup | Memory Overhead |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **1.000** | 4.14 ms | 533.09 ms | 69.51 ms | **7.7x** | 5.38 MB |
-| **5.000** | 19.83 ms | 3157.34 ms | 500.37 ms | **6.3x** | 25.45 MB |
-| **10.000** | 35.99 ms | 5804.26 ms | 688.31 ms | **8.4x** | -7.63 MB |
-| **25.000** | 59.43 ms | 13393.92 ms | 1837.28 ms | **7.3x** | -2.93 MB |
+| **1.000** | 6.61 ms | 549.93 ms | 70.72 ms | **7.8x** | 5.38 MB |
+| **5.000** | 24.8 ms | 3086.61 ms | 460.07 ms | **6.7x** | 25.6 MB |
+| **10.000** | 34.04 ms | 5989.71 ms | 778.35 ms | **7.7x** | -7.61 MB |
+| **25.000** | 67.62 ms | 14785.32 ms | 2056.88 ms | **7.2x** | -2.87 MB |
 
 ---
 

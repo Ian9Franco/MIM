@@ -3,7 +3,7 @@ import { Edit3, Activity, RefreshCw } from "lucide-react";
 import { SageAnalysisView } from "./SageAnalysisView";
 import { SageEmptyState } from "./SageComponents";
 
-export function SageManualPaste({ analyzing, analysis, onAnalyze, onAutoFix }: any) {
+export function SageManualPaste({ analyzing, analysis, rawText, onAnalyze, onAutoFix }: any) {
   const [text, setText] = useState("");
 
   return (
@@ -38,7 +38,7 @@ export function SageManualPaste({ analyzing, analysis, onAnalyze, onAutoFix }: a
             <p className="text-sm text-white/30 font-bold uppercase tracking-widest">SAGE procesando heurísticas...</p>
           </div>
         ) : analysis ? (
-          <SageAnalysisView analysis={analysis} onAutoFix={onAutoFix} />
+          <SageAnalysisView analysis={analysis} rawText={text || rawText} onAutoFix={onAutoFix} />
         ) : (
           <SageEmptyState 
             icon={<Edit3 className="w-16 h-16" />}

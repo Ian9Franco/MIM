@@ -1,7 +1,7 @@
 {
   "f81e56771bed5b44cf9cb0df5bce3a571f39a3fda23a6e1b63b05f143fd473e7": {
     "signature": "f81e56771bed5b44cf9cb0df5bce3a571f39a3fda23a6e1b63b05f143fd473e7",
-    "timestamp": 1788489356710,
+    "timestamp": 1788491806015,
     "loader": "fabric",
     "mcVersion": "1.20.1",
     "culprit": "optifine",
@@ -71,6 +71,58 @@
         "modId": "sodium",
         "confidence": 0.7,
         "reason": "Identificado preliminarmente en el stack frame del error. Incompatibilidad estructural activa con 'optifine'.",
+        "hasDirectMixinCollision": false,
+        "isMissingDependency": false
+      }
+    ]
+  },
+  "ff633c2f3005aef5326dab4767512a5e1ae5a8b4daa608cb50f16d252ec0ec9b": {
+    "signature": "ff633c2f3005aef5326dab4767512a5e1ae5a8b4daa608cb50f16d252ec0ec9b",
+    "timestamp": 1788491794793,
+    "loader": "forge",
+    "mcVersion": "1.20.1",
+    "culprit": "ad_astra",
+    "suspects": [
+      "ad_astra",
+      "resourcefullib",
+      "bootstraplauncher"
+    ],
+    "severity": "critical",
+    "summary": "Dependencia requerida faltante: 'ad_astra'.\n\nEvidencia detectada:\n• Mod 'resourcefullib' demands dependency 'ad_astra', which is missing from the environment.",
+    "mimbotExplanation": "🔥 **El Roast de MIM-Bot**: El juego colapsó por culpa de 'ad_astra'. No sé qué le hiciste a tu modpack pero el motor de rendering pidió auxilio.\n\n🎯 **La Posta**: Dependencia requerida faltante: 'ad_astra'.\n\nEvidencia detectada:\n• Mod 'resourcefullib' demands dependency 'ad_astra', which is missing from the environment.\n\n🛠️ **Plan de Rescate**:\n1. Desactivá temporalmente 'ad_astra' renombrándolo a .disabled.\n2. Verificá si existe una actualización en CurseForge o Modrinth.",
+    "personality": "bully",
+    "solutions": [
+      "Busca 'ad_astra' compatible con Minecraft 1.20.1 (forge).",
+      "Coloca el archivo .jar correspondiente en tu carpeta mods.",
+      "Reinicia el cliente de Minecraft."
+    ],
+    "actionableFixes": [
+      {
+        "id": "disable-ad_astra",
+        "label": "Desactivar temporalmente 'ad_astra' (.disabled)",
+        "action": "disable_mod",
+        "modId": "ad_astra"
+      }
+    ],
+    "eliminationTree": [
+      {
+        "modId": "adastra",
+        "confidence": 0.3,
+        "reason": "Identificado preliminarmente en el stack frame del error.",
+        "hasDirectMixinCollision": false,
+        "isMissingDependency": false
+      },
+      {
+        "modId": "resourcefullib",
+        "confidence": 0.3,
+        "reason": "Identificado preliminarmente en el stack frame del error.",
+        "hasDirectMixinCollision": false,
+        "isMissingDependency": false
+      },
+      {
+        "modId": "bootstraplauncher",
+        "confidence": 0.3,
+        "reason": "Identificado preliminarmente en el stack frame del error.",
         "hasDirectMixinCollision": false,
         "isMissingDependency": false
       }

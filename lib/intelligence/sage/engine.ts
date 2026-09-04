@@ -7,7 +7,6 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import crypto from "crypto";
 import { parseCrashEnvironment, parseNormalizedStack } from "./parser";
 import { classifyCrash } from "./classifier";
 import { correlateCulprits } from "./correlator";
@@ -15,6 +14,21 @@ import { computeConfidenceScore } from "./scorer";
 import { planRemediation } from "./remediation";
 import { StructuredCrashReport, SageLocale } from "./types";
 import { formatLocalizedRootCause } from "./i18n";
+
+/**
+ * Universal UUID generator safe for both Browser (window/globalThis.crypto)
+ * and Node.js environments without relying on external or unpolyfilled modules.
+ */
+function generateUUID(): string {
+  if (typeof globalThis !== "undefined" && globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface SageDiagnoseOptions {
   locale?: SageLocale;
@@ -71,7 +85,7 @@ export class SageCrashEngine {
     const rootCause = formatLocalizedRootCause(classification.category, culpritMod, locale);
 
     return {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       category: classification.category,
       rootCause,
       confidence,

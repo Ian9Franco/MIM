@@ -16,11 +16,12 @@ import { getSettings } from "@/lib/core/settings";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const project = searchParams.get("project");
-  const version = searchParams.get("version");
+  const project = searchParams.get("project") || "";
+  const version = searchParams.get("version") || "";
   const fileToRead = searchParams.get("file"); // Ej. "latest.log" o "crash-reports/crash-2026-05-06_12.30.00-client.txt"
 
-  if (!project || !version) {
+  const isGlobal = fileToRead ? fileToRead.startsWith("global:") : false;
+  if (!isGlobal && fileToRead && (!project || !version)) {
     return NextResponse.json(
       { error: "Faltan parámetros obligatorios: 'project' y 'version'" },
       { status: 400 }
@@ -28,8 +29,8 @@ export async function GET(req: NextRequest) {
   }
 
   const globalSettings = getSettings();
-  const projectPath = path.join(globalSettings.sourceBase, "_projects", project);
-  const projectPathExists = fs.existsSync(projectPath);
+  const projectPath = project ? path.join(globalSettings.sourceBase, "_projects", project) : "";
+  const projectPathExists = projectPath ? fs.existsSync(projectPath) : false;
   const globalMcPath = globalSettings.minecraftPath;
 
   // ── MODO 1: Leer el contenido de un archivo específico ───────────────────────
@@ -246,20 +247,27 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const project = searchParams.get("project");
-  const version = searchParams.get("version");
+  const project = searchParams.get("project") || "";
+  const version = searchParams.get("version") || "";
   const fileToDelete = searchParams.get("file");
 
-  if (!project || !version || !fileToDelete) {
+  if (!fileToDelete) {
     return NextResponse.json(
-      { error: "Faltan parámetros obligatorios: 'project', 'version' y 'file'" },
+      { error: "Falta parámetro obligatorio: 'file'" },
+      { status: 400 }
+    );
+  }
+
+  const isGlobal = fileToDelete.startsWith("global:");
+  if (!isGlobal && (!project || !version)) {
+    return NextResponse.json(
+      { error: "Faltan parámetros obligatorios: 'project' y 'version'" },
       { status: 400 }
     );
   }
 
   const globalSettings = getSettings();
-  const projectPath = path.join(globalSettings.sourceBase, "_projects", project);
-  const isGlobal = fileToDelete.startsWith("global:");
+  const projectPath = project ? path.join(globalSettings.sourceBase, "_projects", project) : "";
   const relativePath = isGlobal ? fileToDelete.substring(7) : fileToDelete;
   const basePath = isGlobal ? globalSettings.minecraftPath : projectPath;
 

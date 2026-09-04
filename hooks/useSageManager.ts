@@ -226,23 +226,51 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [readingFile, setReadingFile] = useState(false);
   const [crashAnalysis, setCrashAnalysis] = useState<SageAnalysisResult | null>(null);
+  const [crashRawText, setCrashRawText] = useState<string>("");
   const [logAnalysis, setLogAnalysis] = useState<SageAnalysisResult | null>(null);
+  const [logRawText, setLogRawText] = useState<string>("");
   const [pasteAnalysis, setPasteAnalysis] = useState<SageAnalysisResult | null>(null);
+  const [pasteRawText, setPasteRawText] = useState<string>("");
   const [selectedCrashFile, setSelectedCrashFile] = useState<LocalLogFile | null>(null);
   const [latestLogFile, setLatestLogFile] = useState<LocalLogFile | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
 
+  // handleLoadAndAnalyze debe definirse ANTES de fetchLocalFiles ya que esta última la referencia
+  const handleLoadAndAnalyze = useCallback(async (file: LocalLogFile) => {
+    setReadingFile(true);
+    try {
+      const projName = activeProject?.name || "MIMU";
+      const projVersion = activeProject?.version || "1.20.1";
+      const res = await fetch(`/api/project/logs?project=${encodeURIComponent(projName)}&version=${encodeURIComponent(projVersion)}&file=${encodeURIComponent(file.path)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.content || "";
+        const result = analyzeMinecraftLog(content);
+        if (file.type === "crash") {
+          setCrashAnalysis(result);
+          setCrashRawText(content);
+        } else {
+          setLogAnalysis(result);
+          setLogRawText(content);
+        }
+        eventBus.emit("sage:analysis-completed", { type: file.type, success: true, category: result.rule || "unknown" });
+      }
+    } catch (e) { console.error("[SAGE] Error analyzing file:", e); }
+    setReadingFile(false);
+  }, [activeProject]);
+
   const fetchLocalFiles = useCallback(async () => {
-    if (!activeProject) return;
     setLoadingFiles(true);
     try {
-      const res = await fetch(`/api/project/logs?project=${activeProject.name}&version=${activeProject.version}`);
+      const projName = activeProject?.name || "MIMU";
+      const projVersion = activeProject?.version || "1.20.1";
+      const res = await fetch(`/api/project/logs?project=${encodeURIComponent(projName)}&version=${encodeURIComponent(projVersion)}`);
       if (res.ok) {
         const data = await res.json();
         const files: LocalLogFile[] = data.files || [];
         setLocalFiles(files);
 
-        // Auto-selection logic
+        // Auto-selection logic: carga y analiza el archivo más relevante según el modo activo
         if (files.length > 0) {
           if (mode === "crash") {
             const newestCrash = files.find(f => f.type === "crash");
@@ -261,37 +289,27 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       }
     } catch (e) { console.error("[SAGE] Error fetching local files:", e); }
     setLoadingFiles(false);
-  }, [activeProject]);
-
-  const handleLoadAndAnalyze = async (file: LocalLogFile) => {
-    if (!activeProject) return;
-    setReadingFile(true);
-    try {
-      const res = await fetch(`/api/project/logs?project=${activeProject.name}&version=${activeProject.version}&file=${encodeURIComponent(file.path)}`);
-      if (res.ok) {
-        const data = await res.json();
-        const result = analyzeMinecraftLog(data.content || "");
-        if (file.type === "crash") setCrashAnalysis(result);
-        else setLogAnalysis(result);
-        eventBus.emit("sage:analysis-completed", { type: file.type, success: true, category: result.rule || "unknown" });
-      }
-    } catch (e) { console.error("[SAGE] Error analyzing file:", e); }
-    setReadingFile(false);
-  };
+  }, [activeProject, mode, handleLoadAndAnalyze]);
 
   const handleConfirmDelete = async (file: LocalLogFile) => {
-    if (!activeProject) return;
+    const projName = activeProject?.name || "MIMU";
+    const projVersion = activeProject?.version || "1.20.1";
     try {
-      const res = await fetch(`/api/project/logs?project=${activeProject.name}&version=${activeProject.version}&file=${encodeURIComponent(file.path)}`, { method: "DELETE" });
+      const res = await fetch(`/api/project/logs?project=${encodeURIComponent(projName)}&version=${encodeURIComponent(projVersion)}&file=${encodeURIComponent(file.path)}`, { method: "DELETE" });
       if (res.ok) {
         setLocalFiles(prev => prev.filter(f => f.path !== file.path));
-        if (selectedCrashFile?.path === file.path) { setSelectedCrashFile(null); setCrashAnalysis(null); }
+        if (selectedCrashFile?.path === file.path) {
+          setSelectedCrashFile(null);
+          setCrashAnalysis(null);
+          setCrashRawText("");
+        }
       }
     } catch (err) { console.error("[SAGE] Error deleting file:", err); }
   };
 
   const handleAnalyzeText = (text: string) => {
     setAnalyzing(true);
+    setPasteRawText(text);
     setTimeout(() => {
       const res = analyzeMinecraftLog(text);
       setPasteAnalysis(res);
@@ -300,10 +318,12 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
   };
 
   useEffect(() => {
-    if (isOpen && activeProject) {
+    if (isOpen) {
       fetchLocalFiles();
-      fetchPlayersList();
-      fetchScannable();
+      if (activeProject) {
+        fetchPlayersList();
+        fetchScannable();
+      }
     }
   }, [isOpen, activeProject, fetchLocalFiles, fetchPlayersList, fetchScannable]);
 
@@ -311,7 +331,8 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
     mode, setMode, 
     players, loadingPlayers, selectedPlayer, setSelectedPlayer, rescuingPlayer, rescueLogs, rescueSuccess, fetchPlayersList, handlePlayerRescue,
     secScannable, secResults, secScanning, secLoading, secError, secScanned, fetchScannable, runSecurityScan, resetSecurityScan,
-    localFiles, loadingFiles, readingFile, crashAnalysis, logAnalysis, pasteAnalysis, selectedCrashFile, setSelectedCrashFile, latestLogFile, setLatestLogFile, 
+    localFiles, loadingFiles, readingFile, crashAnalysis, crashRawText, logAnalysis, logRawText, pasteAnalysis, pasteRawText,
+    selectedCrashFile, setSelectedCrashFile, latestLogFile, setLatestLogFile, 
     analyzing, fetchLocalFiles, handleLoadAndAnalyze, handleConfirmDelete, handleAnalyzeText
   };
 }

@@ -4,7 +4,7 @@ import { SageAnalysisView } from "./SageAnalysisView";
 import { SageEmptyState } from "./SageComponents";
 
 export function SageLogViewer({ 
-  mode, localFiles, loadingFiles, readingFile, analysis, selectedFile, onSelect, onDelete, onAutoFix 
+  mode, localFiles, loadingFiles, readingFile, analysis, selectedFile, rawText, onSelect, onDelete, onAutoFix 
 }: any) {
   const filteredFiles = localFiles.filter((f: any) => mode === "crash" ? f.type === "crash" : f.type === "log");
   
@@ -55,7 +55,7 @@ export function SageLogViewer({
             <p className="text-sm text-white/30 font-bold uppercase tracking-widest">Analizando reporte...</p>
           </div>
         ) : analysis ? (
-          <SageAnalysisView analysis={analysis} onAutoFix={onAutoFix} />
+          <SageAnalysisView analysis={analysis} rawText={rawText} onAutoFix={onAutoFix} />
         ) : (
           <SageEmptyState 
             icon={mode === "crash" ? <FileWarning className="w-16 h-16" /> : <FileText className="w-16 h-16" />}

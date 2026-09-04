@@ -132,6 +132,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
               mode={sage.mode} localFiles={sage.localFiles} 
               loadingFiles={sage.loadingFiles} readingFile={sage.readingFile} 
               analysis={sage.mode === "crash" ? sage.crashAnalysis : sage.logAnalysis}
+              rawText={sage.mode === "crash" ? sage.crashRawText : sage.logRawText}
               selectedFile={sage.mode === "crash" ? sage.selectedCrashFile : sage.latestLogFile}
               onSelect={(f: LocalLogFile) => {
                 if (sage.mode === "crash") sage.setSelectedCrashFile(f);
@@ -155,6 +156,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
           {sage.mode === "paste" && (
             <SageManualPaste 
               analyzing={sage.analyzing} analysis={sage.pasteAnalysis}
+              rawText={sage.pasteRawText}
               onAnalyze={sage.handleAnalyzeText} onAutoFix={handleAutoFix}
             />
           )}

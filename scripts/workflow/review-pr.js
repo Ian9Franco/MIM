@@ -84,12 +84,28 @@ function runAsyncCmd(title, cmd, args) {
   });
 }
 
+function cleanTransientTestArtifacts() {
+  try {
+    runGit(["checkout", "--", ".mim-index", "lib/.mim-index"]);
+  } catch {}
+  try {
+    runGit(["clean", "-f", "docs/ADUANA_BENCHMARKS.md", "docs/SAGE_EVALUATION.md"]);
+  } catch {}
+}
+
 function checkCleanWorkingDirectory() {
-  const status = runGit(["status", "--porcelain"]);
-  if (status.length > 0) {
+  cleanTransientTestArtifacts();
+  const rawStatus = runGit(["status", "--porcelain"]);
+  const lines = rawStatus
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .filter((l) => !l.includes(".mim-index") && !l.includes("ADUANA_BENCHMARKS.md") && !l.includes("SAGE_EVALUATION.md"));
+
+  if (lines.length > 0) {
     log("\n⚠️  ADVERTENCIA DE SEGURIDAD:", "yellow");
     log("Tenés cambios pendientes sin commitear en tu árbol de trabajo actual:", "yellow");
-    console.log(status);
+    console.log(lines.join("\n"));
     log("\nPara no perder trabajo, hacé 'git stash' o commiteá tus cambios antes de revisar otro PR.\n", "yellow");
     process.exit(1);
   }
@@ -107,6 +123,7 @@ async function handlePromote() {
   }
 
   checkCleanWorkingDirectory();
+  cleanTransientTestArtifacts();
 
   log(`\n🚀 Promoviendo rama '${currentBranch}' a 'main'...`, "bold");
   log("1. Cambiando a 'main'...", "cyan");
@@ -137,6 +154,7 @@ function handleReturn() {
     return;
   }
   checkCleanWorkingDirectory();
+  cleanTransientTestArtifacts();
   runGit(["checkout", "main"]);
   log("\n✓ Volviste a la rama 'main' de forma segura.\n", "green");
 }

@@ -19,7 +19,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const { execSync, spawn } = require("child_process");
+const { execFileSync, spawn } = require("child_process");
 const path = require("path");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
@@ -39,11 +39,19 @@ function log(msg, color = "reset") {
   console.log(`${colors[color]}${msg}${colors.reset}`);
 }
 
-function runGit(cmd) {
+function runGit(args) {
   try {
-    return execSync(`git ${cmd}`, { cwd: REPO_ROOT, encoding: "utf-8" }).trim();
+    return execFileSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" }).trim();
   } catch (err) {
-    throw new Error(`Error ejecutando 'git ${cmd}': ${err.message}`);
+    throw new Error(`Error ejecutando 'git ${args.join(" ")}': ${err.message}`);
+  }
+}
+
+function validateBranchName(branch) {
+  try {
+    runGit(["check-ref-format", "--branch", branch]);
+  } catch {
+    throw new Error(`Nombre de rama inválido: '${branch}'`);
   }
 }
 
@@ -77,7 +85,7 @@ function runAsyncCmd(title, cmd, args) {
 }
 
 function checkCleanWorkingDirectory() {
-  const status = runGit("status --porcelain");
+  const status = runGit(["status", "--porcelain"]);
   if (status.length > 0) {
     log("\n⚠️  ADVERTENCIA DE SEGURIDAD:", "yellow");
     log("Tenés cambios pendientes sin commitear en tu árbol de trabajo actual:", "yellow");
@@ -88,7 +96,7 @@ function checkCleanWorkingDirectory() {
 }
 
 function getCurrentBranch() {
-  return runGit("rev-parse --abbrev-ref HEAD");
+  return runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
 }
 
 async function handlePromote() {
@@ -102,20 +110,20 @@ async function handlePromote() {
 
   log(`\n🚀 Promoviendo rama '${currentBranch}' a 'main'...`, "bold");
   log("1. Cambiando a 'main'...", "cyan");
-  runGit("checkout main");
+  runGit(["checkout", "main"]);
 
   log("2. Sincronizando 'main' con origin...", "cyan");
   try {
-    runGit("pull origin main");
+    runGit(["pull", "origin", "main"]);
   } catch {
     log("Aviso: no se pudo hacer pull de origin/main o ya está al día.", "dim");
   }
 
   log(`3. Mergeando '${currentBranch}' en 'main'...`, "cyan");
-  runGit(`merge ${currentBranch}`);
+  runGit(["merge", currentBranch]);
 
   log("4. Pusheando a 'origin/main'...", "cyan");
-  runGit("push origin main");
+  runGit(["push", "origin", "main"]);
 
   log(`\n🎉 ¡ÉXITO TOTAL!`, "green");
   log(`La rama '${currentBranch}' fue mergeada y pusheada a 'origin/main'.`, "green");
@@ -129,7 +137,7 @@ function handleReturn() {
     return;
   }
   checkCleanWorkingDirectory();
-  runGit("checkout main");
+  runGit(["checkout", "main"]);
   log("\n✓ Volviste a la rama 'main' de forma segura.\n", "green");
 }
 
@@ -148,24 +156,25 @@ async function reviewTarget(target) {
     branchToCheckout = `pr-${prNum}`;
     log(`• Descargando Pull Request #${prNum} desde origin...`, "cyan");
     try {
-      runGit(`fetch origin pull/${prNum}/head:${branchToCheckout}`);
+      runGit(["fetch", "origin", `pull/${prNum}/head:${branchToCheckout}`]);
     } catch {
       log(`No se pudo descargar 'pull/${prNum}/head'. Intentando checkout directo si la rama existe...`, "yellow");
     }
   } else {
+    validateBranchName(target);
     log(`• Obteniendo cambios remotos de '${target}'...`, "cyan");
     try {
-      runGit(`fetch origin ${target}`);
+      runGit(["fetch", "origin", target]);
     } catch {
       // Puede ser rama local o tracking
     }
   }
 
   log(`• Haciendo checkout a '${branchToCheckout}'...`, "cyan");
-  runGit(`checkout ${branchToCheckout}`);
+  runGit(["checkout", branchToCheckout]);
 
   try {
-    runGit("pull");
+    runGit(["pull"]);
   } catch {
     // Si no tiene upstream configurado no pasa nada
   }
@@ -173,7 +182,7 @@ async function reviewTarget(target) {
   // 1. Mostrar resumen de commits
   log(`\n📦 Commits introducidos (vs main):`, "bold");
   try {
-    const commits = runGit("log --oneline main..HEAD -n 10");
+    const commits = runGit(["log", "--oneline", "main..HEAD", "-n", "10"]);
     if (commits) {
       console.log(commits);
     } else {
@@ -186,7 +195,7 @@ async function reviewTarget(target) {
   // 2. Mostrar resumen de archivos modificados
   log(`\n📁 Archivos modificados:`, "bold");
   try {
-    const diffStat = runGit("diff --stat main..HEAD");
+    const diffStat = runGit(["diff", "--stat", "main..HEAD"]);
     if (diffStat) {
       console.log(diffStat);
     } else {

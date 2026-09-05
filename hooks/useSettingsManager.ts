@@ -30,7 +30,8 @@ export function useSettingsManager(onClose: () => void) {
   const [keyValidation, setKeyValidation] = useState<Record<string, boolean | null>>({
     curseforge: null,
     modrinth: null,
-    virusTotal: null
+    virusTotal: null,
+    gemini: null
   });
   const [isValidating, setIsValidating] = useState(false);
   const [isValidatingKeys, setIsValidatingKeys] = useState(false);
@@ -63,7 +64,12 @@ export function useSettingsManager(onClose: () => void) {
         validatePaths([
           d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.stagingPath
         ]);
-        validateKeys(d.curseforgeApiKey, d.modrinthApiKey, d.virusTotalApiKey);
+        validateKeys(
+          d.curseforgeApiKey,
+          d.modrinthApiKey,
+          d.virusTotalApiKey,
+          d.geminiApiKey || localStorage.getItem("mim_gemini_api_key") || ""
+        );
       })
       .catch((e) => {
         console.error(e);
@@ -71,9 +77,9 @@ export function useSettingsManager(onClose: () => void) {
       });
   }, []);
 
-  const validateKeys = async (cf: string, mr: string, vt: string) => {
-    if (!cf && !mr && !vt) {
-      setKeyValidation({ curseforge: false, modrinth: true, virusTotal: true });
+  const validateKeys = async (cf: string, mr: string, vt: string, gemini: string) => {
+    if (!cf && !mr && !vt && !gemini) {
+      setKeyValidation({ curseforge: false, modrinth: true, virusTotal: true, gemini: null });
       return;
     }
     
@@ -82,7 +88,7 @@ export function useSettingsManager(onClose: () => void) {
       const res = await fetch("/api/settings/validate-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ curseforge: cf, modrinth: mr, virusTotal: vt })
+        body: JSON.stringify({ curseforge: cf, modrinth: mr, virusTotal: vt, gemini })
       });
       if (res.ok) {
         const { results } = await res.json();
@@ -126,11 +132,11 @@ export function useSettingsManager(onClose: () => void) {
   useEffect(() => {
     if (!loading) {
       const timer = setTimeout(() => {
-        validateKeys(curseforgeApiKey, modrinthApiKey, virusTotalApiKey);
+        validateKeys(curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, loading]);
+  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, loading]);
 
   const handlePickFolder = async (setter: (p: string) => void, isMinecraft = false, currentPath = "") => {
     if (pathValidation[currentPath] === false) {

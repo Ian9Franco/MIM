@@ -17,6 +17,9 @@ interface ModGalleryLightboxProps {
  * ModGalleryLightbox — Visor fullscreen de imágenes para la galería.
  * Se monta mediante React Portal directamente en document.body para evitar
  * quedar atrapado dentro del stacking context y transformaciones de la Bottom Sheet.
+ *
+ * Mantiene el contenedor de arrastre estable (sin keys dinámicas que destruyan
+ * listeners de touch) para evitar que el navegador quede con eventos de puntero bloqueados.
  */
 export function ModGalleryLightbox({
   galleryImages,
@@ -36,14 +39,14 @@ export function ModGalleryLightbox({
   const hasMultipleImages = galleryImages.length > 1;
 
   const showPreviousImage = useCallback(() => {
-    setActiveImageIndex((current) => {
+    setActiveImageIndex((current: number | null) => {
       if (current === null || galleryImages.length === 0) return current;
       return (current - 1 + galleryImages.length) % galleryImages.length;
     });
   }, [galleryImages.length, setActiveImageIndex]);
 
   const showNextImage = useCallback(() => {
-    setActiveImageIndex((current) => {
+    setActiveImageIndex((current: number | null) => {
       if (current === null || galleryImages.length === 0) return current;
       return (current + 1) % galleryImages.length;
     });
@@ -72,20 +75,28 @@ export function ModGalleryLightbox({
   }
 
   return createPortal(
-    <AnimatePresence>
-      {isOpen && activeImageUrl && (
+    <AnimatePresence
+      onExitComplete={() => {
+        if (typeof document !== "undefined") {
+          document.body.style.pointerEvents = "";
+          document.documentElement.style.pointerEvents = "";
+        }
+      }}
+    >
+      {isOpen && activeImageUrl ? (
         <motion.div
           key="mod-gallery-lightbox-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex flex-col justify-between p-3 sm:p-6 select-none touch-none"
+          exit={{ opacity: 0, pointerEvents: "none" }}
+          transition={{ duration: 0.16 }}
+          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex flex-col justify-between p-3 sm:p-6 select-none"
+          style={{ pointerEvents: "auto" }}
           onClick={handleClose}
         >
           {/* Top Control Bar */}
           <div
-            className="w-full flex items-center justify-between z-10 shrink-0 gap-3"
+            className="w-full flex items-center justify-between z-10 shrink-0 gap-3 pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -107,7 +118,7 @@ export function ModGalleryLightbox({
             <button
               type="button"
               onClick={handleClose}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 border border-white/15 flex items-center justify-center transition-all cursor-pointer shadow-lg"
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 border border-white/15 flex items-center justify-center transition-all cursor-pointer shadow-lg pointer-events-auto"
               aria-label="Cerrar galería"
             >
               <X className="w-5 h-5" />
@@ -127,34 +138,33 @@ export function ModGalleryLightbox({
                   e.stopPropagation();
                   showPreviousImage();
                 }}
-                className="absolute left-2 sm:left-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xl"
+                className="absolute left-2 sm:left-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xl pointer-events-auto"
                 aria-label="Imagen anterior"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
             )}
 
+            {/* Stable drag container without dynamic key to preserve pointer listeners */}
             <motion.div
-              key={activeImageUrl}
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
-              transition={{ type: "spring", damping: 26, stiffness: 320 }}
-              className="relative max-w-[96vw] sm:max-w-[90vw] max-h-[76dvh] sm:max-h-[82dvh] flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/40"
+              className="relative max-w-[96vw] sm:max-w-[90vw] max-h-[76dvh] sm:max-h-[82dvh] flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/40 touch-none pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
-              drag="x"
+              drag={hasMultipleImages ? "x" : false}
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.2}
               onDragEnd={(_e, info) => {
                 if (!hasMultipleImages) return;
-                if (info.offset.x > 60) showPreviousImage();
-                if (info.offset.x < -60) showNextImage();
+                if (info.offset.x > 50) {
+                  showPreviousImage();
+                } else if (info.offset.x < -50) {
+                  showNextImage();
+                }
               }}
             >
               <img
                 src={activeImageUrl}
                 alt={activeImage?.title || projectTitle || "Screenshot"}
-                className="max-w-full max-h-[76dvh] sm:max-h-[82dvh] object-contain select-none pointer-events-auto"
+                className="max-w-full max-h-[76dvh] sm:max-h-[82dvh] object-contain select-none transition-opacity duration-150"
                 draggable={false}
               />
             </motion.div>
@@ -166,7 +176,7 @@ export function ModGalleryLightbox({
                   e.stopPropagation();
                   showNextImage();
                 }}
-                className="absolute right-2 sm:right-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xl"
+                className="absolute right-2 sm:right-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xl pointer-events-auto"
                 aria-label="Imagen siguiente"
               >
                 <ChevronRight className="w-6 h-6" />
@@ -176,7 +186,7 @@ export function ModGalleryLightbox({
 
           {/* Bottom Caption & Pill */}
           <div
-            className="w-full flex flex-col items-center justify-center z-10 shrink-0 gap-2 pb-1"
+            className="w-full flex flex-col items-center justify-center z-10 shrink-0 gap-2 pb-1 pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {activeImage?.title && (
@@ -191,7 +201,7 @@ export function ModGalleryLightbox({
             )}
           </div>
         </motion.div>
-      )}
+      ) : null}
     </AnimatePresence>,
     document.body
   );

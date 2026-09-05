@@ -41,15 +41,7 @@ export function ModDetailsGalleryTab({
       </div>
 
       {galleryImages.length > 0 ? (
-        <div
-          onTouchStart={(e) => {
-            e.stopPropagation();
-            setDragEnabled(false);
-          }}
-          onTouchEnd={() => setDragEnabled(true)}
-          onTouchCancel={() => setDragEnabled(true)}
-          className="grid grid-cols-2 gap-2.5 pb-2"
-        >
+        <div className="grid grid-cols-2 gap-2.5 pb-2">
           {galleryImages.map((img: FomoGalleryItem, i: number) => {
             const imgUrl = img.url || (img as unknown as Record<string, string>)?.raw_url || "";
             return (

@@ -68,17 +68,14 @@ async function run() {
   // ─────────────────────────────────────────────────────────────────────────
   console.log(`${colors.bold}1. Route: /api/settings/validate (POST)${colors.reset}`);
 
-  // Test malformed JSON
   const badReq1 = createMalformedRequest("/api/settings/validate");
   const resBad1 = await validatePost(badReq1);
   assert(resBad1.status === 400, "Rejects malformed JSON with HTTP 400");
 
-  // Test missing paths array
   const emptyReq1 = createJsonRequest("/api/settings/validate", { paths: [] });
   const resEmpty1 = await validatePost(emptyReq1);
   assert(resEmpty1.status === 400, "Rejects empty paths array with HTTP 400");
 
-  // Test valid paths array
   const goodReq1 = createJsonRequest("/api/settings/validate", { paths: [process.cwd()] });
   const resGood1 = await validatePost(goodReq1);
   assert(resGood1.status === 200, "Accepts valid paths array with HTTP 200");
@@ -97,13 +94,22 @@ async function run() {
   const goodReq2 = createJsonRequest("/api/settings/validate-keys", {
     curseforge: "",
     modrinth: null,
-    virusTotal: ""
+    virusTotal: "",
+    gemini: null
   });
   const resGood2 = await validateKeysPost(goodReq2);
   assert(resGood2.status === 200, "Processes empty/null keys safely with HTTP 200");
   const dataGood2 = await resGood2.json();
   assert(dataGood2.results.curseforge === false, "Unprovided required key marked false");
   assert(dataGood2.results.modrinth === null, "Unprovided optional key marked null");
+  assert(dataGood2.results.gemini === null, "Unprovided optional Gemini key marked null");
+
+  const invalidGeminiReq = createJsonRequest("/api/settings/validate-keys", {
+    curseforge: "",
+    gemini: 12345
+  });
+  const invalidGeminiRes = await validateKeysPost(invalidGeminiReq);
+  assert(invalidGeminiRes.status === 400, "Rejects non-string Gemini key with HTTP 400");
 
   // ─────────────────────────────────────────────────────────────────────────
   // 3. /api/staging
@@ -151,7 +157,6 @@ async function run() {
   // ─────────────────────────────────────────────────────────────────────────
   console.log(`\n${colors.bold}6. Endpoint: /api/sage/chat Defense Perimeter & Contracts${colors.reset}`);
 
-  // Rejection when question is missing
   const emptyChatReq = createJsonRequest("/api/sage/chat", {
     personality: "bully"
   });
@@ -159,7 +164,6 @@ async function run() {
   assert(resEmptyChat.status === 400, "Rejects request missing question parameter with HTTP 400");
   assert(resEmptyChat.headers.has("X-RateLimit-Limit"), "Response includes X-RateLimit-Limit header");
 
-  // Rejection when personality is invalid enum
   const badPersonalityReq = createJsonRequest("/api/sage/chat", {
     question: "¿Qué pasó?",
     personality: "super_aggressive"
@@ -167,7 +171,6 @@ async function run() {
   const resBadPersonality = await sageChatPost(badPersonalityReq);
   assert(resBadPersonality.status === 400, "Rejects invalid personality enum with HTTP 400");
 
-  // Rejection when JSON is malformed
   const malformedChatReq = createMalformedRequest("/api/sage/chat");
   const resMalformedChat = await sageChatPost(malformedChatReq);
   assert(resMalformedChat.status === 400, "Rejects malformed JSON body with HTTP 400");

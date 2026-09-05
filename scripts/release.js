@@ -14,7 +14,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const { runAllQualityGates } = require("./workflow/review-pr.js");
@@ -30,6 +30,19 @@ function run(command, silent = false) {
     return result?.trim() || "";
   } catch (error) {
     console.log(chalk.red(`\nCommand failed: ${command}`));
+    process.exit(1);
+  }
+}
+
+function runGit(args, silent = false) {
+  try {
+    const result = execFileSync("git", args, {
+      stdio: silent ? "pipe" : "inherit",
+      encoding: "utf-8",
+    });
+    return result?.trim() || "";
+  } catch (error) {
+    console.log(chalk.red(`\nGit command failed: git ${args.join(" ")}`));
     process.exit(1);
   }
 }
@@ -264,7 +277,7 @@ async function automatedReleaseFlow() {
 
   console.log(chalk.bold("\n🏷️  Creando commit y tag de Git:"));
   run("git add .");
-  run(`git commit -m "chore(release): v${newVersion} - ${commitMessage}"`);
+  runGit(["commit", "-m", `chore(release): v${newVersion} - ${commitMessage}`]);
   run(`git tag v${newVersion}`);
   console.log(chalk.green(`  ✓ Tag local 'v${newVersion}' creado exitosamente`));
 
@@ -360,7 +373,7 @@ async function interactiveReleaseFlow() {
   updateVersion(newVersion);
 
   run("git add .");
-  run(`git commit -m "v${newVersion} - ${answers.commitMessage}"`);
+  runGit(["commit", "-m", `v${newVersion} - ${answers.commitMessage}`]);
   run(`git tag v${newVersion}`);
 
   if (answers.pushNow) {

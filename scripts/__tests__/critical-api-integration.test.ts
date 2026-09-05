@@ -175,6 +175,42 @@ async function run() {
   const resMalformedChat = await sageChatPost(malformedChatReq);
   assert(resMalformedChat.status === 400, "Rejects malformed JSON body with HTTP 400");
 
+  const originalFetch = globalThis.fetch;
+  let capturedGeminiUrl = "";
+  let capturedGeminiHeaders = new Headers();
+  const sentinelGeminiKey = "mim-test-key-must-not-appear-in-url";
+
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    capturedGeminiUrl =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    capturedGeminiHeaders = new Headers(init?.headers);
+
+    return new Response(
+      JSON.stringify({
+        candidates: [{ content: { parts: [{ text: "Respuesta de prueba" }] } }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }) as typeof fetch;
+
+  try {
+    const authenticatedChatReq = createJsonRequest("/api/sage/chat", {
+      question: "¿Qué mod causó el crash?",
+      personality: "standard",
+      clientApiKey: sentinelGeminiKey,
+    });
+    const authenticatedChatRes = await sageChatPost(authenticatedChatReq);
+    assert(authenticatedChatRes.status === 200, "Gemini-backed chat succeeds with mocked provider response");
+    assert(!capturedGeminiUrl.includes(sentinelGeminiKey), "Gemini API key is never embedded in the request URL");
+    assert(capturedGeminiHeaders.get("x-goog-api-key") === sentinelGeminiKey, "Gemini API key is sent through x-goog-api-key header");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
   console.log(`\n${colors.green}${colors.bold}✓ All Critical API integration & schema tests passed successfully!${colors.reset}\n`);
 }
 

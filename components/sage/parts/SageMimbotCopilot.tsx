@@ -25,6 +25,7 @@ import {
   MimbotMessageBubble,
   MimbotQuickQuestions,
 } from "./mimbot";
+import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
 
 export interface SageMimbotCopilotProps {
   analysis: SageAnalysisResult;
@@ -33,7 +34,6 @@ export interface SageMimbotCopilotProps {
   onClose?: () => void;
 }
 
-const GEMINI_KEY_STORAGE = "mim_gemini_api_key";
 const PERSONALITY_STORAGE = "mim_bot_personality";
 
 interface ChatMessage {
@@ -54,7 +54,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
   const [showConfig, setShowConfig] = useState(false);
   const [geminiKeyVal, setGeminiKeyVal] = useState("");
-  const [savedKey, setSavedKey] = useState("");
+  const [hasKey, setHasKey] = useState(false);
   const [isSavingKey, setIsSavingKey] = useState(false);
 
   // Estado del chat
@@ -71,32 +71,15 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const prevSigRef = useRef("");
 
-  const hasKey = savedKey.trim().length > 0;
-
-  // Cargar clave desde localStorage y sincronizar con /api/settings
+  // Only retrieve configuration status. The saved credential never returns to
+  // the renderer after Electron has placed it in the OS-backed secret store.
   useEffect(() => {
-    let localKey = "";
-    try {
-      localKey = localStorage.getItem(GEMINI_KEY_STORAGE) || "";
-      if (localKey) {
-        setSavedKey(localKey);
-        setGeminiKeyVal(localKey);
-      }
-    } catch {}
-
-    fetch("/api/settings")
+    migrateLegacyBrowserGeminiKey()
+      .catch(() => false)
+      .then(() => fetch("/api/settings"))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.geminiApiKey) {
-          const configKey = data.geminiApiKey.trim();
-          if (configKey) {
-            setSavedKey(configKey);
-            setGeminiKeyVal(configKey);
-            try {
-              localStorage.setItem(GEMINI_KEY_STORAGE, configKey);
-            } catch {}
-          }
-        }
+        setHasKey(Boolean(data?.apiKeysConfigured?.geminiApiKey));
       })
       .catch(() => {});
   }, []);
@@ -117,28 +100,29 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isSending]);
 
-  // Guardar clave en localStorage y en /api/settings
+  // Persist through the settings API; packaged Desktop forwards this write to
+  // Electron safeStorage and responds without echoing the credential.
   const handleSaveKey = async () => {
     const clean = geminiKeyVal.trim();
     if (!clean) return;
 
     setIsSavingKey(true);
     try {
-      localStorage.setItem(GEMINI_KEY_STORAGE, clean);
-      localStorage.setItem(PERSONALITY_STORAGE, personality);
-    } catch {}
-
-    try {
-      await fetch("/api/settings", {
+      const response = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ geminiApiKey: clean }),
       });
+      if (!response.ok) throw new Error("No se pudo guardar la clave de forma segura");
+      const data = await response.json();
+      setHasKey(Boolean(data?.apiKeysConfigured?.geminiApiKey));
+      setGeminiKeyVal("");
     } catch (e) {
       console.warn("[SageMimbotCopilot] Error al persistir key en settings:", e);
+      setIsSavingKey(false);
+      return;
     }
 
-    setSavedKey(clean);
     setIsSavingKey(false);
     setShowConfig(false);
     setChatError(null);
@@ -205,10 +189,8 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-gemini-key": savedKey,
           },
           body: JSON.stringify({
-            clientApiKey: savedKey,
             question,
             messages: chatMessages,
             personality,
@@ -256,7 +238,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
             { role: "model", text: `Error: ${data.message || data.error || "No se obtuvo respuesta del bot."}` },
           ]);
         }
-      } catch (err: any) {
+      } catch {
         setChatMessages([
           ...newMessages,
           { role: "model", text: "Error de conexión al consultar con MIM-Bot." },
@@ -265,7 +247,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         setIsSending(false);
       }
     },
-    [chatInput, chatMessages, isSending, hasKey, savedKey, personality, analysis]
+    [chatInput, chatMessages, isSending, hasKey, personality, analysis]
   );
 
   const handleFormSubmit = (e: React.FormEvent) => {

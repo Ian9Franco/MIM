@@ -74,6 +74,7 @@ interface PathInputGroupProps {
   canEdit: boolean;
   isValid: boolean | null;
   saving: boolean;
+  configured?: boolean;
   placeholder?: string;
   desc?: string;
 }
@@ -141,6 +142,7 @@ interface ApiKeyInputGroupProps {
   isValid: boolean | null;
   isValidating: boolean;
   saving: boolean;
+  configured?: boolean;
   placeholder?: string;
   desc?: string;
   link?: string;
@@ -151,7 +153,7 @@ interface ApiKeyInputGroupProps {
 
 export function ApiKeyInputGroup({ 
   label, value, onChange, show, onToggleShow, canEdit, isValid, isValidating, saving, 
-  placeholder, desc, link, linkText, badge, color = "primary" 
+  placeholder, desc, link, linkText, badge, color = "primary", configured = false,
 }: ApiKeyInputGroupProps) {
   const colorClass = color === "emerald" ? "text-emerald-400" : color === "blue" ? "text-blue-400" : color === "purple" ? "text-purple-400" : "text-primary";
   const bgClass = color === "emerald" ? "bg-emerald-500/10 border-emerald-500/20" : color === "blue" ? "bg-blue-500/10 border-blue-500/20" : color === "purple" ? "bg-purple-500/10 border-purple-500/20" : "bg-primary/10 border-primary/20";
@@ -188,13 +190,13 @@ export function ApiKeyInputGroup({
               : "text-foreground/40 bg-white/1 border-white/5 cursor-not-allowed select-none"
           }`}
           style={{ paddingLeft: "2.5rem" }}
-          placeholder={placeholder}
+          placeholder={configured ? "Configurada • ingresá otra para reemplazarla" : placeholder}
           disabled={saving || !canEdit}
         />
         <div className="absolute right-12 flex items-center gap-2">
           {isValidating && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted/40" />}
           {!isValidating && value && isValid === false && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
-          {!isValidating && value && isValid === true && <Check className="w-3.5 h-3.5 text-[#66C8A0]" />}
+          {!isValidating && (value || configured) && isValid === true && <Check className="w-3.5 h-3.5 text-[#66C8A0]" />}
         </div>
         <button
           type="button"
@@ -649,4 +651,3 @@ export function SovereignVaultSettingsCard({ settingsData, onApplySettings }: So
     </div>
   );
 }
-

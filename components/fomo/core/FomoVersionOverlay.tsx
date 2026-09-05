@@ -73,15 +73,21 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   }, [chatMessages, isChatSending]);
 
   const [geminiKeyVal, setGeminiKeyVal] = useState("");
-  const handleSaveGeminiKey = () => {
+  const handleSaveGeminiKey = async () => {
     if (!geminiKeyVal.trim()) return;
     const clean = geminiKeyVal.trim();
     try {
-      localStorage.setItem("mim_gemini_api_key", clean);
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geminiApiKey: clean }),
+      });
+      if (!response.ok) throw new Error("No se pudo guardar la clave de forma segura");
+      setGeminiKeyVal("");
+      handleExplain(undefined, true);
     } catch (e) {
-      console.warn("[FomoVersionOverlay] Error persisting Gemini API key:", e);
+      console.warn("[FomoVersionOverlay] Error saving Gemini API key:", e);
     }
-    handleExplain(clean);
   };
 
   const galleryBanner = useModGalleryBanner(mod);

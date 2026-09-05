@@ -23,6 +23,7 @@ export function useModExplainer({
   const [explanationImagesAnalyzed, setExplanationImagesAnalyzed] = useState(0);
   const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false);
   const [geminiKeyVal, setGeminiKeyVal] = useState("");
+  const [sessionGeminiKey, setSessionGeminiKey] = useState("");
   const [explainError, setExplainError] = useState<string | null>(null);
   const [botPersonality, setBotPersonality] = useState<"bully" | "standard">(() => {
     if (typeof window !== "undefined") {
@@ -39,6 +40,14 @@ export function useModExplainer({
   const [chatInput, setChatInput] = useState("");
   const [isChatSending, setIsChatSending] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const legacy = localStorage.getItem("mim_gemini_api_key")?.trim() || "";
+      if (legacy) setSessionGeminiKey(legacy);
+      localStorage.removeItem("mim_gemini_api_key");
+    } catch {}
+  }, []);
 
   // Load from local storage cache when project changes
   useEffect(() => {
@@ -79,7 +88,7 @@ export function useModExplainer({
       }
 
       const targetPersonality = personalityOverride || botPersonality;
-      const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
+      const savedKey = customKey || sessionGeminiKey;
       const cacheKey = `mim_explain_${selectedMod.projectId}_${targetPersonality}`;
 
       if (!customKey && !forceRefresh && !personalityOverride) {
@@ -167,7 +176,7 @@ export function useModExplainer({
         setIsExplaining(false);
       }
     },
-    [botPersonality, descriptionBody, explainedBody, galleryImages, isExplaining, selectedMod]
+    [botPersonality, descriptionBody, explainedBody, galleryImages, isExplaining, selectedMod, sessionGeminiKey]
   );
 
   const handleTogglePersonality = useCallback(
@@ -187,9 +196,8 @@ export function useModExplainer({
   const handleSaveGeminiKey = useCallback(() => {
     if (!geminiKeyVal.trim()) return;
     const cleanKey = geminiKeyVal.trim();
-    try {
-      localStorage.setItem("mim_gemini_api_key", cleanKey);
-    } catch {}
+    setSessionGeminiKey(cleanKey);
+    setGeminiKeyVal("");
     handleExplain(cleanKey);
   }, [geminiKeyVal, handleExplain]);
 
@@ -204,7 +212,6 @@ export function useModExplainer({
       setIsChatSending(true);
 
       try {
-        const savedKey = localStorage.getItem("mim_gemini_api_key") || "";
         const res = await fetch("/api/fomo/explain", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -217,7 +224,7 @@ export function useModExplainer({
             categories: selectedMod.categories || [],
             loaders: selectedMod.loaders || [],
             initialSummary: explainedBody || "",
-            clientApiKey: savedKey,
+            clientApiKey: sessionGeminiKey,
             messages: chatMessages,
             question: query,
             personality: botPersonality,
@@ -243,7 +250,7 @@ export function useModExplainer({
         setIsChatSending(false);
       }
     },
-    [botPersonality, chatInput, chatMessages, descriptionBody, explainedBody, isChatSending, selectedMod]
+    [botPersonality, chatInput, chatMessages, descriptionBody, explainedBody, isChatSending, selectedMod, sessionGeminiKey]
   );
 
   useEffect(() => {

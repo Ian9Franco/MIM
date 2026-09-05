@@ -95,6 +95,34 @@ export async function runLicenseAuditorTests() {
   assert(!fabricReport.redistributionRestricted, "Fabric MIT is not redistribution restricted");
   assert(fabricReport.sourceMetadata === "fabric.mod.json", "Identified sourceMetadata as fabric.mod.json");
 
+  // Quilt Apache-2.0 Mod
+  const quiltJarPath = path.join(scratchDir, "quilt-sample-mod.jar");
+  const quiltZip = new AdmZip();
+  quiltZip.addFile(
+    "quilt.mod.json",
+    Buffer.from(
+      JSON.stringify({
+        schema_version: 1,
+        quilt_loader: {
+          id: "sample_quilt",
+          version: "1.0.0",
+          metadata: {
+            name: "Sample Quilt Mod",
+            license: "Apache-2.0",
+          },
+        },
+      })
+    )
+  );
+  quiltZip.writeZip(quiltJarPath);
+
+  const quiltReport = await auditJarLicense(quiltJarPath);
+  assert(quiltReport.modId === "sample_quilt", "Extracted modId from quilt.mod.json");
+  assert(quiltReport.modName === "Sample Quilt Mod", "Extracted modName from Quilt metadata");
+  assert(quiltReport.category === "PERMISSIVE", "Correctly categorized Quilt Apache-2.0 as PERMISSIVE");
+  assert(!quiltReport.redistributionRestricted, "Quilt Apache-2.0 is not redistribution restricted");
+  assert(quiltReport.sourceMetadata === "quilt.mod.json", "Identified sourceMetadata as quilt.mod.json");
+
   // Forge All Rights Reserved Mod
   const forgeJarPath = path.join(scratchDir, "forge-sample-mod.jar");
   const forgeZip = new AdmZip();

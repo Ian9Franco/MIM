@@ -35,6 +35,7 @@ import { ModDetailsDescTab } from "./mod-details/ModDetailsDescTab";
 import { ModDetailsVersionsTab } from "./mod-details/ModDetailsVersionsTab";
 import { ModDetailsDepsTab } from "./mod-details/ModDetailsDepsTab";
 import { ModShareModal } from "./mod-details/ModShareModal";
+import { ModGalleryLightbox } from "./mod-details/ModGalleryLightbox";
 import { ModDetailsFooter } from "./mod-details/ModDetailsFooter";
 import { useModExplainer } from "./mod-details/useModExplainer";
 import { useModVersions } from "./mod-details/useModVersions";
@@ -154,11 +155,18 @@ export function ModDetailsSheet({
     return releaseGlobalSheetLocks;
   }, [isSheetOpen]);
 
+  // Reset active image when changing tabs or project
   useEffect(() => {
-    if (activeImageIndex !== null && activeImageIndex >= galleryImages.length) {
-      setActiveImageIndex(galleryImages.length ? galleryImages.length - 1 : null);
-    }
-  }, [activeImageIndex, galleryImages.length]);
+    setActiveImageIndex(null);
+  }, [modalTab]);
+
+  const handleTabChange = useCallback(
+    (nextTab: ModDetailsTabId) => {
+      setActiveImageIndex(null);
+      setModalTab(nextTab);
+    },
+    [setModalTab]
+  );
 
   const isFavorited = userFavorites.some(
     (f) => ((f as any).mod_id || (f as any).project_id || (f as any).projectId || (f as any).id) === selectedMod?.projectId
@@ -328,7 +336,7 @@ export function ModDetailsSheet({
               {/* Modular Animated Tabs */}
               <ModDetailsTabs
                 modalTab={modalTab}
-                setModalTab={setModalTab}
+                setModalTab={handleTabChange}
                 hasGallery={galleryImages.length > 0}
               />
 
@@ -458,6 +466,14 @@ export function ModDetailsSheet({
         session={session}
         userShares={userShares}
         refreshUserData={refreshUserData}
+      />
+
+      {/* Portaled Fullscreen Gallery Lightbox */}
+      <ModGalleryLightbox
+        galleryImages={galleryImages}
+        activeImageIndex={activeImageIndex}
+        setActiveImageIndex={setActiveImageIndex}
+        projectTitle={selectedMod?.title}
       />
     </>
   );

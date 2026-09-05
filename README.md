@@ -24,6 +24,11 @@
 
 ---
 
+> ### 💡 Project Philosophy
+> *"Building a spaceship to go buy bread is ridiculous if your goal was just the bread. But if your goal was to learn how to build a spaceship, the true value lies in everything you had to break, learn, and connect to make that spaceship fly."*
+
+---
+
 ## ⚡ Engineering Highlights
 
 - ⚡ **Content-Addressed Storage & Deduplication:** Identity cryptographically enforced by SHA-512/SHA-1 digests, eliminating redundant network downloads.

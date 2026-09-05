@@ -24,6 +24,11 @@
 
 ---
 
+> ### 💡 Filosofía del Proyecto
+> *"Construir una nave espacial para ir a comprar pan es ridículo si tu meta es el pan. Pero si tu meta era aprender a construir una nave espacial, el valor residió en todo lo que tuviste que romper, aprender y conectar para que esa nave vuele."*
+
+---
+
 ## ⚡ Puntos Destacados de Ingeniería
 
 - ⚡ **Almacenamiento Direccionado por Contenido (CAS):** Identidad criptográfica impuesta por hashes SHA-512/SHA-1, eliminando descargas de red redundantes.

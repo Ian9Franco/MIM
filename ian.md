@@ -4,134 +4,113 @@ Esta guía es tu manual rápido personal para verificar cambios, gestionar el fl
 
 ---
 
-## 📋 1. Verificación Rápida Post-Edición (Chequeo Previo)
+## ⚡ 1. Los 2 Comandos Automatizados de 1 Solo Paso (Fast Track)
 
-Antes de hacer commit, crear una release o dar por terminada una tarea, ejecutá estos comandos para asegurar que el código compila, está blindado y pasa todas las pruebas:
+Diseñados para cuando querés máxima velocidad con garantía técnica absoluta: ejecutan **tooooodos los testeos** de forma obligatoria y resuelven el flujo en un solo comando.
+
+### 🤖 Modo A: Gatekeeper Automático de PRs (1-Click)
+```bash
+npm run gatekeeper <numero_de_pr | nombre_rama>
+# Ejemplo: npm run gatekeeper 15
+```
+**¿Qué hace automáticamente en 1 solo paso?**
+1. **Trae el PR:** Descarga (`git fetch`) y hace checkout de la rama del PR.
+2. **Ejecuta absolutamente todos los testeos (Fail-Closed):**
+   - `lint:api-guard` (100% de rutas blindadas con `withApiGuard`)
+   - `lint:architecture` (aislamiento estricto core vs UI/Desktop)
+   - `test:architecture` (tests de contrato de fronteras)
+   - `tsc --noEmit` (tipado estricto Raíz/Desktop)
+   - `tsc web` (tipado estricto MIMweb)
+   - `npm test` (15 suites unificadas del sistema, 144+ escenarios)
+3. **Si pasa todo en verde ➔ Auto-Promote:**
+   - Cambia a `main`, sincroniza con `origin/main`, mergea la rama y **pushea a `origin/main`** con tu bypass de admin.
+4. **Si falla algún test ➔ Auto-Bloqueo & Log con Fecha:**
+   - **Bloquea el push de inmediato:** Ningún cambio roto llega a `main`.
+   - Vuelve a tu rama `main` limpia.
+   - Genera un reporte detallado con fecha y hora en:
+     `logs/pr-audits/audit-failed-PR-<id>-YYYY-MM-DD_HH-mm-ss.log`
+   - El log contiene: compuerta fallida, motivo exacto, commits, diff de archivos y la salida completa del error.
+
+---
+
+### 📦 Modo B: Release & Deploy Automático a GitHub (1-Click)
+```bash
+npm run release:auto
+# Opcional especificando tipo o mensaje:
+# npm run release:auto minor "Nuevo motor de seguridad"
+# npm run release:auto patch "Correcciones menores"
+```
+**¿Qué hace automáticamente en 1 solo paso?**
+1. **Ejecuta todos los testeos primero:** No toca ninguna versión ni sube nada si falla alguna compuerta.
+2. **Calcula la versión semántica:** Detecta cambios y calcula el bump (`patch`/`minor`/`major`).
+3. **Crea backup local:** Guarda rama de seguridad `backup/YYYY-MM-DDTHH-mm-ss`.
+4. **Sincroniza la versión global:** Actualiza automáticamente `package.json`, `README.md`, `docs/architecture/MIM.md`, `docs/releases/CHANGELOG.md`, `docs/planning/PROJECT_STATUS.md` y `docs/planning/ROADMAP.md`.
+5. **Commit y Tag:** Genera `chore(release): vX.Y.Z` y crea el tag `vX.Y.Z`.
+6. **Push a GitHub:** Sube `main` y el tag `vX.Y.Z` a `origin`, disparando la GitHub Action [.github/workflows/release.yml](file:///.github/workflows/release.yml) para compilar el ejecutable `.exe` de Windows y publicar la Release oficial.
+7. **Cero pausas:** No pide confirmaciones `y/n`, hace todo el ciclo de principio a fin.
+
+---
+
+## 🎛️ 2. Los Comandos de Control Manual Paso a Paso (Conservados)
+
+Si preferís revisar manualmente antes de decidir si promover o no, disponés del flujo interactivo tradicional:
+
+### Flujo Manual de PRs:
+```bash
+# Paso 1: Inspeccionar PR y correr testeos sin mergear todavía
+npm run pr:review <numero_o_rama>
+
+# Paso 2: Si te gustó y pasó los tests ➔ Subir a main
+npm run pr:promote
+
+# Paso 3: Si no te gustó o querés volver sin tocar nada
+npm run pr:return
+```
+
+### Asistente Manual de Release (Con Menú y Confirmaciones):
+```bash
+npm run release
+```
+*Abre el asistente interactivo original (`Choose your weapon: Release / Rollback / Sync`), preguntándote cada paso y confirmación antes de pushear.*
+
+---
+
+## 📋 3. Verificación Rápida de Salud (Chequeo Previo)
+
+Si querés probar tus cambios locales manualmente antes de lanzar un commit o PR:
 
 ```bash
 # 1. Chequeo estricto de tipos de TypeScript (Desktop y Web)
 npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit
 
-# 2. Verificación de blindaje estructural de APIs (Fail-Closed)
+# 2. Verificación de blindaje estructural de APIs y Fronteras Arquitectónicas
 npm run lint:api-guard
+npm run lint:architecture
+npm run test:architecture
 
-# 3. Correr la suite de pruebas unificada (13 suites, 144 escenarios)
+# 3. Correr la suite de pruebas unificada (15 suites del sistema)
 npm test
 ```
 
-*Si estos comandos terminan sin errores, el proyecto está 100% listo para producción.*
-
 ---
 
-## 🤖 2. Flujo con IAs: Revisión y Promoción Rápida de PRs
+## 💻 4. Crear el `.exe` Standalone en Local (En tu PC)
 
-MIM tiene configurado un flujo profesional de ingeniería donde **vos sos el Gatekeeper**:
-- **La IA externa:** Trabaja en ramas y abre Pull Requests. No puede pushear a `main` porque GitHub Rulesets la frena hasta pasar CI.
-- **Vos en local:** Tenés permiso de **Bypass de Administrador**. Tus pushes directos a `main` entran sin trabas.
-
-### ¿Cómo saber qué PR o rama revisar?
-
-Tenés dos formas facilísimas:
-1. **Desde tu consola (Modo automático):** Ejecutá `npm run pr:review` (sin parámetros). Te separa limpiamente en dos bloques: los **🟢 PENDIENTES / ABIERTOS** (con el comando listo para auditar) y los **⚪ CERRADOS / RESUELTOS** (que ya están en `main`).
-2. **Desde la web de GitHub:** Entrá a la pestaña **[Pull requests](https://github.com/Ian9Franco/MIM/pulls)** de tu repositorio. Cada PR tiene su estado (`Open` o `Closed`), un número gigante al lado del título (ej: `#2`) y el nombre de la rama.
-
----
-
-### ¿Cómo auditar y mergear un PR en 1 paso?
-
-Usá tu helper local interactivo [`npm run pr:review`](file:///d:/Dev/CodeProjects/MIM/scripts/workflow/review-pr.js):
-
-#### Paso A: Inspeccionar el PR
-Pasale el número de PR o el nombre de la rama que viste en la lista:
-```bash
-npm run pr:review 2
-# o también con el nombre de la rama:
-npm run pr:review audit/pr-review-shell-safety
-```
-**¿Qué hace automáticamente?**
-1. **Pre-flight:** Verifica que no tengas cambios sin commitear en tu rama para no perder nada.
-2. **Checkout:** Se descarga el PR de GitHub y se para en esa rama.
-3. **Diff & Commits:** Te muestra en pantalla los commits agregados y qué archivos se tocaron contra `main`.
-4. **Compuertas de Calidad:** Corre `lint:api-guard`, `tsc --noEmit` y `npm test`.
-5. **Veredicto:** Te confirma en verde si superó todos los controles o te avisa en rojo qué falló.
-
-#### Paso B: Si te gusta y pasó los tests ➔ Subir a `main`
-```bash
-npm run pr:promote
-```
-*Automáticamente vuelve a `main`, se sincroniza con origin, mergea la rama del PR y **pushea a `origin/main`** con tu bypass de admin.*
-
-#### Paso C: Si no te gustó o querés volver sin tocar nada
-```bash
-npm run pr:return
-```
-*Te devuelve a tu `main` intacto.*
-
----
-
-## 🏷️ 3. Crear la Release con el Asistente
-
-Para gestionar la versión semántica y preparar el tag de Git de forma interactiva:
-
-```bash
-npm run release
-```
-
-### ¿Qué hace este comando?
-1. **Detecta cambios**: Revisa el estado de tu Git (`git status`).
-2. **Te pide el tipo de versión**:
-   * `patch` (ej. 11.3.0 ➔ 11.3.1): Para corrección de errores menores.
-   * `minor` (ej. 11.3.0 ➔ 11.4.0): Para nuevas funciones o módulos.
-   * `major` (ej. 11.3.0 ➔ 12.0.0): Para grandes saltos arquitectónicos.
-3. **Crea un backup automático**: Guarda una rama de seguridad local (`backup/YYYY-MM-DDTHH-mm-ss`).
-4. **Crea el commit y el tag**: Actualiza el número de versión en `package.json`, sincroniza `docs/architecture/MIM.md` y `docs/releases/CHANGELOG.md`, hace el commit y crea el tag de git local (ej. `v11.4.0`).
-
----
-
-## ☁️ 4. Subir la Release con GitHub Actions (Publicación en la Nube)
-
-Una vez que `npm run release` creó el tag local, solo debés subirlo a GitHub:
-
-```bash
-# Subir tus commits de la rama main junto con los nuevos tags
-git push origin main --tags
-```
-
-*(Si querés subir solo el tag específico: `git push origin v11.4.0`)*
-
-### ¿Qué pasa en GitHub automáticamente?
-1. GitHub Actions detecta el tag `v*` y activa [.github/workflows/release.yml](file:///.github/workflows/release.yml).
-2. Levanta un servidor virtual con **Windows**.
-3. Ejecuta `npm run package:win` (que incluye `npm run build:standalone`).
-4. `electron-builder` compila y firma el instalador de Windows.
-5. Se publica automáticamente la **Release Oficial** en la pestaña *Releases* de tu repositorio con el instalador `.exe` listo para que cualquiera lo descargue.
-
----
-
-## 💻 5. Crear el `.exe` para Usarlo en Local (En tu PC)
-
-Si querés probar la aplicación de escritorio en tu máquina o generar el `.exe` directamente sin esperar a GitHub Actions:
+Si querés probar la aplicación de escritorio en tu máquina o generar el `.exe` sin esperar a GitHub Actions:
 
 ### Opción A: Compilar el Instalador `.exe` de Windows (Recomendado)
-
 ```bash
 npm run package:win
 ```
-
 * **¿Dónde queda el archivo listo?**
-  * Al finalizar, el instalador se guarda en la carpeta:
+  * Al finalizar, el instalador se guarda en:
     `dist/MIM Setup <version>.exe`
-  * También tenés la versión portable desempaquetada lista para abrir en:
+  * Y la versión portable lista para abrir en:
     `dist/win-unpacked/MIM.exe`
 
----
-
-### Opción B: Probar la Versión Standalone sin crear el instalador (Modo Rápido)
-
-Si solo querés abrir la ventana de Electron para probar tus cambios al instante:
-
+### Opción B: Probar la Versión Standalone sin crear instalador
 ```bash
-# Paso 1: Preparar la build standalone (solo necesario si hiciste cambios de código)
+# Paso 1: Preparar la build standalone
 npm run build:standalone
 
 # Paso 2: Abrir Electron
@@ -140,20 +119,16 @@ npm run start:standalone
 
 ---
 
-## 🛠️ 6. Resumen de Comandos Frecuentes
+## 🛠️ 5. Resumen Comparativo de Comandos
 
-| Objetivo | Comando |
-| :--- | :--- |
-| **Verificar compilación y tipos** | `npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit` |
-| **Verificar blindaje estructural API Guard** | `npm run lint:api-guard` |
-| **Correr todas las pruebas (13 suites)** | `npm test` |
-| **Auditar un PR o rama de la IA** | `npm run pr:review <numero_o_rama>` |
-| **Promover y mergear el PR a main** | `npm run pr:promote` |
-| **Volver a main sin mergear** | `npm run pr:return` |
-| **Build + preparar assets (local/standalone)** | `npm run build:standalone` |
-| **Lanzar Electron localmente** | `npm run start:standalone` |
-| **Iniciar asistente de nueva Release** | `npm run release` |
-| **Subir la Release a GitHub Actions** | `git push origin main --tags` |
-| **Compilar el instalador `.exe` local** | `npm run package:win` |
-
-> ⚠️ Siempre usar `build:standalone` (no `build`) para testear en Electron. El paso extra corre `prepare.js` que copia `.next/static` y `public/` al directorio standalone — sin eso los CSS y assets no cargan.
+| Modo | Objetivo | Comando |
+| :--- | :--- | :--- |
+| ⚡ **Automático** | **Gatekeeper 1-Paso: Traer PR, testear, auto-push (o log de error)** | `npm run gatekeeper <id>` |
+| ⚡ **Automático** | **Release 1-Paso: Testear, versionar, taggear y disparar deploy en GitHub** | `npm run release:auto` |
+| 🎛️ **Manual** | **Auditar un PR o rama de la IA con veredicto en pantalla** | `npm run pr:review <id>` |
+| 🎛️ **Manual** | **Promover y mergear a main el PR auditado** | `npm run pr:promote` |
+| 🎛️ **Manual** | **Volver a main descartando la revisión** | `npm run pr:return` |
+| 🎛️ **Manual** | **Asistente interactivo de release (con menú y confirmaciones)** | `npm run release` |
+| 🧪 **Tests** | **Correr la suite unificada de pruebas (15 suites)** | `npm test` |
+| 💻 **Desktop** | **Compilar instalador `.exe` en tu máquina local** | `npm run package:win` |
+| 💻 **Desktop** | **Abrir Electron standalone en desarrollo** | `npm run start:standalone` |

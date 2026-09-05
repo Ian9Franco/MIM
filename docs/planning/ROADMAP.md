@@ -1,7 +1,7 @@
-# MIM — Roadmap Oficial & Estado de Evolución (v11.3.0)
+# MIM — Roadmap Oficial & Estado de Evolución (v11.4.0)
 
 > Roadmap unificado de evolución técnica de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.3.0 | **Última actualización:** 2026-09-04  
+> **Versión Actual:** v11.4.0 | **Última actualización:** 2026-09-05  
 > *(Historial de hitos de versiones anteriores preservado en [docs/releases/ROADMAP_v10_HISTORIC.md](../releases/ROADMAP_v10_HISTORIC.md)).*
 
 ---
@@ -38,12 +38,13 @@
 - [ ] *Preguntas de seguimiento sugeridas:* Chips contextuales dinámicos ligados a la última respuesta del modelo.
 - [x] *Desacoplar error 429 del error 401:* Los límites de cuota se muestran inline sin desloguear la clave.
 - [x] *Accesibilidad:* Atributos `aria-label` descriptivos en todos los botones del copiloto.
-- [ ] *Validación preventiva de API Key:* Ping liviano al guardar la clave antes de marcar "Gemini Conectado".
+- [x] *Validación preventiva de API Key:* Ping liviano al guardar la clave antes de marcar "Gemini Conectado" (`/api/settings/validate-keys`).
 
 ---
 
 ## 4. Deuda de fondo & Arquitectura
 
+- [x] Verificación estricta de fronteras de arquitectura (`npm run lint:architecture`, AST dependency boundary verifier en CI).
 - [ ] Bajar el uso de `any` (935 casos) — priorizar `lib/security/`, `lib/intelligence/sage/` y hooks orquestadores (`useHomeController.ts`).
 - [ ] Generalizar esquemas Zod a más rutas (actualmente 17/93).
 - [ ] Seguir sumando tests — meta: mantener 100% pass en todas las suites de `npm test`.
@@ -52,7 +53,7 @@
   - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
   - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
   - [ ] `web/hooks/useHomeController.ts` (1,525 líneas) modularizar en sub-hooks (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
-- [ ] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
+- [x] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---
 
@@ -79,4 +80,4 @@
 ## 7. Privacidad y Transparencia en BYOK
 
 - [ ] *Aviso de privacidad del Free Tier de Google:* Notificar con claridad que la capa gratuita de AI Studio puede usar datos para entrenamiento (a diferencia de tiers pagos).
-- [ ] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión.
+- [x] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión (endpoint seguro sin key en URL).

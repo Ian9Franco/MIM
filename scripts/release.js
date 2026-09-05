@@ -1,25 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * MIM Release Manager
- *
- * Features:
- * - Detects git status
- * - Suggests release type
- * - Semantic version bump (major/minor/patch)
- * - Backup branch before release
- * - Git commit + tag + push
- * - Pull/sync option
- * - Rollback to previous tag
- * - Safe confirmations before dangerous actions
- *
- * Install:
- * npm i inquirer chalk
- *
- * package.json:
- * "scripts": {
- *   "release": "node scripts/release.js"
- * }
+ * MIM Release Manager (Híbrido: Modo Interactivo o Automático 1-Click)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Modos:
+ * 1. Automático (1-Click, sin pausas, compuertas obligatorias):
+ *    npm run release:auto [patch|minor|major] ["mensaje opcional"]
+ * 
+ * 2. Interactivo (Asistente manual con menú y confirmaciones):
+ *    npm run release (o npm run release:interactive)
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 const fs = require("fs");
@@ -27,6 +17,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 const inquirer = require("inquirer");
 const chalk = require("chalk");
+const { runAllQualityGates } = require("./workflow/review-pr.js");
 
 const packagePath = path.join(process.cwd(), "package.json");
 
@@ -56,50 +47,64 @@ function getCurrentVersion() {
 function updateVersion(newVersion) {
   const pkg = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   pkg.version = newVersion;
-  fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2));
+  fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
+  console.log(chalk.green(`  ✓ package.json actualizado a v${newVersion}`));
 
-  // Actualizar README.md
+  const today = new Date().toISOString().slice(0, 10);
+
+  // README.md
   const readmePath = path.join(process.cwd(), "README.md");
   if (fs.existsSync(readmePath)) {
     let readme = fs.readFileSync(readmePath, "utf-8");
-    // Reemplazar badge de versión
     readme = readme.replace(/Version-(\d+\.\d+\.\d+)-/g, `Version-${newVersion}-`);
-    // Reemplazar sección de versión actual en el roadmap
     readme = readme.replace(/### ✅ \*\*v\d+\.\d+\.\d+/g, `### ✅ **v${newVersion}`);
     fs.writeFileSync(readmePath, readme);
-    console.log(chalk.green("README.md actualizado con la nueva versión."));
+    console.log(chalk.green("  ✓ README.md actualizado con la nueva versión."));
   }
 
-  // Actualizar docs/architecture/MIM.md
+  // docs/architecture/MIM.md
   const mimDocPath = fs.existsSync(path.join(process.cwd(), "docs", "architecture", "MIM.md"))
     ? path.join(process.cwd(), "docs", "architecture", "MIM.md")
     : path.join(process.cwd(), "docs", "MIM.md");
   if (fs.existsSync(mimDocPath)) {
     let mimDoc = fs.readFileSync(mimDocPath, "utf-8");
-    // Reemplazar versión en el encabezado
     mimDoc = mimDoc.replace(/\*\*Versión:\*\* \d+\.\d+\.\d+/g, `**Versión:** ${newVersion}`);
-    // Reemplazar menciones de versión en el texto
     mimDoc = mimDoc.replace(/versión \d+\.\d+\.\d+/g, `versión ${newVersion}`);
-    // Actualizar fecha
-    const today = new Date().toISOString().slice(0, 10);
     mimDoc = mimDoc.replace(/\*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `**Última actualización:** ${today}`);
     fs.writeFileSync(mimDocPath, mimDoc);
-    console.log(chalk.green("docs/architecture/MIM.md actualizado con la nueva versión y fecha."));
+    console.log(chalk.green("  ✓ docs/architecture/MIM.md actualizado con la nueva versión y fecha."));
   }
 
-  // Actualizar docs/releases/CHANGELOG.md
+  // docs/releases/CHANGELOG.md
   const changelogPath = fs.existsSync(path.join(process.cwd(), "docs", "releases", "CHANGELOG.md"))
     ? path.join(process.cwd(), "docs", "releases", "CHANGELOG.md")
     : path.join(process.cwd(), "docs", "CHANGELOG.md");
   if (fs.existsSync(changelogPath)) {
     let changelog = fs.readFileSync(changelogPath, "utf-8");
-    // Reemplazar versión actual en el encabezado
-    changelog = changelog.replace(/> \*\*Versión Actual:\*\* \d+\.\d+\.\d+/g, `> **Versión Actual:** ${newVersion}`);
-    // Reemplazar fecha de actualización
-    const today = new Date().toISOString().slice(0, 10);
+    changelog = changelog.replace(/> \*\*Versión Actual:\*\* v?\d+\.\d+\.\d+/g, `> **Versión Actual:** v${newVersion}`);
     changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
     fs.writeFileSync(changelogPath, changelog);
-    console.log(chalk.green("docs/releases/CHANGELOG.md actualizado con la nueva versión y fecha."));
+    console.log(chalk.green("  ✓ docs/releases/CHANGELOG.md actualizado con la nueva versión y fecha."));
+  }
+
+  // docs/planning/PROJECT_STATUS.md
+  const statusPath = path.join(process.cwd(), "docs", "planning", "PROJECT_STATUS.md");
+  if (fs.existsSync(statusPath)) {
+    let statusDoc = fs.readFileSync(statusPath, "utf-8");
+    statusDoc = statusDoc.replace(/\*\*Versión:\*\* v?\d+\.\d+\.\d+/g, `**Versión:** v${newVersion}`);
+    fs.writeFileSync(statusPath, statusDoc);
+    console.log(chalk.green("  ✓ docs/planning/PROJECT_STATUS.md actualizado"));
+  }
+
+  // docs/planning/ROADMAP.md
+  const roadmapPath = path.join(process.cwd(), "docs", "planning", "ROADMAP.md");
+  if (fs.existsSync(roadmapPath)) {
+    let roadmapDoc = fs.readFileSync(roadmapPath, "utf-8");
+    roadmapDoc = roadmapDoc.replace(/# MIM — Roadmap Oficial & Estado de Evolución \(v?\d+\.\d+\.\d+\)/g, `# MIM — Roadmap Oficial & Estado de Evolución (v${newVersion})`);
+    roadmapDoc = roadmapDoc.replace(/> \*\*Versión Actual:\*\* v?\d+\.\d+\.\d+/g, `> **Versión Actual:** v${newVersion}`);
+    roadmapDoc = roadmapDoc.replace(/\|\s*\*\*Última actualización:\*\*\s*\d{4}-\d{2}-\d{2}/g, `| **Última actualización:** ${today}`);
+    fs.writeFileSync(roadmapPath, roadmapDoc);
+    console.log(chalk.green("  ✓ docs/planning/ROADMAP.md actualizado"));
   }
 }
 
@@ -117,9 +122,8 @@ function bumpVersion(version, type) {
       patch = 0;
       break;
     case "patch":
-      patch += 1;
-      break;
     default:
+      patch += 1;
       break;
   }
 
@@ -135,8 +139,7 @@ function gitDiffStat() {
 }
 
 function suggestReleaseType(diff) {
-  const lines = diff.split("\n").filter(Boolean).length;
-
+  const lines = diff ? diff.split("\n").filter(Boolean).length : 0;
   if (lines > 20) return "major";
   if (lines > 8) return "minor";
   return "patch";
@@ -149,15 +152,10 @@ function createBackupBranch() {
     .slice(0, 19);
 
   const branchName = `backup/${timestamp}`;
-
-  console.log(chalk.yellow(`\nCreating backup branch: ${branchName}`));
-  run(`git checkout -b ${branchName}`);
-  run("git push -u origin HEAD");
-
-  console.log(chalk.green("Backup created. Your future self says thanks.\n"));
-
-  const currentBranch = run("git branch --show-current", true);
-  console.log(chalk.yellow(`Returning to main branch workflow from: ${currentBranch}`));
+  try {
+    run(`git branch ${branchName}`);
+    console.log(chalk.dim(`  ✓ Rama de seguridad local creada: ${branchName}`));
+  } catch {}
 }
 
 function listTags() {
@@ -167,7 +165,6 @@ function listTags() {
 
 async function rollbackFlow() {
   const tags = listTags();
-
   if (!tags.length) {
     console.log(chalk.red("No tags found. Time travel unavailable."));
     return;
@@ -192,9 +189,7 @@ async function rollbackFlow() {
   ]);
 
   if (!confirm) return;
-
   run(`git checkout tags/${selectedTag}`);
-
   console.log(chalk.green(`Checked out ${selectedTag}`));
 }
 
@@ -205,7 +200,92 @@ function syncRepo() {
   console.log(chalk.green("Repo synced. Civilization restored.\n"));
 }
 
-async function releaseFlow() {
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. MODO AUTOMÁTICO (1-Click, Sin prompts, con todos los tests)
+// ─────────────────────────────────────────────────────────────────────────────
+async function automatedReleaseFlow() {
+  console.log(chalk.bold.cyan("\n╔════════════════════════════════════════════════════════════════╗"));
+  console.log(chalk.bold.cyan("║  MIM — Release Automatizado en 1 Solo Paso (Push & Deploy)     ║"));
+  console.log(chalk.bold.cyan("╚════════════════════════════════════════════════════════════════╝\n"));
+
+  const currentBranch = run("git branch --show-current", true);
+  if (currentBranch !== "main" && currentBranch !== "master") {
+    console.log(chalk.red(`❌ Debés estar parado en la rama 'main' para hacer release (rama actual: '${currentBranch}').`));
+    console.log(chalk.yellow("Volvé a main con 'git checkout main' o 'npm run pr:return'.\n"));
+    process.exit(1);
+  }
+
+  console.log(chalk.cyan("• Sincronizando 'main' con origin..."));
+  try {
+    run("git pull origin main");
+  } catch {}
+
+  // Compuertas de calidad obligatorias
+  console.log(chalk.bold("\n🛡️  COMPUERTAS DE CALIDAD PRE-RELEASE:"));
+  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD PRE-RELEASE (TESTEOS OBLIGATORIOS)");
+  if (!gateResult.ok) {
+    console.log(chalk.bold.red("\n🚨 RELEASE ABORTADA: Las compuertas de calidad no pasaron."));
+    console.log(chalk.red(`Motivo: ${gateResult.reason}`));
+    console.log(chalk.yellow("No se modificó ninguna versión ni se subió ningún tag a GitHub.\n"));
+    process.exit(1);
+  }
+
+  const rawArgs = process.argv.slice(2).filter((a) => a !== "--" && a !== "--auto" && a !== "-a");
+  let releaseType = "patch";
+  let commitMessage = "";
+
+  const validTypes = ["patch", "minor", "major"];
+  if (rawArgs.length > 0 && validTypes.includes(rawArgs[0].toLowerCase())) {
+    releaseType = rawArgs[0].toLowerCase();
+    commitMessage = rawArgs.slice(1).join(" ").trim();
+  } else if (rawArgs.length > 0) {
+    const diff = gitDiffStat();
+    releaseType = suggestReleaseType(diff);
+    commitMessage = rawArgs.join(" ").trim();
+  } else {
+    const diff = gitDiffStat();
+    releaseType = suggestReleaseType(diff);
+  }
+
+  const currentVersion = getCurrentVersion();
+  const newVersion = bumpVersion(currentVersion, releaseType);
+
+  if (!commitMessage) {
+    commitMessage = `Release v${newVersion} — Sistemas y Criterio Técnico MIM`;
+  }
+
+  console.log(chalk.bold.magenta(`\n🚀 Nueva versión calculada: v${currentVersion} ➔ v${newVersion} (${releaseType.toUpperCase()})`));
+  console.log(chalk.cyan(`📝 Mensaje de commit: "${commitMessage}"\n`));
+
+  createBackupBranch();
+
+  console.log(chalk.bold("📦 Actualizando nomenclatura de versionado global:"));
+  updateVersion(newVersion);
+
+  console.log(chalk.bold("\n🏷️  Creando commit y tag de Git:"));
+  run("git add .");
+  run(`git commit -m "chore(release): v${newVersion} - ${commitMessage}"`);
+  run(`git tag v${newVersion}`);
+  console.log(chalk.green(`  ✓ Tag local 'v${newVersion}' creado exitosamente`));
+
+  console.log(chalk.bold("\n☁️  Pusheando a GitHub (dispara compilación en la nube):"));
+  run("git push origin main");
+  run(`git push origin v${newVersion}`);
+
+  console.log(chalk.bold.green("\n════════════════════════════════════════════════════════════════"));
+  console.log(chalk.bold.green(`🎉 ¡RELEASE v${newVersion} PUBLICADO CON ÉXITO!`));
+  console.log(chalk.bold.green("════════════════════════════════════════════════════════════════"));
+  console.log(chalk.cyan("• Commits y Tag pusheados a 'origin/main'."));
+  console.log(chalk.cyan("• GitHub Actions ha comenzado a compilar el binario .exe standalone y"));
+  console.log(chalk.cyan("  publicará la Release oficial con los ejecutables en GitHub."));
+  console.log(chalk.bold.yellow("\nSeguí el progreso del build en vivo aquí:"));
+  console.log(chalk.bold.underline("👉 https://github.com/Ian9Franco/MIM/actions\n"));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. MODO INTERACTIVO ORIGINAL (Control manual paso a paso con inquirer)
+// ─────────────────────────────────────────────────────────────────────────────
+async function interactiveReleaseFlow() {
   const status = gitStatus();
 
   if (!status) {
@@ -221,7 +301,6 @@ async function releaseFlow() {
   console.log(diff || "No diff summary available.");
 
   const suggested = suggestReleaseType(diff);
-
   const currentVersion = getCurrentVersion();
 
   console.log(
@@ -229,6 +308,12 @@ async function releaseFlow() {
   );
 
   const answers = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "runGates",
+      message: "Ejecutar todas las compuertas de calidad antes de continuar?",
+      default: true,
+    },
     {
       type: "confirm",
       name: "backup",
@@ -256,15 +341,21 @@ async function releaseFlow() {
     },
   ]);
 
+  if (answers.runGates) {
+    console.log(chalk.bold("\n🛡️  EJECUTANDO COMPUERTAS DE CALIDAD:"));
+    const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD PRE-RELEASE");
+    if (!gateResult.ok) {
+      console.log(chalk.red(`\n🚨 Control de calidad fallido: ${gateResult.reason}`));
+      process.exit(1);
+    }
+  }
+
   if (answers.backup) {
     createBackupBranch();
   }
 
   const newVersion = bumpVersion(currentVersion, answers.releaseType);
-
-  console.log(
-    chalk.yellow(`\nVersion bump: ${currentVersion} → ${newVersion}`)
-  );
+  console.log(chalk.yellow(`\nVersion bump: ${currentVersion} → ${newVersion}`));
 
   updateVersion(newVersion);
 
@@ -273,8 +364,8 @@ async function releaseFlow() {
   run(`git tag v${newVersion}`);
 
   if (answers.pushNow) {
-    run("git push");
-    run("git push --tags");
+    run("git push origin main");
+    run(`git push origin v${newVersion}`);
   }
 
   console.log(chalk.green(`\nRelease completed: v${newVersion}`));
@@ -282,8 +373,15 @@ async function releaseFlow() {
 }
 
 async function main() {
+  const isAuto = process.argv.includes("--auto") || process.argv.includes("-a");
+
+  if (isAuto) {
+    await automatedReleaseFlow();
+    return;
+  }
+
   console.clear();
-  console.log(chalk.bold.cyan("\n=== MIM Release Manager ===\n"));
+  console.log(chalk.bold.cyan("\n=== MIM Release Manager (Control Interactivo) ===\n"));
 
   const { action } = await inquirer.prompt([
     {
@@ -301,7 +399,7 @@ async function main() {
 
   switch (action) {
     case "Release new version":
-      await releaseFlow();
+      await interactiveReleaseFlow();
       break;
 
     case "Rollback to previous version":
@@ -317,4 +415,9 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main().catch((err) => {
+    console.log(chalk.red(`\n❌ Error en release: ${err.message}\n`));
+    process.exit(1);
+  });
+}

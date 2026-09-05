@@ -21,6 +21,7 @@
 
 const { execFileSync, spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
 
@@ -55,31 +56,93 @@ function validateBranchName(branch) {
   }
 }
 
+function saveFailureLog(target, branchName, failedGate, reason, output, commits, diffStat) {
+  const logDir = path.join(REPO_ROOT, "logs", "pr-audits");
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  const humanTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  const sanitizedTarget = String(target).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `audit-failed-PR-${sanitizedTarget}-${timestamp}.log`;
+  const filePath = path.join(logDir, fileName);
+
+  const content = [
+    "================================================================================",
+    "MIM GATEKEEPER — INFORME DE FALLO DE AUDITORÍA AUTOMÁTICA",
+    "================================================================================",
+    `Fecha y Hora:      ${humanTime}`,
+    `Objetivo auditado: ${target}`,
+    `Rama de trabajo:   ${branchName}`,
+    `Compuerta fallida: ${failedGate}`,
+    `Motivo:            ${reason}`,
+    "",
+    "────────────────────────────────────────────────────────────────────────────────",
+    "COMMITS DEL PR (vs main):",
+    "────────────────────────────────────────────────────────────────────────────────",
+    commits || "(Sin commits detectados)",
+    "",
+    "────────────────────────────────────────────────────────────────────────────────",
+    "ARCHIVOS MODIFICADOS (diff --stat):",
+    "────────────────────────────────────────────────────────────────────────────────",
+    diffStat || "(Sin archivos modificados)",
+    "",
+    "────────────────────────────────────────────────────────────────────────────────",
+    "SALIDA DE LA COMPUERTA FALLIDA:",
+    "────────────────────────────────────────────────────────────────────────────────",
+    output || "(Sin salida capturada)",
+    "================================================================================",
+    ""
+  ].join("\n");
+
+  fs.writeFileSync(filePath, content, "utf-8");
+  return filePath;
+}
+
 function runAsyncCmd(title, cmd, args) {
   return new Promise((resolve) => {
     log(`\n  ⏳ ${title}...`, "cyan");
     const start = Date.now();
+    let capturedOutput = "";
+
     const proc = spawn(cmd, args, {
       cwd: REPO_ROOT,
       shell: true,
-      stdio: "inherit",
       env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
     });
+
+    if (proc.stdout) {
+      proc.stdout.on("data", (chunk) => {
+        process.stdout.write(chunk);
+        capturedOutput += chunk.toString();
+      });
+    }
+
+    if (proc.stderr) {
+      proc.stderr.on("data", (chunk) => {
+        process.stderr.write(chunk);
+        capturedOutput += chunk.toString();
+      });
+    }
 
     proc.on("close", (code) => {
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       if (code === 0) {
         log(`  ✓ ${title} completado exitosamente (${elapsed}s)`, "green");
-        resolve(true);
+        resolve({ ok: true, elapsed, output: capturedOutput });
       } else {
         log(`  ✗ ${title} falló con código ${code} (${elapsed}s)`, "red");
-        resolve(false);
+        resolve({ ok: false, elapsed, code, output: capturedOutput });
       }
     });
 
     proc.on("error", (err) => {
       log(`  ✗ Fallo al ejecutar ${title}: ${err.message}`, "red");
-      resolve(false);
+      resolve({ ok: false, elapsed: 0, code: 1, output: err.message });
     });
   });
 }
@@ -115,6 +178,143 @@ function getCurrentBranch() {
   return runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
 }
 
+async function runAllQualityGates(contextLabel = "COMPUERTAS DE CALIDAD") {
+  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
+  log(`🛡️  EJECUTANDO ${contextLabel}`, "bold");
+  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
+
+  const gates = [
+    { title: "1. Verificación Estructural de API Guard", cmd: "npm", args: ["run", "lint:api-guard"], reason: "Fallo en la auditoría estructural de API Guard (rutas desprotegidas)." },
+    { title: "2. Verificación de Fronteras de Arquitectura", cmd: "npm", args: ["run", "lint:architecture"], reason: "Fallo en las fronteras de arquitectura (dependencias cruzadas no permitidas)." },
+    { title: "3. Contratos de Fronteras Arquitectónicas", cmd: "npm", args: ["run", "test:architecture"], reason: "Fallo en la suite de pruebas de contratos arquitectónicos." },
+    { title: "4. Verificación de Tipos TypeScript (Raíz / Desktop)", cmd: "npx", args: ["tsc", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (Raíz)." },
+    { title: "5. Verificación de Tipos TypeScript (MIMweb)", cmd: "npx", args: ["tsc", "--project", "web/tsconfig.json", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (web/tsconfig.json)." },
+    { title: "6. Suite de Tests Unificados (npm test)", cmd: "node", args: ["scripts/test-runner.js"], reason: "Fallo en una o más suites del Test Runner unificado de MIM." },
+  ];
+
+  for (const g of gates) {
+    const res = await runAsyncCmd(g.title, g.cmd, g.args);
+    if (!res.ok) {
+      return {
+        ok: false,
+        gateTitle: g.title,
+        reason: g.reason,
+        output: res.output,
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
+async function handleGatekeeper(target) {
+  checkCleanWorkingDirectory();
+
+  const isPrNumber = /^[#]?\d+$/.test(target);
+  let branchToCheckout = target;
+
+  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
+  log(`🤖 MIM GATEKEEPER AUTOMÁTICO — Inspección, Testeo y Auto-Push: ${target}`, "bold");
+  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
+
+  if (isPrNumber) {
+    const prNum = target.replace("#", "");
+    branchToCheckout = `pr-${prNum}`;
+    log(`• Descargando Pull Request #${prNum} desde origin...`, "cyan");
+    try {
+      runGit(["fetch", "origin", `pull/${prNum}/head:${branchToCheckout}`]);
+    } catch {
+      log(`No se pudo descargar 'pull/${prNum}/head'. Intentando checkout directo si la rama existe...`, "yellow");
+    }
+  } else {
+    validateBranchName(target);
+    log(`• Obteniendo cambios remotos de '${target}'...`, "cyan");
+    try {
+      runGit(["fetch", "origin", target]);
+    } catch {}
+  }
+
+  log(`• Haciendo checkout a '${branchToCheckout}'...`, "cyan");
+  runGit(["checkout", branchToCheckout]);
+
+  try {
+    runGit(["pull"]);
+  } catch {}
+
+  let commits = "";
+  try {
+    commits = runGit(["log", "--oneline", "main..HEAD", "-n", "10"]);
+  } catch {}
+
+  let diffStat = "";
+  try {
+    diffStat = runGit(["diff", "--stat", "main..HEAD"]);
+  } catch {}
+
+  log(`\n📦 Commits introducidos (vs main):`, "bold");
+  console.log(commits || "  (Sin diferencias de commits con main)");
+
+  log(`\n📁 Archivos modificados:`, "bold");
+  console.log(diffStat || "  (Sin diferencias con main)");
+
+  // Ejecutar las compuertas completas
+  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD — GATEKEEPER AUTOMÁTICO");
+
+  if (!gateResult.ok) {
+    cleanTransientTestArtifacts();
+    runGit(["checkout", "main"]);
+
+    const logPath = saveFailureLog(
+      target,
+      branchToCheckout,
+      gateResult.gateTitle,
+      gateResult.reason,
+      gateResult.output,
+      commits,
+      diffStat
+    );
+
+    log(`\n─────────────────────────────────────────────────────────────────────────────`, "red");
+    log(`🚨 GATEKEEPER BLOQUEÓ LA PROMOCIÓN: CONTROL DE CALIDAD NO SUPERADO`, "red");
+    log(`─────────────────────────────────────────────────────────────────────────────`, "red");
+    log(`Compuerta fallida: ${gateResult.gateTitle}`, "red");
+    log(`Motivo:            ${gateResult.reason}`, "red");
+    log(`\n📄 Se generó un reporte detallado del fallo con fecha y hora en:`, "yellow");
+    log(`   ${logPath}`, "bold");
+    log(`\nNingún cambio fue incorporado a 'main' ni subido a origin. Tu main está a salvo.\n`, "yellow");
+    process.exit(1);
+  }
+
+  // Todo verde -> Auto-merge y push
+  cleanTransientTestArtifacts();
+  log(`\n─────────────────────────────────────────────────────────────────────────────`, "green");
+  log(`✅ COMPUERTAS 100% EN VERDE — EJECUTANDO AUTO-PROMOCIÓN A MAIN`, "green");
+  log(`─────────────────────────────────────────────────────────────────────────────`, "green");
+
+  log("1. Cambiando a 'main'...", "cyan");
+  runGit(["checkout", "main"]);
+
+  log("2. Sincronizando con origin/main...", "cyan");
+  try {
+    runGit(["pull", "origin", "main"]);
+  } catch {}
+
+  log(`3. Mergeando '${branchToCheckout}' en 'main'...`, "cyan");
+  try {
+    runGit(["merge", branchToCheckout]);
+  } catch (err) {
+    log(`\n🚨 Error durante git merge: ${err.message}`, "red");
+    process.exit(1);
+  }
+
+  log("4. Pusheando a 'origin/main' con bypass de administrador...", "cyan");
+  runGit(["push", "origin", "main"]);
+
+  log(`\n🎉 ¡GATEKEEPER EXITOSO!`, "green");
+  log(`El PR/rama '${target}' superó el 100% de los testeos, fue mergeado a main y pusheado a origin/main con éxito.`, "green");
+  log(`Tu repositorio local y remoto ya tienen los cambios incorporados.\n`, "green");
+}
+
 async function handlePromote() {
   const currentBranch = getCurrentBranch();
   if (currentBranch === "main" || currentBranch === "master") {
@@ -125,7 +325,7 @@ async function handlePromote() {
   checkCleanWorkingDirectory();
   cleanTransientTestArtifacts();
 
-  log(`\n🚀 Promoviendo rama '${currentBranch}' a 'main'...`, "bold");
+  log(`\n🚀 Iniciando promoción de rama '${currentBranch}' a 'main'...`, "bold");
   log("1. Cambiando a 'main'...", "cyan");
   runGit(["checkout", "main"]);
 
@@ -137,13 +337,33 @@ async function handlePromote() {
   }
 
   log(`3. Mergeando '${currentBranch}' en 'main'...`, "cyan");
-  runGit(["merge", currentBranch]);
+  try {
+    runGit(["merge", currentBranch]);
+  } catch (err) {
+    log(`\n🚨 Fallo durante git merge '${currentBranch}': ${err.message}`, "red");
+    runGit(["checkout", currentBranch]);
+    process.exit(1);
+  }
 
-  log("4. Pusheando a 'origin/main'...", "cyan");
+  log("\n4. Verificando calidad en 'main' antes de autorizar el push a origin...", "cyan");
+  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD PRE-PUSH (EN MAIN)");
+  if (!gateResult.ok) {
+    log("\n🚨 BLOQUEO DE SEGURIDAD PRE-PUSH:", "red");
+    log("Las compuertas de calidad fallaron en el merge local de 'main'.", "red");
+    log("Restaurando 'main' al estado intacto de origin/main...", "yellow");
+    try {
+      runGit(["reset", "--hard", "origin/main"]);
+    } catch {}
+    runGit(["checkout", currentBranch]);
+    printFailureReport(`Promoción abortada pre-push: ${gateResult.reason}\nNingún cambio fue subido a origin/main.`);
+    return;
+  }
+
+  log("\n5. Compuertas 100% en verde. Pusheando a 'origin/main'...", "cyan");
   runGit(["push", "origin", "main"]);
 
   log(`\n🎉 ¡ÉXITO TOTAL!`, "green");
-  log(`La rama '${currentBranch}' fue mergeada y pusheada a 'origin/main'.`, "green");
+  log(`La rama '${currentBranch}' superó todas las pruebas, fue mergeada y pusheada a 'origin/main'.`, "green");
   log(`Tu main local y remoto ahora tienen todos los cambios probados.\n`, "green");
 }
 
@@ -224,28 +444,9 @@ async function reviewTarget(target) {
   }
 
   // 3. Quality Gates
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
-  log(`🛡️  EJECUTANDO COMPUERTAS DE CALIDAD LOCALES`, "bold");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
-
-  // Gate 1: Structural API Guard
-  const gate1 = await runAsyncCmd("1. Verificación Estructural de API Guard", "npm", ["run", "lint:api-guard"]);
-  if (!gate1) {
-    printFailureReport("Fallo en la auditoría estructural de API Guard (rutas desprotegidas).");
-    return;
-  }
-
-  // Gate 2: TypeScript Compilation
-  const gate2 = await runAsyncCmd("2. Verificación de Tipos TypeScript (tsc --noEmit)", "npx", ["tsc", "--noEmit"]);
-  if (!gate2) {
-    printFailureReport("Fallo en la comprobación estática de TypeScript.");
-    return;
-  }
-
-  // Gate 3: MIM Test Runner
-  const gate3 = await runAsyncCmd("3. Suite de Tests Unificados (npm test)", "node", ["scripts/test-runner.js"]);
-  if (!gate3) {
-    printFailureReport("Fallo en una o más suites del Test Runner de MIM.");
+  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD LOCALES");
+  if (!gateResult.ok) {
+    printFailureReport(gateResult.reason);
     return;
   }
 
@@ -373,20 +574,34 @@ async function main() {
     rawArgs.includes("--list") ||
     rawArgs.includes("-l")
   ) {
-    log("\n📖 Uso de MIM AI PR Inspector:", "bold");
+    log("\n📖 Uso de MIM Workflow & Gatekeeper:", "bold");
+    log("  npm run gatekeeper <pr | rama>      1-Click: Trae PR, testea TODO. Si pasa ➔ push directo. Si falla ➔ log con fecha.");
     log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para revisar.");
     log("  npm run pr:review <numero_o_rama>   Inspecciona y audita un PR o rama de la IA.");
-    log("  npm run pr:promote                  Mergea la rama inspeccionada a main y la pushea.");
+    log("  npm run pr:promote                  Mergea la rama inspeccionada a main (tras verificar compuertas).");
     log("  npm run pr:return                   Vuelve a main de forma segura.\n");
     log("Ejemplos:");
-    log("  npm run pr:review 2");
-    log("  npm run pr:review audit/pr-review-shell-safety");
+    log("  npm run gatekeeper 15");
+    log("  npm run pr:review 15");
 
     listAvailableTargets();
     process.exit(0);
   }
 
   const firstArg = rawArgs[0];
+
+  if (firstArg === "gatekeeper" || firstArg === "--gatekeeper" || firstArg === "-g") {
+    const target = rawArgs[1];
+    if (!target) {
+      log("\n❌ Falta especificar el PR o rama para el Gatekeeper.", "red");
+      log("Uso: npm run gatekeeper <numero_de_pr | nombre_de_rama>", "yellow");
+      log("Ejemplo: npm run gatekeeper 15\n", "yellow");
+      listAvailableTargets();
+      process.exit(1);
+    }
+    await handleGatekeeper(target);
+    return;
+  }
 
   if (firstArg === "promote" || firstArg === "--promote" || firstArg === "-m" || firstArg === "--merge") {
     await handlePromote();
@@ -401,7 +616,16 @@ async function main() {
   await reviewTarget(firstArg);
 }
 
-main().catch((err) => {
-  log(`\n❌ Error inesperado: ${err.message}\n`, "red");
-  process.exit(1);
-});
+module.exports = {
+  runAllQualityGates,
+  runAsyncCmd,
+  runGit,
+  REPO_ROOT,
+};
+
+if (require.main === module) {
+  main().catch((err) => {
+    log(`\n❌ Error inesperado: ${err.message}\n`, "red");
+    process.exit(1);
+  });
+}

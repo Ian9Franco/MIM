@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.3.2",
+  "version": "11.4.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -21,6 +21,8 @@
     "test:quick": "node scripts/test-runner.js",
     "lint:api-guard": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/security/verify-api-guard.ts",
     "lint:architecture": "ts-node --project tsconfig.scripts.json scripts/architecture/verify-boundaries.ts",
+    "gatekeeper": "node scripts/workflow/review-pr.js gatekeeper",
+    "pr:gatekeeper": "node scripts/workflow/review-pr.js gatekeeper",
     "pr:review": "node scripts/workflow/review-pr.js",
     "pr:promote": "node scripts/workflow/review-pr.js promote",
     "pr:return": "node scripts/workflow/review-pr.js return",
@@ -31,6 +33,7 @@
     "start:standalone": "electron standalone/main.js",
     "package:win": "npm run build:standalone && electron-builder build --win --publish never",
     "release": "node scripts/release.js",
+    "release:auto": "node scripts/release.js --auto",
     "version:sync": "node scripts/release.js"
   },
   "dependencies": {

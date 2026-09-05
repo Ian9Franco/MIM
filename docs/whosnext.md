@@ -69,10 +69,11 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
 - [ ] *Los "quick questions" son buenos pero estáticos una vez que el chat ya tiene mensajes.* Después del primer intercambio, desaparecen. Se podría mantener un set de sugerencias contextuales más chico (2 chips) ligado a la última respuesta, tipo "preguntas de seguimiento sugeridas" (patrón común en copilots).
 - [x] *El estado de error se mezcla con el estado de "falta key".* Desacoplado: el error 429 de cuota o rate limit se muestra inline en el chat sin desconfigurar la clave del usuario.
 - [x] *Accesibilidad básica:* los botones ahora cuentan con `aria-label` descriptivos para lectores de pantalla.
-- [ ] *El indicador "Gemini Conectado" es engañoso.* Se muestra apenas hay una key guardada, no cuando se confirmó que la key es válida. Un usuario con key vencida ve "Conectado" hasta que manda un mensaje y falla. Mejor: validar la key al guardarla (un ping liviano a la API) antes de mostrar el estado "conectado".
+- [x] *El indicador "Gemini Conectado" es engañoso.* Resuelto: validación preventiva con ping liviano a `/api/settings/validate-keys` antes de reflejar el estado conectado.
 
 ## 4. Deuda de fondo & Arquitectura (ya en curso, seguir empujando)
 
+- [x] Verificación estricta de fronteras de arquitectura (`npm run lint:architecture`, AST dependency boundary verifier en CI).
 - [ ] Bajar el uso de `any` (935 casos) — priorizar `lib/security/`, `lib/intelligence/sage/` y hooks orquestadores (`useHomeController.ts`).
 - [ ] Generalizar esquemas Zod a más rutas (actualmente 17/93).
 - [ ] Seguir sumando tests — el patrón de crecimiento (5→10→12→13 suites) está bien, no aflojar.
@@ -81,7 +82,7 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
   - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
   - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
   - [ ] `web/hooks/useHomeController.ts` (1,525 líneas) modularizar en sub-hooks (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
-- [ ] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
+- [x] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---
 
@@ -115,4 +116,4 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
 ## 7. Privacidad y Transparencia de Datos en BYOK
 
 - [ ] *Aviso de privacidad del Free Tier de Google:* Incorporar un aviso visible en el panel de configuración de MIM-Bot explicando con transparencia que Google AI Studio en su capa gratuita puede utilizar los prompts para entrenamiento de modelos (mientras que cuentas con facturación habilitada o keys privadas no lo hacen).
-- [ ] *Validación preventiva de API Key:* Ejecutar un ping liviano a la API al guardar la clave para comprobar que es válida antes de mostrar el indicador *"Gemini Conectado"*.
+- [x] *Validación preventiva de API Key:* Implementado en `/api/settings/validate-keys` asegurando que la clave nunca viaje en la URL.

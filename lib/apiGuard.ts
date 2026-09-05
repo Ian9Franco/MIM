@@ -145,7 +145,7 @@ export function withApiGuard<
         if (!queryValidation.success) {
           return new Response(
             JSON.stringify({
-              error: "INVALID_QUERY_PARAMS",
+              error: "INVALID_QUERY_PARAMETERS",
               details: queryValidation.error.flatten(),
             }),
             {
@@ -161,8 +161,8 @@ export function withApiGuard<
       } catch {
         return new Response(
           JSON.stringify({
-            error: "MALFORMED_QUERY_PARAMS",
-            message: "No se pudieron procesar los parámetros de consulta.",
+            error: "MALFORMED_URL",
+            message: "No se pudo interpretar la URL de la petición.",
           }),
           {
             status: 400,

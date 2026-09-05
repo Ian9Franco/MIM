@@ -66,6 +66,9 @@ jobs:
       - name: Run Test Suites & Generate Audited Coverage
         run: npm run test:coverage
 
+      - name: Verify SAGE Error Contract
+        run: npm run test:sage-errors
+
       - name: Upload Coverage to Codacy
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}

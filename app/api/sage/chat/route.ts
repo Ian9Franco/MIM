@@ -13,6 +13,10 @@ import {
   computeCrashSignature,
   getCachedDiagnosis,
 } from "@/lib/intelligence/sage/cacheEngine";
+import {
+  errorMessage,
+  sageErrorResponse,
+} from "@/lib/intelligence/sage/errorContract";
 
 const GEMINI_MODELS = [
   "gemini-flash-lite-latest",
@@ -73,10 +77,7 @@ export const POST = withApiGuard(
       getApiKey("gemini");
 
     if (!resolvedApiKey) {
-      return NextResponse.json(
-        { error: "NO_API_KEY", message: "No hay clave de Gemini API configurada." },
-        { status: 401 }
-      );
+      return sageErrorResponse("MIM_CREDENTIAL_MISSING");
     }
 
     const isBully = personality === "bully";
@@ -203,15 +204,12 @@ Respondé a la consulta del usuario de forma concisa y accionable.
         const errMsg = errData?.error?.message || res.statusText || "";
         lastErrorMsg = errMsg;
 
-        // Caso A: Clave API inválida o expirada (400/401/403)
+        // Caso A: Clave API inválida o expirada
         if (
-          res.status === 400 &&
+          [400, 401, 403].includes(res.status) &&
           (errMsg.toLowerCase().includes("api_key") || errMsg.toLowerCase().includes("api key"))
         ) {
-          return NextResponse.json(
-            { error: "NO_API_KEY", message: "Clave de Gemini API inválida o expirada." },
-            { status: 401 }
-          );
+          return sageErrorResponse("MIM_CREDENTIAL_INVALID", { details: errMsg });
         }
 
         // Caso B: Rate Limit / Quota Exceeded (429)
@@ -222,32 +220,21 @@ Respondé a la consulta del usuario de forma concisa y accionable.
         }
 
         console.warn(`[/api/sage/chat] Modelo ${modelName} falló (Status ${res.status}): ${errMsg}. Probando siguiente modelo...`);
-      } catch (err: any) {
-        console.warn(`[/api/sage/chat] Error de red con modelo ${modelName}:`, err.message);
-        lastErrorMsg = err.message;
+      } catch (err: unknown) {
+        const message = errorMessage(err);
+        console.warn(`[/api/sage/chat] Error de red con modelo ${modelName}:`, message);
+        lastErrorMsg = message;
       }
     }
 
     // Si fallaron todos los modelos por cuota/rate limit
     if (isRateLimited) {
-      return NextResponse.json(
-        {
-          error: "RATE_LIMITED",
-          message:
-            "Se alcanzó temporalmente el límite de consultas por minuto (RPM) o cuota de la API de Gemini. Esperá unos segundos antes de volver a preguntar.",
-          details: lastErrorMsg,
-        },
-        { status: 429 }
-      );
+      return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: lastErrorMsg });
     }
 
-    return NextResponse.json(
-      {
-        error: "GENERATION_FAILED",
-        message: `MIM-Bot no pudo generar respuesta tras probar ${prioritizedModels.length} modelos.`,
-        details: lastErrorMsg,
-      },
-      { status: 502 }
-    );
+    return sageErrorResponse("MIM_AI_GENERATION_FAILED", {
+      message: `MIM-Bot no pudo generar respuesta tras probar ${prioritizedModels.length} modelos.`,
+      details: lastErrorMsg,
+    });
   }
 );

@@ -15,6 +15,7 @@
     "test:nbt": "ts-node --project tsconfig.scripts.json scripts/__tests__/nbt-integration.test.ts",
     "test:api": "ts-node --project tsconfig.scripts.json scripts/__tests__/api-integration.test.ts",
     "test:architecture": "ts-node --project tsconfig.scripts.json scripts/__tests__/architecture-boundaries.test.ts",
+    "test:sage-errors": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sage-error-contract.test.ts",
     "eval:sage": "ts-node --project tsconfig.scripts.json scripts/evaluation/sage-eval.ts",
     "benchmark:aduana": "ts-node --project tsconfig.scripts.json scripts/benchmarks/aduana-benchmark.ts",
     "test": "node scripts/test-runner.js",

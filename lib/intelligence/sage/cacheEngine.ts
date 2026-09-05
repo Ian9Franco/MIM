@@ -195,7 +195,8 @@ export function saveSageCacheEntry(entry: SageCacheEntry): Promise<void> {
     const merged: SageCacheStore = { ...diskData, ...inMemoryCache };
     inMemoryCache = merged;
 
-    const tempFile = `${cacheFile}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+    const tempId = nodeCrypto?.randomUUID() ?? `${process.pid}-${Date.now()}`;
+    const tempFile = `${cacheFile}.tmp.${tempId}`;
     const payload = JSON.stringify(merged, null, 2);
 
     try {

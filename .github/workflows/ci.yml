@@ -40,6 +40,12 @@ jobs:
       - name: Verify API Guard Route Shielding
         run: npm run lint:api-guard
 
+      - name: Verify Architecture Boundaries
+        run: npm run lint:architecture
+
+      - name: Test Architecture Boundary Contracts
+        run: npm run test:architecture
+
   test-and-evaluate:
     name: Systems Test Suite & Benchmark Evaluation
     runs-on: ubuntu-latest

@@ -31,3 +31,17 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **PR:** https://github.com/Ian9Franco/MIM/pull/20
 - **Resumen:** proponía migrar las credenciales Desktop a Electron `safeStorage`, eliminar su retorno por `/api/settings`, retirar la copia persistente de Gemini en el navegador y cubrir la migración con tests.
 - **Motivo:** motivo no determinado. GitHub registra el PR como cerrado sin merge; una implementación relacionada ingresó después a `main` mediante commits separados, lo cual no cambia el resultado factual de este PR.
+
+## 2026-09-05 17:29:12 — Hermione — PR #23
+
+- **Título:** 📚 Hermione: corrijo el contrato y actualizo la bitácora
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/23
+- **Resumen:** corrigió la documentación del contrato público de `/api/settings` después de la separación de secretos y agregó cierres verificables previos a la bitácora Hogwarts.
+
+## 2026-09-05 17:29:12 — Harry — PR #26
+
+- **Título:** ⚡ Harry: aseguro los temporales de caché con randomUUID
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/26
+- **Resumen:** reemplazó `Math.random()` por `crypto.randomUUID()` en el nombre temporal usado por la escritura atómica de la caché SAGE, manteniendo un fallback acotado para el caso anómalo en que Node crypto no esté disponible.

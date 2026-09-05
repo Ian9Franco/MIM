@@ -8,28 +8,34 @@ Esta guía es tu manual rápido personal para verificar cambios, gestionar el fl
 
 Diseñados para cuando querés máxima velocidad con garantía técnica absoluta: ejecutan **tooooodos los testeos** de forma obligatoria y resuelven el flujo en un solo comando.
 
-### 🤖 Modo A: Gatekeeper Automático de PRs (1-Click)
+### 🛡️ Modo A: Auditor Seguro de PRs (Safe Auditor / `pr:audit`)
 ```bash
-npm run gatekeeper <numero_de_pr | nombre_rama>
-# Ejemplo: npm run gatekeeper 15
+npm run pr:audit <numero_de_pr | nombre_rama>
+# Alias idéntico: npm run gatekeeper 15
 ```
-**¿Qué hace automáticamente en 1 solo paso?**
+**¿Qué hace automáticamente y de forma 100% segura?**
 1. **Trae el PR:** Descarga (`git fetch`) y hace checkout de la rama del PR.
-2. **Ejecuta absolutamente todos los testeos (Fail-Closed):**
+2. **Auditoría de Sincronización:** Compara commits y diff contra `origin/main` y verifica si la rama quedó desactualizada.
+3. **Ejecuta absolutamente todas las compuertas de calidad (Fail-Closed):**
    - `lint:api-guard` (100% de rutas blindadas con `withApiGuard`)
    - `lint:architecture` (aislamiento estricto core vs UI/Desktop)
    - `test:architecture` (tests de contrato de fronteras)
    - `tsc --noEmit` (tipado estricto Raíz/Desktop)
    - `tsc web` (tipado estricto MIMweb)
-   - `npm test` (15 suites unificadas del sistema, 144+ escenarios)
-3. **Si pasa todo en verde ➔ Auto-Promote:**
-   - Cambia a `main`, sincroniza con `origin/main`, mergea la rama y **pushea a `origin/main`** con tu bypass de admin.
-4. **Si falla algún test ➔ Auto-Bloqueo & Log con Fecha:**
-   - **Bloquea el push de inmediato:** Ningún cambio roto llega a `main`.
-   - Vuelve a tu rama `main` limpia.
-   - Genera un reporte detallado con fecha y hora en:
+   - `npm test` (16 suites unificadas del sistema, 144+ escenarios)
+4. **Emite un Veredicto Estructurado Formal (Sin auto-push destructivo):**
+   - **`READY`:** Todas las compuertas pasaron en verde y la rama está al día con `origin/main`. Listo para ser promovido de forma explícita con `npm run pr:promote`.
+   - **`HOLD`:** Las compuertas pasaron pero la rama está atrasada con respecto a `origin/main`. Solicita actualizar con `git merge origin/main` y re-auditar antes de mergear.
+   - **`REQUEST_CHANGES`:** Alguna compuerta falló. Bloquea el flujo, no toca `main` y genera un reporte detallado con fecha y hora en:
      `logs/pr-audits/audit-failed-PR-<id>-YYYY-MM-DD_HH-mm-ss.log`
-   - El log contiene: compuerta fallida, motivo exacto, commits, diff de archivos y la salida completa del error.
+
+5. **Promoción Manual Explícita:**
+   Una vez que el PR obtiene el veredicto `READY`, ejecutas:
+   ```bash
+   npm run pr:promote
+   ```
+   *(Hace checkout a `main`, mergea, re-verifica compuertas en `main` y sube a `origin/main`).*
+
 
 ---
 

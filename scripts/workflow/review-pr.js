@@ -1,25 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * MIM — AI PR Local Inspector & Quality Gate Runner
+ * MIM — Safe PR Auditor & Quality Gate Runner
  * ─────────────────────────────────────────────────────────────────────────────
- * Automatiza el ciclo de revisión y promoción de PRs creados por agentes/IAs:
+ * Automatiza el ciclo de inspección, auditoría de calidad y promoción de PRs:
  * 
  * Modos de uso:
- *   1. Revisar un PR o rama:
- *      npm run pr:review <numero_pr | nombre_rama>
- *      Ejemplo: npm run pr:review 14
- *      Ejemplo: npm run pr:review audit/api-guard-fail-closed
+ *   1. Auditar un PR o rama (emite READY, HOLD o REQUEST_CHANGES sin merge destructivo):
+ *      npm run pr:audit <numero_pr | nombre_rama>
+ *      (Alias compatibles: npm run gatekeeper <id>, npm run pr:review <id>)
  * 
- *   2. Promover y mergear a main (tras verificar):
- *      npm run pr:review --promote
+ *   2. Promover y mergear a main (tras verificar y confirmar el veredicto READY):
+ *      npm run pr:promote
  * 
  *   3. Volver a main sin mergear:
- *      npm run pr:review --return
+ *      npm run pr:return
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const { execFileSync, spawn } = require("child_process");
+const { execFileSync, execSync, spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
@@ -42,9 +41,10 @@ function log(msg, color = "reset") {
 
 function runGit(args) {
   try {
-    return execFileSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" }).trim();
+    const gitArgs = Array.isArray(args) ? args : args.split(" ");
+    return execFileSync("git", gitArgs, { cwd: REPO_ROOT, encoding: "utf-8" }).trim();
   } catch (err) {
-    throw new Error(`Error ejecutando 'git ${args.join(" ")}': ${err.message}`);
+    throw new Error(`Error ejecutando 'git ${Array.isArray(args) ? args.join(" ") : args}': ${err.message}`);
   }
 }
 
@@ -73,16 +73,17 @@ function saveFailureLog(target, branchName, failedGate, reason, output, commits,
 
   const content = [
     "================================================================================",
-    "MIM GATEKEEPER — INFORME DE FALLO DE AUDITORÍA AUTOMÁTICA",
+    "MIM PR AUDITOR — INFORME DE FALLO DE CONTROL DE CALIDAD",
     "================================================================================",
     `Fecha y Hora:      ${humanTime}`,
     `Objetivo auditado: ${target}`,
     `Rama de trabajo:   ${branchName}`,
+    `Veredicto:         REQUEST_CHANGES`,
     `Compuerta fallida: ${failedGate}`,
     `Motivo:            ${reason}`,
     "",
     "────────────────────────────────────────────────────────────────────────────────",
-    "COMMITS DEL PR (vs main):",
+    "COMMITS DEL PR (vs origin/main):",
     "────────────────────────────────────────────────────────────────────────────────",
     commits || "(Sin commits detectados)",
     "",
@@ -169,7 +170,7 @@ function checkCleanWorkingDirectory() {
     log("\n⚠️  ADVERTENCIA DE SEGURIDAD:", "yellow");
     log("Tenés cambios pendientes sin commitear en tu árbol de trabajo actual:", "yellow");
     console.log(lines.join("\n"));
-    log("\nPara no perder trabajo, hacé 'git stash' o commiteá tus cambios antes de revisar otro PR.\n", "yellow");
+    log("\nPara no perder trabajo, hacé 'git stash' o commiteá tus cambios antes de auditar otro PR.\n", "yellow");
     process.exit(1);
   }
 }
@@ -207,14 +208,25 @@ async function runAllQualityGates(contextLabel = "COMPUERTAS DE CALIDAD") {
   return { ok: true };
 }
 
-async function handleGatekeeper(target) {
+/**
+ * Auditoría segura de PR/rama:
+ * - Descarga y cambia a la rama del PR.
+ * - Compara contra origin/main (commits, archivos, commits atrasados).
+ * - Ejecuta las 6 compuertas de calidad.
+ * - Emite veredicto estructurado:
+ *     REQUEST_CHANGES -> Si alguna compuerta falla (genera log y aborta).
+ *     HOLD            -> Si aprueba las compuertas pero la rama está atrasada con main.
+ *     READY           -> Si aprueba el 100% y está al día con main (habilita npm run pr:promote).
+ * - NUNCA realiza merge ni push automático a main.
+ */
+async function handleAudit(target) {
   checkCleanWorkingDirectory();
 
   const isPrNumber = /^[#]?\d+$/.test(target);
   let branchToCheckout = target;
 
   log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
-  log(`🤖 MIM GATEKEEPER AUTOMÁTICO — Inspección, Testeo y Auto-Push: ${target}`, "bold");
+  log(`🔍 MIM SAFE PR AUDITOR — Auditoría de Integridad: ${target}`, "bold");
   log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
 
   if (isPrNumber) {
@@ -241,28 +253,44 @@ async function handleGatekeeper(target) {
     runGit(["pull"]);
   } catch {}
 
+  // Sincronizar referencia de origin/main para cálculo preciso de divergencia
+  try {
+    runGit(["fetch", "origin", "main"]);
+  } catch {}
+
   let commits = "";
   try {
-    commits = runGit(["log", "--oneline", "main..HEAD", "-n", "10"]);
+    commits = runGit(["log", "--oneline", "origin/main..HEAD", "-n", "10"]);
   } catch {}
 
   let diffStat = "";
   try {
-    diffStat = runGit(["diff", "--stat", "main..HEAD"]);
+    diffStat = runGit(["diff", "--stat", "origin/main..HEAD"]);
   } catch {}
 
-  log(`\n📦 Commits introducidos (vs main):`, "bold");
-  console.log(commits || "  (Sin diferencias de commits con main)");
+  let behindCount = 0;
+  try {
+    const countStr = runGit(["rev-list", "--count", "HEAD..origin/main"]);
+    behindCount = parseInt(countStr, 10) || 0;
+  } catch {}
+
+  log(`\n📦 Commits introducidos (vs origin/main):`, "bold");
+  console.log(commits || "  (Sin diferencias de commits nuevos respecto a main)");
 
   log(`\n📁 Archivos modificados:`, "bold");
-  console.log(diffStat || "  (Sin diferencias con main)");
+  console.log(diffStat || "  (Sin diferencias de archivos con origin/main)");
 
-  // Ejecutar las compuertas completas
-  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD — GATEKEEPER AUTOMÁTICO");
+  if (behindCount > 0) {
+    log(`\n⚠️  Estado de sincronización: Esta rama está ${behindCount} commit(s) por detrás de origin/main.`, "yellow");
+  } else {
+    log(`\n✓ Estado de sincronización: Al día con origin/main (0 commits behind).`, "green");
+  }
+
+  // Ejecutar compuertas completas
+  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD — AUDITORÍA DE PR");
 
   if (!gateResult.ok) {
     cleanTransientTestArtifacts();
-    runGit(["checkout", "main"]);
 
     const logPath = saveFailureLog(
       target,
@@ -275,57 +303,61 @@ async function handleGatekeeper(target) {
     );
 
     log(`\n─────────────────────────────────────────────────────────────────────────────`, "red");
-    log(`🚨 GATEKEEPER BLOQUEÓ LA PROMOCIÓN: CONTROL DE CALIDAD NO SUPERADO`, "red");
+    log(`🚨 VEREDICTO: [REQUEST_CHANGES] — CONTROL DE CALIDAD NO SUPERADO`, "red");
     log(`─────────────────────────────────────────────────────────────────────────────`, "red");
     log(`Compuerta fallida: ${gateResult.gateTitle}`, "red");
     log(`Motivo:            ${gateResult.reason}`, "red");
-    log(`\n📄 Se generó un reporte detallado del fallo con fecha y hora en:`, "yellow");
+    log(`\n📄 Reporte detallado del fallo guardado en:`, "yellow");
     log(`   ${logPath}`, "bold");
-    log(`\nNingún cambio fue incorporado a 'main' ni subido a origin. Tu main está a salvo.\n`, "yellow");
+    log(`\nAuditoría Segura: Ningún cambio fue mergeado a 'main' ni subido a origin.\n`, "yellow");
+    log(`Opciones siguientes:`);
+    log(`  👉 Para volver a main sin tocar nada:`, "yellow");
+    log(`     npm run pr:return\n`);
     process.exit(1);
   }
 
-  // Todo verde -> Auto-merge y push
   cleanTransientTestArtifacts();
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "green");
-  log(`✅ COMPUERTAS 100% EN VERDE — EJECUTANDO AUTO-PROMOCIÓN A MAIN`, "green");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "green");
 
-  log("1. Cambiando a 'main'...", "cyan");
-  runGit(["checkout", "main"]);
-
-  log("2. Sincronizando con origin/main...", "cyan");
-  try {
-    runGit(["pull", "origin", "main"]);
-  } catch {}
-
-  log(`3. Mergeando '${branchToCheckout}' en 'main'...`, "cyan");
-  try {
-    runGit(["merge", branchToCheckout]);
-  } catch (err) {
-    log(`\n🚨 Error durante git merge: ${err.message}`, "red");
-    process.exit(1);
+  if (behindCount > 0) {
+    log(`\n─────────────────────────────────────────────────────────────────────────────`, "yellow");
+    log(`⏸️  VEREDICTO: [HOLD] — COMPUERTAS APROBADAS PERO RAMA DESACTUALIZADA`, "yellow");
+    log(`─────────────────────────────────────────────────────────────────────────────`, "yellow");
+    log(`• La rama '${branchToCheckout}' superó el 100% de las compuertas de calidad.`);
+    log(`• Sin embargo, está ${behindCount} commit(s) por detrás de 'origin/main'.`, "yellow");
+    log(`\nAcción requerida antes de promover:`, "bold");
+    log(`  1. Traer los cambios más recientes de main para evitar regresiones o conflictos:`, "cyan");
+    log(`     git merge origin/main   (o git rebase origin/main)`);
+    log(`  2. Volver a auditar:`, "cyan");
+    log(`     npm run pr:audit ${target}\n`);
+    log(`  👉 Para volver a main sin mergear:`, "dim");
+    log(`     npm run pr:return\n`, "dim");
+    return;
   }
 
-  log("4. Pusheando a 'origin/main' con bypass de administrador...", "cyan");
-  runGit(["push", "origin", "main"]);
-
-  log(`\n🎉 ¡GATEKEEPER EXITOSO!`, "green");
-  log(`El PR/rama '${target}' superó el 100% de los testeos, fue mergeado a main y pusheado a origin/main con éxito.`, "green");
-  log(`Tu repositorio local y remoto ya tienen los cambios incorporados.\n`, "green");
+  log(`\n─────────────────────────────────────────────────────────────────────────────`, "green");
+  log(`✅ VEREDICTO: [READY] — LISTO PARA PROMOCIÓN MANUAL A MAIN`, "green");
+  log(`─────────────────────────────────────────────────────────────────────────────`, "green");
+  log(`• La rama '${branchToCheckout}' superó el 100% de las compuertas de calidad.`);
+  log(`• Está completamente al día con 'origin/main' (0 commits behind).`);
+  log(`• Principio de Auditoría Segura: NO se realizó auto-merge ni auto-push destructivo.`);
+  log(`\nAcción recomendada:`, "bold");
+  log(`  👉 Para mergear y subir a main de forma manual y explícita:`, "cyan");
+  log(`     npm run pr:promote\n`);
+  log(`  👉 Para volver a main sin mergear:`, "yellow");
+  log(`     npm run pr:return\n`);
 }
 
 async function handlePromote() {
   const currentBranch = getCurrentBranch();
   if (currentBranch === "main" || currentBranch === "master") {
-    log("\n❌ Ya estás parado en 'main'. Para promover un PR primero revisalo con 'npm run pr:review <rama>'.\n", "red");
+    log("\n❌ Ya estás parado en 'main'. Para promover un PR primero audítalo con 'npm run pr:audit <rama>'.\n", "red");
     process.exit(1);
   }
 
   checkCleanWorkingDirectory();
   cleanTransientTestArtifacts();
 
-  log(`\n🚀 Iniciando promoción de rama '${currentBranch}' a 'main'...`, "bold");
+  log(`\n🚀 Iniciando promoción explícita de rama '${currentBranch}' a 'main'...`, "bold");
   log("1. Cambiando a 'main'...", "cyan");
   runGit(["checkout", "main"]);
 
@@ -362,7 +394,7 @@ async function handlePromote() {
   log("\n5. Compuertas 100% en verde. Pusheando a 'origin/main'...", "cyan");
   runGit(["push", "origin", "main"]);
 
-  log(`\n🎉 ¡ÉXITO TOTAL!`, "green");
+  log(`\n🎉 ¡PROMOCIÓN EXITOSA!`, "green");
   log(`La rama '${currentBranch}' superó todas las pruebas, fue mergeada y pusheada a 'origin/main'.`, "green");
   log(`Tu main local y remoto ahora tienen todos los cambios probados.\n`, "green");
 }
@@ -379,94 +411,12 @@ function handleReturn() {
   log("\n✓ Volviste a la rama 'main' de forma segura.\n", "green");
 }
 
-async function reviewTarget(target) {
-  checkCleanWorkingDirectory();
-
-  const isPrNumber = /^[#]?\d+$/.test(target);
-  let branchToCheckout = target;
-
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
-  log(`🔍 MIM AI PR Inspector — Inspeccionando: ${target}`, "bold");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
-
-  if (isPrNumber) {
-    const prNum = target.replace("#", "");
-    branchToCheckout = `pr-${prNum}`;
-    log(`• Descargando Pull Request #${prNum} desde origin...`, "cyan");
-    try {
-      runGit(["fetch", "origin", `pull/${prNum}/head:${branchToCheckout}`]);
-    } catch {
-      log(`No se pudo descargar 'pull/${prNum}/head'. Intentando checkout directo si la rama existe...`, "yellow");
-    }
-  } else {
-    validateBranchName(target);
-    log(`• Obteniendo cambios remotos de '${target}'...`, "cyan");
-    try {
-      runGit(["fetch", "origin", target]);
-    } catch {
-      // Puede ser rama local o tracking
-    }
-  }
-
-  log(`• Haciendo checkout a '${branchToCheckout}'...`, "cyan");
-  runGit(["checkout", branchToCheckout]);
-
-  try {
-    runGit(["pull"]);
-  } catch {
-    // Si no tiene upstream configurado no pasa nada
-  }
-
-  // 1. Mostrar resumen de commits
-  log(`\n📦 Commits introducidos (vs main):`, "bold");
-  try {
-    const commits = runGit(["log", "--oneline", "main..HEAD", "-n", "10"]);
-    if (commits) {
-      console.log(commits);
-    } else {
-      log("  (La rama está al mismo nivel o detrás de main)", "dim");
-    }
-  } catch {
-    log("  (No se pudo comparar commits contra main)", "dim");
-  }
-
-  // 2. Mostrar resumen de archivos modificados
-  log(`\n📁 Archivos modificados:`, "bold");
-  try {
-    const diffStat = runGit(["diff", "--stat", "main..HEAD"]);
-    if (diffStat) {
-      console.log(diffStat);
-    } else {
-      log("  (Sin diferencias con main)", "dim");
-    }
-  } catch {
-    log("  (No se pudo obtener diff con main)", "dim");
-  }
-
-  // 3. Quality Gates
-  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD LOCALES");
-  if (!gateResult.ok) {
-    printFailureReport(gateResult.reason);
-    return;
-  }
-
-  // 4. Veredicto Final
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "green");
-  log(`✅ VEREDICTO: EL PR CUMPLE 100% DE LOS ESTÁNDARES DE INGENIERÍA`, "green");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "green");
-  log(`Todas las compuertas pasaron en verde. Podés revisar los archivos si querés.`);
-  log(`  👉 Para mergear y subir a main:`, "cyan");
-  log(`     npm run pr:promote  (o npm run pr:review promote)\n`);
-  log(`  👉 Para descartar o volver a main sin mergear:`, "yellow");
-  log(`     npm run pr:return   (o npm run pr:review return)\n`);
-}
-
 function printFailureReport(reason) {
   log(`\n─────────────────────────────────────────────────────────────────────────────`, "red");
-  log(`🚨 VEREDICTO: EL PR NO SUPERA LOS CONTROLES DE CALIDAD`, "red");
+  log(`🚨 VEREDICTO: [REQUEST_CHANGES] — NO SUPERA CONTROLES PRE-PUSH`, "red");
   log(`─────────────────────────────────────────────────────────────────────────────`, "red");
   log(`Motivo: ${reason}`, "red");
-  log(`\nEl código contiene fallas o no cumple con las políticas de seguridad de MIM.`);
+  log(`\nEl código contiene fallas o no cumple con las políticas de calidad de MIM.`);
   log(`Opciones siguientes:`);
   log(`  👉 Para volver a main sin mergear:`, "yellow");
   log(`     npm run pr:return\n`);
@@ -476,14 +426,14 @@ function printFailureReport(reason) {
 function listAvailableTargets() {
   log("\n📡 Consultando ramas y PRs en GitHub...", "cyan");
   try {
-    runGit("fetch origin");
+    runGit(["fetch", "origin"]);
   } catch {}
 
   const openPrs = [];
   const closedPrs = [];
 
   try {
-    const rawPrs = runGit("ls-remote origin refs/pull/*/head");
+    const rawPrs = runGit(["ls-remote", "origin", "refs/pull/*/head"]);
     const lines = rawPrs.split("\n").filter(Boolean);
     for (const line of lines) {
       const parts = line.split("\t");
@@ -510,7 +460,7 @@ function listAvailableTargets() {
 
   let openBranches = [];
   try {
-    const rawBranches = runGit("branch -r --no-merged main");
+    const rawBranches = runGit(["branch", "-r", "--no-merged", "main"]);
     openBranches = rawBranches
       .split("\n")
       .map((b) => b.trim().replace(/^origin\//, ""))
@@ -519,7 +469,7 @@ function listAvailableTargets() {
 
   let mergedBranches = [];
   try {
-    const rawMerged = runGit("branch -r --merged main");
+    const rawMerged = runGit(["branch", "-r", "--merged", "main"]);
     mergedBranches = rawMerged
       .split("\n")
       .map((b) => b.trim().replace(/^origin\//, ""))
@@ -527,20 +477,20 @@ function listAvailableTargets() {
   } catch {}
 
   log("\n─────────────────────────────────────────────────────────────────────────────", "dim");
-  log("🟢 PENDIENTES / ABIERTAS (Esperando tu revisión):", "green");
+  log("🟢 PENDIENTES / ABIERTAS (Esperando tu revisión o auditoría):", "green");
   log("─────────────────────────────────────────────────────────────────────────────", "dim");
 
   if (openPrs.length > 0 || openBranches.length > 0) {
     if (openPrs.length > 0) {
       log("  🔢 Pull Requests:", "bold");
       for (const pr of openPrs) {
-        log(`     • PR #${pr}  ➔  npm run pr:review ${pr}`, "green");
+        log(`     • PR #${pr}  ➔  npm run pr:audit ${pr}`, "green");
       }
     }
     if (openBranches.length > 0) {
       log("\n  🌿 Ramas:", "bold");
       for (const br of openBranches) {
-        log(`     • ${br}  ➔  npm run pr:review ${br}`, "green");
+        log(`     • ${br}  ➔  npm run pr:audit ${br}`, "green");
       }
     }
   } else {
@@ -574,15 +524,17 @@ async function main() {
     rawArgs.includes("--list") ||
     rawArgs.includes("-l")
   ) {
-    log("\n📖 Uso de MIM Workflow & Gatekeeper:", "bold");
-    log("  npm run gatekeeper <pr | rama>      1-Click: Trae PR, testea TODO. Si pasa ➔ push directo. Si falla ➔ log con fecha.");
-    log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para revisar.");
-    log("  npm run pr:review <numero_o_rama>   Inspecciona y audita un PR o rama de la IA.");
-    log("  npm run pr:promote                  Mergea la rama inspeccionada a main (tras verificar compuertas).");
-    log("  npm run pr:return                   Vuelve a main de forma segura.\n");
+    log("\n📖 Uso de MIM Safe PR Auditor & Workflow:", "bold");
+    log("  npm run pr:audit <pr | rama>        Auditoría segura: corre compuertas y emite veredicto (READY/HOLD/REQUEST_CHANGES).");
+    log("  npm run gatekeeper <pr | rama>      Alias idéntico a pr:audit.");
+    log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para auditar.");
+    log("  npm run pr:review <pr | rama>       Audita e inspecciona un PR o rama.");
+    log("  npm run pr:promote                  Promoción manual: mergea la rama auditada a main tras verificar compuertas.");
+    log("  npm run pr:return                   Vuelve a main de forma segura sin mergear.\n");
     log("Ejemplos:");
-    log("  npm run gatekeeper 15");
+    log("  npm run pr:audit 15");
     log("  npm run pr:review 15");
+    log("  npm run pr:promote");
 
     listAvailableTargets();
     process.exit(0);
@@ -590,16 +542,22 @@ async function main() {
 
   const firstArg = rawArgs[0];
 
-  if (firstArg === "gatekeeper" || firstArg === "--gatekeeper" || firstArg === "-g") {
+  if (
+    firstArg === "audit" ||
+    firstArg === "--audit" ||
+    firstArg === "gatekeeper" ||
+    firstArg === "--gatekeeper" ||
+    firstArg === "-g"
+  ) {
     const target = rawArgs[1];
     if (!target) {
-      log("\n❌ Falta especificar el PR o rama para el Gatekeeper.", "red");
-      log("Uso: npm run gatekeeper <numero_de_pr | nombre_de_rama>", "yellow");
-      log("Ejemplo: npm run gatekeeper 15\n", "yellow");
+      log("\n❌ Falta especificar el PR o rama para auditar.", "red");
+      log("Uso: npm run pr:audit <numero_de_pr | nombre_de_rama>", "yellow");
+      log("Ejemplo: npm run pr:audit 15\n", "yellow");
       listAvailableTargets();
       process.exit(1);
     }
-    await handleGatekeeper(target);
+    await handleAudit(target);
     return;
   }
 
@@ -613,7 +571,7 @@ async function main() {
     return;
   }
 
-  await reviewTarget(firstArg);
+  await handleAudit(firstArg);
 }
 
 module.exports = {

@@ -29,6 +29,21 @@ export function assertPathSegment(value: unknown): asserts value is string {
   }
 }
 
+function assertNoSymlinkInAncestry(base: string, relation: string): void {
+  let cursor = base;
+  for (const segment of relation ? relation.split(path.sep) : []) {
+    cursor = path.join(cursor, segment);
+    try {
+      if (fs.lstatSync(cursor).isSymbolicLink()) {
+        throw new UnsafePathError("Acceso no autorizado: enlace simbólico fuera del perímetro permitido");
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      break;
+    }
+  }
+}
+
 /**
  * Resolve a user-controlled relative path strictly below a trusted root.
  * Existing symlink/junction components are rejected so containment cannot be bypassed
@@ -39,7 +54,8 @@ export function resolveWithin(root: string, relative: string, allowRoot = false)
     throw new UnsafePathError();
   }
 
-  const segments = relative === "" ? [] : relative.split(/[\\/]/);
+  const clean = relative.replace(/[\\/]+$/, "");
+  const segments = clean === "" ? [] : clean.split(/[\\/]/);
   for (const segment of segments) assertPathSegment(segment);
 
   const base = path.resolve(root);
@@ -55,18 +71,7 @@ export function resolveWithin(root: string, relative: string, allowRoot = false)
     throw new UnsafePathError();
   }
 
-  let cursor = base;
-  for (const segment of relation ? relation.split(path.sep) : []) {
-    cursor = path.join(cursor, segment);
-    try {
-      if (fs.lstatSync(cursor).isSymbolicLink()) {
-        throw new UnsafePathError("Acceso no autorizado: enlace simbólico fuera del perímetro permitido");
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      break;
-    }
-  }
+  assertNoSymlinkInAncestry(base, relation);
 
   return target;
 }

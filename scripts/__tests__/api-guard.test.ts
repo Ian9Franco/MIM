@@ -141,6 +141,46 @@ function assertStructuralEnforcement() {
   }
 }
 
+function assertPathSegmentRejections() {
+  assertThrows(() => assertPathSegment("."), "Rejects '.' as a filesystem segment");
+  assertThrows(() => assertPathSegment(".."), "Rejects '..' as a filesystem segment");
+  assertThrows(() => assertPathSegment("CON"), "Rejects Windows reserved filesystem names");
+}
+
+function assertSymlinkTraversalRejections(configRoot: string, outsideRoot: string) {
+  const linkPath = path.join(configRoot, "linked");
+  try {
+    fs.symlinkSync(outsideRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
+    assertThrows(
+      () => resolveWithin(configRoot, "linked/secret.txt"),
+      "Rejects symlink/junction escapes below a trusted root"
+    );
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EPERM" && code !== "EACCES") throw error;
+    pass("Symlink/junction escape check skipped because this environment cannot create links");
+  }
+}
+
+function assertRouteWiring() {
+  const deleteRoute = fs.readFileSync(
+    path.join(process.cwd(), "app", "api", "project", "delete", "route.ts"),
+    "utf-8"
+  );
+  const configRoute = fs.readFileSync(
+    path.join(process.cwd(), "app", "api", "config", "files", "route.ts"),
+    "utf-8"
+  );
+  assert(
+    deleteRoute.includes("resolveWithin") && deleteRoute.includes("assertPathSegment"),
+    "Project deletion route is wired to strict path containment"
+  );
+  assert(
+    configRoute.includes("resolveWithin") && configRoute.includes("assertPathSegment"),
+    "Config/history route is wired to strict path containment"
+  );
+}
+
 function assertFilesystemContainment() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mim-path-safety-"));
   const configRoot = path.join(tempRoot, "config");
@@ -149,9 +189,7 @@ function assertFilesystemContainment() {
   fs.mkdirSync(outsideRoot, { recursive: true });
 
   try {
-    assertThrows(() => assertPathSegment("."), "Rejects '.' as a filesystem segment");
-    assertThrows(() => assertPathSegment(".."), "Rejects '..' as a filesystem segment");
-    assertThrows(() => assertPathSegment("CON"), "Rejects Windows reserved filesystem names");
+    assertPathSegmentRejections();
     assertThrows(
       () => resolveWithin(configRoot, "../config-other/secret.txt"),
       "Rejects sibling-prefix traversal that a startsWith check would accept"
@@ -168,35 +206,15 @@ function assertFilesystemContainment() {
       nested
     );
 
-    const linkPath = path.join(configRoot, "linked");
-    try {
-      fs.symlinkSync(outsideRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
-      assertThrows(
-        () => resolveWithin(configRoot, "linked/secret.txt"),
-        "Rejects symlink/junction escapes below a trusted root"
-      );
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "EPERM" && code !== "EACCES") throw error;
-      pass("Symlink/junction escape check skipped because this environment cannot create links");
-    }
+    const withTrailingSlash = resolveWithin(configRoot, "nested/");
+    assert(
+      withTrailingSlash === path.join(configRoot, "nested"),
+      "Handles legitimate directories with trailing slashes",
+      withTrailingSlash
+    );
 
-    const deleteRoute = fs.readFileSync(
-      path.join(process.cwd(), "app", "api", "project", "delete", "route.ts"),
-      "utf-8"
-    );
-    const configRoute = fs.readFileSync(
-      path.join(process.cwd(), "app", "api", "config", "files", "route.ts"),
-      "utf-8"
-    );
-    assert(
-      deleteRoute.includes("resolveWithin") && deleteRoute.includes("assertPathSegment"),
-      "Project deletion route is wired to strict path containment"
-    );
-    assert(
-      configRoute.includes("resolveWithin") && configRoute.includes("assertPathSegment"),
-      "Config/history route is wired to strict path containment"
-    );
+    assertSymlinkTraversalRejections(configRoot, outsideRoot);
+    assertRouteWiring();
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -269,16 +287,16 @@ async function assertWebGuardRuntime() {
   });
 
   let handlerCalls = 0;
-  const guarded = withWebApiGuard(
+  const guarded = (withWebApiGuard as Function)(
     {
       querySchema,
       rateLimit: {
         windowMs: 60_000,
         maxRequests: 5,
-        customIdentifier: (request) => request.headers.get("x-test-id") || "web-test",
+        customIdentifier: (request: Request) => request.headers.get("x-test-id") || "web-test",
       },
     },
-    async ({ query }) => {
+    async ({ query }: { query: { page: number } }) => {
       handlerCalls += 1;
       return Response.json({ page: query.page });
     }

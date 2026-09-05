@@ -1,7 +1,7 @@
-# MIM — Roadmap Oficial & Estado de Evolución (v11.4.0)
+# MIM — Roadmap Oficial & Estado de Evolución (v11.4.1)
 
 > Roadmap unificado de evolución técnica de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.0 | **Última actualización:** 2026-09-05  
+> **Versión Actual:** v11.4.1 | **Última actualización:** 2026-09-05  
 > *(Historial de hitos de versiones anteriores preservado en [docs/releases/ROADMAP_v10_HISTORIC.md](../releases/ROADMAP_v10_HISTORIC.md)).*
 
 ---

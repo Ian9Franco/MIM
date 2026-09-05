@@ -24,7 +24,7 @@ export interface ModLicenseReport {
   declaredLicense: string;
   category: LicenseCategory;
   redistributionRestricted: boolean;
-  sourceMetadata: "fabric.mod.json" | "mods.toml" | "mcmod.info" | "embedded_file" | "none";
+  sourceMetadata: "fabric.mod.json" | "quilt.mod.json" | "mods.toml" | "mcmod.info" | "embedded_file" | "none";
   notes?: string;
 }
 
@@ -135,7 +135,7 @@ export async function auditJarLicense(jarPath: string): Promise<ModLicenseReport
     const zip = new AdmZip(jarPath);
     const entries = zip.getEntries();
 
-    // 1. Check fabric.mod.json (Fabric / Quilt)
+    // 1. Check fabric.mod.json (Fabric)
     const fabricEntry = entries.find((e) => e.entryName === "fabric.mod.json");
     if (fabricEntry) {
       try {
@@ -164,7 +164,39 @@ export async function auditJarLicense(jarPath: string): Promise<ModLicenseReport
       }
     }
 
-    // 2. Check META-INF/mods.toml or META-INF/neoforge.mods.toml (Forge / NeoForge)
+    // 2. Check quilt.mod.json (Quilt)
+    const quiltEntry = entries.find((e) => e.entryName === "quilt.mod.json");
+    if (quiltEntry) {
+      try {
+        const text = quiltEntry.getData().toString("utf8");
+        const json = JSON.parse(text);
+        const loader = json.quilt_loader || {};
+        const metadata = loader.metadata || loader;
+        const modId = loader.id || fallbackModId;
+        const modName = metadata.name || loader.name || modId;
+        const licenseValue = metadata.license ?? loader.license ?? null;
+        const rawLicense = Array.isArray(licenseValue)
+          ? licenseValue.join(", ")
+          : typeof licenseValue === "string"
+          ? licenseValue
+          : null;
+
+        const classification = classifyLicense(rawLicense);
+        return {
+          modId,
+          modName,
+          jarName,
+          declaredLicense: classification.normalized,
+          category: classification.category,
+          redistributionRestricted: classification.redistributionRestricted,
+          sourceMetadata: "quilt.mod.json",
+        };
+      } catch {
+        // Continue to fallback checks
+      }
+    }
+
+    // 3. Check META-INF/mods.toml or META-INF/neoforge.mods.toml (Forge / NeoForge)
     const forgeEntry = entries.find(
       (e) =>
         e.entryName === "META-INF/mods.toml" ||
@@ -198,7 +230,7 @@ export async function auditJarLicense(jarPath: string): Promise<ModLicenseReport
       }
     }
 
-    // 3. Check mcmod.info (Legacy Forge)
+    // 4. Check mcmod.info (Legacy Forge)
     const mcmodEntry = entries.find((e) => e.entryName === "mcmod.info");
     if (mcmodEntry) {
       try {
@@ -225,7 +257,7 @@ export async function auditJarLicense(jarPath: string): Promise<ModLicenseReport
       }
     }
 
-    // 4. Check for embedded LICENSE or LICENSE.txt files
+    // 5. Check for embedded LICENSE or LICENSE.txt files
     const licenseFileEntry = entries.find(
       (e) =>
         !e.isDirectory &&

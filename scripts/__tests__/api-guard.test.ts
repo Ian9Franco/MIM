@@ -5,6 +5,7 @@
  * 1. Structural route verification cannot be fooled by comments/strings/imports.
  * 2. The real desktop and web withApiGuard wrappers execute validation,
  *    rate limiting, handler dispatch, and defensive headers.
+ * 3. User-controlled filesystem paths remain contained below trusted roots.
  */
 
 import fs from "fs";
@@ -13,6 +14,7 @@ import path from "path";
 import { z } from "zod";
 import { withApiGuard as withDesktopApiGuard } from "../../lib/apiGuard";
 import { withApiGuard as withWebApiGuard } from "../../web/lib/apiGuard";
+import { assertPathSegment, resolveWithin } from "../../lib/security/safePaths";
 import {
   analyzeRouteSource,
   auditApiGuard,
@@ -39,6 +41,16 @@ function fail(msg: string, details?: unknown): never {
 function assert(condition: boolean, msg: string, details?: unknown) {
   if (!condition) fail(msg, details);
   pass(msg);
+}
+
+function assertThrows(fn: () => unknown, msg: string) {
+  let threw = false;
+  try {
+    fn();
+  } catch {
+    threw = true;
+  }
+  assert(threw, msg);
 }
 
 function assertStructuralEnforcement() {
@@ -123,6 +135,67 @@ function assertStructuralEnforcement() {
       exemptAudit.violations.length === 0,
       "Auditor respects explicit allowlist exceptions with documented reasons",
       exemptAudit
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function assertFilesystemContainment() {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mim-path-safety-"));
+  const configRoot = path.join(tempRoot, "config");
+  const outsideRoot = path.join(tempRoot, "config-other");
+  fs.mkdirSync(configRoot, { recursive: true });
+  fs.mkdirSync(outsideRoot, { recursive: true });
+
+  try {
+    assertThrows(() => assertPathSegment("."), "Rejects '.' as a filesystem segment");
+    assertThrows(() => assertPathSegment(".."), "Rejects '..' as a filesystem segment");
+    assertThrows(() => assertPathSegment("CON"), "Rejects Windows reserved filesystem names");
+    assertThrows(
+      () => resolveWithin(configRoot, "../config-other/secret.txt"),
+      "Rejects sibling-prefix traversal that a startsWith check would accept"
+    );
+    assertThrows(
+      () => resolveWithin(configRoot, "C:\\outside.txt"),
+      "Rejects Windows absolute paths even when tests run on another OS"
+    );
+
+    const nested = resolveWithin(configRoot, "nested/options.txt");
+    assert(
+      nested === path.join(configRoot, "nested", "options.txt"),
+      "Allows legitimate nested config files inside the trusted root",
+      nested
+    );
+
+    const linkPath = path.join(configRoot, "linked");
+    try {
+      fs.symlinkSync(outsideRoot, linkPath, process.platform === "win32" ? "junction" : "dir");
+      assertThrows(
+        () => resolveWithin(configRoot, "linked/secret.txt"),
+        "Rejects symlink/junction escapes below a trusted root"
+      );
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EPERM" && code !== "EACCES") throw error;
+      pass("Symlink/junction escape check skipped because this environment cannot create links");
+    }
+
+    const deleteRoute = fs.readFileSync(
+      path.join(process.cwd(), "app", "api", "project", "delete", "route.ts"),
+      "utf-8"
+    );
+    const configRoute = fs.readFileSync(
+      path.join(process.cwd(), "app", "api", "config", "files", "route.ts"),
+      "utf-8"
+    );
+    assert(
+      deleteRoute.includes("resolveWithin") && deleteRoute.includes("assertPathSegment"),
+      "Project deletion route is wired to strict path containment"
+    );
+    assert(
+      configRoute.includes("resolveWithin") && configRoute.includes("assertPathSegment"),
+      "Config/history route is wired to strict path containment"
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -240,6 +313,7 @@ async function run() {
   console.log(`\n${colors.cyan}${colors.bold}▶ Executing API Guard enforcement tests...${colors.reset}\n`);
 
   assertStructuralEnforcement();
+  assertFilesystemContainment();
   await assertDesktopGuardRuntime();
   await assertWebGuardRuntime();
 

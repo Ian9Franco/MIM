@@ -173,14 +173,15 @@ Respondé a la consulta del usuario de forma concisa y accionable.
     let isRateLimited = false;
 
     for (const modelName of prioritizedModels) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(
-        resolvedApiKey
-      )}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
       try {
         const res = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": resolvedApiKey,
+          },
           body: JSON.stringify(requestPayload),
           signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
         });

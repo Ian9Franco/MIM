@@ -1,11 +1,11 @@
 /**
- * SAGE 2.0 — AI Guardrails & Output Validator
+ * SAGE 2.0 — Remediation Safety Validator & Output Sanitizer
  * ─────────────────────────────────────────────────────────────────────────────
- * Validates AI-generated diagnostic proposals against the deterministic truth.
- * Protects against:
- * 1. Culprit Hallucination (accusing unverified mods)
- * 2. Unsafe Remediation Instructions (shell execution, security disabling)
- * 3. Ungrounded Assertions (actions without evidence lineage)
+ * Validates suggested remediation proposals against deterministic engine findings.
+ * Enforces:
+ * 1. Attribution Consistency (proposals must match verified culprit or suspect mods)
+ * 2. Shell Command & Security Safety (blocks destructive commands and security disabling)
+ * 3. Evidence Lineage (verifies actions align with known knowledge base terms)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -30,9 +30,9 @@ const FORBIDDEN_PHRASES = [
   "pirate"
 ];
 
-export class SageGuardrails {
+export class SageSafetyValidator {
   /**
-   * Validates and sanitizes proposed AI remediation steps.
+   * Validates and sanitizes proposed remediation steps.
    */
   public static validate(
     report: StructuredCrashReport,
@@ -43,7 +43,7 @@ export class SageGuardrails {
     const violations: string[] = [];
     const sanitizedActions: string[] = [];
 
-    // 1. Culprit Hallucination Check
+    // 1. Attribution Consistency Check
     if (proposedCulprit && report.culpritMod) {
       const normProposed = proposedCulprit.toLowerCase().trim();
       const normReport = report.culpritMod.toLowerCase().trim();
@@ -51,7 +51,7 @@ export class SageGuardrails {
 
       if (normProposed !== normReport && !isSuspected) {
         violations.push(
-          `Hallucination Violation: AI proposed culprit '${proposedCulprit}' which contradicts deterministic engine findings ('${report.culpritMod}').`
+          `Attribution Inconsistency: Proposed culprit '${proposedCulprit}' contradicts deterministic engine findings ('${report.culpritMod}').`
         );
       }
     }
@@ -106,3 +106,7 @@ export class SageGuardrails {
     };
   }
 }
+
+/** Backward-compatible alias for SageSafetyValidator */
+export const SageGuardrails = SageSafetyValidator;
+export type SageGuardrails = SageSafetyValidator;

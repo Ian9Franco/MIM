@@ -56,8 +56,8 @@ In contrast to naive chatbot wrappers that prompt generic LLMs with entire 5,000
 |:---|:---:|:---|
 | **Deterministic Crash Parsing** | ✅ DOES | Structural stackframe demangling, Mixin injection normalization, Java runtime fingerprinting. |
 | **Evidence-Backed Attribution** | ✅ DOES | Maps frame namespaces to mod packages; computes multi-factor evidence-based confidence (0–100%). |
-| **Offline Semantic Retrieval (RAG)** | ✅ DOES | Token-frequency and cosine similarity matching against curated compatibility database (`knowledgeBase.ts`). |
-| **Anti-Hallucination Guardrails** | ✅ DOES | `SageGuardrails` strictly blocks fabricated culprits and dangerous remediation commands. |
+| **Offline Knowledge Base Matching** | ✅ DOES | Token-frequency and category alignment matching against curated compatibility database (`knowledgeBase.ts`). |
+| **Remediation Safety Validation** | ✅ DOES | `SageSafetyValidator` strictly blocks contradictory culprits and dangerous remediation commands. |
 | **Universal 100% In-The-Wild Guarantee** | ❌ DOES NOT | 100% Macro F1 is strictly evaluated against the 125 canonical benchmark corpus. Unseen logs gracefully degrade to `UNKNOWN_RUNTIME`. |
 | **Runtime JVM Process Injection** | ❌ DOES NOT | Zero live execution or JVM process attachment; analysis is entirely static on log files. |
 | **Generative Hallucination** | ❌ DOES NOT | The LLM layer is forbidden from inventing culprits, changing scores, or altering evidence. |

@@ -1,11 +1,11 @@
 /**
- * SAGE 2.0 — AI Explanation & RAG Layer (Deterministic-First)
+ * SAGE 2.0 — Contextual Explanation & Grounding Layer (Deterministic-First)
  * ─────────────────────────────────────────────────────────────────────────────
  * Translates structured diagnostic reports into human-readable explanations.
  * Combines:
  * 1. Deterministic SAGE Engine Diagnostic Facts
- * 2. Semantic Knowledge Base Retrieval (RAG)
- * 3. Anti-Hallucination Guardrails & Grounding Verification
+ * 2. Curated Knowledge Base Context Matching
+ * 3. Remediation Safety & Grounding Verification
  * 
  * Architectural Invariant:
  * "AI should explain evidence, not manufacture it."
@@ -31,7 +31,7 @@ export interface GroundedSynthesisResult {
 
 export class SageExplainer {
   /**
-   * Generates a constrained, RAG-enriched prompt package for LLMs
+   * Generates a constrained, context-enriched prompt package for LLMs
    * (e.g. Gemini, OpenAI, Claude, local Ollama).
    */
   public static generateLlmPrompt(report: StructuredCrashReport): LlmPromptPackage {

@@ -1,9 +1,10 @@
 /**
- * SAGE 2.0 — Semantic Knowledge Retriever (RAG Layer)
+ * SAGE 2.0 — Deterministic Knowledge Context Matcher
  * ─────────────────────────────────────────────────────────────────────────────
- * Offline-first high-speed semantic retrieval engine.
- * Computes cosine/BM25 similarity between structured crash evidence and the
- * curated compatibility knowledge base to extract relevant contextual articles.
+ * Offline-first weighted knowledge base matching engine.
+ * Computes heuristic relevance scores between structured crash evidence and the
+ * curated compatibility knowledge base (via category alignment, mod attribution,
+ * and token frequency overlap) to attach actionable contextual articles.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,9 +17,9 @@ export interface RetrievedContext {
   matchedSignals: string[];
 }
 
-export class SageRetriever {
+export class SageKnowledgeMatcher {
   /**
-   * Retrieves Top-K most relevant knowledge articles for a given crash report.
+   * Matches Top-K most relevant knowledge articles for a given crash report.
    */
   public static retrieve(
     report: StructuredCrashReport,
@@ -110,3 +111,7 @@ export class SageRetriever {
     return scoredArticles.slice(0, topK);
   }
 }
+
+/** Backward-compatible alias for SageKnowledgeMatcher */
+export const SageRetriever = SageKnowledgeMatcher;
+export type SageRetriever = SageKnowledgeMatcher;

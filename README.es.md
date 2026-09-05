@@ -37,7 +37,7 @@
 - 🔄 **Sincronización de Estado Distribuido Offline-First:** Mutaciones locales optimistas sub-8ms, colas de replay FIFO en IndexedDB y resolución determinista Last-Write-Wins.
 - 📡 **Arquitectura Interna Reactiva Orientada a Eventos:** 7 motores de dominio desacoplados comunicándose mediante un bus reactivo tipado (`MimEventMap`) con aislamiento estricto de fallos.
 - 🗄️ **Capa Multitenant con PostgreSQL RLS:** Autorización y aislamiento de datos forzado a nivel del kernel de la base de datos mediante JWT claims.
-- 🧪 **Motor de Diagnóstico Determinista:** 100% Macro F1 sobre corpus de evaluación canónico (125 casos) con recuperación semántica RAG y guardrails anti-alucinación.
+- 🧪 **Motor de Diagnóstico Determinista:** 100% Macro F1 sobre corpus de evaluación canónico (125 casos) con matching heurístico de conocimiento local y validación estricta de seguridad de comandos.
 
 ## 📊 Rendimiento Medido
 
@@ -49,7 +49,7 @@
 | **Latencia de Broadcast Realtime** | **42 ms** | < 100 ms | Supabase WebSocket Pub/Sub | ⚡ Verificado |
 | **Mutación UI Local Optimista** | **< 8 ms** | < 16 ms | Presupuesto de Frame React 19 + IDB | ⚡ Verificado |
 | **Replay de 50 Mutaciones Offline** | **180 ms** | < 500 ms | Cola FIFO de IndexedDB | ⚡ Verificado |
-| **Latencia Media de Inferencia SAGE** | **0.06 ms/log** | < 15 ms | Suite de Evaluación SAGE 2.0 | ⚡ Verificado |
+| **Latencia Media de Diagnóstico SAGE** | **0.06 ms/log** | < 15 ms | Suite de Evaluación SAGE 2.0 | ⚡ Verificado |
 | **Macro F1-Score en SAGE** | **100.0%** | > 85.0% | Corpus Canónico (125 Casos) | ⚡ Verificado |
 | **Diagnóstico Culpable Top-1** | **84.0%** | > 80.0% | Atribución Estricta de Mod | ⚡ Verificado |
 | **Diagnóstico Culpable Top-3** | **100.0%** | > 95.0% | Ranking de Candidatos | ⚡ Verificado |
@@ -133,32 +133,34 @@ Reporte de Crash Estructurado → JSON determinista consumido por la UI o por la
 | **Macro F1-Score** | **100.0%** | > 85.0% | 8 Clases Taxonómicas de Fallos | ✅ Verificado |
 | **Diagnóstico Culpable Top-1** | **84.0%** | > 80.0% | Atribución Estricta de Mod | ✅ Verificado |
 | **Diagnóstico Culpable Top-3** | **100.0%** | > 95.0% | Ranking de Candidatos | ✅ Verificado |
-| **Latencia Media de Inferencia** | **0.06 ms/log** | < 15.0 ms | Inferencia Determinista Local | ⚡ Real-Time |
+| **Latencia Media de Diagnóstico** | **0.06 ms/log** | < 15.0 ms | Determinista Local Sub-Milisegundo | ⚡ Real-Time |
 
 > [!NOTE]
 > **Frontera Operativa y Non-Goals:** SAGE evalúa evidencia estática de logs. No ejecuta bytecode de Java no confiable, no se acopla a la memoria de la JVM en ejecución, y la capa de LLM tiene terminantemente prohibido inventar culpables. El 100% Macro F1 refleja el rendimiento contra el corpus de benchmark de 125 casos canónicos en 8 categorías; trazas no canónicas o dañadas degradan con seguridad a `UNKNOWN_RUNTIME` con un score bajo acotado. Documentación completa en [docs/engines/SAGE_EVALUATION.md](./docs/engines/SAGE_EVALUATION.md).
 
-#### El Límite de Diseño de la IA y la Capa RAG Semántica
+#### Invariante de Arquitectura: Por qué Heurísticas Deterministas en vez de LLMs / RAG Vectorial
 > *"La IA debe explicar la evidencia, no manufacturarla."*
 
-SAGE impone una separación arquitectónica estricta entre diagnóstico, recuperación y explicación:
-1. **El Motor Determinista** extrae hechos, normaliza trazas, calcula el score de confianza e identifica al mod culpable basándose exclusivamente en el código y los logs.
-2. **Recuperación Semántica de Conocimiento (RAG):** El vector de evidencia consulta la **Base de Conocimiento de Compatibilidad** (`lib/intelligence/sage/knowledgeBase.ts`) mediante coincidencia por similitud de tokens y cosenos para extraer análisis de causa raíz documentados y workarounds verificados por la comunidad.
-3. **Guardrails Anti-Alucinación:** El motor `SageGuardrails` valida las acciones de remediación propuestas, exigiendo que las sugerencias tengan linaje directo en la evidencia e impidiendo matemáticamente que el LLM invente culpables o proponga comandos peligrosos.
-4. **La Capa de Explicación LLM** (`SageExplainer`) sintetiza los hechos diagnósticos verificados en lenguaje natural empático y accesible.
+Para el triaje local de crashes, invocar LLMs externos o montar pesadas bases de datos vectoriales introduce segundos de latencia, costos de API, dependencia de red y riesgo de alucinaciones. MIM utiliza normalización determinista de stacktraces, clasificación categórica, árboles de eliminación y matching sobre base de conocimiento que diagnostican el 100% de los crashes del benchmark en menos de **0.06 ms** con cero dependencias externas y reproducibilidad matemática.
+
+SAGE impone una separación arquitectónica estricta entre diagnóstico, consulta de contexto y explicación:
+1. **El Motor Heurístico Determinista** extrae hechos, normaliza trazas, calcula el score de confianza e identifica al mod culpable basándose exclusivamente en el código y los logs.
+2. **Matching de Contexto sobre Base de Conocimiento:** La evidencia estructurada consulta la **Base de Conocimiento de Compatibilidad** (`lib/intelligence/sage/knowledgeBase.ts`) mediante coincidencia offline ponderada de señales (alineación de categoría, atribución de mod y superposición de tokens) para adjuntar análisis de causa raíz documentados y workarounds comunitarios verificados.
+3. **Validación de Seguridad de Remediación:** El validador `SageSafetyValidator` verifica las acciones de remediación propuestas, comprobando la consistencia de atribución con los culpables identificados y bloqueando comandos de shell destructivos.
+4. **La Capa Opcional de Explicación LLM** (`SageExplainer`) sintetiza los hechos diagnósticos verificados en lenguaje natural si se conecta un modelo.
 
 ```
 Crash de Minecraft
        ↓
-[Motor Determinista SAGE]     → Hechos, evidencia, mod culpable, score de confianza
+[Motor Determinista SAGE]      → Hechos, evidencia, mod culpable, score de confianza (< 0.1 ms)
        ↓
 [Grafo de Evidencia]
        ↓
-[Recuperación Semántica (RAG)]→ Consulta la Base de Compatibilidad (Frecuencia de Tokens / Coseno)
+[Matcher de Base de Conocimiento] → Coincide con la Base de Compatibilidad mediante señales ponderadas
        ↓
-[Verificación de Guardrails]  → Bloquea alucinaciones, valida linaje de evidencia
+[Validador de Seguridad]       → Bloquea culpables contradictorios, garantiza comandos seguros
        ↓
-Salida Estructurada Fiel      → Plan de remediación verificado con citas fácticas
+Salida Estructurada Fiel       → Plan de remediación verificado con citas fácticas
 ```
 
 ---

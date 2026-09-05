@@ -69,9 +69,51 @@ function getSettingsPath(): string {
   return LOCAL_SETTINGS_FILE;
 }
 
+/**
+ * Returns the default source base directory.
+ * Priority:
+ *  1. MIM_SOURCE_BASE environment variable
+ *  2. D:\.MIM\source (if it exists on the host system)
+ *  3. %USERPROFILE%\.mim\source (universal fallback)
+ */
+export function getDefaultSourceBase(): string {
+  if (process.env.MIM_SOURCE_BASE) return path.resolve(process.env.MIM_SOURCE_BASE);
+  const devSource = path.join("D:", ".MIM", "source");
+  if (fs.existsSync(devSource)) return devSource;
+  return path.join(os.homedir(), ".mim", "source");
+}
+
+/**
+ * Returns the default builds base directory.
+ * Priority:
+ *  1. MIM_BUILDS_BASE environment variable
+ *  2. D:\.MIM\builds (if it exists on the host system)
+ *  3. %USERPROFILE%\.mim\builds (universal fallback)
+ */
+export function getDefaultBuildsBase(): string {
+  if (process.env.MIM_BUILDS_BASE) return path.resolve(process.env.MIM_BUILDS_BASE);
+  const devBuilds = path.join("D:", ".MIM", "builds");
+  if (fs.existsSync(devBuilds)) return devBuilds;
+  return path.join(os.homedir(), ".mim", "builds");
+}
+
+/**
+ * Returns the default Minecraft directory according to host platform.
+ */
+export function getDefaultMinecraftPath(): string {
+  if (process.env.MINECRAFT_PATH) return path.resolve(process.env.MINECRAFT_PATH);
+  if (process.platform === "win32") {
+    return path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+  }
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "minecraft");
+  }
+  return path.join(os.homedir(), ".minecraft");
+}
+
 export function getSettings(): MimSettings {
   const settingsFile = getSettingsPath();
-  const defaultMinecraft = path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+  const defaultMinecraft = getDefaultMinecraftPath();
   const defaultStaging = path.join(getPortableDir(), "staging");
 
   if (!fs.existsSync(defaultStaging)) {
@@ -103,8 +145,8 @@ export function getSettings(): MimSettings {
         }
       }
       return {
-        sourceBase: data.sourceBase || path.join("D:", ".MIM", "source"),
-        buildsBase: data.buildsBase || path.join("D:", ".MIM", "builds"),
+        sourceBase: data.sourceBase || getDefaultSourceBase(),
+        buildsBase: data.buildsBase || getDefaultBuildsBase(),
         downloadsPath: data.downloadsPath || path.join(os.homedir(), "Downloads"),
         minecraftPath: data.minecraftPath || defaultMinecraft,
         stagingPath: data.stagingPath || defaultStaging,
@@ -115,8 +157,8 @@ export function getSettings(): MimSettings {
     }
   }
   return {
-    sourceBase: process.env.MIM_SOURCE_BASE || path.join("D:", ".MIM", "source"),
-    buildsBase: process.env.MIM_BUILDS_BASE || path.join("D:", ".MIM", "builds"),
+    sourceBase: getDefaultSourceBase(),
+    buildsBase: getDefaultBuildsBase(),
     downloadsPath: path.join(os.homedir(), "Downloads"),
     minecraftPath: defaultMinecraft,
     stagingPath: defaultStaging,

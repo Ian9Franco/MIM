@@ -1,5 +1,5 @@
 /**
- * SAGE 2.0 — Diagnostic Inference Engine Types
+ * SAGE 2.0 — Heuristic Diagnostic Engine Types
  * ─────────────────────────────────────────────────────────────────────────────
  * Formal domain models for Minecraft crash classification, stack normalization,
  * evidence-based confidence scoring, and structured remediation.
@@ -88,6 +88,8 @@ export interface StructuredCrashReport {
   remediation: RemediationPlan;
   rawException?: string;
   timestamp: string;
-  inferenceDurationMs: number;
+  diagnosisDurationMs: number;
+  /** @deprecated Backward-compatible alias for diagnosisDurationMs */
+  inferenceDurationMs?: number;
   locale?: SageLocale;
 }

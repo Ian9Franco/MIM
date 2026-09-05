@@ -36,7 +36,7 @@ export interface SageDiagnoseOptions {
 
 export class SageCrashEngine {
   /**
-   * Runs the full diagnostic inference pipeline over a raw Minecraft log/crash report.
+   * Runs the full heuristic diagnostic pipeline over a raw Minecraft log/crash report.
    *
    * Pipeline:
    * 1. Environment & Stack Normalization
@@ -79,7 +79,7 @@ export class SageCrashEngine {
     );
 
     const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const inferenceDurationMs = Math.round((endTime - startTime) * 100) / 100;
+    const diagnosisDurationMs = Math.round((endTime - startTime) * 100) / 100;
 
     // Build descriptive root cause statement using locale
     const rootCause = formatLocalizedRootCause(classification.category, culpritMod, locale);
@@ -97,7 +97,8 @@ export class SageCrashEngine {
       remediation,
       rawException: classification.primaryException,
       timestamp: new Date().toISOString(),
-      inferenceDurationMs,
+      diagnosisDurationMs,
+      inferenceDurationMs: diagnosisDurationMs,
       locale
     };
   }

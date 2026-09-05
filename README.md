@@ -37,7 +37,7 @@
 - 🔄 **Offline-First Distributed State Synchronization:** Sub-8ms optimistic local mutations, IndexedDB FIFO replay queues, and deterministic Last-Write-Wins conflict resolution.
 - 📡 **Typed Event-Driven Internal Architecture:** 7 decoupled domain engines communicating over an asynchronous typed reactive bus (`MimEventMap`) with isolated fault boundaries.
 - 🗄️ **PostgreSQL RLS Multi-Tenant Data Layer:** Tenant boundary authorization enforced at the database kernel level with JWT security claims.
-- 🧪 **Deterministic Crash Diagnosis Engine:** 100% Macro F1 on canonical crash benchmark corpus (125 cases) with semantic RAG retrieval and anti-hallucination guardrails.
+- 🧪 **Deterministic Crash Diagnosis Engine:** 100% Macro F1 on canonical crash benchmark corpus (125 cases) with local knowledge base matching and strict command safety validation.
 
 ## 📊 Measured Performance
 
@@ -49,7 +49,7 @@
 | **Realtime Broadcast Latency** | **42 ms** | < 100 ms | Supabase WebSocket Pub/Sub | ⚡ Verified |
 | **Optimistic Local UI Mutation** | **< 8 ms** | < 16 ms | React 19 + IndexedDB Frame Budget | ⚡ Verified |
 | **50-Mutation Reconnection Replay** | **180 ms** | < 500 ms | IndexedDB FIFO Replay Queue | ⚡ Verified |
-| **SAGE Mean Inference Latency** | **0.06 ms/log** | < 15 ms | SAGE 2.0 Evaluation Suite | ⚡ Verified |
+| **SAGE Mean Diagnosis Latency** | **0.06 ms/log** | < 15 ms | SAGE 2.0 Evaluation Suite | ⚡ Verified |
 | **SAGE Macro F1-Score** | **100.0%** | > 85.0% | 125-Case Canonical Crash Corpus | ⚡ Verified |
 | **SAGE Top-1 Culprit Diagnosis** | **84.0%** | > 80.0% | 125-Case Canonical Crash Corpus | ⚡ Verified |
 | **SAGE Top-3 Culprit Diagnosis** | **100.0%** | > 95.0% | 125-Case Canonical Crash Corpus | ⚡ Verified |
@@ -133,32 +133,34 @@ Structured Crash Report    → Deterministic JSON schema consumed by UI or AI Ex
 | **Macro F1-Score** | **100.0%** | > 85.0% | 8 Failure Taxonomy Classes | ✅ Verified |
 | **Top-1 Culprit Diagnosis** | **84.0%** | > 80.0% | Strict Mod Attribution | ✅ Verified |
 | **Top-3 Culprit Diagnosis** | **100.0%** | > 95.0% | Candidate Ranking | ✅ Verified |
-| **Mean Inference Latency** | **0.06 ms/log** | < 15.0 ms | Sub-Millisecond Deterministic | ⚡ Real-Time |
+| **Mean Diagnosis Latency** | **0.06 ms/log** | < 15.0 ms | Sub-Millisecond Deterministic | ⚡ Real-Time |
 
 > [!NOTE]
 > **Operational Boundary & Non-Goals:** SAGE evaluates static log evidence. It does not execute untrusted Java bytecode, does not attach to live JVM runtime memory, and the LLM layer is strictly forbidden from manufacturing culprits. The 100% Macro F1 reflects performance against the 125 canonical benchmark corpus across 8 failure modes; unseen or corrupted wild traces degrade safely to `UNKNOWN_RUNTIME` with bounded low confidence. Full taxonomy report in [docs/engines/SAGE_EVALUATION.md](./docs/engines/SAGE_EVALUATION.md).
 
-#### The AI Design Boundary & Semantic RAG Layer
+#### Architectural Invariant: Why Deterministic Heuristics Over LLMs / Vector RAG
 > *"AI should explain evidence, not manufacture it."*
 
-SAGE enforces an architectural separation between diagnosis, retrieval, and explanation:
-1. **The Deterministic Engine** extracts facts, normalizes traces, scores confidence, and identifies culprits strictly from codebase evidence.
-2. **Semantic Knowledge Retrieval (RAG):** The evidence vector queries the curated **Compatibility Knowledge Base** (`lib/intelligence/sage/knowledgeBase.ts`) via offline cosine/token-similarity retrieval to extract documented root cause analyses and verified community workarounds.
-3. **Anti-Hallucination Guardrails:** The `SageGuardrails` engine validates proposed remediation steps, verifying that recommendations strictly cite retrieved lineage and mathematically forbidding the LLM from inventing culprits or suggesting unsafe operations.
-4. **The LLM Explanation Layer** (`SageExplainer`) synthesizes verified diagnostic facts into empathetic, natural language.
+For local crash triage, calling external LLMs or standing up heavy vector databases introduces seconds of latency, API costs, network dependencies, and hallucination risks. MIM uses deterministic stacktrace normalization, category classification, elimination trees, and knowledge-base matching that diagnose 100% of benchmark crashes in under **0.06 ms** with zero external dependencies and mathematical reproducibility.
+
+SAGE enforces an architectural separation between diagnosis, context matching, and explanation:
+1. **The Deterministic Heuristic Engine** extracts facts, normalizes traces, scores confidence, and identifies culprits strictly from codebase evidence.
+2. **Knowledge Base Context Matching:** The structured evidence queries the curated **Compatibility Knowledge Base** (`lib/intelligence/sage/knowledgeBase.ts`) via offline weighted signal matching (category alignment, mod attribution, and token overlap) to attach documented root cause analyses and verified community workarounds.
+3. **Remediation Safety Validation:** The `SageSafetyValidator` engine validates proposed remediation steps, verifying attribution consistency with identified culprits and blocking destructive shell commands.
+4. **The Optional LLM Explanation Layer** (`SageExplainer`) synthesizes verified diagnostic facts into clear, natural language if an LLM is attached.
 
 ```
 Minecraft Crash
        ↓
-[SAGE Deterministic Engine]   → Facts, evidence, culprit mod, confidence score
+[SAGE Deterministic Engine]     → Facts, evidence, culprit mod, confidence score (< 0.1 ms)
        ↓
 [Evidence Graph]
        ↓
-[Semantic Retrieval (RAG)]    → Queries Compatibility Knowledge Base (BM25 / Cosine)
+[Knowledge Base Matcher]        → Matches Compatibility Knowledge Base via weighted signals
        ↓
-[Guardrail Verification]       → Blocks hallucinations, enforces evidence lineage
+[Safety Validator]              → Blocks contradictory culprits, ensures command safety
        ↓
-Structured Grounded Output    → Verified remediation plan with factual citations
+Structured Grounded Output      → Verified remediation plan with factual citations
 ```
 
 ---

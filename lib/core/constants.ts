@@ -63,15 +63,23 @@ export type Loader = (typeof LOADERS)[number];
  *   MIM_SOURCE_BASE=D:\.MIM\source   (Windows default)
  *   MIM_SOURCE_BASE=/mnt/mine/source  (Linux / WSL)
  */
+const defaultHome = process.env.USERPROFILE || process.env.HOME || "";
+
 export const SOURCE_BASE: string =
-  process.env.MIM_SOURCE_BASE ?? path.join("D:", "\\.MIM", "source");
+  process.env.MIM_SOURCE_BASE ??
+  (process.platform === "win32"
+    ? path.join("D:", ".MIM", "source")
+    : path.join(defaultHome, ".mim", "source"));
 
 /**
  * Root where finished builds are written.
  * Override via MIM_BUILDS_BASE env var.
  */
 export const BUILDS_BASE: string =
-  process.env.MIM_BUILDS_BASE ?? path.join("D:", "\\.MIM", "builds");
+  process.env.MIM_BUILDS_BASE ??
+  (process.platform === "win32"
+    ? path.join("D:", ".MIM", "builds")
+    : path.join(defaultHome, ".mim", "builds"));
 
 /**
  * Marker used internally — the actual Downloads path is resolved at runtime

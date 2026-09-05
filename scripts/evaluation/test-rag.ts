@@ -1,8 +1,9 @@
 /**
- * SAGE 2.0 — RAG Layer & Guardrails Test Harness
+ * SAGE 2.0 — Knowledge Context Matcher & Safety Validator Test Harness
  * ─────────────────────────────────────────────────────────────────────────────
- * Verifies semantic retrieval from the compatibility knowledge base,
- * anti-hallucination guardrail validation, and grounded remediation synthesis.
+ * Verifies heuristic retrieval from the compatibility knowledge base,
+ * remediation safety validation (destructive commands & mod attribution),
+ * and grounded remediation synthesis.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -13,11 +14,11 @@ import { SageGuardrails } from "../../lib/intelligence/sage/guardrails";
 
 function runRagVerification() {
   console.log(`\n===============================================================`);
-  console.log(`🧠 SAGE 2.0 AI & RAG LAYER VERIFICATION`);
+  console.log(`🧠 SAGE 2.0 KNOWLEDGE BASE MATCHING & SAFETY VALIDATION`);
   console.log(`===============================================================\n`);
 
   // Test Case 1: Sodium & OptiFine Rendering Conflict
-  console.log(`[Test 1] Verifying Semantic Retrieval on Mod Conflict...`);
+  console.log(`[Test 1] Verifying Knowledge Base Matching on Mod Conflict...`);
   const mockLog1 = `[Render thread/FATAL] [Minecraft/]: Error executing task on Client
 org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered
 \tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)
@@ -41,8 +42,8 @@ Fabric Loader: 0.15.11`;
   }
   console.log(`  ✓ Retrieval accuracy verified on Sodium/OptiFine conflict.`);
 
-  // Test Case 2: Guardrail Anti-Hallucination & Lineage
-  console.log(`\n[Test 2] Verifying Guardrail Hallucination Trap...`);
+  // Test Case 2: Safety Validator: Attribution & Dangerous Commands
+  console.log(`\n[Test 2] Verifying Safety Validator: Attribution & Dangerous Commands...`);
   const hallucinatedActions = [
     "Disable Windows Defender real-time protection to allow jar execution.",
     "Install the official Sodium release build.",
@@ -53,19 +54,19 @@ Fabric Loader: 0.15.11`;
     report1,
     retrieved1,
     hallucinatedActions,
-    "completely_made_up_mod_name" // Hallucinated culprit
+    "completely_made_up_mod_name" // Contradictory culprit
   );
 
-  console.log(`  • Guardrail Grounding Score: ${(guardrailResult.groundingScore * 100).toFixed(0)}%`);
-  console.log(`  • Guardrail Violations Caught: ${guardrailResult.violations.length}`);
+  console.log(`  • Safety Grounding Score: ${(guardrailResult.groundingScore * 100).toFixed(0)}%`);
+  console.log(`  • Safety Violations Caught: ${guardrailResult.violations.length}`);
   for (const v of guardrailResult.violations) {
     console.log(`    - 🚨 ${v}`);
   }
 
   if (guardrailResult.valid) {
-    throw new Error("Test 2 Failed: Guardrail failed to catch forbidden action and hallucinated culprit!");
+    throw new Error("Test 2 Failed: Safety validator failed to catch forbidden action and contradictory culprit!");
   }
-  console.log(`  ✓ Hallucination trap and security guardrails successfully triggered.`);
+  console.log(`  ✓ Security violation and attribution trap successfully triggered.`);
 
   // Test Case 3: Grounded Synthesis Generation
   console.log(`\n[Test 3] Verifying Grounded Synthesis Pipeline...`);
@@ -76,7 +77,7 @@ Fabric Loader: 0.15.11`;
   console.log(`  ✓ Grounded synthesis completed successfully.`);
 
   console.log(`\n===============================================================`);
-  console.log(`🎉 ALL SAGE AI & RAG LAYER VERIFICATIONS PASSED!`);
+  console.log(`🎉 ALL SAGE KNOWLEDGE MATCHING & SAFETY VALIDATIONS PASSED!`);
   console.log(`===============================================================\n`);
 }
 

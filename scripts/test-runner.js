@@ -81,7 +81,7 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-unit.test.ts"]
     },
     {
-      name: "SAGE 2.0 AI & RAG Layer (Retrieval + Guardrails)",
+      name: "SAGE 2.0 Knowledge Base Matcher & Safety Validator",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/evaluation/test-rag.ts"]
     },
@@ -173,7 +173,7 @@ async function main() {
   log("  ──────────────────────────────────────────────────────────────");
   log("  NBT Binary Engine      | 12 Integration Tests   |   100.0%    ", "green");
   log("  SAGE Taxonomy Engine   | 125 Benchmark Logs     |   100.0%    ", "green");
-  log("  SAGE RAG & Guardrails  | 3 Behavioral Suites    |   100.0%    ", "green");
+  log("  SAGE Context & Safety  | 3 Behavioral Suites    |   100.0%    ", "green");
   log("  Aduana Storage Engine  | 4 Scale Invariant Tiers|   100.0%    ", "green");
   log("  ──────────────────────────────────────────────────────────────");
   log("  TOTAL ENGINE COVERAGE  | 144 Verified Scenarios |    96.4%    ", "bold");

@@ -6,6 +6,7 @@ const validateKeysSchema = z.object({
   curseforge: z.string().optional().nullable(),
   modrinth: z.string().optional().nullable(),
   virusTotal: z.string().optional().nullable(),
+  gemini: z.string().optional().nullable(),
 });
 
 export const POST = withApiGuard(
@@ -29,7 +30,7 @@ export const POST = withApiGuard(
       );
     }
 
-    const { curseforge, modrinth, virusTotal } = parsed.data;
+    const { curseforge, modrinth, virusTotal, gemini } = parsed.data;
     const results: Record<string, boolean | null> = {};
 
     // 1. CurseForge Validation (Required)
@@ -80,6 +81,24 @@ export const POST = withApiGuard(
       }
     } else {
       results.virusTotal = null; // Not configured
+    }
+
+    // 4. Gemini Validation (Optional)
+    if (gemini?.trim()) {
+      try {
+        const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+          headers: {
+            "x-goog-api-key": gemini.trim(),
+            "x-goog-api-client": "mim-app/1.0.0",
+          },
+          signal: AbortSignal.timeout(15_000),
+        });
+        results.gemini = geminiRes.ok;
+      } catch {
+        results.gemini = false;
+      }
+    } else {
+      results.gemini = null; // Not configured
     }
 
     return NextResponse.json({ results });

@@ -139,6 +139,11 @@ async function main() {
       name: "Architecture Boundary Contract Suite",
       cmd: "npx",
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/architecture-boundaries.test.ts"]
+    },
+    {
+      name: "Secure Settings Migration & Secret Boundary",
+      cmd: "npx",
+      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/secure-settings.test.ts"]
     }
   ];
 

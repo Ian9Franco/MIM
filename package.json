@@ -81,6 +81,7 @@
     },
     "files": [
       "standalone/main.js",
+      "standalone/secret-store.js",
       "standalone/prepare.js",
       "standalone/scraper.js",
       ".next/standalone/**/*",

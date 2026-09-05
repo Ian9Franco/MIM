@@ -1,13 +1,47 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, safeStorage } = require('electron');
 const { fork } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { runCurseForgeScraper } = require('./scraper');
+const { createSecretStore } = require('./secret-store');
 
 let mainWindow = null;
 let serverProcess = null;
 let pendingProtocolUrl = null;
 const PORT = process.env.PORT || 3000;
+let secretStore = null;
+
+function getPortableDirectory() {
+  if (process.env.MIM_PORTABLE_DIR) return path.resolve(process.env.MIM_PORTABLE_DIR);
+  const developerSource = path.join('D:', '.MIM', 'source');
+  if (fs.existsSync(developerSource)) return path.join(developerSource, '.mim-index');
+  return path.join(app.getPath('home'), '.mim-index');
+}
+
+function initializeSecretStore() {
+  const portableDir = getPortableDirectory();
+  fs.mkdirSync(portableDir, { recursive: true });
+  const portableSettings = path.join(portableDir, 'mim-settings.json');
+  if (!fs.existsSync(portableSettings)) {
+    const legacyCandidates = [
+      path.join(process.cwd(), 'mim-settings.json'),
+      path.join(__dirname, '..', '.next', 'standalone', 'mim-settings.json'),
+    ];
+    const legacySettings = legacyCandidates.find((candidate) => fs.existsSync(candidate));
+    if (legacySettings) {
+      fs.copyFileSync(legacySettings, portableSettings);
+      fs.unlinkSync(legacySettings);
+    }
+  }
+  secretStore = createSecretStore({
+    safeStorage,
+    settingsPath: portableSettings,
+    secretsPath: path.join(portableDir, 'mim-secrets.enc.json'),
+  });
+  const secrets = secretStore.migratePlaintextSettings();
+  return secretStore.toEnvironment(secrets);
+}
 
 function handleDeepLink(url) {
   try {
@@ -31,7 +65,7 @@ function handleDeepLink(url) {
 }
 
 // Start the Next.js standalone server as a background subprocess
-function startNextServer() {
+function startNextServer(secretEnvironment = {}) {
   const serverPath = path.join(__dirname, '..', '.next', 'standalone', 'server.js');
   const serverDir = path.join(__dirname, '..', '.next', 'standalone');
   
@@ -44,7 +78,8 @@ function startNextServer() {
       ...process.env,
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
-      NODE_ENV: 'production'
+      NODE_ENV: 'production',
+      ...secretEnvironment
     },
     silent: false // Lets us see server logs in the terminal
   });
@@ -56,6 +91,21 @@ function startNextServer() {
       const { scrapeCollectionMods } = require('./scraper');
       const mods = await scrapeCollectionMods(slug);
       serverProcess.send({ type: 'scrape_mods_response', slug, mods });
+    }
+
+    if (msg.type === 'mim:secrets:update' && typeof msg.requestId === 'string') {
+      try {
+        if (!secretStore) throw new Error('Secret store is not initialized');
+        secretStore.update(msg.secrets || {});
+        serverProcess.send({ type: 'mim:secrets:updated', requestId: msg.requestId, ok: true });
+      } catch (error) {
+        serverProcess.send({
+          type: 'mim:secrets:updated',
+          requestId: msg.requestId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   });
 
@@ -148,7 +198,14 @@ app.whenReady().then(() => {
     pendingProtocolUrl = initialProtocolUrl;
   }
 
-  startNextServer();
+  let secretEnvironment = {};
+  try {
+    secretEnvironment = initializeSecretStore();
+  } catch (error) {
+    console.error('Failed to initialize encrypted credential storage:', error);
+  }
+
+  startNextServer(secretEnvironment);
   
   waitForServer(() => {
     console.log('✅ Server is ready! Launching window.');

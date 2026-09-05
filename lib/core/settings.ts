@@ -1,6 +1,15 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import {
+  API_KEY_FIELDS,
+  type ApiKeyField,
+  type ApiKeyUpdates,
+  getApiKeyStatus,
+  getStoredApiKey,
+  hydrateSessionApiKeys,
+  updateStoredApiKeys,
+} from "./secretStore";
 
 export interface MimSettings {
   sourceBase: string;
@@ -9,11 +18,13 @@ export interface MimSettings {
   minecraftPath: string;
   stagingPath: string;
   validated?: boolean;
-  modrinthApiKey?: string;
-  curseforgeApiKey?: string;
-  virusTotalApiKey?: string;
-  geminiApiKey?: string;
 }
+
+export type SettingsUpdate = Partial<MimSettings> & ApiKeyUpdates;
+export type PublicSettings = MimSettings & {
+  apiKeysConfigured: ReturnType<typeof getApiKeyStatus>;
+  secretPersistence: "safeStorage" | "session";
+};
 
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
 
@@ -25,6 +36,7 @@ const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
  *  2. %USERPROFILE%\.mim-index (universal portable fallback for executable/dist/host runs)
  */
 export function getPortableDir(): string {
+  if (process.env.MIM_PORTABLE_DIR) return path.resolve(process.env.MIM_PORTABLE_DIR);
   const dMineSource = path.join("D:", ".MIM", "source");
   if (fs.existsSync(dMineSource)) {
     return path.join(dMineSource, ".mim-index");
@@ -73,6 +85,23 @@ export function getSettings(): MimSettings {
   if (fs.existsSync(settingsFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
+      if (typeof process.send !== "function") {
+        const legacySecrets: ApiKeyUpdates = {};
+        let hasLegacySecrets = false;
+        for (const field of API_KEY_FIELDS) {
+          if (typeof data[field] === "string" && data[field].trim()) {
+            legacySecrets[field] = data[field].trim();
+            delete data[field];
+            hasLegacySecrets = true;
+          }
+        }
+        if (hasLegacySecrets) {
+          hydrateSessionApiKeys(legacySecrets);
+          const temporaryFile = `${settingsFile}.${process.pid}.migration.tmp`;
+          fs.writeFileSync(temporaryFile, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
+          fs.renameSync(temporaryFile, settingsFile);
+        }
+      }
       return {
         sourceBase: data.sourceBase || path.join("D:", ".MIM", "source"),
         buildsBase: data.buildsBase || path.join("D:", ".MIM", "builds"),
@@ -80,10 +109,6 @@ export function getSettings(): MimSettings {
         minecraftPath: data.minecraftPath || defaultMinecraft,
         stagingPath: data.stagingPath || defaultStaging,
         validated: !!data.validated,
-        modrinthApiKey: data.modrinthApiKey || "",
-        curseforgeApiKey: data.curseforgeApiKey || "",
-        virusTotalApiKey: data.virusTotalApiKey || "",
-        geminiApiKey: data.geminiApiKey || ""
       };
     } catch (e) {
       console.warn(`[/lib/core/settings] Corrupted or unreadable settings file at ${settingsFile}, falling back to defaults:`, e);
@@ -96,34 +121,64 @@ export function getSettings(): MimSettings {
     minecraftPath: defaultMinecraft,
     stagingPath: defaultStaging,
     validated: false,
-    modrinthApiKey: "",
-    curseforgeApiKey: "",
-    virusTotalApiKey: "",
-    geminiApiKey: ""
   };
 }
 
-export function saveSettings(settings: Partial<MimSettings>) {
+export function getPublicSettings(): PublicSettings {
+  const settings = getSettings();
+  const apiKeysConfigured = getApiKeyStatus();
+  apiKeysConfigured.modrinthApiKey ||= Boolean(process.env.MODRINTH_API_KEY || process.env.MODRINTH_TOKEN);
+  apiKeysConfigured.curseforgeApiKey ||= Boolean(process.env.CURSEFORGE_API_KEY);
+  apiKeysConfigured.virusTotalApiKey ||= Boolean(process.env.VIRUSTOTAL_API_KEY);
+  apiKeysConfigured.geminiApiKey ||= Boolean(process.env.GEMINI_API_KEY);
+  return {
+    ...settings,
+    apiKeysConfigured,
+    secretPersistence: typeof process.send === "function" ? "safeStorage" : "session",
+  };
+}
+
+export async function saveSettings(settings: SettingsUpdate): Promise<PublicSettings> {
   const settingsFile = getSettingsPath();
   const current = getSettings();
-  const next = { ...current, ...settings };
-  fs.writeFileSync(settingsFile, JSON.stringify(next, null, 2), "utf-8");
-  return next;
+  const secrets: ApiKeyUpdates = {};
+  for (const field of API_KEY_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(settings, field)) secrets[field] = settings[field];
+  }
+
+  const publicSettings = { ...settings } as Record<string, unknown>;
+  for (const field of API_KEY_FIELDS) delete publicSettings[field];
+  const next = { ...current, ...publicSettings } as MimSettings;
+
+  // The encrypted write succeeds before public settings are committed. A
+  // failed safeStorage operation therefore cannot fall back to plaintext.
+  await updateStoredApiKeys(secrets);
+  const temporaryFile = `${settingsFile}.${process.pid}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(next, null, 2), { encoding: "utf-8", mode: 0o600 });
+  fs.renameSync(temporaryFile, settingsFile);
+  return getPublicSettings();
 }
 
 export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal" | "gemini"): string {
-  const settings = getSettings();
+  const fieldByName: Record<typeof keyName, ApiKeyField> = {
+    modrinth: "modrinthApiKey",
+    curseforge: "curseforgeApiKey",
+    virustotal: "virusTotalApiKey",
+    gemini: "geminiApiKey",
+  };
+  const stored = getStoredApiKey(fieldByName[keyName]);
+  if (stored) return stored;
   if (keyName === "modrinth") {
-    return settings.modrinthApiKey || process.env.MODRINTH_API_KEY || process.env.MODRINTH_TOKEN || "";
+    return process.env.MODRINTH_API_KEY || process.env.MODRINTH_TOKEN || "";
   }
   if (keyName === "curseforge") {
-    return settings.curseforgeApiKey || process.env.CURSEFORGE_API_KEY || "";
+    return process.env.CURSEFORGE_API_KEY || "";
   }
   if (keyName === "virustotal") {
-    return settings.virusTotalApiKey || process.env.VIRUSTOTAL_API_KEY || "";
+    return process.env.VIRUSTOTAL_API_KEY || "";
   }
   if (keyName === "gemini") {
-    return settings.geminiApiKey || process.env.GEMINI_API_KEY || "";
+    return process.env.GEMINI_API_KEY || "";
   }
   return "";
 }

@@ -1,7 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
+
+type ApiKeyStatus = {
+  modrinthApiKey: boolean;
+  curseforgeApiKey: boolean;
+  virusTotalApiKey: boolean;
+  geminiApiKey: boolean;
+};
+
+type SettingsResponse = {
+  sourceBase: string;
+  buildsBase: string;
+  downloadsPath: string;
+  minecraftPath: string;
+  stagingPath: string;
+  apiKeysConfigured: ApiKeyStatus;
+};
+
+const EMPTY_KEY_STATUS: ApiKeyStatus = {
+  modrinthApiKey: false,
+  curseforgeApiKey: false,
+  virusTotalApiKey: false,
+  geminiApiKey: false,
+};
 
 export function useSettingsManager(onClose: () => void) {
-  const [originalSettings, setOriginalSettings] = useState<any>(null);
+  const [originalSettings, setOriginalSettings] = useState<SettingsResponse | null>(null);
+  const [apiKeysConfigured, setApiKeysConfigured] = useState<ApiKeyStatus>(EMPTY_KEY_STATUS);
   
   const [sourceBase, setSourceBase] = useState("");
   const [buildsBase, setBuildsBase] = useState("");
@@ -43,33 +68,37 @@ export function useSettingsManager(onClose: () => void) {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/settings")
+    migrateLegacyBrowserGeminiKey()
+      .catch(() => false)
+      .then(() => fetch("/api/settings"))
       .then((r) => {
         if (!r.ok) throw new Error("Error al cargar ajustes");
         return r.json();
       })
-      .then((d) => {
+      .then((d: SettingsResponse) => {
         setOriginalSettings(d);
+        const configured = d.apiKeysConfigured || EMPTY_KEY_STATUS;
+        setApiKeysConfigured(configured);
         setSourceBase(d.sourceBase || "");
         setBuildsBase(d.buildsBase || "");
         setDownloadsPath(d.downloadsPath || "");
         setMinecraftPath(d.minecraftPath || "");
         setStagingPath(d.stagingPath || "");
-        setModrinthApiKey(d.modrinthApiKey || "");
-        setCurseforgeApiKey(d.curseforgeApiKey || "");
-        setVirusTotalApiKey(d.virusTotalApiKey || "");
-        setGeminiApiKey(d.geminiApiKey || localStorage.getItem("mim_gemini_api_key") || "");
+        setModrinthApiKey("");
+        setCurseforgeApiKey("");
+        setVirusTotalApiKey("");
+        setGeminiApiKey("");
+        setKeyValidation({
+          curseforge: configured.curseforgeApiKey,
+          modrinth: configured.modrinthApiKey ? true : null,
+          virusTotal: configured.virusTotalApiKey ? true : null,
+          gemini: configured.geminiApiKey ? true : null,
+        });
         setLoading(false);
         
         validatePaths([
           d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.stagingPath
         ]);
-        validateKeys(
-          d.curseforgeApiKey,
-          d.modrinthApiKey,
-          d.virusTotalApiKey,
-          d.geminiApiKey || localStorage.getItem("mim_gemini_api_key") || ""
-        );
       })
       .catch((e) => {
         console.error(e);
@@ -77,9 +106,14 @@ export function useSettingsManager(onClose: () => void) {
       });
   }, []);
 
-  const validateKeys = async (cf: string, mr: string, vt: string, gemini: string) => {
+  const validateKeys = useCallback(async (cf: string, mr: string, vt: string, gemini: string) => {
     if (!cf && !mr && !vt && !gemini) {
-      setKeyValidation({ curseforge: false, modrinth: true, virusTotal: true, gemini: null });
+      setKeyValidation({
+        curseforge: apiKeysConfigured.curseforgeApiKey,
+        modrinth: apiKeysConfigured.modrinthApiKey ? true : null,
+        virusTotal: apiKeysConfigured.virusTotalApiKey ? true : null,
+        gemini: apiKeysConfigured.geminiApiKey ? true : null,
+      });
       return;
     }
     
@@ -92,13 +126,18 @@ export function useSettingsManager(onClose: () => void) {
       });
       if (res.ok) {
         const { results } = await res.json();
-        setKeyValidation(results);
+        setKeyValidation({
+          curseforge: cf ? results.curseforge : apiKeysConfigured.curseforgeApiKey,
+          modrinth: mr ? results.modrinth : (apiKeysConfigured.modrinthApiKey ? true : null),
+          virusTotal: vt ? results.virusTotal : (apiKeysConfigured.virusTotalApiKey ? true : null),
+          gemini: gemini ? results.gemini : (apiKeysConfigured.geminiApiKey ? true : null),
+        });
       }
     } catch (e) {
       console.error("Error validando keys", e);
     }
     setIsValidatingKeys(false);
-  };
+  }, [apiKeysConfigured]);
 
   const validatePaths = async (paths: string[]) => {
     setIsValidating(true);
@@ -136,7 +175,7 @@ export function useSettingsManager(onClose: () => void) {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, loading]);
+  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, loading, validateKeys]);
 
   const handlePickFolder = async (setter: (p: string) => void, isMinecraft = false, currentPath = "") => {
     if (pathValidation[currentPath] === false) {
@@ -179,10 +218,10 @@ export function useSettingsManager(onClose: () => void) {
       setDownloadsPath(originalSettings.downloadsPath || "");
       setMinecraftPath(originalSettings.minecraftPath || "");
       setStagingPath(originalSettings.stagingPath || "");
-      setModrinthApiKey(originalSettings.modrinthApiKey || "");
-      setCurseforgeApiKey(originalSettings.curseforgeApiKey || "");
-      setVirusTotalApiKey(originalSettings.virusTotalApiKey || "");
-      setGeminiApiKey(originalSettings.geminiApiKey || "");
+      setModrinthApiKey("");
+      setCurseforgeApiKey("");
+      setVirusTotalApiKey("");
+      setGeminiApiKey("");
     }
     setCanEdit(false);
   };
@@ -195,10 +234,7 @@ export function useSettingsManager(onClose: () => void) {
       downloadsPath !== originalSettings.downloadsPath ||
       minecraftPath !== originalSettings.minecraftPath ||
       stagingPath !== originalSettings.stagingPath ||
-      modrinthApiKey !== (originalSettings.modrinthApiKey || "") ||
-      curseforgeApiKey !== (originalSettings.curseforgeApiKey || "") ||
-      virusTotalApiKey !== (originalSettings.virusTotalApiKey || "") ||
-      geminiApiKey !== (originalSettings.geminiApiKey || "")
+      Boolean(modrinthApiKey || curseforgeApiKey || virusTotalApiKey || geminiApiKey)
     );
   };
 
@@ -226,6 +262,10 @@ export function useSettingsManager(onClose: () => void) {
 
   const handleSave = async () => {
     setSaving(true);
+    if (!originalSettings) {
+      setSaving(false);
+      return;
+    }
     const changes = [];
     if (sourceBase !== originalSettings.sourceBase) changes.push({ name: "Source", old: originalSettings.sourceBase, new: sourceBase });
     if (buildsBase !== originalSettings.buildsBase) changes.push({ name: "Builds", old: originalSettings.buildsBase, new: buildsBase });
@@ -251,23 +291,25 @@ export function useSettingsManager(onClose: () => void) {
     }
 
     setMoveProgress("Guardando ajustes...");
-    try {
-      if (geminiApiKey) {
-        localStorage.setItem("mim_gemini_api_key", geminiApiKey.trim());
-      }
-    } catch (e) {
-      console.warn("[useSettingsManager] Unable to persist API key to localStorage:", e);
-    }
-
-    await fetch("/api/settings", {
+    const secretUpdates = Object.fromEntries(
+      Object.entries({ modrinthApiKey, curseforgeApiKey, virusTotalApiKey, geminiApiKey })
+        .filter(([, value]) => value.trim().length > 0)
+        .map(([key, value]) => [key, value.trim()])
+    );
+    const response = await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath,
-        modrinthApiKey, curseforgeApiKey, virusTotalApiKey, geminiApiKey,
+        ...secretUpdates,
         validated: true 
       })
     });
+    if (!response.ok) {
+      setSaving(false);
+      setMoveProgress("No se pudieron guardar los ajustes.");
+      return;
+    }
     
     setSaving(false);
     onClose();
@@ -282,7 +324,7 @@ export function useSettingsManager(onClose: () => void) {
     showModrinth, setShowModrinth, showCurseforge, setShowCurseforge, showVirusTotal, setShowVirusTotal,
     showGemini, setShowGemini,
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
-    showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, 
+    showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, apiKeysConfigured,
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
     showInvalidPathsWarning, setShowInvalidPathsWarning,
     pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave

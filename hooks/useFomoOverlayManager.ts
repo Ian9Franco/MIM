@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/core/types";
 import { mimDB } from "@/lib/storage/indexeddb";
+import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
 
@@ -345,18 +346,17 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
   };
 
-  const handleExplain = async (customKey?: string, forceRefresh?: boolean, personalityOverride?: "bully" | "standard") => {
+  const handleExplain = async (_customKey?: string, forceRefresh?: boolean, personalityOverride?: "bully" | "standard") => {
     if (isExplaining) return;
-    if (explainedBody && !customKey && !forceRefresh && !personalityOverride) {
+    if (explainedBody && !forceRefresh && !personalityOverride) {
       setExplainedBody(null);
       return;
     }
 
     const targetPersonality = personalityOverride || botPersonality;
-    const savedKey = customKey || localStorage.getItem("mim_gemini_api_key") || "";
     const cacheKey = `mim_explain_${mod.projectId}_${targetPersonality}`;
 
-    if (!customKey && !forceRefresh && !personalityOverride) {
+    if (!forceRefresh && !personalityOverride) {
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
@@ -378,6 +378,8 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     setIsExplaining(true);
     setExplainError(null);
 
+    await migrateLegacyBrowserGeminiKey().catch(() => false);
+
     const galleryUrls = (gallery || [])
       .map((g: any) => g?.thumbnailUrl || g?.url)
       .filter((u: any): u is string => typeof u === "string" && u.length > 0)
@@ -386,10 +388,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     try {
       const res = await fetch("/api/fomo/explain", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(savedKey ? { "x-gemini-key": savedKey } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: mod.projectId,
           title: mod.title,
@@ -401,7 +400,6 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           categories: mod.categories || [],
           loaders: mod.loaders || [],
           galleryUrls,
-          clientApiKey: savedKey,
           personality: targetPersonality,
         }),
       });
@@ -463,13 +461,9 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     setIsChatSending(true);
 
     try {
-      const savedKey = localStorage.getItem("mim_gemini_api_key") || "";
       const res = await fetch("/api/fomo/explain", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(savedKey ? { "x-gemini-key": savedKey } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "chat",
           projectId: mod.projectId,
@@ -479,7 +473,6 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           categories: mod.categories || [],
           loaders: mod.loaders || [],
           initialSummary: explainedBody || "",
-          clientApiKey: savedKey,
           messages: chatMessages,
           question: query,
           personality: botPersonality,

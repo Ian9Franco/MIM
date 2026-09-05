@@ -52,3 +52,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/28
 - **Resumen:** corrigió en `docs/releases/CHANGELOG.md` el enlace obsoleto de `PROJECT_STATUS.md`, apuntándolo a la ubicación canónica `docs/planning/PROJECT_STATUS.md` para que también funcione correctamente al renderizarse como cuerpo de un GitHub Release.
+
+## 2026-09-05 20:11:26 — McGonagall — PR #30
+
+- **Título:** 🏰 McGonagall: formalizo los errores de SAGE
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/30
+- **Resumen:** formalizó el contrato de errores de `/api/sage/chat` con códigos internos estables, retryability, severidad y acción recomendada; preservó los identificadores legados y agregó una suite de regresión ejecutada por CI.

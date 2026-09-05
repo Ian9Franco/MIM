@@ -45,3 +45,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/26
 - **Resumen:** reemplazó `Math.random()` por `crypto.randomUUID()` en el nombre temporal usado por la escritura atómica de la caché SAGE, manteniendo un fallback acotado para el caso anómalo en que Node crypto no esté disponible.
+
+## 2026-09-05 19:06:23 — Hermione — PR #28
+
+- **Título:** 📚 Hermione: corrijo el enlace de estado del release
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/28
+- **Resumen:** corrigió en `docs/releases/CHANGELOG.md` el enlace obsoleto de `PROJECT_STATUS.md`, apuntándolo a la ubicación canónica `docs/planning/PROJECT_STATUS.md` para que también funcione correctamente al renderizarse como cuerpo de un GitHub Release.

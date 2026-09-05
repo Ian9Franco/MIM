@@ -8,6 +8,7 @@
 
 **[English](./README.md)** • **[Español](./README.es.md)**
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/37ef1c7cc6c442ebbbcaf313bccb9558)](https://app.codacy.com/gh/Ian9Franco/MIM?utm_source=github.com&utm_medium=referral&utm_content=Ian9Franco/MIM&utm_campaign=Badge_Grade)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-42.0-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)

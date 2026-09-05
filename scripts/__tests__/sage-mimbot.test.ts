@@ -9,6 +9,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { computeCrashSignature, loadSageCache, saveSageCacheEntry, getCachedDiagnosis, _resetInMemoryCacheForTests } from "../../lib/intelligence/sage/cacheEngine";
 import { correlateSuspectsWithFomo, normalizeModId } from "../../lib/intelligence/sage/fomoCorrelator";
 import { profileLogStream } from "../../lib/intelligence/sage/logProfiler";
@@ -72,10 +75,33 @@ export async function runSageMimbotTests() {
     eliminationTree: [{ modId: "optifine", confidence: 0.95, reason: "Conflict", hasDirectMixinCollision: true, isMissingDependency: false }],
   };
 
-  await saveSageCacheEntry(testEntry);
-  const fetched = getCachedDiagnosis(sig1);
-  assert(fetched !== null, "Successfully saved and retrieved entry from local cache");
-  assert(fetched?.culprit === "optifine", "Cached culprit accurately preserved");
+  const originalCwd = process.cwd();
+  const isolatedCacheRoot = mkdtempSync(join(tmpdir(), "mim-sage-cache-test-"));
+
+  try {
+    process.chdir(isolatedCacheRoot);
+    _resetInMemoryCacheForTests();
+
+    await saveSageCacheEntry(testEntry);
+    const fetched = getCachedDiagnosis(sig1);
+    assert(fetched !== null, "Successfully saved and retrieved entry from local cache");
+    assert(fetched?.culprit === "optifine", "Cached culprit accurately preserved");
+
+    const cacheFile = join(isolatedCacheRoot, ".mim-index", "cache", "sage-cache.json");
+    writeFileSync(cacheFile, "{ definitely-not-json", "utf-8");
+    _resetInMemoryCacheForTests();
+
+    const recovered = loadSageCache();
+    assert(Object.keys(recovered).length === 0, "Corrupted disk cache falls back to an empty store");
+
+    await saveSageCacheEntry(testEntry);
+    const repairedDisk = JSON.parse(readFileSync(cacheFile, "utf-8"));
+    assert(repairedDisk[sig1]?.culprit === "optifine", "Cache write repairs corrupt persisted JSON");
+  } finally {
+    process.chdir(originalCwd);
+    _resetInMemoryCacheForTests();
+    rmSync(isolatedCacheRoot, { recursive: true, force: true });
+  }
 
   // 2. FOMO Graph Correlator & Elimination Tree
   console.log("\n[2. FOMO Graph Correlator & Heuristic Elimination Tree]");

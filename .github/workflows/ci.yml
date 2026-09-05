@@ -66,6 +66,11 @@ jobs:
       - name: Run Test Suites & Generate Audited Coverage
         run: npm run test:coverage
 
+      - name: Upload Coverage to Codacy
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage/lcov.info
+
       - name: Upload Audited Coverage Artifact
         uses: actions/upload-artifact@v4
         with:

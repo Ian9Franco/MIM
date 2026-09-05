@@ -7,7 +7,7 @@
 > **Última actualización:** 2026-09-05
 
 > [!NOTE]
-> **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](./PROJECT_STATUS.md).
+> **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/PROJECT_STATUS.md).
 
 ---
 

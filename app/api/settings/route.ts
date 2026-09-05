@@ -1,11 +1,11 @@
 /**
  * /api/settings — GET / POST
  * ─────────────────────────────────────────────────────────────────────────────
- * GET  — Devuelve la configuración actual de la app (sourceBase, buildsBase, etc.)
- * POST — Guarda y devuelve la nueva configuración.
+ * GET  — Devuelve la configuración pública actual y el estado de credenciales.
+ * POST — Guarda preferencias públicas y actualiza credenciales sin devolver secretos.
  *
  * Body POST: Objeto parcial con los campos a actualizar.
- * Respuesta: Settings completo persistido en disco.
+ * Respuesta: configuración pública redacted; las credenciales persistidas no se exponen.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

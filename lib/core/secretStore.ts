@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 export const API_KEY_FIELDS = [
   "modrinthApiKey",
   "curseforgeApiKey",
@@ -73,7 +75,7 @@ export async function updateStoredApiKeys(updates: ApiKeyUpdates): Promise<{ per
 
   if (typeof process.send === "function") {
     installReplyListener();
-    const requestId = `secrets-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const requestId = `secrets-${process.pid}-${Date.now()}-${randomUUID()}`;
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(requestId);

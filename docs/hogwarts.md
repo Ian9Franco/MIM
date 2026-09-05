@@ -16,3 +16,18 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/19
 - **Resumen:** aisló la prueba de persistencia de la caché SAGE en un directorio temporal y agregó una regresión que verifica recuperación ante JSON corrupto y reparación del archivo persistido en el siguiente guardado.
+
+## 2026-09-05 14:58:03 — Hermione — PR #16
+
+- **Título:** 🪄 El release deja de conjurar comandos desde el mensaje
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/16
+- **Resumen:** reemplazó la interpolación de mensajes de commit dentro de comandos shell por argumentos literales de Git mediante `execFileSync`, reduciendo el riesgo de ejecución accidental de metacaracteres durante `release:auto`.
+
+## 2026-09-05 15:32:25 — McGonagall — PR #20
+
+- **Título:** 🏰 McGonagall: encerré las credenciales en safeStorage
+- **Resultado:** `CERRADO SIN MERGE`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/20
+- **Resumen:** proponía migrar las credenciales Desktop a Electron `safeStorage`, eliminar su retorno por `/api/settings`, retirar la copia persistente de Gemini en el navegador y cubrir la migración con tests.
+- **Motivo:** motivo no determinado. GitHub registra el PR como cerrado sin merge; una implementación relacionada ingresó después a `main` mediante commits separados, lo cual no cambia el resultado factual de este PR.

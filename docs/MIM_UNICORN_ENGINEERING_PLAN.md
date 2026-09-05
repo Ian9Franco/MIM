@@ -54,11 +54,9 @@ La senioridad no se demuestra inventando complejidad, sino **demostrando por qu�
 | Arquitectura de software | 8.0 | 8.5+ |
 | Seguridad | 7.5 | 8.5+ |
 | IA aplicada | 7.0 | 8.5+ |
-| Cloud / BaaS | 6.5 | 8.5 |
-| Sistemas distribuidos | 5.5 | 8.5 |
 | Redes / Application Networking | 5.0 | 8.5 |
 
-Las áreas ya fuertes —Desktop, Producto y UX/UI— no son el foco principal de este documento.
+Las áreas ya fuertes —Desktop, Producto y UX/UI— no son el foco principal de este documento. Cloud y sistemas distribuidos avanzados dejan de ser objetivos activos: sólo deben reaparecer si un problema real del producto justifica reconsiderarlos.
 
 ---
 
@@ -524,304 +522,13 @@ Evitar dependencias accidentales entre implementaciones concretas.
 
 ---
 
-# 7. Cloud — 6.5 → 8.5
-
-No meter infraestructura pesada sólo para subir la nota.
-
-Profundizar la relación real:
-
-```text
-Desktop ↔ Supabase ↔ Web
-```
-
-## 7.1 Sync engine real
-
-En vez de sincronizar snapshots completos sin contexto:
-
-```text
-local state
-→ change log
-→ sync
-→ remote state
-```
-
-Agregar:
-
-- revision IDs;
-- timestamps;
-- retry;
-- conflict detection;
-- offline queue.
-
-## 7.2 Device awareness
-
-Identificar origen de cambios:
-
-```text
-deviceId
-clientType
-lastSeen
-revision
-```
-
-Ejemplo:
-
-> cambio realizado desde Desktop principal vs Notebook.
-
-## 7.3 Incremental sync
-
-Sincronizar sólo cambios reales.
-
-Evitar re-subir estructuras completas innecesariamente.
-
-## 7.4 Cloud audit trail
-
-Registrar eventos relevantes:
-
-- entidad;
-- dispositivo;
-- operación;
-- revisión;
-- timestamp.
-
-No necesariamente visible por defecto al usuario.
-
-## 7.5 Realtime
-
-Usar realtime donde aporte valor real:
-
-- comunidad;
-- drafts;
-- favoritos;
-- publicaciones;
-- estados compartidos.
-
-Sin convertir todo el producto en realtime por moda.
-
----
-
-# 8. Sistemas distribuidos — 5.5 → 8.5
-
-El problema real a resolver:
-
-> ¿Qué pasa cuando Desktop y Web modifican estado mientras uno de los dos está offline?
-
-## 8.1 Revisions
-
-Cada entidad sincronizable debería poder llevar:
-
-```text
-revision
-updatedAt
-deviceId
-```
-
-Una escritura contra una revisión vieja debería poder detectarse.
-
-## 8.2 Conflict resolution por tipo de dato
-
-No usar una sola estrategia para todo.
-
-Ejemplos:
-
-### Favoritos
-
-```text
-set union / tombstones
-```
-
-### Followed mods
-
-```text
-set merge
-```
-
-### Perfil
-
-```text
-field-level merge
-```
-
-### Drafts complejos
-
-```text
-conflict explícito
-```
-
-### Campos simples
-
-```text
-LWW cuando sea aceptable
-```
-
-## 8.3 Offline operation log
-
-Registrar operaciones locales:
-
-```text
-ADD_FAVORITE A
-REMOVE_FAVORITE B
-UPDATE_PROFILE X
-```
-
-Al recuperar conexión:
-
-```text
-replay
-→ conflict check
-→ remote commit
-```
-
-## 8.4 Retry-safe distributed operations
-
-Toda operación sincronizada debería tolerar:
-
-- duplicate delivery;
-- reorder;
-- retry;
-- network interruption.
-
----
-
-# 9. Redes / Application Networking — 5 → 8.5
-
-No implementar TCP por diversión.
-
-Profundizar la resiliencia HTTP real de MIM.
-
-## 9.1 MIM Network Core
-
-Crear un cliente común para:
-
-- Modrinth;
-- CurseForge;
-- Gemini;
-- YouTube;
-- traducción;
-- Supabase cuando corresponda.
-
-Con:
-
-- timeout;
-- cancellation;
-- retry;
-- exponential backoff;
-- jitter;
-- concurrency limit;
-- rate-limit awareness;
-- cache;
-- telemetry;
-- circuit breaker.
-
-## 9.2 Circuit breaker
-
-Ejemplo:
-
-```text
-5 fallos consecutivos de CurseForge
-→ circuit OPEN
-→ no enviar tráfico durante 30 s
-→ cache/fallback
-→ HALF-OPEN probe
-→ CLOSED si recupera
-```
-
-La UI no necesita conocer la implementación.
-
-## 9.3 Network quality awareness
-
-Estados generales:
-
-```text
-offline
-degraded
-normal
-```
-
-El sistema puede adaptar:
-
-- retries;
-- concurrencia;
-- imágenes;
-- sync;
-- llamadas de IA;
-- descargas.
-
-## 9.4 Resumable downloads
-
-Para descargas grandes:
-
-- HTTP Range;
-- partial files;
-- resume;
-- integrity check al finalizar.
-
-Evitar reiniciar una descarga grande desde cero por una caída de conexión.
-
----
-
 # Proyectos transversales recomendados
 
 En lugar de implementar 30 features inconexas, priorizar proyectos que eleven varias disciplinas simultáneamente.
 
 ---
 
-## A. MIM Network Core
-
-### Objetivo
-
-Capa unificada de networking resiliente.
-
-### Incluir
-
-- timeout;
-- retry;
-- exponential backoff;
-- jitter;
-- circuit breaker;
-- cancellation;
-- concurrency;
-- rate-limit awareness;
-- cache;
-- telemetry.
-
-### Campos que eleva
-
-- Redes
-- Backend
-- Arquitectura
-- Resiliencia
-- Testing
-
----
-
-## B. MIM Sync Engine
-
-### Objetivo
-
-Sincronización offline-first consistente entre Desktop, Web y Supabase.
-
-### Incluir
-
-- operation log;
-- revisions;
-- device IDs;
-- incremental sync;
-- conflict detection;
-- retry seguro;
-- merge strategies.
-
-### Campos que eleva
-
-- Cloud
-- Sistemas distribuidos
-- Data
-- Backend
-- Arquitectura
-
----
-
-## C. MIM Intelligence Runtime
+## A. MIM Intelligence Runtime
 
 ### Objetivo
 
@@ -845,7 +552,7 @@ Convertir MimBot en una capa real de AI Engineering.
 
 ---
 
-## D. MIM Trusted Pipeline
+## B. MIM Trusted Pipeline
 
 ### Objetivo
 
@@ -872,11 +579,11 @@ download
 
 ---
 
-## E. MIM Reliability Lab / Chaos Lab
+## C. MIM Reliability Lab
 
 ### Objetivo
 
-Probar deliberadamente que MIM sabe fallar bien.
+Probar deliberadamente que MIM sabe fallar bien mediante tests automatizados, sin convertirlo en una feature de producto ni en una UI separada.
 
 ### Fallos simulables
 
@@ -900,37 +607,6 @@ Probar deliberadamente que MIM sabe fallar bien.
 - Backend
 - Seguridad
 - Networking
-- Distributed Systems
-
----
-
-# Idea: MIM Chaos Lab
-
-Modo exclusivo para desarrollo/testing.
-
-No debe ser parte visible de la experiencia normal del usuario.
-
-Ejemplo conceptual:
-
-```text
-MIM CHAOS LAB
-
-[ ] Modrinth offline
-[ ] CurseForge 429
-[ ] Gemini 429
-[ ] Supabase +2000ms
-[ ] Drop network after 40%
-[ ] Filesystem readonly
-[ ] Disk full
-[ ] Corrupt cache metadata
-[ ] Lock target file
-```
-
-Objetivo:
-
-> demostrar que MIM no sólo funciona cuando todo está bien, sino que degrada de forma controlada cuando el entorno falla.
-
-Esto representa muy bien la filosofía "overengineered por dentro, correcto por fuera".
 
 ---
 
@@ -948,7 +624,7 @@ Antes de construir abstracciones avanzadas, la base de código debe reflejar sol
 
 ## Fase 1 — Network Resilience & Error Taxonomy (Alta Señal)
 
-1. MIM Network Core unificado (timeout, retry, exponential backoff, full jitter, cache).
+1. Cliente HTTP compartido sólo donde existan consumidores repetidos, con timeout, retry, exponential backoff, full jitter y cache; **sin circuit breaker distribuido/half-open como objetivo activo**.
 2. Rate-limit awareness para APIs externas (Modrinth, CurseForge, Gemini).
 3. Taxonomía de errores formal (`MIM_PROVIDER_RATE_LIMIT`, `MIM_FILE_LOCKED`, etc.) con códigos y flags `retryable`.
 4. Idempotencia básica en operaciones de descarga e instalación.
@@ -987,9 +663,11 @@ Antes de construir abstracciones avanzadas, la base de código debe reflejar sol
 ## Fase 6 — Evaluado y Pospuesto (Considered & Deferred)
 
 Arquitecturas documentadas para justificar decisiones de diseño, pero congeladas por relación señal/costo:
-- **Sync distribuido multi-master con CRDT**: Reemplazado por Last-Write-Wins con revision timestamps para 1 usuario en 2 dispositivos.
-- **Chaos Lab interactivo con UI**: Reemplazado por la suite de tests de Fault Injection en CI.
-- **RAG vectorial local masivo**: Pospuesto en favor de evaluación sistemática sobre prompts estructurados y datos contextuales directos.
+- **Sync distribuido multi-master / CRDT y Sync Engine offline-first complejo**: reemplazados por Last-Write-Wins con timestamps/revision hashes para el escenario real de una persona en sus propios dispositivos.
+- **Cloud avanzado con operation logs, device-awareness, conflict policies e incremental sync como subsistema propio**: fuera del roadmap activo hasta que exista un problema real de producto que lo justifique.
+- **Circuit breaker completo con estados OPEN/HALF-OPEN/CLOSED y sondas distribuidas**: reemplazado por timeouts, retry con exponential backoff + full jitter y cache/fallback donde corresponda.
+- **Chaos Lab interactivo con UI**: reemplazado por la suite de tests de Fault Injection en CI.
+- **RAG vectorial local masivo**: pospuesto en favor de evaluación sistemática sobre prompts estructurados y datos contextuales directos.
 
 ---
 
@@ -1047,8 +725,7 @@ MIM debería avanzar hacia esto:
                  COMPLEJIDAD INTERNA
 
 AI Runtime
-Network Core
-Sync Engine
+Network Resilience
 Trusted Pipeline
 Storage Integrity
 Security

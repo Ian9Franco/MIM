@@ -66,6 +66,11 @@ async function main() {
 
   const suites = [
     {
+      name: "Review Safety & Reliability Regressions",
+      cmd: "node",
+      args: ["scripts/__tests__/review-regressions.test.cjs"]
+    },
+    {
       name: "SAGE NBT Binary Safe Recovery (12 Tests)",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/nbt-integration.test.ts"]
@@ -151,18 +156,7 @@ async function main() {
     if (!r.passed) allPassed = false;
   }
 
-  log("────────────────────────────────────────────────────────────────", "cyan");
-  log("                 ENGINE SPECIFICATION & COVERAGE                ", "bold");
-  log("────────────────────────────────────────────────────────────────", "cyan");
-  log("  Module Domain          | Verification Scope     | Coverage    ");
-  log("  ──────────────────────────────────────────────────────────────");
-  log("  NBT Binary Engine      | 12 Integration Tests   |   100.0%    ", "green");
-  log("  SAGE Taxonomy Engine   | 125 Benchmark Logs     |   100.0%    ", "green");
-  log("  SAGE RAG & Guardrails  | 3 Behavioral Suites    |   100.0%    ", "green");
-  log("  Aduana Storage Engine  | 4 Scale Invariant Tiers|   100.0%    ", "green");
-  log("  ──────────────────────────────────────────────────────────────");
-  log("  TOTAL ENGINE COVERAGE  | 144 Verified Scenarios |    96.4%    ", "bold");
-  log("════════════════════════════════════════════════════════════════\n", "blue");
+  log("Coverage is measured by npm run test:coverage; this runner reports suite outcomes only.", "cyan");
 
   if (allPassed) {
     log("🎉 ALL SUITES PASSED! Verified zero regression across all engines.", "green");

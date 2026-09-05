@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
+import { type NBTTag } from "@/lib/modding/nbt";
+import { savePlayerNBT } from "@/lib/modding/savePlayerNBT";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
@@ -43,22 +44,9 @@ export const POST = withApiGuard(
 
     const logs: string[] = [];
 
-    // Create backup before writing
-    if (createBackup) {
-      try {
-        const backupPath = `${filePath}.mim_bak`;
-        fs.copyFileSync(filePath, backupPath);
-        logs.push(`✓ Backup created: ${path.basename(backupPath)}`);
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        logs.push(`⚠ Warning: Could not create backup: ${errMsg}`);
-      }
-    }
-
-    // Write the NBT data (will be auto-gzipped)
     try {
-      const buffer = await writeNBT(nbtData, true);
-      fs.writeFileSync(filePath, buffer);
+      await savePlayerNBT(filePath, nbtData, createBackup);
+      if (createBackup) logs.push(`✓ Backup created: ${path.basename(filePath)}.mim_bak`);
       logs.push(`✓ File saved successfully: ${path.basename(filePath)}`);
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);

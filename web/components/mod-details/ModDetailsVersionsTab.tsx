@@ -1,4 +1,5 @@
 "use client";
+import { sanitizeHtml } from "../../lib/markdown";
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -254,7 +255,7 @@ export function ModDetailsVersionsTab({
                                       <div
                                         className="mim-rich-description"
                                         dangerouslySetInnerHTML={{
-                                          __html: translatedVersionChangelogs[version.id],
+                                          __html: sanitizeHtml(translatedVersionChangelogs[version.id]),
                                         }}
                                       />
                                     ) : (

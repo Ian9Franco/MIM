@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X, Download, Info, FileText, ListTree, ExternalLink, Package, Heart, Images, Maximize2, Search, Workflow, Sparkles, Key, Loader2, RotateCcw, Send, MessageSquare } from "lucide-react";
 import { openExternal } from "@/utils/format";
 import { COLORS } from "@/theme/tokens";
-import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
+import { markdownToHtml, formatCurseForgeHtml, sanitizeHtml } from "@/utils/markdown";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
 import { TabButton, DependencyCard, VersionCard, ModHeader, StatsGrid, CompatibilitySection } from "@/components/fomo/core/FomoOverlayComponents";
 import { getFirstGalleryUrl } from "@/lib/fomo/fomoModBanner";
@@ -604,7 +604,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                     </div>
                   </div>
                 ) : (
-                  <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: descHtml }} />
+                  <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(descHtml) }} />
                 )}
               </div>
             )}

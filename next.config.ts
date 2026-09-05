@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
       'dist/**/*',
       '.git/**/*',
       'D:/.mine/source/**/*',
+      'D:/.MIM/source/**/*',
+      '**/.mim-index/**/*',
+      '**/mim-settings.json',
     ],
   },
 };

@@ -83,8 +83,30 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run DAST Security Audit
-        run: node scripts/security/dast-scan.js
+      - name: Install MIMweb Dependencies
+        run: npm ci --prefix web
+
+      - name: Build MIMweb from this revision
+        run: npm run build --prefix web
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Audit this revision on localhost
+        shell: bash
+        run: |
+          npm run start --prefix web -- --hostname 127.0.0.1 --port 3100 > /tmp/mim-dast-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3100/ > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then cat /tmp/mim-dast-server.log; exit 1; fi
+          node scripts/security/dast-scan.js http://127.0.0.1:3100
 
   build-production:
     name: Next.js Production Build Verification

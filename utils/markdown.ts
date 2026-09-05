@@ -1,3 +1,6 @@
+import { sanitizeHtml } from "../web/lib/sanitizeRichHtml";
+export { sanitizeHtml } from "../web/lib/sanitizeRichHtml";
+
 function cleanEmbeddedUrl(url: string, defaultDomain = "https://modrinth.com"): string {
   const cleaned = url
     .replace(/&amp;/g, "&")
@@ -201,10 +204,10 @@ export function markdownToHtml(md: string): string {
     html = html.replace(`@@@MIMHTML${index}@@@`, block);
   });
 
-  return html
+  return sanitizeHtml(html
     .replace(/<ul class="space-y-1 my-3">(<ul class="space-y-1 my-3">)+/g, '<ul class="space-y-1 my-3">')
     .replace(/(<\/ul>)+/g, "</ul>")
-    .replace(/@@@MIMHTML\d+@@@/g, "");
+    .replace(/@@@MIMHTML\d+@@@/g, ""));
 }
 
 /**
@@ -263,5 +266,5 @@ export function formatCurseForgeHtml(html: string): string {
     return `<img ${cleanAttrs}>`;
   });
 
-  return formatted;
+  return sanitizeHtml(formatted);
 }

@@ -47,6 +47,7 @@
     "react-dom": "19.2.4",
     "react-window": "^2.2.7",
     "react-window-infinite-loader": "^2.0.1",
+    "sanitize-html": "^2.17.7",
     "skinview3d": "^3.4.2",
     "yt-dlp-wrap": "^2.3.12",
     "zod": "^4.4.2"
@@ -58,6 +59,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^1.8.8",
+    "@types/sanitize-html": "^2.16.1",
     "c8": "^12.0.0",
     "electron": "^42.0.1",
     "electron-builder": "^26.8.1",
@@ -76,6 +78,7 @@
     },
     "files": [
       "standalone/main.js",
+      "standalone/deep-link.js",
       "standalone/prepare.js",
       "standalone/scraper.js",
       ".next/standalone/**/*",

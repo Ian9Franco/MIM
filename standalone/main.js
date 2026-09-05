@@ -3,6 +3,7 @@ const { fork } = require('child_process');
 const path = require('path');
 const http = require('http');
 const { runCurseForgeScraper } = require('./scraper');
+const { toLocalUrl } = require('./deep-link');
 
 let mainWindow = null;
 let serverProcess = null;
@@ -11,12 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 function handleDeepLink(url) {
   try {
-    const parsed = new URL(url);
-    let targetPath = parsed.pathname;
-    if (targetPath === '/' && parsed.hostname) {
-      targetPath = `/${parsed.hostname}`;
-    }
-    const localUrl = `http://127.0.0.1:${PORT}${targetPath}${parsed.search}`;
+    const localUrl = toLocalUrl(url, PORT);
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -145,7 +141,7 @@ app.whenReady().then(() => {
 
   const initialProtocolUrl = process.argv.find((arg) => typeof arg === 'string' && arg.startsWith('mim://'));
   if (initialProtocolUrl) {
-    pendingProtocolUrl = initialProtocolUrl;
+    handleDeepLink(initialProtocolUrl);
   }
 
   startNextServer();

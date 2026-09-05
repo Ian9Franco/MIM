@@ -15,7 +15,7 @@ import {
   Send,
 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
-import { markdownToHtml } from "../../lib/markdown";
+import { markdownToHtml, sanitizeHtml } from "../../lib/markdown";
 import { renderBodyText } from "./utils";
 
 interface ModDetailsDescTabProps {
@@ -423,7 +423,7 @@ export function ModDetailsDescTab({
           </div>
         </div>
       ) : translatedBody ? (
-        <div className="mim-rich-description" dangerouslySetInnerHTML={{ __html: translatedBody }} />
+        <div className="mim-rich-description" dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedBody) }} />
       ) : (
         renderBodyText(descriptionBody, selectedMod?._source)
       )}

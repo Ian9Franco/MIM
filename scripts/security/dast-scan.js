@@ -4,10 +4,10 @@
  * MIM — Dynamic Application Security Testing (DAST) Scanner
  * ─────────────────────────────────────────────────────────────────────────────
  * Validates active HTTP service deployment against essential security baselines:
- * 1. Security Headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy
+ * 1. Security Headers: HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy
  * 2. CORS Misconfigurations (Wildcard origin on authenticated/mutation routes)
  * 3. Rate-Limiter Enforcement & HTTP 429 Retry-After verification
- * 4. OWASP ZAP & ProjectDiscovery Nuclei scanning compatibility & command definitions
+ * This is a baseline check, not a ZAP/Nuclei vulnerability scan.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -73,12 +73,14 @@ async function runDastAudit(baseUrl) {
   console.log(`Target: ${baseUrl}\n`);
 
   let findings = 0;
+  let unavailable = 0;
 
   // 1. Root & Base Header Audit
   console.log(`${colors.cyan}[1/3] Auditing Baseline Security Headers...${colors.reset}`);
   try {
     const res = await fetchEndpoint(baseUrl);
     console.log(`  HTTP Status: ${res.statusCode}`);
+    if (res.statusCode !== 200) { unavailable++; console.error("  Root page did not return HTTP 200"); }
 
     for (const h of REQUIRED_HEADERS) {
       const val = res.headers[h.name];
@@ -108,7 +110,8 @@ async function runDastAudit(baseUrl) {
       }
     }
   } catch (err) {
-    console.log(`  ${colors.yellow}⚠️ Endpoint connection failed or offline (${err.message}). Skipping network header verification.${colors.reset}`);
+    unavailable++;
+    console.error(`  Endpoint unavailable: ${err.message}`);
   }
 
   // 2. CORS Policy Audit
@@ -119,29 +122,45 @@ async function runDastAudit(baseUrl) {
       headers: { Origin: "https://attacker-domain.evil" },
     });
     const allowOrigin = corsRes.headers["access-control-allow-origin"];
-    if (allowOrigin === "*") {
+    if (![200, 204, 403].includes(corsRes.statusCode)) unavailable++;
+    if (allowOrigin === "*" || allowOrigin === "https://attacker-domain.evil") {
       console.log(`  ${colors.yellow}⚠️ [MEDIUM] Wildcard CORS header detected on API endpoint${colors.reset}`);
       findings++;
     } else {
       console.log(`  ${colors.green}✓ No permissive wildcard CORS on API route: ${allowOrigin || "None declared (Strict)"}${colors.reset}`);
     }
   } catch {
-    console.log(`  ${colors.green}✓ API route not publicly reachable locally (Standard offline safe-state).${colors.reset}`);
+    unavailable++;
+    console.error("  CORS probe unavailable");
   }
 
-  // 3. Automated External Pentest Commands Specification
-  console.log(`\n${colors.cyan}[3/3] External Pentest Profiles Specification (OWASP ZAP & Nuclei)${colors.reset}`);
-  console.log(`  • OWASP ZAP Baseline Scan (Containerized):`);
-  console.log(`    docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${baseUrl} -r zap-report.html`);
-  console.log(`  • Nuclei DAST Vulnerability Template Run:`);
-  console.log(`    nuclei -u ${baseUrl} -t cves/ -t misconfiguration/ -t exposed-panels/ -o nuclei-report.txt`);
-
-  console.log(`\n${colors.bold}Audit Result: ${findings === 0 ? colors.green + "PASSED (Zero critical findings)" : colors.yellow + `${findings} advisory items flagged`}${colors.reset}\n`);
+  console.log("\n[3/3] Checking rate limiting with malformed JSON (no external AI calls)...");
+  try {
+    let limited = false;
+    for (let i = 0; i < 21; i++) {
+      const res = await fetchEndpoint(`${baseUrl}/api/fomo/translate`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: "{",
+      });
+      if (res.statusCode === 429) {
+        limited = true;
+        if (!(Number(res.headers["retry-after"]) > 0)) findings++;
+        break;
+      }
+      if (res.statusCode !== 400) { unavailable++; break; }
+    }
+    if (!limited) findings++;
+  } catch (error) { unavailable++; console.error(`  Rate limit probe unavailable: ${error.message}`); }
+  const status = unavailable ? "INCONCLUSIVE" : findings ? "FAILED" : "PASSED";
+  console.log(`\nAudit Result: ${status} (${findings} findings, ${unavailable} unavailable checks)`);
+  return { status, findings, unavailable, exitCode: unavailable ? 2 : findings ? 1 : 0 };
 }
 
 if (require.main === module) {
-  const target = process.argv[2] || "https://mim-hub.vercel.app";
-  runDastAudit(target).catch(console.error);
+  const target = process.argv[2];
+  if (!target) { console.error("Usage: node scripts/security/dast-scan.js <base-url>"); process.exitCode = 2; }
+  else runDastAudit(target).then(result => { process.exitCode = result.exitCode; }).catch(error => {
+    console.error(error); process.exitCode = 2;
+  });
 }
 
 module.exports = { runDastAudit, fetchEndpoint };

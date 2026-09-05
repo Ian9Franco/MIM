@@ -30,6 +30,7 @@ import type {
 } from "@/lib/core/types";
 import type { Loader } from "@/lib/core/constants";
 import { predictConnectorCompatibility } from "@/lib/modding/sinytraUtils";
+import { matchesMinecraftVersion } from "./minecraftVersionRange";
 
 // ── Mod info as seen from the scanner output ──────────────────────────────────
 
@@ -108,16 +109,6 @@ function buildModIdIndex(mods: ValidatorMod[]): Set<string> {
   return ids;
 }
 
-/** Normalize "1.20.x" / ">=1.20.1" ranges to simple "1.20.1" for fuzzy match */
-function versionMatchesFuzzy(modVer: string, projectVer: string): boolean {
-  if (!modVer || modVer === "unknown") return true; // no info → skip
-  if (modVer === projectVer) return true;
-  // Ignore trailing ranges like "1.20+" or "1.20.x"
-  if (modVer.startsWith(projectVer)) return true;
-  // projectVer starts with modVer (e.g. mod says "1.20", project is "1.20.1")
-  if (projectVer.startsWith(modVer)) return true;
-  return false;
-}
 
 // ── Rule Implementations ──────────────────────────────────────────────────────
 
@@ -279,7 +270,7 @@ function ruleDuplicateMod(mods: ValidatorMod[]): ValidationIssue[] {
 /** R7 — VERSION_MISMATCH (WARNING) */
 function ruleVersionMismatch(mod: ValidatorMod, projectVersion: string): ValidationIssue | null {
   if (!mod.gameVersion || mod.gameVersion === "unknown") return null;
-  if (versionMatchesFuzzy(mod.gameVersion, projectVersion)) return null;
+  if (matchesMinecraftVersion(mod.gameVersion, projectVersion)) return null;
   return issue(
     "warning", "version_mismatch", mod,
     `Versión de juego incompatible: mod dice ${mod.gameVersion}, proyecto usa ${projectVersion}`,

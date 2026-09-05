@@ -33,11 +33,14 @@ export function middleware(request: NextRequest) {
 
   // Handle preflight OPTIONS requests cleanly
   if (method === "OPTIONS") {
-    const origin = request.headers.get("origin") || "*";
+    const origin = request.headers.get("origin");
+    if (origin && origin !== request.nextUrl.origin) {
+      return new NextResponse(null, { status: 403 });
+    }
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": origin,
+        ...(origin ? { "Access-Control-Allow-Origin": origin, "Vary": "Origin" } : {}),
         "Access-Control-Allow-Methods": ALLOWED_METHODS.join(", "),
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
         "Access-Control-Max-Age": "86400",

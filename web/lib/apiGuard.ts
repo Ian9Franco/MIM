@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "./rateLimiter";
+let nextGuardId = 0;
 
 export interface ApiGuardConfig<
   TQuery extends z.ZodTypeAny = z.ZodTypeAny,
@@ -49,6 +50,7 @@ export function withApiGuard<
   config: ApiGuardConfig<TQuery, TBody>,
   handler: (ctx: ApiGuardContext<TQuery, TBody>) => Promise<Response> | Response
 ) {
+  const routeScope = `route:${nextGuardId++}`;
   return async function guardedHandler(request: Request): Promise<Response> {
     const clientIp = getClientIp(request);
 
@@ -60,7 +62,7 @@ export function withApiGuard<
 
     const identifier = config.rateLimit?.customIdentifier
       ? config.rateLimit.customIdentifier(request)
-      : clientIp;
+      : `${routeScope}:${clientIp}`;
 
     const rateResult = checkRateLimit(identifier, rateLimitOpts);
 

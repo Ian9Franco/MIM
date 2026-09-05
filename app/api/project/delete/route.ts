@@ -13,6 +13,7 @@ import { SOURCE_BASE } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { assertPathSegment, resolveWithin, UnsafePathError } from "@/lib/security/safePaths";
 
 export const POST = withApiGuard(
   {},
@@ -26,12 +27,8 @@ export const POST = withApiGuard(
       return NextResponse.json({ error: "Missing projectName" }, { status: 400 });
     }
 
-    const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
-    if (!safeName) {
-      return NextResponse.json({ error: "Invalid project name" }, { status: 400 });
-    }
-
-    const projectPath = path.join(SOURCE_BASE, "_projects", safeName);
+    assertPathSegment(projectName);
+    const projectPath = resolveWithin(SOURCE_BASE, path.join("_projects", projectName));
 
     if (fs.existsSync(projectPath)) {
       fs.rmSync(projectPath, { recursive: true, force: true });
@@ -42,6 +39,9 @@ export const POST = withApiGuard(
 
     return NextResponse.json({ success: true });
   } catch (e: unknown) {
+    if (e instanceof UnsafePathError) {
+      return NextResponse.json({ error: "Invalid project name or path" }, { status: 400 });
+    }
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/project/delete] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });

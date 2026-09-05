@@ -1,4 +1,5 @@
 import React from "react";
+import { sanitizeHtml } from "@/utils/markdown";
 import { Download, Loader2, CheckCircle2, ChevronDown, ChevronUp, Package, Workflow } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 
@@ -139,7 +140,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
             </div>
             <div className="text-xs leading-relaxed p-3 rounded-lg border max-h-40 overflow-y-auto custom-scrollbar" style={{ background: "rgba(0,0,0,0.05)", borderColor: COLORS.border, color: COLORS.foreground }}>
               {translatedChangelog ? (
-                <div dangerouslySetInnerHTML={{ __html: translatedChangelog }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedChangelog) }} />
               ) : (
                 v.changelog?.trim() || "Sin changelog."
               )}

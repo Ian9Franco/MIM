@@ -145,7 +145,10 @@ async function checkVirusTotalHash(sha256: string): Promise<SecurityScanResult["
   if (!key || key.length < 16) return null;
   
   try {
-    const res = await fetch(`https://www.virustotal.com/api/v3/files/${sha256}`, { headers: { "x-apikey": key } });
+    const res = await fetch(`https://www.virustotal.com/api/v3/files/${sha256}`, {
+      headers: { "x-apikey": key },
+      signal: AbortSignal.timeout(15_000),
+    });
     if (res.status === 404) return { maliciousCount: 0, totalEngineCount: 0, fromCache: false };
     if (res.status === 429) {
       console.warn(`[/lib/security-scanner] VirusTotal rate limit hit for ${sha256}`);

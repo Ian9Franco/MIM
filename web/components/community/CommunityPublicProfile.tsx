@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, ChevronRight, Heart, Layers, Tv2, UserCheck, Share2, Play, Pin } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronRight, Heart, Layers, Tv2, UserCheck, Share2, Play, Pin, UserPlus } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { PublicProfileSkeleton } from "../FomoSkeletons";
 import { formatCommunityDate } from "./communityUtils";
@@ -18,10 +18,14 @@ interface CommunityPublicProfileProps {
   onBack: () => void;
   onOpenMod: (mod: ModHit) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
+  affinity?: { favorites: number; creators: number };
+  isCurrentUser?: boolean;
+  isFollowing?: boolean;
+  onToggleFollow?: () => void;
 }
 
 /** Full public profile is isolated so ComunidadTab remains an orchestration component. */
-export function CommunityPublicProfile({ profile, favorites, authors, drafts, channels, shares = [], loading, onBack, onOpenMod, onSearchAuthor }: CommunityPublicProfileProps) {
+export function CommunityPublicProfile({ profile, favorites, authors, drafts, channels, shares = [], loading, onBack, onOpenMod, onSearchAuthor, affinity, isCurrentUser, isFollowing, onToggleFollow }: CommunityPublicProfileProps) {
   const accent = profile?.color || "var(--color-primary)";
   return (
     <motion.div key="profile-detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 overflow-y-auto pb-28 scrollbar-none">
@@ -38,8 +42,10 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
           <div className="relative z-10 -mt-7 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 bg-surface shadow-xl" style={{ borderColor: accent }}>
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span className="text-sm font-black uppercase" style={{ color: accent }}>{(profile?.username || "?").slice(0, 2)}</span>}
           </div>
-          <h3 className="mt-2 text-sm font-black text-white">@{profile?.username || "usuario"}</h3>
-          <p className="mt-0.5 flex items-center gap-1 text-[9px] text-white/35"><Calendar className="h-3 w-3" /> Miembro desde {formatCommunityDate(profile?.created_at)}</p>
+          <div className="mt-2 flex items-start justify-between gap-3">
+            <div><h3 className="text-sm font-black text-white">@{profile?.username || "usuario"}</h3><p className="mt-0.5 flex items-center gap-1 text-[9px] text-white/35"><Calendar className="h-3 w-3" /> Miembro desde {formatCommunityDate(profile?.created_at)}</p><p className="mt-1 text-[8px] text-white/45">{affinity?.favorites || 0} favoritos y {affinity?.creators || 0} creadores en común</p></div>
+            {!isCurrentUser && onToggleFollow && <button type="button" aria-pressed={isFollowing} onClick={onToggleFollow} className={`flex h-8 items-center gap-1 rounded-lg border px-2.5 text-[9px] font-bold ${isFollowing ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-border text-white/60"}`}><UserPlus className="h-3.5 w-3.5" />{isFollowing ? "Siguiendo" : "Seguir"}</button>}
+          </div>
         </div>
       </div>
 

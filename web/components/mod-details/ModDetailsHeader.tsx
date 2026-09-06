@@ -14,6 +14,7 @@ import {
   VolumeX,
   UserPlus,
   UserCheck,
+  Share2,
 } from "lucide-react";
 import { CollectibleSurface } from "../CollectibleSurface";
 import { DefaultModIcon } from "../DefaultModIcon";
@@ -41,6 +42,7 @@ interface ModDetailsHeaderProps {
   handleGoBackInStack: () => void;
   handleSwitchStackIndex: (i: number) => void;
   session: FomoUserSession | null;
+  profile?: { username?: string | null } | null;
   communitySharedByMe: boolean;
   handleShareClick: () => void;
   isFavorited: boolean;
@@ -68,6 +70,7 @@ export function ModDetailsHeader({
   handleGoBackInStack,
   handleSwitchStackIndex,
   session,
+  profile,
   communitySharedByMe,
   handleShareClick,
   isFavorited,
@@ -85,6 +88,18 @@ export function ModDetailsHeader({
       ((a as Record<string, unknown>).author_name === authorName || a.name === authorName) &&
       a.platform === authorPlatform
   );
+  const viewerName = profile?.username
+    || session?.user?.user_metadata?.user_name
+    || session?.user?.email?.split("@")[0]
+    || "vos";
+  const canonicalProjectType = (() => {
+    const type = String(selectedMod.projectType || "mod").toLowerCase().replace(/[ _-]/g, "");
+    if (["texture", "textura", "texturepack", "resourcepack"].includes(type)) return "resourcepack";
+    if (["shader", "shaderpack"].includes(type)) return "shader";
+    if (["datapack", "datapacks"].includes(type)) return "datapack";
+    if (["modpack", "modpacks"].includes(type)) return "modpack";
+    return type || "mod";
+  })();
 
   return (
     <div
@@ -94,7 +109,7 @@ export function ModDetailsHeader({
     >
       {/* Banner Image or Fallback */}
       <div
-        className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+        className="mim-details-ambient absolute inset-0 z-0 overflow-hidden pointer-events-none"
         style={{ backgroundColor: bannerBgColor }}
       >
         {bannerUrl ? (
@@ -105,13 +120,12 @@ export function ModDetailsHeader({
             onError={(e) => {
               e.currentTarget.style.display = "none";
             }}
-            className="w-full h-full object-cover opacity-60 scale-105 transition-opacity duration-700"
-            style={{ filter: "brightness(0.75)" }}
+            className="mim-details-ambient-image w-full h-full object-cover opacity-60 scale-105 transition-opacity duration-700"
           />
         ) : (
           <div className="absolute inset-0 opacity-15" style={fallbackTexture} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent" />
+        <div className="mim-details-ambient-fade absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent" />
       </div>
 
       {/* Drag handle container */}
@@ -184,13 +198,21 @@ export function ModDetailsHeader({
       )}
 
       {/* Mod info */}
-      <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} project={`${selectedMod._source || "modrinth"}:${selectedMod.projectId}`} detail className="relative z-10">
+      <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} detail className="relative z-10">
         {!isReadingTab && bannerUrl && (
-          <div data-collectible-art className="relative h-24 sm:h-28 overflow-hidden rounded-xl mb-3 bg-surface">
+          <div className="relative h-24 sm:h-28 overflow-hidden rounded-xl mb-3 bg-surface">
             <img src={bannerUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer"
               onError={e => { e.currentTarget.style.display = "none"; }} />
-            <span className="absolute bottom-2 right-2 z-10 rounded-md bg-black/70 px-2 py-1 text-[9px] text-white capitalize">
-              {selectedMod._source || "modrinth"} · {selectedMod.projectType || "mod"}
+            <div className="absolute left-2 top-2 z-10 flex flex-col items-start gap-1">
+              {isFavorited && session && (
+                <span className="mim-project-badge flex items-center gap-1"><Heart className="h-2.5 w-2.5 fill-current" /> @{viewerName}</span>
+              )}
+              {communitySharedByMe && session && (
+                <span className="mim-project-badge flex items-center gap-1"><Share2 className="h-2.5 w-2.5" /> @{viewerName}</span>
+              )}
+            </div>
+            <span className="mim-project-badge absolute bottom-2 right-2 z-10">
+              {(selectedMod._source || "modrinth").toLowerCase()}-{canonicalProjectType}
             </span>
           </div>
         )}
@@ -286,10 +308,10 @@ export function ModDetailsHeader({
                 isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
               } font-black uppercase tracking-wider transition-all border ${
                 communitySharedByMe
-                  ? "bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+                  ? "mim-control-3d-active bg-orange-500/20 text-orange-400 border-orange-500/30"
                   : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
               }`}
-              title={communitySharedByMe ? "Ya compartido en la Comunidad" : "Compartir en la Comunidad"}
+              title={communitySharedByMe ? "Dejar de compartir en la Comunidad" : "Compartir en la Comunidad"}
               type="button"
             >
               {communitySharedByMe ? (
@@ -297,7 +319,7 @@ export function ModDetailsHeader({
               ) : (
                 <CircleFadingPlus className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span>{communitySharedByMe ? "Compartido" : "Compartir"}</span>
+              <span>{communitySharedByMe ? "Dejar de compartir" : "Compartir"}</span>
             </button>
 
             {/* Favorite button */}
@@ -307,7 +329,7 @@ export function ModDetailsHeader({
                 isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
               } font-black uppercase tracking-wider transition-all border ${
                 isFavorited
-                  ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.15)]"
+                  ? "mim-control-3d-active bg-red-500/20 text-red-400 border-red-500/30"
                   : "bg-black/40 border border-white/10 text-white/80 hover:bg-black/60 hover:text-white"
               }`}
               type="button"
@@ -364,7 +386,7 @@ export function ModDetailsHeader({
               isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
             } font-bold uppercase tracking-wider transition-all border ${
               isFollowingAuthor
-                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                ? "mim-control-3d-active bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
                 : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
             }`}
             type="button"
@@ -397,7 +419,7 @@ export function ModDetailsHeader({
                   isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
                 } font-bold uppercase tracking-wider transition-all border ${
                   isFollowingOrg
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+                    ? "mim-control-3d-active bg-amber-500/15 text-amber-400 border-amber-500/25"
                     : "bg-black/25 border border-white/[0.08] text-white/60 hover:text-white/90 hover:bg-black/40"
                 }`}
                 type="button"

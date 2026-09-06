@@ -1,5 +1,6 @@
 "use client";
 import { DefaultModIcon } from "../DefaultModIcon";
+import { CollectibleSurface } from "../CollectibleSurface";
 
 import React from "react";
 import { motion } from "framer-motion";
@@ -791,20 +792,24 @@ export function DiscoverTab({
               const bannerUrl = mod.gallery?.[0]?.url || undefined;
               const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(pType);
               
-              const platformBorderClass = isCurse 
-                ? "border-orange-500/15 hover:border-orange-500/40 hover:shadow-[0_4px_20px_rgba(249,115,22,0.08)]" 
-                : "border-emerald-500/15 hover:border-emerald-500/40 hover:shadow-[0_4px_20px_rgba(16,185,129,0.08)]";
+              const platformBorderClass = isCurse
+                ? "border-orange-500/20 hover:border-orange-500/45"
+                : "border-emerald-500/20 hover:border-emerald-500/45";
 
               return (
-                <motion.div
+                <CollectibleSurface
                   key={mod.projectId}
                   onClick={() => handleOpenModDetails(mod)}
+                  label={`Ver detalles de ${mod.title}`}
+                  className={`mim-discover-card flex flex-col overflow-hidden ${cardRoundedClass} ${platformBorderClass}`}
+                >
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(resultIndex * 0.025, 0.18) }}
                   whileHover={{ y: -3 }}
                   whileTap={{ scale: 0.985 }}
-                  className={`bg-surface/60 border flex flex-col overflow-hidden cursor-pointer transition-shadow ${cardRoundedClass} ${platformBorderClass}`}
+                  className="flex h-full flex-col"
                 >
                   {/* Banner/Header of the card */}
                   <div 
@@ -896,6 +901,7 @@ export function DiscoverTab({
                     </div>
                   </div>
                 </motion.div>
+                </CollectibleSurface>
               );
             })}
           </div>

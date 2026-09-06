@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
   platform: z.enum(["modrinth", "curseforge"]).optional(),
+  period: z.enum(["7d", "30d", "all"]).optional().default("30d"),
+  metric: z.enum(["shares", "saves"]).optional().default("shares"),
 });
 
 const sharedModRowSchema = z.object({
@@ -31,13 +33,18 @@ export const GET = withApiGuard(
     rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
     querySchema,
   },
-  async ({ query: { limit, platform } }) => {
+  async ({ query: { limit, platform, period, metric } }) => {
+    const table = metric === "saves" ? "followed_mods" : "favorite_mods";
     let query = supabase
-      .from("favorite_mods")
-      .select("mod_id, name, icon_url, platform");
+      .from(table)
+      .select("mod_id, name, icon_url, platform, created_at");
 
     if (platform) {
       query = query.eq("platform", platform);
+    }
+    if (period !== "all") {
+      const days = period === "7d" ? 7 : 30;
+      query = query.gte("created_at", new Date(Date.now() - days * 86400000).toISOString());
     }
 
     const { data: sharedMods, error } = await query;
@@ -83,6 +90,8 @@ export const GET = withApiGuard(
 
     return NextResponse.json({
       rankings: topCommunity,
+      metric,
+      period,
     });
   }
 );

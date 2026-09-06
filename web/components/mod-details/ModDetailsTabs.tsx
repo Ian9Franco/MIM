@@ -25,21 +25,21 @@ export function ModDetailsTabs({
   ];
 
   return (
-    <div className="flex gap-1 rounded-xl border border-white/[0.07] bg-black/15 p-0.5 shrink-0 overflow-x-auto scrollbar-none shadow-inner">
+    <div className="mim-details-tabs flex gap-1 rounded-xl border p-0.5 shrink-0 overflow-x-auto scrollbar-none">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => setModalTab(t.id)}
           className={`relative overflow-hidden flex-1 text-center py-1 px-1 rounded-lg text-[9.5px] sm:text-[10px] font-semibold transition-colors whitespace-nowrap ${
-            modalTab === t.id ? "text-orange-400" : "text-white/50 hover:text-white/80"
+            modalTab === t.id ? "mim-details-tab-active mim-control-3d-active" : "mim-details-tab"
           }`}
         >
           {/* Shared pill animation across tabs */}
           {modalTab === t.id && (
             <motion.span
               layoutId="mod-details-tab-selection"
-              className="absolute inset-0 rounded-lg border border-orange-500/25 bg-orange-500/15 shadow-[0_6px_16px_rgba(0,0,0,0.18)]"
+              className="mim-details-tab-pill absolute inset-0 rounded-lg border"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}

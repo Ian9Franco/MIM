@@ -101,7 +101,7 @@ export function ModDetailsSummaryTab({
                 setModalTab("desc");
               }}
               disabled={isExplaining}
-              className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20"
+              className={`mim-control-3d px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20 ${explainedBody || isExplaining ? "mim-control-3d-active" : ""}`}
               title="Explicar e investigar con MIM-Bot"
             >
               {isExplaining ? (
@@ -115,7 +115,7 @@ export function ModDetailsSummaryTab({
               type="button"
               onClick={handleTranslateSummary}
               disabled={isTranslatingSummary || !selectedMod.description}
-              className="px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+              className={`mim-control-3d px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${translatedSummary || isTranslatingSummary ? "mim-control-3d-active" : ""}`}
               style={{
                 color: "var(--color-primary)",
                 background: "color-mix(in srgb, var(--color-primary) 10%, transparent)",

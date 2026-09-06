@@ -228,7 +228,7 @@ export function FeedTab({
             const isShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === shareId);
 
             return (
-            <motion.article key={post.postId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(postIndex * 0.03, 0.18) }} whileHover={{ y: -2 }} className="bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-[0_14px_34px_rgba(0,0,0,0.2)] transition-shadow">
+            <motion.article key={post.postId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(postIndex * 0.03, 0.18) }} whileHover={{ y: -2 }} className="mim-feed-card bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 transition-shadow">
               {/* Bold Title for videos and shorts */}
               {(post.mode === "video" || post.mode === "short" || post.mode === "video-short") && post.title && (
                 <h3 className="text-xs font-bold text-white/90 leading-snug">{post.title}</h3>

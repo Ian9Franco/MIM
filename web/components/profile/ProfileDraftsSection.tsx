@@ -56,7 +56,7 @@ export function ProfileDraftsSection({
               transition={{ delay: Math.min(draftIndex * 0.04, 0.16) }}
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.985 }}
-              className="bg-surface/80 border border-border rounded-2xl overflow-hidden cursor-pointer transition-colors hover:border-white/15 hover:shadow-[0_12px_30px_rgba(0,0,0,0.2)]"
+              className="mim-profile-list-card bg-surface/80 border border-border rounded-2xl overflow-hidden cursor-pointer transition-colors hover:border-white/15"
             >
               {draft.cover_image && (
                 <div className="h-20 w-full">

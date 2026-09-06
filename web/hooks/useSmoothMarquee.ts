@@ -16,10 +16,6 @@ export function useSmoothMarquee(speed = 1, reverse = false, isVertical = true, 
     let animationFrame: number;
 
     const animate = () => {
-      if (paused) {
-        animationFrame = requestAnimationFrame(animate);
-        return;
-      }
       // Lerp smooth scroll
       offset.current += (targetOffset.current - offset.current) * 0.1;
 

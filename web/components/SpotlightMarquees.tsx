@@ -1,6 +1,5 @@
 "use client";
 import { CollectibleSurface } from "./CollectibleSurface";
-import { useCollectibleTransition } from "./CollectibleTransition";
 import { DefaultModIcon } from "./DefaultModIcon";
 
 import React, { useEffect, useState } from "react";
@@ -215,8 +214,7 @@ export function HorizontalEditorialMarquee({
   paused?: boolean;
 }) {
   const duplicatedItems = [...items, ...items, ...items, ...items];
-  const { open } = useCollectibleTransition();
-  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused || open);
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused);
 
   return (
     <div
@@ -268,11 +266,10 @@ export function HorizontalEditorialMarquee({
               <CollectibleSurface
                 key={`${item.projectId}-${i}`}
                 label={`Ver detalles de ${item.title}`}
-                project={`${item._source || "modrinth"}:${item.projectId}`}
                 onClick={() => onSelectMod?.(item)}
                 className="overflow-hidden flex flex-col min-w-[200px] max-w-[200px]"
               >
-                <div data-collectible-art className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
+                <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
                   {(() => {
                     const bannerImg = item.gallery?.find((g: any) => g.featured)?.url || item.gallery?.[0]?.url;
                     if (bannerImg) {
@@ -528,7 +525,7 @@ export function HorizontalShowcaseMarquee({
               window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
             }}
             style={{ width: "180px", height: "255px" }}
-            className="mim-themed-card shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl border text-left"
+            className="mim-themed-card shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 border text-left"
           >
             {/* Thumbnail */}
             <div style={{ height: "125px" }} className="relative overflow-hidden rounded-t-[calc(1rem-1px)] bg-black/40 shrink-0">

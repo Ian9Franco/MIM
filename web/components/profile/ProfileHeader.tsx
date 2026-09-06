@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { LogOut, Pencil } from "lucide-react";
+import { LogOut, MoreHorizontal, Pencil } from "lucide-react";
 
 interface ProfileHeaderProps {
   session: any;
@@ -17,6 +17,18 @@ export function ProfileHeader({
   handleLogout,
   handleOpenEditProfile,
 }: ProfileHeaderProps) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const closeMenu = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeMenu);
+    return () => document.removeEventListener("pointerdown", closeMenu);
+  }, [menuOpen]);
+
   return (
     <motion.section
       variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
@@ -33,12 +45,28 @@ export function ProfileHeader({
             style={{ background: `linear-gradient(135deg, ${profile?.color || '#F05A28'}44 0%, var(--color-surface) 100%)` }}
           />
         )}
-        <button
-          onClick={handleLogout}
-          className="absolute top-3 right-3 bg-black/40 hover:bg-red-500/20 hover:text-red-400 border border-white/[0.08] backdrop-blur-md rounded-full p-2 text-white/70 active:scale-95 transition-all z-10"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div ref={menuRef} className="absolute right-3 top-3 z-20">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="Opciones del perfil"
+            aria-expanded={menuOpen}
+            className="rounded-full border border-white/[0.08] bg-black/40 p-2 text-white/70 backdrop-blur-md transition-all active:scale-95"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-11 w-36 rounded-xl border border-border bg-surface p-1.5 shadow-xl">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[10px] font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+              >
+                <LogOut className="h-3.5 w-3.5" /> Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Avatar & Info */}

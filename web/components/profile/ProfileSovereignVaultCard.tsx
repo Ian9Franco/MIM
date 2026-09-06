@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
-import { Shield, Download, Upload, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Shield, Download, Upload, Loader2, ChevronDown } from "lucide-react";
 
 interface ProfileSovereignVaultCardProps {
   isExportingVault: boolean;
@@ -17,35 +17,34 @@ export function ProfileSovereignVaultCard({
   fileInputRef,
   onFilePicked,
 }: ProfileSovereignVaultCardProps) {
+  const [expanded, setExpanded] = React.useState(false);
   return (
     <motion.section
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
-      className="bg-gradient-to-br from-emerald-950/20 via-indigo-950/15 to-surface/80 border border-emerald-500/20 rounded-3xl p-5 shadow-xl space-y-4"
+      className="bg-gradient-to-br from-emerald-950/20 via-indigo-950/15 to-surface/80 border border-emerald-500/20 rounded-2xl p-3.5 shadow-lg"
     >
-      <div className="flex items-start justify-between gap-3">
+      <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} className="flex w-full items-center justify-between gap-3 text-left">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-            <Shield className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <Shield className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white">Bóveda Soberana (MIM Vault)</h3>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                SHA-256
-              </span>
-            </div>
-            <p className="text-[11px] text-white/50 leading-relaxed mt-0.5">
-              Respaldá tus borradores, favoritos y creadores en un archivo portable{" "}
-              <code className="text-emerald-300 font-mono">.mimvault</code> independiente de la nube.
-            </p>
+            <h3 className="text-xs font-bold text-white">Respaldo y migración</h3>
+            <p className="mt-0.5 text-[9px] text-white/45">Bóveda Soberana · .mimvault</p>
           </div>
         </div>
-      </div>
+        <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
 
-      {/* Acciones principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+      <AnimatePresence initial={false}>
+      {expanded && (
+      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+      <p className="px-1 pt-3 text-[10px] leading-relaxed text-white/50">
+        Respaldá tus borradores, favoritos y creadores en un archivo portable e independiente de la nube.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3">
         <button
           type="button"
           onClick={onOpenExportModal}
@@ -68,15 +67,17 @@ export function ProfileSovereignVaultCard({
           <Upload className="w-4 h-4 text-indigo-400" />
           Restaurar / Migrar Bóveda
         </button>
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={onFilePicked}
-          accept=".mimvault,.json"
-          className="hidden"
-        />
       </div>
+      </motion.div>
+      )}
+      </AnimatePresence>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFilePicked}
+        accept=".mimvault,.json"
+        className="hidden"
+      />
     </motion.section>
   );
 }

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Check, ChevronRight, Loader2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import {
   readFavoriteMeta,
@@ -15,6 +15,10 @@ interface ProfileFavoritesSectionProps {
   recentUpdates: Record<string, boolean>;
   loadingUserData: boolean;
   handleOpenModDetails: (mod: ModHit) => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  filter: "all" | "updated";
+  onFilterChange: (filter: "all" | "updated") => void;
 }
 
 export function ProfileFavoritesSection({
@@ -22,15 +26,33 @@ export function ProfileFavoritesSection({
   recentUpdates,
   loadingUserData,
   handleOpenModDetails,
+  expanded,
+  onToggleExpanded,
+  filter,
+  onFilterChange,
 }: ProfileFavoritesSectionProps) {
+  const visibleFavorites = expanded ? sortedUserFavorites : sortedUserFavorites.slice(0, 3);
   return (
     <motion.section
       variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
       className="flex flex-col gap-3"
     >
-      <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
-        <Check className="w-4 h-4 text-emerald-400" /> Mis Proyectos Favoritos
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
+          <Check className="w-4 h-4 text-emerald-400" /> Favoritos
+        </h3>
+        <button type="button" onClick={onToggleExpanded} aria-expanded={expanded} className="flex items-center gap-1 text-[9px] font-semibold text-white/45">
+          {expanded ? "Ver menos" : `Ver todos (${sortedUserFavorites.length})`}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      <div className="inline-flex w-fit rounded-xl border border-border bg-surface/70 p-0.5" aria-label="Filtrar favoritos">
+        {(["all", "updated"] as const).map((value) => (
+          <button key={value} type="button" aria-pressed={filter === value} onClick={() => onFilterChange(value)} className={`rounded-lg px-3 py-1 text-[9px] font-bold transition-all ${filter === value ? "mim-control-3d-active bg-orange-500/15 text-orange-400" : "text-white/40"}`}>
+            {value === "all" ? "Todos" : "Actualizados"}
+          </button>
+        ))}
+      </div>
       {loadingUserData ? (
         <div className="py-6 flex items-center justify-center">
           <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
@@ -40,7 +62,7 @@ export function ProfileFavoritesSection({
           onWheel={handleHorizontalWheel}
           className="grid grid-flow-col grid-rows-3 auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
         >
-          {sortedUserFavorites.map((fav) => {
+          {visibleFavorites.map((fav) => {
             const meta = readFavoriteMeta(fav);
             const projectId = fav.mod_id || fav.project_id || fav.id;
             const projectType = fav.project_type || meta.project_type || "mod";
@@ -74,7 +96,7 @@ export function ProfileFavoritesSection({
                     _source: projectSource,
                   })
                 }
-                className={`bg-surface/80 border rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10 snap-start ${
+                className={`mim-profile-list-card bg-surface/80 border rounded-2xl p-3.5 min-h-[66px] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all hover:border-white/10 snap-start ${
                   isRecentlyUpdated
                     ? "border-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.28)]"
                     : "border-border"
@@ -92,6 +114,9 @@ export function ProfileFavoritesSection({
                   <p className="text-[9px] text-white/35 mt-0.5 capitalize">
                     {author} • {fav.platform}
                   </p>
+                  {isRecentlyUpdated && (
+                    <span className="mt-1 inline-flex rounded-full border border-amber-400/30 bg-amber-500/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wide text-amber-400">Actualizado</span>
+                  )}
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
               </div>

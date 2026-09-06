@@ -42,7 +42,7 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
                 <motion.span
                   layoutId={reducedMotion ? undefined : "bottom-nav-selection"}
                   className="absolute inset-0 rounded-2xl border"
-                  style={{ background: "linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 18%, var(--color-surface)), var(--color-card))", borderColor: "color-mix(in srgb, var(--color-primary) 35%, var(--color-border-strong))", boxShadow: "inset 0 1px 0 #ffffff35, 0 3px 0 color-mix(in srgb, var(--color-primary) 20%, var(--color-background)), 0 6px 10px #0003" }}
+                  style={{ background: "linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 18%, var(--color-surface)), var(--color-card))", borderColor: "color-mix(in srgb, var(--color-primary) 35%, var(--color-border-strong))", boxShadow: "0 3px 0 color-mix(in srgb, var(--color-primary) 20%, var(--color-background)), 0 6px 10px #0003" }}
                   transition={{ duration: reducedMotion ? 0 : .3, ease: [.22, 1, .36, 1] }}
                 >
                   <span className="absolute inset-x-3 top-0 h-px" style={{ background: "var(--color-primary)", boxShadow: "0 0 10px var(--color-primary)" }} />

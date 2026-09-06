@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { CollectibleTransition } from "../components/CollectibleTransition";
 import { AnimatePresence, motion } from "framer-motion";
 import { Coffee, Ghost, Share2, Sun, X, Puzzle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
@@ -53,10 +52,6 @@ function formatSearchQuery(input: string): string {
 }
 
 export default function Home() {
-  return <CollectibleTransition><HomeContent /></CollectibleTransition>;
-}
-
-function HomeContent() {
   const c = useHomeController();
   const [editingDraftId, setEditingDraftId] = React.useState<string | null>(null);
   const [selectionQuery, setSelectionQuery] = React.useState<string | null>(null);
@@ -325,6 +320,11 @@ function HomeContent() {
               userFavorites={c.userFavorites}
               userFollowedAuthors={c.userFollowedAuthors}
               onSearchAuthor={c.handleSearchAuthor}
+              onAddToDraft={(mod) => {
+                setEditingDraftId(null);
+                c.setPendingMod(mod);
+                c.setShowDraftPicker(true);
+              }}
             />
           )}
 
@@ -357,6 +357,9 @@ function HomeContent() {
               loadingRankings={c.loadingRankings}
               handleOpenModDetails={c.handleOpenModDetails}
               session={c.session}
+              userFavorites={c.userFavorites}
+              userFollowedAuthors={c.userFollowedAuthors}
+              onToggleFavorite={c.onToggleFavorite}
               onSearchAuthor={c.handleSearchAuthor}
             />
           )}
@@ -393,7 +396,13 @@ function HomeContent() {
         </AnimatePresence>
       </main>
 
-      <BottomNav activeTab={c.activeTab} setActiveTab={c.setActiveTab} />
+      <BottomNav
+        activeTab={c.activeTab}
+        setActiveTab={(tab) => {
+          c.handleCloseModDetails();
+          c.setActiveTab(tab);
+        }}
+      />
 
       <ModDetailsSheet
         selectedMod={c.selectedMod}
@@ -410,6 +419,7 @@ function HomeContent() {
         handleOpenModDetails={c.handleOpenModDetails}
         userDrafts={c.userDrafts}
         session={c.session}
+        profile={c.profile}
         onAddToDraft={(mod, draftId) => c.addModToDraft(draftId, mod, mod.projectType || "mod").then(() => undefined)}
         onOpenDraftPicker={(mod) => {
           setEditingDraftId(null);
@@ -419,6 +429,7 @@ function HomeContent() {
         userFavorites={c.userFavorites}
         onToggleFavorite={c.onToggleFavorite}
         userShares={c.userShares}
+        onRemoveShare={c.onRemoveShare}
         refreshUserData={c.refreshUserData}
         userFollowedAuthors={c.userFollowedAuthors}
         onToggleFollowAuthor={c.onToggleFollowAuthor}

@@ -2,7 +2,6 @@
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
-import { useCollectibleTransition } from "./CollectibleTransition";
 import type { ModHit } from "./SpotlightMarquees";
 import type {
   FomoModDetails,
@@ -60,6 +59,7 @@ export interface ModDetailsSheetProps {
   /* Draft */
   userDrafts: FomoUserDraft[];
   session: FomoUserSession | null;
+  profile?: { username?: string | null } | null;
   onAddToDraft: (mod: ModHit, draftId: string) => void;
   onOpenDraftPicker: (mod: ModHit) => void;
   /* Favorite (followed_mods) */
@@ -70,6 +70,7 @@ export interface ModDetailsSheetProps {
   onToggleFollowAuthor?: (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => void;
   /* Community shares (favorite_mods) */
   userShares?: FomoCommunityShare[];
+  onRemoveShare?: (projectId: string) => Promise<void>;
   refreshUserData?: () => void;
 }
 
@@ -92,10 +93,12 @@ export function ModDetailsSheet({
   handleSwitchStackIndex,
   handleOpenModDetails,
   session,
+  profile,
   onOpenDraftPicker,
   userFavorites,
   onToggleFavorite,
   userShares = [],
+  onRemoveShare,
   refreshUserData,
   userFollowedAuthors = [],
   onToggleFollowAuthor,
@@ -117,8 +120,6 @@ export function ModDetailsSheet({
   const [, setDragEnabled] = useState(true);
 
   const reducedMotion = useReducedMotion();
-  const { source } = useCollectibleTransition();
-  const sharedCard = source?.project === `${selectedMod?._source || "modrinth"}:${selectedMod?.projectId}`;
   const { muted, isClosing, handleToggleMute, closeWithSound, resetCloseState } =
     useSheetSounds(handleCloseModDetails);
 
@@ -175,14 +176,21 @@ export function ModDetailsSheet({
   const isFavorited = userFavorites.some(
     (f) => ((f as any).mod_id || (f as any).project_id || (f as any).projectId || (f as any).id) === selectedMod?.projectId
   );
+  const communitySharedByMe = (userShares || []).some(
+    (f) => (f.mod_id || f.projectId || (f as Record<string, unknown>).project_id || f.id) === selectedMod?.projectId
+  );
 
-  const handleShareClick = useCallback(() => {
+  const handleShareClick = useCallback(async () => {
     if (!session?.user?.id) {
       alert("Debes iniciar sesión para compartir en la Comunidad.");
       return;
     }
+    if (communitySharedByMe && selectedMod?.projectId && onRemoveShare) {
+      await onRemoveShare(selectedMod.projectId);
+      return;
+    }
     setShowShareModal(true);
-  }, [session]);
+  }, [communitySharedByMe, onRemoveShare, selectedMod?.projectId, session]);
 
   const handleGalleryWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     if (e.deltaY !== 0) {
@@ -253,10 +261,6 @@ export function ModDetailsSheet({
   const visibleDependencyKinds = (["required", "optional", "incompatible", "embedded"] as DependencyKind[]).filter(
     (kind) => dependencyGroups[kind].length > 0
   );
-  const communitySharedByMe = (userShares || []).some(
-    (f) => (f.mod_id || f.projectId || (f as Record<string, unknown>).project_id || f.id) === selectedMod?.projectId
-  );
-
   const projectPlatformUrl = selectedMod
     ? selectedMod._source === "curseforge"
       ? `https://www.curseforge.com/projects/${selectedMod.projectId}`
@@ -270,35 +274,25 @@ export function ModDetailsSheet({
         <motion.div
           key="mod-details-backdrop"
           className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
-          style={{ pointerEvents: !selectedMod || isClosing ? "none" : "auto" }}
           onClick={closeWithSound}
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, pointerEvents: "none" }}
+          animate={{ opacity: 1, pointerEvents: isClosing ? "none" : "auto" }}
+          exit={{ opacity: 0, pointerEvents: "none" }}
           transition={{ duration: 0.22, ease: "easeOut" }}
         >
           <motion.div
             ref={sheetRef}
-            layout="position"
-            initial={{ y: reducedMotion || sharedCard ? 0 : "112%", scale: reducedMotion || sharedCard ? 1 : 0.96, opacity: 0, height: sheetTargetHeight }}
-            animate={{ y: 0, scale: 1, opacity: 1, height: sheetTargetHeight }}
-            exit={{ y: reducedMotion || sharedCard ? 0 : "108%", scale: 1, opacity: 0 }}
+            initial={{ y: reducedMotion ? 0 : "105%", opacity: reducedMotion ? 0 : 1, height: sheetTargetHeight }}
+            animate={{ y: 0, opacity: 1, height: sheetTargetHeight }}
+            exit={{ y: reducedMotion ? 0 : "105%", opacity: reducedMotion ? 0 : 1 }}
             transition={{
-              duration: reducedMotion ? .1 : .36,
+              duration: reducedMotion ? .12 : .42,
               type: "tween",
-              stiffness: 150,
-              damping: 24,
-              mass: 1.0,
-              layout: {
-                type: "spring",
-                stiffness: 160,
-                damping: 26,
-                mass: 1.0,
-              },
+              ease: [0.22, 1, 0.36, 1],
             }}
-            className="bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[96dvh] overflow-hidden"
+            className="mim-details-sheet bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[96dvh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             drag="y"
             dragControls={dragControls}
@@ -326,6 +320,7 @@ export function ModDetailsSheet({
               handleGoBackInStack={handleGoBackInStack}
               handleSwitchStackIndex={handleSwitchStackIndex}
               session={session}
+              profile={profile}
               communitySharedByMe={communitySharedByMe}
               handleShareClick={handleShareClick}
               isFavorited={isFavorited}

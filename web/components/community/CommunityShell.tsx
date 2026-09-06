@@ -15,10 +15,11 @@ const SECTIONS = [
 interface CommunityHeaderProps {
   active: CommunitySection;
   onChange: (section: CommunitySection) => void;
+  metrics?: { members: number; recommendations: number; featured: number };
 }
 
 /** Compact masthead and shared animated selector for the three community views. */
-export function CommunityHeader({ active, onChange }: CommunityHeaderProps) {
+export function CommunityHeader({ active, onChange, metrics }: CommunityHeaderProps) {
   return (
     <div className="mb-4 shrink-0">
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-surface/75 px-4 py-3 shadow-[0_12px_34px_rgba(0,0,0,0.18)]">
@@ -30,7 +31,13 @@ export function CommunityHeader({ active, onChange }: CommunityHeaderProps) {
           <div className="min-w-0">
             <p className="text-[9px] font-mono font-bold uppercase text-white/40">Comunidad MIM</p>
             <h2 className="mt-1 text-sm font-black text-white">Descubrí lo que mueve al hub.</h2>
-            <p className="mt-0.5 truncate text-[10px] text-white/40">Proyectos, votos y perfiles públicos.</p>
+            <div className="mt-1.5 flex items-center gap-2 text-[8px] font-semibold text-white/45">
+              <span><b className="text-white/80">{metrics?.members ?? 0}</b> miembros</span>
+              <span aria-hidden="true">·</span>
+              <span><b className="text-white/80">{metrics?.recommendations ?? 0}</b> recomendaciones</span>
+              <span aria-hidden="true">·</span>
+              <span><b className="text-white/80">{metrics?.featured ?? 0}</b> destacadas</span>
+            </div>
           </div>
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
             <Radio className="h-4 w-4" style={{ color: "var(--color-primary)" }} />
@@ -70,4 +77,3 @@ export function CommunityHeader({ active, onChange }: CommunityHeaderProps) {
     </div>
   );
 }
-

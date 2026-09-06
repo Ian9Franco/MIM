@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Share2, Pin, Trash2, MessageSquare, Loader2 } from "lucide-react";
+import { Share2, Pin, Trash2, MessageSquare, Loader2, ChevronDown } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import {
   parseShareMeta,
@@ -17,6 +17,8 @@ interface ProfileSharesSectionProps {
   handleOpenModDetails: (mod: ModHit) => void;
   onUpdateSharePriority?: (projectId: string, priority: boolean) => Promise<void>;
   onRemoveShare?: (projectId: string) => Promise<void>;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
 export function ProfileSharesSection({
@@ -26,15 +28,24 @@ export function ProfileSharesSection({
   handleOpenModDetails,
   onUpdateSharePriority,
   onRemoveShare,
+  expanded,
+  onToggleExpanded,
 }: ProfileSharesSectionProps) {
+  const visibleShares = expanded ? sortedUserShares : sortedUserShares.slice(0, 2);
   return (
     <motion.section
       variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
       className="flex flex-col gap-3"
     >
-      <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
-        <Share2 className="w-4 h-4 text-amber-500" /> Mis Recomendados (Compartidos)
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-bold text-white/70 tracking-wide flex items-center gap-1.5">
+          <Share2 className="w-4 h-4 text-amber-500" /> Compartidos
+        </h3>
+        <button type="button" onClick={onToggleExpanded} aria-expanded={expanded} className="flex items-center gap-1 text-[9px] font-semibold text-white/45">
+          {expanded ? "Ver menos" : `Ver todos (${sortedUserShares.length})`}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      </div>
       {loadingUserData ? (
         <div className="py-6 flex items-center justify-center">
           <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
@@ -45,7 +56,7 @@ export function ProfileSharesSection({
           className="grid grid-flow-col grid-rows-1 gap-3 overflow-x-auto overflow-y-hidden pb-2 pr-1 snap-x snap-mandatory scrollbar-none touch-auto overscroll-x-contain"
           style={{ gridAutoColumns: "minmax(260px, calc((100% - 1.5rem) / 3))" }}
         >
-          {sortedUserShares.map((share) => {
+          {visibleShares.map((share) => {
             const meta = parseShareMeta(share.summary);
             const projectId = share.mod_id || share.project_id || share.id;
             const projectType = meta.projectType || "mod";
@@ -90,7 +101,7 @@ export function ProfileSharesSection({
             return (
               <div
                 key={share.id}
-                className={`bg-surface/80 border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start ${
+                className={`mim-profile-list-card bg-surface/80 border rounded-2xl p-3.5 flex flex-col gap-3 hover:border-white/10 transition-all snap-start ${
                   isPriority
                     ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.28)]"
                     : isRecentlyUpdated

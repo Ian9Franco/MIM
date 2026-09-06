@@ -23,6 +23,8 @@ import { ProfileSharesSection } from "../profile/ProfileSharesSection";
 import { ProfileFollowedAuthorsSection } from "../profile/ProfileFollowedAuthorsSection";
 import { ProfileSovereignVaultCard } from "../profile/ProfileSovereignVaultCard";
 import { ProfileVaultModals } from "../profile/ProfileVaultModals";
+import { ProfileOverview } from "../profile/ProfileOverview";
+import { ProfileContinueDraft } from "../profile/ProfileContinueDraft";
 
 export type { ProfileTabProps };
 
@@ -59,6 +61,8 @@ export function ProfileTab({
   onUpdateSharePriority,
 }: ProfileTabProps) {
   const [recentUpdates, setRecentUpdates] = React.useState<Record<string, boolean>>({});
+  const [favoriteFilter, setFavoriteFilter] = React.useState<"all" | "updated">("all");
+  const [expandedSections, setExpandedSections] = React.useState({ favorites: false, shares: false, creators: false });
 
   // Vault state & handlers
   const vault = useProfileVault({
@@ -79,6 +83,29 @@ export function ProfileTab({
       return updateOrder || getCreatedTime(b) - getCreatedTime(a);
     });
   }, [userFavorites, recentUpdates]);
+
+  const filteredUserFavorites = React.useMemo(
+    () => favoriteFilter === "all"
+      ? sortedUserFavorites
+      : sortedUserFavorites.filter((item) => recentUpdates[projectUpdateKey(item.platform || item.source || "modrinth", item.mod_id || item.project_id || item.id)]),
+    [favoriteFilter, recentUpdates, sortedUserFavorites]
+  );
+
+  const latestDraft = React.useMemo(
+    () => userDrafts.reduce<any | null>((latest, draft) => {
+      const draftTime = new Date(draft.updated_at || draft.updatedAt || draft.created_at || 0).getTime();
+      const latestTime = latest ? new Date(latest.updated_at || latest.updatedAt || latest.created_at || 0).getTime() : -1;
+      return draftTime >= latestTime ? draft : latest;
+    }, null),
+    [userDrafts]
+  );
+
+  const jumpToSection = React.useCallback((section: "drafts" | "favorites" | "shares" | "creators") => {
+    if (section !== "drafts") {
+      setExpandedSections((current) => ({ ...current, [section]: true }));
+    }
+    window.requestAnimationFrame(() => document.getElementById(`profile-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, []);
 
   // Ordenamiento de recomendados (prioridad / fijados > recientemente actualizados > fecha)
   const sortedUserShares = React.useMemo(() => {
@@ -236,7 +263,18 @@ export function ProfileTab({
             handleOpenEditProfile={handleOpenEditProfile}
           />
 
+          <ProfileOverview
+            drafts={userDrafts.length}
+            favorites={userFavorites.length}
+            shares={userShares.length}
+            creators={userFollowedAuthors.length}
+            onJump={jumpToSection}
+          />
+
+          <ProfileContinueDraft draft={latestDraft} onOpen={handleEnterDraftCollection} />
+
           {/* Drafts Section */}
+          <div id="profile-drafts" className="scroll-mt-3">
           <ProfileDraftsSection
             userDrafts={userDrafts}
             loadingUserData={loadingUserData}
@@ -244,16 +282,24 @@ export function ProfileTab({
             handleEnterDraftCollection={handleEnterDraftCollection}
             onEditDraft={onEditDraft}
           />
+          </div>
 
           {/* Favorites Section */}
+          <div id="profile-favorites" className="scroll-mt-3">
           <ProfileFavoritesSection
-            sortedUserFavorites={sortedUserFavorites}
+            sortedUserFavorites={filteredUserFavorites}
             recentUpdates={recentUpdates}
             loadingUserData={loadingUserData}
             handleOpenModDetails={handleOpenModDetails}
+            expanded={expandedSections.favorites}
+            onToggleExpanded={() => setExpandedSections((current) => ({ ...current, favorites: !current.favorites }))}
+            filter={favoriteFilter}
+            onFilterChange={setFavoriteFilter}
           />
+          </div>
 
           {/* Shared Mods Section */}
+          <div id="profile-shares" className="scroll-mt-3">
           <ProfileSharesSection
             sortedUserShares={sortedUserShares}
             recentUpdates={recentUpdates}
@@ -261,13 +307,20 @@ export function ProfileTab({
             handleOpenModDetails={handleOpenModDetails}
             onUpdateSharePriority={onUpdateSharePriority}
             onRemoveShare={onRemoveShare}
+            expanded={expandedSections.shares}
+            onToggleExpanded={() => setExpandedSections((current) => ({ ...current, shares: !current.shares }))}
           />
+          </div>
 
           {/* Followed Authors Section */}
+          <div id="profile-creators" className="scroll-mt-3">
           <ProfileFollowedAuthorsSection
             userFollowedAuthors={userFollowedAuthors}
             onSearchAuthor={onSearchAuthor}
+            expanded={expandedSections.creators}
+            onToggleExpanded={() => setExpandedSections((current) => ({ ...current, creators: !current.creators }))}
           />
+          </div>
 
           {/* Sovereign Vault Card */}
           <ProfileSovereignVaultCard

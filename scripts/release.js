@@ -57,7 +57,22 @@ function getCurrentVersion() {
   return pkg.version;
 }
 
-function processReleaseNotes(newVersion, today, commitMessage = "") {
+function buildValidationText(qualityGatesVerified) {
+  return qualityGatesVerified
+    ? "Todas las compuertas de calidad pre-release fueron ejecutadas y verificadas satisfactoriamente (API Guard 100%, Architecture Boundaries, Test Suites & Benchmarks)."
+    : "Las compuertas de calidad pre-release no fueron ejecutadas en este flujo; esta nota no afirma una validación que no ocurrió.";
+}
+
+function insertReleaseSection(changelog, newSection) {
+  const firstVersionHeading = /^## 🚀 Versión /m.exec(changelog);
+  if (!firstVersionHeading) {
+    return `${changelog.trimEnd()}\n\n${newSection.trim()}\n`;
+  }
+
+  return `${changelog.slice(0, firstVersionHeading.index)}${newSection.trim()}\n\n${changelog.slice(firstVersionHeading.index)}`;
+}
+
+function processReleaseNotes(newVersion, today, commitMessage = "", qualityGatesVerified = false) {
   const releasesDir = path.join(process.cwd(), "docs", "releases");
   if (!fs.existsSync(releasesDir)) {
     fs.mkdirSync(releasesDir, { recursive: true });
@@ -113,7 +128,7 @@ function processReleaseNotes(newVersion, today, commitMessage = "") {
     `## Cambios verificados\n\n` +
     `${notesBody}\n\n` +
     `## Validación\n\n` +
-    `Todas las compuertas de calidad pre-release fueron ejecutadas y verificadas satisfactoriamente (API Guard 100%, Architecture Boundaries, Test Suites & Benchmarks).\n`;
+    `${buildValidationText(qualityGatesVerified)}\n`;
 
   fs.writeFileSync(releaseNotesPath, releaseNotesContent, "utf-8");
   console.log(chalk.green(`  ✓ docs/releases/release-notes-v${newVersion}.md generado automáticamente.`));
@@ -124,14 +139,8 @@ function processReleaseNotes(newVersion, today, commitMessage = "") {
     changelog = changelog.replace(/> \*\*Versión Actual:\*\* v?\d+\.\d+\.\d+/g, `> **Versión Actual:** v${newVersion}`);
     changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
 
-    const newSection = `\n## 🚀 Versión ${newVersion} — ${cleanTitle} (${today})\n\n${notesBody}\n\n---\n`;
-    const sep = "\n---\n";
-    const sepIdx = changelog.indexOf(sep);
-    if (sepIdx !== -1) {
-      changelog = changelog.slice(0, sepIdx + sep.length) + "\n" + newSection + changelog.slice(sepIdx + sep.length);
-    } else {
-      changelog += "\n" + newSection;
-    }
+    const newSection = `## 🚀 Versión ${newVersion} — ${cleanTitle} (${today})\n\n${notesBody}\n\n---\n`;
+    changelog = insertReleaseSection(changelog, newSection);
 
     fs.writeFileSync(changelogPath, changelog, "utf-8");
     console.log(chalk.green(`  ✓ docs/releases/CHANGELOG.md actualizado con la sección v${newVersion}.`));
@@ -150,7 +159,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   console.log(chalk.green("  ✓ docs/releases/UNRELEASED.md reiniciado para el próximo ciclo."));
 }
 
-function updateVersion(newVersion, commitMessage = "") {
+function updateVersion(newVersion, commitMessage = "", qualityGatesVerified = false) {
   const pkg = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   pkg.version = newVersion;
   fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
@@ -202,7 +211,7 @@ function updateVersion(newVersion, commitMessage = "") {
   }
 
   // Procesar notas de release y changelog automáticamente
-  processReleaseNotes(newVersion, today, commitMessage);
+  processReleaseNotes(newVersion, today, commitMessage, qualityGatesVerified);
 }
 
 function bumpVersion(version, type) {
@@ -368,7 +377,7 @@ async function automatedReleaseFlow() {
   createBackupBranch();
 
   console.log(chalk.bold("📦 Actualizando nomenclatura de versionado global:"));
-  updateVersion(newVersion, commitMessage);
+  updateVersion(newVersion, commitMessage, true);
 
   console.log(chalk.bold("\n🏷️  Creando commit y tag de Git:"));
   run("git add .");
@@ -465,7 +474,7 @@ async function interactiveReleaseFlow() {
   const newVersion = bumpVersion(currentVersion, answers.releaseType);
   console.log(chalk.yellow(`\nVersion bump: ${currentVersion} → ${newVersion}`));
 
-  updateVersion(newVersion, answers.commitMessage);
+  updateVersion(newVersion, answers.commitMessage, answers.runGates);
 
   run("git add .");
   runGit(["commit", "-m", `v${newVersion} - ${answers.commitMessage}`]);
@@ -522,6 +531,11 @@ async function main() {
       console.log(chalk.gray("Exiting. No disasters today."));
   }
 }
+
+module.exports = {
+  buildValidationText,
+  insertReleaseSection,
+};
 
 if (require.main === module) {
   main().catch((err) => {

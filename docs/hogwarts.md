@@ -59,3 +59,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/30
 - **Resumen:** formalizó el contrato de errores de `/api/sage/chat` con códigos internos estables, retryability, severidad y acción recomendada; preservó los identificadores legados y agregó una suite de regresión ejecutada por CI.
+
+## 2026-09-05 21:30:45 — Harry — PR #31
+
+- **Título:** ⚡ Harry: aseguro los temporales de VirusTotal
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/31
+- **Resumen:** reemplazó `Math.random()` por `crypto.randomUUID()` en el sufijo temporal usado por la escritura atómica de la caché de VirusTotal, manteniendo intactos la cola FIFO, el merge en disco, los reintentos y el fallback de copia.

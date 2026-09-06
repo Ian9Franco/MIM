@@ -90,7 +90,7 @@ export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
     const merged: VirusTotalCache = { ...diskData, ...inMemoryVTCache };
     inMemoryVTCache = merged;
 
-    const tempFile = `${CACHE_FILE}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+    const tempFile = `${CACHE_FILE}.tmp.${process.pid}.${Date.now()}.${crypto.randomUUID()}`;
     
     try {
       fs.writeFileSync(tempFile, JSON.stringify(merged, null, 2), "utf-8");
@@ -261,7 +261,7 @@ export async function scanSecurity(filePath: string, localOnly = false): Promise
       findings.push({ 
         category: "manifest_anomaly", 
         severity: "info", 
-        description: `✅ VirusTotal Limpio (0/${vt.totalEngineCount})`, 
+        description: `✅ VirusTotal Limpio (0/${vt.totalEngineCount})`,
         scoreImpact: 0 
       });
     }

@@ -131,6 +131,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-stream-contract.test.ts"]
     },
     {
+      name: "Home Discover Controller Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-discover.test.ts"]
+    },
+    {
       name: "API Guard Systemic Route Perimeter Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/security/verify-api-guard.ts"]

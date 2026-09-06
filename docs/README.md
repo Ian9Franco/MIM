@@ -6,7 +6,7 @@
 
 </div>
 
-> **Catálogo de Ingeniería MIM:** Índice estructurado de especificaciones, benchmarks, modelos de amenazas y arquitectura (v11.3.0).  
+> **Catálogo de Ingeniería MIM:** Índice estructurado de especificaciones, benchmarks, modelos de amenazas y arquitectura (v11.4.5).  
 > *(Para la presentación general del software a usuarios, consultar el [README.es.md](../README.es.md) en la raíz).*
 
 ---
@@ -18,7 +18,7 @@ La documentación está organizada físicamente en carpetas temáticas para que 
 ```text
 docs/
 ├── README.md                      # Este catálogo técnico
-├── whosnext.md                    # 🟢 Tablero táctico del sprint activo (v11.3.0)
+├── whosnext.md                    # 🟢 Tablero táctico del sprint activo (v11.4.5)
 │
 ├── architecture/                  # Arquitectura del sistema y catálogo de APIs
 ├── security/                      # Seguridad, escáner de bytecode y threat models
@@ -36,8 +36,8 @@ docs/
 ### 1. 🎯 Sprint Activo & Planificación
 | Documento | Ubicación | Propósito |
 | :--- | :--- | :--- |
-| **[whosnext.md](./whosnext.md)** 🟢 | `docs/` | **Checklist táctico del sprint activo (v11.3.0).** Tareas inmediatas de MimBot, seguridad, optimizaciones de UI y deuda técnica urgente. |
-| **[ROADMAP.md](./planning/ROADMAP.md)** 📌 | `docs/planning/` | **Roadmap Técnico Oficial (v11.3.0).** Visión estratégica y consolidación de metas en curso. *(Historial previo en [releases/ROADMAP_v10_HISTORIC.md](./releases/ROADMAP_v10_HISTORIC.md))*. |
+| **[whosnext.md](./whosnext.md)** 🟢 | `docs/` | **Checklist táctico del sprint activo (v11.4.5).** Tareas inmediatas de MimBot, seguridad, optimizaciones de UI y deuda técnica urgente. |
+| **[ROADMAP.md](./planning/ROADMAP.md)** 📌 | `docs/planning/` | **Roadmap Técnico Oficial (v11.4.5).** Visión estratégica y consolidación de metas en curso. *(Historial previo en [releases/ROADMAP_v10_HISTORIC.md](./releases/ROADMAP_v10_HISTORIC.md))*. |
 | **[PROJECT_STATUS.md](./planning/PROJECT_STATUS.md)** ⚖️ | `docs/planning/` | **Auditoría de Madurez & Transparencia.** Evaluación honesta de qué motores son estables, cuáles están en beta y zonas de deuda asumida. |
 
 ---
@@ -83,9 +83,9 @@ docs/
 ### 6. 💡 Propuestas Técnicas & RFCs (Diseños de Futuro)
 | Documento | Ubicación | Propósito |
 | :--- | :--- | :--- |
-| **[PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md](./proposals/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md)** | `docs/proposals/` | Diseño conceptual para potenciar MimBot con grafos y cascada de modelos. |
-| **[PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)** | `docs/proposals/` | Diseño para generar resúmenes con IA mediante Gemini Search Grounding. |
-| **[PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./proposals/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)** | `docs/proposals/` | Propuesta de baúl criptográfico para soberanía total de datos locales. |
+| **[PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md](./proposals/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md)** | Diseño conceptual para potenciar MimBot con grafos y cascada de modelos. |
+| **[PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)** | Diseño para generar resúmenes con IA mediante Gemini Search Grounding. |
+| **[PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](./proposals/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)** | Propuesta de baúl criptográfico para soberanía total de datos locales. |
 
 ---
 

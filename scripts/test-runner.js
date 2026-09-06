@@ -131,6 +131,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-stream-contract.test.ts"]
     },
     {
+      name: "Home Discover Controller Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-discover.test.ts"]
+    },
+    {
       name: "API Guard Systemic Route Perimeter Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/security/verify-api-guard.ts"]
@@ -167,7 +172,7 @@ async function main() {
   for (const r of results) {
     const status = r.passed ? "PASS" : "FAIL";
     const statusColor = r.passed ? "green" : "red";
-    log(`  [${status}] ${r.name.padEnd(46)} (${(r.durationMs / 1000).toFixed(2)}s)`, statusColor);
+    log(`  [${status}] ${r.name.padEnd(46)} (${(r.durationMs / 1000).toFixed(2)}s`, statusColor);
     if (!r.passed) allPassed = false;
   }
 

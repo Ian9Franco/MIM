@@ -73,3 +73,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/34
 - **Resumen:** reemplazó por `unknown` el parámetro opcional de error del helper `fail` en la suite de Security, eliminando un `any` innecesario sin cambiar la ejecución, las aserciones ni la lógica de producción.
+
+## 2026-09-06 01:53:14 — McGonagall — PR #36
+
+- **Título:** 🏰 McGonagall: transmito las respuestas de SAGE
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/36
+- **Resumen:** cambió `/api/sage/chat` a streaming incremental desde Gemini SSE hacia un contrato NDJSON propio de MIM, agregó cancelación en cliente, errores tipados durante el stream y regresiones específicas ejecutadas por CI.

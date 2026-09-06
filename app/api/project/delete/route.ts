@@ -8,7 +8,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import fs from "fs";
 import path from "path";
@@ -19,18 +20,16 @@ import {
   UnsafePathError,
 } from "@/lib/security/safePaths";
 
+const deleteProjectBodySchema = z.object({
+  projectName: z.string().min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
+  { bodySchema: deleteProjectBodySchema },
+  async ({ body }) => {
+    const { projectName } = body;
 
     try {
-      const { projectName } = await req.json();
-
-      if (!projectName) {
-        return NextResponse.json({ error: "Missing projectName" }, { status: 400 });
-      }
-
       assertPathSegment(projectName);
       const projectsRoot = path.join(SOURCE_BASE, "_projects");
       const projectPath = resolveWithin(projectsRoot, projectName);

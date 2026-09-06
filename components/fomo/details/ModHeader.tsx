@@ -173,7 +173,7 @@ export function ModHeader({
           <img
             src={bannerUrl}
             alt=""
-            className="fomo-details-banner-img w-full h-full object-cover scale-110 animate-fade-in duration-1000"
+            className="fomo-details-banner-img mim-details-ambient-image w-full h-full object-cover scale-110 animate-fade-in duration-1000"
             style={{ filter: "var(--fomo-banner-filter)", opacity: "var(--fomo-banner-image-opacity)" }}
           />
         ) : (
@@ -189,7 +189,7 @@ export function ModHeader({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <p className="font-headline text-lg truncate leading-tight text-white drop-shadow-md">{mod.title}</p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <button 
                 onClick={() => onSelectProjectType?.(projectType)}
                 className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest backdrop-blur-xl transition-colors ${
@@ -201,6 +201,17 @@ export function ModHeader({
                 {getProjectTypeIcon(projectType, mod.categories)}
                 {projectType === "resourcepack" ? "TEXTURA" : projectType.toUpperCase()}
               </button>
+
+              {communitySharedByMe && (
+                <span className="mim-project-badge flex items-center gap-1 text-orange-300 border-orange-500/30">
+                  <Globe className="w-2.5 h-2.5 text-orange-400" /> Compartido
+                </span>
+              )}
+              {followedMods?.some((f) => f.mod_id === mod.projectId) && (
+                <span className="mim-project-badge flex items-center gap-1 text-rose-300 border-rose-500/30">
+                  <Heart className="w-2.5 h-2.5 text-rose-400 fill-current" /> Favorito
+                </span>
+              )}
               
               {sharersToShow.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 ml-1">
@@ -275,7 +286,7 @@ export function ModHeader({
             {isProjectInDraft(mod.projectId || mod.id || mod.slug) ? (
               <button 
                 onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("fomo-remove-from-draft", { detail: { projectId: mod.projectId || mod.id || mod.slug } })); }} 
-                className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all bg-red-500/40 backdrop-blur-md border border-red-500/50 text-red-200 hover:bg-red-500/60`}
+                className="mim-control-3d-active flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all bg-red-500/30 backdrop-blur-md border border-red-500/50 text-red-200 hover:bg-red-500/50"
                 title="Quitar del Draft Activo"
               >
                  <FlaskConicalOff className="w-3.5 h-3.5 mr-1.5" /> Draft
@@ -283,7 +294,7 @@ export function ModHeader({
             ) : (
               <button 
                 onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", { detail: { projectId: mod.projectId || mod.id || mod.slug, platform: mod._source || "modrinth", title: mod.title } })); }} 
-                className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-primary" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-primary"}`}
+                className={`mim-control-3d flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-primary" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-primary"}`}
                 title="Añadir a Draft Activo"
               >
                  <FlaskConical className="w-3.5 h-3.5 mr-1.5" /> Draft
@@ -291,7 +302,7 @@ export function ModHeader({
             )}
             <button 
               onClick={handleShareClick}
-              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${communitySharedByMe ? "" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
+              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${communitySharedByMe ? "mim-control-3d-active" : "mim-control-3d bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
               style={communitySharedByMe ? { backgroundColor: currentUserCommunityColor ? `${currentUserCommunityColor}66` : "rgba(249, 115, 22, 0.4)", backdropFilter: "blur(12px)", color: "#fff", border: `1px solid ${currentUserCommunityColor ? `${currentUserCommunityColor}88` : "rgba(249, 115, 22, 0.5)"}` } : undefined}
               title={communitySharedByMe ? "Ya lo compartiste en Comunidad" : "Compartir en Comunidad"}
               type="button"
@@ -312,14 +323,14 @@ export function ModHeader({
                   }
                 }} 
                 id={`mr-btn-${mod.projectId}`}
-                className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white`}
+                className="mim-control-3d flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"
               >
                  <Database className="w-3.5 h-3.5 mr-1.5" /> Modrinth
               </button>
             )}
           </div>
         </div>
-        <button onClick={() => openExternal(mod.url)} className="p-3 rounded-2xl border border-white/20 bg-black/40 backdrop-blur-md hover:bg-black/60 transition-all active:scale-95 group shrink-0">
+        <button onClick={() => openExternal(mod.url)} className="mim-control-3d p-3 rounded-2xl border border-white/20 bg-black/40 backdrop-blur-md hover:bg-black/60 transition-all active:scale-95 group shrink-0">
           <ExternalLink className="w-5 h-5 opacity-80 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>

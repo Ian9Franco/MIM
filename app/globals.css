@@ -722,3 +722,37 @@ select:focus {
     transparent 100%
   );
 }
+
+/* Compact depth language shared by selected controls and the details header */
+.mim-control-3d {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 0 color-mix(in srgb, currentColor 22%, var(--color-surface, #1e1e24)), 0 5px 9px rgba(0, 0, 0, .2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mim-control-3d-active {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 0 color-mix(in srgb, currentColor 30%, var(--color-surface, #1e1e24)), 0 7px 12px rgba(0, 0, 0, .26);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mim-control-3d:active,
+.mim-control-3d-active:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 color-mix(in srgb, currentColor 22%, var(--color-surface, #1e1e24)), 0 2px 5px rgba(0, 0, 0, .18);
+}
+.mim-project-badge {
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 6px;
+  background: rgba(7, 10, 18, .86);
+  color: #fff !important;
+  padding: 3px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .01em;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .22);
+}
+.mim-details-ambient-image {
+  filter: blur(14px) brightness(.75) saturate(.92);
+  transform: scale(1.16);
+  transition: filter 0.5s ease, transform 0.5s ease;
+}

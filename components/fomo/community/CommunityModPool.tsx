@@ -14,6 +14,7 @@ import {
 import { FomoModBannerStrip } from "@/components/fomo/discover/FomoModBannerStrip";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { communityTypeToBannerType } from "@/lib/fomo/fomoModBanner";
+import { CommunityReactionButton } from "./CommunityReactionButton";
 
 interface SharedFavorite {
   id: string;
@@ -310,7 +311,8 @@ export function CommunityModPool({
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-col gap-1 shrink-0 self-end">
+                        <div className="flex flex-col gap-1 shrink-0 self-end items-end">
+                          <CommunityReactionButton shareId={fav.id} />
                           {currentUserId && fav.profile_id === currentUserId && (
                             <CommunityDeleteButton
                               type="favorite"

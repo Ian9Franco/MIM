@@ -7,6 +7,7 @@ import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { FomoModBannerStrip } from "@/components/fomo/discover/FomoModBannerStrip";
 import { communityTypeToBannerType } from "@/lib/fomo/fomoModBanner";
+import { CommunityReactionButton } from "./CommunityReactionButton";
 
 const AUTHOR_MARKERS = ["autor de minecraft", "¿querés agregar"];
 
@@ -197,7 +198,8 @@ export function CommunityProfileModPool({
                   <p className="text-[9px] text-white/45 line-clamp-1 mt-1">{summaryText}</p>
                 )}
               </div>
-              <div className="flex gap-1 shrink-0 self-end">
+              <div className="flex items-center gap-1 shrink-0 self-end">
+                <CommunityReactionButton shareId={fav.id} />
                 {isProjectInDraft(fav.mod_id) ? (
                   <button
                     type="button"

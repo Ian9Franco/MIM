@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club, FlaskConical } from "lucide-react";
+import { ArrowLeft, TvMinimalPlay, CircleFadingPlus, Calendar, Play, Trash2, Club, FlaskConical, UserPlus, UserCheck } from "lucide-react";
 import { CommunityResumen } from "@/components/fomo/community/CommunityResumen";
 import { CommunityProfileModPool } from "@/components/fomo/community/CommunityProfileModPool";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -27,6 +27,10 @@ export function CommunityUserProfile({
   const [currentTheme, setCurrentTheme] = useState("official");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
@@ -71,13 +75,17 @@ export function CommunityUserProfile({
             favsRes,
             vidsRes,
             draftsOwnedRes,
-            draftsMemberRes
+            draftsMemberRes,
+            followersRes,
+            followingRes
           ] = await Promise.all([
             supabase.auth.getSession(),
             supabase.from("favorite_mods").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
             supabase.from("showcase_videos").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
             supabase.from("drafts").select("id, name, description, updated_at, visibility, owner_id, profiles!drafts_owner_id_fkey(username, avatar_url, color)").eq("owner_id", profile.id).order("updated_at", { ascending: false }),
-            supabase.from("draft_members").select("drafts(id, name, description, updated_at, visibility, owner_id, profiles!drafts_owner_id_fkey(username, avatar_url, color))").eq("user_id", profile.id)
+            supabase.from("draft_members").select("drafts(id, name, description, updated_at, visibility, owner_id, profiles!drafts_owner_id_fkey(username, avatar_url, color))").eq("user_id", profile.id),
+            supabase.from("followed_profiles").select("follower_id", { count: "exact" }).eq("followed_id", profile.id),
+            supabase.from("followed_profiles").select("followed_id", { count: "exact" }).eq("follower_id", profile.id)
           ]);
           
           const isOwn = session?.user?.id === profile.id;
@@ -85,6 +93,11 @@ export function CommunityUserProfile({
           setCurrentUserId(session?.user?.id || null);
           setFavorites(favsRes.data || []);
           setVideos(vidsRes.data || []);
+          setFollowersCount(followersRes.count ?? (followersRes.data?.length || 0));
+          setFollowingCount(followingRes.count ?? (followingRes.data?.length || 0));
+          if (session?.user?.id) {
+            setIsFollowing((followersRes.data || []).some((r: any) => r.follower_id === session.user.id));
+          }
           
           const ownedDrafts = (draftsOwnedRes.data || []).filter(d => d.visibility === "public" || isOwn);
           const memberDraftsRaw = (draftsMemberRes.data || []).map((m: any) => m.drafts).filter(Boolean);
@@ -126,6 +139,34 @@ export function CommunityUserProfile({
   const isModern = currentTheme === "modern";
   const isOwnProfile = !!currentUserId && profileData?.id === currentUserId;
   const profileBannerMeta = profileData?.banner_meta ?? { zoom: 1, x: 0, y: 0, blur: 0 };
+
+  const toggleFollow = async () => {
+    if (!currentUserId || !profileData?.id || currentUserId === profileData.id) return;
+    setFollowLoading(true);
+    const nextFollowing = !isFollowing;
+    setIsFollowing(nextFollowing);
+    setFollowersCount((prev) => Math.max(0, prev + (nextFollowing ? 1 : -1)));
+
+    try {
+      if (nextFollowing) {
+        await supabase
+          .from("followed_profiles")
+          .insert({ follower_id: currentUserId, followed_id: profileData.id });
+      } else {
+        await supabase
+          .from("followed_profiles")
+          .delete()
+          .eq("follower_id", currentUserId)
+          .eq("followed_id", profileData.id);
+      }
+    } catch (err) {
+      console.error("Error toggling follow profile:", err);
+      setIsFollowing(!nextFollowing);
+      setFollowersCount((prev) => Math.max(0, prev + (nextFollowing ? -1 : 1)));
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const deleteItem = async (type: 'favorite' | 'video', id: string) => {
     if (deletingId) return;
@@ -207,23 +248,45 @@ export function CommunityUserProfile({
           <ArrowLeft className="w-3.5 h-3.5" /> Volver
         </button>
 
-        <div className="flex items-end gap-5 relative z-10 mt-4">
-          <div 
-            className="w-20 h-20 rounded-2xl flex items-center justify-center font-black text-3xl uppercase shadow-2xl border-2 overflow-hidden bg-black/40 backdrop-blur-md shrink-0"
-            style={{ borderColor: profileData.color || 'var(--primary)', color: profileData.color || 'var(--primary)' }}
-          >
-            {profileData.avatar_url ? (
-              <img src={profileData.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              (profileData.username || "U").charAt(0)
-            )}
-          </div>
-          <div className="mb-1">
-            <h2 className={`text-2xl font-black text-white drop-shadow-md`}>{profileData.username}</h2>
-            <div className={`flex items-center gap-3 mt-1 text-[11px] font-medium text-white/80 drop-shadow-sm`}>
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Unido en {formatDate(profileData.created_at)}</span>
+        <div className="flex items-end justify-between gap-5 relative z-10 mt-4 flex-wrap">
+          <div className="flex items-end gap-5">
+            <div 
+              className="w-20 h-20 rounded-2xl flex items-center justify-center font-black text-3xl uppercase shadow-2xl border-2 overflow-hidden bg-black/40 backdrop-blur-md shrink-0"
+              style={{ borderColor: profileData.color || 'var(--primary)', color: profileData.color || 'var(--primary)' }}
+            >
+              {profileData.avatar_url ? (
+                <img src={profileData.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (profileData.username || "U").charAt(0)
+              )}
+            </div>
+            <div className="mb-1">
+              <h2 className={`text-2xl font-black text-white drop-shadow-md`}>{profileData.username}</h2>
+              <div className={`flex flex-wrap items-center gap-3 mt-1 text-[11px] font-medium text-white/80 drop-shadow-sm`}>
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Unido en {formatDate(profileData.created_at)}</span>
+                <span className="text-white/40">·</span>
+                <span className="font-mono text-white/90 font-bold">{followersCount} <span className="font-normal text-white/50">seguidores</span></span>
+                <span className="text-white/40">·</span>
+                <span className="font-mono text-white/90 font-bold">{followingCount} <span className="font-normal text-white/50">siguiendo</span></span>
+              </div>
             </div>
           </div>
+
+          {!isOwnProfile && currentUserId && (
+            <button
+              type="button"
+              onClick={toggleFollow}
+              disabled={followLoading}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-md ${
+                isFollowing
+                  ? "bg-primary/20 text-primary border-primary/40 hover:bg-primary/30"
+                  : "bg-white/10 text-white hover:bg-white/20 border-white/15"
+              }`}
+            >
+              {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              <span>{isFollowing ? "Siguiendo" : "Seguir"}</span>
+            </button>
+          )}
         </div>
       </div>
 

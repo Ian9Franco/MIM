@@ -6,6 +6,7 @@ import { supabase } from "@/lib/core/supabaseClient";
 import { Plus, Users, Loader, RefreshCw, FileEdit, Box, Library, Trash2 } from "lucide-react";
 import { CommunityCreateDraftModal } from "./CommunityCreateDraftModal";
 import { CommunityDraftDetails } from "./CommunityDraftDetails";
+import { CommunityUserAvatar } from "./CommunityUserAvatar";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export function CommunityDrafts() {
@@ -183,7 +184,78 @@ export function CommunityDrafts() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="space-y-6">
+          {/* Active Workspace Hero Card */}
+          {drafts.length > 0 && (
+            <div
+              onClick={() => setSelectedDraftId(drafts[0].id)}
+              className={`p-1 rounded-3xl border transition-all cursor-pointer overflow-hidden group shadow-lg ${
+                isModern
+                  ? "bg-card border-primary/30 hover:border-primary/60"
+                  : "bg-gradient-to-r from-primary/[0.12] via-white/[0.03] to-transparent border-primary/30 hover:border-primary/50"
+              }`}
+            >
+              <div className="flex flex-col md:flex-row items-stretch gap-5 p-4 sm:p-5">
+                <div className="w-full md:w-56 h-36 rounded-2xl overflow-hidden bg-primary/10 relative shrink-0 border border-white/10">
+                  {drafts[0].cover_image ? (
+                    <img
+                      src={drafts[0].cover_image}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Library className="w-12 h-12 text-primary/40" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/10">
+                    <Box className="w-3 h-3 text-primary" />
+                    <span className="capitalize">{drafts[0].loader || "Vanilla"}</span> {drafts[0].minecraft_version}
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-between min-w-0">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-black uppercase tracking-wider">
+                        Continuar trabajando
+                      </span>
+                      <span className="text-[10px] text-white/40">
+                        Actualizado {new Date(drafts[0].updated_at).toLocaleDateString("es-AR")}
+                      </span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white truncate group-hover:text-primary transition-colors">
+                      {drafts[0].name}
+                    </h3>
+                    <p className="text-xs text-white/60 line-clamp-2 mt-1 max-w-2xl">
+                      {drafts[0].description || "Modpack colaborativo en construcción. Retomá donde lo dejaste."}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                    <div className="flex items-center gap-2">
+                      <CommunityUserAvatar
+                        username={drafts[0].profiles?.username || "Creador"}
+                        avatarUrl={drafts[0].profiles?.avatar_url}
+                        color={drafts[0].profiles?.color}
+                        size="sm"
+                      />
+                      <span className="text-xs text-white/70">
+                        por <b className="text-white">@{drafts[0].profiles?.username || "vos"}</b>
+                      </span>
+                    </div>
+
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-primary group-hover:translate-x-1 transition-transform">
+                      Retomar edición →
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {drafts.map((draft) => {
             const version = draft.draft_snapshots?.[0]?.version_number || 0;
             return (
@@ -243,8 +315,8 @@ export function CommunityDrafts() {
                   </div>
                 </div>
               </div>
-            );
           })}
+          </div>
         </div>
       )}
 

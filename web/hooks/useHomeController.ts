@@ -9,6 +9,7 @@ import type { CollectionItem } from "../app/types";
 import { attachDependencyTypes, buildDependencyTypeMap } from "../lib/dependencies";
 import { inferSide, normalizeContentType, normalizeLoader } from "../lib/projectTypes";
 import { fetchUserShares, isFavoritePlatformConstraintError, sortSharesByPriority } from "../lib/shareMeta";
+import { useHomeDiscover } from "./useHomeDiscover";
 
 export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -129,16 +130,6 @@ function normalizeFavorite(fav: any): ModHit {
   };
 }
 
-function parseStringArrayCache(value: string | null): string[] | null {
-  if (!value || !value.trim().startsWith("[")) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : null;
-  } catch {
-    return null;
-  }
-}
-
 export function useHomeController() {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedMod, setSelectedMod] = useState<ModHit | null>(null);
@@ -149,22 +140,7 @@ export function useHomeController() {
   const [modStack, setModStack] = useState<any[]>([]);
   const [activeStackIndex, setActiveStackIndex] = useState(-1);
 
-  const [discoverQuery, setDiscoverQuery] = useState("");
-  const [discoverType, setDiscoverType] = useState("mod");
-  const [discoverVersion, setDiscoverVersion] = useState<string[]>([]);
-  const [discoverLoader, setDiscoverLoader] = useState<string[]>([]);
-  const [discoverEnvironment, setDiscoverEnvironment] = useState("any");
-  const [discoverCategory, setDiscoverCategory] = useState<string[]>([]);
-  const [discoverSort, setDiscoverSort] = useState<string>("newest");
-  const [discoverResults, setDiscoverResults] = useState<ModHit[]>([]);
-  const [discoverLoading, setDiscoverLoading] = useState(false);
-  const [discoverPage, setDiscoverPage] = useState(1);
-  const [discoverTotal, setDiscoverTotal] = useState(0);
-  const [discoverSource, setDiscoverSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("modrinth");
-  const [discoverError, setDiscoverError] = useState("");
-
   const [isLoaded, setIsLoaded] = useState(false);
-  const initialSearchSkippedRef = useRef(false);
   const collectionsLastLoadedRef = useRef(0);
   const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
@@ -216,6 +192,20 @@ export function useHomeController() {
   const [showDraftPicker, setShowDraftPicker] = useState(false);
   const [pendingMod, setPendingMod] = useState<ModHit | null>(null);
 
+  const closeProjectDetails = useCallback(() => {
+    setSelectedMod(null);
+    setSelectedModDetails(null);
+    setSelectedModDeps([]);
+    setModStack([]);
+    setActiveStackIndex(-1);
+  }, []);
+
+  const discover = useHomeDiscover({
+    activeTab,
+    setActiveTab,
+    closeProjectDetails,
+  });
+
   const showAlert = useCallback((title: string, message: string) => setCustomAlert({ title, message }), []);
 
   const ensureMaxThreeVisible = useCallback((channels: any[]) => {
@@ -256,63 +246,8 @@ export function useHomeController() {
       setShowcaseChannels(DEFAULT_CHANNELS);
     }
 
-    // ── Cache Loading ──
     const cachedTab = localStorage.getItem("mim_active_tab");
     if (cachedTab) setActiveTab(cachedTab);
-
-    const cachedQuery = localStorage.getItem("mim_discover_query");
-    if (cachedQuery !== null) setDiscoverQuery(cachedQuery);
-
-    const cachedType = localStorage.getItem("mim_discover_type");
-    if (cachedType !== null) setDiscoverType(cachedType);
-
-    const cachedVersion = localStorage.getItem("mim_discover_version");
-    if (cachedVersion !== null) setDiscoverVersion(parseStringArrayCache(cachedVersion) ?? []);
-
-    const cachedLoader = localStorage.getItem("mim_discover_loader");
-    if (cachedLoader !== null) setDiscoverLoader(parseStringArrayCache(cachedLoader) ?? []);
-
-    const cachedEnvironment = localStorage.getItem("mim_discover_environment");
-    if (cachedEnvironment !== null) setDiscoverEnvironment(cachedEnvironment);
-
-    const cachedCategory = localStorage.getItem("mim_discover_category");
-    if (cachedCategory !== null) {
-      try { 
-        setDiscoverCategory(JSON.parse(cachedCategory)); 
-      } catch (e) {
-        console.warn("[useHomeController] Corrupted mim_discover_category in localStorage:", e);
-      }
-    }
-
-    const cachedSort = localStorage.getItem("mim_discover_sort");
-    const sortDefaultMigrated = localStorage.getItem("mim_discover_sort_default_v2") === "1";
-    if (cachedSort !== null && (sortDefaultMigrated || cachedSort !== "relevance")) {
-      setDiscoverSort(cachedSort);
-    }
-    localStorage.setItem("mim_discover_sort_default_v2", "1");
-
-    const cachedSource = localStorage.getItem("mim_discover_source");
-    if (cachedSource !== null) setDiscoverSource(cachedSource as any);
-
-    const cachedPage = localStorage.getItem("mim_discover_page");
-    if (cachedPage !== null) setDiscoverPage(Number(cachedPage));
-
-    const cachedTotal = localStorage.getItem("mim_discover_total");
-    if (cachedTotal !== null) setDiscoverTotal(Number(cachedTotal));
-
-    const cachedResults = localStorage.getItem("mim_discover_results");
-    let hasResults = false;
-    if (cachedResults !== null) {
-      try {
-        const parsed = JSON.parse(cachedResults);
-        setDiscoverResults(parsed);
-        if (parsed && parsed.length > 0) {
-          hasResults = true;
-        }
-      } catch (e) {
-        console.warn("[useHomeController] Corrupted mim_discover_results in localStorage:", e);
-      }
-    }
 
     const cachedCollection = localStorage.getItem("mim_active_collection");
     if (cachedCollection !== null) {
@@ -358,12 +293,6 @@ export function useHomeController() {
       }
     }
 
-    if (hasResults) {
-      initialSearchSkippedRef.current = false;
-    } else {
-      initialSearchSkippedRef.current = true;
-    }
-
     setIsLoaded(true);
   }, []);
 
@@ -373,22 +302,10 @@ export function useHomeController() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  // ── Cache Saving ──
   useEffect(() => {
     if (!isLoaded) return;
 
     localStorage.setItem("mim_active_tab", activeTab);
-    localStorage.setItem("mim_discover_query", discoverQuery);
-    localStorage.setItem("mim_discover_type", discoverType);
-    localStorage.setItem("mim_discover_version", JSON.stringify(discoverVersion));
-    localStorage.setItem("mim_discover_loader", JSON.stringify(discoverLoader));
-    localStorage.setItem("mim_discover_environment", discoverEnvironment);
-    localStorage.setItem("mim_discover_category", JSON.stringify(discoverCategory));
-    localStorage.setItem("mim_discover_sort", discoverSort);
-    localStorage.setItem("mim_discover_source", discoverSource);
-    localStorage.setItem("mim_discover_page", String(discoverPage));
-    localStorage.setItem("mim_discover_results", JSON.stringify(discoverResults));
-    localStorage.setItem("mim_discover_total", String(discoverTotal));
 
     if (activeCollection) {
       localStorage.setItem("mim_active_collection", JSON.stringify(activeCollection));
@@ -406,17 +323,6 @@ export function useHomeController() {
   }, [
     isLoaded,
     activeTab,
-    discoverQuery,
-    discoverType,
-    discoverVersion,
-    discoverLoader,
-    discoverEnvironment,
-    discoverCategory,
-    discoverSort,
-    discoverSource,
-    discoverPage,
-    discoverResults,
-    discoverTotal,
     activeCollection,
     activeCollectionMods,
     activeDraft
@@ -715,7 +621,6 @@ export function useHomeController() {
       }
     }
 
-    // In-memory throttling (1 minute) to avoid spamming calls during the same user session
     const THROTTLE_MS = 60 * 1000;
     if (Date.now() - collectionsLastLoadedRef.current < THROTTLE_MS) return;
     if (collectionsRequestRef.current) return collectionsRequestRef.current;
@@ -776,7 +681,6 @@ export function useHomeController() {
     setActiveCollection(collection);
     setActiveCollectionMods([]);
     void loadCollectionMods(collection, false);
-    // Navigate to collections tab so the detail view is immediately visible
     setActiveTab("collections");
   };
 
@@ -822,7 +726,6 @@ export function useHomeController() {
         }
       }
 
-      // Fetch actual game versions and loaders from Modrinth in batch if versions are set
       const versionIds = items.map((item: any) => item.version_id).filter(Boolean);
       let versionsMap: Record<string, { game_versions: string[]; loaders: string[] }> = {};
       if (versionIds.length) {
@@ -918,150 +821,6 @@ export function useHomeController() {
     }
   }, []);
 
-  const runDiscoverSearch = useCallback(async (pageNumber = 1, overrideQuery?: string, overrideSource?: "modrinth" | "curseforge" | "all") => {
-    try {
-      setDiscoverLoading(true);
-      setDiscoverError("");
-      
-      const activeSource = overrideSource || discoverSource;
-      const activeQuery = overrideQuery !== undefined ? overrideQuery : discoverQuery;
-      
-      const gameVersions = Array.isArray(discoverVersion) ? discoverVersion : [];
-      const selectedLoaders = Array.isArray(discoverLoader) ? discoverLoader : [];
-      const categories = discoverCategory.length > 0 ? discoverCategory : [];
-      const environments = discoverEnvironment && discoverEnvironment !== "any" ? [discoverEnvironment] : [];
-
-      const queryParams = new URLSearchParams({
-        projectType: discoverType,
-        loader: selectedLoaders.length > 0 ? selectedLoaders.join(",") : "any",
-        page: String(pageNumber),
-        pageSize: "12",
-        q: activeQuery,
-        sort: discoverSort,
-        gameVersions: JSON.stringify(gameVersions),
-        categories: JSON.stringify(categories),
-        environments: JSON.stringify(environments)
-      });
-
-      let mapped: ModHit[] = [];
-      let totalHits = 0;
-
-      if (activeSource === "chunk") {
-        const chunkParams = new URLSearchParams({
-          page: String(pageNumber),
-          ...(activeQuery ? { q: activeQuery } : {}),
-        });
-        const res = await fetch(`/api/bedrock/discover?${chunkParams.toString()}`);
-        if (!res.ok) {
-          throw new Error("Error en la API de Bedrock (chunk.gg)");
-        }
-        const data = await res.json();
-        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "chunk" }));
-        totalHits = data.total || 0;
-      } else if (activeSource === "all") {
-        const [mRes, cRes] = await Promise.allSettled([
-          fetch(`/api/modrinth/discover?${queryParams.toString()}`),
-          fetch(`/api/curseforge/discover?${queryParams.toString()}`)
-        ]);
-
-        let mMods: ModHit[] = [];
-        let cMods: ModHit[] = [];
-        let mTotal = 0;
-        let cTotal = 0;
-
-        if (mRes.status === "fulfilled" && mRes.value.ok) {
-          const d = await mRes.value.json();
-          mMods = (d.mods || []).map((m: any) => ({ ...m, _source: "modrinth" }));
-          mTotal = d.total || 0;
-        }
-        if (cRes.status === "fulfilled" && cRes.value.ok) {
-          const d = await cRes.value.json();
-          cMods = (d.mods || []).map((m: any) => ({ ...m, _source: "curseforge" }));
-          cTotal = d.total || 0;
-        }
-
-        // Interleave the results for a unified discovery experience
-        const maxLength = Math.max(mMods.length, cMods.length);
-        for (let i = 0; i < maxLength; i++) {
-          if (i < mMods.length) mapped.push(mMods[i]);
-          if (i < cMods.length) mapped.push(cMods[i]);
-        }
-        totalHits = mTotal + cTotal;
-      } else if (activeSource === "curseforge") {
-        const res = await fetch(`/api/curseforge/discover?${queryParams.toString()}`);
-        if (!res.ok) {
-          throw new Error("Error en la API de CurseForge");
-        }
-        const data = await res.json();
-        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "curseforge" }));
-        totalHits = data.total || 0;
-      } else {
-        // Modrinth
-        const res = await fetch(`/api/modrinth/discover?${queryParams.toString()}`);
-        if (!res.ok) {
-          throw new Error("Error en la API de Modrinth");
-        }
-        const data = await res.json();
-        mapped = (data.mods || []).map((m: any) => ({ ...m, _source: "modrinth" }));
-        totalHits = data.total || 0;
-      }
-
-      setDiscoverResults(mapped);
-      setDiscoverTotal(totalHits);
-      setDiscoverPage(pageNumber);
-    } catch (err: any) {
-      console.error("Discover search error:", err);
-      setDiscoverError(err.message || "Error al buscar mods");
-      if (pageNumber === 1) {
-        setDiscoverResults([]);
-      }
-    } finally {
-      setDiscoverLoading(false);
-    }
-  }, [discoverQuery, discoverType, discoverVersion, discoverLoader, discoverSource, discoverEnvironment, discoverCategory, discoverSort]);
-
-  const handleSearchAuthor = useCallback((authorName: string, platform: string) => {
-    const cleanPlatform = (platform === "curseforge" || platform === "all" || platform === "modrinth") ? platform : "modrinth";
-    const isOrg = authorName.startsWith("organization:");
-    const authorQuery = isOrg ? authorName : `author:${authorName}`;
-    setDiscoverQuery(authorQuery);
-    setDiscoverSource(cleanPlatform);
-    setDiscoverCategory([]);
-    setDiscoverResults([]);
-    setDiscoverPage(1);
-    setActiveTab("discover");
-    
-    // Close modal
-    setSelectedMod(null);
-    setSelectedModDetails(null);
-    setSelectedModDeps([]);
-    setModStack([]);
-    setActiveStackIndex(-1);
-
-    // Run search immediately
-    void runDiscoverSearch(1, authorQuery, cleanPlatform);
-  }, [runDiscoverSearch]);
-
-  const handleSearchMod = useCallback((title: string) => {
-    setDiscoverQuery(title);
-    setDiscoverSource("all");
-    setDiscoverType("any");
-    setDiscoverVersion([]);
-    setDiscoverLoader([]);
-    setDiscoverEnvironment("any");
-    setDiscoverCategory([]);
-    setDiscoverResults([]);
-    setDiscoverPage(1);
-    setActiveTab("discover");
-
-    // Close modal
-    setSelectedMod(null);
-    setSelectedModDetails(null);
-    setSelectedModDeps([]);
-    setModStack([]);
-    setActiveStackIndex(-1);
-  }, []);
-
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -1074,12 +833,6 @@ export function useHomeController() {
       void loadRankingsData();
     } else if (activeTab === "feed") {
       void loadYoutubeData(currentChannel, youtubeFeedType);
-    } else if (activeTab === "discover") {
-      if (!initialSearchSkippedRef.current) {
-        initialSearchSkippedRef.current = true;
-      } else {
-        void runDiscoverSearch(discoverPage);
-      }
     }
   }, [
     isLoaded,
@@ -1089,9 +842,7 @@ export function useHomeController() {
     loadSpotlightData,
     loadCollections,
     loadRankingsData,
-    loadYoutubeData,
-    runDiscoverSearch,
-    discoverPage
+    loadYoutubeData
   ]);
 
   const handleOpenModDetails = async (mod: ModHit, isDependency = false) => {
@@ -1269,7 +1020,6 @@ export function useHomeController() {
       });
       if (error) throw error;
 
-      // Log activity
       await supabase.from("draft_activity").insert({
         draft_id: draftId,
         profile_id: session.user.id,
@@ -1319,7 +1069,6 @@ export function useHomeController() {
 
   const removeModFromDraft = async (draftId: string, projectId: string, itemId?: string) => {
     if (!session?.user?.id) return;
-    // Capture the mod name before deleting for activity log
     const draftObj = userDrafts.find((d) => d.id === draftId);
     const itemMeta = (draftObj?.items || []).find(
       (i: any) => (itemId && i.id === itemId) || i.project_id === projectId
@@ -1331,7 +1080,6 @@ export function useHomeController() {
     if (error) {
       showAlert("Error", `Error al eliminar del draft: ${error.message}`);
     } else {
-      // Log activity
       await supabase.from("draft_activity").insert({
         draft_id: draftId,
         profile_id: session.user.id,
@@ -1381,7 +1129,6 @@ export function useHomeController() {
     await loadUserData(session.user.id);
   };
 
-  /** Update draft details (name, version, loader, visibility) and log activity */
   const updateDraftMetadata = async (
     draftId: string,
     updates: { name?: string; minecraft_version?: string; loader?: string; visibility?: string }
@@ -1396,7 +1143,6 @@ export function useHomeController() {
       return false;
     }
 
-    // Construct a list of what changed for the activity log
     const changedFields: string[] = [];
     if (updates.name) changedFields.push("nombre");
     if (updates.minecraft_version) changedFields.push("versión");
@@ -1464,7 +1210,6 @@ export function useHomeController() {
     }
   };
 
-  /** Follow or unfollow an author by name, saving to followed_authors table */
   const onToggleFollowAuthor = async (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => {
     if (!session?.user?.id || !authorName) return;
     try {
@@ -1528,7 +1273,6 @@ export function useHomeController() {
     );
     if (!currentShare) return;
 
-    // Optimistic update — immediately reorder in UI so the pin feels instant.
     setUserShares((items) =>
       sortSharesByPriority(
         items.map((item) => {
@@ -1638,9 +1382,7 @@ export function useHomeController() {
 
   return {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
-    modStack, activeStackIndex, discoverQuery, setDiscoverQuery, discoverType, setDiscoverType, discoverVersion,
-    setDiscoverVersion, discoverLoader, setDiscoverLoader, discoverEnvironment, setDiscoverEnvironment, discoverCategory, setDiscoverCategory, discoverSort, setDiscoverSort, discoverResults, setDiscoverResults, discoverLoading,
-    discoverPage, setDiscoverPage, discoverTotal, discoverSource, setDiscoverSource, discoverError, session, email, setEmail, password, setPassword, username,
+    modStack, activeStackIndex, ...discover, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
     showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts, userFollowedAuthors, loadingUserData,
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, curseForgeCollections, latestFeaturedMods, latestCollectionName,
@@ -1650,13 +1392,13 @@ export function useHomeController() {
     rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,
     handleRemoveChannel, handleEnterCollection, handleExitCollection: () => { setActiveCollection(null); setActiveCollectionMods([]); },
-    handleEnterDraftCollection, runDiscoverSearch, handleOpenModDetails, handleSwitchStackIndex,
+    handleEnterDraftCollection, handleOpenModDetails, handleSwitchStackIndex,
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
-    handleCloseModDetails: () => { setSelectedMod(null); setSelectedModDetails(null); setSelectedModDeps([]); setModStack([]); setActiveStackIndex(-1); },
+    handleCloseModDetails: closeProjectDetails,
     createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
     onRemoveShare, onUpdateSharePriority, shareYoutubePost,
     handleToggleChannelVisibility,
     refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
-    activeDraft, setActiveDraft, handleSearchAuthor, handleSearchMod,
+    activeDraft, setActiveDraft,
   };
 }

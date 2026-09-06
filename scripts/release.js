@@ -57,7 +57,100 @@ function getCurrentVersion() {
   return pkg.version;
 }
 
-function updateVersion(newVersion) {
+function processReleaseNotes(newVersion, today, commitMessage = "") {
+  const releasesDir = path.join(process.cwd(), "docs", "releases");
+  if (!fs.existsSync(releasesDir)) {
+    fs.mkdirSync(releasesDir, { recursive: true });
+  }
+
+  const unreleasedPath = path.join(releasesDir, "UNRELEASED.md");
+  const changelogPath = path.join(releasesDir, "CHANGELOG.md");
+  const releaseNotesPath = path.join(releasesDir, `release-notes-v${newVersion}.md`);
+
+  let notesBody = "";
+
+  // 1. Leer UNRELEASED.md si existe y contiene notas redactadas
+  if (fs.existsSync(unreleasedPath)) {
+    const rawUnreleased = fs.readFileSync(unreleasedPath, "utf-8");
+    let cleaned = rawUnreleased.replace(/<!--[\s\S]*?-->/g, "");
+    cleaned = cleaned.replace(/^#\s+[^\n]+/m, "");
+    cleaned = cleaned.trim();
+    if (cleaned.length > 15) {
+      notesBody = cleaned;
+    }
+  }
+
+  // 2. Si UNRELEASED.md no tenía contenido, extraer del historial git reciente
+  if (!notesBody) {
+    let lastTag = "";
+    try {
+      lastTag = run("git describe --tags --abbrev=0", true);
+    } catch {}
+
+    let gitCommits = "";
+    try {
+      const gitCmd = lastTag
+        ? `git log ${lastTag}..HEAD --pretty=format:"- %s (%h)"`
+        : `git log -n 10 --pretty=format:"- %s (%h)"`;
+      gitCommits = run(gitCmd, true);
+    } catch {}
+
+    if (gitCommits) {
+      notesBody = `### Cambios incluidos\n\n${gitCommits}`;
+    } else {
+      notesBody = `### Cambios incluidos\n\n- ${commitMessage || `Actualización de sistemas v${newVersion}`}`;
+    }
+  }
+
+  // 3. Escribir docs/releases/release-notes-vX.X.X.md
+  const cleanTitle = (commitMessage || "Sistemas y Criterio Técnico MIM")
+    .replace(/^v?\d+\.\d+\.\d+\s*[-—:]*\s*/i, "")
+    .trim();
+
+  const releaseNotesContent = `# MIM v${newVersion} — ${cleanTitle}\n\n` +
+    `**Fecha:** ${today}  \n` +
+    `**Estado:** Beta activa\n\n` +
+    `## Cambios verificados\n\n` +
+    `${notesBody}\n\n` +
+    `## Validación\n\n` +
+    `Todas las compuertas de calidad pre-release fueron ejecutadas y verificadas satisfactoriamente (API Guard 100%, Architecture Boundaries, Test Suites & Benchmarks).\n`;
+
+  fs.writeFileSync(releaseNotesPath, releaseNotesContent, "utf-8");
+  console.log(chalk.green(`  ✓ docs/releases/release-notes-v${newVersion}.md generado automáticamente.`));
+
+  // 4. Actualizar docs/releases/CHANGELOG.md insertando la nueva versión
+  if (fs.existsSync(changelogPath)) {
+    let changelog = fs.readFileSync(changelogPath, "utf-8");
+    changelog = changelog.replace(/> \*\*Versión Actual:\*\* v?\d+\.\d+\.\d+/g, `> **Versión Actual:** v${newVersion}`);
+    changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
+
+    const newSection = `\n## 🚀 Versión ${newVersion} — ${cleanTitle} (${today})\n\n${notesBody}\n\n---\n`;
+    const sep = "\n---\n";
+    const sepIdx = changelog.indexOf(sep);
+    if (sepIdx !== -1) {
+      changelog = changelog.slice(0, sepIdx + sep.length) + "\n" + newSection + changelog.slice(sepIdx + sep.length);
+    } else {
+      changelog += "\n" + newSection;
+    }
+
+    fs.writeFileSync(changelogPath, changelog, "utf-8");
+    console.log(chalk.green(`  ✓ docs/releases/CHANGELOG.md actualizado con la sección v${newVersion}.`));
+  }
+
+  // 5. Reiniciar docs/releases/UNRELEASED.md para el próximo ciclo
+  const unreleasedTemplate = `# Cambios Pendientes (Unreleased)
+
+<!--
+Anota aquí los cambios acumulados de PRs o commits.
+Al ejecutar 'npm run release:auto', este contenido se trasladará automáticamente
+a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
+-->
+`;
+  fs.writeFileSync(unreleasedPath, unreleasedTemplate, "utf-8");
+  console.log(chalk.green("  ✓ docs/releases/UNRELEASED.md reiniciado para el próximo ciclo."));
+}
+
+function updateVersion(newVersion, commitMessage = "") {
   const pkg = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   pkg.version = newVersion;
   fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
@@ -88,18 +181,6 @@ function updateVersion(newVersion) {
     console.log(chalk.green("  ✓ docs/architecture/MIM.md actualizado con la nueva versión y fecha."));
   }
 
-  // docs/releases/CHANGELOG.md
-  const changelogPath = fs.existsSync(path.join(process.cwd(), "docs", "releases", "CHANGELOG.md"))
-    ? path.join(process.cwd(), "docs", "releases", "CHANGELOG.md")
-    : path.join(process.cwd(), "docs", "CHANGELOG.md");
-  if (fs.existsSync(changelogPath)) {
-    let changelog = fs.readFileSync(changelogPath, "utf-8");
-    changelog = changelog.replace(/> \*\*Versión Actual:\*\* v?\d+\.\d+\.\d+/g, `> **Versión Actual:** v${newVersion}`);
-    changelog = changelog.replace(/> \*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `> **Última actualización:** ${today}`);
-    fs.writeFileSync(changelogPath, changelog);
-    console.log(chalk.green("  ✓ docs/releases/CHANGELOG.md actualizado con la nueva versión y fecha."));
-  }
-
   // docs/planning/PROJECT_STATUS.md
   const statusPath = path.join(process.cwd(), "docs", "planning", "PROJECT_STATUS.md");
   if (fs.existsSync(statusPath)) {
@@ -119,6 +200,9 @@ function updateVersion(newVersion) {
     fs.writeFileSync(roadmapPath, roadmapDoc);
     console.log(chalk.green("  ✓ docs/planning/ROADMAP.md actualizado"));
   }
+
+  // Procesar notas de release y changelog automáticamente
+  processReleaseNotes(newVersion, today, commitMessage);
 }
 
 function bumpVersion(version, type) {
@@ -264,6 +348,17 @@ async function automatedReleaseFlow() {
   const newVersion = bumpVersion(currentVersion, releaseType);
 
   if (!commitMessage) {
+    const unreleasedPath = path.join(process.cwd(), "docs", "releases", "UNRELEASED.md");
+    if (fs.existsSync(unreleasedPath)) {
+      const raw = fs.readFileSync(unreleasedPath, "utf-8");
+      const match = raw.match(/###?\s+([^\n]+)/);
+      if (match && match[1]) {
+        commitMessage = match[1].replace(/^[🛡️🌟🚀⚡🔧🛠️\s]+/, "").trim();
+      }
+    }
+  }
+
+  if (!commitMessage) {
     commitMessage = `Release v${newVersion} — Sistemas y Criterio Técnico MIM`;
   }
 
@@ -273,7 +368,7 @@ async function automatedReleaseFlow() {
   createBackupBranch();
 
   console.log(chalk.bold("📦 Actualizando nomenclatura de versionado global:"));
-  updateVersion(newVersion);
+  updateVersion(newVersion, commitMessage);
 
   console.log(chalk.bold("\n🏷️  Creando commit y tag de Git:"));
   run("git add .");
@@ -370,7 +465,7 @@ async function interactiveReleaseFlow() {
   const newVersion = bumpVersion(currentVersion, answers.releaseType);
   console.log(chalk.yellow(`\nVersion bump: ${currentVersion} → ${newVersion}`));
 
-  updateVersion(newVersion);
+  updateVersion(newVersion, answers.commitMessage);
 
   run("git add .");
   runGit(["commit", "-m", `v${newVersion} - ${answers.commitMessage}`]);

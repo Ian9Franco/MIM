@@ -17,6 +17,16 @@ export type SageErrorDefinition = {
   action: string;
 };
 
+export type SageErrorPayload = {
+  error: SageErrorDefinition["legacyError"];
+  code: SageErrorCode;
+  message: string;
+  retryable: boolean;
+  severity: SageErrorSeverity;
+  action: string;
+  details?: string;
+};
+
 export const SAGE_ERROR_DEFINITIONS: Readonly<Record<SageErrorCode, SageErrorDefinition>> = {
   MIM_CREDENTIAL_MISSING: {
     status: 401,
@@ -56,19 +66,24 @@ export function sageErrorResponse(
   code: SageErrorCode,
   options: { message?: string; details?: string } = {},
 ): NextResponse {
+  const payload = sageErrorPayload(code, options);
+  return NextResponse.json(payload, { status: SAGE_ERROR_DEFINITIONS[code].status });
+}
+
+export function sageErrorPayload(
+  code: SageErrorCode,
+  options: { message?: string; details?: string } = {},
+): SageErrorPayload {
   const definition = SAGE_ERROR_DEFINITIONS[code];
-  return NextResponse.json(
-    {
-      error: definition.legacyError,
-      code,
-      message: options.message ?? definition.message,
-      retryable: definition.retryable,
-      severity: definition.severity,
-      action: definition.action,
-      ...(options.details ? { details: options.details } : {}),
-    },
-    { status: definition.status },
-  );
+  return {
+    error: definition.legacyError,
+    code,
+    message: options.message ?? definition.message,
+    retryable: definition.retryable,
+    severity: definition.severity,
+    action: definition.action,
+    ...(options.details ? { details: options.details } : {}),
+  };
 }
 
 export function errorMessage(error: unknown): string {

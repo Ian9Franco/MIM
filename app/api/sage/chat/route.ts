@@ -5,7 +5,6 @@
  * y conexión a caché de diagnóstico de SAGE.
  */
 
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 import { getApiKey } from "@/lib/core/settings";
@@ -15,8 +14,11 @@ import {
 } from "@/lib/intelligence/sage/cacheEngine";
 import {
   errorMessage,
+  sageErrorPayload,
   sageErrorResponse,
 } from "@/lib/intelligence/sage/errorContract";
+import { GeminiSseTextReader } from "@/lib/intelligence/sage/geminiStream";
+import { encodeSageStreamEvent } from "@/lib/intelligence/sage/streamContract";
 
 const GEMINI_MODELS = [
   "gemini-flash-lite-latest",
@@ -174,7 +176,7 @@ Respondé a la consulta del usuario de forma concisa y accionable.
     let isRateLimited = false;
 
     for (const modelName of prioritizedModels) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
 
       try {
         const res = await fetch(endpoint, {
@@ -184,24 +186,27 @@ Respondé a la consulta del usuario de forma concisa y accionable.
             "x-goog-api-key": resolvedApiKey,
           },
           body: JSON.stringify(requestPayload),
-          signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
+          signal: AbortSignal.any([
+            request.signal,
+            AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
+          ]),
         });
 
         if (res.ok) {
-          const data = await res.json();
-          const candidate = data.candidates?.[0];
-          const reply = candidate?.content?.parts?.[0]?.text;
-          if (reply && reply.trim()) {
-            lastSuccessfulModel = modelName;
-            return NextResponse.json({
-              reply: reply.trim(),
-              modelUsed: modelName,
-            });
+          if (res.body) {
+            const reader = new GeminiSseTextReader(res.body);
+            const first = await reader.readText();
+            if (!first.done && first.text) {
+              lastSuccessfulModel = modelName;
+              return createSageStreamResponse(reader, modelName, first.text);
+            }
           }
+          lastErrorMsg = "Gemini returned an empty stream";
+          continue;
         }
 
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData?.error?.message || res.statusText || "";
+        const errData: unknown = await res.json().catch(() => ({}));
+        const errMsg = providerErrorMessage(errData, res.statusText);
         lastErrorMsg = errMsg;
 
         // Caso A: Clave API inválida o expirada
@@ -238,3 +243,63 @@ Respondé a la consulta del usuario de forma concisa y accionable.
     });
   }
 );
+
+function createSageStreamResponse(
+  reader: GeminiSseTextReader,
+  model: string,
+  firstText: string,
+): Response {
+  let started = false;
+  let closed = false;
+
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (closed) return;
+      if (!started) {
+        controller.enqueue(encodeSageStreamEvent({ type: "start", model }));
+        controller.enqueue(encodeSageStreamEvent({ type: "delta", text: firstText }));
+        started = true;
+        return;
+      }
+
+      try {
+        const chunk = await reader.readText();
+        if (chunk.done) {
+          controller.enqueue(encodeSageStreamEvent({ type: "done" }));
+          controller.close();
+          closed = true;
+          return;
+        }
+        controller.enqueue(encodeSageStreamEvent({ type: "delta", text: chunk.text }));
+      } catch (error: unknown) {
+        console.warn("[/api/sage/chat] Gemini stream interrupted:", errorMessage(error));
+        controller.enqueue(encodeSageStreamEvent({
+          type: "error",
+          error: sageErrorPayload("MIM_AI_GENERATION_FAILED"),
+        }));
+        controller.close();
+        closed = true;
+      }
+    },
+    async cancel(reason) {
+      closed = true;
+      await reader.cancel(reason);
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+function providerErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value !== "object" || value === null) return fallback;
+  const error = Reflect.get(value, "error");
+  if (typeof error !== "object" || error === null) return fallback;
+  const message = Reflect.get(error, "message");
+  return typeof message === "string" ? message : fallback;
+}

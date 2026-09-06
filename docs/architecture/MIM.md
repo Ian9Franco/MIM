@@ -251,6 +251,7 @@ Las rutas de API en Next.js actúan como orquestadores de procesos locales y pas
 El sistema interactivo de recuperación de crashes (SAGE) cuenta con las siguientes capacidades:
 * **Crash Log Interpreter**: Analizador heurístico de stack traces de Java de Minecraft para encontrar culpables y dependencias faltantes.
 * **SAGE ➔ FOMO Bridge**: Permite descargar e instalar dependencias faltantes identificadas en logs con un solo clic.
+* **Copiloto por streaming**: `/api/sage/chat` adapta el SSE de Gemini a un contrato NDJSON tipado y cancelable, de modo que la interfaz presenta cada delta sin perder la taxonomía estructurada de fallos.
 * **NBT Player Rescue Editor**: Lógica binaria de lectura y escritura NBT (`lib/nbt.ts`) con soporte Gzip nativo para teletransportar jugadores en chunks corruptos, cambiar dimensiones o limpiar inventarios dañados, con copias de seguridad `.mim_bak` garantizadas.
 * **Aislamiento de Mundos (Sandboxing)**: Flujo de selección en dos pasos (Selección de mundo -> Selección de jugador) que asegura que la edición del archivo `.dat` se aplica rigurosamente al archivo de origen local sin riesgo de colisiones entre distintos mundos. Las modificaciones NBT se realizan ahora de forma totalmente *inline*, sin usar modales superpuestos, permitiendo modificar claves y tipos directamente en la vista del árbol.
 

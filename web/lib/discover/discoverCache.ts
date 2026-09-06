@@ -72,7 +72,7 @@ export const DEFAULT_DISCOVER_CACHE_STATE: DiscoverCacheState = {
 function parseJson(value: string | null): unknown {
   if (value === null) return undefined;
   try {
-    return JSON.parse(value) as unknown;
+    return JSON.parse(value);
   } catch {
     return undefined;
   }

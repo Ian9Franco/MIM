@@ -11,7 +11,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app components lib --max-warnings=9999",
+    "lint": "eslint app components lib --max-warnings=471",
     "test:nbt": "ts-node --project tsconfig.scripts.json scripts/__tests__/nbt-integration.test.ts",
     "test:api": "ts-node --project tsconfig.scripts.json scripts/__tests__/api-integration.test.ts",
     "test:architecture": "ts-node --project tsconfig.scripts.json scripts/__tests__/architecture-boundaries.test.ts",

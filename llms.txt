@@ -1,36 +1,93 @@
-# MIM (Minecraft Intelligent Manager)
+# MIM — Repository Guide for LLMs and Automated Agents
 
-> **MIM (Minecraft Intelligent Manager)** es un ecosistema integral y gestor de modpacks de alto rendimiento para Minecraft, compuesto por una aplicación de escritorio nativa (**MIM Desktop** en Electron 42 + Next.js), una aplicación web móvil complementaria (**MIMweb / FOMO Hub**) y una plataforma comunitaria en la nube (**FOMO Cloud** con Supabase).
+This file is an operational index, not a marketing summary. Use it to find the current sources of truth before proposing or editing code.
 
-## 🎯 ¿Qué es MIM?
-MIM resuelve la complejidad y fricción de gestionar cientos de mods en Minecraft. Proporciona herramientas automatizadas para:
+## Sources of truth
 
-1. **Clasificación Rápida y Heurística**: Categoriza archivos `.jar` en milisegundos con hotkeys numéricos `1-9` o clasificación heurística automática por loader y entorno.
-2. **Búsqueda Dual Simultánea**: Consulta en paralelo los catálogos oficiales de **Modrinth** (Labrinth v2) y **CurseForge** (Eternal v1).
-3. **Diagnóstico Forense y Rescate (SAGE Engine)**:
-   - Análisis heurístico de logs de crasheos (`latest.log`, `crash-reports`, Mixin conflicts) para Forge, Fabric, NeoForge y Quilt.
-   - Editor visual de datos binarios NBT (`playerdata/*.dat`, `level.dat`) para rescatar jugadores atrapados o mundos corruptos con backups automáticos `.mim_bak`.
-4. **Seguridad y Análisis Estático de Bytecode**:
-   - Escáner estático de bytecode JAR para detectar droppers de procesos, invocaciones nativas JNI, abuso de reflexión y patrones de riesgo.
-   - Verificación en segundo plano de hashes SHA-256 con la API de **VirusTotal v3**.
-5. **Curación Móvil y Colaboración (MIMweb / FOMO Cloud)**:
-   - Web app responsive mobile-first para buscar mods, traducir descripciones al español en tiempo real, crear *Drafts* colaborativos y sincronizar en 1 clic con la app de escritorio.
-6. **Optimizador de Rendimiento (Tweak)**:
-   - Asignación inteligente de RAM y flags de Garbage Collection para Java (G1GC, ZGC, Shenandoah).
-   - Gestor de shaders y compatibilidad forzada de resource packs en `options.txt`.
+1. `package.json` — current application version, scripts, Electron build configuration and dependency graph.
+2. `.github/workflows/ci.yml` — actual CI gates executed on push and pull requests.
+3. `docs/README.md` — canonical documentation index. Prefer the paths listed there over historical links.
+4. `docs/planning/PROJECT_STATUS.md` — maturity/transparency audit; use it when README language and implementation maturity differ.
+5. `docs/planning/ROADMAP.md` — active technical roadmap.
+6. `docs/whosnext.md` — tactical debt / next-work list; verify every item against current `main` before acting.
+7. Current code and CI results override stale prose.
 
-## 🛠️ Tecnologías y Arquitectura
-- **Desktop**: Electron 42, Next.js 16, React 19, Tailwind CSS v4, Chokidar.
-- **Web**: Next.js 16 App Router, React 19, Framer Motion, Tailwind CSS.
-- **Cloud & DB**: Supabase (PostgreSQL con Row Level Security), IndexedDB local.
-- **APIs**: Modrinth Labrinth API, CurseForge Eternal API, VirusTotal API v3.
+Do not infer the current version from prose or badges. Read `package.json`.
 
-## 🔗 Enlaces y Contacto Oficial
-- **Web App (Live)**: https://mim-hub.vercel.app
-- **Repositorio GitHub**: https://github.com/Ian9Franco/MIM
-- **Autor**: [Ian Franco Collada Pontorno](https://github.com/Ian9Franco)
-- **Portfolio**: https://ian-pontorno-portfolio.vercel.app/
-- **LinkedIn**: https://ar.linkedin.com/in/ian-franco-collada-pontorno
-- **Instagram**: https://www.instagram.com/ian.franco._/
-- **Email**: ian9franco@gmail.com
-- **Licencia**: MIT License
+## Repository topology
+
+- `app/` — Next.js desktop-facing application and API routes.
+- `components/` — shared React UI, including FOMO, SAGE, library and project surfaces.
+- `lib/` — domain logic and engines: modding, security, intelligence/SAGE, storage, events, downloads and related contracts.
+- `web/` — MIMweb / FOMO Hub web application and its TypeScript project.
+- `standalone/` — Electron runtime, standalone packaging support and encrypted secret persistence.
+- `scripts/` — test runner, architecture checks, security checks, benchmarks, release tooling and PR workflow helpers.
+- `docs/` — canonical engineering documentation organized by topic.
+
+## Canonical technical documentation
+
+- General technical manual: `docs/architecture/MIM.md`
+- System architecture: `docs/architecture/ARCHITECTURE.md`
+- Architecture boundaries: `docs/architecture-boundaries.md`
+- HTTP API catalog: `docs/architecture/API.md`
+- Distributed architecture: `docs/architecture/DISTRIBUTED_ARCHITECTURE.md`
+- Security engine: `docs/security/SECURITY_ENGINE.md`
+- Threat model: `docs/security/THREAT_MODEL.md`
+- Web hardening: `docs/security/WEB_HARDENING.md`
+- SAGE rescue: `docs/engines/SAGE_RESCUE.md`
+- SAGE evaluation: `docs/engines/SAGE_EVALUATION.md`
+- NBT recovery specification: `docs/engines/NBT_RESCUE_SPEC.md`
+- Aduana benchmarks: `docs/engines/ADUANA_BENCHMARKS.md`
+- FOMO engine documentation: `docs/engines/FOMO_CLOUD.md`
+- Supabase/cloud setup: `docs/cloud/supabase_setup_and_api.md`
+- Changelog: `docs/releases/CHANGELOG.md`
+- Active roadmap: `docs/planning/ROADMAP.md`
+
+Historical root-level paths such as `docs/API.md` or `docs/ROADMAP.md` are not canonical unless they actually exist in the current tree.
+
+## Quality gates and validation
+
+Primary commands from `package.json`:
+
+- `npm run lint` — ESLint over `app`, `components` and `lib`. The current warning budget is intentionally bounded; CI must not silently increase it.
+- `npx tsc --noEmit` — root TypeScript check.
+- `npx tsc --project web/tsconfig.json --noEmit` — MIMweb TypeScript check.
+- `npm run lint:api-guard` — structural API guard verification.
+- `npm run lint:architecture` — architecture boundary verification.
+- `npm run test:architecture` — architecture boundary contract tests.
+- `npm test` / `npm run test:quick` — repository custom test runner (`scripts/test-runner.js`).
+- `npm run test:sage-errors` — SAGE error-contract tests.
+- `npm run test:sage-stream` — SAGE streaming-contract tests.
+- `npm run test:coverage` — c8 coverage plus the custom test runner.
+- `npm run build` — Next.js production build.
+
+CI currently executes lint/types, API guard, architecture validation, the custom test suite with coverage, SAGE contract tests, Codacy coverage upload, DAST baseline and production build. Do not claim that the repository lacks CI because it does not use Jest/Vitest/Mocha.
+
+## Coverage boundary
+
+Coverage is not repository-wide. `npm run test:coverage` currently instruments only:
+
+- `lib/modding/nbt.ts`
+- `lib/intelligence/sage/**`
+
+Do not interpret the resulting percentage as global coverage for UI, cloud, security or the rest of `lib/`.
+
+## Electron and secret storage
+
+`package.json` currently builds Electron with `asar: false`. Treat that as packaging transparency, not as a vulnerability by itself.
+
+Credential persistence is implemented in:
+
+- `standalone/main.js`
+- `standalone/secret-store.js`
+
+The Electron runtime uses `safeStorage` and stores encrypted values in `mim-secrets.enc.json` under MIM's local portable/user directory. Legacy plaintext settings are migrated before plaintext secret fields are removed. Verify the implementation before asserting that API keys are stored unencrypted.
+
+## Change discipline
+
+- Read current `main`, open PRs and recent commits before editing.
+- Prefer one coherent technical boundary per PR.
+- Do not introduce infrastructure, dependencies or abstractions merely to match industry conventions.
+- Do not weaken tests, types, security checks or CI to make a change pass.
+- Revalidate documentation claims against code and CI; mark disproved hypotheses instead of manufacturing diffs.
+- For rejected or stale plans, prefer the current implementation plus explicit project decisions over old roadmap prose.

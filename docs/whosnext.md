@@ -119,3 +119,5 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
 
 - [ ] *Aviso de privacidad del Free Tier de Google:* Incorporar un aviso visible en el panel de configuración de MIM-Bot explicando con transparencia que Google AI Studio en su capa gratuita puede utilizar los prompts para entrenamiento de modelos (mientras que cuentas con facturación habilitada o keys privadas no lo hacen).
 - [x] *Validación preventiva de API Key:* Implementado en `/api/settings/validate-keys` asegurando que la clave nunca viaje en la URL.
+
+

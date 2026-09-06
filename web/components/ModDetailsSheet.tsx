@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence, useDragControls } from "framer-motion";
+import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
+import { useCollectibleTransition } from "./CollectibleTransition";
 import type { ModHit } from "./SpotlightMarquees";
 import type {
   FomoModDetails,
@@ -115,6 +116,9 @@ export function ModDetailsSheet({
   const [showShareModal, setShowShareModal] = useState(false);
   const [, setDragEnabled] = useState(true);
 
+  const reducedMotion = useReducedMotion();
+  const { source } = useCollectibleTransition();
+  const sharedCard = source?.project === `${selectedMod?._source || "modrinth"}:${selectedMod?.projectId}`;
   const { muted, isClosing, handleToggleMute, closeWithSound, resetCloseState } =
     useSheetSounds(handleCloseModDetails);
 
@@ -261,6 +265,7 @@ export function ModDetailsSheet({
 
   return (
     <>
+      <AnimatePresence>
       {selectedMod && (
         <motion.div
           key="mod-details-backdrop"
@@ -277,11 +282,12 @@ export function ModDetailsSheet({
           <motion.div
             ref={sheetRef}
             layout="position"
-            initial={{ y: "112%", scale: 0.96, opacity: 0.75, height: sheetTargetHeight }}
+            initial={{ y: reducedMotion || sharedCard ? 0 : "112%", scale: reducedMotion || sharedCard ? 1 : 0.96, opacity: 0, height: sheetTargetHeight }}
             animate={{ y: 0, scale: 1, opacity: 1, height: sheetTargetHeight }}
-            exit={{ y: "108%", scale: 0.98, opacity: 0 }}
+            exit={{ y: reducedMotion || sharedCard ? 0 : "108%", scale: 1, opacity: 0 }}
             transition={{
-              type: "spring",
+              duration: reducedMotion ? .1 : .36,
+              type: "tween",
               stiffness: 150,
               damping: 24,
               mass: 1.0,
@@ -457,6 +463,7 @@ export function ModDetailsSheet({
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Modular Share Opinion Modal */}
       <ModShareModal

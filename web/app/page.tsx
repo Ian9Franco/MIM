@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { CollectibleTransition } from "../components/CollectibleTransition";
 import { AnimatePresence, motion } from "framer-motion";
 import { Coffee, Ghost, Share2, Sun, X, Puzzle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
@@ -52,6 +53,10 @@ function formatSearchQuery(input: string): string {
 }
 
 export default function Home() {
+  return <CollectibleTransition><HomeContent /></CollectibleTransition>;
+}
+
+function HomeContent() {
   const c = useHomeController();
   const [editingDraftId, setEditingDraftId] = React.useState<string | null>(null);
   const [selectionQuery, setSelectionQuery] = React.useState<string | null>(null);

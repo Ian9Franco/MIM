@@ -1,5 +1,6 @@
 "use client";
 import { CollectibleSurface } from "./CollectibleSurface";
+import { useCollectibleTransition } from "./CollectibleTransition";
 import { DefaultModIcon } from "./DefaultModIcon";
 
 import React, { useEffect, useState } from "react";
@@ -214,7 +215,8 @@ export function HorizontalEditorialMarquee({
   paused?: boolean;
 }) {
   const duplicatedItems = [...items, ...items, ...items, ...items];
-  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused);
+  const { open } = useCollectibleTransition();
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused || open);
 
   return (
     <div
@@ -266,6 +268,7 @@ export function HorizontalEditorialMarquee({
               <CollectibleSurface
                 key={`${item.projectId}-${i}`}
                 label={`Ver detalles de ${item.title}`}
+                project={`${item._source || "modrinth"}:${item.projectId}`}
                 onClick={() => onSelectMod?.(item)}
                 className="overflow-hidden flex flex-col min-w-[200px] max-w-[200px]"
               >

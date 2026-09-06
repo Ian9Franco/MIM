@@ -38,11 +38,7 @@
   pointer-events: none;
   background: radial-gradient(ellipse at var(--hx) var(--hy), #eef7ff66, #b8a1ff15 40%, transparent 70%), linear-gradient(rgb(0 0 0 / var(--dark)), rgb(0 0 0 / var(--dark)));
 }
-.detail { padding: 14px; margin-top: 2px; overflow: hidden; animation: reveal 380ms ease-out; }
-@keyframes reveal {
-  from { opacity: .5; transform: perspective(850px) rotateX(7deg) translateY(8px); }
-  to { opacity: 1; transform: perspective(850px) rotateX(0deg) translateY(0); }
-}
+.detail { padding: 14px; margin-top: 2px; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .surface { transition: none; transform: none; animation: none; }
 }

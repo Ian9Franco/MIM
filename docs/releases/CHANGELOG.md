@@ -2,9 +2,9 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.3  
+> **Versión Actual:** v11.4.4  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
-> **Última actualización:** 2026-09-05
+> **Última actualización:** 2026-09-06
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/PROJECT_STATUS.md).

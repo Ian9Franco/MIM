@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useId, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { useCollectibleTransition } from "./CollectibleTransition";
 import styles from "./CollectibleSurface.module.css";
 
 type Vector = [number, number, number];
@@ -16,10 +18,24 @@ function rotate([x, y, z]: Vector, rx: number, ry: number): Vector {
 }
 
 /** No pointer capture or preventDefault: the parent retains its mobile swipe gesture. */
-export function CollectibleSurface({ children, className = "", detail = false, onClick, label }: {
+export function CollectibleSurface({ children, className = "", detail = false, onClick, label, project }: {
   children: React.ReactNode; className?: string; detail?: boolean;
-  onClick?: () => void; label?: string;
+  onClick?: () => void; label?: string; project?: string;
 }) {
+  const id = useId();
+  const { source, setSource, setOpen } = useCollectibleTransition();
+  const reduceMotion = useReducedMotion();
+  const sharedId = detail ? (source?.project === project ? source?.id : undefined) : id;
+  useEffect(() => {
+    if (!detail) return;
+    setOpen(true);
+    return () => setOpen(false);
+  }, [detail, setOpen]);
+  const activate = () => {
+    if (project) setSource({ id, project });
+    setOpen(true);
+    onClick?.();
+  };
   const ref = useRef<HTMLDivElement>(null);
   const paint = (x: number, y: number) => {
     const el = ref.current;
@@ -38,11 +54,13 @@ export function CollectibleSurface({ children, className = "", detail = false, o
   const reset = () => paint(0, 0);
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   return (
-    <div ref={ref} className={`${styles.surface} ${detail ? styles.detail : ""} ${className}`}
+    <motion.div ref={ref} layoutId={reduceMotion ? undefined : sharedId}
+      transition={{ layout: { duration: .36, ease: [.22, 1, .36, 1] } }}
+      className={`${styles.surface} ${detail ? styles.detail : ""} ${className}`}
       role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
-      aria-label={label} onClick={onClick}
+      aria-label={label} onClick={onClick ? activate : undefined}
       onKeyDown={e => {
-        if (onClick && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); }
+        if (onClick && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); activate(); }
       }}
       onPointerMove={e => {
         if (e.pointerType !== "mouse" || e.buttons || reduced()) return;
@@ -57,6 +75,6 @@ export function CollectibleSurface({ children, className = "", detail = false, o
       <span className={styles.foil} aria-hidden="true" />
       <span className={styles.gloss} aria-hidden="true" />
       {children}
-    </div>
+    </motion.div>
   );
 }

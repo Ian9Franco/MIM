@@ -184,7 +184,7 @@ export function ModDetailsHeader({
       )}
 
       {/* Mod info */}
-      <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} detail className="relative z-10">
+      <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} project={`${selectedMod._source || "modrinth"}:${selectedMod.projectId}`} detail className="relative z-10">
         {!isReadingTab && bannerUrl && (
           <div data-collectible-art className="relative h-24 sm:h-28 overflow-hidden rounded-xl mb-3 bg-surface">
             <img src={bannerUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer"

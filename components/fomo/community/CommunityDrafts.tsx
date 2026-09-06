@@ -315,6 +315,7 @@ export function CommunityDrafts() {
                   </div>
                 </div>
               </div>
+            );
           })}
           </div>
         </div>

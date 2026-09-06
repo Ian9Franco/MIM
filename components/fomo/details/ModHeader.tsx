@@ -207,7 +207,7 @@ export function ModHeader({
                   <Globe className="w-2.5 h-2.5 text-orange-400" /> Compartido
                 </span>
               )}
-              {followedMods?.some((f) => f.mod_id === mod.projectId) && (
+              {followedMods?.some((f: any) => (f.projectId || f.mod_id) === mod.projectId) && (
                 <span className="mim-project-badge flex items-center gap-1 text-rose-300 border-rose-500/30">
                   <Heart className="w-2.5 h-2.5 text-rose-400 fill-current" /> Favorito
                 </span>

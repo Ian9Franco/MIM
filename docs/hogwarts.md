@@ -87,3 +87,32 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/38
 - **Resumen:** movió la validación de `projectName` de `POST /api/project/delete` al `bodySchema` Zod de `withApiGuard`, eliminando el parseo manual del body sin alterar las protecciones de path containment ni la lógica de borrado.
+
+## 2026-09-06 11:42:02 — Hermione — PR #40
+
+- **Título:** 📚 Hermione: documento lo que realmente salió en v11.4.4
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/40
+- **Resumen:** agregó notas canónicas específicas para v11.4.4 con los cambios de transición y superficies coleccionables realmente incluidos en ese release, evitando que la documentación pública saltara de v11.4.4 a detalles de v11.3.0.
+
+## 2026-09-06 11:42:35 — Harry — PR #41
+
+- **Título:** ⚡ Valido el borrado de archivos antes del handler
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/41
+- **Resumen:** movió el contrato `{ path | paths }` de `POST /api/delete` al `bodySchema` Zod de `withApiGuard`, eliminando parseo manual antes de la lógica de filesystem sin cambiar todavía la política de rutas permitidas.
+
+## 2026-09-06 13:32:12 — McGonagall — PR #42
+
+- **Título:** 🏰 McGonagall: separo Discover del controlador
+- **Resultado:** `CERRADO SIN MERGE`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/42
+- **Resumen:** proponía extraer Discover desde `useHomeController.ts` hacia un sub-hook preservando el contrato público y agregando regresiones de búsqueda.
+- **Motivo:** Codacy reportó 5 issues nuevos —4 críticos de seguridad y 1 medio de complejidad— y la implementación fue reemplazada por el enfoque más acotado y validado del PR #43.
+
+## 2026-09-06 13:32:22 — McGonagall — PR #43
+
+- **Título:** 🏰 McGonagall: separo Discover con fronteras seguras
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/43
+- **Resumen:** completó la Phase 1 del refactor de `useHomeController.ts`: extrajo Discover a un hook de composición y módulos separados para caché, decodificación de payloads y búsqueda con endpoints estáticos, mantuvo intactos los consumidores y agregó 20 regresiones al runner obligatorio.

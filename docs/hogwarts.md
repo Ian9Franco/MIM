@@ -80,3 +80,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/36
 - **Resumen:** cambió `/api/sage/chat` a streaming incremental desde Gemini SSE hacia un contrato NDJSON propio de MIM, agregó cancelación en cliente, errores tipados durante el stream y regresiones específicas ejecutadas por CI.
+
+## 2026-09-06 02:27:18 — Harry — PR #38
+
+- **Título:** ⚡ Valido el borrado de proyectos antes del handler
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/38
+- **Resumen:** movió la validación de `projectName` de `POST /api/project/delete` al `bodySchema` Zod de `withApiGuard`, eliminando el parseo manual del body sin alterar las protecciones de path containment ni la lógica de borrado.

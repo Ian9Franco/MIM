@@ -116,3 +116,17 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/43
 - **Resumen:** completó la Phase 1 del refactor de `useHomeController.ts`: extrajo Discover a un hook de composición y módulos separados para caché, decodificación de payloads y búsqueda con endpoints estáticos, mantuvo intactos los consumidores y agregó 20 regresiones al runner obligatorio.
+
+## 2026-09-06 14:56:59 — Hermione — PR #45
+
+- **Título:** 📚 Hermione: verifico Discover y alineo su documentación
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/45
+- **Resumen:** verificó contra `main` la Phase 1 de Discover, alineó `docs/whosnext.md` y `docs/planning/ROADMAP.md` con esa extracción y registró los cierres #40–#43 sin alterar código de producción.
+
+## 2026-09-06 15:06:40 — Harry — PR #44
+
+- **Título:** ⚡ Limito el borrado a Downloads
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/44
+- **Resumen:** confinó `POST /api/delete` a archivos directos de la carpeta Downloads configurada, reutilizó `resolveWithin` para contención y validó el lote completo antes del primer borrado.

@@ -136,6 +136,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-discover.test.ts"]
     },
     {
+      name: "Release Notes Truthfulness Contract",
+      cmd: "node",
+      args: ["scripts/__tests__/release-notes.test.js"]
+    },
+    {
       name: "API Guard Systemic Route Perimeter Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/security/verify-api-guard.ts"]

@@ -351,7 +351,7 @@ export function InstalledModsSection() {
               <button
                 onClick={() => {
                   const paths = itemsToDelete.map(item => item.path);
-                  fetch("/api/delete", {
+                  fetch("/api/minecraft/delete", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ paths })

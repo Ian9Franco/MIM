@@ -18,6 +18,10 @@ import { POST as savePlayerPost } from "../../app/api/sage/player-rescue/save/ro
 import { POST as sageChatPost } from "../../app/api/sage/chat/route";
 import { consumeSageStream, SageStreamFailure } from "../../lib/intelligence/sage/streamContract";
 import { translateText } from "../../web/lib/translator";
+import { POST as deletePost } from "../../app/api/delete/route";
+import { POST as minecraftDeletePost } from "../../app/api/minecraft/delete/route";
+import { getSettings } from "../../lib/core/settings";
+import path from "path";
 
 const colors = {
   reset: "\x1b[0m",
@@ -262,6 +266,48 @@ async function run() {
   } finally {
     globalThis.fetch = originalFetch;
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 7. Path Containment Defense: /api/delete & /api/minecraft/delete
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log(`\n${colors.bold}7. Endpoints: Path Containment Defense (/api/delete & /api/minecraft/delete)${colors.reset}`);
+
+  // /api/delete tests
+  const emptyDeleteReq = createJsonRequest("/api/delete", {});
+  const emptyDeleteRes = await deletePost(emptyDeleteReq);
+  assert(emptyDeleteRes.status === 400, "/api/delete rejects empty body with HTTP 400");
+
+  const relativeDeleteReq = createJsonRequest("/api/delete", { path: "relative/traversal/mod.jar" });
+  const relativeDeleteRes = await deletePost(relativeDeleteReq);
+  assert(relativeDeleteRes.status === 400, "/api/delete rejects relative path with HTTP 400");
+
+  const systemDeleteReq = createJsonRequest("/api/delete", { path: "C:\\Windows\\System32\\cmd.exe" });
+  const systemDeleteRes = await deletePost(systemDeleteReq);
+  assert(systemDeleteRes.status === 400, "/api/delete rejects path outside downloads with HTTP 400");
+
+  const { downloadsPath, minecraftPath } = getSettings();
+  const safeDownloadPath = path.join(downloadsPath, "safe-candidate-nonexistent.jar");
+  const validDownloadReq = createJsonRequest("/api/delete", { path: safeDownloadPath });
+  const validDownloadRes = await deletePost(validDownloadReq);
+  assert(validDownloadRes.status === 200, "/api/delete allows safe path contained in downloads");
+
+  // /api/minecraft/delete tests
+  const emptyMcDeleteReq = createJsonRequest("/api/minecraft/delete", {});
+  const emptyMcDeleteRes = await minecraftDeletePost(emptyMcDeleteReq);
+  assert(emptyMcDeleteRes.status === 400, "/api/minecraft/delete rejects empty body with HTTP 400");
+
+  const outsideMcDeleteReq = createJsonRequest("/api/minecraft/delete", { path: "C:\\Windows\\System32\\cmd.exe" });
+  const outsideMcDeleteRes = await minecraftDeletePost(outsideMcDeleteReq);
+  assert(outsideMcDeleteRes.status === 400, "/api/minecraft/delete rejects path outside minecraft with HTTP 400");
+
+  const forbiddenDirReq = createJsonRequest("/api/minecraft/delete", { path: path.join(minecraftPath, "options.txt") });
+  const forbiddenDirRes = await minecraftDeletePost(forbiddenDirReq);
+  assert(forbiddenDirRes.status === 400, "/api/minecraft/delete rejects non-content minecraft files with HTTP 400");
+
+  const safeModPath = path.join(minecraftPath, "mods", "safe-mod-nonexistent.jar");
+  const validModDeleteReq = createJsonRequest("/api/minecraft/delete", { path: safeModPath });
+  const validModDeleteRes = await minecraftDeletePost(validModDeleteReq);
+  assert(validModDeleteRes.status === 200, "/api/minecraft/delete allows safe path contained in mods directory");
 
   console.log(`\n${colors.green}${colors.bold}✓ All Critical API integration & schema tests passed successfully!${colors.reset}\n`);
 }

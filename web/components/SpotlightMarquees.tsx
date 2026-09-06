@@ -1,4 +1,5 @@
 "use client";
+import { CollectibleSurface } from "./CollectibleSurface";
 import { DefaultModIcon } from "./DefaultModIcon";
 
 import React, { useEffect, useState } from "react";
@@ -262,12 +263,13 @@ export function HorizontalEditorialMarquee({
             );
           } else {
             return (
-              <div
+              <CollectibleSurface
                 key={`${item.projectId}-${i}`}
+                label={`Ver detalles de ${item.title}`}
                 onClick={() => onSelectMod?.(item)}
-                className="mim-themed-card border rounded-2xl overflow-hidden flex flex-col min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.97] transition-all shadow-md"
+                className="overflow-hidden flex flex-col min-w-[200px] max-w-[200px]"
               >
-                <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
+                <div data-collectible-art className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
                   {(() => {
                     const bannerImg = item.gallery?.find((g: any) => g.featured)?.url || item.gallery?.[0]?.url;
                     if (bannerImg) {
@@ -341,7 +343,7 @@ export function HorizontalEditorialMarquee({
                     <span className="text-[9px] text-white/30 font-mono">#{String((i % items.length) + 1).padStart(2, "0")}</span>
                   </div>
                 </div>
-              </div>
+              </CollectibleSurface>
             );
           }
         })}

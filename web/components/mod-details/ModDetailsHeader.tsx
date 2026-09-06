@@ -15,6 +15,7 @@ import {
   UserPlus,
   UserCheck,
 } from "lucide-react";
+import { CollectibleSurface } from "../CollectibleSurface";
 import { DefaultModIcon } from "../DefaultModIcon";
 import type { ModHit } from "../SpotlightMarquees";
 import type {
@@ -183,7 +184,17 @@ export function ModDetailsHeader({
       )}
 
       {/* Mod info */}
-      <div className={`relative z-10 flex ${isReadingTab ? "gap-3" : "gap-4"}`}>
+      <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} detail className="relative z-10">
+        {!isReadingTab && bannerUrl && (
+          <div data-collectible-art className="relative h-24 sm:h-28 overflow-hidden rounded-xl mb-3 bg-surface">
+            <img src={bannerUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer"
+              onError={e => { e.currentTarget.style.display = "none"; }} />
+            <span className="absolute bottom-2 right-2 z-10 rounded-md bg-black/70 px-2 py-1 text-[9px] text-white capitalize">
+              {selectedMod._source || "modrinth"} · {selectedMod.projectType || "mod"}
+            </span>
+          </div>
+        )}
+        <div className={`flex ${isReadingTab ? "gap-3" : "gap-4"}`}>
         <div
           className={`${
             isReadingTab ? "w-12 h-12" : "w-16 h-16"
@@ -258,7 +269,8 @@ export function ModDetailsHeader({
             )}
           </p>
         </div>
-      </div>
+        </div>
+      </CollectibleSurface>
 
       {/* Actions row: Share, Favorite, Follow and External Platform link */}
       <div

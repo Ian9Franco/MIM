@@ -1,0 +1,48 @@
+.surface {
+  --rx: 0deg;
+  --ry: 0deg;
+  --hx: 25%;
+  --hy: 18%;
+  --gloss: .22;
+  --dark: .02;
+  position: relative;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 36%, var(--color-border-strong));
+  border-radius: 18px;
+  background: var(--color-card);
+  transform: perspective(850px) rotateX(var(--rx)) rotateY(var(--ry));
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--color-primary) 22%, var(--color-surface)), 0 8px 16px #0002, inset 0 1px 0 #ffffff35;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.surface[role="button"] { cursor: pointer; text-align: left; }
+.surface:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.surface > :not(.foil):not(.gloss) { position: relative; z-index: 2; }
+.foil, .gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.foil {
+  z-index: 3;
+  padding: 2px;
+  background: linear-gradient(125deg, #91dfff99, #b399ff30 28%, #f1c5ffb3 46%, #82caff33 65%, #b5a2ff99);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+.gloss {
+  z-index: 1;
+  background: radial-gradient(ellipse at var(--hx) var(--hy), #eaf5ff 0%, #a8baff66 28%, transparent 65%);
+  opacity: var(--gloss);
+}
+/* Artwork gets varnish; text and controls remain above it and fully legible. */
+.surface > [data-collectible-art]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at var(--hx) var(--hy), #eef7ff66, #b8a1ff15 40%, transparent 70%), linear-gradient(rgb(0 0 0 / var(--dark)), rgb(0 0 0 / var(--dark)));
+}
+.detail { padding: 14px; margin-top: 2px; overflow: hidden; animation: reveal 380ms ease-out; }
+@keyframes reveal {
+  from { opacity: .5; transform: perspective(850px) rotateX(7deg) translateY(8px); }
+  to { opacity: 1; transform: perspective(850px) rotateX(0deg) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface { transition: none; transform: none; animation: none; }
+}

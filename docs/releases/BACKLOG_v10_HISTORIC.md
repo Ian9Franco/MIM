@@ -1,5 +1,7 @@
 # MIM Living Engineering Backlog & Technical Debt Tracker
 
+> **Referencia actual:** [cierres auditados del 2026-09-06](#revision-de-cierres-2026-09-06). Las métricas y estados de las secciones históricas no son una medición actual. Las tareas activas se mantienen en [Who's Next](../whosnext.md).
+
 Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estado de la deuda técnica, las prioridades de ingeniería (metodología MoSCoW) y las métricas de madurez de software a lo largo de los ciclos de desarrollo.
 
 ---
@@ -89,3 +91,29 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
 - **Carpeta `src/`**: La arquitectura del repositorio se mantendrá estrictamente en la raíz de App Router y directorios funcionales modulares.
 - **SAGE Copilot en MIMHub (Web)**: Descartado deliberadamente por diseño arquitectónico; SAGE depende de operaciones intensivas de filesystem local (lectura de `crash-reports/`, `latest.log`, `options.txt`, inspección de bytecode de JARs y caché `safeStorage`), las cuales son exclusivas y nativas del entorno Desktop/Electron y no aplican al catálogo web.
 
+
+## Revision de cierres 2026-09-06
+
+Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sobre los estados y métricas históricos anteriores: registra capacidades existentes, no atribuye todas ellas a una nueva release. Los pendientes activos están en [whosnext](../whosnext.md). Evidencia de implementación no equivale a una prueba visual o a validación de producción.
+
+| Cierre trasladado desde whosnext / Unicorn | Evidencia y alcance comprobado |
+|---|---|
+| [x] Guard obligatorio y auditor AST fail-closed | `scripts/security/verify-api-guard.ts`, allowlist explícita y fixtures negativos de `scripts/__tests__/api-guard.test.ts`; CI ejecuta auditor. Medición: 113/113 handlers, 94 rutas. Los casos de wrapper todavía faltantes siguen en API-01. |
+| [x] Guard de `/api/sage/chat` | `app/api/sage/chat/route.ts`: schema de body y límite 25/min. Guard y schemas no equivalen a validación de todo contenido generado. |
+| [x] Secret management — Unicorn §2.1 / Fase 2 puntos 1–2 | `standalone/secret-store.js`, `standalone/main.js`, `lib/core/settings.ts`, `lib/core/migrateLegacyBrowserSecret.ts`, `app/api/settings/route.ts`: cifrado safeStorage en Desktop empaquetado, migración y respuesta redactada; runtime sin IPC conserva nuevas claves en sesión. Test `secure-settings.test.ts` ejecutado con safeStorage simulado; no es una prueba del cifrado nativo en Electron. La migración conserva datos antiguos si falla para evitar pérdida. No afirmar persistencia de claves de MIMHub sin evidencia. |
+| [x] Chat streaming y errores diferenciados | `app/api/sage/chat/route.ts`, `geminiStream.ts`, `streamContract.ts`, `errorContract.ts` y `SageMimbotCopilot.tsx`: SSE upstream, NDJSON, cancelación y separación 401/429. Suites de stream y errores ejecutadas. |
+| [x] Contexto, cascada y parámetros de inferencia | Endpoint de chat: últimos seis mensajes, memoria del último modelo exitoso, 280/700 tokens y temperatura Bully 0.5. Caché añade contexto del culpable; no responde por sí sola todas las quick questions ni evita toda llamada LLM. No cierra routing semántico de Unicorn §1.4. |
+| [x] UX básica de MimBot | `SageMimbotCopilot.tsx` y `components/sage/parts/mimbot/`: tooltips de modo, copiar respuesta, Undo de 4.5 s, etiquetas accesibles y error de cuota inline. Inspección de código; falta cobertura UI/E2E. “Gemini Conectado” queda reabierto en BOT-04. |
+| [x] Fronteras arquitectónicas — Unicorn §6.2 | `scripts/architecture/verify-boundaries.ts`, `architecture-boundaries.test.ts`, `.github/workflows/ci.yml`: core modding/intelligence/security no importa UI/runtime, web no importa standalone. Auditor y siete casos de contrato ejecutados. No implica cobertura de cualquier frontera imaginable. |
+| [x] Licencias Quilt | `lib/modding/licenseAuditor.ts` y fixture en `license-auditor.test.ts`: lectura de `quilt.mod.json`. La resolución transitiva del ítem histórico sigue abierta. |
+| [x] Discover Phase 1 | `web/hooks/useHomeController.ts` compone `useHomeDiscover`; `web/lib/discover/` separa cache, payload y búsqueda; `home-discover.test.ts` importa esas implementaciones. Ya mencionado en changelog v11.4.5 como verificación de PR #45. El resto del controlador sigue pendiente. |
+| [x] Reducción inicial del presupuesto de lint | `package.json`: `--max-warnings=471`; commit `7ed6b09`. Se cierra el abandono del techo 9999, no el saneamiento completo de Fase 0. |
+| [x] Base de evaluación determinista SAGE | `scripts/evaluation/sage-eval.ts` y corpus fijo; ya registrado en changelog v10.5.0. No cierra evals de respuestas LLM, ni garantiza generalización, ni demuestra ausencia de alucinaciones. Nuevos criterios en SAGE-01–07. |
+
+### Correcciones de estado
+
+- El cierre anterior de tests completos de `withApiGuard` se reduce a los casos presentes; `Retry-After`, params dinámicos y excepción del handler requieren pruebas adicionales.
+- La validación preventiva existe como endpoint, pero el copiloto usa presencia de clave; se reabre su integración y el indicador de conexión.
+- Caché de diagnósticos existente no equivale a historial de chat ni caché de respuestas por 24 horas.
+- Multi-proveedor conectado de extremo a extremo no se considera cerrado por la rama OpenAI en el motor; ver BOT-05.
+- Las fases generales de Unicorn permanecen parciales cuando sólo hay evidencia de un subsistema (errores SAGE, fixtures existentes, migración puntual o caché).

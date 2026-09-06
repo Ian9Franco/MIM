@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name for release'
-        required: false
-        default: 'v11.3.2'
+        required: true
+        description: 'Existing version tag to build and publish (for example v11.4.5)'
 
 permissions:
   contents: write
@@ -19,8 +18,28 @@ jobs:
     name: Build Windows Standalone & Publish Release
     runs-on: windows-latest
     steps:
+      - name: Resolve Release Tag
+        id: release
+        shell: node {0}
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_INPUT_TAG: ${{ inputs.tag_name }}
+        run: |
+          const fs = require('node:fs');
+          const tag = process.env.RELEASE_EVENT === 'workflow_dispatch'
+            ? process.env.RELEASE_INPUT_TAG
+            : process.env.RELEASE_REF_TYPE === 'tag' ? process.env.RELEASE_REF_NAME : '';
+          if (!/^v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(tag || '')) {
+            throw new Error('An explicit version tag is required to publish a release');
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${tag}\n`);
+
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.release.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,9 +58,10 @@ jobs:
       - name: Resolve Release Notes
         id: notes
         shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
-          TAG="${{ github.ref_name || inputs.tag_name || 'v11.3.0' }}"
-          FILE="docs/releases/release-notes-${TAG}.md"
+          FILE="docs/releases/release-notes-${RELEASE_TAG}.md"
           if [ -f "$FILE" ]; then
             echo "path=$FILE" >> $GITHUB_OUTPUT
           elif [ -f "docs/releases/CHANGELOG.md" ]; then
@@ -53,8 +73,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: MIM ${{ github.ref_name || inputs.tag_name || 'v11.3.0' }} — Systems Platform & MIM-Bot
-          tag_name: ${{ github.ref_name || inputs.tag_name || 'v11.3.0' }}
+          name: MIM ${{ steps.release.outputs.tag }} — Systems Platform & MIM-Bot
+          tag_name: ${{ steps.release.outputs.tag }}
           body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
           draft: false

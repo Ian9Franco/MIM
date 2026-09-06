@@ -11,6 +11,20 @@
 
 ---
 
+## Reconciliación documental — 2026-09-06 (sin nueva versión)
+
+Registro retrospectivo de capacidades ya presentes en el checkout v11.4.5; no implica que se hayan implementado o publicado hoy. Detalle y evidencia en [backlog histórico](BACKLOG_v10_HISTORIC.md#revision-de-cierres-2026-09-06).
+
+- Guard AST obligatorio verificado en 94 rutas y 113/113 handlers; los casos de prueba del wrapper todavía faltantes siguen pendientes.
+- Migración segura de secretos Desktop y respuestas redactadas; streaming, errores tipados y parámetros de contexto/cascada en MimBot.
+- Fronteras arquitectónicas en CI, lectura de licencias Quilt y UX básica de copiar/Undo/tooltips/etiquetas accesibles.
+- Discover Phase 1 y benchmark determinista SAGE ya tienen antecedentes en las entradas v11.4.5 y v10.5.0: se consolidó su estado sin anunciarlos nuevamente como features nuevas.
+- Se reabren validación de conectividad en el copiloto y cobertura completa de tests del guard; la evaluación del clasificador no cierra evals de respuestas LLM.
+
+Los cambios nuevos de esta revisión (planificación y corrección del workflow manual) se preparan en [UNRELEASED](UNRELEASED.md), que alimenta la próxima release. [Fuentes y validación de la auditoría](RELEASE_DOCUMENTATION_AUDIT.md).
+
+---
+
 ## 🚀 Versión 11.4.5 — Contención de borrado y MIMHub Enhanced (2026-09-06)
 
 ### 🛡️ Contención de borrado

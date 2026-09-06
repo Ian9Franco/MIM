@@ -1,5 +1,7 @@
 # MIM — Unicorn Engineering Plan
 
+> **Estado auditado:** consultar la [revisión del 2026-09-06](#revision-de-estado-2026-09-06) antes de elegir trabajo. Las propuestas originales conservan su contexto; §2.1 y §6.2 tienen cierres acotados archivados y varias fases están parcialmente implementadas.
+
 > Documento de trabajo para **MIM PR Cycle**.  
 > Objetivo: elevar las disciplinas técnicas de MIM que todavía están por debajo de ~8.5/10 de profundidad, sin agregar complejidad vacía ni features artificiales.
 
@@ -747,3 +749,44 @@ CI / Regression Safety
 El objetivo del unicornio no es que el usuario vea la sofisticación.
 
 El objetivo es que **la sofisticación sea la razón por la cual el usuario no necesita verla**.
+
+## Revision de estado 2026-09-06
+
+Contraste con el checkout local `ad7f939` (v11.4.5). Esta matriz prevalece sobre el tiempo futuro de las propuestas originales. Los cierres se archivan en [backlog](releases/BACKLOG_v10_HISTORIC.md#revision-de-cierres-2026-09-06); los siguientes pasos están en [whosnext](whosnext.md). “Sin cierre verificado” significa que esta revisión no acredita el alcance completo, no que no exista ningún código relacionado.
+
+| Propuesta | Estado y evidencia / alcance restante |
+|---|---|
+| 1.1 Tool calling | Sin cierre verificado; el endpoint de chat revisado construye contexto y genera texto. Falta acreditar herramientas controladas de consulta. |
+| 1.2 Recuperación contextual local | Parcial: `retriever.ts`/`knowledgeBase.ts` y contexto SAGE; no acredita recuperación sobre todos los documentos, configs, manifests e historial enumerados. |
+| 1.3 Evaluación MimBot | Pendiente. El corpus de `sage-eval.ts` evalúa `SageCrashEngine.diagnose`, no respuestas LLM. SAGE-05. |
+| 1.4 Model routing | Parcial: cascada y memoria del último éxito en `app/api/sage/chat/route.ts`; falta routing según complejidad y bypass determinista del LLM. |
+| 1.5 Multimodal explainer | Implementación presente en `lib/intelligence/modExplainer.ts` y `/api/fomo/explain`: galería, metadata y grounding. Validación parcial: `mod-explainer.test.js` reproduce lógica local en vez de importar el motor. Falta acreditar el flujo real con tests. |
+| 1.6 Respuestas con evidencia | Parcial: reportes, retriever y guardrails existentes; falta distinción y validación de la salida real del chat. SAGE-05/06. |
+| 2.1 Secret management | Cerrado en el alcance Desktop seguro/migración/respuestas redactadas, con excepción de conservación del original cuando falla migración. Tests simulados ejecutados. Ver backlog; no inferir políticas de MIMHub. |
+| 2.2 Capacidades internas | Sin cierre verificado para el contrato filesystem/network/destructive/credential-access. |
+| 2.3 Trusted pipeline | Sin cierre verificado del recorrido universal completo: la existencia de download, hash, scan y licencias por separado no demuestra su composición obligatoria. |
+| 2.4 Security regression | Parcial: suites de scanner, malware, guard y contención de paths; falta acreditar toda la matriz hostil enumerada. |
+| 3.1 Idempotencia | Sin cierre verificado en todos los installs, sync, publicación, builds y rescates del alcance. |
+| 3.2 Jobs | Sin cierre verificado del modelo común con progreso/cancelación en todas las operaciones propuestas. |
+| 3.3 Contratos compartidos | Parcial: Zod en rutas y contratos de errores/stream SAGE; generalización pendiente, API-02. |
+| 3.4 Taxonomía | Parcial: `lib/intelligence/sage/errorContract.ts` define código, mensaje, retryable, severidad y acción; no cierra filesystem/storage/dependencias/red del proyecto. |
+| 4.1–4.4 Storage | Sin cierre integral verificado. Hay caché/aduana y `lib/storage/storage-migration.ts`, pero no acreditan referencias completas, GC con cuarentena, scrub y migraciones versionadas reproducibles/reversibles. |
+| 5.1 Regresiones por bug | Práctica en curso; suites existentes no permiten cerrar una obligación continua para todos los futuros bugs. |
+| 5.2 Matrix | Sin cierre verificado de la matriz Windows/Node/configuración/Desktop-Web propuesta. |
+| 5.3 Golden fixtures | Parcial: corpus SAGE y fixtures de varias suites; falta acreditar outputs estables para cada dominio listado. |
+| 5.4 Mutation | Sin cierre verificado de mutation testing en módulos críticos. |
+| 5.5 Fault injection | Parcial: tests de errores/stream SAGE y fallo de migración de secretos; no cubre toda la matriz de proveedores/disco/bloqueos/interrupciones. |
+| 6.1 Use cases | Parcial: Discover Phase 1 separa responsabilidades; no equivale a extraer todos los casos de instalación, reparación, publicación y sync. |
+| 6.2 Architecture tests | Cerrado para reglas core→UI/runtime y web→standalone existentes; auditor y contrato pasan y están en CI. Ver backlog. |
+| 6.3 Contratos entre dominios | Sin cierre integral verificado; no confundir event bus/contratos puntuales con todas las interfaces estables propuestas. |
+
+### Estado de fases y proyectos transversales
+
+- **Fase 0: parcial.** Techo de lint reducido a 471 (cerrado ese subpaso); saneamiento de tipos, warnings y schemas sigue abierto en REC-01/02 y API-02.
+- **Fase 1: parcial.** Errores y cuota SAGE presentes; no acreditan cliente HTTP compartido, idempotencia ni taxonomía general.
+- **Fase 2: parcial.** Puntos 1–2 de secretos archivados; pipeline de provenance/SHA256 y matriz completa de fixtures no cerrados.
+- **Fase 3: pendiente en su alcance MimBot.** Benchmark determinista previo archivado; faltan evals LLM/tool calling/evidencia verificadas.
+- **Fase 4: parcial.** Existen regresiones puntuales; resta completar fault injection y golden fixtures del alcance.
+- **Fase 5: sin cierre integral verificado.** Mantener objetivos de storage pendientes.
+- **Fase 6: pospuesta por decisión de diseño.** No contar CRDT, cloud avanzado, circuit breaker distribuido, Chaos UI o RAG masivo como entregados.
+- **Proyectos A/B/C: parciales o pendientes.** Ninguno se cierra por la presencia aislada de sus componentes.

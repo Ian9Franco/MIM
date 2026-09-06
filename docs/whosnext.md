@@ -81,7 +81,9 @@ Miré el componente (SageMimbotCopilot.tsx) en detalle. Funciona, pero hay fricc
 - [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
   - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
   - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
-  - [ ] `web/hooks/useHomeController.ts` (1,525 líneas) modularizar en sub-hooks (`useHomeFilters`, `useHomeDrafts`, `useHomeSearch`, `useHomeCommunity`).
+  - [ ] `web/hooks/useHomeController.ts` — continuar modularización por ownership; Discover ya no pertenece al controlador, pero Drafts/Profile/Community y otras responsabilidades siguen pendientes.
+    - [x] Phase 1 — Discover extraído y verificado en PR #43; el contrato público permanece compuesto desde `useHomeController` y la búsqueda/cache/payload quedan detrás de fronteras separadas.
+    - [ ] Phase 2+ — reevaluar Drafts y Profile/Community en Hogwarts Council antes de nuevas extracciones; no perseguir reducción de líneas como objetivo aislado.
 - [x] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---

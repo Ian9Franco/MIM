@@ -172,7 +172,7 @@ async function main() {
   for (const r of results) {
     const status = r.passed ? "PASS" : "FAIL";
     const statusColor = r.passed ? "green" : "red";
-    log(`  [${status}] ${r.name.padEnd(46)} (${(r.durationMs / 1000).toFixed(2)}s`, statusColor);
+    log(`  [${status}] ${r.name.padEnd(46)} (${(r.durationMs / 1000).toFixed(2)}s)`, statusColor);
     if (!r.passed) allPassed = false;
   }
 

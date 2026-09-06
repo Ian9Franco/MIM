@@ -5,9 +5,7 @@ import {
   shouldRunInitialDiscoverSearch,
   type DiscoverStorage,
 } from "../../web/lib/discover/discoverCache";
-import {
-  decodeDiscoverPayload,
-} from "../../web/lib/discover/discoverPayload";
+import { decodeDiscoverPayload } from "../../web/lib/discover/discoverPayload";
 import {
   BEDROCK_DISCOVER_ENDPOINT,
   PROVIDER_ENDPOINTS,
@@ -20,7 +18,7 @@ import {
 } from "../../web/lib/discover/discoverSearch";
 import { HOME_DISCOVER_PUBLIC_KEYS } from "../../web/hooks/useHomeDiscover";
 
-function assert(condition: boolean, message: string): void {
+function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 

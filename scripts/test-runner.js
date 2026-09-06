@@ -126,6 +126,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-mimbot.test.ts"]
     },
     {
+      name: "SAGE Streaming Transport Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-stream-contract.test.ts"]
+    },
+    {
       name: "API Guard Systemic Route Perimeter Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/security/verify-api-guard.ts"]

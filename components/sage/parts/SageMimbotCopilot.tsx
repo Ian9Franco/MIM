@@ -26,6 +26,11 @@ import {
   MimbotQuickQuestions,
 } from "./mimbot";
 import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
+import {
+  consumeSageStream,
+  isSageErrorPayload,
+  SageStreamFailure,
+} from "@/lib/intelligence/sage/streamContract";
 
 export interface SageMimbotCopilotProps {
   analysis: SageAnalysisResult;
@@ -67,6 +72,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   // Mecanismo de deshacer al reiniciar conversación
   const [undoMessages, setUndoMessages] = useState<ChatMessage[] | null>(null);
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const prevSigRef = useRef("");
@@ -88,12 +94,15 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   useEffect(() => {
     const sig = `${analysis.exceptionType}|${analysis.category}|${analysis.title}`;
     if (sig === prevSigRef.current) return;
+    activeRequestRef.current?.abort();
     prevSigRef.current = sig;
     setChatMessages([]);
     setChatInput("");
     setChatError(null);
     setUndoMessages(null);
   }, [analysis]);
+
+  useEffect(() => () => activeRequestRef.current?.abort(), []);
 
   // Auto-scroll al último mensaje
   useEffect(() => {
@@ -138,6 +147,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   // Reiniciar chat con soporte de Deshacer
   const handleResetChat = () => {
     if (chatMessages.length === 0) return;
+    activeRequestRef.current?.abort();
     setUndoMessages(chatMessages);
     setChatMessages([]);
     setChatError(null);
@@ -184,6 +194,10 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       setChatError(null);
       setUndoMessages(null);
 
+      const requestController = new AbortController();
+      activeRequestRef.current = requestController;
+      let streamedReply = "";
+
       try {
         const res = await fetch("/api/sage/chat", {
           method: "POST",
@@ -203,48 +217,70 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
               explanation: analysis.explanation,
             },
           }),
+          signal: requestController.signal,
         });
 
-        const data = await res.json();
+        if (!res.ok) {
+          const data: unknown = await res.json();
+          const failure = isSageErrorPayload(data) ? data : null;
+          const fallbackError = readErrorFields(data);
 
-        // 401: Falta de key o clave inválida
-        if (res.status === 401 || data.error === "NO_API_KEY") {
-          setShowConfig(true);
-          setChatError("Clave de Gemini API inválida o expirada. Por favor configúrala de nuevo.");
-          setChatMessages(chatMessages);
-          return;
-        }
+          // 401: Falta de key o clave inválida
+          if (res.status === 401 || failure?.error === "NO_API_KEY" || fallbackError.error === "NO_API_KEY") {
+            setShowConfig(true);
+            setChatError("Clave de Gemini API inválida o expirada. Por favor configúrala de nuevo.");
+            setChatMessages(chatMessages);
+            return;
+          }
 
-        // 429: Rate limit o cuota de Google
-        if (res.status === 429 || data.error === "RATE_LIMITED") {
+          // 429: Rate limit o cuota de Google
+          if (res.status === 429 || failure?.error === "RATE_LIMITED" || fallbackError.error === "RATE_LIMITED") {
+            setChatMessages([
+              ...newMessages,
+              {
+                role: "model",
+                text: `⚠️ **Límite de peticiones alcanzado**: ${
+                  failure?.message || fallbackError.message ||
+                  "Se superó el límite de consultas por minuto (RPM) o la cuota de la API gratuita de Google. Aguardá unos segundos antes de volver a preguntar."
+                }`,
+              },
+            ]);
+            return;
+          }
+
           setChatMessages([
             ...newMessages,
-            {
-              role: "model",
-              text: `⚠️ **Límite de peticiones alcanzado**: ${
-                data.message ||
-                "Se superó el límite de consultas por minuto (RPM) o la cuota de la API gratuita de Google. Aguardá unos segundos antes de volver a preguntar."
-              }`,
-            },
+            { role: "model", text: `Error: ${failure?.message || fallbackError.message || fallbackError.error || "No se obtuvo respuesta del bot."}` },
           ]);
           return;
         }
 
-        if (data.reply) {
-          setChatMessages([...newMessages, { role: "model", text: data.reply }]);
-        } else {
-          setChatMessages([
-            ...newMessages,
-            { role: "model", text: `Error: ${data.message || data.error || "No se obtuvo respuesta del bot."}` },
-          ]);
-        }
-      } catch {
+        if (!res.body) throw new Error("MIM-Bot no devolvió un stream legible");
+
+        await consumeSageStream(res.body, (event) => {
+          if (event.type !== "delta") return;
+          streamedReply += event.text;
+          setChatMessages([...newMessages, { role: "model", text: streamedReply }]);
+        });
+      } catch (error: unknown) {
+        if (requestController.signal.aborted) return;
+        const message = error instanceof SageStreamFailure
+          ? error.payload.message
+          : "Error de conexión al consultar con MIM-Bot.";
         setChatMessages([
           ...newMessages,
-          { role: "model", text: "Error de conexión al consultar con MIM-Bot." },
+          {
+            role: "model",
+            text: streamedReply
+              ? `${streamedReply}\n\n⚠️ ${message}`
+              : message,
+          },
         ]);
       } finally {
-        setIsSending(false);
+        if (activeRequestRef.current === requestController) {
+          activeRequestRef.current = null;
+          setIsSending(false);
+        }
       }
     },
     [chatInput, chatMessages, isSending, hasKey, personality, analysis]
@@ -505,4 +541,14 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       </div>
     </div>
   );
+}
+
+function readErrorFields(value: unknown): { error?: string; message?: string } {
+  if (typeof value !== "object" || value === null) return {};
+  const error = Reflect.get(value, "error");
+  const message = Reflect.get(value, "message");
+  return {
+    ...(typeof error === "string" ? { error } : {}),
+    ...(typeof message === "string" ? { message } : {}),
+  };
 }

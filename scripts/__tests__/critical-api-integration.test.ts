@@ -16,6 +16,7 @@ import { POST as validateKeysPost } from "../../app/api/settings/validate-keys/r
 import { POST as stagingPost } from "../../app/api/staging/route";
 import { POST as savePlayerPost } from "../../app/api/sage/player-rescue/save/route";
 import { POST as sageChatPost } from "../../app/api/sage/chat/route";
+import { consumeSageStream, SageStreamFailure } from "../../lib/intelligence/sage/streamContract";
 import { translateText } from "../../web/lib/translator";
 
 const colors = {
@@ -189,12 +190,13 @@ async function run() {
           : input.url;
     capturedGeminiHeaders = new Headers(init?.headers);
 
-    return new Response(
-      JSON.stringify({
-        candidates: [{ content: { parts: [{ text: "Respuesta de prueba" }] } }],
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    const event = JSON.stringify({
+      candidates: [{ content: { parts: [{ text: "Respuesta de prueba" }] } }],
+    });
+    return new Response(`data: ${event}\n\n`, {
+      status: 200,
+      headers: { "Content-Type": "text/event-stream" },
+    });
   }) as typeof fetch;
 
   try {
@@ -205,8 +207,58 @@ async function run() {
     });
     const authenticatedChatRes = await sageChatPost(authenticatedChatReq);
     assert(authenticatedChatRes.status === 200, "Gemini-backed chat succeeds with mocked provider response");
+    assert(authenticatedChatRes.body !== null, "Gemini-backed chat returns a readable response body");
+    if (!authenticatedChatRes.body) throw new Error("Expected SAGE stream body");
+    let streamedReply = "";
+    await consumeSageStream(authenticatedChatRes.body, (event) => {
+      if (event.type === "delta") streamedReply += event.text;
+    });
+    assert(streamedReply === "Respuesta de prueba", "Gemini-backed chat streams the provider text");
+    assert(capturedGeminiUrl.includes(":streamGenerateContent?alt=sse"), "Gemini streaming endpoint is used");
     assert(!capturedGeminiUrl.includes(sentinelGeminiKey), "Gemini API key is never embedded in the request URL");
     assert(capturedGeminiHeaders.get("x-goog-api-key") === sentinelGeminiKey, "Gemini API key is sent through x-goog-api-key header");
+
+    globalThis.fetch = (async () => new Response(
+      `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "Respuesta parcial" }] } }] })}\n\ndata: {malformed}\n\n`,
+      { status: 200, headers: { "Content-Type": "text/event-stream" } },
+    )) as typeof fetch;
+    const interruptedChatRes = await sageChatPost(createJsonRequest("/api/sage/chat", {
+      question: "¿Podés terminar el diagnóstico?",
+      clientApiKey: sentinelGeminiKey,
+    }));
+    assert(interruptedChatRes.body !== null, "Interrupted provider stream still returns a readable contract stream");
+    if (!interruptedChatRes.body) throw new Error("Expected interrupted SAGE stream body");
+    let partialReply = "";
+    let interruptedFailure: unknown;
+    try {
+      await consumeSageStream(interruptedChatRes.body, (event) => {
+        if (event.type === "delta") partialReply += event.text;
+      });
+    } catch (error: unknown) {
+      interruptedFailure = error;
+    }
+    assert(
+      interruptedFailure instanceof SageStreamFailure && interruptedFailure.payload.retryable,
+      "Interrupted provider stream emits a retryable typed failure",
+    );
+    assert(partialReply === "Respuesta parcial", "Partial text is delivered before a typed stream failure");
+
+    globalThis.fetch = (async () => new Response(
+      JSON.stringify({ error: { message: "RESOURCE_EXHAUSTED quota" } }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    )) as typeof fetch;
+    const limitedChatRes = await sageChatPost(createJsonRequest("/api/sage/chat", {
+      question: "¿Qué ocurrió?",
+      clientApiKey: sentinelGeminiKey,
+    }));
+    const limitedPayload: unknown = await limitedChatRes.json();
+    assert(limitedChatRes.status === 429, "Provider quota exhaustion remains an HTTP 429 before streaming starts");
+    assert(
+      typeof limitedPayload === "object" &&
+        limitedPayload !== null &&
+        Reflect.get(limitedPayload, "code") === "MIM_PROVIDER_RATE_LIMIT",
+      "Provider quota uses the typed SAGE error taxonomy",
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

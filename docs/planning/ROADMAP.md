@@ -23,7 +23,7 @@
 - [x] *Aplicar withApiGuard a api/sage/chat:* Blindado con rate limit defensivo (25 req/min) y validación Zod estricta.
 - [ ] *No guardar la API key de Gemini en texto plano:* Cifrar en disco o usar `safeStorage` del SO en Electron.
 - [x] *Recortar el contexto de conversación antes de enviarlo:* Truncado automático a los últimos 6 turnos en `api/sage/chat`.
-- [ ] *Streaming de respuesta:* Implementar streaming de tokens en Gemini para mejorar sensación de velocidad en respuestas largas.
+- [x] *Streaming de respuesta:* Gemini transmite por SSE; MIM adapta el flujo a eventos NDJSON tipados, preserva los errores HTTP previos al stream y renderiza cada delta en el chat.
 - [x] *Manejo de rate-limit/cuota de la propia API de Gemini:* Diferenciación explícita de código 429 (`RATE_LIMITED`) con mensaje claro en el chat sin desconfigurar la key.
 - [ ] *Persistir el historial del chat:* Guardar historial localmente (opt-in) para no perderlo al cambiar de crash o recargar.
 

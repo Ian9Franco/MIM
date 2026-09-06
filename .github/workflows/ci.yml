@@ -69,6 +69,9 @@ jobs:
       - name: Verify SAGE Error Contract
         run: npm run test:sage-errors
 
+      - name: Verify SAGE Streaming Contract
+        run: npm run test:sage-stream
+
       - name: Upload Coverage to Codacy
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}

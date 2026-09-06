@@ -130,6 +130,14 @@ CREATE TABLE public.profiles (
 * Lector restringido de logs locales (`latest.log` y `crash-reports/`). Protege la carga contra Directory Traversal.
 * Interconecta directamente con `lib/intelligence/sageRecoveryEngine.ts` para diagnosticar fallas de compatibilidad e inyecciones de Mixin.
 
+### 6.3 Copiloto de Diagnóstico SAGE
+`POST /api/sage/chat`
+
+* **Entrada**: consulta, personalidad, últimos seis turnos y contexto estructurado del crash, validados con Zod y protegidos por `withApiGuard`.
+* **Salida exitosa**: `application/x-ndjson` con eventos tipados `start`, `delta` y `done`. El endpoint consume `streamGenerateContent` de Gemini mediante SSE y no espera a ensamblar la respuesta completa.
+* **Fallos**: credenciales inválidas y agotamiento de cuota conservan respuestas HTTP JSON con la taxonomía de SAGE. Una interrupción posterior al primer delta cruza el mismo stream como evento `error` estructurado.
+* **Cancelación**: cerrar el componente, cambiar de crash o reiniciar el chat cancela el lector y la petición al proveedor; los proxies reciben `Cache-Control: no-transform` y `X-Accel-Buffering: no` para no reagrupar deltas.
+
 ---
 
 ## 7. Gestión de Rate Limits y Resiliencia

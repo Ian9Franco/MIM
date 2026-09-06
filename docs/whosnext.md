@@ -52,7 +52,7 @@ Roadmap de lo que sigue, basado en revisión de código real (v11.2.0). Dividido
 - [x] *Aplicar withApiGuard a api/sage/chat ya.* Blindado con rate limit defensivo (25 req/min) y validación Zod estricta.
 - [x] *No guardar la API key de Gemini en texto plano.* Desktop migra las cuatro credenciales desde `mim-settings.json` a Electron `safeStorage`, la API sólo devuelve estado redactado y Gemini dejó de persistirse en `localStorage`; MIMweb conserva la key únicamente durante la sesión activa.
 - [x] *Recortar el contexto de conversación antes de enviarlo.* Truncado automático a los últimos 6 turnos en `api/sage/chat`.
-- [ ] *Streaming de respuesta.* Hoy se espera la respuesta completa antes de mostrar nada (solo hay un loader). Gemini soporta streaming — mejora muchísimo la sensación de velocidad, sobre todo en respuestas largas.
+- [x] *Streaming de respuesta.* `/api/sage/chat` consume Gemini por SSE y entrega al cliente un stream NDJSON tipado (`start`, `delta`, `done`, `error`); la UI renderiza deltas en curso y cancela el upstream al reiniciar, cambiar de crash o desmontarse.
 - [x] *Manejo de rate-limit/cuota de la propia API de Gemini.* Diferenciación explícita de código 429 (`RATE_LIMITED`) con mensaje claro en el chat sin reabrir el panel de API key.
 - [ ] *Persistir el historial del chat* (por lo menos localmente) en vez de perderlo apenas cambia el crash analizado o se recarga la página. Aunque sea opt-in ("guardar esta conversación").
 

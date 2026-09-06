@@ -246,6 +246,7 @@ export function useHomeController() {
       setShowcaseChannels(DEFAULT_CHANNELS);
     }
 
+    // ── Cache Loading ──
     const cachedTab = localStorage.getItem("mim_active_tab");
     if (cachedTab) setActiveTab(cachedTab);
 
@@ -302,6 +303,7 @@ export function useHomeController() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // ── Cache Saving ──
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -621,6 +623,7 @@ export function useHomeController() {
       }
     }
 
+    // In-memory throttling (1 minute) to avoid spamming calls during the same user session
     const THROTTLE_MS = 60 * 1000;
     if (Date.now() - collectionsLastLoadedRef.current < THROTTLE_MS) return;
     if (collectionsRequestRef.current) return collectionsRequestRef.current;
@@ -681,6 +684,7 @@ export function useHomeController() {
     setActiveCollection(collection);
     setActiveCollectionMods([]);
     void loadCollectionMods(collection, false);
+    // Navigate to collections tab so the detail view is immediately visible
     setActiveTab("collections");
   };
 
@@ -726,6 +730,7 @@ export function useHomeController() {
         }
       }
 
+      // Fetch actual game versions and loaders from Modrinth in batch if versions are set
       const versionIds = items.map((item: any) => item.version_id).filter(Boolean);
       let versionsMap: Record<string, { game_versions: string[]; loaders: string[] }> = {};
       if (versionIds.length) {
@@ -1020,6 +1025,7 @@ export function useHomeController() {
       });
       if (error) throw error;
 
+      // Log activity
       await supabase.from("draft_activity").insert({
         draft_id: draftId,
         profile_id: session.user.id,
@@ -1069,6 +1075,7 @@ export function useHomeController() {
 
   const removeModFromDraft = async (draftId: string, projectId: string, itemId?: string) => {
     if (!session?.user?.id) return;
+    // Capture the mod name before deleting for activity log
     const draftObj = userDrafts.find((d) => d.id === draftId);
     const itemMeta = (draftObj?.items || []).find(
       (i: any) => (itemId && i.id === itemId) || i.project_id === projectId
@@ -1080,6 +1087,7 @@ export function useHomeController() {
     if (error) {
       showAlert("Error", `Error al eliminar del draft: ${error.message}`);
     } else {
+      // Log activity
       await supabase.from("draft_activity").insert({
         draft_id: draftId,
         profile_id: session.user.id,
@@ -1129,6 +1137,7 @@ export function useHomeController() {
     await loadUserData(session.user.id);
   };
 
+  /** Update draft details (name, version, loader, visibility) and log activity */
   const updateDraftMetadata = async (
     draftId: string,
     updates: { name?: string; minecraft_version?: string; loader?: string; visibility?: string }
@@ -1143,6 +1152,7 @@ export function useHomeController() {
       return false;
     }
 
+    // Construct a list of what changed for the activity log
     const changedFields: string[] = [];
     if (updates.name) changedFields.push("nombre");
     if (updates.minecraft_version) changedFields.push("versión");
@@ -1210,6 +1220,7 @@ export function useHomeController() {
     }
   };
 
+  /** Follow or unfollow an author by name, saving to followed_authors table */
   const onToggleFollowAuthor = async (authorName: string, authorUrl?: string, iconUrl?: string, platform?: string) => {
     if (!session?.user?.id || !authorName) return;
     try {
@@ -1273,6 +1284,7 @@ export function useHomeController() {
     );
     if (!currentShare) return;
 
+    // Optimistic update — immediately reorder in UI so the pin feels instant.
     setUserShares((items) =>
       sortSharesByPriority(
         items.map((item) => {

@@ -19,6 +19,11 @@ export interface EnhancedModMeta {
     version?: string;
     type: "required" | "optional" | "incompatible";
   }>;
+  conflicts?: string[];
+  providedIds?: string[];
+  clientSide?: "required" | "optional" | "unsupported" | "unknown";
+  serverSide?: "required" | "optional" | "unsupported" | "unknown";
+  environment?: "client" | "server" | "both" | "unknown";
   extractionQuality: "high" | "medium" | "low";
   extractionWarnings: string[];
   mixinTargets?: string[];

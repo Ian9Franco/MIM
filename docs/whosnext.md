@@ -31,7 +31,6 @@ Fuente: [RECRUITER_REVIEW.md](RECRUITER_REVIEW.md), señales amarillas/rojas y p
 - [ ] **REC-07 — Colaboración externa.** Elegir con Ian un proyecto OSS y una contribución acotada; registrar discusión/review y resultado real. Depende de participación humana; esta tarea no autoriza contactar ni publicar en otro proyecto.
 - [ ] **REC-08 — Narrativa de portfolio y pitch de dos minutos.** Traducir sincronización offline, diagnóstico determinista y análisis estático a capacidades transferibles; preparar respuestas con trade-offs para arquitectura, debugging, seguridad, escala y ownership. Validar con Ian rol objetivo y atribuciones personales antes de redactar la versión final.
 - [ ] **REC-09 — Alinear claims con evidencia.** Auditar README, estado, evaluaciones y backlog: fecha/alcance de métricas, autores, usuarios, CI, cobertura y garantías. Separar valoración subjetiva de medición; corregir cifras sin fuente, porcentajes de mercado y afirmaciones absolutas de producción/alucinación. Elegir un recorrido crítico para observabilidad y documentar señales y diagnóstico, sin agregar infraestructura sólo para portfolio.
-- [ ] **ARCH-01 — Retirar `eval("require")` de `sage/cacheEngine.ts`.** Separar adaptadores Node/browser manteniendo el contrato público y verificar ambos entornos; los tres usos continúan presentes.
 
 ## 4. Evaluación SAGE y MimBot
 

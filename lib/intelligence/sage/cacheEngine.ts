@@ -1,75 +1,72 @@
 /**
  * SAGE 3.0 Local Cache & Deduplication Engine
- * 
- * Isomorphic cache: runs seamlessly in both Node.js (disk persistence with atomic
- * rename and retry backoff) and Browser / Electron renderer (localStorage persistence),
- * preventing bundlers (Turbopack) from failing on client-side imports.
+ *
+ * Owns the public cache API and runtime selection. Persistence details live in
+ * dedicated Node/browser adapters so client bundles never need static Node
+ * built-in imports and the engine no longer relies on eval("require").
  */
 
-export interface SageActionableItem {
-  id: string;
-  label: string;
-  action: "disable_mod" | "update_mod" | "install_dependency" | "optimize_jvm";
-  modId?: string;
-  targetFile?: string;
-  url?: string;
-}
+import type { SageCacheAdapter } from "./cacheAdapter";
+import { createBrowserCacheAdapter } from "./cacheBrowserAdapter";
+import { createNodeCacheAdapter } from "./cacheNodeAdapter";
+import type { SageCacheEntry, SageCacheStore } from "./cacheTypes";
 
-export interface SageEliminationCandidate {
-  modId: string;
-  confidence: number;
-  reason: string;
-  hasDirectMixinCollision: boolean;
-  isMissingDependency: boolean;
-}
-
-export interface SageCacheEntry {
-  signature: string;
-  timestamp: number;
-  loader: string;
-  mcVersion: string;
-  culprit: string;
-  suspects: string[];
-  severity: "critical" | "warning" | "info";
-  summary: string;
-  mimbotExplanation: string;
-  personality: "bully" | "standard";
-  solutions: string[];
-  actionableFixes: SageActionableItem[];
-  eliminationTree: SageEliminationCandidate[];
-  sources?: string[];
-}
-
-export type SageCacheStore = Record<string, SageCacheEntry>;
-
-type NodeFs = typeof import("fs");
-type NodePath = typeof import("path");
-type NodeCrypto = typeof import("crypto");
-
-// Dynamic Node loader to keep frontend bundlers clean
-let nodeFs: NodeFs | null = null;
-let nodePath: NodePath | null = null;
-let nodeCrypto: NodeCrypto | null = null;
-
-if (typeof window === "undefined") {
-  try {
-    nodeFs = eval("require")("fs");
-    nodePath = eval("require")("path");
-    nodeCrypto = eval("require")("crypto");
-  } catch {}
-}
+export type {
+  SageActionableItem,
+  SageCacheEntry,
+  SageCacheStore,
+  SageEliminationCandidate,
+} from "./cacheTypes";
 
 const LOCAL_STORAGE_KEY = "mim_sage_cache_store";
 let inMemoryCache: SageCacheStore | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
+let runtimeAdapter: SageCacheAdapter | null | undefined;
 
-function getDiskCachePath(): string {
-  if (!nodePath) return "";
-  return nodePath.join(process.cwd(), ".mim-index", "cache", "sage-cache.json");
+function getNodeCrypto(): Pick<typeof import("crypto"), "createHash"> | null {
+  if (
+    typeof window !== "undefined" ||
+    typeof process === "undefined" ||
+    typeof process.getBuiltinModule !== "function"
+  ) {
+    return null;
+  }
+  return process.getBuiltinModule("crypto") ?? null;
+}
+
+function resolveRuntimeAdapter(): SageCacheAdapter | null {
+  if (runtimeAdapter !== undefined) return runtimeAdapter;
+
+  if (typeof window !== "undefined") {
+    try {
+      runtimeAdapter = window.localStorage
+        ? createBrowserCacheAdapter(window.localStorage, LOCAL_STORAGE_KEY)
+        : null;
+    } catch {
+      runtimeAdapter = null;
+    }
+    return runtimeAdapter;
+  }
+
+  if (typeof process === "undefined" || typeof process.getBuiltinModule !== "function") {
+    runtimeAdapter = null;
+    return runtimeAdapter;
+  }
+
+  const fs = process.getBuiltinModule("fs");
+  const path = process.getBuiltinModule("path");
+  const crypto = process.getBuiltinModule("crypto");
+
+  runtimeAdapter = fs && path && crypto
+    ? createNodeCacheAdapter({ fs, path, crypto, cwd: () => process.cwd() })
+    : null;
+
+  return runtimeAdapter;
 }
 
 /**
- * Computes a deterministic 64-char SHA-256 signature for a crash report.
+ * Computes a deterministic 64-char SHA-256 signature for a crash report in
+ * Node. Browser clients retain the existing deterministic 64-char fallback.
  */
 export function computeCrashSignature(
   loader: string,
@@ -79,7 +76,7 @@ export function computeCrashSignature(
 ): string {
   const normLoader = (loader || "unknown").toLowerCase().trim();
   const normVersion = (mcVersion || "unknown").toLowerCase().trim();
-  
+
   const cleanSnippet = (stackTraceSnippet || "")
     .replace(/0x[0-9a-fA-F]+/g, "")
     .replace(/:\d+\)/g, ")")
@@ -89,21 +86,21 @@ export function computeCrashSignature(
     .slice(0, 1000);
 
   const sortedSuspects = [...suspects]
-    .map((s) => s.toLowerCase().trim())
+    .map((suspect) => suspect.toLowerCase().trim())
     .sort()
     .join(",");
 
   const payload = `${normLoader}|${normVersion}|${sortedSuspects}|${cleanSnippet}`;
+  const nodeCrypto = getNodeCrypto();
 
   if (nodeCrypto) {
     return nodeCrypto.createHash("sha256").update(payload).digest("hex");
   }
 
-  // Deterministic 64-character hash for browser client environments
   let h1 = 0xdeadbeef;
   let h2 = 0x41c64e6d;
-  for (let i = 0; i < payload.length; i++) {
-    const ch = payload.charCodeAt(i);
+  for (let index = 0; index < payload.length; index += 1) {
+    const ch = payload.charCodeAt(index);
     h1 = Math.imul(h1 ^ ch, 2654435761);
     h2 = Math.imul(h2 ^ ch, 1597334677);
   }
@@ -114,129 +111,45 @@ export function computeCrashSignature(
   return (p1 + p2).repeat(4).slice(0, 64);
 }
 
-/**
- * Loads the local cache from disk (Node) or localStorage (Browser).
- */
+/** Loads the local cache from the selected runtime adapter. */
 export function loadSageCache(): SageCacheStore {
-  if (inMemoryCache !== null) {
-    return inMemoryCache;
-  }
+  if (inMemoryCache !== null) return inMemoryCache;
 
-  // Node runtime: load from disk
-  if (nodeFs && nodePath) {
-    const cacheFile = getDiskCachePath();
-    if (nodeFs.existsSync(cacheFile)) {
-      try {
-        const raw = nodeFs.readFileSync(cacheFile, "utf-8");
-        inMemoryCache = JSON.parse(raw) as SageCacheStore;
-        return inMemoryCache || {};
-      } catch (err) {
-        console.warn("[/lib/intelligence/sage/cacheEngine] Corrupted disk cache, starting empty:", err);
-      }
-    }
-  } else if (typeof window !== "undefined" && window.localStorage) {
-    // Browser runtime: load from localStorage
-    try {
-      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (raw) {
-        inMemoryCache = JSON.parse(raw) as SageCacheStore;
-        return inMemoryCache || {};
-      }
-    } catch {}
-  }
-
-  inMemoryCache = {};
+  const adapter = resolveRuntimeAdapter();
+  inMemoryCache = adapter?.load() ?? {};
   return inMemoryCache;
 }
 
-/**
- * Retrieves a cached diagnosis by its cryptographic signature.
- */
+/** Retrieves a cached diagnosis by its deterministic signature. */
 export function getCachedDiagnosis(signature: string): SageCacheEntry | null {
   const store = loadSageCache();
   return store[signature] || null;
 }
 
-/**
- * Atomically saves a diagnosis entry to the local cache.
- */
+/** Atomically saves a diagnosis entry to the selected runtime cache. */
 export function saveSageCacheEntry(entry: SageCacheEntry): Promise<void> {
   const current = loadSageCache();
   current[entry.signature] = entry;
   inMemoryCache = current;
 
-  // Browser: synchronous localStorage persist
-  if (typeof window !== "undefined" && window.localStorage) {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(current));
-    } catch {}
-    return Promise.resolve();
+  const adapter = resolveRuntimeAdapter();
+  if (!adapter) return Promise.resolve();
+
+  if (typeof window !== "undefined") {
+    return adapter.save(current).then((saved) => {
+      inMemoryCache = saved;
+    });
   }
 
-  // Node runtime: atomic disk persist
   writeQueue = writeQueue.then(async () => {
-    if (!nodeFs || !nodePath) return;
-
-    const cacheFile = getDiskCachePath();
-    const dir = nodePath.dirname(cacheFile);
-    if (!nodeFs.existsSync(dir)) {
-      nodeFs.mkdirSync(dir, { recursive: true });
-    }
-
-    let diskData: SageCacheStore = {};
-    if (nodeFs.existsSync(cacheFile)) {
-      try {
-        diskData = JSON.parse(nodeFs.readFileSync(cacheFile, "utf-8")) as SageCacheStore;
-      } catch (err) {
-        console.warn("[/lib/intelligence/sage/cacheEngine] Failed to parse disk cache during merge:", err);
-      }
-    }
-
-    const merged: SageCacheStore = { ...diskData, ...inMemoryCache };
-    inMemoryCache = merged;
-
-    const tempId = nodeCrypto?.randomUUID() ?? `${process.pid}-${Date.now()}`;
-    const tempFile = `${cacheFile}.tmp.${tempId}`;
-    const payload = JSON.stringify(merged, null, 2);
-
-    try {
-      nodeFs.writeFileSync(tempFile, payload, "utf-8");
-
-      let renamed = false;
-      let attempts = 0;
-      while (!renamed && attempts < 5) {
-        try {
-          nodeFs.renameSync(tempFile, cacheFile);
-          renamed = true;
-        } catch (renameErr: unknown) {
-          attempts++;
-          const errCode = (renameErr as { code?: string })?.code;
-          if (errCode === "EBUSY" || errCode === "EPERM") {
-            await new Promise((r) => setTimeout(r, 20 * attempts));
-          } else {
-            throw renameErr;
-          }
-        }
-      }
-
-      if (!renamed) {
-        nodeFs.copyFileSync(tempFile, cacheFile);
-        try { nodeFs.unlinkSync(tempFile); } catch {}
-      }
-    } catch (err) {
-      console.error("[/lib/intelligence/sage/cacheEngine] Failed atomic cache write:", err);
-      if (nodeFs.existsSync(tempFile)) {
-        try { nodeFs.unlinkSync(tempFile); } catch {}
-      }
-    }
+    const latest = inMemoryCache ?? {};
+    inMemoryCache = await adapter.save(latest);
   });
 
   return writeQueue;
 }
 
-/**
- * Clears the in-memory cache mirror (useful for isolated unit tests).
- */
+/** Clears the in-memory cache mirror (useful for isolated unit tests). */
 export function _resetInMemoryCacheForTests(): void {
   inMemoryCache = null;
 }

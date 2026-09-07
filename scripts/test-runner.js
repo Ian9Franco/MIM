@@ -111,6 +111,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/bot-personality.test.ts"]
     },
     {
+      name: "Multimodal Project Explainer Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/mod-explainer.test.ts"]
+    },
+    {
       name: "Third-Party Modpack License Auditor",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/license-auditor.test.ts"]

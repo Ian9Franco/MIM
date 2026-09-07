@@ -144,3 +144,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/51
 - **Resumen:** amplió la suite del wrapper real `withApiGuard` para verificar `Retry-After`, JSON malformado, `paramsSchema`, valores parseados entregados al handler y excepciones convertidas en respuestas 500 estructuradas, sin modificar código de producción.
+
+## 2026-09-07 10:58:15 — Hermione — PR #52
+
+- **Título:** 📚 Hermione: cierro API-01 y registro #51
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/52
+- **Resumen:** reconcilió el cierre verificado de API-01 retirándolo de `docs/whosnext.md` sin ampliar el cierre a API-02 ni a una fase Unicorn más amplia, y registró PR #51 en la bitácora Hogwarts.

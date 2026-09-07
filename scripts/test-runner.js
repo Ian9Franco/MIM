@@ -7,7 +7,7 @@
  * 1. NBT Binary Safe Recovery & Type Compliance (12 tests)
  * 2. SAGE 2.0 Crash Intelligence Evaluation (125 benchmark cases)
  * 3. Aduana Deduplication & Performance Verification
- * 
+ *
  * Exits with code 0 if all suites succeed, or 1 on any failure.
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -129,6 +129,11 @@ async function main() {
       name: "SAGE 3.0 MIM-Bot Copilot & Graph Intelligence",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-mimbot.test.ts"]
+    },
+    {
+      name: "SAGE Cache Runtime Adapter Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-cache-runtime.test.ts"]
     },
     {
       name: "SAGE Streaming Transport Contract",

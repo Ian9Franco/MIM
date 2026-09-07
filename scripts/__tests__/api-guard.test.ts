@@ -279,6 +279,60 @@ async function assertDesktopGuardRuntime() {
   const limited = await guarded(makeValidRequest());
   assert(limited.status === 429, "Desktop guard actively enforces its request quota");
   assert(handlerCalls === 1, "Rate-limited requests never reach the desktop handler");
+  assert(Number(limited.headers.get("retry-after")) > 0, "Desktop 429 includes a positive Retry-After header");
+}
+
+async function assertDesktopGuardContracts() {
+  const querySchema = z.object({ page: z.coerce.number().int().min(1) });
+  const bodySchema = z.object({ name: z.string().trim().min(1) });
+  const paramsSchema = z.object({ slug: z.string().min(3) });
+  let handlerCalls = 0;
+
+  const guarded = withDesktopApiGuard(
+    { querySchema, bodySchema, paramsSchema },
+    async ({ query, body, params }) => {
+      handlerCalls += 1;
+      return Response.json({ page: query.page, name: body.name, slug: params.slug });
+    }
+  );
+
+  const malformed = await guarded(new Request("http://localhost/api/test?page=2", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-test-id": "desktop-malformed-json" },
+    body: "{not-json",
+  }), { params: { slug: "sodium" } });
+  assert(malformed.status === 400, "Desktop guard rejects malformed JSON before dispatch");
+  assert(handlerCalls === 0, "Malformed desktop JSON never reaches the handler");
+
+  const invalidParams = await guarded(new Request("http://localhost/api/test?page=2", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-test-id": "desktop-invalid-params" },
+    body: JSON.stringify({ name: " sodium " }),
+  }), { params: Promise.resolve({ slug: "x" }) });
+  assert(invalidParams.status === 400, "Desktop guard rejects invalid dynamic route params");
+  assert(handlerCalls === 0, "Invalid desktop params never reach the handler");
+
+  const success = await guarded(new Request("http://localhost/api/test?page=3", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-test-id": "desktop-parsed-values" },
+    body: JSON.stringify({ name: " sodium " }),
+  }), { params: Promise.resolve({ slug: "fabric" }) });
+  const payload = await success.json() as { page: number; name: string; slug: string };
+  assert(success.status === 200, "Desktop guard accepts valid query/body/params together");
+  assert(payload.page === 3 && payload.name === "sodium" && payload.slug === "fabric", "Desktop handler receives parsed query/body/params values", payload);
+  assert(handlerCalls === 1, "Only valid desktop input reaches the handler");
+}
+
+async function assertDesktopGuardException() {
+  const guarded = withDesktopApiGuard({}, async () => {
+    throw new Error("expected desktop test failure");
+  });
+  const response = await guarded(new Request("http://localhost/api/test", {
+    headers: { "x-test-id": "desktop-handler-error" },
+  }));
+  const payload = await response.json() as { error?: string };
+  assert(response.status === 500, "Desktop guard converts handler exceptions into 500 responses");
+  assert(payload.error === "INTERNAL_SERVER_ERROR", "Desktop 500 response keeps the structured error code", payload);
 }
 
 async function assertWebGuardRuntime() {
@@ -292,7 +346,7 @@ async function assertWebGuardRuntime() {
       querySchema,
       rateLimit: {
         windowMs: 60_000,
-        maxRequests: 5,
+        maxRequests: 1,
         customIdentifier: (request: Request) => request.headers.get("x-test-id") || "web-test",
       },
     },
@@ -310,21 +364,57 @@ async function assertWebGuardRuntime() {
   assert(invalid.status === 400, "Web guard rejects invalid Zod query parameters");
   assert(handlerCalls === 0, "Web guard does not dispatch invalid queries to the handler");
 
-  const success = await guarded(
-    new Request("http://localhost/api/test?page=2", {
-      headers: { "x-test-id": "web-valid-query" },
-    })
-  );
+  const makeValidRequest = () => new Request("http://localhost/api/test?page=2", {
+    headers: { "x-test-id": "web-rate-limit" },
+  });
+  const success = await guarded(makeValidRequest());
   assert(success.status === 200, "Web guard dispatches a valid query");
   assert(handlerCalls === 1, "Web guarded handler executes after validation");
-  assert(
-    success.headers.get("x-content-type-options") === "nosniff",
-    "Web guard injects the defensive nosniff header"
-  );
-  assert(
-    success.headers.get("x-ratelimit-limit") === "5",
-    "Web guard injects rate-limit metadata"
-  );
+  assert(success.headers.get("x-content-type-options") === "nosniff", "Web guard injects the defensive nosniff header");
+  assert(success.headers.get("x-ratelimit-limit") === "1", "Web guard injects rate-limit metadata");
+
+  const limited = await guarded(makeValidRequest());
+  assert(limited.status === 429, "Web guard actively enforces its request quota");
+  assert(handlerCalls === 1, "Rate-limited requests never reach the web handler");
+  assert(Number(limited.headers.get("retry-after")) > 0, "Web 429 includes a positive Retry-After header");
+}
+
+async function assertWebGuardContracts() {
+  const bodySchema = z.object({ name: z.string().trim().min(1) });
+  let handlerCalls = 0;
+  const guarded = withWebApiGuard({ bodySchema }, async ({ body }) => {
+    handlerCalls += 1;
+    return Response.json({ name: body.name });
+  });
+
+  const malformed = await guarded(new Request("http://localhost/api/test", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-test-id": "web-malformed-json" },
+    body: "{not-json",
+  }));
+  assert(malformed.status === 400, "Web guard rejects malformed JSON before dispatch");
+  assert(handlerCalls === 0, "Malformed web JSON never reaches the handler");
+
+  const success = await guarded(new Request("http://localhost/api/test", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-test-id": "web-parsed-body" },
+    body: JSON.stringify({ name: " sodium " }),
+  }));
+  const payload = await success.json() as { name: string };
+  assert(payload.name === "sodium", "Web handler receives the parsed body value", payload);
+  assert(handlerCalls === 1, "Valid web body reaches the handler exactly once");
+}
+
+async function assertWebGuardException() {
+  const guarded = withWebApiGuard({}, async () => {
+    throw new Error("expected web test failure");
+  });
+  const response = await guarded(new Request("http://localhost/api/test", {
+    headers: { "x-test-id": "web-handler-error" },
+  }));
+  const payload = await response.json() as { error?: string };
+  assert(response.status === 500, "Web guard converts handler exceptions into 500 responses");
+  assert(typeof payload.error === "string" && payload.error.length > 0, "Web 500 response remains structured", payload);
 }
 
 async function run() {
@@ -333,7 +423,11 @@ async function run() {
   assertStructuralEnforcement();
   assertFilesystemContainment();
   await assertDesktopGuardRuntime();
+  await assertDesktopGuardContracts();
+  await assertDesktopGuardException();
   await assertWebGuardRuntime();
+  await assertWebGuardContracts();
+  await assertWebGuardException();
 
   console.log(`\n${colors.green}${colors.bold}✓ All API Guard enforcement tests passed!${colors.reset}\n`);
 }

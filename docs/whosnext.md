@@ -4,7 +4,6 @@ Roadmap pendiente revisado el 2026-09-06 contra el checkout local v11.4.5 (`ad7f
 
 ## 1. Proceso y contratos API
 
-- [ ] **API-01 — Completar las regresiones prometidas de `withApiGuard`.** El auditor AST y la ejecución del wrapper ya existen; el cierre anterior del conjunto de tests era demasiado amplio. Agregar aserciones de `Retry-After`, JSON malformado en el wrapper aislado, `paramsSchema` válido/inválido, excepción → 500 estructurado y valores parseados de query/body/params recibidos por el handler. Cierre: ejecutar ambos wrappers reales y demostrar bloqueo del handler ante entradas inválidas. `scripts/__tests__/api-guard.test.ts` ya cubre body/query inválidos, happy path básico, headers y 429; hay JSON malformado en la suite de integración crítica.
 - [ ] **API-02 — Generalizar schemas Zod compartidos.** Inventariar qué handlers requieren body/query/params y cuáles ya los validan; extraer contratos request/response compartidos con clientes y tests. El guard estructural no prueba cobertura de schemas. No reutilizar el antiguo 17/93 como medición actual.
 
 ## 2. Funcionamiento y UX de MimBot

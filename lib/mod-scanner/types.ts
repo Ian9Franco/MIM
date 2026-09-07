@@ -21,8 +21,9 @@ export interface EnhancedModMeta {
   }>;
   conflicts?: string[];
   providedIds?: string[];
-  clientSide?: "required" | "optional" | "unsupported" | "unknown";
-  serverSide?: "required" | "optional" | "unsupported" | "unknown";
+  /** Legacy scanners expose free-form strings; canonical narrowing happens in ModArtifact. */
+  clientSide?: string;
+  serverSide?: string;
   environment?: "client" | "server" | "both" | "unknown";
   extractionQuality: "high" | "medium" | "low";
   extractionWarnings: string[];

@@ -10,6 +10,7 @@ import {
 } from "@/lib/instances";
 import { buildReconciliationPlan } from "@/lib/server/reconciliation";
 import { hasRemoteCapability, type RemoteServerTarget } from "@/lib/server/capabilities";
+import type { EventPayload } from "@/lib/events/eventContract";
 
 function artifact(overrides: Partial<ModArtifact> = {}): ModArtifact {
   return {
@@ -191,6 +192,14 @@ function testCapabilityModel(): void {
   assert.equal(hasRemoteCapability(target, "process"), false);
 }
 
+function testServerEventContract(): void {
+  const payload: EventPayload<"server:connected"> = {
+    serverId: "server-1",
+    capabilities: ["files", "commands"],
+  };
+  assert.deepEqual(payload.capabilities, ["files", "commands"]);
+}
+
 async function main(): Promise<void> {
   await testBufferScanner();
   testManifestValidation();
@@ -198,6 +207,7 @@ async function main(): Promise<void> {
   testUnsafeDesiredStateBlocksPlan();
   testDuplicateIdentityRequiresReview();
   testCapabilityModel();
+  testServerEventContract();
   console.log("✓ Server Manager foundation contracts passed");
 }
 

@@ -158,3 +158,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/53
 - **Resumen:** reemplazó una suite que reproducía lógica del explainer por pruebas que importan `modExplainer.ts`, verifican payload multimodal, grounding y fallback local, y registró la suite en el runner obligatorio; dejó explícitamente pendiente la cobertura HTTP de `/api/fomo/explain` antes de cerrar SAGE-08.
+
+## 2026-09-07 11:33:08 — McGonagall — PR #55
+
+- **Título:** 🏰 McGonagall: separo el runtime del caché SAGE
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/55
+- **Resumen:** separó la persistencia del caché SAGE en adaptadores Node/browser, retiró `eval("require")` del selector de runtime, conservó la API pública, rutas y formato del caché, y agregó regresiones de persistencia/recovery ejecutadas por CI.

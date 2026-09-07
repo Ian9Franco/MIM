@@ -130,3 +130,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/44
 - **Resumen:** confinó `POST /api/delete` a archivos directos de la carpeta Downloads configurada, reutilizó `resolveWithin` para contención y validó el lote completo antes del primer borrado.
+
+## 2026-09-06 18:54:23 — Hermione — PR #48
+
+- **Título:** 🧪 Hermione: hago veraz el contrato de release
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/48
+- **Resumen:** corrigió el generador de release para no certificar quality gates omitidos, hizo robusta la inserción cronológica del changelog ante LF/CRLF, agregó regresiones al runner obligatorio y corrigió atribuciones factuales de v11.4.5.

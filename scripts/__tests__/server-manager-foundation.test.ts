@@ -8,8 +8,15 @@ import {
   validateInstanceManifest,
   type ModArtifact,
 } from "@/lib/instances";
-import { buildReconciliationPlan } from "@/lib/server/reconciliation";
-import { hasRemoteCapability, type RemoteServerTarget } from "@/lib/server/capabilities";
+import {
+  auditServerInstance,
+  buildReconciliationPlan,
+  evaluateRemoteMutationSafety,
+  getRecentServerChanges,
+  hasRemoteCapability,
+  type RemoteServerTarget,
+  type ServerChangeRecord,
+} from "@/lib/server";
 import type { EventPayload } from "@/lib/events/eventContract";
 
 function artifact(overrides: Partial<ModArtifact> = {}): ModArtifact {
@@ -125,6 +132,28 @@ function testDiffAndReconciliation(): void {
   assert.equal(plan.actions[0].type, "replace");
 }
 
+function testServerAudit(): void {
+  const actual = createInstanceManifest({
+    instanceId: "remote-server",
+    side: "server",
+    minecraftVersion: "1.20.1",
+    loader: "fabric",
+    mods: [artifact({ modVersion: "1.0.0", hashes: { sha1: "old" } })],
+  });
+  const desired = createInstanceManifest({
+    instanceId: "desired-server",
+    side: "server",
+    minecraftVersion: "1.20.1",
+    loader: "fabric",
+    mods: [artifact({ modVersion: "2.0.0", hashes: { sha1: "new" } })],
+  });
+
+  const audit = auditServerInstance(desired, actual, "2026-09-07T00:00:00.000Z");
+  assert.equal(audit.summary.updatesRequired, 1);
+  assert.equal(audit.summary.validationErrors, 0);
+  assert.equal(audit.generatedAt, "2026-09-07T00:00:00.000Z");
+}
+
 function testUnsafeDesiredStateBlocksPlan(): void {
   const clientOnly = artifact({
     fileName: "sodium.jar",
@@ -192,6 +221,58 @@ function testCapabilityModel(): void {
   assert.equal(hasRemoteCapability(target, "process"), false);
 }
 
+function testMutationSafety(): void {
+  const blocked = evaluateRemoteMutationSafety({
+    path: "/world/level.dat",
+    operation: "write",
+    serverStatus: "online",
+    snapshotAvailable: false,
+  });
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.requiresOfflineServer, true);
+  assert.equal(blocked.requiresSnapshot, true);
+
+  const safe = evaluateRemoteMutationSafety({
+    path: "/server.properties",
+    operation: "write",
+    serverStatus: "online",
+    snapshotAvailable: false,
+  });
+  assert.equal(safe.allowed, true);
+}
+
+function testServerHistory(): void {
+  const records: ServerChangeRecord[] = [
+    {
+      id: "old",
+      serverId: "server-1",
+      type: "server-restarted",
+      timestamp: "2026-09-06T10:00:00.000Z",
+      summary: "Old restart",
+    },
+    {
+      id: "new",
+      serverId: "server-1",
+      type: "mod-replaced",
+      timestamp: "2026-09-07T10:00:00.000Z",
+      summary: "Updated Example",
+    },
+    {
+      id: "other-server",
+      serverId: "server-2",
+      type: "crash-detected",
+      timestamp: "2026-09-07T11:00:00.000Z",
+      summary: "Unrelated",
+    },
+  ];
+
+  const recent = getRecentServerChanges(records, {
+    serverId: "server-1",
+    since: "2026-09-07T00:00:00.000Z",
+  });
+  assert.deepEqual(recent.map((record) => record.id), ["new"]);
+}
+
 function testServerEventContract(): void {
   const payload: EventPayload<"server:connected"> = {
     serverId: "server-1",
@@ -204,9 +285,12 @@ async function main(): Promise<void> {
   await testBufferScanner();
   testManifestValidation();
   testDiffAndReconciliation();
+  testServerAudit();
   testUnsafeDesiredStateBlocksPlan();
   testDuplicateIdentityRequiresReview();
   testCapabilityModel();
+  testMutationSafety();
+  testServerHistory();
   testServerEventContract();
   console.log("✓ Server Manager foundation contracts passed");
 }

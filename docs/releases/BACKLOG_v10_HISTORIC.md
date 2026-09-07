@@ -109,6 +109,7 @@ Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sob
 | [x] Discover Phase 1 | `web/hooks/useHomeController.ts` compone `useHomeDiscover`; `web/lib/discover/` separa cache, payload y búsqueda; `home-discover.test.ts` importa esas implementaciones. Ya mencionado en changelog v11.4.5 como verificación de PR #45. El resto del controlador sigue pendiente. |
 | [x] Reducción inicial del presupuesto de lint | `package.json`: `--max-warnings=471`; commit `7ed6b09`. Se cierra el abandono del techo 9999, no el saneamiento completo de Fase 0. |
 | [x] Base de evaluación determinista SAGE | `scripts/evaluation/sage-eval.ts` y corpus fijo; ya registrado en changelog v10.5.0. No cierra evals de respuestas LLM, ni garantiza generalización, ni demuestra ausencia de alucinaciones. Nuevos criterios en SAGE-01–07. |
+| [x] ARCH-01 — runtime/persistencia del caché SAGE | PR #55 / merge `d978e2b`: `cacheEngine.ts` conserva su API pública y retira los tres `eval("require")`; persistencia Node/browser queda detrás de adaptadores específicos. `sage-cache-runtime.test.ts` cubre browser save/load/corrupción y Node persistencia/reload/atomic-write/recovery; CI del merge pasa lint/types, Systems, DAST y build Web. No se ejecutó empaquetado Windows/Electron. |
 
 ### Correcciones de estado
 

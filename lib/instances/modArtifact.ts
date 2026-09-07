@@ -1,4 +1,3 @@
-import path from "path";
 import type { EnhancedModMeta } from "@/lib/mod-scanner/types";
 import type {
   ArtifactEnvironment,
@@ -19,6 +18,11 @@ function requirement(value?: string): EnvironmentRequirement {
     return value;
   }
   return "unknown";
+}
+
+function basename(value: string): string {
+  const normalized = value.replace(/\\/g, "/");
+  return normalized.split("/").filter(Boolean).pop() ?? value;
 }
 
 function normalizeEnvironment(meta: EnhancedModMeta): ArtifactEnvironment {
@@ -51,7 +55,7 @@ export function toModArtifact(
   options: ModArtifactOptions = {}
 ): ModArtifact {
   const source = options.source ?? { kind: "local" as const };
-  const inferredName = source.path ? path.basename(source.path) : undefined;
+  const inferredName = source.path ? basename(source.path) : undefined;
 
   return {
     fileName: options.fileName ?? inferredName ?? meta.modName ?? UNKNOWN,

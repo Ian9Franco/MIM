@@ -1,26 +1,81 @@
 import { EnhancedModMeta, UNKNOWN } from "./types";
 import { normalizeVersion } from "./Utils";
 
+function parseFabricEnvironment(environment: unknown): Pick<EnhancedModMeta, "environment" | "clientSide" | "serverSide"> {
+  if (environment === "client") {
+    return { environment: "client", clientSide: "required", serverSide: "unsupported" };
+  }
+  if (environment === "server") {
+    return { environment: "server", clientSide: "unsupported", serverSide: "required" };
+  }
+  if (environment === "*") {
+    return { environment: "both", clientSide: "optional", serverSide: "optional" };
+  }
+  return { environment: "unknown", clientSide: "unknown", serverSide: "unknown" };
+}
+
+function dependencyEntries(
+  value: unknown,
+  type: "required" | "optional" | "incompatible"
+): NonNullable<EnhancedModMeta["dependencies"]> {
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value as Record<string, unknown>).map(([id, versionValue]) => ({
+    modId: id,
+    version:
+      typeof versionValue === "string"
+        ? versionValue
+        : typeof versionValue === "object" && versionValue !== null && "version" in versionValue
+          ? String((versionValue as { version?: unknown }).version ?? "") || undefined
+          : undefined,
+    type,
+  }));
+}
+
 export function parseFabricModJson(content: string, loader: string): Partial<EnhancedModMeta> {
   try {
     const json = JSON.parse(content);
+    const dependencies = [
+      ...dependencyEntries(json.depends, "required"),
+      ...dependencyEntries(json.recommends, "optional"),
+      ...dependencyEntries(json.suggests, "optional"),
+      ...dependencyEntries(json.conflicts, "incompatible"),
+      ...dependencyEntries(json.breaks, "incompatible"),
+    ];
+    const incompatibleIds = dependencies
+      .filter((dependency) => dependency.type === "incompatible")
+      .map((dependency) => dependency.modId);
+    const firstAuthor = Array.isArray(json.authors) ? json.authors[0] : undefined;
+
     return {
       modId: json.id || json.schema?.["mod-id"] || UNKNOWN,
       modName: json.name || UNKNOWN,
       modVersion: normalizeVersion(json.version) || UNKNOWN,
       loader,
-      author: json.authors?.[0]?.name || json.author || UNKNOWN,
+      author:
+        typeof firstAuthor === "string"
+          ? firstAuthor
+          : firstAuthor?.name || json.author || UNKNOWN,
       description: json.description,
       website: json.contact?.homepage,
-      dependencies: json.depends ? Object.entries(json.depends).map(([id, v]) => ({
-        modId: id, version: typeof v === 'string' ? v : (v as any).version, type: "required" as const
-      })) : undefined
+      dependencies: dependencies.length > 0 ? dependencies : undefined,
+      conflicts: incompatibleIds.length > 0 ? incompatibleIds : undefined,
+      providedIds: Array.isArray(json.provides)
+        ? json.provides.filter((value: unknown): value is string => typeof value === "string")
+        : undefined,
+      ...parseFabricEnvironment(json.environment),
     };
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 export function parseForgeToml(content: string, isNeo: boolean): Partial<EnhancedModMeta> {
-  const result: Partial<EnhancedModMeta> = { loader: isNeo ? "neoforge" : "forge" };
+  const result: Partial<EnhancedModMeta> = {
+    loader: isNeo ? "neoforge" : "forge",
+    environment: "unknown",
+    clientSide: "unknown",
+    serverSide: "unknown",
+  };
   try {
     const id = content.match(/^modId\s*=\s*"([^"]+)"/m);
     if (id) result.modId = id[1];
@@ -47,7 +102,9 @@ export function parseForgeToml(content: string, isNeo: boolean): Partial<Enhance
     }
 
     return result;
-  } catch { return result; }
+  } catch {
+    return result;
+  }
 }
 
 export function parseMcModInfo(content: string): Partial<EnhancedModMeta> {
@@ -55,9 +112,16 @@ export function parseMcModInfo(content: string): Partial<EnhancedModMeta> {
     const json = JSON.parse(content);
     const mod = Array.isArray(json) ? json[0] : json.modList ? json.modList[0] : json;
     return {
-      modId: mod.modid || UNKNOWN, modName: mod.name || UNKNOWN,
+      modId: mod.modid || UNKNOWN,
+      modName: mod.name || UNKNOWN,
       modVersion: normalizeVersion(mod.version) || UNKNOWN,
-      author: mod.authorList?.[0] || mod.author, loader: "forge"
+      author: mod.authorList?.[0] || mod.author,
+      loader: "forge",
+      environment: "unknown",
+      clientSide: "unknown",
+      serverSide: "unknown",
     };
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }

@@ -137,3 +137,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/48
 - **Resumen:** corrigió el generador de release para no certificar quality gates omitidos, hizo robusta la inserción cronológica del changelog ante LF/CRLF, agregó regresiones al runner obligatorio y corrigió atribuciones factuales de v11.4.5.
+
+## 2026-09-07 02:22:45 — Harry — PR #51
+
+- **Título:** ⚡ Harry: pruebo contratos pendientes de withApiGuard
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/51
+- **Resumen:** amplió la suite del wrapper real `withApiGuard` para verificar `Retry-After`, JSON malformado, `paramsSchema`, valores parseados entregados al handler y excepciones convertidas en respuestas 500 estructuradas, sin modificar código de producción.

@@ -144,6 +144,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-discover.test.ts"]
     },
     {
+      name: "Home Drafts Controller Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-drafts.test.ts"]
+    },
+    {
       name: "Server Manager Manifest & Reconciliation Foundation",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/server-manager-foundation.test.ts"]

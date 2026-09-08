@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState, useRef } from "react";
 import type { ModHit } from "../components/SpotlightMarquees";
-import type { DraftAddResult } from "../components/DraftPickerModal";
 import { mockNewestMods, mockUpdatedMods } from "../lib/mockData";
 import { supabase } from "../lib/supabaseClient";
 import type { CollectionItem } from "../app/types";
 import { attachDependencyTypes, buildDependencyTypeMap } from "../lib/dependencies";
-import { inferSide, normalizeContentType, normalizeLoader } from "../lib/projectTypes";
 import { fetchUserShares, isFavoritePlatformConstraintError, sortSharesByPriority } from "../lib/shareMeta";
 import { useHomeDiscover } from "./useHomeDiscover";
+import { useHomeDrafts } from "./useHomeDrafts";
 
 export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -44,23 +43,6 @@ export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: 
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-};
-
-const fetchDraftIcons = async (projectIds: string[]): Promise<Record<string, string>> => {
-  const ids = projectIds.filter(Boolean);
-  if (!ids.length) return {};
-  try {
-    const res = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(ids)}`);
-    if (!res.ok) return {};
-    const data = await res.json();
-    return data.reduce((acc: Record<string, string>, project: any) => {
-      if (project.icon_url) acc[project.id] = project.icon_url;
-      return acc;
-    }, {});
-  } catch (err) {
-    console.error("Error batch fetching project icons:", err);
-    return {};
-  }
 };
 
 const DEFAULT_CHANNELS = [
@@ -157,7 +139,6 @@ export function useHomeController() {
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [userFavorites, setUserFavorites] = useState<any[]>([]);
   const [userShares, setUserShares] = useState<any[]>([]);
-  const [userDrafts, setUserDrafts] = useState<any[]>([]);
   const [userFollowedAuthors, setUserFollowedAuthors] = useState<any[]>([]);
   const [loadingUserData, setLoadingUserData] = useState(false);
 
@@ -173,7 +154,6 @@ export function useHomeController() {
   const [activeCollection, setActiveCollection] = useState<CollectionItem | null>(null);
   const [activeCollectionMods, setActiveCollectionMods] = useState<ModHit[]>([]);
   const [loadingActiveMods, setLoadingActiveMods] = useState(false);
-  const [activeDraft, setActiveDraft] = useState<any | null>(null);
 
   const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
   const [customAlert, setCustomAlert] = useState<{ title: string; message: string } | null>(null);
@@ -207,6 +187,15 @@ export function useHomeController() {
   });
 
   const showAlert = useCallback((title: string, message: string) => setCustomAlert({ title, message }), []);
+
+  const drafts = useHomeDrafts({
+    userId: session?.user?.id,
+    setActiveTab,
+    setActiveCollection,
+    setActiveCollectionMods,
+    setLoadingActiveMods,
+    showAlert,
+  });
 
   const ensureMaxThreeVisible = useCallback((channels: any[]) => {
     if (!Array.isArray(channels)) return [];
@@ -285,15 +274,6 @@ export function useHomeController() {
       }
     }
 
-    const cachedDraft = localStorage.getItem("mim_active_draft");
-    if (cachedDraft !== null) {
-      try { 
-        setActiveDraft(JSON.parse(cachedDraft)); 
-      } catch (e) {
-        console.warn("[useHomeController] Corrupted mim_active_draft in localStorage:", e);
-      }
-    }
-
     setIsLoaded(true);
   }, []);
 
@@ -317,27 +297,20 @@ export function useHomeController() {
 
     localStorage.setItem("mim_active_collection_mods", JSON.stringify(activeCollectionMods));
 
-    if (activeDraft) {
-      localStorage.setItem("mim_active_draft", JSON.stringify(activeDraft));
-    } else {
-      localStorage.removeItem("mim_active_draft");
-    }
   }, [
     isLoaded,
     activeTab,
     activeCollection,
-    activeCollectionMods,
-    activeDraft
+    activeCollectionMods
   ]);
 
   const loadUserData = useCallback(async (userId: string, silent = false) => {
     try {
       if (!silent) setLoadingUserData(true);
-      const [{ data: profData }, { data: follows }, shares, { data: drafts }, { data: followedAuthors }] = await Promise.all([
+      const [{ data: profData }, { data: follows }, shares, { data: followedAuthors }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase.from("followed_mods").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
         fetchUserShares(userId),
-        supabase.from("drafts").select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)").eq("owner_id", userId),
         supabase.from("followed_authors").select("*").eq("profile_id", userId).order("created_at", { ascending: false }),
       ]);
 
@@ -358,32 +331,6 @@ export function useHomeController() {
       setUserShares(shares || []);
       setUserFollowedAuthors(followedAuthors || []);
 
-      if (drafts) {
-        const allItemIds = drafts.flatMap((draft: any) => (draft.draft_items || []).map((item: any) => item.project_id));
-        const iconsMap = await fetchDraftIcons(allItemIds);
-        setUserDrafts(drafts.map((draft: any) => ({
-          id: draft.id,
-          name: draft.name,
-          minecraft_version: draft.minecraft_version,
-          loader: draft.loader,
-          visibility: draft.visibility,
-          cover_image: draft.cover_image || null,
-          items: (draft.draft_items || []).map((item: any) => ({
-            id: item.id,
-            project_id: item.project_id,
-            name: item.mod_name || item.project_id,
-            icon_url: iconsMap[item.project_id],
-            project_type: item.content_type || item.category || "mod",
-            content_type: item.content_type || item.category || "mod",
-            category: item.category || item.content_type || "mod",
-            side: item.side || "both",
-            version_id: item.version_id,
-            dependencies: item.dependencies || [],
-            game_versions: [draft.minecraft_version].filter(Boolean),
-            loaders: [draft.loader].filter(Boolean),
-          })),
-        })));
-      }
     } catch (err) {
       console.error("Error loading user cloud data:", err);
     } finally {
@@ -400,7 +347,6 @@ export function useHomeController() {
     setProfile(null);
     setUserFavorites([]);
     setUserShares([]);
-    setUserDrafts([]);
     const saved = localStorage.getItem("mim_web_youtube_channels");
     if (saved) {
       try {
@@ -412,12 +358,6 @@ export function useHomeController() {
         console.warn("[useHomeController] Corrupted mim_web_youtube_channels in localStorage:", e);
       }
     }
-  }, [session, loadUserData]);
-
-  useEffect(() => {
-    const refreshDrafts = () => session?.user?.id && void loadUserData(session.user.id);
-    window.addEventListener("fomo-draft-items-changed", refreshDrafts);
-    return () => window.removeEventListener("fomo-draft-items-changed", refreshDrafts);
   }, [session, loadUserData]);
 
   useEffect(() => {
@@ -688,95 +628,6 @@ export function useHomeController() {
     setActiveTab("collections");
   };
 
-  const handleEnterDraftCollection = async (draft: any) => {
-    setActiveDraft(draft);
-    setActiveCollection({
-      id: draft.id,
-      name: draft.name,
-      description: draft.description || `Draft Modpack (${draft.minecraft_version} · ${draft.loader})`,
-      projectCount: draft.items?.length || 0,
-      source: "draft" as any,
-    });
-    setActiveCollectionMods([]);
-    setLoadingActiveMods(true);
-    try {
-      let items = draft.items;
-      if (!items) {
-        const { data } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
-        const icons = await fetchDraftIcons((data || []).map((i: any) => i.project_id));
-        items = (data || []).map((item: any) => ({
-          id: item.id,
-          project_id: item.project_id,
-          name: item.mod_name,
-          icon_url: icons[item.project_id],
-          category: item.category || item.content_type || "mod",
-          content_type: item.content_type || item.category || "mod",
-          side: item.side || "both",
-          version_id: item.version_id,
-          dependencies: item.dependencies || [],
-          game_versions: null,
-          loaders: null,
-        }));
-      } else {
-        const missingIconIds = items
-          .filter((item: any) => item.project_id && !item.icon_url && !item.iconUrl)
-          .map((item: any) => item.project_id);
-        if (missingIconIds.length) {
-          const icons = await fetchDraftIcons(missingIconIds);
-          items = items.map((item: any) => ({
-            ...item,
-            icon_url: item.icon_url || item.iconUrl || icons[item.project_id],
-          }));
-        }
-      }
-
-      // Fetch actual game versions and loaders from Modrinth in batch if versions are set
-      const versionIds = items.map((item: any) => item.version_id).filter(Boolean);
-      let versionsMap: Record<string, { game_versions: string[]; loaders: string[] }> = {};
-      if (versionIds.length) {
-        try {
-          const res = await fetch(`https://api.modrinth.com/v2/versions?ids=${encodeURIComponent(JSON.stringify(versionIds))}`);
-          if (res.ok) {
-            const versionsData = await res.json();
-            versionsData.forEach((v: any) => {
-              versionsMap[v.id] = {
-                game_versions: v.game_versions || [],
-                loaders: v.loaders || [],
-              };
-            });
-          }
-        } catch (vErr) {
-          console.error("Error fetching version metadata from Modrinth:", vErr);
-        }
-      }
-
-      setActiveCollectionMods((items || []).map((item: any) => {
-        const actualVersionInfo = item.version_id ? versionsMap[item.version_id] : null;
-        return {
-          itemId: item.id,
-          projectId: item.project_id,
-          title: item.name || item.mod_name || item.project_id,
-          description: "",
-          iconUrl: item.icon_url || item.iconUrl || undefined,
-          author: "Comunidad",
-          projectType: item.content_type || item.category || "mod",
-          categories: [item.category || item.content_type].filter(Boolean),
-          url: `https://modrinth.com/${item.content_type || item.category || "mod"}/${item.project_id}`,
-          _source: "modrinth",
-          gameVersions: actualVersionInfo?.game_versions || item.game_versions || [draft.minecraft_version].filter(Boolean),
-          loaders: actualVersionInfo?.loaders || item.loaders || [draft.loader].filter(Boolean),
-          side: item.side || "both",
-          versionId: item.version_id || null,
-        };
-      }));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingActiveMods(false);
-    }
-    setActiveTab("collections");
-  };
-
   const loadSpotlightData = useCallback(async () => {
     try {
       const facets = encodeURIComponent('[["versions:1.20.1"],["categories:fabric"]]');
@@ -953,225 +804,6 @@ export function useHomeController() {
     setSelectedModDetails(item.details);
     setSelectedModDeps(item.deps);
     setModalTab(item.tab);
-  };
-
-  const createDraft = async (name: string, version: string, loader: string) => {
-    if (!session?.user?.id) return null;
-    try {
-      const { data, error } = await supabase.from("drafts").insert({
-        owner_id: session.user.id,
-        name,
-        minecraft_version: version,
-        loader,
-        visibility: "private",
-      }).select().single();
-      if (error) throw error;
-      window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-      await loadUserData(session.user.id);
-      return data;
-    } catch (err: any) {
-      showAlert("Error", `Error al crear el draft: ${err.message}`);
-      return null;
-    }
-  };
-
-  const addModToDraft = async (draftId: string, mod: ModHit, category: string): Promise<DraftAddResult> => {
-    if (!session?.user?.id) return { ok: false, status: "error", message: "Necesitás iniciar sesión para editar Drafts." };
-    const draft = userDrafts.find((d) => d.id === draftId);
-    const draftVersion = draft?.minecraft_version || "1.20.1";
-    const draftLoader = draft?.loader || "fabric";
-    let details: any = null;
-    let versions: any[] = [];
-    let versionId: string | null = null;
-    let dependencies: any[] = [];
-    const contentType = normalizeContentType({ ...mod, projectType: category || mod.projectType });
-    try {
-      const { data: existing, error: checkErr } = await supabase.from("draft_items").select("id").eq("draft_id", draftId).eq("project_id", mod.projectId).eq("content_type", contentType).maybeSingle();
-      if (checkErr) throw checkErr;
-      if (existing) {
-        showAlert("Ya existe", "Ese contenido ya está en este Draft.");
-        return { ok: false, status: "exists", message: `${mod.title} ya estaba en este Draft.`, contentType };
-      }
-
-      if ((mod._source || "modrinth") !== "curseforge") {
-        const projectRes = await fetch(`https://api.modrinth.com/v2/project/${mod.projectId}`);
-        if (projectRes.ok) details = await projectRes.json();
-
-        const loader = normalizeLoader(draftLoader);
-        const query = [`game_versions=${encodeURIComponent(JSON.stringify([draftVersion]))}`];
-        if (contentType === "mod" && loader) query.push(`loaders=${encodeURIComponent(JSON.stringify([loader]))}`);
-        const versionRes = await fetch(`https://api.modrinth.com/v2/project/${mod.projectId}/version?${query.join("&")}`);
-        if (versionRes.ok) {
-          versions = await versionRes.json();
-          const match = versions[0];
-          versionId = match?.id || null;
-          dependencies = match?.dependencies || [];
-        }
-      }
-
-      const compatible = (mod._source || "modrinth") === "curseforge" || Boolean(versionId);
-      const side = inferSide(contentType, details);
-      const { error } = await supabase.from("draft_items").insert({
-        draft_id: draftId,
-        source: mod._source || "modrinth",
-        project_id: mod.projectId,
-        version_id: versionId,
-        mod_name: mod.title || mod.projectId,
-        added_by: session.user.id,
-        content_type: contentType,
-        category: contentType,
-        side,
-        dependencies,
-      });
-      if (error) throw error;
-
-      // Log activity
-      await supabase.from("draft_activity").insert({
-        draft_id: draftId,
-        profile_id: session.user.id,
-        action: `añadió ${contentType === "resourcepack" ? "una textura" : contentType === "shader" ? "un shader" : contentType === "datapack" ? "un datapack" : "un mod"}`,
-        payload: { name: mod.title || mod.projectId, type: contentType, project_id: mod.projectId },
-      });
-
-      const requiredDeps = dependencies.filter((dep: any) => dep.dependency_type === "required" && dep.project_id);
-      const knownIds = new Set([mod.projectId, ...(draft?.items || []).map((item: any) => item.project_id)]);
-      const missingIds = requiredDeps.map((dep: any) => dep.project_id).filter((id: string) => !knownIds.has(id));
-      if (missingIds.length) {
-        const projectsRes = await fetch(`https://api.modrinth.com/v2/projects?ids=${encodeURIComponent(JSON.stringify(missingIds))}`);
-        if (projectsRes.ok) {
-          const projects = await projectsRes.json();
-          await supabase.from("draft_items").insert(projects.map((project: any) => ({
-            draft_id: draftId,
-            source: "modrinth",
-            project_id: project.id,
-            version_id: null,
-            mod_name: project.title || project.id,
-            added_by: session.user.id,
-            content_type: normalizeContentType(project),
-            category: normalizeContentType(project),
-            side: inferSide(normalizeContentType(project), project),
-            dependencies: [],
-          })));
-        }
-      }
-
-      window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-      await loadUserData(session.user.id);
-      const label = contentType === "resourcepack" ? "textura/resourcepack" : contentType;
-      const depText = missingIds.length ? ` Se agregaron ${missingIds.length} dependencia(s) requeridas.` : "";
-      return {
-        ok: true,
-        status: compatible ? "compatible" : "warning",
-        contentType,
-        message: compatible
-          ? `${mod.title} agregado como ${label}. Compatible con ${draftLoader} ${draftVersion}.${depText}`
-          : `${mod.title} agregado como ${label}, pero no encontré versión para ${draftLoader} ${draftVersion}. Revisalo antes de descargar.${depText}`,
-      };
-    } catch (err: any) {
-      showAlert("Error", `Error al añadir al draft: ${err.message}`);
-      return { ok: false, status: "error", message: `No se pudo agregar: ${err.message}`, contentType };
-    }
-  };
-
-  const removeModFromDraft = async (draftId: string, projectId: string, itemId?: string) => {
-    if (!session?.user?.id) return;
-    // Capture the mod name before deleting for activity log
-    const draftObj = userDrafts.find((d) => d.id === draftId);
-    const itemMeta = (draftObj?.items || []).find(
-      (i: any) => (itemId && i.id === itemId) || i.project_id === projectId
-    );
-    const query = supabase.from("draft_items").delete();
-    const { error } = itemId
-      ? await query.eq("id", itemId)
-      : await query.eq("draft_id", draftId).eq("project_id", projectId);
-    if (error) {
-      showAlert("Error", `Error al eliminar del draft: ${error.message}`);
-    } else {
-      // Log activity
-      await supabase.from("draft_activity").insert({
-        draft_id: draftId,
-        profile_id: session.user.id,
-        action: "eliminó un ítem",
-        payload: {
-          name: itemMeta?.name || itemMeta?.mod_name || projectId,
-          type: itemMeta?.content_type || itemMeta?.category || "mod",
-          project_id: projectId,
-        },
-      });
-    }
-    window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-    await loadUserData(session.user.id);
-  };
-
-  const recategorizeDraftItem = async (draftId: string, projectId: string, category: string) => {
-    if (!session?.user?.id) return;
-    const { error } = await supabase.from("draft_items").update({ category, content_type: category }).eq("draft_id", draftId).eq("project_id", projectId);
-    if (error) showAlert("Error", `Error al recategorizar: ${error.message}`);
-    window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-    await loadUserData(session.user.id);
-  };
-
-  const updateDraftItemSide = async (draftId: string, projectId: string, side: string, itemId?: string) => {
-    if (!session?.user?.id) return;
-    const query = supabase.from("draft_items").update({ side });
-    const { error } = itemId
-      ? await query.eq("id", itemId)
-      : await query.eq("draft_id", draftId).eq("project_id", projectId);
-    if (error) showAlert("Error", `Error al actualizar lado: ${error.message}`);
-    window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-    await loadUserData(session.user.id);
-  };
-
-  const updateDraftCover = async (draftId: string, coverImage: string | null) => {
-    if (!session?.user?.id) return;
-    const { error } = await supabase.from("drafts").update({ cover_image: coverImage, updated_at: new Date().toISOString() }).eq("id", draftId);
-    if (error) showAlert("Error", `Error al actualizar banner: ${error.message}`);
-    await loadUserData(session.user.id);
-  };
-
-  const deleteDraft = async (draftId: string) => {
-    if (!session?.user?.id) return;
-    const { error } = await supabase.from("drafts").delete().eq("id", draftId);
-    if (error) showAlert("Error", `Error al eliminar el draft: ${error.message}`);
-    window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-    await loadUserData(session.user.id);
-  };
-
-  /** Update draft details (name, version, loader, visibility) and log activity */
-  const updateDraftMetadata = async (
-    draftId: string,
-    updates: { name?: string; minecraft_version?: string; loader?: string; visibility?: string }
-  ): Promise<boolean> => {
-    if (!session?.user?.id) return false;
-    const { error } = await supabase
-      .from("drafts")
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("id", draftId);
-    if (error) {
-      showAlert("Error", `No se pudo guardar la configuración: ${error.message}`);
-      return false;
-    }
-
-    // Construct a list of what changed for the activity log
-    const changedFields: string[] = [];
-    if (updates.name) changedFields.push("nombre");
-    if (updates.minecraft_version) changedFields.push("versión");
-    if (updates.loader) changedFields.push("loader");
-    if (updates.visibility) changedFields.push("visibilidad");
-
-    const actionText = changedFields.length
-      ? `actualizó la configuración (${changedFields.join(", ")})`
-      : "actualizó el draft";
-
-    await supabase.from("draft_activity").insert({
-      draft_id: draftId,
-      profile_id: session.user.id,
-      action: actionText,
-      payload: updates,
-    });
-    
-    await loadUserData(session.user.id);
-    return true;
   };
 
   const onToggleFavorite = async (mod: ModHit) => {
@@ -1396,7 +1028,8 @@ export function useHomeController() {
     activeTab, setActiveTab, selectedMod, selectedModDetails, selectedModDeps, loadingDetails, modalTab, setModalTab,
     modStack, activeStackIndex, ...discover, session, email, setEmail, password, setPassword, username,
     setUsername, isRegistering, setIsRegistering, authLoading, profile, setProfile, showEditProfile, setShowEditProfile,
-    showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts, userFollowedAuthors, loadingUserData,
+    showcaseChannels, showChannelPicker, setShowChannelPicker, userFavorites, userShares, userDrafts: drafts.userDrafts, userFollowedAuthors,
+    loadingUserData: loadingUserData || drafts.loadingDrafts,
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, curseForgeCollections, latestFeaturedMods, latestCollectionName,
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
     loadingActiveMods, theme, customAlert, setCustomAlert, youtubePosts, loadingYoutube, currentChannel,
@@ -1404,13 +1037,20 @@ export function useHomeController() {
     rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,
     handleRemoveChannel, handleEnterCollection, handleExitCollection: () => { setActiveCollection(null); setActiveCollectionMods([]); },
-    handleEnterDraftCollection, handleOpenModDetails, handleSwitchStackIndex,
+    handleEnterDraftCollection: drafts.handleEnterDraftCollection, handleOpenModDetails, handleSwitchStackIndex,
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: closeProjectDetails,
-    createDraft, addModToDraft, removeModFromDraft, recategorizeDraftItem, updateDraftItemSide, updateDraftCover, deleteDraft, updateDraftMetadata, onToggleFavorite, onToggleFollowAuthor,
+    createDraft: drafts.createDraft, addModToDraft: drafts.addModToDraft,
+    removeModFromDraft: drafts.removeModFromDraft, recategorizeDraftItem: drafts.recategorizeDraftItem,
+    updateDraftItemSide: drafts.updateDraftItemSide, updateDraftCover: drafts.updateDraftCover,
+    deleteDraft: drafts.deleteDraft, updateDraftMetadata: drafts.updateDraftMetadata,
+    onToggleFavorite, onToggleFollowAuthor,
     onRemoveShare, onUpdateSharePriority, shareYoutubePost,
     handleToggleChannelVisibility,
-    refreshUserData: () => session?.user?.id && void loadUserData(session.user.id),
-    activeDraft, setActiveDraft,
+    refreshUserData: () => {
+      if (!session?.user?.id) return;
+      void Promise.all([loadUserData(session.user.id), drafts.refreshDrafts()]);
+    },
+    activeDraft: drafts.activeDraft, setActiveDraft: drafts.setActiveDraft,
   };
 }

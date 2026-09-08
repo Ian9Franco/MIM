@@ -4,12 +4,12 @@
  */
 
 export * from "./metadata";
-export * from "./taxonomy";
+export * from "./map";
 export * from "./intelligence";
 export * from "./utils";
 
-import { MimEventMap } from "./taxonomy";
-import { EventMetadata } from "./metadata";
+import type { MimEventMap } from "./map";
+import type { EventMetadata } from "./metadata";
 
 export type EventName = keyof MimEventMap;
 export type EventPayload<T extends EventName> = MimEventMap[T];

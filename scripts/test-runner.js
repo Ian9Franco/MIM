@@ -3,10 +3,8 @@
 /**
  * MIM — Unified Headless Test & Verification Runner
  * ─────────────────────────────────────────────────────────────────────────────
- * Executes all automated test and evaluation suites in sequence:
- * 1. NBT Binary Safe Recovery & Type Compliance (12 tests)
- * 2. SAGE 2.0 Crash Intelligence Evaluation (125 benchmark cases)
- * 3. Aduana Deduplication & Performance Verification
+ * Executes all automated test and evaluation suites in sequence, including
+ * engine benchmarks, architecture contracts and Server Manager foundations.
  *
  * Exits with code 0 if all suites succeed, or 1 on any failure.
  * ─────────────────────────────────────────────────────────────────────────────
@@ -144,6 +142,11 @@ async function main() {
       name: "Home Discover Controller Contract",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-discover.test.ts"]
+    },
+    {
+      name: "Server Manager Manifest & Reconciliation Foundation",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/server-manager-foundation.test.ts"]
     },
     {
       name: "Release Notes Truthfulness Contract",

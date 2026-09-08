@@ -3,12 +3,13 @@
  */
 
 import { EventSource, EventMetadata } from "./metadata";
-import { MimEventMap } from "./taxonomy";
+import type { MimEventMap } from "./map";
 
 export function validateEventPayload<T extends keyof MimEventMap>(
   eventType: T,
   payload: any
 ): payload is MimEventMap[T] {
+  void eventType;
   return payload !== null && typeof payload === "object";
 }
 

@@ -19,6 +19,12 @@ export interface EnhancedModMeta {
     version?: string;
     type: "required" | "optional" | "incompatible";
   }>;
+  conflicts?: string[];
+  providedIds?: string[];
+  /** Legacy scanners expose free-form strings; canonical narrowing happens in ModArtifact. */
+  clientSide?: string;
+  serverSide?: string;
+  environment?: "client" | "server" | "both" | "unknown";
   extractionQuality: "high" | "medium" | "low";
   extractionWarnings: string[];
   mixinTargets?: string[];

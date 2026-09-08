@@ -172,3 +172,17 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/56
 - **Resumen:** reconcilió el cierre verificado de ARCH-01 retirándolo de `docs/whosnext.md`, actualizó `UNRELEASED` y el backlog histórico con el alcance probado y su limitación de empaquetado Electron, y registró PR #55 en la bitácora Hogwarts.
+
+## 2026-09-07 23:03:55 — Harry — PR #62
+
+- **Título:** ⚡ Harry: pruebo el consumidor HTTP del explainer
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/62
+- **Resumen:** amplió la suite SAGE-08 para ejecutar el consumidor HTTP real `/api/fomo/explain` sobre `modExplainer.ts`, verificando metadata, imágenes, grounding y fallback con proveedor controlado, sin cambiar producción.
+
+## 2026-09-08 01:51:41 — McGonagall — PR #63
+
+- **Título:** 🏰 McGonagall: separo Drafts del controlador
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/63
+- **Resumen:** extrajo el ownership de Drafts desde `useHomeController.ts` hacia `useHomeDrafts` y contratos/adaptadores específicos, preservó la superficie pública y agregó regresiones de persistencia, eventos, Modrinth y composición; la verificación visible post-merge sigue pendiente.

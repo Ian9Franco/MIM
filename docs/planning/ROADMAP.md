@@ -52,9 +52,10 @@
 - [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
   - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
   - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
-  - [ ] `web/hooks/useHomeController.ts` — continuar modularización por fases; el controller sigue siendo monolítico aunque Discover ya no sea responsabilidad propia.
+  - [ ] `web/hooks/useHomeController.ts` — continuar modularización por fases; el controller sigue siendo monolítico aunque Discover y Drafts ya no sean responsabilidades propias.
     - [x] Phase 1 — Discover extraído y verificado en PR #43, con caché, decodificación de payloads y búsqueda separadas detrás del mismo contrato público.
-    - [ ] Phase 2+ — reevaluar Drafts y Profile/Community según el plan activo del Hogwarts Council antes de nuevas extracciones.
+    - [ ] Phase 2 — Drafts mergeado en PR #63 con `useHomeDrafts`, contrato/adaptador y regresiones dedicadas; verificación final `BLOCKED` hasta reproducir create/edit/delete/refresh con sesión browser/Supabase.
+    - [ ] Phase 3 — Profile/Community no está desbloqueada hasta cerrar la verificación de Phase 2 y la reevaluación de Dumbledore.
 - [x] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---

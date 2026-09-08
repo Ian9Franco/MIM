@@ -110,6 +110,7 @@ Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sob
 | [x] Reducción inicial del presupuesto de lint | `package.json`: `--max-warnings=471`; commit `7ed6b09`. Se cierra el abandono del techo 9999, no el saneamiento completo de Fase 0. |
 | [x] Base de evaluación determinista SAGE | `scripts/evaluation/sage-eval.ts` y corpus fijo; ya registrado en changelog v10.5.0. No cierra evals de respuestas LLM, ni garantiza generalización, ni demuestra ausencia de alucinaciones. Nuevos criterios en SAGE-01–07. |
 | [x] ARCH-01 — runtime/persistencia del caché SAGE | PR #55 / merge `d978e2b`: `cacheEngine.ts` conserva su API pública y retira los tres `eval("require")`; persistencia Node/browser queda detrás de adaptadores específicos. `sage-cache-runtime.test.ts` cubre browser save/load/corrupción y Node persistencia/reload/atomic-write/recovery; CI del merge pasa lint/types, Systems, DAST y build Web. No se ejecutó empaquetado Windows/Electron. |
+| [x] SAGE-08 — explainer multimodal real | PR #53 importó `lib/intelligence/modExplainer.ts`; PR #62 / merge `a729cba` añadió ejecución del consumidor HTTP real `/api/fomo/explain`. La suite controla proveedor e imágenes y verifica metadata, payload multimodal, grounding, respuesta HTTP y fallback local. Los checks del head #62 pasaron Systems, DAST, build y Codacy; el `main` posterior permanece verde. Este cierre corresponde al explainer multimodal y no equivale a evals generales de MimBot ni a Unicorn §1.3 completo. |
 
 ### Correcciones de estado
 

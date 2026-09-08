@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Layers, Trash2, Pencil, Check, Loader2, ImagePlus } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
+import type { DraftAddResult } from "../lib/drafts/draftContract";
 import { ImageCropper } from "./ImageCropper";
 
 /* ─── Types ─── */
@@ -62,13 +63,6 @@ const SIDE_LABELS: Record<string, string> = {
   client: "Solo cliente",
   server: "Solo servidor",
 };
-
-export interface DraftAddResult {
-  ok: boolean;
-  status: "compatible" | "warning" | "exists" | "error";
-  message: string;
-  contentType?: string;
-}
 
 /* ─── Props ─── */
 interface DraftPickerModalProps {

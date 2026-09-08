@@ -186,3 +186,10 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/63
 - **Resumen:** extrajo el ownership de Drafts desde `useHomeController.ts` hacia `useHomeDrafts` y contratos/adaptadores específicos, preservó la superficie pública y agregó regresiones de persistencia, eventos, Modrinth y composición; la verificación visible post-merge sigue pendiente.
+
+## 2026-09-08 11:07:56 — Hermione — PR #64
+
+- **Título:** 📚 Hermione: reconcilio SAGE-08 y REC-03
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/64
+- **Resumen:** reconcilió SAGE-08 como verificado en la documentación canónica, mantuvo REC-03 Phase 2 explícitamente bloqueada por falta de validación visible autenticada y registró los cierres #62 y #63 en la bitácora Hogwarts.

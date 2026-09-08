@@ -1,4 +1,5 @@
 import assert from "assert";
+import { POST as explainProjectRoute } from "../../app/api/fomo/explain/route";
 import {
   buildMultimodalPrompt,
   explainModWithGemini,
@@ -93,6 +94,89 @@ async function testRealFallback(): Promise<void> {
   }
 }
 
+function makeRouteRequest(body: Record<string, unknown>): Request {
+  return new Request("http://localhost/api/fomo/explain", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-forwarded-for": "203.0.113.53",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function testHttpConsumerMultimodalRequest(): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  const mockFetch: typeof fetch = async (input) => {
+    if (String(input) === "https://example.test/route-gallery.webp") {
+      return new Response(Uint8Array.from([5, 6, 7, 8]), {
+        status: 200,
+        headers: { "content-type": "image/webp" },
+      });
+    }
+
+    return Response.json({
+      candidates: [{
+        content: { parts: [{ text: "Explicación desde el consumidor HTTP." }] },
+        groundingMetadata: {
+          webSearchQueries: ["Route Project mod"],
+          groundingChunks: [{ web: { title: "Route Source", uri: "https://example.test/route-source" } }],
+        },
+      }],
+    });
+  };
+
+  try {
+    globalThis.fetch = mockFetch;
+    const response = await explainProjectRoute(makeRouteRequest({
+      projectId: "route-project",
+      title: "Route Project",
+      categories: ["technology"],
+      loaders: ["fabric"],
+      galleryUrls: ["https://example.test/route-gallery.webp"],
+      model: "gemini-route-test",
+      personality: "standard",
+      clientApiKey: "test-key",
+    }));
+    const result = await response.json();
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(result.summaryMarkdown, "Explicación desde el consumidor HTTP.");
+    assert.strictEqual(result.imagesAnalyzed, 1);
+    assert.strictEqual(result.searchUsed, true);
+    assert.strictEqual(result.groundedSources[0]?.url, "https://example.test/route-source");
+    pass("HTTP consumer forwards metadata + gallery images through the real explainer");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testHttpConsumerFallback(): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  const mockFetch: typeof fetch = async () => new Response("provider unavailable", { status: 500 });
+
+  try {
+    globalThis.fetch = mockFetch;
+    const response = await explainProjectRoute(makeRouteRequest({
+      projectId: "route-fallback",
+      title: "Route Fallback",
+      categories: ["utility"],
+      loaders: ["fabric"],
+      personality: "standard",
+      clientApiKey: "test-key",
+    }));
+    const result = await response.json();
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(result.model, "mim-bot-offline-fallback-standard");
+    assert.strictEqual(result.searchUsed, false);
+    assert.strictEqual(result.imagesAnalyzed, 0);
+    pass("HTTP consumer preserves the real explainer fallback contract");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
 async function run(): Promise<void> {
   const prompt = buildMultimodalPrompt({ projectId: "p", title: "Prompt Project" }, 2, "standard");
   assert.ok(prompt.includes("2 captura(s)"));
@@ -101,6 +185,8 @@ async function run(): Promise<void> {
 
   await testRealMultimodalRequest();
   await testRealFallback();
+  await testHttpConsumerMultimodalRequest();
+  await testHttpConsumerFallback();
   console.log("✓ Real multimodal explainer contract suite passed");
 }
 

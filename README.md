@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Ian9Franco/MIM/main/public/icon.png" width="100" alt="MIM Logo" />
+<img src="./public/icon.png" width="100" alt="MIM Logo" />
 
 # MIM — Minecraft Intelligent Manager
 

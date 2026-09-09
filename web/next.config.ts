@@ -1,8 +1,9 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: __dirname,
+    root: path.resolve(__dirname, ".."),
   },
   /* config options here */
   experimental: {

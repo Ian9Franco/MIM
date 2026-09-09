@@ -8,8 +8,8 @@ type DownloadEventMap = {
   "task:started": { task: DownloadTask };
   "task:progress": { task: DownloadTask };
   "task:completed": { task: DownloadTask };
-  "task:failed": { task: DownloadTask; error: string };
-  "task:retry": { task: DownloadTask; attempt: number; delayMs: number };
+  "task:failed": { task: DownloadTask; error: string; report?: import("@/lib/network").NetworkDiagnosticReport };
+  "task:retry": { task: DownloadTask; attempt: number; delayMs: number; report?: import("@/lib/network").NetworkDiagnosticReport };
 };
 
 type DownloadEventCallback<T extends keyof DownloadEventMap> = (payload: DownloadEventMap[T]) => void;

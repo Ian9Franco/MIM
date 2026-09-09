@@ -1,42 +1,35 @@
+import { fetchWithRetry } from "@/lib/network";
+import type { NetworkDiagnosticReport } from "@/lib/network";
+
 /**
- * Client-side JSON fetch with small retries. Helps when the embedded Next server
- * or Turbopack is still waking up on first navigation (TypeError: Failed to fetch).
+ * Client-side JSON fetch with resilient retries, exponential backoff, jitter, and classification.
+ * Backward compatible with existing callers while leveraging the unified network resilience engine.
  */
 export async function fetchJsonWithRetry<T = unknown>(
   path: string,
   options?: RequestInit & { retries?: number; retryDelayMs?: number }
-): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  const retries = options?.retries ?? 3;
-  const retryDelayMs = options?.retryDelayMs ?? 400;
-  const { retries: _r, retryDelayMs: _d, ...init } = options ?? {};
+): Promise<
+  | { ok: true; data: T; report?: NetworkDiagnosticReport }
+  | { ok: false; error: string; report?: NetworkDiagnosticReport }
+> {
+  const { retries, retryDelayMs, ...init } = options ?? {};
 
-  const url =
-    typeof window !== "undefined" && path.startsWith("/")
-      ? new URL(path, window.location.origin).toString()
-      : path;
-
-  let lastMessage = "Failed to fetch";
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, init);
-      if (!res.ok) {
-        lastMessage = `HTTP ${res.status}`;
-        if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, retryDelayMs * (attempt + 1)));
-          continue;
+  const policy =
+    retries !== undefined || retryDelayMs !== undefined
+      ? {
+          maxAttempts: retries ?? 3,
+          baseDelayMs: retryDelayMs ?? 400,
         }
-        return { ok: false, error: lastMessage };
-      }
-      const data = (await res.json()) as T;
-      return { ok: true, data };
-    } catch (e: unknown) {
-      lastMessage = e instanceof Error ? e.message : String(e);
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, retryDelayMs * (attempt + 1)));
-      }
-    }
+      : undefined;
+
+  const result = await fetchWithRetry<T>(path, {
+    ...init,
+    policy,
+  });
+
+  if (result.ok) {
+    return { ok: true, data: result.data, report: result.report };
   }
 
-  return { ok: false, error: lastMessage };
+  return { ok: false, error: result.error, report: result.report };
 }

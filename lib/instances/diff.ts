@@ -117,6 +117,33 @@ export function diffInstanceManifests(
     }
   }
 
+  // Config artifacts diffing
+  const configDiffs: import("@mim/contracts-core/instances").ConfigDiffEntry[] = [];
+  const desiredConfigs = new Map((desired.configs || []).map((c) => [c.relativePath, c]));
+  const actualConfigs = new Map((actual.configs || []).map((c) => [c.relativePath, c]));
+  const allConfigPaths = new Set([...desiredConfigs.keys(), ...actualConfigs.keys()]);
+
+  for (const configPath of [...allConfigPaths].sort()) {
+    const desiredCfg = desiredConfigs.get(configPath);
+    const actualCfg = actualConfigs.get(configPath);
+
+    if (desiredCfg && !actualCfg) {
+      configDiffs.push({ relativePath: configPath, type: "addition", desired: desiredCfg });
+    } else if (!desiredCfg && actualCfg) {
+      configDiffs.push({ relativePath: configPath, type: "removal", actual: actualCfg });
+    } else if (desiredCfg && actualCfg) {
+      const dHash = desiredCfg.hashes.sha256 || desiredCfg.hashes.sha1 || desiredCfg.hashes.sha512;
+      const aHash = actualCfg.hashes.sha256 || actualCfg.hashes.sha1 || actualCfg.hashes.sha512;
+      if (dHash && aHash && dHash !== aHash) {
+        configDiffs.push({ relativePath: configPath, type: "modified", desired: desiredCfg, actual: actualCfg });
+      } else {
+        configDiffs.push({ relativePath: configPath, type: "unchanged", desired: desiredCfg, actual: actualCfg });
+      }
+    }
+  }
+
+  const hasConfigChanges = configDiffs.some((c) => c.type !== "unchanged");
+
   const desiredDuplicates = duplicates(desiredIndex);
   const actualDuplicates = duplicates(actualIndex);
   const mismatches = environmentMismatches(desired);
@@ -130,12 +157,14 @@ export function diffInstanceManifests(
     removals,
     updates,
     unchanged,
+    configDiffs,
     duplicates: { desired: desiredDuplicates, actual: actualDuplicates },
     environmentMismatches: mismatches,
     hasChanges:
       additions.length > 0 ||
       removals.length > 0 ||
       updates.length > 0 ||
+      hasConfigChanges ||
       requiresManualReview,
     requiresManualReview,
   };

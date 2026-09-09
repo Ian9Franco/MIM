@@ -1,0 +1,14 @@
+{
+  "name": "@mim/server-engine",
+  "version": "0.1.0",
+  "description": "Server synchronization, SFTP discovery, preflight, diffing, durable snapshotting, and reconciliation engine",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "private": true,
+  "dependencies": {
+    "@mim/contracts-core": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

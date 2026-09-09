@@ -20,6 +20,12 @@
       }
     ],
     "paths": {
+      "@mim/contracts-core": ["./packages/contracts-core/index.ts"],
+      "@mim/contracts-core/*": ["./packages/contracts-core/*"],
+      "@mim/network-resilience": ["./packages/network-resilience/index.ts"],
+      "@mim/network-resilience/*": ["./packages/network-resilience/*"],
+      "@mim/server-engine": ["./packages/server-engine/index.ts"],
+      "@mim/server-engine/*": ["./packages/server-engine/*"],
       "@/*": ["./*"]
     }
   },

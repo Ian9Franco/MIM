@@ -1,3 +1,4 @@
+import { calculateNextRetry, classifyNetworkError } from "@/lib/network";
 import { DownloadIntent, DownloadSessionState, DownloadTask, DownloadProvider, DownloadPlatform } from "./downloadTypes";
 import { downloadEvents } from "./downloadEvents";
 import { ModrinthProvider } from "./providers/ModrinthProvider";
@@ -129,10 +130,13 @@ export class DraftDownloadBroker {
   }
 
   private async executeTask(task: DownloadTask) {
-    const MAX_RETRIES = 5;
-    let attempt = task.retries;
+    const startTimeMs = task.startedAt || Date.now();
+    const retryState = {
+      attemptCount: task.retries || 0,
+      startTimeMs,
+    };
 
-    while (attempt <= MAX_RETRIES) {
+    while (true) {
       try {
         task.status = "downloading";
         task.startedAt = Date.now();
@@ -153,22 +157,40 @@ export class DraftDownloadBroker {
         return; // Success, exit loop
         
       } catch (e: any) {
-        if (e.message === "RateLimited" && attempt < MAX_RETRIES) {
-          attempt++;
-          task.retries = attempt;
+        const isRateLimit = e.message === "RateLimited" || e.status === 429;
+        const report = classifyNetworkError({
+          rawUrl: task.url || `${task.platform}://${task.projectId}`,
+          error: e,
+          httpStatus: isRateLimit ? 429 : typeof e?.status === "number" ? e.status : undefined,
+        });
+
+        const decision = calculateNextRetry(
+          retryState,
+          report,
+          {
+            maxAttempts: 5,
+            baseDelayMs: 1000,
+            maxDelayMs: 30000,
+            budgetMs: 120000,
+          }
+        );
+
+        if (decision.shouldRetry) {
+          retryState.attemptCount += 1;
+          task.retries = retryState.attemptCount;
           task.status = "retry_wait";
-          const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, 16s...
+          const delayMs = decision.delayMs;
           
           this.updateTask(task);
-          downloadEvents.emit("task:retry", { task, attempt, delayMs });
+          downloadEvents.emit("task:retry", { task, attempt: task.retries, delayMs, report });
           
           await new Promise(r => setTimeout(r, delayMs));
         } else {
-          // Unrecoverable error or max retries reached
+          // Unrecoverable error or max retries/budget reached
           task.status = "failed";
-          task.error = e.message;
+          task.error = report.errorMessage || e.message;
           this.updateTask(task);
-          downloadEvents.emit("task:failed", { task, error: e.message });
+          downloadEvents.emit("task:failed", { task, error: task.error, report });
           return;
         }
       }

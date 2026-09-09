@@ -84,3 +84,100 @@
 
 - [ ] *Aviso de privacidad del Free Tier de Google:* Notificar con claridad que la capa gratuita de AI Studio puede usar datos para entrenamiento (a diferencia de tiers pagos).
 - [x] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión (endpoint seguro sin key en URL).
+
+---
+
+## 8. Resiliencia de Red & Diagnóstico (Issue #57 — COMPLETADO)
+
+- [x] **Hito NET-1: Contratos puros de red y política de retry:**
+  - [x] Modelado de fases (`dns`, `tcp`, `tls`, `http`, `timeout`, `abort`) y estados tipados.
+  - [x] Sanitización estricta de credenciales (`user:pass`) y tokens en URLs (`sanitizeEndpoint`).
+  - [x] Clasificación determinista de errores (`classifyNetworkError`) con soporte para Node, Browser y cabeceras `Retry-After`.
+  - [x] Política pura de retry (`calculateNextRetry`) con backoff exponencial, full jitter inyectable y presupuesto global de tiempo (`budgetMs`).
+- [x] **Hito NET-2: Adapters de runtime e integración:**
+  - [x] Cliente unificado `fetchWithRetry` con tipado `<T>`, soporte de cancelación `AbortSignal` y reporte de diagnóstico `NetworkDiagnosticReport`.
+  - [x] Migración retrocompatible de `fetchJsonWithRetry` en `lib/core/`.
+  - [x] Endurecimiento de `DraftDownloadBroker` con jitter y control de cuotas/budget en descargas de mods.
+  - [x] Suite de tests dedicada `test:network` pasando al 100%.
+
+---
+
+## 9. Server Manager & Sincronización Remota (Issue #58 — En Progreso)
+
+- [x] **Fase 0 (Foundation):**
+  - [x] Contratos puros de `InstanceManifest` y diffing determinista (`diffInstanceManifests`).
+  - [x] Escaneo de mods desde memoria (`scanModBuffer`) y adapter de validación.
+  - [x] Auditoría pura de servidor y generación de planes de reconciliación.
+- [x] **Hito SRV-1: Transporte SFTP de sólo lectura y descubrimiento remoto:**
+  - [x] Desacople formal de capacidades: `ReadOnlyFileTransport` vs `WritableFileTransport`.
+  - [x] Configuración segura SFTP (`SftpConnectionConfig`) con sanitización de contraseñas y claves.
+  - [x] Motor de descubrimiento remoto `discoverRemoteServerState` con garantía estricta de cero mutaciones.
+  - [x] Protección activa contra ataques de Path Traversal (`safeResolveRemotePath`).
+  - [x] Resolución de acoplamiento: `lib/events/server.ts` migrado a contratos puros en `lib/server/types.ts`.
+  - [x] Suite de tests `test:server` ampliada y validada al 100%.
+- [x] **Hito SRV-2: UI de auditoría y comparación visual:**
+  - [x] Endpoint de API `/api/server/audit` protegido por `withApiGuard`.
+  - [x] Grid interactivo `ServerAuditSummaryCards` y tabla de discrepancias `ServerDiffTable` (Faltantes, Sobrantes, Versiones distintas, Duplicados).
+  - [x] Visualización de mods client-only e incompatibilidades de entorno.
+  - [x] Indicador de salud `ServerHealthBadge` con soporte para auditorías parciales/incompletas.
+  - [x] Panel orquestador `ServerAuditPanel` con micro-animaciones Framer Motion y suites de tests al 100%.
+- [x] **Hito SRV-3: Endurecimiento de preflight, builder y snapshots durables:**
+  - [x] Validación bidireccional exhaustiva (compatibilidad de versión de Minecraft, mod loader, exclusión de client-only mods en servidor y resolución de dependencias requeridas).
+  - [x] Reconciliación explícita de archivos de configuración (`diff.configDiffs`).
+  - [x] Snapshot obligatorio pre-mutación para cualquier acción destructiva o aditiva (`createPreMutationSnapshot`).
+  - [x] Detección determinista de planes obsoletos y drift de estado remoto (`validatePlanFreshness` con fingerprints SHA-256).
+  - [x] Almacenamiento durable y journal de cambios de servidor (`MemorySnapshotStore` / `ISnapshotStore`).
+  - [x] Suite de tests `server-preflight-snapshot.test.ts` pasando al 100%.
+- [x] **Hito SRV-4: Executor de despliegue con staging, verificación atómica y rollback:**
+  - [x] Motor de staging atómico en `.mim_staging/` y validación de hash SHA-256 pre/post ejecución.
+  - [x] Bloqueo de concurrencia (`isServerDeploymentLocked`) para impedir despliegues paralelos sobre el mismo servidor.
+  - [x] Compensación y rollback automático (`executeRollback`) ante errores o discrepancias.
+  - [x] Estado `recovery-required` para protección ante fallos críticos de filesystem.
+  - [x] Suite de tests `server-executor-rollback.test.ts` pasando al 100%.
+- [x] **Hito SRV-5: SAGE remoto para diagnóstico contextual de logs de servidor:**
+  - [x] Ingesta remota de `logs/latest.log` y crash reports vía `ReadOnlyFileTransport`.
+  - [x] Clasificación determinista de crashes (dependencias faltantes, incompatibilidades, mixins, OOM, entidades).
+  - [x] Correlación automática con cambios recientes (`ServerChangeRecord`) y despliegues (`correlatedDeploymentId`).
+  - [x] Suite de tests `server-sage-remote.test.ts` pasando al 100%.
+- [x] **Hito SRV-6: Administración avanzada (configs, RCON y backups):**
+  - [x] Parser bidireccional y serializador de `server.properties` preservando comentarios y claves no administradas.
+  - [x] Validador de rangos y directivas de seguridad para propiedades de servidor.
+  - [x] Ejecutor RCON con sanitización de comandos peligrosos (`/stop`) y stripping de códigos de formato Minecraft (§ / ANSI).
+  - [x] Descubrimiento de backups y extracción segura de metadata de mundos (`level.dat`).
+  - [x] Suite de tests `server-admin-rcon.test.ts` pasando al 100%.
+- [x] **Hito SRV-7: Sincronización multiplayer cliente-servidor:**
+  - [x] Generación de manifest distribuible (`generateDistributableManifest`) con exclusión de mods server-only y secretos.
+  - [x] Reconciliación de cliente local (`reconcileClientWithServerManifest`) detectando missing mods y version mismatches.
+  - [x] Preservación estricta de mods client-only (OptiFine, Sodium, Iris, Shaders).
+  - [x] Suite de tests `server-multiplayer-sync.test.ts` pasando al 100%.
+
+---
+
+## 10. Arquitectura de Monorepo & Desacoplamiento (Issue #60 — En Progreso)
+
+- [x] **Hito ARCH-0: Inventario y análisis de dependencias:**
+  - [x] Herramienta automatizada de grafo `scripts/architecture/analyze-graph.ts` (606 archivos, 1242 imports).
+  - [x] Detección de ciclos, matriz de acoplamiento e inventario de duplicación en `MONOREPO_INVENTORY_ARCH_0.md`.
+  - [x] Resolución de la anomalía de dependencias en el bus de eventos de servidor.
+- [x] **Hito ARCH-1: Workspaces Foundation y comandos scoped:**
+  - [x] Configuración de `npm workspaces: ["apps/*", "packages/*", "web"]` en `package.json` raíz.
+  - [x] Comandos agregados: `build:hub`, `lint:hub`, `build:all`, `lint:all`.
+  - [x] Integración de linting y build de producción para el Hub web en `.github/workflows/ci.yml`.
+  - [x] Saneamiento de ESLint en `web/app/page.tsx` (cero errores en toda la superficie web).
+- [x] **Hito ARCH-2: Primera extracción de contratos puros (`@mim/contracts-core`):**
+  - [x] Creación del package modular `@mim/contracts-core` en `packages/contracts-core/`.
+  - [x] Módulos de contratos tipados puros: `instances.ts`, `network.ts`, `server.ts` e `index.ts`.
+  - [x] Path mapping configurado en `tsconfig.json` y retrocompatibilidad total mediante re-exports transparentes.
+  - [x] Regla estricta de pureza arquitectónica y boundaries en `scripts/architecture/verify-boundaries.ts`.
+  - [x] Suite de tests `contracts-core-boundaries.test.ts` pasando al 100%.
+- [x] **Hito ARCH-3: Extracción de engines de dominio a `packages/*`:**
+  - [x] Creación de `@mim/network-resilience` en `packages/network-resilience/` con sanitización, clasificación determinista de fallos y retry policy con backoff/jitter.
+  - [x] Creación de `@mim/server-engine` en `packages/server-engine/` con discovery, preflight, reconciliación, auditoría, snapshots, capabilities y safety.
+  - [x] Re-exports transparentes y retrocompatibles en `lib/network/` y `lib/server/`.
+  - [x] Reglas de pureza arquitectónica actualizadas en `scripts/architecture/verify-boundaries.ts`.
+- [x] **Hito ARCH-4: Configuración explícita de `apps/desktop`:**
+  - [x] Workspace `@mim/desktop` configurado en `apps/desktop/` con `package.json` y `tsconfig.json`.
+  - [x] Scripts de build, prepare:standalone y packaging para Windows.
+  - [x] Suite de tests `scripts/__tests__/monorepo-arch3-arch4.test.ts` pasando al 100%.
+- [ ] **Hito ARCH-5: Traslado de `web/` a `apps/hub` y eliminación de duplicados (Pendiente).**
+- [ ] **Hitos ARCH-6 a ARCH-8: Surface Server Manager, CI scoped y versionado semántico (Pendiente).**

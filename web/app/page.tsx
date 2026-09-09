@@ -123,12 +123,16 @@ export default function Home() {
     setSelectionRect(null);
   }, [selectionQuery, c]);
   const activeThemeIndex = Math.max(0, THEMES.findIndex((opt) => opt.id === c.theme));
-  const previousThemeIndexRef = React.useRef(activeThemeIndex);
-  const hubAnimationDirection = activeThemeIndex >= previousThemeIndexRef.current ? 1 : -1;
+  const [themeTransition, setThemeTransition] = React.useState({ prevIndex: activeThemeIndex, direction: 1 });
 
-  React.useEffect(() => {
-    previousThemeIndexRef.current = activeThemeIndex;
-  }, [activeThemeIndex]);
+  if (themeTransition.prevIndex !== activeThemeIndex) {
+    setThemeTransition({
+      prevIndex: activeThemeIndex,
+      direction: activeThemeIndex >= themeTransition.prevIndex ? 1 : -1,
+    });
+  }
+
+  const hubAnimationDirection = themeTransition.direction;
 
   /**
    * Fetches the latest MIM release from GitHub and opens it.

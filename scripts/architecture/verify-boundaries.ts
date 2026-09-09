@@ -18,14 +18,29 @@ type BoundaryRule = {
 
 export const BOUNDARY_RULES: BoundaryRule[] = [
   {
+    name: "contracts-must-be-pure",
+    sourcePrefixes: ["packages/contracts-core/"],
+    forbiddenTargetPrefixes: ["app/", "components/", "lib/", "web/", "standalone/", "scripts/", "apps/"],
+  },
+  {
+    name: "network-resilience-must-be-pure",
+    sourcePrefixes: ["packages/network-resilience/"],
+    forbiddenTargetPrefixes: ["app/", "components/", "web/", "standalone/", "scripts/", "apps/"],
+  },
+  {
+    name: "server-engine-must-not-depend-on-ui",
+    sourcePrefixes: ["packages/server-engine/"],
+    forbiddenTargetPrefixes: ["app/", "components/", "web/", "standalone/", "scripts/", "apps/"],
+  },
+  {
     name: "core-engines-must-not-depend-on-ui",
     sourcePrefixes: ["lib/modding/", "lib/intelligence/", "lib/security/"],
-    forbiddenTargetPrefixes: ["app/", "components/", "web/", "standalone/"],
+    forbiddenTargetPrefixes: ["app/", "components/", "web/", "standalone/", "apps/"],
   },
   {
     name: "web-must-not-depend-on-desktop-runtime",
     sourcePrefixes: ["web/"],
-    forbiddenTargetPrefixes: ["standalone/"],
+    forbiddenTargetPrefixes: ["standalone/", "apps/desktop/"],
   },
 ];
 
@@ -41,12 +56,45 @@ function normalizeRepoPath(value: string): string {
 }
 
 export function resolveRepoImport(sourceFile: string, specifier: string): string | null {
+  const normalizedSource = normalizeRepoPath(sourceFile);
+  const isInsideWeb = normalizedSource.startsWith("web/");
+
+  if (specifier === "@mim/contracts-core") {
+    return "packages/contracts-core/index.ts";
+  }
+
+  if (specifier.startsWith("@mim/contracts-core/")) {
+    const subpath = specifier.slice("@mim/contracts-core/".length);
+    return normalizeRepoPath(path.posix.join("packages/contracts-core", subpath));
+  }
+
+  if (specifier === "@mim/network-resilience") {
+    return "packages/network-resilience/index.ts";
+  }
+
+  if (specifier.startsWith("@mim/network-resilience/")) {
+    const subpath = specifier.slice("@mim/network-resilience/".length);
+    return normalizeRepoPath(path.posix.join("packages/network-resilience", subpath));
+  }
+
+  if (specifier === "@mim/server-engine") {
+    return "packages/server-engine/index.ts";
+  }
+
+  if (specifier.startsWith("@mim/server-engine/")) {
+    const subpath = specifier.slice("@mim/server-engine/".length);
+    return normalizeRepoPath(path.posix.join("packages/server-engine", subpath));
+  }
+
   if (specifier.startsWith("@/")) {
+    if (isInsideWeb) {
+      return normalizeRepoPath(path.posix.join("web", specifier.slice(2)));
+    }
     return normalizeRepoPath(specifier.slice(2));
   }
 
   if (specifier.startsWith("./") || specifier.startsWith("../")) {
-    const sourceDir = path.posix.dirname(normalizeRepoPath(sourceFile));
+    const sourceDir = path.posix.dirname(normalizedSource);
     const resolved = normalizeRepoPath(path.posix.join(sourceDir, specifier));
     if (resolved === ".." || resolved.startsWith("../")) return null;
     return resolved;

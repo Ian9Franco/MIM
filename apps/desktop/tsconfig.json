@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@mim/contracts-core": ["../../packages/contracts-core/index.ts"],
+      "@mim/contracts-core/*": ["../../packages/contracts-core/*"],
+      "@mim/network-resilience": ["../../packages/network-resilience/index.ts"],
+      "@mim/network-resilience/*": ["../../packages/network-resilience/*"],
+      "@mim/server-engine": ["../../packages/server-engine/index.ts"],
+      "@mim/server-engine/*": ["../../packages/server-engine/*"],
+      "@/*": ["../../*"]
+    }
+  },
+  "include": ["../../**/*.ts", "../../**/*.tsx"],
+  "exclude": ["../../node_modules", "../../web"]
+}

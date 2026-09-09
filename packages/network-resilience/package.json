@@ -1,0 +1,14 @@
+{
+  "name": "@mim/network-resilience",
+  "version": "0.1.0",
+  "description": "Network resilience engine with deterministic retry policy, jitter, classification, and sanitized diagnostics",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "private": true,
+  "dependencies": {
+    "@mim/contracts-core": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

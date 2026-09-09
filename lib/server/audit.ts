@@ -1,27 +1,6 @@
 import { diffInstanceManifests, validateInstanceManifest } from "@/lib/instances";
-import type { InstanceManifest, InstanceManifestDiff } from "@/lib/instances/types";
-import type { PackHealthReport } from "@/lib/core/types";
-
-export interface ServerAuditSummary {
-  correct: number;
-  missingFromServer: number;
-  extraOnServer: number;
-  updatesRequired: number;
-  duplicateIdentities: number;
-  environmentMismatches: number;
-  validationErrors: number;
-  validationWarnings: number;
-}
-
-export interface ServerAuditReport {
-  desiredInstanceId: string;
-  actualInstanceId: string;
-  generatedAt: string;
-  validation: PackHealthReport;
-  diff: InstanceManifestDiff;
-  summary: ServerAuditSummary;
-  readyForPlanning: boolean;
-}
+import type { InstanceManifest } from "@/lib/instances/types";
+import type { ServerAuditReport } from "./types";
 
 /**
  * Read-only audit over desired and observed server state.

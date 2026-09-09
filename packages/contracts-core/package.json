@@ -1,0 +1,11 @@
+{
+  "name": "@mim/contracts-core",
+  "version": "0.1.0",
+  "description": "Pure domain contracts and interfaces for Minecraft Instance Manager",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

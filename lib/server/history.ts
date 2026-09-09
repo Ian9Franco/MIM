@@ -1,30 +1,4 @@
-import type { ModArtifact } from "@/lib/instances/types";
-
-export type ServerChangeType =
-  | "reconciliation-planned"
-  | "mod-installed"
-  | "mod-removed"
-  | "mod-replaced"
-  | "config-updated"
-  | "server-started"
-  | "server-stopped"
-  | "server-restarted"
-  | "snapshot-created"
-  | "rollback-applied"
-  | "crash-detected";
-
-export interface ServerChangeRecord {
-  id: string;
-  serverId: string;
-  type: ServerChangeType;
-  timestamp: string;
-  reconciliationId?: string;
-  artifactBefore?: ModArtifact;
-  artifactAfter?: ModArtifact;
-  path?: string;
-  summary: string;
-  metadata?: Record<string, string | number | boolean | null>;
-}
+import type { ServerChangeRecord } from "./types";
 
 /**
  * Deterministic history slice intended for SAGE context and UI timelines.

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@mim/contracts-core": ["../contracts-core/index.ts"],
+      "@mim/contracts-core/*": ["../contracts-core/*"]
+    }
+  },
+  "include": ["./**/*.ts"]
+}

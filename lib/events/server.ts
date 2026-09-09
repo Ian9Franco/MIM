@@ -1,5 +1,5 @@
 import type { InstanceManifest } from "@/lib/instances/types";
-import type { ReconciliationPlan } from "@/lib/server/reconciliation";
+import type { ReconciliationPlan } from "@/lib/server/types";
 
 export type ServerEventMap = {
   "server:connected": {

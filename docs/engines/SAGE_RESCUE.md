@@ -1,4 +1,4 @@
-﻿# SAGE Rescue Feature - Implementation & Test Suite Summary
+# SAGE Rescue Feature - Implementation & Test Suite Summary
 
 ## ✅ Delivered
 
@@ -16,15 +16,15 @@
 
 | Component | Purpose |
 |-----------|---------|
-| [NbtTreeViewer.tsx](components/sage/rescue/NbtTreeViewer.tsx) | Interactive NBT tree with type visualization |
-| [InventoryManager.tsx](components/sage/rescue/InventoryManager.tsx) | Item grid with search & deletion |
-| [RescueActions.tsx](components/sage/rescue/RescueActions.tsx) | Coordinate/dimension editor + backup purge |
+| [NbtTreeViewer.tsx](../../components/sage/rescue/NbtTreeViewer.tsx) | Interactive NBT tree with type visualization |
+| [InventoryManager.tsx](../../components/sage/rescue/InventoryManager.tsx) | Item grid with search & deletion |
+| [RescueActions.tsx](../../components/sage/rescue/RescueActions.tsx) | Coordinate/dimension editor + backup purge |
 
 **Location:** `components/sage/rescue/`
 
 ### 3. Main Component (Refactored)
 
-[SagePlayerRescue.tsx](components/sage/SagePlayerRescue.tsx) - Updated with:
+[SagePlayerRescue.tsx](../../components/sage/SagePlayerRescue.tsx) - Updated with:
 - 3-tab interface (NBT Tree | Inventory | Actions)
 - File selection from local worlds
 - External file import button (UI ready)

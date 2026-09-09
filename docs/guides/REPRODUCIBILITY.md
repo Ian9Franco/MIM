@@ -61,7 +61,7 @@ npm run build
 
 ## 🤖 GitHub Actions CI Pipeline
 
-The continuous integration pipeline is defined in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
+The continuous integration pipeline is defined in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml):
 - Executes automatically on `push` and `pull_request` to `main` and `master`.
 - Validates linting (`npm run lint`), runs headless test suites (`npm test`), and verifies the production bundle (`npm run build`).
 - Live pipeline status: [![CI](https://github.com/Ian9Franco/MIM/actions/workflows/ci.yml/badge.svg)](https://github.com/Ian9Franco/MIM/actions).

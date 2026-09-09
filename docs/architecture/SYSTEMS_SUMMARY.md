@@ -144,10 +144,10 @@ if (knownState.lastId !== latestItem.id) {
 
 ## Files to Reference When Implementing
 
-- **Alert display:** [components/alerts/](components/alerts/)
-- **FOMO Followed:** [components/fomo/followed/](components/fomo/followed/)
-- **Showcases:** [components/fomo/showcase/](components/fomo/showcase/)
-- **Hooks:** [hooks/useAlertManager.ts](hooks/useAlertManager.ts), [hooks/useFomoFollowedManager.ts](hooks/useFomoFollowedManager.ts), [hooks/fomo/useFomoBackgroundSync.ts](hooks/fomo/useFomoBackgroundSync.ts)
-- **Event system:** [lib/events/](lib/events/)
-- **Incidents:** [lib/intelligence/incidentManager.ts](lib/intelligence/incidentManager.ts)
-- **Storage:** [lib/storage/indexeddb.ts](lib/storage/indexeddb.ts)
+- **Alert display:** [components/alerts/](../../components/alerts/)
+- **FOMO Followed:** [components/fomo/followed/](../../components/fomo/followed/)
+- **Showcases:** [components/fomo/showcase/](../../components/fomo/showcase/)
+- **Hooks:** [hooks/useAlertManager.ts](../../hooks/useAlertManager.ts), [hooks/useFomoFollowedManager.ts](../../hooks/useFomoFollowedManager.ts), [hooks/fomo/useFomoBackgroundSync.ts](../../hooks/fomo/useFomoBackgroundSync.ts)
+- **Event system:** [lib/events/](../../lib/events/)
+- **Incidents:** [lib/intelligence/incidentManager.ts](../../lib/intelligence/incidentManager.ts)
+- **Storage:** [lib/storage/indexeddb.ts](../../lib/storage/indexeddb.ts)

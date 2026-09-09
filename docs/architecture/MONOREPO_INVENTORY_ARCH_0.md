@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-09.  
 Iniciativa: **#60 (Arquitectura de Monorepo y desacoplamiento de superficies)**.  
-Herramienta de análisis: [scripts/architecture/analyze-graph.ts](file:///d:/.mine/manager/scripts/architecture/analyze-graph.ts).
+Herramienta de análisis: [scripts/architecture/analyze-graph.ts](../../scripts/architecture/analyze-graph.ts).
 
 ---
 

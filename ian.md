@@ -52,7 +52,7 @@ npm run release:auto
 3. **Crea backup local:** Guarda rama de seguridad `backup/YYYY-MM-DDTHH-mm-ss`.
 4. **Sincroniza la versión global:** Actualiza automáticamente `package.json`, `README.md`, `docs/architecture/MIM.md`, `docs/releases/CHANGELOG.md`, `docs/planning/PROJECT_STATUS.md` y `docs/planning/ROADMAP.md`.
 5. **Commit y Tag:** Genera `chore(release): vX.Y.Z` y crea el tag `vX.Y.Z`.
-6. **Push a GitHub:** Sube `main` y el tag `vX.Y.Z` a `origin`, disparando la GitHub Action [.github/workflows/release.yml](file:///.github/workflows/release.yml) para compilar el ejecutable `.exe` de Windows y publicar la Release oficial.
+6. **Push a GitHub:** Sube `main` y el tag `vX.Y.Z` a `origin`, disparando la GitHub Action [.github/workflows/release.yml](.github/workflows/release.yml) para compilar el ejecutable `.exe` de Windows y publicar la Release oficial.
 7. **Cero pausas:** No pide confirmaciones `y/n`, hace todo el ciclo de principio a fin.
 
 ---

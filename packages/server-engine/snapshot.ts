@@ -7,6 +7,7 @@ import type {
   SnapshotEntry,
 } from "@mim/contracts-core/server";
 import { computeManifestFingerprint } from "./preflight";
+import { getActionTargetPath, getReplacedSourcePath } from "./actionPaths";
 
 export interface SnapshotCreationOptions {
   plan: ReconciliationPlan;
@@ -43,29 +44,33 @@ export async function createPreMutationSnapshot(
   for (const action of plan.actions) {
     if (action.type === "manual-review") continue;
 
-    const targetPath =
-      action.targetPath ||
-      (action.actual?.fileName ? `mods/${action.actual.fileName}` : action.desired?.fileName ? `mods/${action.desired.fileName}` : undefined);
+    // Renamed updates touch both paths; capture both before either is mutated.
+    const paths = [getActionTargetPath(action), getReplacedSourcePath(action)];
+    for (const targetPath of paths) {
+      if (!targetPath || processedPaths.has(targetPath)) continue;
+      processedPaths.add(targetPath);
 
-    if (!targetPath || processedPaths.has(targetPath)) continue;
-    processedPaths.add(targetPath);
-
-    try {
-      const buffer = await transport.read(targetPath);
-      const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-      entries.push({
-        relativePath: targetPath,
-        action: "existed",
-        originalSha256: sha256,
-        backupBlob: buffer,
-        sizeBytes: buffer.byteLength,
-      });
-    } catch {
-      // If reading fails (e.g. file not found), it means the file did not exist previously
-      entries.push({
-        relativePath: targetPath,
-        action: "created",
-      });
+      try {
+        const buffer = await transport.read(targetPath);
+        const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+        entries.push({
+          relativePath: targetPath,
+          action: "existed",
+          originalSha256: sha256,
+          backupBlob: buffer,
+          sizeBytes: buffer.byteLength,
+        });
+      } catch (error: unknown) {
+        // Only confirmed absence permits rollback deletion. Adapters normalize it
+        // to ENOENT; permission and connection failures must stop the deployment.
+        if (typeof error !== "object" || error === null || !("code" in error) || error.code !== "ENOENT") {
+          throw error;
+        }
+        entries.push({
+          relativePath: targetPath,
+          action: "created",
+        });
+      }
     }
   }
 

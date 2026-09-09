@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { calculateNextRetry as packageRetry } from "@mim/network-resilience/retryPolicy";
 import {
   calculateNextRetry,
   classifyNetworkError,
@@ -241,7 +242,21 @@ async function testDeterministicRetryPolicy(): Promise<void> {
   console.log("✔ Deterministic retry policy tests passed");
 }
 
+function testProviderMinimumWait(): void {
+  // Provider minimum waits can exceed our backoff cap, but never the time budget.
+  for (const budgetMs of [30000, 120000]) {
+    const report = classifyNetworkError({ httpStatus: 429, headers: { "retry-after": "60" } }, () => 0);
+    const decision = calculateNextRetry({ attemptCount: 0, startTimeMs: 0 }, report,
+      { budgetMs, maxDelayMs: 10000 }, { now: () => 0, random: () => 0 });
+    assert.equal(decision.shouldRetry, budgetMs >= 60000);
+    if (decision.shouldRetry) assert.equal(decision.delayMs, 60000);
+  }
+
+  assert.equal(calculateNextRetry, packageRetry, "Legacy and package retries must share one policy");
+}
+
 async function run(): Promise<void> {
+  testProviderMinimumWait();
   console.log("Starting network policy and classification contract test suite...");
   await testSanitization();
   await testErrorClassification();

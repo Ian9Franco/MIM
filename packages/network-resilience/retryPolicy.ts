@@ -74,8 +74,8 @@ export function calculateNextRetry(
     finalDelayMs = Math.max(jitteredDelay, serverRequestedDelayMs);
   }
 
-  // Ensure delay stays within max ceiling
-  finalDelayMs = Math.min(config.maxDelayMs, finalDelayMs);
+  // maxDelayMs caps our backoff, not the provider's minimum wait. If that
+  // minimum exceeds the remaining budget, decline the retry below.
 
   // 5. Check overall time budget
   const currentTime = nowFn();

@@ -20,7 +20,7 @@ function testNetworkResiliencePackage(): void {
   assert.equal(diag.retryAfterSeconds, 5);
   assert.equal(diag.isRetryable, true);
 
-  const decision = calculateNextRetry(diag, { attemptCount: 0, startTimeMs: Date.now() });
+  const decision = calculateNextRetry({ attemptCount: 0, startTimeMs: Date.now() }, diag);
   assert.equal(decision.shouldRetry, true);
   assert.equal(decision.delayMs, 5000);
 

@@ -83,7 +83,7 @@ class MockTransport implements ReadOnlyFileTransport {
   async read(remotePath: string): Promise<Uint8Array> {
     const content = this.files.get(remotePath);
     if (!content) {
-      throw new Error(`File not found: ${remotePath}`);
+      throw Object.assign(new Error(`File not found: ${remotePath}`), { code: "ENOENT" });
     }
     return content;
   }
@@ -155,7 +155,8 @@ async function testConfigReconciliationAndSnapshotRequirement(): Promise<void> {
   assert.ok(preflight.plan.requiresSnapshot, "Mutating config changes MUST require snapshot");
 
   const configActions = preflight.plan.actions.filter((a) => a.type === "sync-config");
-  assert.equal(configActions.length, 3); // 1 addition, 1 removal, 1 modified
+  assert.equal(configActions.length, 2); // 1 addition, 1 modified
+  assert.ok(preflight.plan.actions.some((a) => a.type === "remove" && a.identity.startsWith("config:")));
 
   console.log("✔ Config reconciliation and mutating snapshot requirement passed");
 }

@@ -61,7 +61,7 @@ export function buildReconciliationPlan(diff: InstanceManifestDiff): Reconciliat
         });
       } else if (configDiff.type === "removal") {
         actions.push({
-          type: "sync-config",
+          type: "remove",
           identity: `config:${configDiff.relativePath}`,
           targetPath: configDiff.relativePath,
           reason: "Configuration file removed from desired state",

@@ -63,6 +63,9 @@ async function main() {
   log("╚════════════════════════════════════════════════════════════════╝", "cyan");
 
   const suites = [
+    { name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/monorepo-arch3-arch4.test.ts"] },
+    { name: "Server Engine & Recovery", cmd: "npm", args: ["run", "test:server"] },
+    { name: "Network Resilience", cmd: "npm", args: ["run", "test:network"] },
     {
       name: "SAGE NBT Binary Safe Recovery (12 Tests)",
       cmd: "npx",

@@ -5,7 +5,7 @@
  * and durable snapshot contracts.
  */
 
-import type { InstanceManifest, InstanceManifestDiff, ModArtifact } from "./instances";
+import type { InstanceManifest, ModArtifact } from "./instances";
 
 // ==========================================
 // Remote File Transport & Capabilities
@@ -21,6 +21,7 @@ export interface RemoteFileEntry {
 
 export interface ReadOnlyFileTransport {
   list(remotePath: string): Promise<RemoteFileEntry[]>;
+  /** Reject with code ENOENT only for confirmed absence; preserve other I/O failures. */
   read(remotePath: string): Promise<Uint8Array>;
   stat?(remotePath: string): Promise<RemoteFileEntry | null>;
 }
@@ -407,4 +408,3 @@ export interface ClientSyncDiffResult {
   incompatibleLoaders?: { server: string; client: string };
   incompatibleMinecraft?: { server: string; client: string };
 }
-

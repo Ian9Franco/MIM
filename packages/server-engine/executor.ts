@@ -18,6 +18,7 @@ import type { InstanceManifest } from "@mim/contracts-core/instances";
 import { createPreMutationSnapshot } from "./snapshot";
 import { executeRollback } from "./rollback";
 import type { ISnapshotStore } from "./snapshotStore";
+import { getActionTargetPath, getReplacedSourcePath } from "./actionPaths";
 
 // Active deployment locks per serverId to prevent concurrent executions
 const activeServerLocks = new Set<string>();
@@ -117,12 +118,13 @@ export async function executeServerDeployment(
     status = "staging";
 
     for (const action of plan.actions) {
+      if (action.type === "manual-review") continue;
       if (options.signal?.aborted) {
         throw new Error("Deployment aborted by user signal.");
       }
 
       const actionStart = Date.now();
-      const targetPath = action.targetPath || (action.desired ? `mods/${action.desired.fileName}` : `mods/${action.identity}`);
+      const targetPath = getActionTargetPath(action);
 
       if (action.type === "install" || action.type === "replace") {
         status = "staging";
@@ -131,33 +133,35 @@ export async function executeServerDeployment(
           payload = await filePayloadProvider(action.identity);
         }
 
-        if (!payload && action.desired) {
-          payload = new Uint8Array(0);
+        // Missing downloads are failures, never placeholders. An empty JAR is
+        // invalid even when optional hash verification is disabled.
+        if (!payload || payload.byteLength === 0) {
+          throw new Error(`Missing or empty artifact payload for ${action.identity}`);
         }
 
-        if (payload) {
-          // Verify hash if requested
-          const expectedSha = action.desired?.hashes?.sha256;
-          if (options.verifyHashes && expectedSha) {
-            const actualSha = crypto.createHash("sha256").update(payload).digest("hex");
-            if (actualSha !== expectedSha) {
-              throw new Error(
-                `Integrity check failed for ${action.identity}: expected sha256 ${expectedSha}, calculated ${actualSha}`
-              );
-            }
+        // Verify hash if requested
+        const expectedSha = action.desired?.hashes?.sha256;
+        if (options.verifyHashes && expectedSha) {
+          const actualSha = crypto.createHash("sha256").update(payload).digest("hex");
+          if (actualSha !== expectedSha) {
+            throw new Error(
+              `Integrity check failed for ${action.identity}: expected sha256 ${expectedSha}, calculated ${actualSha}`
+            );
           }
-
-          // Staged upload path
-          const stagedPath = `${stagingDir}/${action.desired?.fileName || action.identity}`;
-          if (transport.mkdir) {
-            try { await transport.mkdir(stagingDir); } catch { /* benign */ }
-          }
-          await transport.write(stagedPath, payload);
-
-          // Atomic move to final location
-          status = "applying";
-          await transport.move(stagedPath, targetPath);
         }
+
+        // Staged upload path
+        const stagedPath = `${stagingDir}/${action.desired?.fileName || action.identity}`;
+        if (transport.mkdir) {
+          try { await transport.mkdir(stagingDir); } catch { /* benign */ }
+        }
+        await transport.write(stagedPath, payload);
+
+        // Atomic move to final location
+        status = "applying";
+        await transport.move(stagedPath, targetPath);
+        const replacedSource = getReplacedSourcePath(action);
+        if (replacedSource) await transport.remove(replacedSource);
       } else if (action.type === "remove") {
         status = "applying";
         await transport.remove(targetPath);
@@ -167,9 +171,9 @@ export async function executeServerDeployment(
         if (filePayloadProvider) {
           configPayload = await filePayloadProvider(action.identity);
         }
-        if (configPayload) {
-          await transport.write(targetPath, configPayload);
-        }
+        if (!configPayload) throw new Error(`Missing config payload for ${action.identity}`);
+        // Empty configuration files are valid; null means the download failed.
+        await transport.write(targetPath, configPayload);
       }
 
       appliedActions++;
@@ -187,7 +191,7 @@ export async function executeServerDeployment(
     if (transport.stat) {
       for (const action of plan.actions) {
         if (action.type === "install" || action.type === "replace") {
-          const targetPath = action.targetPath || (action.desired ? `mods/${action.desired.fileName}` : `mods/${action.identity}`);
+          const targetPath = getActionTargetPath(action);
           const stat = await transport.stat(targetPath);
           if (!stat) {
             throw new Error(`Post-execution verification failed: ${targetPath} does not exist on remote.`);

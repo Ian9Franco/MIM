@@ -105,3 +105,13 @@ Gates: suite afectada, tipos/lint, API guard si cambian rutas, arquitectura y CI
 Primer bloque ejecutable: BASE → ARCH-0 → NET-1 → SRV-1/NET-2 → SRV-2. Después priorizar garantías del executor y continuar extracciones con fronteras claras.
 
 Se necesitará una instancia SFTP de prueba y evidencia fiable del estado del proceso para validar escrituras; fixtures permiten avanzar antes. Hosting concreto y UX final no bloquean contratos ni auditoría inicial. Estimar calendario después del inventario y de comprobar el entorno remoto, no a partir del número de checkboxes.
+
+## Correcciones de recuperación y retry — 2026-09-09
+
+MIM Server sigue siendo una funcionalidad nueva sin integración operativa completa. Los módulos SRV-4 a SRV-7 y ARCH-3/4 ya existen en el código; las filas pendientes anteriores conservan el plan original y no deben interpretarse como evidencia de ausencia de implementación ni de aceptación completa.
+
+El endurecimiento del executor distingue ausencia confirmada (`ENOENT`) de errores de lectura, rechaza JAR sin contenido, respalda ambas rutas al cambiar el nombre de un mod y representa las eliminaciones de configuración como `remove`. El snapshot y el executor comparten la resolución de rutas; las entradas legacy corregidas delegan al package para evitar divergencias. En red, `maxDelayMs` limita el backoff propio y nunca recorta `Retry-After`: si la espera supera el presupuesto restante se rechaza el retry.
+
+Las regresiones usan transporte en memoria con fallos inyectados y reloj determinista, y se ejecutan desde `npm test`. Este alcance no acredita SFTP real, persistencia tras reinicio (el store actual es en memoria), integración visible ni disponibilidad de MIM Server para usuarios. Esas validaciones permanecen pendientes.
+
+Validación de esta corrección: `npm test` (26 suites), tipos de raíz y Hub, `npm run lint:all`, lint de los módulos de dominio modificados y `npm run build:all`. El lockfile raíz incorpora los workspaces y alinea Zod con Hub; `npm ci --dry-run --ignore-scripts --offline` acepta su resolución, sin acreditar una instalación limpia real.

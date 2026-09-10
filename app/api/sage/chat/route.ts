@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { resolveGatewayKeys } from "@/lib/intelligence/ai";
+import { classifyProviderQuotaError, resolveGatewayKeys } from "@/lib/intelligence/ai";
 import {
   errorMessage,
   sageErrorResponse,
@@ -83,7 +83,12 @@ export const POST = withApiGuard(
 
       const mapped = mapSageChatError(err);
       if (mapped.code === "MIM_PROVIDER_RATE_LIMIT") {
-        return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: mapped.details });
+        const classified = classifyProviderQuotaError(mapped.details ?? msg, "gemini");
+        return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", {
+          details: mapped.details,
+          quotaKind: classified.kind,
+          quotaHint: classified.userHint,
+        });
       }
       if (mapped.code === "MIM_CREDENTIAL_MISSING") {
         return sageErrorResponse("MIM_CREDENTIAL_MISSING");
@@ -93,7 +98,13 @@ export const POST = withApiGuard(
       }
 
       if (isAIProviderError(err) && err.code === "RATE_LIMITED") {
-        return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: msg });
+        const provider = err.provider === "openrouter" ? "openrouter" : "gemini";
+        const classified = classifyProviderQuotaError(msg, provider);
+        return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", {
+          details: msg,
+          quotaKind: classified.kind,
+          quotaHint: classified.userHint,
+        });
       }
 
       return sageErrorResponse("MIM_AI_GENERATION_FAILED", {

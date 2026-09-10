@@ -30,3 +30,8 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - Nuevo endpoint `POST /api/fomo/explain-deps` para interpretación estructurada del árbol de dependencias de mods.
   - Soporte BYOK de OpenRouter en `lib/core/settings.ts` y variables de entorno.
   - Suite de pruebas unitarias en `scripts/__tests__/context-builder.test.ts` con 100% de aserciones pasando.
+- **MIMbot gateway — fases BOT-GW / BOT-05b / BOT-JSON / BOT-06**:
+  - BOT-GW: router por intención (`modelGateway.ts`) — texto → OpenRouter/GLM, multimodal/search → Gemini.
+  - BOT-05b: `sageChatEngine.ts` unifica chat SAGE HTTP + `sageMimbotEngine`; sin rama OpenAI legacy.
+  - BOT-JSON: `dependencyExplain.ts` con schema Zod y fallback determinista en `POST /api/fomo/explain-deps`.
+  - BOT-06: clasificación de cuotas (`quotaClassifier.ts`), tracker local, `GET /api/settings/ai-quota`, panel en Ajustes → Conectividad.

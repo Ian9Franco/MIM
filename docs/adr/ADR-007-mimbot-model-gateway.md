@@ -51,3 +51,9 @@ El código de esta entrega mantiene Gemini como default (`resolveConfiguredAIPro
 - **Search grounding** (descripción escasa en mod explain) → Gemini con `tools.googleSearch`.
 
 `MIMBOT_AI_PROVIDER=openrouter` sigue aplicando como override global cuando `MIMBOT_INTENT_ROUTING=false`.
+
+## 6. Revisión (2026-09-10) — BOT-05b, BOT-JSON, BOT-06
+
+- **BOT-05b:** `sageChatEngine.ts` es la fuente única del chat SAGE; el engine y la ruta HTTP comparten `runSageChat()` + gateway.
+- **BOT-JSON:** `/api/fomo/explain-deps` valida JSON del modelo con Zod; respuesta inválida → fallback determinista (no 502).
+- **BOT-06:** `quotaClassifier.ts` clasifica 429 por señales explícitas del mensaje (RPM/TPM/daily); contadores locales en Settings vía `/api/settings/ai-quota`. No afirma límites numéricos no verificados del proveedor.

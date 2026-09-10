@@ -49,17 +49,18 @@
 | **Naming MIM-Bot Chat** | — | PR #70 — `mim-bot-chat`, `mimBotChat()`, `MIM_BOT_CHAT_MODE` |
 | **Estado de conexión Gemini en copiloto** | `BOT-04` | Validación real vía `/api/settings/validate-keys` + badge en `SageMimbotCopilot` |
 | **Model Router por intención** | `BOT-GW` | `modelGateway.ts` — texto → GLM/OpenRouter, multimodal/búsqueda → Gemini |
+| **SAGE chat unificado multi-proveedor** | `BOT-05b` | `sageChatEngine.ts` — `/api/sage/chat` y `sageMimbotEngine` comparten gateway |
+| **Salida JSON en explain-deps** | `BOT-JSON` | Zod + fallback determinista en `dependencyExplain.ts` |
+| **Observabilidad de cuotas IA** | `BOT-06` | `quotaClassifier.ts`, `GET /api/settings/ai-quota`, panel en Settings |
 
 ### Pendiente (gateway y producto)
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Multi-proveedor en SAGE follow-up:** Revisar rama OpenAI desconectada en `sageMimbotEngine.ts` vs contrato Gemini/OpenRouter. | `BOT-05b` | 🟢 [whosnext.md (BOT-05b)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Structured JSON Output:** Validación estricta con schemas Zod sobre las respuestas generadas por los modelos para prevenir alucinaciones de formato. | `BOT-JSON` | 📌 [ROADMAP.md (Sección 5)](./planning/ROADMAP.md#5-pipeline-de-inferencia--model-backlog-pendiente--futuro) |
 | **Caché Semántico / Hashing de Contexto:** Cachear por hash de evidencia para no reenviar inferencias ante consultas idénticas. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Chips de Preguntas Contextuales Dinámicas:** Sugerencias de seguimiento inteligentes ligadas a la última respuesta del modelo. | `BOT-03` | 🟢 [whosnext.md (BOT-03)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Observabilidad de Cuotas & Costos:** Monitoreo inline de RPM/TPM y costo acumulado de OpenRouter en la interfaz de Settings. | `BOT-06` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 
 ---
 

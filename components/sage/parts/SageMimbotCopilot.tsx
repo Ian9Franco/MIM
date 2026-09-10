@@ -293,13 +293,24 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
           // 429: Rate limit o cuota de Google
           if (res.status === 429 || failure?.error === "RATE_LIMITED" || fallbackError.error === "RATE_LIMITED") {
+            const quotaHint =
+              failure?.quotaHint ||
+              fallbackError.quotaHint ||
+              failure?.action ||
+              fallbackError.action;
+            const quotaLabel =
+              failure?.quotaKind || fallbackError.quotaKind
+                ? ` (${String(failure?.quotaKind || fallbackError.quotaKind).toUpperCase()})`
+                : "";
             setChatMessages([
               ...newMessages,
               {
                 role: "model",
-                text: `⚠️ **Límite de peticiones alcanzado**: ${
-                  failure?.message || fallbackError.message ||
-                  "Se superó el límite de consultas por minuto (RPM) o la cuota de la API gratuita de Google. Aguardá unos segundos antes de volver a preguntar."
+                text: `⚠️ **Límite de cuota${quotaLabel}**: ${
+                  quotaHint ||
+                  failure?.message ||
+                  fallbackError.message ||
+                  "El proveedor rechazó la solicitud por cuota. Aguardá antes de reintentar."
                 }`,
               },
             ]);
@@ -651,12 +662,24 @@ function GeminiConnectionBadge({ state }: { state: GeminiConnectionState }) {
   );
 }
 
-function readErrorFields(value: unknown): { error?: string; message?: string } {
+function readErrorFields(value: unknown): {
+  error?: string;
+  message?: string;
+  action?: string;
+  quotaKind?: string;
+  quotaHint?: string;
+} {
   if (typeof value !== "object" || value === null) return {};
   const error = Reflect.get(value, "error");
   const message = Reflect.get(value, "message");
+  const action = Reflect.get(value, "action");
+  const quotaKind = Reflect.get(value, "quotaKind");
+  const quotaHint = Reflect.get(value, "quotaHint");
   return {
     ...(typeof error === "string" ? { error } : {}),
     ...(typeof message === "string" ? { message } : {}),
+    ...(typeof action === "string" ? { action } : {}),
+    ...(typeof quotaKind === "string" ? { quotaKind } : {}),
+    ...(typeof quotaHint === "string" ? { quotaHint } : {}),
   };
 }

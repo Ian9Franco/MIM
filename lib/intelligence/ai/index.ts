@@ -14,6 +14,9 @@ export {
   resolveGatewayKeys,
 } from "./modelGateway";
 export type { GatewayGenerateOptions, GatewayGenerateResult, GatewayKeyOptions } from "./modelGateway";
+export { classifyProviderQuotaError, parseRetryAfterSeconds } from "./quotaClassifier";
+export type { ClassifiedQuotaLimit, QuotaLimitKind } from "./quotaClassifier";
+export { getAiQuotaSnapshots, recordAiProviderRateLimit, recordAiProviderRequest } from "./quotaTracker";
 export type {
   AIContentPart,
   AIGroundedSource,

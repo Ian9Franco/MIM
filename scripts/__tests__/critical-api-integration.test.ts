@@ -19,6 +19,8 @@ import { POST as sageChatPost } from "../../app/api/sage/chat/route";
 import { consumeSageStream } from "../../lib/intelligence/sage/streamContract";
 import { translateText } from "../../web/lib/translator";
 import { POST as deletePost } from "../../app/api/delete/route";
+import { POST as buildPost } from "../../app/api/build/route";
+import { POST as tweakPost } from "../../app/api/tweak/route";
 import { POST as minecraftDeletePost } from "../../app/api/minecraft/delete/route";
 import { getSettings } from "../../lib/core/settings";
 import path from "path";
@@ -116,6 +118,13 @@ async function run() {
   const invalidGeminiRes = await validateKeysPost(invalidGeminiReq);
   assert(invalidGeminiRes.status === 400, "Rejects non-string Gemini key with HTTP 400");
 
+  const useStoredGeminiReq = createJsonRequest("/api/settings/validate-keys", {
+    curseforge: "",
+    useStoredGemini: "yes"
+  });
+  const useStoredGeminiRes = await validateKeysPost(useStoredGeminiReq);
+  assert(useStoredGeminiRes.status === 400, "Rejects non-boolean useStoredGemini with HTTP 400");
+
   // ─────────────────────────────────────────────────────────────────────────
   // 3. /api/staging
   // ─────────────────────────────────────────────────────────────────────────
@@ -124,6 +133,37 @@ async function run() {
   const invalidActionReq = createJsonRequest("/api/staging", { action: "invalid_action_xyz" });
   const resInvalidAction = await stagingPost(invalidActionReq);
   assert(resInvalidAction.status === 400, "Rejects invalid action enum with HTTP 400");
+
+  const malformedStagingReq = createMalformedRequest("/api/staging");
+  const malformedStagingRes = await stagingPost(malformedStagingReq);
+  assert(malformedStagingRes.status === 400, "Rejects malformed JSON body with HTTP 400");
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3b. /api/build
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log(`\n${colors.bold}3b. Route: /api/build (POST)${colors.reset}`);
+
+  const emptyBuildReq = createJsonRequest("/api/build", {});
+  const emptyBuildRes = await buildPost(emptyBuildReq);
+  assert(emptyBuildRes.status === 400, "Rejects empty build body with HTTP 400");
+
+  const invalidLoaderBuildReq = createJsonRequest("/api/build", {
+    version: "1.20.1",
+    loader: "quilt",
+    projectName: "test-pack",
+    buildType: "alluser",
+  });
+  const invalidLoaderBuildRes = await buildPost(invalidLoaderBuildReq);
+  assert(invalidLoaderBuildRes.status === 400, "Rejects invalid loader with HTTP 400");
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3c. /api/tweak
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log(`\n${colors.bold}3c. Route: /api/tweak (POST)${colors.reset}`);
+
+  const invalidTweakReq = createJsonRequest("/api/tweak", { action: "nonexistent_action" });
+  const invalidTweakRes = await tweakPost(invalidTweakReq);
+  assert(invalidTweakRes.status === 400, "Rejects invalid tweak action with HTTP 400");
 
   // ─────────────────────────────────────────────────────────────────────────
   // 4. /api/sage/player-rescue/save

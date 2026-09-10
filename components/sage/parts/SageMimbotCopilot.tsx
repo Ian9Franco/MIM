@@ -31,6 +31,9 @@ import {
   isSageErrorPayload,
   SageStreamFailure,
 } from "@/lib/intelligence/sage/streamContract";
+import type { GeminiKeyStatus } from "@/lib/intelligence/geminiKeyValidation";
+
+type GeminiConnectionState = "none" | "validating" | GeminiKeyStatus;
 
 export interface SageMimbotCopilotProps {
   analysis: SageAnalysisResult;
@@ -59,7 +62,8 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
   const [showConfig, setShowConfig] = useState(false);
   const [geminiKeyVal, setGeminiKeyVal] = useState("");
-  const [hasKey, setHasKey] = useState(false);
+  const [hasSavedKey, setHasSavedKey] = useState(false);
+  const [connectionState, setConnectionState] = useState<GeminiConnectionState>("none");
   const [isSavingKey, setIsSavingKey] = useState(false);
 
   // Estado del chat
@@ -77,18 +81,46 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const prevSigRef = useRef("");
 
+  const refreshGeminiConnection = useCallback(async () => {
+    try {
+      const settingsRes = await fetch("/api/settings");
+      if (!settingsRes.ok) {
+        setHasSavedKey(false);
+        setConnectionState("none");
+        return;
+      }
+
+      const settings = await settingsRes.json();
+      const configured = Boolean(settings?.apiKeysConfigured?.geminiApiKey);
+      setHasSavedKey(configured);
+
+      if (!configured) {
+        setConnectionState("none");
+        return;
+      }
+
+      setConnectionState("validating");
+      const validateRes = await fetch("/api/settings/validate-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ useStoredGemini: true }),
+      });
+      const payload: unknown = await validateRes.json();
+      const status = readGeminiStatus(payload);
+      setConnectionState(status ?? "invalid");
+    } catch {
+      setConnectionState("invalid");
+    }
+  }, []);
+
   // Only retrieve configuration status. The saved credential never returns to
   // the renderer after Electron has placed it in the OS-backed secret store.
   useEffect(() => {
     migrateLegacyBrowserGeminiKey()
       .catch(() => false)
-      .then(() => fetch("/api/settings"))
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        setHasKey(Boolean(data?.apiKeysConfigured?.geminiApiKey));
-      })
+      .then(refreshGeminiConnection)
       .catch(() => {});
-  }, []);
+  }, [refreshGeminiConnection]);
 
   // Reset de conversación al cambiar el reporte analizado
   useEffect(() => {
@@ -117,6 +149,25 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
     setIsSavingKey(true);
     try {
+      setConnectionState("validating");
+      const validateRes = await fetch("/api/settings/validate-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gemini: clean }),
+      });
+      const validatePayload: unknown = await validateRes.json();
+      const validatedStatus = readGeminiStatus(validatePayload);
+      if (validatedStatus !== "valid") {
+        setConnectionState(validatedStatus ?? "invalid");
+        setChatError(
+          validatedStatus === "rate_limited"
+            ? "La API de Gemini está en límite de cuota. Probá de nuevo en unos segundos."
+            : "La clave de Gemini no pudo validarse. Revisá que sea correcta y activa."
+        );
+        setIsSavingKey(false);
+        return;
+      }
+
       const response = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,10 +175,12 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       });
       if (!response.ok) throw new Error("No se pudo guardar la clave de forma segura");
       const data = await response.json();
-      setHasKey(Boolean(data?.apiKeysConfigured?.geminiApiKey));
+      setHasSavedKey(Boolean(data?.apiKeysConfigured?.geminiApiKey));
+      setConnectionState("valid");
       setGeminiKeyVal("");
     } catch (e) {
       console.warn("[SageMimbotCopilot] Error al persistir key en settings:", e);
+      setConnectionState("invalid");
       setIsSavingKey(false);
       return;
     }
@@ -182,8 +235,13 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       const question = (textOverride || chatInput).trim();
       if (!question || isSending) return;
 
-      if (!hasKey) {
+      if (connectionState !== "valid") {
         setShowConfig(true);
+        if (connectionState === "rate_limited") {
+          setChatError("La cuota de Gemini está agotada momentáneamente. Esperá unos segundos.");
+        } else if (hasSavedKey && connectionState === "invalid") {
+          setChatError("La clave guardada ya no es válida. Configurala de nuevo.");
+        }
         return;
       }
 
@@ -283,12 +341,12 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         }
       }
     },
-    [chatInput, chatMessages, isSending, hasKey, personality, analysis]
+    [chatInput, chatMessages, isSending, connectionState, hasSavedKey, personality, analysis]
   );
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasKey) {
+    if (connectionState !== "valid") {
       setShowConfig(true);
       return;
     }
@@ -391,7 +449,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
             onClick={() => setShowConfig(!showConfig)}
             aria-label="Configurar clave de Gemini API"
             className={`p-1.5 rounded-lg border transition-all ${
-              !hasKey
+              !hasSavedKey
                 ? "border-amber-500/50 bg-amber-500/20 text-amber-300 animate-pulse"
                 : "border-white/10 bg-white/5 text-white/60 hover:text-white hover:border-purple-500/40"
             }`}
@@ -431,7 +489,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       {/* Panel de Configuración de API Key */}
       <MimbotConfigModal
         showConfig={showConfig}
-        hasKey={hasKey}
+        hasKey={hasSavedKey}
         geminiKeyVal={geminiKeyVal}
         setGeminiKeyVal={setGeminiKeyVal}
         isSavingKey={isSavingKey}
@@ -439,7 +497,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         onClose={() => setShowConfig(false)}
       />
 
-      {chatError && !showConfig && hasKey && (
+      {chatError && !showConfig && hasSavedKey && (
         <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center justify-between gap-2">
           <span>{chatError}</span>
           <button
@@ -459,12 +517,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
             <MessageSquare className="w-3 h-3 text-purple-400" />
             <span>Preguntale a MIM-Bot sobre este incidente</span>
           </div>
-          {hasKey && (
-            <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Gemini Conectado
-            </span>
-          )}
+          <GeminiConnectionBadge state={connectionState} />
         </div>
 
         {/* Historial de mensajes */}
@@ -521,11 +574,11 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           />
           <button
             type="submit"
-            disabled={isSending || (!chatInput.trim() && hasKey)}
+            disabled={isSending || (!chatInput.trim() && connectionState === "valid")}
             className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shrink-0 active:scale-95"
             aria-label="Enviar mensaje"
           >
-            {!hasKey ? (
+            {connectionState !== "valid" ? (
               <>
                 <Key className="w-3.5 h-3.5" /> Key
               </>
@@ -540,6 +593,61 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         </form>
       </div>
     </div>
+  );
+}
+
+function readGeminiStatus(payload: unknown): GeminiConnectionState | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const status = Reflect.get(payload, "geminiStatus");
+  if (
+    status === "valid" ||
+    status === "invalid" ||
+    status === "rate_limited" ||
+    status === "missing"
+  ) {
+    return status === "missing" ? "none" : status;
+  }
+  const results = Reflect.get(payload, "results");
+  if (typeof results !== "object" || results === null) return null;
+  const gemini = Reflect.get(results, "gemini");
+  if (gemini === true) return "valid";
+  if (gemini === false) return "invalid";
+  return null;
+}
+
+function GeminiConnectionBadge({ state }: { state: GeminiConnectionState }) {
+  if (state === "none") return null;
+
+  if (state === "validating") {
+    return (
+      <span className="text-[9px] font-mono text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 flex items-center gap-1">
+        <Loader2 className="w-3 h-3 animate-spin" />
+        Validando Gemini
+      </span>
+    );
+  }
+
+  if (state === "valid") {
+    return (
+      <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        Gemini verificado
+      </span>
+    );
+  }
+
+  if (state === "rate_limited") {
+    return (
+      <span className="text-[9px] font-mono text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+        Cuota Gemini agotada
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[9px] font-mono text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 flex items-center gap-1">
+      Clave Gemini inválida
+    </span>
   );
 }
 

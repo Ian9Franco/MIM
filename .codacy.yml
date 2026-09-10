@@ -9,6 +9,7 @@ engines:
 
 exclude_paths:
   - scripts/__tests__/**
+  - standalone/**
   - node_modules/**
   - .next/**
   - out/**

@@ -135,7 +135,7 @@ export function DraftDetailView({
   }, [tab, draft?.id]);
 
   const visibleMods = activeCollectionMods.filter((mod: ModHit) => {
-    const key = mod.itemId || mod.id || mod.projectId;
+    const key = mod.itemId || mod.projectId;
     if (removedIds.has(key)) return false;
     if (typeFilter === "all") return true;
     return (mod.projectType || "mod") === typeFilter;
@@ -194,7 +194,7 @@ export function DraftDetailView({
 
   const handleRemoveMod = async (mod: any) => {
     if (!onRemoveModFromDraft || !draft?.id) return;
-    const itemId = mod.itemId || mod.id;
+    const itemId = mod.itemId || mod.projectId;
     await onRemoveModFromDraft(draft.id, mod.projectId, itemId);
     setRemovedIds((prev) => new Set(prev).add(itemId || mod.projectId));
     onRefreshDrafts?.();

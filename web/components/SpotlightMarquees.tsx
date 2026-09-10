@@ -7,6 +7,7 @@ import { TvMinimalPlay, X, Puzzle } from "lucide-react";
 import { useSmoothMarquee } from "../hooks/useSmoothMarquee";
 
 export interface ModHit {
+  id?: string;
   itemId?: string;
   projectId: string;
   slug?: string;

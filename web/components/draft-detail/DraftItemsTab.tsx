@@ -79,7 +79,7 @@ export function DraftItemsTab({
           const col = typeColor(mod.projectType);
           return (
             <div
-              key={mod.itemId || mod.id || mod.projectId}
+              key={mod.itemId || mod.projectId}
               onClick={() => handleOpenModDetails(mod)}
               className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/15"
             >

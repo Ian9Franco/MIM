@@ -201,12 +201,13 @@ export async function saveSettings(settings: SettingsUpdate): Promise<PublicSett
   return getPublicSettings();
 }
 
-export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal" | "gemini"): string {
+export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal" | "gemini" | "openrouter"): string {
   const fieldByName: Record<typeof keyName, ApiKeyField> = {
     modrinth: "modrinthApiKey",
     curseforge: "curseforgeApiKey",
     virustotal: "virusTotalApiKey",
     gemini: "geminiApiKey",
+    openrouter: "openrouterApiKey",
   };
   const stored = getStoredApiKey(fieldByName[keyName]);
   if (stored) return stored;
@@ -221,6 +222,9 @@ export function getApiKey(keyName: "modrinth" | "curseforge" | "virustotal" | "g
   }
   if (keyName === "gemini") {
     return process.env.GEMINI_API_KEY || "";
+  }
+  if (keyName === "openrouter") {
+    return process.env.OPENROUTER_API_KEY || "";
   }
   return "";
 }

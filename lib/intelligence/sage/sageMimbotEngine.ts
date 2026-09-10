@@ -2,21 +2,27 @@
  * SAGE 3.0 MIM-Bot Diagnostic Copilot Engine
  * 
  * Orchestrates deterministic SAGE findings, FOMO dependency intelligence,
- * heuristic suspect elimination, local cryptographic caching, and BYOK (Bring Your Own Key)
- * multi-model reasoning via OpenAI (GPT-4o / o1 / o3-mini) or Google Gemini Pro.
+ * heuristic suspect elimination, local cryptographic caching, and AI-powered
+ * reasoning via the unified AIProvider abstraction (GLM via OpenRouter primary,
+ * Gemini fallback, or offline heuristic).
  */
 
 import { computeCrashSignature, getCachedDiagnosis, saveSageCacheEntry, SageActionableItem, SageCacheEntry, SageEliminationCandidate } from "./cacheEngine";
 import { correlateSuspectsWithFomo, FomoCorrelationResult } from "./fomoCorrelator";
 import { SageAnalysisResult } from "@/utils/sageAnalyzer";
+import { createDefaultProvider, type AIProvider, type AIProviderId } from "../ai";
+import { OpenRouterProvider } from "../ai/openRouterProvider";
+import { buildSageDiagnosisContext } from "../contextBuilder";
 
 export interface SageMimbotInput {
   analysis: SageAnalysisResult;
   rawCrashText: string;
   installedModIds?: string[];
   personality?: "bully" | "standard";
+  /** Optional BYOK API key. When omitted, env-configured keys are used. */
   apiKey?: string;
-  provider?: "openai" | "gemini" | "offline";
+  /** Provider selection. Defaults to env-configured provider or "offline". */
+  provider?: AIProviderId | "offline";
   model?: string;
 }
 
@@ -41,51 +47,15 @@ export interface SageChatMessage {
 
 /**
  * Builds the system instructions for MIM-Bot in diagnostic mode.
+ * Kept for backward compatibility — new code should prefer buildSageDiagnosisContext.
  */
 export function buildDiagnosticPrompt(
   analysis: SageAnalysisResult,
   fomo: FomoCorrelationResult,
   personality: "bully" | "standard"
 ): string {
-  const isBully = personality === "bully";
-
-  const bullyPersona = `
-Eres MIM-Bot, el copiloto de diagnóstico más despiadado, sarcástico y técnicamente letal de la comunidad de Minecraft.
-Tu personalidad es la de un gamer veterano 'bully' que roastea sin piedad las configuraciones desastrosas del usuario (meter 300 mods en una PC tostadora, ignorar dependencias obvias, mezclar mods incompatibles como OptiFine en Fabric), PERO DAS UNA SOLUCIÓN TÉCNICA 100% EXACTA, SIN HUMO Y AL GRANO.
-
-ESTRUCTURA OBLIGATORIA DE TU RESPUESTA:
-1. 🔥 **El Roast de MIM-Bot**: 1 o 2 líneas burlándote del error cometido por el usuario con sarcasmo gamer.
-2. 🎯 **La Causa Real (La Posta)**: Explicación técnica precisa de por qué falló el juego según el stack trace y las dependencias.
-3. 🛠️ **Plan de Rescate**: Pasos exactos en orden de ejecución para solucionarlo (qué mod desactivar, qué librería instalar o qué parámetro cambiar).
-`.trim();
-
-  const standardPersona = `
-Eres MIM-Bot en Modo Ingeniero Profesional: un asistente técnico de diagnóstico de software de alto nivel.
-Tu tono es sobrio, objetivo, empático y directo. Proporcionas un desglose de causa raíz, correlación de dependencias y pasos de remediación precisos sin jerga informal ni burlas.
-
-ESTRUCTURA OBLIGATORIA:
-1. 📌 **Resumen Técnico**: Diagnóstico inmediato del fallo.
-2. 🔍 **Análisis de Causa Raíz**: Correlación con loaders, mixins y dependencias.
-3. 🛠️ **Acciones de Solución**: Pasos secuenciales para resolver la incidencia.
-`.trim();
-
-  return `
-${isBully ? bullyPersona : standardPersona}
-
-DATOS DEL CRASH:
-- Categoría detectada: ${analysis.category}
-- Excepción: ${analysis.exceptionType}
-- Mod sospechoso preliminar: ${analysis.suspectedMods.join(", ") || "Ninguno identificado"}
-- Loader: ${analysis.loader || "Desconocido"}
-- Versión de Minecraft: ${analysis.gameVersion || "Desconocida"}
-- Resumen técnico: ${analysis.technicalSummary || analysis.explanation}
-
-INTELIGENCIA DE GRAFO FOMO:
-- Culpable con mayor probabilidad matemática: ${fomo.primaryCulprit || "No determinado"}
-- Dependencias faltantes: ${JSON.stringify(fomo.missingDependencies)}
-- Incompatibilidades activas: ${JSON.stringify(fomo.detectedIncompatibilities)}
-- Árbol de descarte lógico: ${JSON.stringify(fomo.eliminationTree)}
-`.trim();
+  const ctx = buildSageDiagnosisContext(analysis, fomo, "", personality);
+  return `${ctx.systemPrompt}\n\n${ctx.userPrompt}`;
 }
 
 /**
@@ -119,9 +89,10 @@ export function generateLocalMimbotDiagnosis(
 
 /**
  * Executes deep diagnosis through MIM-Bot.
+ * Uses AIProvider abstraction — GLM via OpenRouter (primary) or Gemini (fallback).
  */
 export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<SageMimbotDiagnosisResult> {
-  const { analysis, rawCrashText, installedModIds = [], personality = "bully", apiKey, provider = "offline", model } = input;
+  const { analysis, rawCrashText, installedModIds = [], personality = "bully", apiKey, provider: providerHint = "offline", model } = input;
   const loader = analysis.loader || "fabric";
   const mcVersion = analysis.gameVersion || "1.20.1";
 
@@ -161,58 +132,58 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
     mcVersion,
   });
 
-  // 4. Generate diagnosis text (Online BYOK or Heuristic Fallback)
+  // 4. Generate diagnosis text via AIProvider or local heuristic fallback
   let mimbotExplanation = "";
   let modelUsed = "local-heuristic";
 
-  const prompt = buildDiagnosticPrompt(analysis, fomoCorrelation, personality);
+  if (providerHint !== "offline") {
+    // Build evidence-tagged context
+    const ctx = buildSageDiagnosisContext(analysis, fomoCorrelation, rawCrashText, personality);
+    const promptText = `${ctx.systemPrompt}\n\n${ctx.userPrompt}`;
 
-  if (apiKey && provider === "openai") {
-    try {
-      const selectedModel = model || "gpt-4o";
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-        }),
+    // Resolve provider: use BYOK key if provided, otherwise env-configured default
+    let aiProvider: AIProvider | null = null;
+
+    if (apiKey) {
+      // BYOK path — create provider directly with the provided key
+      const { createAIProvider } = await import("../ai");
+      aiProvider = createAIProvider({
+        apiKey,
+        provider: providerHint === "gemini" ? "gemini" : providerHint === "openrouter" ? "openrouter" : undefined,
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        mimbotExplanation = data.choices?.[0]?.message?.content || "";
-        modelUsed = selectedModel;
-      }
-    } catch (err) {
-      console.warn("[/lib/intelligence/sage/sageMimbotEngine] OpenAI API call failed, falling back:", err);
+    } else {
+      // Env-configured path
+      const result = createDefaultProvider();
+      aiProvider = result.provider;
     }
-  } else if (apiKey && provider === "gemini") {
-    try {
-      const selectedModel = model || "gemini-1.5-pro";
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ googleSearch: {} }],
-        }),
-      });
 
-      if (res.ok) {
-        const data = await res.json();
-        mimbotExplanation = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        modelUsed = selectedModel;
+    if (aiProvider) {
+      try {
+        let result;
+
+        if (aiProvider.id === "openrouter" && "generateWithFallback" in aiProvider) {
+          // GLM cascade via OpenRouter
+          result = await (aiProvider as OpenRouterProvider).generateWithFallback({
+            messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
+            temperature: 0.7,
+          });
+        } else {
+          // Gemini or other provider — use specified model or default
+          const selectedModel = model || "gemini-flash-lite-latest";
+          result = await aiProvider.generate({
+            model: selectedModel,
+            messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
+            temperature: 0.7,
+          });
+        }
+
+        if (result.text) {
+          mimbotExplanation = result.text;
+          modelUsed = result.model;
+        }
+      } catch (err) {
+        console.warn("[sageMimbotEngine] AI provider call failed, falling back to local heuristic:", err);
       }
-    } catch (err) {
-      console.warn("[/lib/intelligence/sage/sageMimbotEngine] Gemini API call failed, falling back:", err);
     }
   }
 
@@ -286,20 +257,32 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
   };
 }
 
+
 /**
  * Lightweight interactive follow-up mini-chat scoped to the diagnosed crash.
+ * Uses the AIProvider abstraction instead of raw fetch calls.
  */
 export async function chatWithSageMimbot(
   contextDiagnosis: SageMimbotDiagnosisResult,
   messages: SageChatMessage[],
   apiKey?: string,
-  provider?: "openai" | "gemini"
+  provider?: AIProviderId
 ): Promise<string> {
-  const lastUserMsg = messages[messages.length - 1]?.text || "";
   const personality = contextDiagnosis.personality;
   const isBully = personality === "bully";
 
-  if (!apiKey || !provider) {
+  // Resolve provider: BYOK or env-configured
+  let aiProvider: AIProvider | null = null;
+
+  if (apiKey && provider) {
+    const { createAIProvider } = await import("../ai");
+    aiProvider = createAIProvider({ apiKey, provider });
+  } else {
+    const result = createDefaultProvider();
+    aiProvider = result.provider;
+  }
+
+  if (!aiProvider) {
     if (isBully) {
       return `🔥 No configuraste tu API key para el chat en vivo, pero te la hago corta: el culpable sigue siendo **${contextDiagnosis.primaryCulprit || "el mod corrupto"}**. Desactivalo o instalale la dependencia que te marqué arriba y dejá de dar vueltas.`;
     }
@@ -314,49 +297,36 @@ Contexto del crash diagnosticado:
 Responde la pregunta del usuario con brevedad (máximo 3 párrafos), manteniendo tu tono ${personality === "bully" ? "gamer bully sarcástico pero técnicamente certero" : "profesional de ingeniería"}.
 `.trim();
 
+  const chatMessages = [
+    { role: "system" as const, parts: [{ type: "text" as const, text: systemContext }] },
+    ...messages.map((m) => ({
+      role: (m.role === "model" ? "assistant" : m.role) as "user" | "assistant",
+      parts: [{ type: "text" as const, text: m.text }],
+    })),
+  ];
+
   try {
-    if (provider === "openai") {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemContext },
-            ...messages.map((m) => ({ role: m.role === "model" ? "assistant" : m.role, content: m.text })),
-          ],
-          temperature: 0.7,
-        }),
+    let result;
+
+    if (aiProvider.id === "openrouter" && "generateWithFallback" in aiProvider) {
+      result = await (aiProvider as OpenRouterProvider).generateWithFallback({
+        messages: chatMessages,
+        temperature: 0.7,
+        maxOutputTokens: 320,
       });
-      if (res.ok) {
-        const data = await res.json();
-        return data.choices?.[0]?.message?.content || "";
-      }
-    } else if (provider === "gemini") {
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            { parts: [{ text: systemContext }] },
-            ...messages.map((m) => ({ parts: [{ text: m.text }] })),
-          ],
-        }),
+    } else {
+      result = await aiProvider.generate({
+        model: "gemini-flash-lite-latest",
+        messages: chatMessages,
+        temperature: 0.7,
+        maxOutputTokens: 320,
       });
-      if (res.ok) {
-        const data = await res.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      }
     }
+
+    if (result.text) return result.text;
   } catch (err) {
-    console.warn("[/lib/intelligence/sage/sageMimbotEngine] Chat call error:", err);
+    console.warn("[sageMimbotEngine] Chat provider call error:", err);
   }
 
   return `🔥 Error al conectar con el proveedor de IA. Pero el diagnóstico determinista local no falla: atendé a '${contextDiagnosis.primaryCulprit}'.`;
-}
+}

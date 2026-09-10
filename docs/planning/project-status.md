@@ -22,6 +22,10 @@ No hay inversores que engañar ni equipo que impresionar. Esta honestidad es lo 
 
 ---
 
+## MIM Server — primera entrega de lectura (2026-09-10)
+
+Existe una pantalla Desktop `/servers` de conexión y comparación de mods contra un build AllHost, con transporte SFTP de solo lectura. El estado es **en desarrollo**, no una feature terminada. No habilita escrituras ni cubre configs/mundos. Persistencia durable de snapshots, hosting externo y distribución Electron permanecen pendientes. Ver la [matriz de aceptación](ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso).
+
 ## Lo que está sólido (con evidencia)
 
 ### SAGE Crash Intelligence Engine
@@ -29,6 +33,10 @@ No hay inversores que engañar ni equipo que impresionar. Esta honestidad es lo 
 - **Evidencia:** 125 casos reales de crash logs de Minecraft, cubriendo las 8 categorías de fallo. 100% Macro F1, 84% Top-1 culprit attribution, 0.06ms latencia media.
 - **Por qué es creíble:** El corpus de evaluación fue construido con logs reales que yo mismo acumulé diagnosticando crashes de mi comunidad. No son datos sintéticos.
 - **Caveat honesto:** El corpus tiene 125 casos. Logs muy raros o altamente customizados de modpacks de nicho pueden degradar al `UNKNOWN_RUNTIME` category, que es el comportamiento correcto.
+
+### MIMbot Model Gateway & Context Builder (Sep 2026)
+- **Estado:** Código y tests de `ContextBuilder` presentes; Gemini sigue siendo el proveedor por defecto.
+- **Evidencia:** `AIProvider` con `GeminiProvider` y `OpenRouterProvider`. GLM-5.3 Flash es candidato vía `MIMBOT_AI_PROVIDER=openrouter`, no el default de producto (ADR-007). `ContextBuilder` etiqueta evidencia (`[EVIDENCE: ... ]`). Tests en `scripts/__tests__/context-builder.test.ts`.
 
 ### Aduana Storage Engine
 - **Estado:** Benchmarkeado y en uso.

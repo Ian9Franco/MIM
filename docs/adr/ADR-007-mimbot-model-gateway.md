@@ -37,3 +37,7 @@ MIMbot today calls Google Gemini (and a disconnected OpenAI branch) from feature
 ### Out of scope for the first implementation
 
 - Feature flags in the UI, A/B routing, semantic cache, and evaluation fixtures.
+
+## 4. Revisión (2026-09-10)
+
+El código de esta entrega mantiene Gemini como default (`resolveConfiguredAIProviderId` → `"gemini"` salvo `MIMBOT_AI_PROVIDER=openrouter`). GLM-5.3 Flash está implementado como candidato detrás de esa variable y de BYOK OpenRouter. No hay cambio de modelo primario en producto hasta un PR posterior con comparación registrada.

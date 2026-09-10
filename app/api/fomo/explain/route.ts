@@ -7,7 +7,7 @@ import {
   type ModExplainerInput,
   type BotPersonality,
 } from "@/lib/intelligence/modExplainer";
-import { getApiKey } from "@/lib/core/settings";
+import { createDefaultProvider } from "@/lib/intelligence/ai";
 
 const bodySchema = z.object({
   projectId: z.string().trim().min(1, "Faltan parámetros requeridos (projectId)"),
@@ -57,24 +57,34 @@ export const POST = withApiGuard(
       messages,
     } = body;
 
-    const headerKey = request.headers.get("x-gemini-key") || "";
-    const resolvedApiKey =
-      (clientApiKey && clientApiKey.trim()) ||
-      (headerKey && headerKey.trim()) ||
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      getApiKey("gemini");
+    // Resolve provider using the unified factory
+    // Supports BYOK via headers (x-gemini-key, x-openrouter-key) and env defaults
+    const headerGeminiKey = request.headers.get("x-gemini-key") || "";
+    const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    if (!resolvedApiKey) {
+    const { provider, providerId } = createDefaultProvider({
+      clientGeminiKey: clientApiKey,
+      headerGeminiKey: headerGeminiKey,
+      openrouterKey: headerOpenRouterKey,
+    });
+
+    if (!provider) {
       return NextResponse.json(
         {
           error: "NO_API_KEY",
           message:
-            "No se ha configurado una clave de Google Gemini API. Puedes ingresar tu clave gratuita en los Ajustes de MIM o directamente en esta ventana.",
+            "No se ha configurado una clave de API. Puedes ingresar tu clave gratuita en los Ajustes de MIM o directamente en esta ventana.",
         },
         { status: 401 }
       );
     }
+
+    // Extract a resolved key for backward-compatible functions that still need it
+    const resolvedApiKey =
+      (clientApiKey && clientApiKey.trim()) ||
+      (headerGeminiKey && headerGeminiKey.trim()) ||
+      (headerOpenRouterKey && headerOpenRouterKey.trim()) ||
+      "provider-managed";
 
     const headerPersonality = request.headers.get("x-bot-personality");
     const requestedPersonality: BotPersonality =
@@ -122,7 +132,8 @@ export const POST = withApiGuard(
       personality: requestedPersonality,
     };
 
-    const result = await explainModWithGemini(input, resolvedApiKey);
+    const result = await explainModWithGemini(input, resolvedApiKey, provider);
     return NextResponse.json(result);
   }
 );
+

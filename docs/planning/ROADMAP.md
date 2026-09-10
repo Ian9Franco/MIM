@@ -1,15 +1,15 @@
 # MIM — Roadmap Oficial & Estado de Evolución (v11.4.5)
 
 > Roadmap unificado de evolución técnica de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.5 | **Última actualización:** 2026-09-06  
-> *(Historial de hitos de versiones anteriores preservado en [docs/releases/ROADMAP_v10_HISTORIC.md](../releases/ROADMAP_v10_HISTORIC.md)).*
+> **Versión Actual:** v11.4.5 | **Última actualización:** 2026-09-09  
+> *(Historial de hitos de versiones anteriores preservado en [docs/releases/roadmap-v10-historic.md](../releases/roadmap-v10-historic.md)).*
 
 ---
 
 ## 1. Proceso & Seguridad de API (Completado en v11.3.0)
 
 - [x] **Hacer withApiGuard obligatorio, no opcional:**
-  - [x] Barrido de 100% de rutas en `web/app/api/` y `app/api/` (112 handlers protegidos).
+  - [x] Barrido de 100% de rutas en `web/app/api/` y `app/api/` (116 handlers protegidos).
   - [x] Regla de CI que falla estructuralmente con AST si un `route.ts` no usa `withApiGuard` (`npm run lint:api-guard`).
   - [x] Soporte para allowlist formalizada y documentada de excepciones.
   - [x] Suite de tests exhaustiva del wrapper con casos negativos, validación Zod y rate limits reales.
@@ -18,10 +18,15 @@
 
 ---
 
-## 2. Funcionamiento de MimBot (En curso)
+## 2. Funcionamiento de MimBot & Model Gateway
 
 - [x] *Aplicar withApiGuard a api/sage/chat:* Blindado con rate limit defensivo (25 req/min) y validación Zod estricta.
-- [ ] *No guardar la API key de Gemini en texto plano:* Cifrar en disco o usar `safeStorage` del SO en Electron.
+- [x] *Abstracción Multi-Proveedor (AIProvider Gateway):* Interfaz unificada `AIProvider` con implementaciones `GeminiProvider` y `OpenRouterProvider` (`createAIProvider.ts`).
+- [x] *Integración GLM-5.3 Flash (candidato OpenRouter):* `OpenRouterProvider` con GLM (`z-ai/glm-5.3-flash:free` → tier pago). Gemini sigue siendo el default; GLM se activa con `MIMBOT_AI_PROVIDER=openrouter` (ADR-007).
+- [x] *Context Builder & Evidence Layer:* Ensamblado determinista de prompts con etiquetas de origen (`[EVIDENCE: MANIFEST]`, `[EVIDENCE: LOCAL]`, `[EVIDENCE: SAGE]`, `[EVIDENCE: FOMO_GRAPH]`, `[EVIDENCE: GALLERY]`) e invariantes de grounding que impiden al LLM sobreescribir hechos o diagnósticos.
+- [x] *Migración de rutas y nuevo endpoint de dependencias:* `lib/intelligence/modExplainer.ts`, `sageMimbotEngine.ts`, `app/api/fomo/explain`, `app/api/sage/chat` y `POST /api/fomo/explain-deps`.
+- [x] *Soporte BYOK OpenRouter:* Configuración en `lib/core/settings.ts` y `.env.local` con almacenamiento seguro de secretos.
+- [ ] *No guardar la API key de Gemini/OpenRouter en texto plano:* Cifrar en disco o usar `safeStorage` del SO en Electron.
 - [x] *Recortar el contexto de conversación antes de enviarlo:* Truncado automático a los últimos 6 turnos en `api/sage/chat`.
 - [x] *Streaming de respuesta:* Gemini transmite por SSE; MIM adapta el flujo a eventos NDJSON tipados, preserva los errores HTTP previos al stream y renderiza cada delta en el chat.
 - [x] *Manejo de rate-limit/cuota de la propia API de Gemini:* Diferenciación explícita de código 429 (`RATE_LIMITED`) con mensaje claro en el chat sin desconfigurar la key.
@@ -60,14 +65,18 @@
 
 ---
 
-## 5. Pipeline de Inferencia & Cascada de Modelos (`api/sage/chat`)
+## 5. Pipeline de Inferencia & Model Backlog (Pendiente / Futuro)
 
 - [x] *Caché determinista conectada:* Integración de `cacheEngine.ts` con `api/sage/chat` para diagnósticos instantáneos de firmas conocidas.
 - [x] *Memoria de modelo en la cascada:* Recordar el último modelo exitoso (`flash-lite-latest` → `3.5-flash-lite` → `3.5-flash` → `3.6-flash`) para evitar round-trips fallidos tras un 429.
 - [x] *Presupuestos de tokens diferenciados:* Modo Bully (~250 tokens) vs. Modo Estándar (~700 tokens estructurados).
 - [x] *Ajuste de temperatura en modo Bully:* Reducida a 0.5 para conservar estilo satírico sin alucinar dependencias.
 - [x] *Ventana de contexto acotada:* Últimos 6 turnos para no inflar consumo de tokens.
-- [ ] *Soporte multi-proveedor:* Conectar `gpt-4o` de `sageMimbotEngine.ts` como proveedor de respaldo ante agotamiento de cuota de Google AI Studio.
+- [ ] *Model Router Dinámico:* Ruteo inteligente por costo/latencia según la intención del usuario (GLM primario para texto/explicación, Gemini como especialista multimodal/búsqueda).
+- [ ] *Structured JSON Output:* Validación de schemas Zod estrictos sobre la salida generada por el LLM en respuestas estructuradas.
+- [ ] *Caché semántico / Hashing de contexto:* Cacheo por hash de payload de evidencia para evitar re-inferencias en consultas idénticas.
+- [ ] *Desacoplamiento de Search Grounding:* Motor de búsqueda web externo independiente del vendor del LLM para enriquecimiento de evidencia previa.
+- [ ] *Observabilidad y límites de OpenRouter:* Métricas de costo, latencia, rate limits y monitoreo de cuota en UI.
 
 ---
 
@@ -82,7 +91,7 @@
 
 ## 7. Privacidad y Transparencia en BYOK
 
-- [ ] *Aviso de privacidad del Free Tier de Google:* Notificar con claridad que la capa gratuita de AI Studio puede usar datos para entrenamiento (a diferencia de tiers pagos).
+- [ ] *Aviso de privacidad del Free Tier de Google / OpenRouter:* Notificar con claridad las políticas de retención o entrenamiento de capas gratuitas en BYOK.
 - [x] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión (endpoint seguro sin key en URL).
 
 ---
@@ -104,6 +113,24 @@
 
 ## 9. Server Manager & Sincronización Remota (Issue #58 — En Progreso)
 
+### Estado de aceptación — 2026-09-09
+
+Los checkboxes de implementación debajo registran código existente; no certifican una funcionalidad operativa completa. Esta matriz distingue implementación, integración Desktop y validación.
+
+| Entrega | Código | Integración Desktop | Validación |
+|---|---|---|---|
+| Conectar y auditar mods (SRV-1/2) | Transporte SSH/SFTP real de solo lectura, huella de host obligatoria, límites y auditoría parcial explícita. | Pantalla `/servers` desde el header; compara contra el último build AllHost. | Fixture local con protocolo SFTP real y recorrido HTTP/UI; hosting externo y paquete Electron pendientes. |
+| Preflight y snapshots (SRV-3) | Contratos, fingerprint y store en memoria. | Pendiente de integrar al recorrido de sincronización. | Regresiones de motor; persistencia en disco y drift antes de mutar pendientes. |
+| Aplicar y recuperar (SRV-4) | Executor y rollback con regresiones de fallos. | No habilitado en la interfaz. | Pendiente de reinicio, recuperación durable, hashes remotos y servidor real. |
+| SAGE remoto (SRV-5) | Motor y pruebas controladas. | Pendiente. | Recorrido integrado pendiente. |
+| Administración (SRV-6) | Módulos de propiedades, RCON y backups. | Pendiente. | Validación real y garantías de proceso offline pendientes. |
+| Multiplayer (SRV-7) | Contratos y reconciliación. | Pendiente. | Recorrido cliente-servidor real pendiente. |
+
+Primera entrega integrada: **comparación de JARs de mods, solo lectura**. No cubre configs, mundos, escritura remota ni disponibilidad general de MIM Server. La versión y el loader remotos los informa el operador; no se infieren de rangos de dependencias.
+
+Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architecture/server-audit.md)).
+
+
 - [x] **Fase 0 (Foundation):**
   - [x] Contratos puros de `InstanceManifest` y diffing determinista (`diffInstanceManifests`).
   - [x] Escaneo de mods desde memoria (`scanModBuffer`) y adapter de validación.
@@ -121,12 +148,12 @@
   - [x] Visualización de mods client-only e incompatibilidades de entorno.
   - [x] Indicador de salud `ServerHealthBadge` con soporte para auditorías parciales/incompletas.
   - [x] Panel orquestador `ServerAuditPanel` con micro-animaciones Framer Motion y suites de tests al 100%.
-- [x] **Hito SRV-3: Endurecimiento de preflight, builder y snapshots durables:**
+- [x] **Hito SRV-3: Preflight, builder y contratos de snapshots (persistencia pendiente):**
   - [x] Validación bidireccional exhaustiva (compatibilidad de versión de Minecraft, mod loader, exclusión de client-only mods en servidor y resolución de dependencias requeridas).
   - [x] Reconciliación explícita de archivos de configuración (`diff.configDiffs`).
   - [x] Snapshot obligatorio pre-mutación para cualquier acción destructiva o aditiva (`createPreMutationSnapshot`).
   - [x] Detección determinista de planes obsoletos y drift de estado remoto (`validatePlanFreshness` con fingerprints SHA-256).
-  - [x] Almacenamiento durable y journal de cambios de servidor (`MemorySnapshotStore` / `ISnapshotStore`).
+  - [ ] Persistencia durable y recuperación tras reinicio. Existen `MemorySnapshotStore` e `ISnapshotStore`, todavía sin backend en disco.
   - [x] Suite de tests `server-preflight-snapshot.test.ts` pasando al 100%.
 - [x] **Hito SRV-4: Executor de despliegue con staging, verificación atómica y rollback:**
   - [x] Motor de staging atómico en `.mim_staging/` y validación de hash SHA-256 pre/post ejecución.

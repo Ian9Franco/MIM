@@ -5,6 +5,7 @@ export const API_KEY_FIELDS = [
   "curseforgeApiKey",
   "virusTotalApiKey",
   "geminiApiKey",
+  "openrouterApiKey",
 ] as const;
 
 export type ApiKeyField = (typeof API_KEY_FIELDS)[number];
@@ -16,6 +17,7 @@ const ENVIRONMENT_KEYS: Record<ApiKeyField, string> = {
   curseforgeApiKey: "MIM_SECRET_CURSEFORGE",
   virusTotalApiKey: "MIM_SECRET_VIRUSTOTAL",
   geminiApiKey: "MIM_SECRET_GEMINI",
+  openrouterApiKey: "MIM_SECRET_OPENROUTER",
 };
 
 const runtimeSecrets: ApiKeyUpdates = {};

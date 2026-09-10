@@ -1,36 +1,27 @@
 /**
  * /api/sage/chat — POST
  * Chat interactivo de MIM-Bot con contexto de crash report (SAGE).
- * Protegido con withApiGuard, validación Zod, memoria de cascada de modelos
+ * Protegido con withApiGuard, validación Zod, AIProvider abstraction,
  * y conexión a caché de diagnóstico de SAGE.
+ *
+ * MVP: Uses non-streaming generation through AIProvider, but emits
+ * the response through the existing SSE stream contract (start → delta → done)
+ * to preserve the SageMimbotCopilot frontend component.
  */
 
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getApiKey } from "@/lib/core/settings";
 import {
   computeCrashSignature,
   getCachedDiagnosis,
 } from "@/lib/intelligence/sage/cacheEngine";
 import {
   errorMessage,
-  sageErrorPayload,
   sageErrorResponse,
 } from "@/lib/intelligence/sage/errorContract";
-import { GeminiSseTextReader } from "@/lib/intelligence/sage/geminiStream";
 import { encodeSageStreamEvent } from "@/lib/intelligence/sage/streamContract";
-
-const GEMINI_MODELS = [
-  "gemini-flash-lite-latest",
-  "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
-  "gemini-3.6-flash",
-];
-
-const GEMINI_REQUEST_TIMEOUT_MS = 15_000;
-
-// Memoria en caliente del último modelo que respondió exitosamente
-let lastSuccessfulModel = GEMINI_MODELS[0];
+import { createDefaultProvider, isAIProviderError } from "@/lib/intelligence/ai";
+import { OpenRouterProvider } from "@/lib/intelligence/ai/openRouterProvider";
 
 const bodySchema = z.object({
   question: z.string().trim().min(1, "Falta el parámetro question"),
@@ -66,19 +57,17 @@ export const POST = withApiGuard(
   async ({ request, body }) => {
     const { crashContext, messages, question, personality, clientApiKey } = body;
 
-    // Prioridad de clave API:
-    // 1. clientApiKey provista en el body
-    // 2. Header x-gemini-key
-    // 3. Settings MIM Desktop / process.env
-    const headerKey = request.headers.get("x-gemini-key") || "";
-    const resolvedApiKey =
-      (clientApiKey || "").trim() ||
-      (headerKey && headerKey.trim()) ||
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      getApiKey("gemini");
+    // Resolve provider using the unified factory
+    const headerGeminiKey = request.headers.get("x-gemini-key") || "";
+    const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    if (!resolvedApiKey) {
+    const { provider, providerId } = createDefaultProvider({
+      clientGeminiKey: clientApiKey || undefined,
+      headerGeminiKey: headerGeminiKey,
+      openrouterKey: headerOpenRouterKey,
+    });
+
+    if (!provider) {
       return sageErrorResponse("MIM_CREDENTIAL_MISSING");
     }
 
@@ -136,154 +125,151 @@ Respondé a la consulta del usuario de forma concisa y accionable.
     // ── 3. Truncado de Historial a los últimos 6 turnos para optimizar tokens ──
     const recentMessages = Array.isArray(messages) ? messages.slice(-6) : [];
 
-    const geminiContents = [
-      { role: "user", parts: [{ text: `${systemContext}\n\n[INICIO DE LA CONSULTA]` }] },
+    // Build messages in the AIProvider format
+    const aiMessages = [
       {
-        role: "model",
-        parts: [
-          {
-            text: isBully
-              ? "Dale, decime qué hiciste ahora para romper el juego."
-              : "Entendido. Estoy listo para ayudarte a analizar este incidente técnico.",
-          },
-        ],
+        role: "user" as const,
+        parts: [{ type: "text" as const, text: `${systemContext}\n\n[INICIO DE LA CONSULTA]` }],
+      },
+      {
+        role: "assistant" as const,
+        parts: [{
+          type: "text" as const,
+          text: isBully
+            ? "Dale, decime qué hiciste ahora para romper el juego."
+            : "Entendido. Estoy listo para ayudarte a analizar este incidente técnico.",
+        }],
       },
       ...recentMessages
         .filter((m) => m?.text && m.text.trim())
         .map((m) => ({
-          role: m.role === "model" ? "model" : "user",
-          parts: [{ text: m.text.trim() }],
+          role: (m.role === "model" ? "assistant" : "user") as "user" | "assistant",
+          parts: [{ type: "text" as const, text: m.text.trim() }],
         })),
-      { role: "user", parts: [{ text: question.trim() }] },
-    ];
-
-    // Presupuesto diferenciado de tokens y temperatura ajustada
-    const requestPayload = {
-      contents: geminiContents,
-      generationConfig: {
-        temperature: isBully ? 0.5 : 0.2,
-        maxOutputTokens: isBully ? 280 : 700,
+      {
+        role: "user" as const,
+        parts: [{ type: "text" as const, text: question.trim() }],
       },
-    };
-
-    // ── 4. Cascada de modelos ordenada priorizando el último exitoso ──
-    const prioritizedModels = [
-      lastSuccessfulModel,
-      ...GEMINI_MODELS.filter((m) => m !== lastSuccessfulModel),
     ];
 
-    let lastErrorMsg = "";
-    let isRateLimited = false;
+    // ── 4. Generate via AIProvider ──
+    try {
+      let responseText: string;
+      let modelUsed: string;
 
-    for (const modelName of prioritizedModels) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
-
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": resolvedApiKey,
-          },
-          body: JSON.stringify(requestPayload),
-          signal: AbortSignal.any([
-            request.signal,
-            AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
-          ]),
+      if (provider.id === "openrouter" && "generateWithFallback" in provider) {
+        // GLM cascade via OpenRouter
+        const result = await (provider as OpenRouterProvider).generateWithFallback({
+          messages: aiMessages,
+          temperature: isBully ? 0.5 : 0.2,
+          maxOutputTokens: isBully ? 280 : 700,
         });
+        responseText = result.text;
+        modelUsed = result.model;
+      } else {
+        // Gemini cascade: try models in order
+        const GEMINI_MODELS = [
+          "gemini-flash-lite-latest",
+          "gemini-3.5-flash-lite",
+          "gemini-3.5-flash",
+          "gemini-3.6-flash",
+        ];
 
-        if (res.ok) {
-          if (res.body) {
-            const reader = new GeminiSseTextReader(res.body);
-            const first = await reader.readText();
-            if (!first.done && first.text) {
-              lastSuccessfulModel = modelName;
-              return createSageStreamResponse(reader, modelName, first.text);
+        let lastErr: unknown = null;
+        responseText = "";
+        modelUsed = GEMINI_MODELS[0];
+
+        for (const modelName of GEMINI_MODELS) {
+          try {
+            const result = await provider.generate({
+              model: modelName,
+              messages: aiMessages,
+              temperature: isBully ? 0.5 : 0.2,
+              maxOutputTokens: isBully ? 280 : 700,
+            });
+
+            if (result.text) {
+              responseText = result.text;
+              modelUsed = modelName;
+              break;
             }
+          } catch (err: unknown) {
+            lastErr = err;
+            const isRetryable =
+              isAIProviderError(err) &&
+              (err.code === "RATE_LIMITED" || (err.status !== undefined && err.status >= 500));
+
+            if (!isRetryable) {
+              // Non-retryable error — check for auth issues
+              if (isAIProviderError(err) && err.code === "NO_API_KEY") {
+                return sageErrorResponse("MIM_CREDENTIAL_MISSING");
+              }
+              const msg = errorMessage(err);
+              if (msg.toLowerCase().includes("api_key") || msg.toLowerCase().includes("api key")) {
+                return sageErrorResponse("MIM_CREDENTIAL_INVALID", { details: msg });
+              }
+              throw err;
+            }
+
+            console.warn(`[/api/sage/chat] Model ${modelName} failed, trying fallback...`);
           }
-          lastErrorMsg = "Gemini returned an empty stream";
-          continue;
         }
 
-        const errData: unknown = await res.json().catch(() => ({}));
-        const errMsg = providerErrorMessage(errData, res.statusText);
-        lastErrorMsg = errMsg;
-
-        // Caso A: Clave API inválida o expirada
-        if (
-          [400, 401, 403].includes(res.status) &&
-          (errMsg.toLowerCase().includes("api_key") || errMsg.toLowerCase().includes("api key"))
-        ) {
-          return sageErrorResponse("MIM_CREDENTIAL_INVALID", { details: errMsg });
+        if (!responseText) {
+          if (lastErr && isAIProviderError(lastErr) && lastErr.code === "RATE_LIMITED") {
+            return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: errorMessage(lastErr) });
+          }
+          return sageErrorResponse("MIM_AI_GENERATION_FAILED", {
+            message: `MIM-Bot no pudo generar respuesta tras probar ${GEMINI_MODELS.length} modelos.`,
+            details: lastErr ? errorMessage(lastErr) : "Unknown error",
+          });
         }
-
-        // Caso B: Rate Limit / Quota Exceeded (429)
-        if (res.status === 429 || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource_exhausted")) {
-          isRateLimited = true;
-          console.warn(`[/api/sage/chat] Modelo ${modelName} devolvió 429 (Cuota/Rate Limit): ${errMsg}. Probando fallback...`);
-          continue;
-        }
-
-        console.warn(`[/api/sage/chat] Modelo ${modelName} falló (Status ${res.status}): ${errMsg}. Probando siguiente modelo...`);
-      } catch (err: unknown) {
-        const message = errorMessage(err);
-        console.warn(`[/api/sage/chat] Error de red con modelo ${modelName}:`, message);
-        lastErrorMsg = message;
       }
-    }
 
-    // Si fallaron todos los modelos por cuota/rate limit
-    if (isRateLimited) {
-      return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: lastErrorMsg });
-    }
+      // ── 5. Emit buffered response through SSE stream contract ──
+      // The SageMimbotCopilot frontend expects the SSE stream format.
+      // We buffer the full response and emit it as start → delta → done.
+      return createBufferedStreamResponse(responseText, modelUsed);
 
-    return sageErrorResponse("MIM_AI_GENERATION_FAILED", {
-      message: `MIM-Bot no pudo generar respuesta tras probar ${prioritizedModels.length} modelos.`,
-      details: lastErrorMsg,
-    });
+    } catch (err: unknown) {
+      const msg = errorMessage(err);
+      console.warn("[/api/sage/chat] Provider generation failed:", msg);
+
+      if (isAIProviderError(err)) {
+        if (err.code === "RATE_LIMITED") {
+          return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: msg });
+        }
+      }
+
+      return sageErrorResponse("MIM_AI_GENERATION_FAILED", {
+        message: "MIM-Bot no pudo generar respuesta.",
+        details: msg,
+      });
+    }
   }
 );
 
-function createSageStreamResponse(
-  reader: GeminiSseTextReader,
-  model: string,
-  firstText: string,
-): Response {
-  let started = false;
-  let closed = false;
+/**
+ * Emits a buffered AI response through the SAGE SSE stream contract.
+ * Preserves the SageMimbotCopilot frontend expectations (start → delta → done).
+ */
+function createBufferedStreamResponse(text: string, model: string): Response {
+  let step = 0;
 
   const stream = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (closed) return;
-      if (!started) {
+    pull(controller) {
+      if (step === 0) {
         controller.enqueue(encodeSageStreamEvent({ type: "start", model }));
-        controller.enqueue(encodeSageStreamEvent({ type: "delta", text: firstText }));
-        started = true;
+        step = 1;
         return;
       }
-
-      try {
-        const chunk = await reader.readText();
-        if (chunk.done) {
-          controller.enqueue(encodeSageStreamEvent({ type: "done" }));
-          controller.close();
-          closed = true;
-          return;
-        }
-        controller.enqueue(encodeSageStreamEvent({ type: "delta", text: chunk.text }));
-      } catch (error: unknown) {
-        console.warn("[/api/sage/chat] Gemini stream interrupted:", errorMessage(error));
-        controller.enqueue(encodeSageStreamEvent({
-          type: "error",
-          error: sageErrorPayload("MIM_AI_GENERATION_FAILED"),
-        }));
-        controller.close();
-        closed = true;
+      if (step === 1) {
+        controller.enqueue(encodeSageStreamEvent({ type: "delta", text }));
+        step = 2;
+        return;
       }
-    },
-    async cancel(reason) {
-      closed = true;
-      await reader.cancel(reason);
+      controller.enqueue(encodeSageStreamEvent({ type: "done" }));
+      controller.close();
     },
   });
 
@@ -296,10 +282,3 @@ function createSageStreamResponse(
   });
 }
 
-function providerErrorMessage(value: unknown, fallback: string): string {
-  if (typeof value !== "object" || value === null) return fallback;
-  const error = Reflect.get(value, "error");
-  if (typeof error !== "object" || error === null) return fallback;
-  const message = Reflect.get(error, "message");
-  return typeof message === "string" ? message : fallback;
-}

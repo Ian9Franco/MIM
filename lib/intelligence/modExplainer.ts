@@ -1,9 +1,13 @@
 /**
  * MIM Desktop — Intelligent Multimodal Project Explainer Service
- * Synthesizes Minecraft mod/shader/resourcepack descriptions on-demand using
- * Google Gemini Flash Multimodal API with native Google Search Grounding and
- * gallery screenshot visual analysis.
+ * Synthesizes Minecraft mod/shader/resourcepack descriptions on-demand.
+ * Generation goes through AIProvider (Gemini by default). Search grounding
+ * remains a Gemini response field when the provider returns it.
  */
+
+import { GeminiProvider, isAIProviderError, type AIContentPart, type AIProvider } from "./ai";
+import { OpenRouterProvider } from "./ai/openRouterProvider";
+import { buildProjectExplainContext } from "./contextBuilder";
 
 export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 
@@ -263,113 +267,89 @@ ${imagesCount > 0 ? `- **📸 En capturas:** Hay ${imagesCount} captura(s) ofici
 
 export async function explainModWithGemini(
   input: ModExplainerInput,
-  resolvedApiKey: string
+  resolvedApiKey: string,
+  provider: AIProvider = new GeminiProvider(resolvedApiKey)
 ): Promise<ModExplanationResult> {
   if (!resolvedApiKey) {
     throw new Error("NO_API_KEY");
   }
 
-  const baseModel = getGeminiModel(input.model);
-  const modelsToTry = [baseModel, ...GEMINI_MODEL_CASCADE.filter((m) => m !== baseModel)];
   const inlineImages = await fetchImagesAsInlineData(input.galleryUrls, 3, 2000);
   const imagesCount = inlineImages.length;
-  const promptText = buildMultimodalPrompt(input, imagesCount);
-  type GeminiPart =
-    | { text: string }
-    | { inlineData: { mimeType: string; data: string } };
 
-  const contentParts: GeminiPart[] = [{ text: promptText }];
-  for (const img of inlineImages) {
-    contentParts.push({
-      inlineData: {
-        mimeType: img.mimeType,
-        data: img.data,
-      },
-    });
-  }
+  // Build evidence-tagged context via the Context Builder
+  const ctx = buildProjectExplainContext(input, inlineImages);
 
-  for (const currentModel of modelsToTry) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      currentModel
-    )}:generateContent?key=${encodeURIComponent(resolvedApiKey)}`;
+  const contentParts: AIContentPart[] = [
+    { type: "text", text: `${ctx.systemPrompt}\n\n${ctx.userPrompt}` },
+    ...inlineImages.map((img) => ({
+      type: "image" as const,
+      mimeType: img.mimeType,
+      data: img.data,
+    })),
+  ];
 
+  // Route through the appropriate cascade based on provider type
+  if (provider.id === "openrouter" && "generateWithFallback" in provider) {
     try {
-      // 1 SOLA PETICIÓN DIRECTA: Todo empaquetado (prompt + metadatos + capturas inline base64)
-      // Sin herramientas adicionales que agoten la cuota de búsqueda de Google en Free Tier
-      const requestPayload = {
-        contents: [{ role: "user", parts: contentParts }],
-        generationConfig: {
-          temperature: 0.65,
-          maxOutputTokens: 800,
-        },
-      };
-
-      let response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestPayload),
+      const result = await (provider as OpenRouterProvider).generateWithFallback({
+        messages: [{ role: "user", parts: contentParts }],
+        temperature: 0.65,
+        maxOutputTokens: 800,
       });
 
-      // Si Google responde 429 (límite de 20 RPM de Free Tier), extraer tiempo de espera y reintentar una vez
-      if (response.status === 429) {
-        const errText = await response.text();
-        const retryMatch = errText.match(/retry in\s*([\d.]+)\s*s/i);
-        const waitSeconds = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1])), 8) : 3;
-        console.warn(`[ModExplainer] Rate limit (429) alcanzado en ${currentModel}. Esperando ${waitSeconds}s para reintento automático...`);
-        
-        await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-        
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestPayload),
+      return {
+        projectId: input.projectId,
+        summaryMarkdown: result.text,
+        groundedSources: result.groundedSources,
+        searchUsed: result.searchUsed,
+        imagesAnalyzed: imagesCount,
+        model: result.model,
+      };
+    } catch (err: unknown) {
+      const errMsg = isAIProviderError(err) ? err.message : err instanceof Error ? err.message : String(err);
+      console.warn("[ModExplainer] OpenRouter cascade exhausted:", errMsg);
+    }
+  } else {
+    // Gemini cascade: try each model in the cascade
+    const baseModel = getGeminiModel(input.model);
+    const modelsToTry = [baseModel, ...GEMINI_MODEL_CASCADE.filter((m) => m !== baseModel)];
+
+    for (const currentModel of modelsToTry) {
+      try {
+        const result = await provider.generate({
+          model: currentModel,
+          messages: [{ role: "user", parts: contentParts }],
+          temperature: 0.65,
+          maxOutputTokens: 800,
         });
+
+        return {
+          projectId: input.projectId,
+          summaryMarkdown: result.text,
+          groundedSources: result.groundedSources,
+          searchUsed: result.searchUsed,
+          imagesAnalyzed: imagesCount,
+          model: result.model,
+        };
+      } catch (fetchErr: unknown) {
+        const errMsg = isAIProviderError(fetchErr)
+          ? fetchErr.message
+          : fetchErr instanceof Error
+            ? fetchErr.message
+            : String(fetchErr);
+        console.warn(`[ModExplainer] Error con modelo ${currentModel}:`, errMsg);
       }
-
-      if (response.ok) {
-        const data = await response.json();
-        const candidate = data?.candidates?.[0];
-        const summaryMarkdown = candidate?.content?.parts?.[0]?.text;
-
-        if (summaryMarkdown && summaryMarkdown.trim()) {
-          const sources: GroundedSource[] = [];
-          const groundingMetadata = candidate?.groundingMetadata;
-          const searchChunks = groundingMetadata?.groundingChunks || [];
-
-          for (const chunk of searchChunks) {
-            if (chunk?.web?.uri) {
-              sources.push({
-                title: chunk.web.title || chunk.web.uri,
-                url: chunk.web.uri,
-              });
-            }
-          }
-
-          const searchQueries = groundingMetadata?.webSearchQueries || [];
-          const searchUsed = searchChunks.length > 0 || searchQueries.length > 0;
-
-          return {
-            projectId: input.projectId,
-            summaryMarkdown: summaryMarkdown.trim(),
-            groundedSources: sources,
-            searchUsed,
-            imagesAnalyzed: imagesCount,
-            model: currentModel,
-          };
-        }
-      }
-
-      const errText = await response.text();
-      console.warn(`[ModExplainer] Modelo ${currentModel} respondió ${response.status}: ${errText.substring(0, 100)}. Probando modelo de respaldo...`);
-    } catch (fetchErr: unknown) {
-      const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-      console.warn(`[ModExplainer] Error con modelo ${currentModel}:`, errMsg);
     }
   }
 
-  console.warn("[ModExplainer] Todos los modelos de la API de Google alcanzaron el límite. Activando Fallback Heurístico Local de MIM-Bot...");
+  console.warn("[ModExplainer] All models exhausted. Activating local fallback...");
   return generateLocalFallbackExplanation(input, imagesCount);
 }
+
+/** @deprecated Use `explainModWithGemini` — alias kept for backward compatibility. */
+export const explainProject = explainModWithGemini;
+
 
 export interface ProjectChatMessage {
   role: "user" | "model";

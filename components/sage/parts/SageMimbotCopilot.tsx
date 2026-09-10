@@ -14,7 +14,7 @@
  *  - Distinción de errores (429 Rate Limit vs 401 Auth).
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { 
   Send, Loader2, Key, Settings2, X, RotateCcw, 
   MessageSquare, Undo2
@@ -32,6 +32,16 @@ import {
   SageStreamFailure,
 } from "@/lib/intelligence/sage/streamContract";
 import type { GeminiKeyStatus } from "@/lib/intelligence/geminiKeyValidation";
+import { computeCrashSignature } from "@/lib/intelligence/sage/cacheEngine";
+import {
+  buildInitialQuickQuestions,
+  deriveFollowUpSuggestions,
+  isCanonicalQuickQuestion,
+} from "@/lib/intelligence/sage/mimbotQuickQuestions";
+import {
+  getCachedQuickQuestionResponse,
+  saveQuickQuestionResponse,
+} from "@/lib/intelligence/sage/quickQuestionCache";
 
 type GeminiConnectionState = "none" | "validating" | GeminiKeyStatus;
 
@@ -80,6 +90,36 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const prevSigRef = useRef("");
+
+  const crashSignature = useMemo(
+    () =>
+      computeCrashSignature(
+        analysis.loader || "",
+        analysis.gameVersion || "",
+        analysis.explanation || analysis.technicalSummary || "",
+        analysis.suspectedMods || []
+      ),
+    [analysis]
+  );
+
+  const initialQuickQuestions = useMemo(
+    () => buildInitialQuickQuestions(analysis),
+    [analysis]
+  );
+
+  const followUpQuestions = useMemo(() => {
+    if (chatMessages.length === 0 || isSending) return [];
+    const lastModel = [...chatMessages].reverse().find((msg) => msg.role === "model");
+    if (!lastModel?.text.trim()) return [];
+    return deriveFollowUpSuggestions({
+      analysis,
+      lastModelReply: lastModel.text,
+      askedQuestions: chatMessages.filter((msg) => msg.role === "user").map((msg) => msg.text),
+    });
+  }, [analysis, chatMessages, isSending]);
+
+  const suggestionChips =
+    chatMessages.length === 0 ? initialQuickQuestions : followUpQuestions;
 
   const refreshGeminiConnection = useCallback(async () => {
     try {
@@ -248,9 +288,23 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       const newMessages: ChatMessage[] = [...chatMessages, { role: "user", text: question }];
       setChatMessages(newMessages);
       setChatInput("");
-      setIsSending(true);
       setChatError(null);
       setUndoMessages(null);
+
+      const cacheEligible = isCanonicalQuickQuestion(question, analysis);
+      if (cacheEligible) {
+        const cachedReply = getCachedQuickQuestionResponse(
+          crashSignature,
+          question,
+          personality
+        );
+        if (cachedReply) {
+          setChatMessages([...newMessages, { role: "model", text: cachedReply }]);
+          return;
+        }
+      }
+
+      setIsSending(true);
 
       const requestController = new AbortController();
       activeRequestRef.current = requestController;
@@ -331,6 +385,10 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           streamedReply += event.text;
           setChatMessages([...newMessages, { role: "model", text: streamedReply }]);
         });
+
+        if (cacheEligible && streamedReply.trim()) {
+          saveQuickQuestionResponse(crashSignature, question, personality, streamedReply);
+        }
       } catch (error: unknown) {
         if (requestController.signal.aborted) return;
         const message = error instanceof SageStreamFailure
@@ -352,7 +410,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         }
       }
     },
-    [chatInput, chatMessages, isSending, connectionState, hasSavedKey, personality, analysis]
+    [chatInput, chatMessages, isSending, connectionState, hasSavedKey, personality, analysis, crashSignature]
   );
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -385,15 +443,6 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       }
     }
   };
-
-  const quickQuestions = [
-    analysis.suspectedMods?.length
-      ? `¿Cómo resuelvo el conflicto con ${analysis.suspectedMods[0]}?`
-      : "¿Qué causó este crash exactamente?",
-    "¿Hay una versión actualizada o compatible disponible?",
-    "¿Qué mod debo desactivar primero?",
-    "¿Es un error de memoria o de dependencias?",
-  ];
 
   return (
     <div className="rounded-2xl border border-purple-500/25 bg-black/40 backdrop-blur-md p-4 space-y-3.5 shadow-xl">
@@ -566,11 +615,12 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           </div>
         )}
 
-        {/* Chips de sugerencias rápidas si el chat está vacío */}
-        {chatMessages.length === 0 && (
+        {/* Quick questions (iniciales) o seguimientos contextuales (BOT-03) */}
+        {suggestionChips.length > 0 && connectionState === "valid" && !isSending && (
           <MimbotQuickQuestions
-            quickQuestions={quickQuestions}
+            quickQuestions={suggestionChips}
             onSelectQuestion={(chip) => handleSend(chip)}
+            variant={chatMessages.length === 0 ? "initial" : "follow-up"}
           />
         )}
 

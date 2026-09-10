@@ -8,7 +8,7 @@
 
 1. [🖥️ MIM Server & Sincronización Remota (Issue #58)](#1-mim-server--sincronización-remota-issue-58)
 2. [📦 Arquitectura de Monorepo & Workspaces (Issue #60)](#2-arquitectura-de-monorepo--workspaces-issue-60)
-3. [🤖 MIMbot & Model Gateway (Backlog LLM)](#3-mimbot--model-gateway-backlog-llm)
+3. [🤖 MIMbot & Model Gateway](#3-mimbot--model-gateway)
 4. [🧹 Calidad de Código, Refactorings & Deuda Técnica](#4-calidad-de-código-refactorings--deuda-técnica)
 5. [📊 Rigor de Evaluación (SAGE & MIMbot Evals)](#5-rigor-de-evaluación-sage--mimbot-evals)
 6. [🎨 UI / UX & Experiencia de Usuario](#6-ui--ux--experiencia-de-usuario)
@@ -39,28 +39,35 @@
 
 ---
 
-## 3. 🤖 MIMbot & Model Gateway (Backlog LLM)
+## 3. 🤖 MIMbot & Model Gateway
 
-### ✅ Cerrado recientemente (main)
+> **Estado (2026-09-10):** El **Model Gateway (ADR-007)** está **cerrado** en `main` (#68, #70, #73–#75). Lo que queda en esta sección es **backlog de producto/UX** de MIMbot, no infraestructura de gateway.
+
+### ✅ Model Gateway (ADR-007) — cerrado
 
 | Ítem | Tarea | Evidencia |
 | :--- | :--- | :--- |
 | **Gateway request lifecycle** | `BOT-05a` | PR #68 — cancelación, timeout 15s, retries cancelables, credenciales en headers |
 | **Naming MIM-Bot Chat** | — | PR #70 — `mim-bot-chat`, `mimBotChat()`, `MIM_BOT_CHAT_MODE` |
 | **Estado de conexión Gemini en copiloto** | `BOT-04` | Validación real vía `/api/settings/validate-keys` + badge en `SageMimbotCopilot` |
-| **Model Router por intención** | `BOT-GW` | `modelGateway.ts` — texto → GLM/OpenRouter, multimodal/búsqueda → Gemini |
-| **SAGE chat unificado multi-proveedor** | `BOT-05b` | `sageChatEngine.ts` — `/api/sage/chat` y `sageMimbotEngine` comparten gateway |
-| **Salida JSON en explain-deps** | `BOT-JSON` | Zod + fallback determinista en `dependencyExplain.ts` |
-| **Observabilidad de cuotas IA** | `BOT-06` | `quotaClassifier.ts`, `GET /api/settings/ai-quota`, panel en Settings |
+| **Model Router por intención** | `BOT-GW` | PR #73 — `modelGateway.ts`: texto → GLM/OpenRouter, multimodal/búsqueda → Gemini |
+| **SAGE chat unificado multi-proveedor** | `BOT-05b` | PR #74 — `sageChatEngine.ts` unifica `/api/sage/chat` y `sageMimbotEngine` |
+| **Salida JSON en explain-deps** | `BOT-JSON` | PR #74 — Zod + fallback determinista en `dependencyExplain.ts` |
+| **Observabilidad de cuotas IA** | `BOT-06` | PR #75 — `quotaClassifier.ts`, `GET /api/settings/ai-quota`, panel en Settings |
 
-### Pendiente (gateway y producto)
+Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): eval fixtures MIMbot (`SAGE-05`), migración de rutas legacy en `web/`, caché semántica (`BOT-08`), flags de modelo en UI.
+
+### Pendiente — producto MIMbot / UX
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Caché Semántico / Hashing de Contexto:** Cachear por hash de evidencia para no reenviar inferencias ante consultas idénticas. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Primera Experiencia sin BYOK:** Ejemplos estáticos y explicación de valor antes de pedir clave; backend gratuito requiere decisión de presupuesto/cuota. | `BOT-02` | 🟢 [whosnext.md (BOT-02)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Chips de Preguntas Contextuales Dinámicas:** Sugerencias de seguimiento inteligentes ligadas a la última respuesta del modelo. | `BOT-03` | 🟢 [whosnext.md (BOT-03)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Cola para Análisis por Lotes (condicional):** Concurrencia acotada, cancelación y espera según cuota real — solo si se incorpora ese flujo. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Caché de Quick Questions (24 h):** Clave por crash/pregunta/modo; la caché actual de diagnósticos no cierra este requisito. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Transparencia BYOK:** Aviso verificable sobre qué datos se envían, retención y uso; no prometer privacidad solo por usar key propia. | `BOT-09` | 🟢 [whosnext.md (BOT-09)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 
 ---
 

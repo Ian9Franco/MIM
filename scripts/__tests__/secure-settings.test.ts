@@ -36,6 +36,7 @@ async function main() {
     safeStorage: fakeSafeStorage(),
     settingsPath,
     secretsPath,
+    trustedRoots: [root],
   });
 
   const migrated = store.migratePlaintextSettings();

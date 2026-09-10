@@ -3,11 +3,8 @@
  * Validates dataset structure; live LLM scoring is opt-in via RUN_MIMBOT_LIVE=1.
  */
 
-import fs from "fs";
-import path from "path";
 import { z } from "zod";
-
-const FIXTURE_PATH = path.join(__dirname, "mimbot-fixtures.json");
+import fixtureData from "./mimbot-fixtures.json";
 
 const caseSchema = z.object({
   id: z.string().min(1),
@@ -59,8 +56,7 @@ function scoreResponse(text: string, testCase: z.infer<typeof caseSchema>): {
 }
 
 async function main(): Promise<void> {
-  const raw = fs.readFileSync(FIXTURE_PATH, "utf8");
-  const fixture = fixtureSchema.parse(JSON.parse(raw));
+  const fixture = fixtureSchema.parse(fixtureData);
 
   assert(fixture.cases.length >= 15, `Fixture has ${fixture.cases.length} cases (>= 15)`);
   assert(fixture.cases.length <= 20, `Fixture has ${fixture.cases.length} cases (SAGE-05 target <= 20)`);

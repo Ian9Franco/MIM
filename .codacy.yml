@@ -8,6 +8,7 @@ engines:
       min_length: 50
 
 exclude_paths:
+  - scripts/__tests__/**
   - node_modules/**
   - .next/**
   - out/**

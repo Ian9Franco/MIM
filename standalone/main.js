@@ -5,6 +5,7 @@ const path = require('path');
 const http = require('http');
 const { runCurseForgeScraper } = require('./scraper');
 const { createSecretStore } = require('./secret-store');
+const { resolveTrustedPath } = require('./trusted-path');
 
 let mainWindow = null;
 let serverProcess = null;
@@ -23,44 +24,57 @@ function getPortableDirectory() {
   return path.join(app.getPath('home'), '.mim-index');
 }
 
-function listLegacySettingsCandidates(portableSettings) {
+function buildLegacyTrustedRoots() {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
+  return [homeIndex, standaloneDir, devSourceIndex];
+}
+
+function listLegacySettingsCandidates(portableSettings, trustedRoots) {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
   const candidates = [
-    path.join(process.cwd(), 'mim-settings.json'),
-    path.join(__dirname, '..', '.next', 'standalone', 'mim-settings.json'),
-    path.join(app.getPath('home'), '.mim-index', 'mim-settings.json'),
-    path.join('D:', '.MIM', 'source', '.mim-index', 'mim-settings.json'),
+    path.join(standaloneDir, 'mim-settings.json'),
+    path.join(homeIndex, 'mim-settings.json'),
+    path.join(devSourceIndex, 'mim-settings.json'),
   ];
-  return [...new Set(candidates)].filter(
-    (candidate) => candidate !== portableSettings && fs.existsSync(candidate)
-  );
+  const resolvedPortable = path.resolve(portableSettings);
+  return [...new Set(candidates)]
+    .map((candidate) => resolveTrustedPath(candidate, trustedRoots))
+    .filter((candidate) => candidate !== resolvedPortable && fs.existsSync(candidate));
 }
 
-function listLegacySecretsCandidates(portableSecretsPath, portableDir) {
-  const dirs = [
-    path.join(app.getPath('home'), '.mim-index'),
-    path.join('D:', '.MIM', 'source', '.mim-index'),
-    path.join(__dirname, '..', '.next', 'standalone'),
-    process.cwd(),
-  ];
+function listLegacySecretsCandidates(portableSecretsPath, portableDir, trustedRoots) {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
+  const dirs = [homeIndex, devSourceIndex, standaloneDir];
+  const resolvedPortableDir = path.resolve(portableDir);
+  const resolvedPortableSecrets = path.resolve(portableSecretsPath);
   return [...new Set(dirs)]
-    .filter((dir) => dir && dir !== portableDir)
-    .map((dir) => path.join(dir, 'mim-secrets.enc.json'))
-    .filter((candidate) => candidate !== portableSecretsPath && fs.existsSync(candidate));
+    .map((dir) => resolveTrustedPath(dir, trustedRoots))
+    .filter((dir) => dir !== resolvedPortableDir)
+    .map((dir) => resolveTrustedPath(path.join(dir, 'mim-secrets.enc.json'), trustedRoots))
+    .filter((candidate) => candidate !== resolvedPortableSecrets && fs.existsSync(candidate));
 }
 
-function recoverPortableSettings(portableSettings) {
-  if (fs.existsSync(portableSettings)) return;
-  const legacySettings = listLegacySettingsCandidates(portableSettings);
+function recoverPortableSettings(portableSettings, trustedRoots) {
+  const resolvedTarget = resolveTrustedPath(portableSettings, trustedRoots);
+  if (fs.existsSync(resolvedTarget)) return;
+  const legacySettings = listLegacySettingsCandidates(resolvedTarget, trustedRoots);
   if (legacySettings.length === 0) return;
-  fs.copyFileSync(legacySettings[0], portableSettings);
+  fs.copyFileSync(legacySettings[0], resolvedTarget);
   console.log('[MIM] Recovered settings from', legacySettings[0]);
 }
 
-function recoverEncryptedSecrets(portableSecretsPath, portableDir) {
-  if (fs.existsSync(portableSecretsPath)) return;
-  const legacySecrets = listLegacySecretsCandidates(portableSecretsPath, portableDir);
+function recoverEncryptedSecrets(portableSecretsPath, portableDir, trustedRoots) {
+  const resolvedTarget = resolveTrustedPath(portableSecretsPath, trustedRoots);
+  if (fs.existsSync(resolvedTarget)) return;
+  const legacySecrets = listLegacySecretsCandidates(resolvedTarget, portableDir, trustedRoots);
   if (legacySecrets.length === 0) return;
-  fs.copyFileSync(legacySecrets[0], portableSecretsPath);
+  fs.copyFileSync(legacySecrets[0], resolvedTarget);
   console.log('[MIM] Recovered encrypted credentials from', legacySecrets[0]);
 }
 
@@ -71,17 +85,21 @@ function initializeSecretStore() {
   const portableSettings = path.join(portableDir, 'mim-settings.json');
   const portableSecrets = path.join(portableDir, 'mim-secrets.enc.json');
 
-  recoverPortableSettings(portableSettings);
-  recoverEncryptedSecrets(portableSecrets, portableDir);
+  const trustedRoots = buildLegacyTrustedRoots();
+  trustedRoots.push(portableDir);
+
+  recoverPortableSettings(portableSettings, trustedRoots);
+  recoverEncryptedSecrets(portableSecrets, portableDir, trustedRoots);
 
   secretStore = createSecretStore({
     safeStorage,
     settingsPath: portableSettings,
     secretsPath: portableSecrets,
+    trustedRoots,
   });
 
   secretStore.migratePlaintextSettings();
-  secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings));
+  secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
 
   console.log('[MIM] Portable data directory:', portableDir);
   return secretStore.toEnvironment();

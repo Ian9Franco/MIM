@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { resolveTrustedPath } = require("./trusted-path");
 
 const SECRET_FIELDS = [
   "modrinthApiKey",
@@ -27,7 +28,12 @@ function writeJsonAtomic(filePath, value) {
   fs.renameSync(temporaryPath, filePath);
 }
 
-function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
+function createSecretStore({ safeStorage, settingsPath, secretsPath, trustedRoots = [] }) {
+  const pathRoots = [
+    ...trustedRoots,
+    path.dirname(settingsPath),
+    path.dirname(secretsPath),
+  ];
   function assertAvailable() {
     if (!safeStorage.isEncryptionAvailable()) {
       throw new Error("Electron safeStorage is not available on this system");
@@ -81,10 +87,16 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
   }
 
   function importPlaintextFromSettingsFile(sourcePath, stripPlaintext = true) {
-    if (!fs.existsSync(sourcePath)) return false;
+    let resolvedSource;
+    try {
+      resolvedSource = resolveTrustedPath(sourcePath, pathRoots);
+    } catch {
+      return false;
+    }
+    if (!fs.existsSync(resolvedSource)) return false;
     let settings;
     try {
-      settings = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+      settings = JSON.parse(fs.readFileSync(resolvedSource, "utf8"));
     } catch {
       return false;
     }
@@ -101,7 +113,7 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
     update(legacySecrets);
     if (stripPlaintext) {
       for (const field of SECRET_FIELDS) delete settings[field];
-      writeJsonAtomic(sourcePath, settings);
+      writeJsonAtomic(resolvedSource, settings);
     }
     return true;
   }

@@ -11,36 +11,80 @@ let serverProcess = null;
 let pendingProtocolUrl = null;
 const PORT = process.env.PORT || 3000;
 let secretStore = null;
+let resolvedPortableDir = null;
 
 function getPortableDirectory() {
   if (process.env.MIM_PORTABLE_DIR) return path.resolve(process.env.MIM_PORTABLE_DIR);
-  const developerSource = path.join('D:', '.MIM', 'source');
-  if (fs.existsSync(developerSource)) return path.join(developerSource, '.mim-index');
+  // D: dev path only for unpackaged dev runs — packaged installs always use homedir
+  if (!app.isPackaged) {
+    const developerSource = path.join('D:', '.MIM', 'source');
+    if (fs.existsSync(developerSource)) return path.join(developerSource, '.mim-index');
+  }
   return path.join(app.getPath('home'), '.mim-index');
+}
+
+function listLegacySettingsCandidates(portableSettings) {
+  const candidates = [
+    path.join(process.cwd(), 'mim-settings.json'),
+    path.join(__dirname, '..', '.next', 'standalone', 'mim-settings.json'),
+    path.join(app.getPath('home'), '.mim-index', 'mim-settings.json'),
+    path.join('D:', '.MIM', 'source', '.mim-index', 'mim-settings.json'),
+  ];
+  return [...new Set(candidates)].filter(
+    (candidate) => candidate !== portableSettings && fs.existsSync(candidate)
+  );
+}
+
+function listLegacySecretsCandidates(portableSecretsPath, portableDir) {
+  const dirs = [
+    path.join(app.getPath('home'), '.mim-index'),
+    path.join('D:', '.MIM', 'source', '.mim-index'),
+    path.join(__dirname, '..', '.next', 'standalone'),
+    process.cwd(),
+  ];
+  return [...new Set(dirs)]
+    .filter((dir) => dir && dir !== portableDir)
+    .map((dir) => path.join(dir, 'mim-secrets.enc.json'))
+    .filter((candidate) => candidate !== portableSecretsPath && fs.existsSync(candidate));
+}
+
+function recoverPortableSettings(portableSettings) {
+  if (fs.existsSync(portableSettings)) return;
+  const legacySettings = listLegacySettingsCandidates(portableSettings);
+  if (legacySettings.length === 0) return;
+  fs.copyFileSync(legacySettings[0], portableSettings);
+  console.log('[MIM] Recovered settings from', legacySettings[0]);
+}
+
+function recoverEncryptedSecrets(portableSecretsPath, portableDir) {
+  if (fs.existsSync(portableSecretsPath)) return;
+  const legacySecrets = listLegacySecretsCandidates(portableSecretsPath, portableDir);
+  if (legacySecrets.length === 0) return;
+  fs.copyFileSync(legacySecrets[0], portableSecretsPath);
+  console.log('[MIM] Recovered encrypted credentials from', legacySecrets[0]);
 }
 
 function initializeSecretStore() {
   const portableDir = getPortableDirectory();
+  resolvedPortableDir = portableDir;
   fs.mkdirSync(portableDir, { recursive: true });
   const portableSettings = path.join(portableDir, 'mim-settings.json');
-  if (!fs.existsSync(portableSettings)) {
-    const legacyCandidates = [
-      path.join(process.cwd(), 'mim-settings.json'),
-      path.join(__dirname, '..', '.next', 'standalone', 'mim-settings.json'),
-    ];
-    const legacySettings = legacyCandidates.find((candidate) => fs.existsSync(candidate));
-    if (legacySettings) {
-      fs.copyFileSync(legacySettings, portableSettings);
-      fs.unlinkSync(legacySettings);
-    }
-  }
+  const portableSecrets = path.join(portableDir, 'mim-secrets.enc.json');
+
+  recoverPortableSettings(portableSettings);
+  recoverEncryptedSecrets(portableSecrets, portableDir);
+
   secretStore = createSecretStore({
     safeStorage,
     settingsPath: portableSettings,
-    secretsPath: path.join(portableDir, 'mim-secrets.enc.json'),
+    secretsPath: portableSecrets,
   });
-  const secrets = secretStore.migratePlaintextSettings();
-  return secretStore.toEnvironment(secrets);
+
+  secretStore.migratePlaintextSettings();
+  secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings));
+
+  console.log('[MIM] Portable data directory:', portableDir);
+  return secretStore.toEnvironment();
 }
 
 function handleDeepLink(url) {
@@ -80,6 +124,7 @@ function startNextServer(secretEnvironment = {}) {
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       MIM_DESKTOP_RUNTIME: '1',
+      ...(resolvedPortableDir ? { MIM_PORTABLE_DIR: resolvedPortableDir } : {}),
       ...secretEnvironment
     },
     silent: false // Lets us see server logs in the terminal

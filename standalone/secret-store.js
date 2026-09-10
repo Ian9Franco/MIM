@@ -45,7 +45,14 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
     for (const field of SECRET_FIELDS) {
       const encrypted = envelope.values[field];
       if (typeof encrypted !== "string" || encrypted.length === 0) continue;
-      values[field] = safeStorage.decryptString(Buffer.from(encrypted, "base64"));
+      try {
+        values[field] = safeStorage.decryptString(Buffer.from(encrypted, "base64"));
+      } catch (error) {
+        console.warn(
+          `[MIM secret-store] Could not decrypt ${field}:`,
+          error instanceof Error ? error.message : String(error)
+        );
+      }
     }
     return values;
   }
@@ -73,26 +80,46 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
     return current;
   }
 
-  function migratePlaintextSettings() {
-    if (!fs.existsSync(settingsPath)) return readEncryptedValues();
-    const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    const legacySecrets = {};
-    let foundPlaintext = false;
+  function importPlaintextFromSettingsFile(sourcePath, stripPlaintext = true) {
+    if (!fs.existsSync(sourcePath)) return false;
+    let settings;
+    try {
+      settings = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+    } catch {
+      return false;
+    }
 
+    const legacySecrets = {};
     for (const field of SECRET_FIELDS) {
       if (typeof settings[field] === "string" && settings[field].trim()) {
         legacySecrets[field] = settings[field].trim();
-        foundPlaintext = true;
       }
     }
 
-    if (!foundPlaintext) return readEncryptedValues();
+    if (Object.keys(legacySecrets).length === 0) return false;
 
-    // Persist the encrypted copy first. If encryption fails, the legacy file is
-    // deliberately left untouched so migration cannot destroy credentials.
-    const migrated = update(legacySecrets);
-    for (const field of SECRET_FIELDS) delete settings[field];
-    writeJsonAtomic(settingsPath, settings);
+    update(legacySecrets);
+    if (stripPlaintext) {
+      for (const field of SECRET_FIELDS) delete settings[field];
+      writeJsonAtomic(sourcePath, settings);
+    }
+    return true;
+  }
+
+  function migratePlaintextSettings() {
+    importPlaintextFromSettingsFile(settingsPath, true);
+    return readEncryptedValues();
+  }
+
+  function migratePlaintextFromPaths(extraSettingsPaths = []) {
+    let migrated = false;
+    for (const sourcePath of extraSettingsPaths) {
+      if (sourcePath === settingsPath) continue;
+      if (importPlaintextFromSettingsFile(sourcePath, true)) {
+        migrated = true;
+        console.log("[MIM secret-store] Imported plaintext credentials from", sourcePath);
+      }
+    }
     return migrated;
   }
 
@@ -106,9 +133,12 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath }) {
 
   return {
     migratePlaintextSettings,
+    migratePlaintextFromPaths,
     readAll: readEncryptedValues,
     update,
     toEnvironment,
+    secretsPath,
+    settingsPath,
   };
 }
 

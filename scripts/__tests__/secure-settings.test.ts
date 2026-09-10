@@ -56,6 +56,17 @@ async function main() {
   assert.deepEqual(store.readAll(), { geminiApiKey: "replacement-gemini" });
   assert.deepEqual(store.toEnvironment(), { MIM_SECRET_GEMINI: "replacement-gemini" });
 
+  const legacySettingsPath = path.join(root, "legacy-install", "mim-settings.json");
+  fs.mkdirSync(path.dirname(legacySettingsPath), { recursive: true });
+  fs.writeFileSync(
+    legacySettingsPath,
+    JSON.stringify({ downloadsPath: "C:/Old", geminiApiKey: "legacy-from-old-release" }),
+  );
+  const migratedFromLegacy = store.migratePlaintextFromPaths([legacySettingsPath]);
+  assert.equal(migratedFromLegacy, true);
+  assert.equal(store.readAll().geminiApiKey, "legacy-from-old-release");
+  assert.equal(fs.readFileSync(legacySettingsPath, "utf8").includes("legacy-from-old-release"), false);
+
   const unavailableSettings = path.join(root, "unavailable-settings.json");
   const unavailableSecrets = path.join(root, "unavailable-secrets.json");
   fs.writeFileSync(unavailableSettings, JSON.stringify({ geminiApiKey: sentinelGemini }));

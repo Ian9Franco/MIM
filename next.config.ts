@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // SSE and API routes require server mode.
   output: "standalone",
+  // ssh2 must execute through native Node resolution; Turbopack cannot bundle its crypto implementation.
   serverExternalPackages: ["ssh2"],
   images: {
     unoptimized: true,

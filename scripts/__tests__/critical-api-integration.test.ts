@@ -16,7 +16,7 @@ import { POST as validateKeysPost } from "../../app/api/settings/validate-keys/r
 import { POST as stagingPost } from "../../app/api/staging/route";
 import { POST as savePlayerPost } from "../../app/api/sage/player-rescue/save/route";
 import { POST as sageChatPost } from "../../app/api/sage/chat/route";
-import { consumeSageStream, SageStreamFailure } from "../../lib/intelligence/sage/streamContract";
+import { consumeSageStream } from "../../lib/intelligence/sage/streamContract";
 import { translateText } from "../../web/lib/translator";
 import { POST as deletePost } from "../../app/api/delete/route";
 import { POST as minecraftDeletePost } from "../../app/api/minecraft/delete/route";
@@ -194,12 +194,12 @@ async function run() {
           : input.url;
     capturedGeminiHeaders = new Headers(init?.headers);
 
-    const event = JSON.stringify({
+    const payload = JSON.stringify({
       candidates: [{ content: { parts: [{ text: "Respuesta de prueba" }] } }],
     });
-    return new Response(`data: ${event}\n\n`, {
+    return new Response(payload, {
       status: 200,
-      headers: { "Content-Type": "text/event-stream" },
+      headers: { "Content-Type": "application/json" },
     });
   }) as typeof fetch;
 
@@ -218,37 +218,29 @@ async function run() {
       if (event.type === "delta") streamedReply += event.text;
     });
     assert(streamedReply === "Respuesta de prueba", "Gemini-backed chat streams the provider text");
-    assert(capturedGeminiUrl.includes(":streamGenerateContent?alt=sse"), "Gemini streaming endpoint is used");
+    assert(capturedGeminiUrl.includes(":generateContent"), "Gemini provider endpoint is used");
     assert(!capturedGeminiUrl.includes(sentinelGeminiKey), "Gemini API key is never embedded in the request URL");
     assert(capturedGeminiHeaders.get("x-goog-api-key") === sentinelGeminiKey, "Gemini API key is sent through x-goog-api-key header");
 
     globalThis.fetch = (async () => new Response(
-      `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "Respuesta parcial" }] } }] })}\n\ndata: {malformed}\n\n`,
-      { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      JSON.stringify({ candidates: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
     )) as typeof fetch;
-    const interruptedChatRes = await sageChatPost(createJsonRequest("/api/sage/chat", {
+    const emptyProviderRes = await sageChatPost(createJsonRequest("/api/sage/chat", {
       question: "¿Podés terminar el diagnóstico?",
       clientApiKey: sentinelGeminiKey,
     }));
-    assert(interruptedChatRes.body !== null, "Interrupted provider stream still returns a readable contract stream");
-    if (!interruptedChatRes.body) throw new Error("Expected interrupted SAGE stream body");
-    let partialReply = "";
-    let interruptedFailure: unknown;
-    try {
-      await consumeSageStream(interruptedChatRes.body, (event) => {
-        if (event.type === "delta") partialReply += event.text;
-      });
-    } catch (error: unknown) {
-      interruptedFailure = error;
-    }
+    const emptyProviderPayload: unknown = await emptyProviderRes.json();
+    assert(emptyProviderRes.status === 502, "Empty provider output fails before opening the client stream");
     assert(
-      interruptedFailure instanceof SageStreamFailure && interruptedFailure.payload.retryable,
-      "Interrupted provider stream emits a retryable typed failure",
+      typeof emptyProviderPayload === "object" &&
+        emptyProviderPayload !== null &&
+        Reflect.get(emptyProviderPayload, "code") === "MIM_AI_GENERATION_FAILED",
+      "Empty provider output uses the typed SAGE generation failure",
     );
-    assert(partialReply === "Respuesta parcial", "Partial text is delivered before a typed stream failure");
 
     globalThis.fetch = (async () => new Response(
-      JSON.stringify({ error: { message: "RESOURCE_EXHAUSTED quota" } }),
+      JSON.stringify({ error: { message: "RESOURCE_EXHAUSTED; retry in 0s" } }),
       { status: 429, headers: { "Content-Type": "application/json" } },
     )) as typeof fetch;
     const limitedChatRes = await sageChatPost(createJsonRequest("/api/sage/chat", {

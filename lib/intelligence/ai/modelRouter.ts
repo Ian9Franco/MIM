@@ -70,6 +70,7 @@ export function resolveModelRoute(
 
   const textIntents: AIIntent[] = [
     "sage-chat",
+    "sage-diagnosis",
     "mim-bot-chat",
     "mod-explain-text",
     "dependency-explain",

@@ -10,7 +10,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 
 - [ ] **BOT-01 — Historial local opt-in.** Guardar/restaurar conversaciones por firma de crash, con borrado explícito y prueba de recarga/cambio de crash.
 - [ ] **BOT-02 — Primera experiencia antes de BYOK.** Preparar ejemplos estáticos de respuestas y explicar el valor antes de pedir una clave. La alternativa de backend gratuito requiere decidir presupuesto y cuota con el usuario antes de implementarla.
-- [ ] **BOT-03 — Seguimientos contextuales.** Mantener dos sugerencias relevantes tras el primer intercambio, sin repetir preguntas ya respondidas.
+- [x] **BOT-03 — Seguimientos contextuales (cerrado).** `deriveFollowUpSuggestions()` genera dos chips tras el primer intercambio a partir de la última respuesta y categoría del crash; excluye preguntas ya hechas.
 - [x] **BOT-04 — Estado de conexión veraz (cerrado).** `SageMimbotCopilot` valida con `/api/settings/validate-keys` (`useStoredGemini: true`), muestra badge por estado (`validating`/`valid`/`invalid`/`rate_limited`) y bloquea envío hasta conexión verificada. `probeGeminiApiKey()` centraliza la sonda sin exponer la clave en URL.
 - [x] **BOT-05a — Gateway request lifecycle (cerrado).** PR #68: `requestLifecycle.ts`, propagación de `signal`/timeout en SAGE/FOMO/providers, MIM-Bot Chat usa el provider seleccionado sin credenciales en URL.
 - [x] **BOT-GW — Model router por intención (cerrado).** `generateWithModelGateway()`: texto (SAGE chat, MIM-Bot chat, deps) → GLM vía OpenRouter cuando hay clave; multimodal y search grounding → Gemini. Desactivable con `MIMBOT_INTENT_ROUTING=false`. Pendiente: eval fixtures, migración `web/` legacy.
@@ -19,7 +19,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 - [x] **BOT-JSON — Salida estructurada explain-deps (cerrado).** Schema Zod + parseo con fallback determinista (HTTP 200) en `dependencyExplain.ts`.
 - [x] **BOT-06 — Clasificación de cuotas IA (cerrado).** `classifyProviderQuotaError()` distingue RPM/TPM/daily/concurrency; tracker local + `GET /api/settings/ai-quota` + panel en Settings. No incluye costos acumulados OpenRouter (ver BOT-06b).
 - [ ] **BOT-07 — Cola para análisis por lotes (condicional).** Sólo si se incorpora ese flujo: concurrencia acotada, cancelación y espera según cuota real.
-- [ ] **BOT-08 — Caché de las cuatro quick questions durante 24 horas.** Clave por crash/pregunta/modo, expiración e invalidación verificadas. La caché actual de diagnósticos no cierra este requisito.
+- [x] **BOT-08 — Caché de las cuatro quick questions durante 24 horas (cerrado).** `quickQuestionCache.ts`: clave `hash(crashSignature + question + mode)`, TTL 24 h, lectura/escritura en `SageMimbotCopilot` para chips canónicos.
 - [ ] **BOT-09 — Transparencia BYOK.** Verificar términos oficiales aplicables a plan/región/proveedor y redactar aviso sobre qué datos se envían, retención y uso. No prometer privacidad por el solo hecho de usar una key propia.
 
 ## 3. Calidad y arquitectura — revisión recruiter

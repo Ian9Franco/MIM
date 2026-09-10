@@ -54,8 +54,10 @@
 | **SAGE chat unificado multi-proveedor** | `BOT-05b` | PR #74 — `sageChatEngine.ts` unifica `/api/sage/chat` y `sageMimbotEngine` |
 | **Salida JSON en explain-deps** | `BOT-JSON` | PR #74 — Zod + fallback determinista en `dependencyExplain.ts` |
 | **Observabilidad de cuotas IA** | `BOT-06` | PR #75 — `quotaClassifier.ts`, `GET /api/settings/ai-quota`, panel en Settings |
+| **Seguimientos contextuales post-chat** | `BOT-03` | PR #77 — `deriveFollowUpSuggestions()` — dos chips tras primer intercambio |
+| **Caché 24 h quick questions** | `BOT-08` | PR #77 — `quickQuestionCache.ts` — clave crash/pregunta/modo en `SageMimbotCopilot` |
 
-Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): eval fixtures MIMbot (`SAGE-05`), migración de rutas legacy en `web/`, caché semántica (`BOT-08`), flags de modelo en UI.
+Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): eval fixtures MIMbot (`SAGE-05`), migración de rutas legacy en `web/`, flags de modelo en UI.
 
 ### Pendiente — producto MIMbot / UX
 
@@ -63,10 +65,8 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | :--- | :--- | :--- |
 | **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Primera Experiencia sin BYOK:** Ejemplos estáticos y explicación de valor antes de pedir clave; backend gratuito requiere decisión de presupuesto/cuota. | `BOT-02` | 🟢 [whosnext.md (BOT-02)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Chips de Preguntas Contextuales Dinámicas:** Sugerencias de seguimiento inteligentes ligadas a la última respuesta del modelo. | `BOT-03` | 🟢 [whosnext.md (BOT-03)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Cola para Análisis por Lotes (condicional):** Concurrencia acotada, cancelación y espera según cuota real — solo si se incorpora ese flujo. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Caché de Quick Questions (24 h):** Clave por crash/pregunta/modo; la caché actual de diagnósticos no cierra este requisito. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Transparencia BYOK:** Aviso verificable sobre qué datos se envían, retención y uso; no prometer privacidad solo por usar key propia. | `BOT-09` | 🟢 [whosnext.md (BOT-09)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 
 ---

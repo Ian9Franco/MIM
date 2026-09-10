@@ -1,14 +1,14 @@
 /**
  * /api/fomo/explain-deps — POST
- * Explains a mod's dependency tree via the Context Builder → AIProvider pipeline.
- * Returns a structured markdown explanation of missing, outdated, and incompatible deps.
+ * Explains a mod's dependency tree with structured JSON validation (BOT-JSON).
  */
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { generateWithModelGateway, isAIProviderError, resolveGatewayKeys } from "@/lib/intelligence/ai";
-import { buildDependencyExplainContext, type DependencyInfo } from "@/lib/intelligence/contextBuilder";
+import { resolveGatewayKeys } from "@/lib/intelligence/ai";
+import { explainModDependencies } from "@/lib/intelligence/dependencyExplain";
+import type { DependencyInfo } from "@/lib/intelligence/contextBuilder";
 import { resolveBotPersonality } from "@/lib/intelligence/modExplainer";
 
 const depSchema = z.object({
@@ -38,7 +38,6 @@ export const POST = withApiGuard(
   async ({ request, body }) => {
     const { modId, modName, dependencies, loader, mcVersion, personality } = body;
 
-    // Resolve provider
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
@@ -54,42 +53,24 @@ export const POST = withApiGuard(
 
     const resolvedPersonality = resolveBotPersonality(personality);
 
-    // Build evidence-tagged context
-    const ctx = buildDependencyExplainContext(
+    const result = await explainModDependencies({
       modId,
       modName,
-      dependencies as DependencyInfo[],
+      dependencies: dependencies as DependencyInfo[],
       loader,
       mcVersion,
-      resolvedPersonality
-    );
+      personality: resolvedPersonality,
+      gatewayKeys,
+      signal: request.signal,
+    });
 
-    const promptText = `${ctx.systemPrompt}\n\n${ctx.userPrompt}`;
-
-    try {
-      const result = await generateWithModelGateway({
-        intent: "dependency-explain",
-        messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
-        temperature: 0.5,
-        maxOutputTokens: 500,
-        signal: request.signal,
-        ...gatewayKeys,
-      });
-
-      return NextResponse.json({
-        modId,
-        explanation: result.text,
-        model: result.model,
-        provider: result.provider,
-      });
-    } catch (err: unknown) {
-      const msg = isAIProviderError(err) ? err.message : err instanceof Error ? err.message : String(err);
-      console.warn("[/api/fomo/explain-deps] Generation failed:", msg);
-
-      return NextResponse.json(
-        { error: "GENERATION_FAILED", message: msg },
-        { status: 502 }
-      );
-    }
+    return NextResponse.json({
+      modId: result.modId,
+      explanation: result.explanation,
+      structured: result.structured,
+      fallback: result.fallback,
+      model: result.model,
+      provider: result.provider,
+    });
   }
 );

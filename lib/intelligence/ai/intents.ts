@@ -1,6 +1,7 @@
 /** High-level MIMbot request intents used by the model router (BOT-GW). */
 export type AIIntent =
   | "sage-chat"
+  | "sage-diagnosis"
   | "mim-bot-chat"
   | "mod-explain-text"
   | "mod-explain-multimodal"

@@ -1,29 +1,37 @@
 /**
  * SAGE 3.0 MIM-Bot Diagnostic Copilot Engine
- * 
+ *
  * Orchestrates deterministic SAGE findings, FOMO dependency intelligence,
  * heuristic suspect elimination, local cryptographic caching, and AI-powered
- * reasoning via the unified AIProvider abstraction (GLM via OpenRouter primary,
- * Gemini fallback, or offline heuristic).
+ * reasoning via the unified Model Gateway (Gemini / OpenRouter).
  */
 
 import { computeCrashSignature, getCachedDiagnosis, saveSageCacheEntry, SageActionableItem, SageCacheEntry, SageEliminationCandidate } from "./cacheEngine";
 import { correlateSuspectsWithFomo, FomoCorrelationResult } from "./fomoCorrelator";
 import { SageAnalysisResult } from "@/utils/sageAnalyzer";
-import { createDefaultProvider, type AIProvider, type AIProviderId } from "../ai";
-import { OpenRouterProvider } from "../ai/openRouterProvider";
+import { generateWithModelGateway, resolveGatewayKeys, type AIProviderId, type GatewayKeyOptions } from "../ai";
 import { buildSageDiagnosisContext } from "../contextBuilder";
+import {
+  runSageChat,
+  type SageChatMessage,
+  type SageCrashContext,
+} from "./sageChatEngine";
+
+export type { SageChatMessage };
 
 export interface SageMimbotInput {
   analysis: SageAnalysisResult;
   rawCrashText: string;
   installedModIds?: string[];
   personality?: "bully" | "standard";
-  /** Optional BYOK API key. When omitted, env-configured keys are used. */
+  /** Optional BYOK overrides for gateway routing. */
+  gatewayKeys?: GatewayKeyOptions;
+  /** @deprecated Use gatewayKeys — kept for tests */
   apiKey?: string;
   /** Provider selection. Defaults to env-configured provider or "offline". */
   provider?: AIProviderId | "offline";
   model?: string;
+  signal?: AbortSignal;
 }
 
 export interface SageMimbotDiagnosisResult {
@@ -38,11 +46,6 @@ export interface SageMimbotDiagnosisResult {
   solutions: string[];
   severity: "critical" | "warning" | "info";
   modelUsed: string;
-}
-
-export interface SageChatMessage {
-  role: "user" | "model" | "assistant";
-  text: string;
 }
 
 /**
@@ -68,7 +71,7 @@ export function generateLocalMimbotDiagnosis(
 ): string {
   const isBully = personality === "bully";
   const culprit = fomo.primaryCulprit || analysis.suspectedMods[0] || "un mod no identificado";
-  
+
   if (isBully) {
     if (fomo.missingDependencies.length > 0) {
       const dep = fomo.missingDependencies[0];
@@ -83,23 +86,29 @@ export function generateLocalMimbotDiagnosis(
     return `🔥 **El Roast de MIM-Bot**: El juego colapsó por culpa de '${culprit}'. No sé qué le hiciste a tu modpack pero el motor de rendering pidió auxilio.\n\n🎯 **La Posta**: ${analysis.explanation || "Colisión interna en el stack de ejecución."}\n\n🛠️ **Plan de Rescate**:\n1. Desactivá temporalmente '${culprit}' renombrándolo a .disabled.\n2. Verificá si existe una actualización en CurseForge o Modrinth.`;
   }
 
-  // Standard persona fallback
   return `📌 **Resumen Técnico**: El crash report indica un fallo crítico asociado a '${culprit}'.\n\n🔍 **Análisis de Causa Raíz**: ${analysis.explanation || "Incompatibilidad o fallo en tiempo de ejecución."}\n\n🛠️ **Acciones de Solución**:\n1. ${analysis.solutions[0] || "Revisar la compatibilidad de versiones de los mods instalados."}\n2. ${analysis.solutions[1] || "Desactivar temporalmente el mod afectado."}`;
 }
 
+function resolveGatewayKeysFromLegacy(input: SageMimbotInput): GatewayKeyOptions | undefined {
+  if (input.gatewayKeys) return input.gatewayKeys;
+  if (!input.apiKey?.trim()) return undefined;
+
+  if (input.provider === "openrouter") {
+    return { openrouterKey: input.apiKey.trim() };
+  }
+  return { clientGeminiKey: input.apiKey.trim() };
+}
+
 /**
- * Executes deep diagnosis through MIM-Bot.
- * Uses AIProvider abstraction — GLM via OpenRouter (primary) or Gemini (fallback).
+ * Executes deep diagnosis through MIM-Bot via Model Gateway.
  */
 export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<SageMimbotDiagnosisResult> {
-  const { analysis, rawCrashText, installedModIds = [], personality = "bully", apiKey, provider: providerHint = "offline", model } = input;
+  const { analysis, rawCrashText, installedModIds = [], personality = "bully", provider: providerHint = "offline", model, signal } = input;
   const loader = analysis.loader || "fabric";
   const mcVersion = analysis.gameVersion || "1.20.1";
 
-  // 1. Signature calculation
   const signature = computeCrashSignature(loader, mcVersion, rawCrashText, analysis.suspectedMods);
 
-  // 2. Check Local Cache
   const cached = getCachedDiagnosis(signature);
   if (cached) {
     return {
@@ -123,7 +132,6 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
     };
   }
 
-  // 3. FOMO Correlation & Elimination Tree
   const fomoCorrelation = correlateSuspectsWithFomo({
     suspects: analysis.suspectedMods,
     stackTrace: rawCrashText,
@@ -132,58 +140,34 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
     mcVersion,
   });
 
-  // 4. Generate diagnosis text via AIProvider or local heuristic fallback
   let mimbotExplanation = "";
   let modelUsed = "local-heuristic";
 
   if (providerHint !== "offline") {
-    // Build evidence-tagged context
+    const gatewayKeys = input.gatewayKeys ?? resolveGatewayKeysFromLegacy(input) ?? {};
+    const { hasGeminiKey, hasOpenRouterKey } = resolveGatewayKeys(gatewayKeys);
+
+    if (hasGeminiKey || hasOpenRouterKey) {
     const ctx = buildSageDiagnosisContext(analysis, fomoCorrelation, rawCrashText, personality);
     const promptText = `${ctx.systemPrompt}\n\n${ctx.userPrompt}`;
 
-    // Resolve provider: use BYOK key if provided, otherwise env-configured default
-    let aiProvider: AIProvider | null = null;
-
-    if (apiKey) {
-      // BYOK path — create provider directly with the provided key
-      const { createAIProvider } = await import("../ai");
-      aiProvider = createAIProvider({
-        apiKey,
-        provider: providerHint === "gemini" ? "gemini" : providerHint === "openrouter" ? "openrouter" : undefined,
+    try {
+      const result = await generateWithModelGateway({
+        intent: "sage-diagnosis",
+        messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
+        temperature: 0.7,
+        preferredGeminiModel: model,
+        signal,
+        ...gatewayKeys,
       });
-    } else {
-      // Env-configured path
-      const result = createDefaultProvider();
-      aiProvider = result.provider;
-    }
 
-    if (aiProvider) {
-      try {
-        let result;
-
-        if (aiProvider.id === "openrouter" && "generateWithFallback" in aiProvider) {
-          // GLM cascade via OpenRouter
-          result = await (aiProvider as OpenRouterProvider).generateWithFallback({
-            messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
-            temperature: 0.7,
-          });
-        } else {
-          // Gemini or other provider — use specified model or default
-          const selectedModel = model || "gemini-flash-lite-latest";
-          result = await aiProvider.generate({
-            model: selectedModel,
-            messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
-            temperature: 0.7,
-          });
-        }
-
-        if (result.text) {
-          mimbotExplanation = result.text;
-          modelUsed = result.model;
-        }
-      } catch (err) {
-        console.warn("[sageMimbotEngine] AI provider call failed, falling back to local heuristic:", err);
+      if (result.text) {
+        mimbotExplanation = result.text;
+        modelUsed = result.model;
       }
+    } catch (err) {
+      console.warn("[sageMimbotEngine] Model gateway failed, falling back to local heuristic:", err);
+    }
     }
   }
 
@@ -192,7 +176,6 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
     modelUsed = "local-heuristic";
   }
 
-  // 5. Build Actionable Items
   const actionableFixes: SageActionableItem[] = [];
   if (fomoCorrelation.missingDependencies.length > 0) {
     for (const dep of fomoCorrelation.missingDependencies) {
@@ -223,7 +206,6 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
     });
   }
 
-  // 6. Save in Local Cache for instant 0 ms future recall
   const cacheEntry: SageCacheEntry = {
     signature,
     timestamp: Date.now(),
@@ -257,76 +239,47 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
   };
 }
 
-
 /**
- * MIM-Bot Chat (incident scope): lightweight follow-up scoped to the diagnosed crash.
- * Uses the AIProvider abstraction instead of raw fetch calls.
+ * MIM-Bot Chat (incident scope): follow-up scoped to the diagnosed crash.
+ * Delegates to the shared sageChatEngine used by /api/sage/chat (BOT-05b).
  */
 export async function chatWithSageMimbot(
   contextDiagnosis: SageMimbotDiagnosisResult,
   messages: SageChatMessage[],
-  apiKey?: string,
-  provider?: AIProviderId
+  gatewayKeys?: GatewayKeyOptions,
+  signal?: AbortSignal
 ): Promise<string> {
   const personality = contextDiagnosis.personality;
   const isBully = personality === "bully";
 
-  // Resolve provider: BYOK or env-configured
-  let aiProvider: AIProvider | null = null;
-
-  if (apiKey && provider) {
-    const { createAIProvider } = await import("../ai");
-    aiProvider = createAIProvider({ apiKey, provider });
-  } else {
-    const result = createDefaultProvider();
-    aiProvider = result.provider;
-  }
-
-  if (!aiProvider) {
+  if (!gatewayKeys) {
     if (isBully) {
-      return `🔥 No configuraste tu API key para el chat en vivo, pero te la hago corta: el culpable sigue siendo **${contextDiagnosis.primaryCulprit || "el mod corrupto"}**. Desactivalo o instalale la dependencia que te marqué arriba y dejá de dar vueltas.`;
+      return `🔥 No configuraste tu clave para el chat en vivo, pero te la hago corta: el culpable sigue siendo **${contextDiagnosis.primaryCulprit || "el mod corrupto"}**. Desactivalo o instalale la dependencia que te marqué arriba y dejá de dar vueltas.`;
     }
-    return `Para consultas interactivas avanzadas, podés configurar tu clave de OpenAI o Google Gemini en las opciones. Según el diagnóstico técnico, la recomendación principal es solucionar el mod **${contextDiagnosis.primaryCulprit}**.`;
+    return `Para consultas interactivas avanzadas, configurá tu clave de **Google Gemini** u **OpenRouter** en Ajustes. Según el diagnóstico técnico, la recomendación principal es solucionar el mod **${contextDiagnosis.primaryCulprit}**.`;
   }
 
-  const systemContext = `
-Contexto del crash diagnosticado:
-- Culpable: ${contextDiagnosis.primaryCulprit}
-- Explicación previa: ${contextDiagnosis.mimbotExplanation}
-- Personalidad activa: ${personality}
-Responde la pregunta del usuario con brevedad (máximo 3 párrafos), manteniendo tu tono ${personality === "bully" ? "gamer bully sarcástico pero técnicamente certero" : "profesional de ingeniería"}.
-`.trim();
+  const crashContext: SageCrashContext = {
+    explanation: contextDiagnosis.mimbotExplanation,
+    suspectedMods: contextDiagnosis.eliminationTree.map((e) => e.modId),
+  };
 
-  const chatMessages = [
-    { role: "system" as const, parts: [{ type: "text" as const, text: systemContext }] },
-    ...messages.map((m) => ({
-      role: (m.role === "model" ? "assistant" : m.role) as "user" | "assistant",
-      parts: [{ type: "text" as const, text: m.text }],
-    })),
-  ];
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user" && m.text.trim());
+  const question = lastUserMessage?.text.trim() || "¿Qué debería hacer ahora?";
+  const priorMessages = messages.filter((m) => m !== lastUserMessage);
 
   try {
-    let result;
-
-    if (aiProvider.id === "openrouter" && "generateWithFallback" in aiProvider) {
-      result = await (aiProvider as OpenRouterProvider).generateWithFallback({
-        messages: chatMessages,
-        temperature: 0.7,
-        maxOutputTokens: 320,
-      });
-    } else {
-      result = await aiProvider.generate({
-        model: "gemini-flash-lite-latest",
-        messages: chatMessages,
-        temperature: 0.7,
-        maxOutputTokens: 320,
-      });
-    }
-
-    if (result.text) return result.text;
+    const result = await runSageChat({
+      question,
+      personality,
+      messages: priorMessages,
+      crashContext,
+      gatewayKeys,
+      signal,
+    });
+    return result.text;
   } catch (err) {
-    console.warn("[sageMimbotEngine] Chat provider call error:", err);
+    console.warn("[sageMimbotEngine] Chat gateway error:", err);
+    return `🔥 Error al conectar con el proveedor de IA. Pero el diagnóstico determinista local no falla: atendé a '${contextDiagnosis.primaryCulprit}'.`;
   }
-
-  return `🔥 Error al conectar con el proveedor de IA. Pero el diagnóstico determinista local no falla: atendé a '${contextDiagnosis.primaryCulprit}'.`;
-}
+}

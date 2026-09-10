@@ -12,7 +12,9 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
+import { RichHtmlBlock } from "@/components/ui/RichHtmlBlock";
 import { markdownToHtml } from "@/utils/markdown";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 interface FomoDescriptionTabProps {
   rawDesc: string;
@@ -261,10 +263,10 @@ export function FomoDescriptionTab({
             </div>
           </div>
 
-          <div
+          <RichHtmlBlock
             onClick={handleFomoLinkClick}
             className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer"
-            dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
+            html={markdownToHtml(explainedBody)}
           />
 
           {explanationSources.length > 0 && (
@@ -326,10 +328,10 @@ export function FomoDescriptionTab({
                         </>
                       )}
                     </span>
-                    <div
+                    <RichHtmlBlock
                       onClick={handleFomoLinkClick}
                       className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
-                      dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.text) }}
+                      html={markdownToHtml(msg.text)}
                     />
                   </div>
                 ))}
@@ -398,9 +400,9 @@ export function FomoDescriptionTab({
           </div>
         </div>
       ) : (
-        <div
+        <RichHtmlBlock
           className="prose prose-invert prose-sm max-w-none text-sm text-foreground"
-          dangerouslySetInnerHTML={{ __html: descHtml }}
+          html={sanitizeHtml(descHtml)}
         />
       )}
     </div>

@@ -1,3 +1,5 @@
+import { sanitizeHtml } from "./sanitizeHtml";
+
 function cleanEmbeddedUrl(url: string, defaultDomain = "https://modrinth.com"): string {
   const cleaned = url
     .replace(/&amp;/g, "&")
@@ -263,5 +265,5 @@ export function formatCurseForgeHtml(html: string): string {
     return `<img ${cleanAttrs}>`;
   });
 
-  return formatted;
+  return sanitizeHtml(formatted);
 }

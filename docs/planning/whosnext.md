@@ -8,8 +8,8 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 
 ## 2. Funcionamiento y UX de MimBot
 
-- [ ] **BOT-01 — Historial local opt-in.** Guardar/restaurar conversaciones por firma de crash, con borrado explícito y prueba de recarga/cambio de crash.
-- [ ] **BOT-02 — Primera experiencia antes de BYOK.** Preparar ejemplos estáticos de respuestas y explicar el valor antes de pedir una clave. La alternativa de backend gratuito requiere decidir presupuesto y cuota con el usuario antes de implementarla.
+- [x] **BOT-01 — Historial local opt-in (cerrado).** `chatHistoryStore.ts` persiste por `crashSignature`; toggle y borrado global en Settings; restauración al cambiar de crash; botón borrar por incidente en copiloto.
+- [x] **BOT-02 — Primera experiencia antes de BYOK (cerrado, alcance estático).** `MimbotDemoPreview` muestra valor y ejemplo fijo sin llamar al proveedor. Backend gratuito gestionado sigue fuera de alcance hasta decisión de presupuesto/cuota.
 - [x] **BOT-03 — Seguimientos contextuales (cerrado).** `deriveFollowUpSuggestions()` genera dos chips tras el primer intercambio a partir de la última respuesta y categoría del crash; excluye preguntas ya hechas.
 - [x] **BOT-04 — Estado de conexión veraz (cerrado).** `SageMimbotCopilot` valida con `/api/settings/validate-keys` (`useStoredGemini: true`), muestra badge por estado (`validating`/`valid`/`invalid`/`rate_limited`) y bloquea envío hasta conexión verificada. `probeGeminiApiKey()` centraliza la sonda sin exponer la clave en URL.
 - [x] **BOT-05a — Gateway request lifecycle (cerrado).** PR #68: `requestLifecycle.ts`, propagación de `signal`/timeout en SAGE/FOMO/providers, MIM-Bot Chat usa el provider seleccionado sin credenciales en URL.
@@ -20,7 +20,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 - [x] **BOT-06 — Clasificación de cuotas IA (cerrado).** `classifyProviderQuotaError()` distingue RPM/TPM/daily/concurrency; tracker local + `GET /api/settings/ai-quota` + panel en Settings. No incluye costos acumulados OpenRouter (ver BOT-06b).
 - [ ] **BOT-07 — Cola para análisis por lotes (condicional).** Sólo si se incorpora ese flujo: concurrencia acotada, cancelación y espera según cuota real.
 - [x] **BOT-08 — Caché de las cuatro quick questions durante 24 horas (cerrado).** `quickQuestionCache.ts`: clave `hash(crashSignature + question + mode)`, TTL 24 h, lectura/escritura en `SageMimbotCopilot` para chips canónicos.
-- [ ] **BOT-09 — Transparencia BYOK.** Verificar términos oficiales aplicables a plan/región/proveedor y redactar aviso sobre qué datos se envían, retención y uso. No prometer privacidad por el solo hecho de usar una key propia.
+- [x] **BOT-09 — Transparencia BYOK (cerrado).** `mimbotByokTransparency.ts` + panel en Settings y modal de configuración; enlaces a términos Google/OpenRouter; sin prometer privacidad absoluta por BYOK.
 
 ## 3. Calidad y arquitectura — revisión recruiter
 

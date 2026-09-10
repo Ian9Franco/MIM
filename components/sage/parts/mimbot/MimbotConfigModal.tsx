@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Key, ExternalLink, Loader2 } from "lucide-react";
+import { MimbotByokTransparencyPanel } from "./MimbotByokTransparencyPanel";
 
 interface MimbotConfigModalProps {
   showConfig: boolean;
@@ -41,7 +42,8 @@ export function MimbotConfigModal({
         )}
       </div>
       <p className="text-[11px] text-white/60 leading-relaxed">
-        Para consultar a MIM-Bot sobre crashes y recibir diagnósticos inteligentes, se utiliza la API gratuita de Google Gemini. Se guardará permanentemente en tus ajustes de configuración.
+        Para consultar a MIM-Bot sobre crashes en tiempo real, conectá tu clave de Google Gemini (BYOK).
+        MIM la guarda en el almacenamiento seguro local de la app; no se envía a servidores de MIM.
       </p>
       <div className="flex items-center gap-2">
         <input
@@ -67,9 +69,10 @@ export function MimbotConfigModal({
           rel="noreferrer"
           className="text-purple-400 hover:underline flex items-center gap-1"
         >
-          <ExternalLink className="w-3 h-3" /> Obtener clave gratuita en Google AI Studio
+          <ExternalLink className="w-3 h-3" /> Obtener clave en Google AI Studio
         </a>
       </div>
+      <MimbotByokTransparencyPanel compact />
     </div>
   );
 }

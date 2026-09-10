@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 import { classifyProviderQuotaError, resolveGatewayKeys } from "@/lib/intelligence/ai";
+import { withStoredGatewayKeys } from "@/lib/intelligence/ai/storedGatewayKeys";
 import {
   errorMessage,
   sageErrorResponse,
@@ -55,11 +56,11 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const gatewayKeys = {
+    const gatewayKeys = withStoredGatewayKeys({
       clientGeminiKey: clientApiKey || undefined,
       headerGeminiKey,
       openrouterKey: headerOpenRouterKey,
-    };
+    });
     const { hasGeminiKey, hasOpenRouterKey } = resolveGatewayKeys(gatewayKeys);
 
     if (!hasGeminiKey && !hasOpenRouterKey) {

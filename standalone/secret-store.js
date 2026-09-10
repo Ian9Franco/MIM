@@ -6,6 +6,7 @@ const SECRET_FIELDS = [
   "curseforgeApiKey",
   "virusTotalApiKey",
   "geminiApiKey",
+  "openrouterApiKey",
 ];
 
 const SECRET_ENV = {
@@ -13,6 +14,7 @@ const SECRET_ENV = {
   curseforgeApiKey: "MIM_SECRET_CURSEFORGE",
   virusTotalApiKey: "MIM_SECRET_VIRUSTOTAL",
   geminiApiKey: "MIM_SECRET_GEMINI",
+  openrouterApiKey: "MIM_SECRET_OPENROUTER",
 };
 
 function writeJsonAtomic(filePath, value) {

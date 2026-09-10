@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench, Shield, Download, Upload, FileCheck, Loader2, Activity } from "lucide-react";
 import { createVault, verifyVault, encryptVault, decryptVault, generateVaultFilename, type VaultData, type MimVaultSchema } from "@/lib/vault/vaultEngine";
+import {
+  clearAllChatHistory,
+  isChatHistoryEnabled,
+  setChatHistoryEnabled,
+} from "@/lib/intelligence/sage/chatHistoryStore";
+import { MimbotByokTransparencyPanel } from "@/components/sage/parts/mimbot/MimbotByokTransparencyPanel";
+
+export const MIMBOT_HISTORY_SETTINGS_EVENT = "mim-bot-history-settings-changed";
 
 // ── SettingsTabNav ───────────────────────────────────────────────────────────
 
@@ -724,6 +732,68 @@ export function AiQuotaStatusPanel() {
         </div>
       )}
       {note && <p className="text-[10px] text-muted/70 leading-relaxed">{note}</p>}
+    </div>
+  );
+}
+
+// ── MimbotPrivacySettingsPanel (BOT-01 / BOT-09) ─────────────────────────────
+
+export function MimbotPrivacySettingsPanel() {
+  const [historyEnabled, setHistoryEnabled] = useState(false);
+
+  useEffect(() => {
+    setHistoryEnabled(isChatHistoryEnabled());
+  }, []);
+
+  const notifyHistorySettingsChanged = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(MIMBOT_HISTORY_SETTINGS_EVENT));
+    }
+  };
+
+  const handleToggleHistory = () => {
+    const next = !historyEnabled;
+    setChatHistoryEnabled(next);
+    setHistoryEnabled(next);
+    if (!next) clearAllChatHistory();
+    notifyHistorySettingsChanged();
+  };
+
+  const handleClearAllHistory = () => {
+    clearAllChatHistory();
+    notifyHistorySettingsChanged();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-purple-400" />
+          <h3 className="text-xs font-headline tracking-wider uppercase text-muted">
+            MIM-Bot — Privacidad local
+          </h3>
+        </div>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={historyEnabled}
+            onChange={handleToggleHistory}
+            className="mt-0.5 accent-purple-500"
+          />
+          <span className="text-[11px] text-muted leading-relaxed">
+            Guardar historial de chat por crash en este dispositivo (opt-in). Si lo desactivás, se
+            borra el historial local guardado.
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={handleClearAllHistory}
+          className="text-[11px] px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 transition-colors"
+        >
+          Borrar todo el historial MIM-Bot local
+        </button>
+      </div>
+      <MimbotByokTransparencyPanel />
     </div>
   );
 }

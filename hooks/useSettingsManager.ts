@@ -6,6 +6,7 @@ type ApiKeyStatus = {
   curseforgeApiKey: boolean;
   virusTotalApiKey: boolean;
   geminiApiKey: boolean;
+  openrouterApiKey: boolean;
 };
 
 type SettingsResponse = {
@@ -22,6 +23,7 @@ const EMPTY_KEY_STATUS: ApiKeyStatus = {
   curseforgeApiKey: false,
   virusTotalApiKey: false,
   geminiApiKey: false,
+  openrouterApiKey: false,
 };
 
 export function useSettingsManager(onClose: () => void) {
@@ -38,11 +40,13 @@ export function useSettingsManager(onClose: () => void) {
   const [curseforgeApiKey, setCurseforgeApiKey] = useState("");
   const [virusTotalApiKey, setVirusTotalApiKey] = useState("");
   const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [openrouterApiKey, setOpenrouterApiKey] = useState("");
   
   const [showModrinth, setShowModrinth] = useState(false);
   const [showCurseforge, setShowCurseforge] = useState(false);
   const [showVirusTotal, setShowVirusTotal] = useState(false);
   const [showGemini, setShowGemini] = useState(false);
+  const [showOpenrouter, setShowOpenrouter] = useState(false);
   const [activeTab, setActiveTab] = useState<"paths" | "apiKeys" | "tools" | "vault">("paths");
   
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,8 @@ export function useSettingsManager(onClose: () => void) {
     curseforge: null,
     modrinth: null,
     virusTotal: null,
-    gemini: null
+    gemini: null,
+    openrouter: null,
   });
   const [isValidating, setIsValidating] = useState(false);
   const [isValidatingKeys, setIsValidatingKeys] = useState(false);
@@ -88,11 +93,13 @@ export function useSettingsManager(onClose: () => void) {
         setCurseforgeApiKey("");
         setVirusTotalApiKey("");
         setGeminiApiKey("");
+        setOpenrouterApiKey("");
         setKeyValidation({
           curseforge: configured.curseforgeApiKey,
           modrinth: configured.modrinthApiKey ? true : null,
           virusTotal: configured.virusTotalApiKey ? true : null,
           gemini: configured.geminiApiKey ? true : null,
+          openrouter: configured.openrouterApiKey ? true : null,
         });
         setLoading(false);
         
@@ -106,13 +113,14 @@ export function useSettingsManager(onClose: () => void) {
       });
   }, []);
 
-  const validateKeys = useCallback(async (cf: string, mr: string, vt: string, gemini: string) => {
-    if (!cf && !mr && !vt && !gemini) {
+  const validateKeys = useCallback(async (cf: string, mr: string, vt: string, gemini: string, openrouter: string) => {
+    if (!cf && !mr && !vt && !gemini && !openrouter) {
       setKeyValidation({
         curseforge: apiKeysConfigured.curseforgeApiKey,
         modrinth: apiKeysConfigured.modrinthApiKey ? true : null,
         virusTotal: apiKeysConfigured.virusTotalApiKey ? true : null,
         gemini: apiKeysConfigured.geminiApiKey ? true : null,
+        openrouter: apiKeysConfigured.openrouterApiKey ? true : null,
       });
       return;
     }
@@ -122,7 +130,7 @@ export function useSettingsManager(onClose: () => void) {
       const res = await fetch("/api/settings/validate-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ curseforge: cf, modrinth: mr, virusTotal: vt, gemini })
+        body: JSON.stringify({ curseforge: cf, modrinth: mr, virusTotal: vt, gemini, openrouter })
       });
       if (res.ok) {
         const { results } = await res.json();
@@ -131,6 +139,7 @@ export function useSettingsManager(onClose: () => void) {
           modrinth: mr ? results.modrinth : (apiKeysConfigured.modrinthApiKey ? true : null),
           virusTotal: vt ? results.virusTotal : (apiKeysConfigured.virusTotalApiKey ? true : null),
           gemini: gemini ? results.gemini : (apiKeysConfigured.geminiApiKey ? true : null),
+          openrouter: openrouter ? results.openrouter : (apiKeysConfigured.openrouterApiKey ? true : null),
         });
       }
     } catch (e) {
@@ -171,11 +180,11 @@ export function useSettingsManager(onClose: () => void) {
   useEffect(() => {
     if (!loading) {
       const timer = setTimeout(() => {
-        validateKeys(curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey);
+        validateKeys(curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, openrouterApiKey);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, loading, validateKeys]);
+  }, [curseforgeApiKey, modrinthApiKey, virusTotalApiKey, geminiApiKey, openrouterApiKey, loading, validateKeys]);
 
   const handlePickFolder = async (setter: (p: string) => void, isMinecraft = false, currentPath = "") => {
     if (pathValidation[currentPath] === false) {
@@ -222,6 +231,7 @@ export function useSettingsManager(onClose: () => void) {
       setCurseforgeApiKey("");
       setVirusTotalApiKey("");
       setGeminiApiKey("");
+      setOpenrouterApiKey("");
     }
     setCanEdit(false);
   };
@@ -234,7 +244,7 @@ export function useSettingsManager(onClose: () => void) {
       downloadsPath !== originalSettings.downloadsPath ||
       minecraftPath !== originalSettings.minecraftPath ||
       stagingPath !== originalSettings.stagingPath ||
-      Boolean(modrinthApiKey || curseforgeApiKey || virusTotalApiKey || geminiApiKey)
+      Boolean(modrinthApiKey || curseforgeApiKey || virusTotalApiKey || geminiApiKey || openrouterApiKey)
     );
   };
 
@@ -292,7 +302,7 @@ export function useSettingsManager(onClose: () => void) {
 
     setMoveProgress("Guardando ajustes...");
     const secretUpdates = Object.fromEntries(
-      Object.entries({ modrinthApiKey, curseforgeApiKey, virusTotalApiKey, geminiApiKey })
+      Object.entries({ modrinthApiKey, curseforgeApiKey, virusTotalApiKey, geminiApiKey, openrouterApiKey })
         .filter(([, value]) => value.trim().length > 0)
         .map(([key, value]) => [key, value.trim()])
     );
@@ -321,8 +331,9 @@ export function useSettingsManager(onClose: () => void) {
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
     geminiApiKey, setGeminiApiKey,
+    openrouterApiKey, setOpenrouterApiKey,
     showModrinth, setShowModrinth, showCurseforge, setShowCurseforge, showVirusTotal, setShowVirusTotal,
-    showGemini, setShowGemini,
+    showGemini, setShowGemini, showOpenrouter, setShowOpenrouter,
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, apiKeysConfigured,
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,

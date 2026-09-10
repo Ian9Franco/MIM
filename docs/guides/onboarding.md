@@ -38,9 +38,12 @@ Copia o crea los archivos `.env.local` en la raíz y en el directorio `web/`:
 # Claves de terceros (opcionales; el sistema cuenta con fallbacks y mocks seguros)
 CURSEFORGE_API_KEY=tu_clave_de_curseforge
 GEMINI_API_KEY=tu_clave_de_gemini
+OPENROUTER_API_KEY=sk-or-v1-...   # opcional — chat texto vía GLM; ver guía MIM-Bot
 MODRINTH_API_KEY=tu_token_de_modrinth
 DEEPL_API_KEY=tu_clave_de_deepl_free
 ```
+
+Guía completa BYOK / free tier para MIM-Bot: [mimbot-byok-setup.md](./mimbot-byok-setup.md).
 
 ---
 

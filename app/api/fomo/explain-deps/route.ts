@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 import { resolveGatewayKeys } from "@/lib/intelligence/ai";
+import { withStoredGatewayKeys } from "@/lib/intelligence/ai/storedGatewayKeys";
 import { explainModDependencies } from "@/lib/intelligence/dependencyExplain";
 import type { DependencyInfo } from "@/lib/intelligence/contextBuilder";
 import { resolveBotPersonality } from "@/lib/intelligence/modExplainer";
@@ -41,7 +42,10 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const gatewayKeys = { headerGeminiKey, openrouterKey: headerOpenRouterKey };
+    const gatewayKeys = withStoredGatewayKeys({
+      headerGeminiKey,
+      openrouterKey: headerOpenRouterKey,
+    });
     const { hasGeminiKey, hasOpenRouterKey } = resolveGatewayKeys(gatewayKeys);
 
     if (!hasGeminiKey && !hasOpenRouterKey) {

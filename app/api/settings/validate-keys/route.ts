@@ -9,14 +9,16 @@ const validateKeysSchema = z.object({
   modrinth: z.string().optional().nullable(),
   virusTotal: z.string().optional().nullable(),
   gemini: z.string().optional().nullable(),
+  openrouter: z.string().optional().nullable(),
   useStoredGemini: z.boolean().optional(),
+  useStoredOpenrouter: z.boolean().optional(),
 });
 
 export const POST = withApiGuard(
   { bodySchema: validateKeysSchema },
   async ({ body }) => {
     try {
-      const { curseforge, modrinth, virusTotal, gemini, useStoredGemini } = body;
+      const { curseforge, modrinth, virusTotal, gemini, openrouter, useStoredGemini, useStoredOpenrouter } = body;
       const results: Record<string, boolean | null> = {};
       let geminiStatus: GeminiKeyStatus | undefined;
 
@@ -85,6 +87,23 @@ export const POST = withApiGuard(
               : false;
       } else {
         results.gemini = null;
+      }
+
+      const openrouterCandidate = useStoredOpenrouter
+        ? getApiKey("openrouter").trim()
+        : openrouter?.trim() || "";
+
+      if (useStoredOpenrouter || openrouter?.trim()) {
+        try {
+          const orRes = await fetch("https://openrouter.ai/api/v1/auth/key", {
+            headers: { Authorization: `Bearer ${openrouterCandidate}` },
+          });
+          results.openrouter = orRes.ok;
+        } catch {
+          results.openrouter = false;
+        }
+      } else {
+        results.openrouter = null;
       }
 
       return NextResponse.json({

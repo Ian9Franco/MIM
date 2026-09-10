@@ -5,7 +5,7 @@ import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSe
 import { useSettingsManager } from "@/hooks/useSettingsManager";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
-  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
+  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, MimbotPrivacySettingsPanel, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
 } from "./SettingsComponents";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -14,8 +14,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
     geminiApiKey, setGeminiApiKey,
+    openrouterApiKey, setOpenrouterApiKey,
     showModrinth, setShowModrinth, showCurseforge, setShowCurseforge, showVirusTotal, setShowVirusTotal,
-    showGemini, setShowGemini,
+    showGemini, setShowGemini, showOpenrouter, setShowOpenrouter,
     activeTab, setActiveTab, loading, saving, moveProgress, canEdit, setCanEdit,
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, apiKeysConfigured,
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
@@ -154,11 +155,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 )}
                 {activeTab === "apiKeys" && (
                   <div id="onboarding-settings-keys" className="space-y-5">
-                    <ApiKeyInputGroup label="Google Gemini API Key" value={geminiApiKey} onChange={setGeminiApiKey} show={showGemini} onToggleShow={() => setShowGemini(!showGemini)} canEdit={canEdit} isValid={keyValidation.gemini} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.geminiApiKey} placeholder="AIzaSy..." badge="Gratis" color="purple" link="https://aistudio.google.com/app/apikey" />
+                    <ApiKeyInputGroup label="Google Gemini API Key" value={geminiApiKey} onChange={setGeminiApiKey} show={showGemini} onToggleShow={() => setShowGemini(!showGemini)} canEdit={canEdit} isValid={keyValidation.gemini} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.geminiApiKey} placeholder="AIzaSy..." badge="Gratis / BYOK" color="purple" link="https://aistudio.google.com/app/apikey" desc="Obligatoria para multimodal y search grounding. El copiloto SAGE la valida al conectar." />
+                    <ApiKeyInputGroup label="OpenRouter API Key" value={openrouterApiKey} onChange={setOpenrouterApiKey} show={showOpenrouter} onToggleShow={() => setShowOpenrouter(!showOpenrouter)} canEdit={canEdit} isValid={keyValidation.openrouter} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.openrouterApiKey} placeholder="sk-or-v1-..." badge="Opcional" color="blue" link="https://openrouter.ai/keys" linkText="Crear clave" desc="Opcional: enruta chat de texto a GLM vía OpenRouter y ahorra cuota Gemini. Ver docs/guides/mimbot-byok-setup.md." />
                     <ApiKeyInputGroup label="CurseForge API Key" value={curseforgeApiKey} onChange={setCurseforgeApiKey} show={showCurseforge} onToggleShow={() => setShowCurseforge(!showCurseforge)} canEdit={canEdit} isValid={keyValidation.curseforge} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.curseforgeApiKey} placeholder="Tu clave de CurseForge..." badge="Requerida" link="https://console.curseforge.com/" />
                     <ApiKeyInputGroup label="Modrinth Token" value={modrinthApiKey} onChange={setModrinthApiKey} show={showModrinth} onToggleShow={() => setShowModrinth(!showModrinth)} canEdit={canEdit} isValid={keyValidation.modrinth} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.modrinthApiKey} placeholder="mrp_..." badge="Opcional" color="emerald" link="https://modrinth.com/settings/pats" />
                     <ApiKeyInputGroup label="VirusTotal API Key" value={virusTotalApiKey} onChange={setVirusTotalApiKey} show={showVirusTotal} onToggleShow={() => setShowVirusTotal(!showVirusTotal)} canEdit={canEdit} isValid={keyValidation.virusTotal} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.virusTotalApiKey} placeholder="Tu clave API..." badge="Opcional" color="blue" link="https://www.virustotal.com/gui/user/join" />
                     <AiQuotaStatusPanel />
+                    <MimbotPrivacySettingsPanel />
                   </div>
                 )}
                 {activeTab === "tools" && (

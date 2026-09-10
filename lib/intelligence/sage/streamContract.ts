@@ -95,6 +95,13 @@ export function isSageErrorPayload(value: unknown): value is SageErrorPayload {
     typeof value.retryable === "boolean" &&
     (value.severity === "warning" || value.severity === "error") &&
     typeof value.action === "string" &&
-    (value.details === undefined || typeof value.details === "string")
+    (value.details === undefined || typeof value.details === "string") &&
+    (value.quotaKind === undefined ||
+      value.quotaKind === "rpm" ||
+      value.quotaKind === "tpm" ||
+      value.quotaKind === "daily" ||
+      value.quotaKind === "concurrency" ||
+      value.quotaKind === "unknown") &&
+    (value.quotaHint === undefined || typeof value.quotaHint === "string")
   );
 }

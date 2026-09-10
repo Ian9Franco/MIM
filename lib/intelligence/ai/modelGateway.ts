@@ -4,6 +4,7 @@ import { OpenRouterProvider } from "./openRouterProvider";
 import { resolveGeminiApiKey, resolveOpenRouterApiKey } from "./createAIProvider";
 import type { AIIntent } from "./intents";
 import { resolveModelRoute } from "./modelRouter";
+import { recordAiProviderRateLimit, recordAiProviderRequest } from "./quotaTracker";
 import type { AIMessage, AIProvider, AIRequest, AIResponse } from "./types";
 
 export type GatewayKeyOptions = {
@@ -107,16 +108,24 @@ export async function generateWithModelGateway(
 
   let response: AIResponse;
 
-  if (provider.id === "openrouter") {
-    response = await (provider as OpenRouterProvider).generateWithFallback(
-      baseRequest,
-      route.openRouterModels
-    );
-  } else {
-    response = await generateGeminiCascade(provider, baseRequest, route.geminiModels);
-  }
+  try {
+    if (provider.id === "openrouter") {
+      response = await (provider as OpenRouterProvider).generateWithFallback(
+        baseRequest,
+        route.openRouterModels
+      );
+    } else {
+      response = await generateGeminiCascade(provider, baseRequest, route.geminiModels);
+    }
 
-  return { ...response, routeReason: route.reason };
+    recordAiProviderRequest(response.provider);
+    return { ...response, routeReason: route.reason };
+  } catch (err: unknown) {
+    if (isAIProviderError(err) && err.code === "RATE_LIMITED" && err.provider) {
+      recordAiProviderRateLimit(err.provider as "gemini" | "openrouter", err.message);
+    }
+    throw err;
+  }
 }
 
 async function generateGeminiCascade(

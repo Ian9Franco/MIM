@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench, Shield, Download, Upload, FileCheck, Loader2 } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { FolderSearch, Lock, AlertTriangle, KeyRound, Eye, EyeOff, RefreshCw, Check, MoveRight, Package, X, ChevronLeft, FolderOpen, Wrench, Shield, Download, Upload, FileCheck, Loader2, Activity } from "lucide-react";
 import { createVault, verifyVault, encryptVault, decryptVault, generateVaultFilename, type VaultData, type MimVaultSchema } from "@/lib/vault/vaultEngine";
 
 // ── SettingsTabNav ───────────────────────────────────────────────────────────
@@ -648,6 +648,82 @@ export function SovereignVaultSettingsCard({ settingsData, onApplySettings }: So
           <AlertTriangle className="w-4 h-4 shrink-0" /> {importError}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── AiQuotaStatusPanel (BOT-06) ──────────────────────────────────────────────
+
+type AiQuotaProviderSnapshot = {
+  provider: string;
+  requestsLastMinute: number;
+  lastRateLimit: {
+    kind: string;
+    at: string;
+    retryAfterSeconds?: number;
+    userHint: string;
+  } | null;
+};
+
+export function AiQuotaStatusPanel() {
+  const [loading, setLoading] = useState(true);
+  const [providers, setProviders] = useState<AiQuotaProviderSnapshot[]>([]);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/ai-quota");
+        if (!res.ok) throw new Error("quota-status-unavailable");
+        const data = await res.json();
+        if (!cancelled) {
+          setProviders(Array.isArray(data.providers) ? data.providers : []);
+          setNote(typeof data.note === "string" ? data.note : "");
+        }
+      } catch {
+        if (!cancelled) setProviders([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Activity className="w-4 h-4 text-purple-400" />
+        <h3 className="text-xs font-headline tracking-wider uppercase text-muted">
+          Uso de IA (sesión local)
+        </h3>
+      </div>
+      {loading ? (
+        <p className="text-[11px] text-muted flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Leyendo contadores…
+        </p>
+      ) : providers.length === 0 ? (
+        <p className="text-[11px] text-muted">Sin actividad de proveedores registrada en esta sesión.</p>
+      ) : (
+        <div className="space-y-2">
+          {providers.map((p) => (
+            <div key={p.provider} className="text-[11px] rounded-xl border border-white/5 bg-black/20 p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-subhead text-foreground/80 capitalize">{p.provider}</span>
+                <span className="text-muted">{p.requestsLastMinute} req / min (local)</span>
+              </div>
+              {p.lastRateLimit && (
+                <p className="mt-1.5 text-amber-300/90 leading-relaxed">
+                  Último límite ({p.lastRateLimit.kind.toUpperCase()}): {p.lastRateLimit.userHint}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {note && <p className="text-[10px] text-muted/70 leading-relaxed">{note}</p>}
     </div>
   );
 }

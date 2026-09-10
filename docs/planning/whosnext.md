@@ -1,6 +1,6 @@
 # MIM — Who's Next
 
-Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70. Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](../releases/release-audit.md).
+Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75. Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](../releases/release-audit.md).
 
 ## 1. Proceso y contratos API
 
@@ -13,10 +13,11 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70. Las eval
 - [ ] **BOT-03 — Seguimientos contextuales.** Mantener dos sugerencias relevantes tras el primer intercambio, sin repetir preguntas ya respondidas.
 - [x] **BOT-04 — Estado de conexión veraz (cerrado).** `SageMimbotCopilot` valida con `/api/settings/validate-keys` (`useStoredGemini: true`), muestra badge por estado (`validating`/`valid`/`invalid`/`rate_limited`) y bloquea envío hasta conexión verificada. `probeGeminiApiKey()` centraliza la sonda sin exponer la clave en URL.
 - [x] **BOT-05a — Gateway request lifecycle (cerrado).** PR #68: `requestLifecycle.ts`, propagación de `signal`/timeout en SAGE/FOMO/providers, MIM-Bot Chat usa el provider seleccionado sin credenciales en URL.
-- [x] **BOT-GW — Model router por intención (cerrado).** `generateWithModelGateway()`: texto (SAGE chat, MIM-Bot chat, deps) → GLM vía OpenRouter cuando hay clave; multimodal y search grounding → Gemini. Desactivable con `MIMBOT_INTENT_ROUTING=false`. Pendiente: observabilidad (BOT-06), eval fixtures, migración `web/` legacy.
+- [x] **BOT-GW — Model router por intención (cerrado).** `generateWithModelGateway()`: texto (SAGE chat, MIM-Bot chat, deps) → GLM vía OpenRouter cuando hay clave; multimodal y search grounding → Gemini. Desactivable con `MIMBOT_INTENT_ROUTING=false`. Pendiente: eval fixtures, migración `web/` legacy.
 - [x] **Naming — MIM-Bot Chat (cerrado).** PR #70: vocabulario `mim-bot-chat` / `mimBotChat()` en código, API mode y docs.
-- [ ] **BOT-05b — Resolver soporte multi-proveedor en SAGE follow-up.** Revisar el proveedor OpenAI de `sageMimbotEngine.ts` frente al endpoint Gemini/OpenRouter; decidir si integrarlo o retirar la rama desconectada antes de cambiar el producto.
-- [ ] **BOT-06 — Distinguir límites de cuota.** Usar metadatos reales del proveedor para separar límites temporales y diarios; no inferir un tipo de cuota a partir de cualquier 429. Verificar límites, precios y políticas vigentes antes de mostrarlos: los números históricos del roadmap no constituyen evidencia actual.
+- [x] **BOT-05b — SAGE follow-up multi-proveedor (cerrado).** `sageChatEngine.ts` unifica `/api/sage/chat` y `chatWithSageMimbot()` vía Model Gateway; referencia OpenAI retirada.
+- [x] **BOT-JSON — Salida estructurada explain-deps (cerrado).** Schema Zod + parseo con fallback determinista (HTTP 200) en `dependencyExplain.ts`.
+- [x] **BOT-06 — Clasificación de cuotas IA (cerrado).** `classifyProviderQuotaError()` distingue RPM/TPM/daily/concurrency; tracker local + `GET /api/settings/ai-quota` + panel en Settings. No incluye costos acumulados OpenRouter (ver BOT-06b).
 - [ ] **BOT-07 — Cola para análisis por lotes (condicional).** Sólo si se incorpora ese flujo: concurrencia acotada, cancelación y espera según cuota real.
 - [ ] **BOT-08 — Caché de las cuatro quick questions durante 24 horas.** Clave por crash/pregunta/modo, expiración e invalidación verificadas. La caché actual de diagnósticos no cierra este requisito.
 - [ ] **BOT-09 — Transparencia BYOK.** Verificar términos oficiales aplicables a plan/región/proveedor y redactar aviso sobre qué datos se envían, retención y uso. No prometer privacidad por el solo hecho de usar una key propia.

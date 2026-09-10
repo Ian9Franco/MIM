@@ -25,6 +25,9 @@ export type SageErrorPayload = {
   severity: SageErrorSeverity;
   action: string;
   details?: string;
+  /** BOT-06: classified quota limit when provider returns 429 */
+  quotaKind?: "rpm" | "tpm" | "daily" | "concurrency" | "unknown";
+  quotaHint?: string;
 };
 
 export const SAGE_ERROR_DEFINITIONS: Readonly<Record<SageErrorCode, SageErrorDefinition>> = {
@@ -64,7 +67,12 @@ export const SAGE_ERROR_DEFINITIONS: Readonly<Record<SageErrorCode, SageErrorDef
 
 export function sageErrorResponse(
   code: SageErrorCode,
-  options: { message?: string; details?: string } = {},
+  options: {
+    message?: string;
+    details?: string;
+    quotaKind?: SageErrorPayload["quotaKind"];
+    quotaHint?: string;
+  } = {},
 ): NextResponse {
   const payload = sageErrorPayload(code, options);
   return NextResponse.json(payload, { status: SAGE_ERROR_DEFINITIONS[code].status });
@@ -72,7 +80,12 @@ export function sageErrorResponse(
 
 export function sageErrorPayload(
   code: SageErrorCode,
-  options: { message?: string; details?: string } = {},
+  options: {
+    message?: string;
+    details?: string;
+    quotaKind?: SageErrorPayload["quotaKind"];
+    quotaHint?: string;
+  } = {},
 ): SageErrorPayload {
   const definition = SAGE_ERROR_DEFINITIONS[code];
   return {
@@ -81,8 +94,10 @@ export function sageErrorPayload(
     message: options.message ?? definition.message,
     retryable: definition.retryable,
     severity: definition.severity,
-    action: definition.action,
+    action: options.quotaHint ?? definition.action,
     ...(options.details ? { details: options.details } : {}),
+    ...(options.quotaKind ? { quotaKind: options.quotaKind } : {}),
+    ...(options.quotaHint ? { quotaHint: options.quotaHint } : {}),
   };
 }
 

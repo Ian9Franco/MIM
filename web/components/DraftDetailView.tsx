@@ -134,7 +134,7 @@ export function DraftDetailView({
     }
   }, [tab, draft?.id]);
 
-  const visibleMods = activeCollectionMods.filter((mod: any) => {
+  const visibleMods = activeCollectionMods.filter((mod: ModHit) => {
     const key = mod.itemId || mod.id || mod.projectId;
     if (removedIds.has(key)) return false;
     if (typeFilter === "all") return true;
@@ -277,7 +277,9 @@ export function DraftDetailView({
       {/* Modales */}
       <DraftMetadataModal
         isOpen={showMetadataModal}
-        onClose={() => setShowMetadataModal(false)}
+        onClose={() => {
+          setShowMetadataModal(false);
+        }}
         editName={editName}
         setEditName={setEditName}
         editVersion={editVersion}
@@ -295,7 +297,9 @@ export function DraftDetailView({
 
       <DraftItemEditModal
         editingItem={editingItem}
-        onClose={() => setEditingItem(null)}
+        onClose={() => {
+          setEditingItem(null);
+        }}
         itemType={itemType}
         setItemType={setItemType}
         itemSide={itemSide}

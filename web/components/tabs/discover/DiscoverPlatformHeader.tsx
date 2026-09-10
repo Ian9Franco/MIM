@@ -59,7 +59,9 @@ export function DiscoverPlatformHeader({
         <div className="w-[124px] shrink-0 grid grid-cols-3 gap-1">
           <button
             type="button"
-            onClick={() => handleSelectPlatform("modrinth")}
+            onClick={() => {
+              handleSelectPlatform("modrinth");
+            }}
             className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center ${
               discoverSource === "modrinth"
                 ? "text-[#1bd672] border-[#1bd672]/30"
@@ -79,7 +81,9 @@ export function DiscoverPlatformHeader({
           </button>
           <button
             type="button"
-            onClick={() => handleSelectPlatform("curseforge")}
+            onClick={() => {
+              handleSelectPlatform("curseforge");
+            }}
             className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center ${
               discoverSource === "curseforge"
                 ? "text-orange-400 border-orange-500/30"
@@ -99,7 +103,9 @@ export function DiscoverPlatformHeader({
           </button>
           <button
             type="button"
-            onClick={() => handleSelectPlatform("chunk")}
+            onClick={() => {
+              handleSelectPlatform("chunk");
+            }}
             className={`relative h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
               discoverSource === "chunk"
                 ? "text-[#00cc44] border-[#00cc44]/30"
@@ -119,7 +125,9 @@ export function DiscoverPlatformHeader({
           </button>
           <button
             type="button"
-            onClick={() => handleSelectPlatform("all")}
+            onClick={() => {
+              handleSelectPlatform("all");
+            }}
             className={`relative col-span-3 h-6 overflow-hidden rounded-lg text-xs font-bold transition-colors border flex items-center justify-center gap-1 ${
               discoverSource === "all"
                 ? "text-blue-400 border-blue-500/30"
@@ -153,7 +161,9 @@ export function DiscoverPlatformHeader({
               Te recomendamos cambiar a **CurseForge** para continuar explorando.
               <button
                 type="button"
-                onClick={() => handleSelectPlatform("curseforge")}
+                onClick={() => {
+                  handleSelectPlatform("curseforge");
+                }}
                 className="mt-2.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 transition-all text-white font-bold rounded-lg block w-max"
               >
                 Cambiar a CurseForge

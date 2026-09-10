@@ -5,9 +5,19 @@ import { motion } from "framer-motion";
 import { Users, UserCheck } from "lucide-react";
 import { MiembrosSkeleton } from "../FomoSkeletons";
 
+export interface DraftMemberItem {
+  id: string;
+  role: string;
+  profiles?: {
+    username?: string | null;
+    avatar_url?: string | null;
+    color?: string | null;
+  } | null;
+}
+
 interface DraftMembersTabProps {
   loadingMembers: boolean;
-  members: any[];
+  members: DraftMemberItem[];
 }
 
 export function DraftMembersTab({
@@ -31,7 +41,7 @@ export function DraftMembersTab({
           <p className="text-xs text-white/40">No hay miembros adicionales en este draft.</p>
         </div>
       ) : (
-        members.map((member: any) => {
+        members.map((member: DraftMemberItem) => {
           const profile = member.profiles;
           const initial = (profile?.username || "?").charAt(0).toUpperCase();
           return (

@@ -78,7 +78,9 @@ export function DraftMetadataModal({
                 <input
                   type="text"
                   value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  onChange={(e) => {
+                    setEditName(e.target.value);
+                  }}
                   className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-orange-500/50 transition-all"
                   placeholder="Ej. Mi Modpack Brutal"
                 />
@@ -92,7 +94,9 @@ export function DraftMetadataModal({
                   <input
                     type="text"
                     value={editVersion}
-                    onChange={(e) => setEditVersion(e.target.value)}
+                    onChange={(e) => {
+                      setEditVersion(e.target.value);
+                    }}
                     className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all"
                     placeholder="Ej. 1.20.1"
                   />
@@ -103,7 +107,9 @@ export function DraftMetadataModal({
                   </label>
                   <select
                     value={editLoader}
-                    onChange={(e) => setEditLoader(e.target.value)}
+                    onChange={(e) => {
+                      setEditLoader(e.target.value);
+                    }}
                     className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all cursor-pointer"
                   >
                     <option value="fabric">Fabric</option>
@@ -121,7 +127,9 @@ export function DraftMetadataModal({
                 <input
                   type="text"
                   value={editCoverImage}
-                  onChange={(e) => setEditCoverImage(e.target.value)}
+                  onChange={(e) => {
+                    setEditCoverImage(e.target.value);
+                  }}
                   className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-orange-500/50 transition-all font-mono text-[10px]"
                   placeholder="https://ejemplo.com/imagen.png"
                 />
@@ -133,7 +141,7 @@ export function DraftMetadataModal({
                       alt="Preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as any).style.display = "none";
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
                       }}
                     />
                   </div>
@@ -149,7 +157,9 @@ export function DraftMetadataModal({
                   <div className="grid grid-cols-2 gap-2 mt-1.5">
                     <button
                       type="button"
-                      onClick={() => setEditVisibility("private")}
+                      onClick={() => {
+                        setEditVisibility("private");
+                      }}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all border text-center ${
                         editVisibility === "private"
                           ? "bg-white/10 text-white border-white/20"
@@ -160,7 +170,9 @@ export function DraftMetadataModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEditVisibility("public")}
+                      onClick={() => {
+                        setEditVisibility("public");
+                      }}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all border text-center ${
                         editVisibility === "public"
                           ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"

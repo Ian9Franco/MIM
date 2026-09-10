@@ -11,10 +11,10 @@ interface DraftItemsTabProps {
   typeFilter: string;
   setTypeFilter: (f: string) => void;
   loadingActiveMods: boolean;
-  visibleMods: any[];
+  visibleMods: ModHit[];
   handleOpenModDetails: (mod: ModHit) => void;
-  onOpenEditItem: (mod: any) => void;
-  onRemoveItem?: (mod: any) => void;
+  onOpenEditItem: (mod: ModHit) => void;
+  onRemoveItem?: (mod: ModHit) => void;
 }
 
 export function DraftItemsTab({
@@ -43,7 +43,9 @@ export function DraftItemsTab({
             <button
               key={f.id}
               type="button"
-              onClick={() => setTypeFilter(f.id)}
+              onClick={() => {
+                setTypeFilter(f.id);
+              }}
               className="relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors active:scale-95"
               style={{
                 color: active ? "var(--color-primary)" : "var(--color-muted)",
@@ -73,7 +75,7 @@ export function DraftItemsTab({
           {typeFilter === "all" ? "Este draft no tiene ítems." : "No hay items de este tipo."}
         </div>
       ) : (
-        visibleMods.map((mod: any) => {
+        visibleMods.map((mod: ModHit) => {
           const col = typeColor(mod.projectType);
           return (
             <div

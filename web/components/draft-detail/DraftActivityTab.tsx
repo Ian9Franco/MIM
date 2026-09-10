@@ -5,9 +5,23 @@ import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import { MiembrosSkeleton } from "../FomoSkeletons";
 
+export interface DraftActivityEvent {
+  id: string;
+  action: string;
+  created_at: string;
+  payload?: {
+    name?: string;
+  } | null;
+  profiles?: {
+    username?: string | null;
+    avatar_url?: string | null;
+    color?: string | null;
+  } | null;
+}
+
 interface DraftActivityTabProps {
   loadingActivity: boolean;
-  activity: any[];
+  activity: DraftActivityEvent[];
 }
 
 export function DraftActivityTab({
@@ -31,7 +45,7 @@ export function DraftActivityTab({
           <p className="text-xs text-white/40">Sin actividad registrada aún.</p>
         </div>
       ) : (
-        activity.map((evt: any) => {
+        activity.map((evt: DraftActivityEvent) => {
           const profile = evt.profiles;
           const initial = (profile?.username || "?").charAt(0).toUpperCase();
           const date = new Date(evt.created_at).toLocaleDateString("es-AR", {

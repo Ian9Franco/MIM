@@ -101,7 +101,9 @@ export function DiscoverFiltersPanel({
     <>
       {/* Filtros y Categorías - Cabecera Colapsable */}
       <div 
-        onClick={() => setShowFilters(!showFilters)}
+        onClick={() => {
+          setShowFilters(!showFilters);
+        }}
         className="flex items-center justify-between mb-2 shrink-0 bg-white/5 border border-white/[0.04] p-1.5 rounded-2xl cursor-pointer hover:bg-white/[0.08] transition-colors"
       >
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-white/80 transition-all select-none">
@@ -173,7 +175,9 @@ export function DiscoverFiltersPanel({
                   <button
                     key={ver}
                     type="button"
-                    onClick={() => toggleVersion(ver)}
+                    onClick={() => {
+                      toggleVersion(ver);
+                    }}
                     className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
                       isSelected
                         ? "bg-amber-500/20 text-amber-300 border border-amber-500/35"
@@ -215,7 +219,9 @@ export function DiscoverFiltersPanel({
                     <button
                       key={l.value}
                       type="button"
-                      onClick={() => toggleLoader(l.value)}
+                      onClick={() => {
+                        toggleLoader(l.value);
+                      }}
                       className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
                         isSelected
                           ? "bg-amber-500/20 text-amber-300 border border-amber-500/35"

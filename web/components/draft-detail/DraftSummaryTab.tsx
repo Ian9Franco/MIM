@@ -6,7 +6,12 @@ import { typeLabel, typeColor } from "./draftDetailConstants";
 import type { ModHit } from "../SpotlightMarquees";
 
 interface DraftSummaryTabProps {
-  draft: any;
+  draft: {
+    minecraft_version?: string;
+    loader?: string;
+    visibility?: string;
+    description?: string;
+  } | null;
   activeCollectionMods: ModHit[];
 }
 

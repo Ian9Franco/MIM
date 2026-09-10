@@ -63,7 +63,9 @@ export function DiscoverControls({
             <button
               key={type.value}
               type="button"
-              onClick={() => handleTypeChange(type.value)}
+              onClick={() => {
+                handleTypeChange(type.value);
+              }}
               title={type.label}
               aria-label={type.label}
               className={`group relative h-8 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 flex items-center justify-center gap-1.5 overflow-hidden ${
@@ -101,7 +103,9 @@ export function DiscoverControls({
         </label>
         <select
           value={discoverSort}
-          onChange={(e) => handleSortChange(e.target.value)}
+          onChange={(e) => {
+            handleSortChange(e.target.value);
+          }}
           className="flex-1 h-8 bg-surface/90 border border-border rounded-xl px-3 text-[11px] text-white/80 focus:border-amber-500/50 outline-none cursor-pointer"
         >
           {SORT_OPTIONS.map(opt => (
@@ -120,7 +124,9 @@ export function DiscoverControls({
             type="text"
             placeholder="Buscar proyectos..."
             value={discoverQuery}
-            onChange={(e) => setDiscoverQuery(e.target.value)}
+            onChange={(e) => {
+              setDiscoverQuery(e.target.value);
+            }}
             className="w-full bg-white/5 border border-white/[0.08] rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-white/20 focus:border-amber-500/55 outline-none"
           />
         </div>

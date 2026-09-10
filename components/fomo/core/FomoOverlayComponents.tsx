@@ -12,6 +12,6 @@ export { FomoDependenciesTab } from "../details/FomoDependenciesTab";
 export { FomoVersionsTab } from "../details/FomoVersionsTab";
 export { FomoLightbox } from "../details/FomoLightbox";
 
-export function StatsGrid({ mod: _mod }: { mod: any }) {
+export function StatsGrid({ mod: _mod }: { mod: unknown }) {
   return null; // Compacted into CompatibilitySection
 }

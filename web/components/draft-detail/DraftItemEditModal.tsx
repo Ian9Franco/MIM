@@ -4,8 +4,10 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Check } from "lucide-react";
 
+import type { ModHit } from "../SpotlightMarquees";
+
 interface DraftItemEditModalProps {
-  editingItem: any;
+  editingItem: (ModHit & { projectId?: string; itemId?: string }) | null;
   onClose: () => void;
   itemType: string;
   setItemType: (t: string) => void;
@@ -83,7 +85,9 @@ export function DraftItemEditModal({
                       <button
                         key={t.id}
                         type="button"
-                        onClick={() => setItemType(t.id)}
+                        onClick={() => {
+                          setItemType(t.id);
+                        }}
                         className={`py-2 px-2 rounded-xl text-[10px] font-semibold transition-all border text-center ${
                           active
                             ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
@@ -109,7 +113,9 @@ export function DraftItemEditModal({
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setItemSide(s.id)}
+                        onClick={() => {
+                          setItemSide(s.id);
+                        }}
                         className={`py-2 px-1 rounded-xl text-[9px] font-semibold transition-all border text-center ${
                           active
                             ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"

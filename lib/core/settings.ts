@@ -173,6 +173,7 @@ export function getPublicSettings(): PublicSettings {
   apiKeysConfigured.curseforgeApiKey ||= Boolean(process.env.CURSEFORGE_API_KEY);
   apiKeysConfigured.virusTotalApiKey ||= Boolean(process.env.VIRUSTOTAL_API_KEY);
   apiKeysConfigured.geminiApiKey ||= Boolean(process.env.GEMINI_API_KEY);
+  apiKeysConfigured.openrouterApiKey ||= Boolean(process.env.OPENROUTER_API_KEY);
   return {
     ...settings,
     apiKeysConfigured,

@@ -1,3 +1,4 @@
+import { getApiKey } from "@/lib/core/settings";
 import { GeminiProvider } from "./geminiProvider";
 import { OpenRouterProvider } from "./openRouterProvider";
 import type { AIProvider, AIProviderId } from "./types";
@@ -17,7 +18,11 @@ export function resolveConfiguredAIProviderId(
 export function resolveOpenRouterApiKey(
   env: NodeJS.ProcessEnv = process.env
 ): string {
-  return env.OPENROUTER_API_KEY?.trim() || "";
+  return (
+    env.OPENROUTER_API_KEY?.trim() ||
+    getApiKey("openrouter").trim() ||
+    ""
+  );
 }
 
 /**
@@ -34,6 +39,7 @@ export function resolveGeminiApiKey(
   return (
     env.GEMINI_API_KEY?.trim() ||
     env.NEXT_PUBLIC_GEMINI_API_KEY?.trim() ||
+    getApiKey("gemini").trim() ||
     ""
   );
 }

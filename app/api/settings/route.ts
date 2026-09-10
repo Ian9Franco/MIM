@@ -25,6 +25,7 @@ const settingsUpdateSchema = z.object({
   curseforgeApiKey: z.string().max(4096).optional(),
   virusTotalApiKey: z.string().max(4096).optional(),
   geminiApiKey: z.string().max(4096).optional(),
+  openrouterApiKey: z.string().max(4096).optional(),
 }).strict();
 
 export const GET = withApiGuard(

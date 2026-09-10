@@ -6,6 +6,7 @@
 import React, { memo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ListTree, Package, Images, FileText, Loader2 } from "lucide-react";
+import { renderBodyText } from "@/web/components/mod-details/utils";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
 import {
   TabButton,
@@ -213,6 +214,40 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     }
   };
 
+  const renderStyledBody = (
+    body: string,
+    source: string,
+    className: string,
+    onClick?: React.MouseEventHandler<HTMLDivElement>,
+  ) =>
+    React.cloneElement(renderBodyText(body, source), {
+      className,
+      onClick,
+    } as React.HTMLAttributes<HTMLDivElement>);
+
+  const descriptionHtmlNode = renderStyledBody(
+    translatedBody ?? descText,
+    translatedBody ? "curseforge" : descSource,
+    "prose prose-invert prose-sm max-w-none text-sm text-foreground",
+  );
+
+  const explainedHtmlNode = explainedBody
+    ? renderStyledBody(
+        explainedBody,
+        "modrinth",
+        "prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer",
+        handleFomoLinkClick,
+      )
+    : null;
+
+  const renderChatMessageHtml = (text: string) =>
+    renderStyledBody(
+      text,
+      "modrinth",
+      "prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words",
+      handleFomoLinkClick,
+    );
+
   const mainContent = (
     <div className="flex-1 flex flex-col min-h-0 animate-fade-in text-foreground relative">
       {loading ? (
@@ -281,7 +316,6 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             {activeTab === "description" && (
               <FomoDescriptionTab
                 descText={descText}
-                descSource={descSource}
                 translatedBody={translatedBody}
                 isTranslating={isTranslating}
                 handleTranslate={handleTranslate}
@@ -305,7 +339,9 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 isChatSending={isChatSending}
                 handleSendChatMessage={handleSendChatMessage}
                 chatBottomRef={chatBottomRef}
-                onFomoLinkClick={handleFomoLinkClick}
+                descriptionHtmlNode={descriptionHtmlNode}
+                explainedHtmlNode={explainedHtmlNode}
+                renderChatMessageHtml={renderChatMessageHtml}
               />
             )}
             {activeTab === "gallery" && (

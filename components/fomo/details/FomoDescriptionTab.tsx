@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { renderBodyText } from "@/web/components/mod-details/utils";
 import {
   ExternalLink,
   Images,
@@ -13,21 +12,8 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
-function renderStyledBody(
-  body: string,
-  source: string,
-  className: string,
-  onClick?: React.MouseEventHandler<HTMLDivElement>,
-) {
-  return React.cloneElement(renderBodyText(body, source), {
-    className,
-    onClick,
-  } as React.HTMLAttributes<HTMLDivElement>);
-}
-
 interface FomoDescriptionTabProps {
   descText: string;
-  descSource: string;
   translatedBody: string | null;
   isTranslating: boolean;
   handleTranslate: () => void;
@@ -51,12 +37,13 @@ interface FomoDescriptionTabProps {
   isChatSending: boolean;
   handleSendChatMessage: (text?: string) => void;
   chatBottomRef: React.RefObject<HTMLDivElement | null>;
-  onFomoLinkClick: (e: React.MouseEvent) => void;
+  descriptionHtmlNode: React.ReactNode;
+  explainedHtmlNode: React.ReactNode;
+  renderChatMessageHtml: (text: string) => React.ReactNode;
 }
 
 export function FomoDescriptionTab({
   descText,
-  descSource,
   translatedBody,
   isTranslating,
   handleTranslate,
@@ -80,7 +67,9 @@ export function FomoDescriptionTab({
   isChatSending,
   handleSendChatMessage,
   chatBottomRef,
-  onFomoLinkClick,
+  descriptionHtmlNode,
+  explainedHtmlNode,
+  renderChatMessageHtml,
 }: FomoDescriptionTabProps) {
   return (
     <div className="space-y-4">
@@ -272,14 +261,7 @@ export function FomoDescriptionTab({
             </div>
           </div>
 
-          {explainedBody
-            ? renderStyledBody(
-                explainedBody,
-                "modrinth",
-                "prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer",
-                onFomoLinkClick,
-              )
-            : null}
+          {explainedHtmlNode}
 
           {explanationSources.length > 0 && (
             <div className="pt-2 border-t border-white/5 space-y-1.5">
@@ -340,12 +322,7 @@ export function FomoDescriptionTab({
                         </>
                       )}
                     </span>
-                    {renderStyledBody(
-                      msg.text,
-                      "modrinth",
-                      "prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words",
-                      onFomoLinkClick,
-                    )}
+                    {renderChatMessageHtml(msg.text)}
                   </div>
                 ))}
                 {isChatSending && (
@@ -413,11 +390,7 @@ export function FomoDescriptionTab({
           </div>
         </div>
       ) : (
-        renderStyledBody(
-          translatedBody ?? descText,
-          translatedBody ? "curseforge" : descSource,
-          "prose prose-invert prose-sm max-w-none text-sm text-foreground",
-        )
+        descriptionHtmlNode
       )}
     </div>
   );

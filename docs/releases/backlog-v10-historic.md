@@ -119,3 +119,10 @@ Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sob
 - Caché de diagnósticos existente no equivale a historial de chat ni caché de respuestas por 24 horas.
 - Multi-proveedor conectado de extremo a extremo no se considera cerrado por la rama OpenAI en el motor; ver BOT-05.
 - Las fases generales de Unicorn permanecen parciales cuando sólo hay evidencia de un subsistema (errores SAGE, fixtures existentes, migración puntual o caché).
+
+## Reconciliación de cierres 2026-09-10
+
+| Cierre verificado | Evidencia y alcance comprobado |
+|---|---|
+| [x] CI-SSH2 — empaquetado Desktop de Server/SFTP | PR #69 integró `serverExternalPackages: ["ssh2"]`; el merge de #68 `d098d7ad5607d2f37dd644f71662d39e5e92c794` contiene esa configuración. MIM Systems Engineering CI #191 sobre ese SHA pasó Lint/Types, Systems, DAST, build Desktop y build Hub. Cierra sólo la regresión de empaquetado; no verifica semántica SFTP ni cierra #58. |
+| [x] BOT-05 — subalcance lifecycle/credenciales de MIMBOT-GW | PR #68 / merge `d098d7ad5607d2f37dd644f71662d39e5e92c794`: cancelación y timeout llegan a Gemini/OpenRouter, retry comparte el ciclo cancelable, el mini-chat usa el proveedor seleccionado y las credenciales permanecen fuera de URLs. CI #191 valida runner obligatorio y ambos builds. BOT-05 global y decisiones de producto multi-proveedor permanecen abiertos. |

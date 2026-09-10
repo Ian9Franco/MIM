@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { RichDescriptionBlock } from "@/components/ui/DescriptionModal";
-import { markdownToHtml } from "@/utils/markdown";
+import { renderBodyText } from "@/web/components/mod-details/utils";
 import {
   ExternalLink,
   Images,
@@ -14,8 +13,21 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
+function renderStyledBody(
+  body: string,
+  source: string,
+  className: string,
+  onClick?: React.MouseEventHandler<HTMLDivElement>,
+) {
+  return React.cloneElement(renderBodyText(body, source), {
+    className,
+    onClick,
+  } as React.HTMLAttributes<HTMLDivElement>);
+}
+
 interface FomoDescriptionTabProps {
-  rawDesc: string;
+  descText: string;
+  descSource: string;
   translatedBody: string | null;
   isTranslating: boolean;
   handleTranslate: () => void;
@@ -39,12 +51,12 @@ interface FomoDescriptionTabProps {
   isChatSending: boolean;
   handleSendChatMessage: (text?: string) => void;
   chatBottomRef: React.RefObject<HTMLDivElement | null>;
-  descHtml: string;
   onFomoLinkClick: (e: React.MouseEvent) => void;
 }
 
 export function FomoDescriptionTab({
-  rawDesc,
+  descText,
+  descSource,
   translatedBody,
   isTranslating,
   handleTranslate,
@@ -68,7 +80,6 @@ export function FomoDescriptionTab({
   isChatSending,
   handleSendChatMessage,
   chatBottomRef,
-  descHtml,
   onFomoLinkClick,
 }: FomoDescriptionTabProps) {
   return (
@@ -98,7 +109,7 @@ export function FomoDescriptionTab({
           <button
             type="button"
             onClick={handleTranslate}
-            disabled={isTranslating || !rawDesc}
+            disabled={isTranslating || !descText.trim()}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[0.65rem] font-bold transition-all active:scale-95 disabled:opacity-50 text-foreground"
             style={{
               borderColor: "var(--fomo-border)",
@@ -172,7 +183,7 @@ export function FomoDescriptionTab({
       )}
 
       {/* Empty description prompt */}
-      {!rawDesc && !explainedBody && (
+      {!descText.trim() && !explainedBody && (
         <div className="p-4 rounded-xl bg-purple-900/10 border border-purple-500/20 text-center space-y-3 my-2">
           <div className="w-9 h-9 rounded-full bg-purple-500/15 text-purple-300 mx-auto flex items-center justify-center border border-purple-500/30">
             <Sparkles className="w-4 h-4" />
@@ -261,13 +272,14 @@ export function FomoDescriptionTab({
             </div>
           </div>
 
-          {explainedBody ? (
-            <RichDescriptionBlock
-              html={markdownToHtml(explainedBody)}
-              className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer"
-              onClick={onFomoLinkClick}
-            />
-          ) : null}
+          {explainedBody
+            ? renderStyledBody(
+                explainedBody,
+                "modrinth",
+                "prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer",
+                onFomoLinkClick,
+              )
+            : null}
 
           {explanationSources.length > 0 && (
             <div className="pt-2 border-t border-white/5 space-y-1.5">
@@ -328,11 +340,12 @@ export function FomoDescriptionTab({
                         </>
                       )}
                     </span>
-                    <RichDescriptionBlock
-                      html={markdownToHtml(msg.text)}
-                      className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
-                      onClick={onFomoLinkClick}
-                    />
+                    {renderStyledBody(
+                      msg.text,
+                      "modrinth",
+                      "prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words",
+                      onFomoLinkClick,
+                    )}
                   </div>
                 ))}
                 {isChatSending && (
@@ -400,10 +413,11 @@ export function FomoDescriptionTab({
           </div>
         </div>
       ) : (
-        <RichDescriptionBlock
-          html={descHtml}
-          className="prose prose-invert prose-sm max-w-none text-sm text-foreground"
-        />
+        renderStyledBody(
+          translatedBody ?? descText,
+          translatedBody ? "curseforge" : descSource,
+          "prose prose-invert prose-sm max-w-none text-sm text-foreground",
+        )
       )}
     </div>
   );

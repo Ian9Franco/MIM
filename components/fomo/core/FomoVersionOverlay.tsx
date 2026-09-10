@@ -6,7 +6,6 @@
 import React, { memo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ListTree, Package, Images, FileText, Loader2 } from "lucide-react";
-import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
 import {
   TabButton,
@@ -200,8 +199,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   }, [selectedImageIndex, gallery.length]);
 
   const descText = fullBody || mod.body || mod.description || "";
-  const rawDesc = descText.trim() ? (mod._source === "curseforge" ? formatCurseForgeHtml(descText) : markdownToHtml(descText)) : "Sin descripción.";
-  const descHtml = translatedBody ? translatedBody : rawDesc;
+  const descSource = mod._source === "curseforge" ? "curseforge" : "modrinth";
 
   const handleFomoLinkClick = (e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest("[data-fomo-query]") as HTMLElement;
@@ -282,7 +280,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {activeTab === "description" && (
               <FomoDescriptionTab
-                rawDesc={rawDesc}
+                descText={descText}
+                descSource={descSource}
                 translatedBody={translatedBody}
                 isTranslating={isTranslating}
                 handleTranslate={handleTranslate}
@@ -306,7 +305,6 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 isChatSending={isChatSending}
                 handleSendChatMessage={handleSendChatMessage}
                 chatBottomRef={chatBottomRef}
-                descHtml={descHtml}
                 onFomoLinkClick={handleFomoLinkClick}
               />
             )}

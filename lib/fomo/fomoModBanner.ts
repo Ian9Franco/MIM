@@ -27,7 +27,6 @@ export function resolveModBannerUrl(mod: {
 }
 
 const POTENTIAL_TYPES = ["datapack", "mod", "resourcepack", "shader", "textura", "modpack"];
-const KNOWN_LOADERS = ["forge", "fabric", "neoforge", "quilt"];
 
 export function inferPrimaryProjectType(mod: {
   projectType?: string;

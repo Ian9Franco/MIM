@@ -10,8 +10,8 @@ const SOUND_CONFIG: Record<FomoSoundKind, { src: string; volume: number }> = {
 };
 
 const POOL_SIZE = 3;
-let pools: Partial<Record<FomoSoundKind, HTMLAudioElement[]>> = {};
-let poolCursor: Record<FomoSoundKind, number> = { on: 0, off: 0, pop: 0, sparkle: 0 };
+const pools: Partial<Record<FomoSoundKind, HTMLAudioElement[]>> = {};
+const poolCursor: Record<FomoSoundKind, number> = { on: 0, off: 0, pop: 0, sparkle: 0 };
 let preloadStarted = false;
 let unlockStarted = false;
 

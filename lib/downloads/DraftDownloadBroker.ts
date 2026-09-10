@@ -233,10 +233,10 @@ export class DraftDownloadBroker {
       downloadEvents.emit("session:progress", { session });
     }
 
-    this.persistSession(session);
+    this.persistSession();
   }
 
-  private persistSession(session: DownloadSessionState) {
+  private persistSession(_session?: DownloadSessionState) {
     // TODO: Write to IndexedDB
   }
 

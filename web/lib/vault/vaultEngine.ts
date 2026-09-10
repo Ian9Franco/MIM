@@ -353,7 +353,7 @@ export async function decryptVault(
     }
 
     return vault;
-  } catch (err: any) {
+  } catch {
     throw new Error("Contraseña incorrecta o archivo de bóveda dañado.");
   }
 }

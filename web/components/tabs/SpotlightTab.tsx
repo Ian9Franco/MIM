@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock, Calendar, Loader2, Settings2, ChevronRight } from "lucide-react";
+import { Clock, Calendar, Settings2, ChevronRight } from "lucide-react";
 import {
   VerticalTicker,
   HorizontalEditorialMarquee,
@@ -40,9 +40,9 @@ interface SpotlightTabProps {
  * y admite scroll táctil/mouse gracias al useSmoothMarquee hook existente.
  */
 export function SpotlightTab({
-  latestCollectionName, curseForgeFeatured, activeSpotlightPlatform,
+  curseForgeFeatured, activeSpotlightPlatform,
   setActiveSpotlightPlatform, loadingLatestMods, latestFeaturedMods,
-  handleOpenModDetails, handleEnterCollection, showcaseChannels,
+  handleOpenModDetails, showcaseChannels,
   setShowChannelPicker, updatedMods, newestMods,
 }: SpotlightTabProps) {
   const curseForgeMonthlyMods = (curseForgeFeatured[0]?.mods || []) as ModHit[];

@@ -9,7 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
 import { CommunityRankings } from "../community/CommunityRankings";
 import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
-import { CommunityFeedSkeleton, formatCommunityDate, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
+import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 
 interface ComunidadTabProps {
   rankings: ModHit[];
@@ -222,12 +222,24 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   const toggleProfileFollow = async (profileId: string) => {
     if (!session?.user?.id || profileId === session.user.id) return;
     const following = followedProfileIds.has(profileId);
-    setFollowedProfileIds((current) => { const next = new Set(current); following ? next.delete(profileId) : next.add(profileId); return next; });
+    setFollowedProfileIds((current) => {
+      const next = new Set(current);
+      if (following) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
     const request = following
       ? supabase.from("followed_profiles").delete().eq("follower_id", session.user.id).eq("followed_id", profileId)
       : supabase.from("followed_profiles").insert({ follower_id: session.user.id, followed_id: profileId });
     const { error } = await request;
-    if (error) setFollowedProfileIds((current) => { const next = new Set(current); following ? next.add(profileId) : next.delete(profileId); return next; });
+    if (error) {
+      setFollowedProfileIds((current) => {
+        const next = new Set(current);
+        if (following) next.add(profileId);
+        else next.delete(profileId);
+        return next;
+      });
+    }
   };
 
   const toggleReaction = async (shareId: string) => {

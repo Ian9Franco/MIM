@@ -1,8 +1,5 @@
-"use client";
-
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { createPortal } from "react-dom";
-import { Layers, GripVertical, Trash2, Plus, Check, ArrowUp, ArrowDown, Settings, RefreshCw, AlertTriangle, Package, X, Maximize2 } from "lucide-react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
+import { Layers, GripVertical, Trash2, Plus, Check, AlertTriangle, Package, X, Maximize2 } from "lucide-react";
 
 interface PackHierarchyManagerProps {
   activePacks: string[];
@@ -91,6 +88,30 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
       }
     }, [blocks, blockOrder, mounted]);
 
+    const moveSelectedBlocks = useCallback((direction: number) => {
+      const newOrder = [...blockOrder];
+      const sortedSelected = [...selectedBlocks].sort((a, b) => newOrder.indexOf(a) - newOrder.indexOf(b));
+      
+      if (direction === 1) { // Move UP (Left in array)
+        for (const block of sortedSelected) {
+          const idx = newOrder.indexOf(block);
+          if (idx > 0) {
+            [newOrder[idx], newOrder[idx - 1]] = [newOrder[idx - 1], newOrder[idx]];
+          }
+        }
+      } else if (direction === -1) { // Move DOWN (Right in array)
+        for (let i = sortedSelected.length - 1; i >= 0; i--) {
+          const block = sortedSelected[i];
+          const idx = newOrder.indexOf(block);
+          if (idx < newOrder.length - 1) {
+            [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+          }
+        }
+      }
+      
+      setBlockOrder(newOrder);
+    }, [blockOrder, selectedBlocks]);
+
     // Keyboard Shortcuts for moving blocks
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -107,7 +128,7 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
       
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedBlocks, blockOrder]);
+    }, [selectedBlocks, moveSelectedBlocks]);
 
     // Expose handleCompile to parent
     useImperativeHandle(ref, () => ({
@@ -244,30 +265,6 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
       setDraggedItem(null);
     };
 
-    const moveSelectedBlocks = (direction: number) => {
-      const newOrder = [...blockOrder];
-      const sortedSelected = [...selectedBlocks].sort((a, b) => newOrder.indexOf(a) - newOrder.indexOf(b));
-      
-      if (direction === 1) { // Move UP (Left in array)
-        for (const block of sortedSelected) {
-          const idx = newOrder.indexOf(block);
-          if (idx > 0) {
-            [newOrder[idx], newOrder[idx - 1]] = [newOrder[idx - 1], newOrder[idx]];
-          }
-        }
-      } else if (direction === -1) { // Move DOWN (Right in array)
-        for (let i = sortedSelected.length - 1; i >= 0; i--) {
-          const block = sortedSelected[i];
-          const idx = newOrder.indexOf(block);
-          if (idx < newOrder.length - 1) {
-            [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-          }
-        }
-      }
-      
-      setBlockOrder(newOrder);
-    };
-
     const handleSelectBlock = (blockKey: string, e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest('button')) return;
       
@@ -388,7 +385,7 @@ const PackHierarchyManager = forwardRef<PackHierarchyManagerRef, PackHierarchyMa
                       <div
                         key={item}
                         draggable
-                        onDragStart={(e) => handleDragStartItem(blockKey, idx)}
+                        onDragStart={() => handleDragStartItem(blockKey, idx)}
                         onDragOver={(e) => handleDragOverItem(e, blockKey, idx)}
                         className={`flex items-center gap-2 p-2 rounded-xl text-[10px] font-medium transition-all duration-200 bg-white/5 text-white/70 border border-white/5 cursor-grab active:cursor-grabbing hover:bg-white/10`}
                       >

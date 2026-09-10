@@ -227,7 +227,7 @@ export function autoPromoteDependencies(loaderPath: string) {
               essentialDependencies.add(dep);
             }
           }
-        } catch (e) {
+        } catch {
           // ignore scan errors
         }
       }
@@ -257,7 +257,7 @@ export function autoPromoteDependencies(loaderPath: string) {
             fs.renameSync(full, targetFile);
             console.log(`[builder] Auto-promoted dependency: ${entry} -> .essential/${sub}`);
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }

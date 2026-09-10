@@ -14,7 +14,6 @@ export function InventoryManager({
   readOnly = false
 }: InventoryManagerProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ id: "", count: 1, slot: 0 });

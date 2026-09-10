@@ -9,8 +9,8 @@ import crypto from "crypto";
 import path from "path";
 import { getApiKey } from "../core/settings";
 import { scanMod } from "../scanner";
-import { SUSPICIOUS_PATTERNS, OBFUSCATION_PATTERNS, KNOWN_MALWARE_HASHES, TRUSTED_MODS, checkKnownMalwareThreat } from "./security-data";
-import type { SecurityScanResult, SecurityFinding, ThreatCategory } from "../core/types";
+import { SUSPICIOUS_PATTERNS, OBFUSCATION_PATTERNS, TRUSTED_MODS, checkKnownMalwareThreat } from "./security-data";
+import type { SecurityScanResult, SecurityFinding } from "../core/types";
 
 // ── Whitelist & Verification ──────────────────────────────────────────────────
 
@@ -192,7 +192,6 @@ async function checkVirusTotalHash(sha256: string): Promise<SecurityScanResult["
 // ── Core Scanner ──────────────────────────────────────────────────────────────
 
 export async function scanSecurity(filePath: string, localOnly = false): Promise<SecurityScanResult> {
-  const stats = fs.statSync(filePath);
   const sha1 = crypto.createHash("sha1").update(fs.readFileSync(filePath)).digest("hex");
   const sha256 = crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
   const scannedAt = new Date().toISOString();
@@ -223,7 +222,7 @@ export async function scanSecurity(filePath: string, localOnly = false): Promise
   let meta; 
   try { 
     meta = scanMod(filePath); 
-  } catch (metaErr) {
+  } catch {
     meta = { modId: "" }; 
   }
 

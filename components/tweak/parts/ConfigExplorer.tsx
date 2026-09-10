@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FolderOpen, File, Save, RefreshCw, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 function highlightTOML(text: string) {
@@ -44,7 +44,7 @@ export function ConfigExplorer({ project }: { project: string }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [targetEnv, setTargetEnv] = useState<"common" | "user" | "host">("common");
 
-  const fetchFiles = async (folderPath = currentPath) => {
+  const fetchFiles = useCallback(async (folderPath = "") => {
     setLoading(true);
     const savedMode = typeof window !== "undefined" ? localStorage.getItem("mim_app_mode") : "MIMU";
     const projectParam = savedMode === "MIMU" ? "MIMU" : project;
@@ -53,11 +53,11 @@ export function ConfigExplorer({ project }: { project: string }) {
       const data = await res.json();
       setFiles(data.files || []);
       setCurrentPath(folderPath);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // ignore
     }
     setLoading(false);
-  };
+  }, [project]);
 
   const fetchFileContent = async (file: string) => {
     setSelectedFile(file);
@@ -71,8 +71,8 @@ export function ConfigExplorer({ project }: { project: string }) {
       const res = await fetch(`/api/config/files?project=${projectParam}&file=${file}`);
       const data = await res.json();
       setFileContent(data.content || "");
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // ignore
     }
   };
 
@@ -83,8 +83,8 @@ export function ConfigExplorer({ project }: { project: string }) {
       const res = await fetch(`/api/config/files?project=${projectParam}&file=${file}&history=true`);
       const data = await res.json();
       setHistory(data.history || []);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // ignore
     }
   };
 
@@ -95,8 +95,8 @@ export function ConfigExplorer({ project }: { project: string }) {
       const res = await fetch(`/api/config/files?project=${projectParam}&file=${file}&version=${version}`);
       const data = await res.json();
       setFileContent(data.content || "");
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // ignore
     }
   };
 
@@ -113,7 +113,7 @@ export function ConfigExplorer({ project }: { project: string }) {
     const savedMode = typeof window !== "undefined" ? localStorage.getItem("mim_app_mode") : "MIMU";
     const projectParam = savedMode === "MIMU" ? "MIMU" : project;
     try {
-      const res = await fetch(`/api/config/files`, {
+      const res = await fetch("/api/config/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -131,7 +131,7 @@ export function ConfigExplorer({ project }: { project: string }) {
       } else {
         setMessage({ type: "error", text: data.error || "Error al guardar." });
       }
-    } catch (e) {
+    } catch {
       setMessage({ type: "error", text: "Error de conexión." });
     }
     setSaving(false);
@@ -139,7 +139,7 @@ export function ConfigExplorer({ project }: { project: string }) {
 
   useEffect(() => {
     fetchFiles("");
-  }, [project]);
+  }, [fetchFiles]);
 
   const lineCount = fileContent.split("\n").length;
 

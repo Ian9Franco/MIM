@@ -118,7 +118,7 @@ export function normalizeModId(raw: string): string {
  * Builds a heuristic elimination tree to isolate culprits with deterministic logic.
  */
 export function correlateSuspectsWithFomo(input: CorrelationInput): FomoCorrelationResult {
-  const { suspects, stackTrace, installedModIds = [], loader = "fabric" } = input;
+  const { suspects, stackTrace, installedModIds = [] } = input;
   const normalizedSuspects = suspects.map(normalizeModId);
   const normalizedInstalled = installedModIds.map(normalizeModId);
   const lowerStack = (stackTrace || "").toLowerCase();
@@ -212,7 +212,13 @@ export function correlateSuspectsWithFomo(input: CorrelationInput): FomoCorrelat
       };
     })
     .sort((a, b) => b._weightedScore - a._weightedScore)
-    .map(({ _weightedScore, ...rest }) => rest);
+    .map((entry) => ({
+      modId: entry.modId,
+      confidence: entry.confidence,
+      reason: entry.reason,
+      hasDirectMixinCollision: entry.hasDirectMixinCollision,
+      isMissingDependency: entry.isMissingDependency,
+    }));
 
   const primaryCulprit = eliminationTree.length > 0 && eliminationTree[0].confidence >= 0.5
     ? eliminationTree[0].modId

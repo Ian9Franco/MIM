@@ -15,6 +15,11 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 - API-01: ampliadas las regresiones de los wrappers reales `withApiGuard` para cubrir `Retry-After`, JSON malformado, `paramsSchema`, excepciones estructuradas y valores parseados que llegan al handler. El objetivo API-01 sigue pendiente de reconciliación post-merge por Hermione.
 - SAGE-08: verificado post-merge sobre PR #62 / `a729cba`; la suite importa `modExplainer.ts` real y ejecuta también `/api/fomo/explain`, cubriendo metadata, imágenes, grounding y fallback con proveedor controlado. Este cierre no equivale a evals generales de MimBot ni cierra otras fases Unicorn.
 - ARCH-01: separada y verificada la persistencia del caché SAGE en adaptadores Node/browser; `cacheEngine.ts` ya no usa `eval("require")`, conserva su API pública y CI valida tests de runtime, typecheck, DAST y build Web. El empaquetado Windows/Electron no fue ejecutado y no se presenta como evidencia.
+- **REC-02 (Reducción de Deuda y Techo de Warnings ESLint)**:
+  - Limpieza sistemática de código muerto, imports no utilizados, capturas de errores sin variable innecesaria (`optional catch`) y estados no leídos en `lib/`, `components/` y `web/`.
+  - Presupuesto Desktop (`lint`) rebajado de `--max-warnings=471` a `--max-warnings=400` (medido: 392 warnings, reducción de -79).
+  - Presupuesto Hub Web (`lint:hub`) rebajado de `--max-warnings=100` a `--max-warnings=75` (medido: 69 warnings, reducción de -14).
+  - Verificados el suite completo de linters (`npm run lint:all`), los 27 suites de pruebas y el build de producción.
 - REC-03 Phase 2: mergeada en PR #63 la extracción de Drafts desde `useHomeController` a `useHomeDrafts`, con contrato público preservado, validación defensiva y regresiones dedicadas. La fase sigue pendiente de verificación final porque no se reprodujo todavía el recorrido visible create/edit/delete/refresh con sesión browser/Supabase; Phase 3 permanece bloqueada.
 - **Server Manager (lectura SFTP / `/servers`, Refs #58)**:
   - Transporte SFTP de solo lectura con huella de host obligatoria, descubrimiento remoto y `POST /api/server/inspect`.

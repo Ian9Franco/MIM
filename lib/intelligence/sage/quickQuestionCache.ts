@@ -131,8 +131,9 @@ export function getCachedQuickQuestionResponse(
   const entry = store[key];
   if (!entry) return null;
   if (now - entry.cachedAt > QUICK_QUESTION_TTL_MS) {
-    const { [key]: _removed, ...rest } = store;
-    persistQuickQuestionCache(rest);
+    const nextStore = { ...store };
+    delete nextStore[key];
+    persistQuickQuestionCache(nextStore);
     return null;
   }
   return entry.response;

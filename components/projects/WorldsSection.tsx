@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Globe, Loader2, Package, CheckCircle } from "lucide-react";
+import { Globe, Loader2, Package } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 import { PendingFile } from "@/lib/core/types";
 
@@ -15,11 +15,9 @@ interface WorldsSectionProps {
   pendingFiles: PendingFile[];
 }
 
-export function WorldsSection({ pendingFiles }: WorldsSectionProps) {
+export function WorldsSection(_props: WorldsSectionProps) {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const pendingDatapacks = pendingFiles.filter(f => f.meta?.projectType === "datapack" || f.path.toLowerCase().endsWith(".zip"));
 
   const fetchWorlds = () => {
     setLoading(true);

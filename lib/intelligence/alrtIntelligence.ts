@@ -67,7 +67,7 @@ class AlrtIntelligence {
     if (this.eventBuffer.length > this.BUFFER_SIZE) this.eventBuffer = this.eventBuffer.slice(-this.BUFFER_SIZE);
   }
 
-  private analyzePatterns(triggerEvent: OperationalEvent) {
+  private analyzePatterns(_latestEvent?: OperationalEvent) {
     this.behavioralPatterns.forEach(p => this.checkPattern(p.context as EventPattern));
   }
 

@@ -1,4 +1,3 @@
-import path from "path";
 import { UNKNOWN } from "./types";
 
 export function normalizeVersion(version: string): string {

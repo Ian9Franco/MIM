@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/core/supabaseClient";
-
 interface DownloadItem {
   id: string;
   name: string;

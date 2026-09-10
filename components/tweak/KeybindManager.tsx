@@ -6,24 +6,21 @@ import { useKeybindManager } from "@/hooks/tweak/useKeybindManager";
 import { KeybindRow } from "./parts/KeybindRow";
 import { KeyboardMap } from "./KeyboardMap";
 
-export function KeybindManager({ keybinds, grouped, conflicts, suggestions, projectName, version, data, onUpdate }: any) {
+export function KeybindManager({ keybinds, suggestions, projectName, version, data, onUpdate }: any) {
   const {
     searchQuery, setSearchQuery, pressedKeyFilter, setPressedKeyFilter,
-    detecting, filteredGrouped, handleKeyDetect, expandedMods, toggleModExpand, totalCount
+    detecting, filteredGrouped, handleKeyDetect, expandedMods, toggleModExpand
   } = useKeybindManager(keybinds);
 
   const [editingKeybind, setEditingKeybind] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const handleSaveKeybind = async (id: string, key: string) => {
-    setSaving(true);
     const res = await fetch("/api/tweak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ projectName, version, action: "save", keybinds: [{ id, key }] })
     });
     if (res.ok) { setEditingKeybind(null); onUpdate(); }
-    setSaving(false);
   };
 
   const toggleLock = async (id: string) => {

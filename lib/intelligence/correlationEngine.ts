@@ -7,7 +7,6 @@
  */
 
 import { eventBus } from "@/lib/events/eventBus";
-import { MimEventMap } from "@/lib/events/eventContract";
 import { incidentManager } from "@/lib/intelligence/incidentManager";
 
 interface CorrelationRule {

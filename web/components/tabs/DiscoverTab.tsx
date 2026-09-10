@@ -4,7 +4,7 @@ import { CollectibleSurface } from "../CollectibleSurface";
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, Loader2, ChevronRight, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Box, Image as ImageIcon, Glasses, Database, Hash, Package } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronRight, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Box, Image as ImageIcon, Glasses, Database, Hash, Package } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { DiscoverSkeleton } from "../FomoSkeletons";
 

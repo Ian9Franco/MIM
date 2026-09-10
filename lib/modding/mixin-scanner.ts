@@ -43,7 +43,7 @@ export async function extractMixinTargets(zip: AdmZip): Promise<string[]> {
           config.server.forEach(m => targets.add(pkg + m));
         }
       }
-    } catch (e) {
+    } catch {
       // Ignorar archivos malformados
     }
   }

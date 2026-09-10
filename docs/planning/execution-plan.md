@@ -186,6 +186,23 @@ Independientes entre sí. Cada una es un PR pequeño. Orden sugerido por riesgo 
 
 - Schema Zod para la respuesta de `/api/fomo/explain-deps`; si el modelo no cumple, devolver fallback determinista, no error 500.
 
+### T3.6 — Desktop: persistencia credenciales tras upgrade (cerrado)
+
+- **Archivos:** `standalone/main.js`, `standalone/secret-store.js`, `lib/core/settings.ts`, [desktop-credentials.md](../guides/desktop-credentials.md).
+- **Problema:** releases nuevas no reutilizaban `%USERPROFILE%\.mim-index\` ni importaban claves legacy en texto plano.
+- **Verificación:** `scripts/__tests__/secure-settings.test.ts` (incluido en `npm test`).
+
+### T3.7 — BOT-06b: uso OpenRouter en Settings (cerrado)
+
+- **Archivos:** `lib/intelligence/ai/openRouterAccount.ts`, `app/api/settings/ai-quota/route.ts`, `AiQuotaStatusPanel`.
+- **Verificación:** `npm run test:openrouter-account`.
+
+### T3.8 — SAGE-05: fixtures baseline MIMbot (cerrado, estructura)
+
+- **Archivos:** `scripts/evaluation/mimbot-fixtures.json`, `scripts/evaluation/mimbot-eval.ts`.
+- **Verificación:** `npm run eval:mimbot`. Live scoring: `RUN_MIMBOT_LIVE=1 npm run eval:mimbot` (requiere claves).
+- **Pendiente:** gate CI (SAGE-05b).
+
 ---
 
 ## 5. Fase 4 — UX (PENDING §6). Sin dependencias. Un cambio por PR.

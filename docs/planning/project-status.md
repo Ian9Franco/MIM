@@ -35,8 +35,9 @@ Existe una pantalla Desktop `/servers` de conexión y comparación de mods contr
 - **Caveat honesto:** El corpus tiene 125 casos. Logs muy raros o altamente customizados de modpacks de nicho pueden degradar al `UNKNOWN_RUNTIME` category, que es el comportamiento correcto.
 
 ### MIMbot Model Gateway & Context Builder (Sep 2026)
-- **Estado:** Código y tests de `ContextBuilder` presentes; Gemini sigue siendo el proveedor por defecto.
-- **Evidencia:** `AIProvider` con `GeminiProvider` y `OpenRouterProvider`. GLM-5.3 Flash es candidato vía `MIMBOT_AI_PROVIDER=openrouter`, no el default de producto (ADR-007). `ContextBuilder` etiqueta evidencia (`[EVIDENCE: ... ]`). Tests en `scripts/__tests__/context-builder.test.ts`.
+- **Estado:** Gateway por intención en main (BOT-GW, BOT-05b); cuotas clasificadas (BOT-06) y uso OpenRouter en Settings (BOT-06b).
+- **Evidencia:** `AIProvider` con `GeminiProvider` y `OpenRouterProvider`. Texto → OpenRouter cuando hay clave; multimodal → Gemini. `ContextBuilder` etiqueta evidencia. Fixtures MIMbot baseline (SAGE-05): `npm run eval:mimbot`.
+- **Credenciales:** MIMhub usa `GEMINI_API_KEY` en Vercel; Desktop persiste en `%USERPROFILE%\.mim-index\` con recuperación legacy al actualizar release ([desktop-credentials.md](../guides/desktop-credentials.md)).
 
 ### Aduana Storage Engine
 - **Estado:** Benchmarkeado y en uso.

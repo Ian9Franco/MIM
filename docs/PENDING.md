@@ -59,23 +59,17 @@
 | **Historial local opt-in** | `BOT-01` | PR #78 — `chatHistoryStore.ts` — persistencia por crash + Settings + borrado |
 | **Vista previa estática pre-BYOK** | `BOT-02` | PR #78 — `MimbotDemoPreview` — ejemplo fijo sin backend gratuito |
 | **Transparencia BYOK** | `BOT-09` | PR #78 — `mimbotByokTransparency.ts` — panel Settings + modal config |
+| **Persistencia credenciales Desktop (upgrade release)** | — | PR #79 — recuperación legacy + `MIM_PORTABLE_DIR` / `MIM_DESKTOP_RUNTIME`; [desktop-credentials.md](./guides/desktop-credentials.md) |
+| **Costos OpenRouter en UI** | `BOT-06b` | PR #79 — `openRouterAccount.ts`, campo `openRouter` en `GET /api/settings/ai-quota` |
+| **Suite eval MIMbot (fixtures baseline)** | `SAGE-05` | PR #79 — `mimbot-fixtures.json` (18 casos), `npm run eval:mimbot` |
 
-Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): eval fixtures MIMbot (`SAGE-05`), migración de rutas legacy en `web/`, flags de modelo en UI.
+Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): gate CI live MIMbot (`SAGE-05b`), migración de rutas legacy en `web/`, flags de modelo en UI.
 
 ### Pendiente — producto MIMbot / UX
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-<<<<<<< HEAD
-| **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Primera Experiencia sin BYOK:** Ejemplos estáticos y explicación de valor antes de pedir clave; backend gratuito requiere decisión de presupuesto/cuota. | `BOT-02` | 🟢 [whosnext.md (BOT-02)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Cola para Análisis por Lotes (condicional):** Concurrencia acotada, cancelación y espera según cuota real — solo si se incorpora ese flujo. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Transparencia BYOK:** Aviso verificable sobre qué datos se envían, retención y uso; no prometer privacidad solo por usar key propia. | `BOT-09` | 🟢 [whosnext.md (BOT-09)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-=======
-| **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
-| **Cola para Análisis por Lotes (condicional):** Solo si se incorpora ese flujo de producto. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
->>>>>>> 95af4f5 (feat(BOT-01,BOT-02,BOT-09): history, demo preview, BYOK transparency)
 
 ---
 
@@ -98,7 +92,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **Generalización del Dataset SAGE:** Anonimización formal, registro de licencias y separación de conjunto ciego (unseen logs) para validación. | `SAGE-01` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-01)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Métricas Top-1/Top-3 Rigurosas:** Separar formalmente en el reporte casos con culpable atribuible de aciertos sistémicos sin culpable. | `SAGE-02` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-02)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Gate Automatizado de CI:** Hacer que `npm run eval:sage` falle el pipeline si las métricas caen por debajo de los umbrales históricos. | `SAGE-03` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-03)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
-| **Suite de Evaluación MIMbot:** Dataset fijo de 15–20 consultas para medir exactitud, alucinaciones, referencias de evidencia y latencia por modelo. | `SAGE-05` | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md)<br/>🟢 [whosnext.md (SAGE-05)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
+| **Scoring live MIMbot en CI:** Ejecutar fixtures contra LLM real (`RUN_MIMBOT_LIVE=1`) y gate de regresión. | `SAGE-05b` | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md)<br/>Baseline en `scripts/evaluation/mimbot-fixtures.json` |
 
 ---
 

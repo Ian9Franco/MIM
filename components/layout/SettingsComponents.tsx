@@ -673,9 +673,21 @@ type AiQuotaProviderSnapshot = {
   } | null;
 };
 
+type OpenRouterAccountSnapshot = {
+  configured: boolean;
+  label?: string;
+  usageUsd?: number;
+  limitUsd?: number | null;
+  isFreeTier?: boolean;
+  rateLimitRequests?: number;
+  rateLimitInterval?: string;
+  error?: string;
+};
+
 export function AiQuotaStatusPanel() {
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState<AiQuotaProviderSnapshot[]>([]);
+  const [openRouter, setOpenRouter] = useState<OpenRouterAccountSnapshot | null>(null);
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -687,6 +699,11 @@ export function AiQuotaStatusPanel() {
         const data = await res.json();
         if (!cancelled) {
           setProviders(Array.isArray(data.providers) ? data.providers : []);
+          setOpenRouter(
+            data.openRouter && typeof data.openRouter === "object"
+              ? (data.openRouter as OpenRouterAccountSnapshot)
+              : null
+          );
           setNote(typeof data.note === "string" ? data.note : "");
         }
       } catch {
@@ -729,6 +746,41 @@ export function AiQuotaStatusPanel() {
               )}
             </div>
           ))}
+        </div>
+      )}
+      {openRouter?.configured && (
+        <div className="text-[11px] rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-subhead text-blue-200/90">OpenRouter (cuenta)</span>
+            {openRouter.isFreeTier && (
+              <span className="text-[9px] uppercase tracking-wide text-blue-300/80">Free tier</span>
+            )}
+          </div>
+          {openRouter.error ? (
+            <p className="text-amber-300/90">{openRouter.error}</p>
+          ) : (
+            <>
+              {typeof openRouter.usageUsd === "number" && (
+                <p className="text-muted">
+                  Uso acumulado: ${openRouter.usageUsd.toFixed(4)}
+                  {openRouter.limitUsd != null ? ` / límite $${openRouter.limitUsd}` : ""}
+                </p>
+              )}
+              {openRouter.rateLimitRequests && openRouter.rateLimitInterval && (
+                <p className="text-muted">
+                  Rate limit declarado: {openRouter.rateLimitRequests} / {openRouter.rateLimitInterval}
+                </p>
+              )}
+            </>
+          )}
+          <a
+            href="https://openrouter.ai/activity"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block text-[10px] text-blue-300 hover:underline"
+          >
+            Ver actividad en OpenRouter →
+          </a>
         </div>
       )}
       {note && <p className="text-[10px] text-muted/70 leading-relaxed">{note}</p>}

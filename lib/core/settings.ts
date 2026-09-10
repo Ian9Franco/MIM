@@ -37,9 +37,12 @@ const LOCAL_SETTINGS_FILE = path.join(process.cwd(), "mim-settings.json");
  */
 export function getPortableDir(): string {
   if (process.env.MIM_PORTABLE_DIR) return path.resolve(process.env.MIM_PORTABLE_DIR);
-  const dMineSource = path.join("D:", ".MIM", "source");
-  if (fs.existsSync(dMineSource)) {
-    return path.join(dMineSource, ".mim-index");
+  // Packaged Desktop pins MIM_PORTABLE_DIR from Electron; avoid silent D: switch for end users
+  if (!process.env.MIM_DESKTOP_RUNTIME) {
+    const dMineSource = path.join("D:", ".MIM", "source");
+    if (fs.existsSync(dMineSource)) {
+      return path.join(dMineSource, ".mim-index");
+    }
   }
   return path.join(os.homedir(), ".mim-index");
 }

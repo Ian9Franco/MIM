@@ -5,42 +5,104 @@ const path = require('path');
 const http = require('http');
 const { runCurseForgeScraper } = require('./scraper');
 const { createSecretStore } = require('./secret-store');
+const { resolveTrustedPath } = require('./trusted-path');
 
 let mainWindow = null;
 let serverProcess = null;
 let pendingProtocolUrl = null;
 const PORT = process.env.PORT || 3000;
 let secretStore = null;
+let resolvedPortableDir = null;
 
 function getPortableDirectory() {
   if (process.env.MIM_PORTABLE_DIR) return path.resolve(process.env.MIM_PORTABLE_DIR);
-  const developerSource = path.join('D:', '.MIM', 'source');
-  if (fs.existsSync(developerSource)) return path.join(developerSource, '.mim-index');
+  // D: dev path only for unpackaged dev runs — packaged installs always use homedir
+  if (!app.isPackaged) {
+    const developerSource = path.join('D:', '.MIM', 'source');
+    if (fs.existsSync(developerSource)) return path.join(developerSource, '.mim-index');
+  }
   return path.join(app.getPath('home'), '.mim-index');
+}
+
+function buildLegacyTrustedRoots() {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
+  return [homeIndex, standaloneDir, devSourceIndex];
+}
+
+function listLegacySettingsCandidates(portableSettings, trustedRoots) {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
+  const candidates = [
+    path.join(standaloneDir, 'mim-settings.json'),
+    path.join(homeIndex, 'mim-settings.json'),
+    path.join(devSourceIndex, 'mim-settings.json'),
+  ];
+  const resolvedPortable = path.resolve(portableSettings);
+  return [...new Set(candidates)]
+    .map((candidate) => resolveTrustedPath(candidate, trustedRoots))
+    .filter((candidate) => candidate !== resolvedPortable && fs.existsSync(candidate));
+}
+
+function listLegacySecretsCandidates(portableSecretsPath, portableDir, trustedRoots) {
+  const homeIndex = path.join(app.getPath('home'), '.mim-index');
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
+  const dirs = [homeIndex, devSourceIndex, standaloneDir];
+  const resolvedPortableDir = path.resolve(portableDir);
+  const resolvedPortableSecrets = path.resolve(portableSecretsPath);
+  return [...new Set(dirs)]
+    .map((dir) => resolveTrustedPath(dir, trustedRoots))
+    .filter((dir) => dir !== resolvedPortableDir)
+    .map((dir) => resolveTrustedPath(path.join(dir, 'mim-secrets.enc.json'), trustedRoots))
+    .filter((candidate) => candidate !== resolvedPortableSecrets && fs.existsSync(candidate));
+}
+
+function recoverPortableSettings(portableSettings, trustedRoots) {
+  const resolvedTarget = resolveTrustedPath(portableSettings, trustedRoots);
+  if (fs.existsSync(resolvedTarget)) return;
+  const legacySettings = listLegacySettingsCandidates(resolvedTarget, trustedRoots);
+  if (legacySettings.length === 0) return;
+  fs.copyFileSync(legacySettings[0], resolvedTarget);
+  console.log('[MIM] Recovered settings from', legacySettings[0]);
+}
+
+function recoverEncryptedSecrets(portableSecretsPath, portableDir, trustedRoots) {
+  const resolvedTarget = resolveTrustedPath(portableSecretsPath, trustedRoots);
+  if (fs.existsSync(resolvedTarget)) return;
+  const legacySecrets = listLegacySecretsCandidates(resolvedTarget, portableDir, trustedRoots);
+  if (legacySecrets.length === 0) return;
+  fs.copyFileSync(legacySecrets[0], resolvedTarget);
+  console.log('[MIM] Recovered encrypted credentials from', legacySecrets[0]);
 }
 
 function initializeSecretStore() {
   const portableDir = getPortableDirectory();
+  resolvedPortableDir = portableDir;
   fs.mkdirSync(portableDir, { recursive: true });
   const portableSettings = path.join(portableDir, 'mim-settings.json');
-  if (!fs.existsSync(portableSettings)) {
-    const legacyCandidates = [
-      path.join(process.cwd(), 'mim-settings.json'),
-      path.join(__dirname, '..', '.next', 'standalone', 'mim-settings.json'),
-    ];
-    const legacySettings = legacyCandidates.find((candidate) => fs.existsSync(candidate));
-    if (legacySettings) {
-      fs.copyFileSync(legacySettings, portableSettings);
-      fs.unlinkSync(legacySettings);
-    }
-  }
+  const portableSecrets = path.join(portableDir, 'mim-secrets.enc.json');
+
+  const trustedRoots = buildLegacyTrustedRoots();
+  trustedRoots.push(portableDir);
+
+  recoverPortableSettings(portableSettings, trustedRoots);
+  recoverEncryptedSecrets(portableSecrets, portableDir, trustedRoots);
+
   secretStore = createSecretStore({
     safeStorage,
     settingsPath: portableSettings,
-    secretsPath: path.join(portableDir, 'mim-secrets.enc.json'),
+    secretsPath: portableSecrets,
+    trustedRoots,
   });
-  const secrets = secretStore.migratePlaintextSettings();
-  return secretStore.toEnvironment(secrets);
+
+  secretStore.migratePlaintextSettings();
+  secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
+
+  console.log('[MIM] Portable data directory:', portableDir);
+  return secretStore.toEnvironment();
 }
 
 function handleDeepLink(url) {
@@ -80,6 +142,7 @@ function startNextServer(secretEnvironment = {}) {
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       MIM_DESKTOP_RUNTIME: '1',
+      ...(resolvedPortableDir ? { MIM_PORTABLE_DIR: resolvedPortableDir } : {}),
       ...secretEnvironment
     },
     silent: false // Lets us see server logs in the terminal

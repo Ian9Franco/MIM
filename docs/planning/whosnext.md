@@ -1,18 +1,21 @@
 # MIM — Who's Next
 
-Roadmap pendiente revisado el 2026-09-06 contra el checkout local v11.4.5 (`ad7f939`). Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](../releases/release-audit.md).
+Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70. Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](../releases/release-audit.md).
 
 ## 1. Proceso y contratos API
 
-- [ ] **API-02 — Generalizar schemas Zod compartidos.** Inventariar qué handlers requieren body/query/params y cuáles ya los validan; extraer contratos request/response compartidos con clientes y tests. El guard estructural no prueba cobertura de schemas. No reutilizar el antiguo 17/93 como medición actual.
+- [x] **API-02 — Generalizar schemas Zod compartidos (cerrado en mutaciones core).** `build`, `delete`, `staging` y `tweak` usan `bodySchema`/`querySchema` del guard; `/api/settings/validate-keys` expone `useStoredGemini` para validación server-side. Pendiente: inventario del resto de handlers y contratos compartidos con clientes.
 
 ## 2. Funcionamiento y UX de MimBot
 
 - [ ] **BOT-01 — Historial local opt-in.** Guardar/restaurar conversaciones por firma de crash, con borrado explícito y prueba de recarga/cambio de crash.
 - [ ] **BOT-02 — Primera experiencia antes de BYOK.** Preparar ejemplos estáticos de respuestas y explicar el valor antes de pedir una clave. La alternativa de backend gratuito requiere decidir presupuesto y cuota con el usuario antes de implementarla.
 - [ ] **BOT-03 — Seguimientos contextuales.** Mantener dos sugerencias relevantes tras el primer intercambio, sin repetir preguntas ya respondidas.
-- [ ] **BOT-04 — Estado de conexión veraz (reabierto).** `SageMimbotCopilot.tsx` usa `apiKeysConfigured` para mostrar “Gemini Conectado”; tener clave guardada no prueba conectividad. Integrar validación y estados de clave guardada, validando, válida, inválida y cuota agotada. Existe `/api/settings/validate-keys`, pero no se observó una llamada desde el copiloto. Cierre: tests del flujo y no enviar la clave en la URL.
-- [ ] **BOT-05 — Resolver soporte multi-proveedor.** El subalcance lifecycle/credenciales quedó verificado en PR #68 / merge `d098d7ad`: Gemini/OpenRouter reciben cancelación y timeout, los retries comparten el ciclo cancelable y el mini-chat respeta el proveedor seleccionado sin credenciales en URLs. El objetivo global permanece abierto: revalidar el alcance de producto multi-proveedor y cualquier cambio de proveedor/default con decisión del usuario; no inferir cierre completo por este subalcance.
+- [x] **BOT-04 — Estado de conexión veraz (cerrado).** `SageMimbotCopilot` valida con `/api/settings/validate-keys` (`useStoredGemini: true`), muestra badge por estado (`validating`/`valid`/`invalid`/`rate_limited`) y bloquea envío hasta conexión verificada. `probeGeminiApiKey()` centraliza la sonda sin exponer la clave en URL.
+- [x] **BOT-05a — Gateway request lifecycle (cerrado).** PR #68: `requestLifecycle.ts`, propagación de `signal`/timeout en SAGE/FOMO/providers, MIM-Bot Chat usa el provider seleccionado sin credenciales en URL.
+- [x] **BOT-GW — Model router por intención (cerrado).** `generateWithModelGateway()`: texto (SAGE chat, MIM-Bot chat, deps) → GLM vía OpenRouter cuando hay clave; multimodal y search grounding → Gemini. Desactivable con `MIMBOT_INTENT_ROUTING=false`. Pendiente: observabilidad (BOT-06), eval fixtures, migración `web/` legacy.
+- [x] **Naming — MIM-Bot Chat (cerrado).** PR #70: vocabulario `mim-bot-chat` / `mimBotChat()` en código, API mode y docs.
+- [ ] **BOT-05b — Resolver soporte multi-proveedor en SAGE follow-up.** Revisar el proveedor OpenAI de `sageMimbotEngine.ts` frente al endpoint Gemini/OpenRouter; decidir si integrarlo o retirar la rama desconectada antes de cambiar el producto.
 - [ ] **BOT-06 — Distinguir límites de cuota.** Usar metadatos reales del proveedor para separar límites temporales y diarios; no inferir un tipo de cuota a partir de cualquier 429. Verificar límites, precios y políticas vigentes antes de mostrarlos: los números históricos del roadmap no constituyen evidencia actual.
 - [ ] **BOT-07 — Cola para análisis por lotes (condicional).** Sólo si se incorpora ese flujo: concurrencia acotada, cancelación y espera según cuota real.
 - [ ] **BOT-08 — Caché de las cuatro quick questions durante 24 horas.** Clave por crash/pregunta/modo, expiración e invalidación verificadas. La caché actual de diagnósticos no cierra este requisito.

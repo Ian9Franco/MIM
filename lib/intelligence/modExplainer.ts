@@ -6,24 +6,22 @@
  */
 
 import {
+  DEFAULT_GEMINI_MODEL,
+  GEMINI_MODEL_CASCADE,
   GeminiProvider,
+  generateWithModelGateway,
   isAIProviderError,
   type AIContentPart,
   type AIMessage,
   type AIProvider,
+  type GatewayKeyOptions,
 } from "./ai";
 import { createAIRequestSignal } from "./ai/requestLifecycle";
 import { OpenRouterProvider } from "./ai/openRouterProvider";
+import { classifyModExplainIntent } from "./ai/intents";
 import { buildProjectExplainContext } from "./contextBuilder";
 
-export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
-
-export const GEMINI_MODEL_CASCADE = [
-  "gemini-flash-lite-latest",
-  "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
-  "gemini-3.6-flash",
-];
+export { DEFAULT_GEMINI_MODEL, GEMINI_MODEL_CASCADE };
 
 export type BotPersonality = "bully" | "standard";
 
@@ -272,9 +270,10 @@ export async function explainModWithGemini(
   input: ModExplainerInput,
   resolvedApiKey: string,
   provider: AIProvider = new GeminiProvider(resolvedApiKey),
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  gatewayKeys?: GatewayKeyOptions
 ): Promise<ModExplanationResult> {
-  if (!resolvedApiKey) {
+  if (!resolvedApiKey && !gatewayKeys) {
     throw new Error("NO_API_KEY");
   }
 
@@ -298,60 +297,38 @@ export async function explainModWithGemini(
     })),
   ];
 
-  // Route through the appropriate cascade based on provider type
-  if (provider instanceof OpenRouterProvider) {
-    try {
-      const result = await provider.generateWithFallback({
-        messages: [{ role: "user", parts: contentParts }],
-        temperature: 0.65,
-        maxOutputTokens: 800,
-        signal,
-      });
+  const hasRichDescription = Boolean(input.description && input.description.trim().length > 25);
+  const intent = classifyModExplainIntent({
+    imageCount: imagesCount,
+    wantsSearchGrounding: !hasRichDescription,
+  });
 
-      return {
-        projectId: input.projectId,
-        summaryMarkdown: result.text,
-        groundedSources: result.groundedSources,
-        searchUsed: result.searchUsed,
-        imagesAnalyzed: imagesCount,
-        model: result.model,
-      };
-    } catch (err: unknown) {
-      const errMsg = isAIProviderError(err) ? err.message : err instanceof Error ? err.message : String(err);
-      console.warn("[ModExplainer] OpenRouter cascade exhausted:", errMsg);
-    }
-  } else {
-    // Gemini cascade: try each model in the cascade
-    const baseModel = getGeminiModel(input.model);
-    const modelsToTry = [baseModel, ...GEMINI_MODEL_CASCADE.filter((m) => m !== baseModel)];
+  try {
+    const result = await generateWithModelGateway({
+      intent,
+      messages: [{ role: "user", parts: contentParts }],
+      temperature: 0.65,
+      maxOutputTokens: 800,
+      signal,
+      preferredGeminiModel: getGeminiModel(input.model),
+      wantsSearchGrounding: !hasRichDescription,
+      clientGeminiKey: gatewayKeys?.clientGeminiKey ?? (provider instanceof GeminiProvider ? resolvedApiKey : input.clientApiKey),
+      headerGeminiKey: gatewayKeys?.headerGeminiKey,
+      openrouterKey: gatewayKeys?.openrouterKey ?? (provider instanceof OpenRouterProvider ? resolvedApiKey : undefined),
+      env: gatewayKeys?.env,
+    });
 
-    for (const currentModel of modelsToTry) {
-      try {
-        const result = await provider.generate({
-          model: currentModel,
-          messages: [{ role: "user", parts: contentParts }],
-          temperature: 0.65,
-          maxOutputTokens: 800,
-          signal,
-        });
-
-        return {
-          projectId: input.projectId,
-          summaryMarkdown: result.text,
-          groundedSources: result.groundedSources,
-          searchUsed: result.searchUsed,
-          imagesAnalyzed: imagesCount,
-          model: result.model,
-        };
-      } catch (fetchErr: unknown) {
-        const errMsg = isAIProviderError(fetchErr)
-          ? fetchErr.message
-          : fetchErr instanceof Error
-            ? fetchErr.message
-            : String(fetchErr);
-        console.warn(`[ModExplainer] Error con modelo ${currentModel}:`, errMsg);
-      }
-    }
+    return {
+      projectId: input.projectId,
+      summaryMarkdown: result.text,
+      groundedSources: result.groundedSources,
+      searchUsed: result.searchUsed,
+      imagesAnalyzed: imagesCount,
+      model: result.model,
+    };
+  } catch (err: unknown) {
+    const errMsg = isAIProviderError(err) ? err.message : err instanceof Error ? err.message : String(err);
+    console.warn("[ModExplainer] Model gateway exhausted:", errMsg);
   }
 
   console.warn("[ModExplainer] All models exhausted. Activating local fallback...");
@@ -413,15 +390,15 @@ export async function mimBotChat(
   input: MimBotChatInput,
   resolvedApiKey: string,
   provider: AIProvider = new GeminiProvider(resolvedApiKey),
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  gatewayKeys?: GatewayKeyOptions
 ): Promise<MimBotChatResult> {
-  if (!resolvedApiKey) {
+  if (!resolvedApiKey && !gatewayKeys) {
     throw new Error("NO_API_KEY");
   }
 
   const personality = resolveBotPersonality(input.personality);
   const baseModel = getGeminiModel(input.model);
-  const modelsToTry = [baseModel, ...GEMINI_MODEL_CASCADE.filter((m) => m !== baseModel)];
 
   const ctx = input.projectContext;
   const systemInstruction = personality === "standard"
@@ -492,33 +469,22 @@ PAUTAS DE BULLY:
     parts: message.parts.map((part) => ({ type: "text", text: part.text })),
   }));
 
-  if (provider instanceof OpenRouterProvider) {
-    try {
-      const result = await provider.generateWithFallback({
-        messages,
-        temperature: personality === "standard" ? 0.3 : 0.7,
-        maxOutputTokens: 320,
-        signal,
-      });
-      return { reply: result.text, modelUsed: result.model };
-    } catch (error: unknown) {
-      console.warn("[MimBotChat] OpenRouter cascade failed:", getErrorMessage(error));
-    }
-  } else {
-    for (const currentModel of modelsToTry) {
-      try {
-        const result = await provider.generate({
-          model: currentModel,
-          messages,
-          temperature: personality === "standard" ? 0.3 : 0.7,
-          maxOutputTokens: 320,
-          signal,
-        });
-        return { reply: result.text, modelUsed: result.model };
-      } catch (error: unknown) {
-        console.warn(`[MimBotChat] Error con modelo ${currentModel}:`, getErrorMessage(error));
-      }
-    }
+  try {
+    const result = await generateWithModelGateway({
+      intent: "mim-bot-chat",
+      messages,
+      temperature: personality === "standard" ? 0.3 : 0.7,
+      maxOutputTokens: 320,
+      signal,
+      preferredGeminiModel: baseModel,
+      clientGeminiKey: gatewayKeys?.clientGeminiKey ?? (provider instanceof GeminiProvider ? resolvedApiKey : undefined),
+      headerGeminiKey: gatewayKeys?.headerGeminiKey,
+      openrouterKey: gatewayKeys?.openrouterKey ?? (provider instanceof OpenRouterProvider ? resolvedApiKey : undefined),
+      env: gatewayKeys?.env,
+    });
+    return { reply: result.text, modelUsed: result.model };
+  } catch (error: unknown) {
+    console.warn("[MimBotChat] Model gateway failed:", getErrorMessage(error));
   }
 
   if (personality === "standard") {

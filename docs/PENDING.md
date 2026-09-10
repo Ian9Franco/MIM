@@ -41,9 +41,20 @@
 
 ## 3. 🤖 MIMbot & Model Gateway (Backlog LLM)
 
+### ✅ Cerrado recientemente (main)
+
+| Ítem | Tarea | Evidencia |
+| :--- | :--- | :--- |
+| **Gateway request lifecycle** | `BOT-05a` | PR #68 — cancelación, timeout 15s, retries cancelables, credenciales en headers |
+| **Naming MIM-Bot Chat** | — | PR #70 — `mim-bot-chat`, `mimBotChat()`, `MIM_BOT_CHAT_MODE` |
+| **Estado de conexión Gemini en copiloto** | `BOT-04` | Validación real vía `/api/settings/validate-keys` + badge en `SageMimbotCopilot` |
+| **Model Router por intención** | `BOT-GW` | `modelGateway.ts` — texto → GLM/OpenRouter, multimodal/búsqueda → Gemini |
+
+### Pendiente (gateway y producto)
+
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Model Router Dinámico:** Ruteo inteligente por costo/latencia según intención (GLM-5.3 Flash para texto/explicaciones, Gemini para imágenes/búsqueda). | `BOT-GW` | 📑 [ADR-007](./adr/ADR-007-mimbot-model-gateway.md)<br/>📌 [ROADMAP.md (Sección 5)](./planning/ROADMAP.md#5-pipeline-de-inferencia--model-backlog-pendiente--futuro) |
+| **Multi-proveedor en SAGE follow-up:** Revisar rama OpenAI desconectada en `sageMimbotEngine.ts` vs contrato Gemini/OpenRouter. | `BOT-05b` | 🟢 [whosnext.md (BOT-05b)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Structured JSON Output:** Validación estricta con schemas Zod sobre las respuestas generadas por los modelos para prevenir alucinaciones de formato. | `BOT-JSON` | 📌 [ROADMAP.md (Sección 5)](./planning/ROADMAP.md#5-pipeline-de-inferencia--model-backlog-pendiente--futuro) |
 | **Caché Semántico / Hashing de Contexto:** Cachear por hash de evidencia para no reenviar inferencias ante consultas idénticas. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
@@ -59,7 +70,7 @@
 | **Reducción de `any` en TypeScript:** Bajar uso de `any` en hooks orquestadores (`useHomeController`, `useAlertManager`) y fronteras core. | `REC-01` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-01)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Reducción de Warnings ESLint:** Bajar progresivamente el techo de warnings (actualmente en 471) módulo por módulo. | `REC-02` | 🟢 [whosnext.md (REC-02)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Modularizar Componentes > 600 Líneas:**<br/>• `DiscoverTab.tsx` (862L)<br/>• `DraftDetailView.tsx` (819L)<br/>• `FomoVersionOverlay.tsx` (869L)<br/>• `useHomeController.ts` (Phase 2 verificación final & Phase 3 Profile/Community). | `REC-03` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-03)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
-| **Generalizar Schemas Zod en API Routes:** Extender validación Zod al resto de endpoints de mutación (`build`, `delete`, `staging`, `tweak`). | `API-02` | 🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
+| **Inventario Zod en rutas restantes:** Mutaciones core (`build`, `delete`, `staging`, `tweak`) ya usan `bodySchema`/`querySchema` del guard. Falta inventariar handlers secundarios y extraer contratos compartidos con clientes. | `API-02b` | 🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
 | **Tests E2E de UI:** Agregar 3–5 recorridos E2E reproducibles (Discover → Detalle → Descarga y manejo de reintentos de red). | `REC-04` | 🟢 [whosnext.md (REC-04)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 
 ---

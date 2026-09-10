@@ -20,8 +20,7 @@ import {
   sageErrorResponse,
 } from "@/lib/intelligence/sage/errorContract";
 import { encodeSageStreamEvent } from "@/lib/intelligence/sage/streamContract";
-import { createDefaultProvider, isAIProviderError } from "@/lib/intelligence/ai";
-import { OpenRouterProvider } from "@/lib/intelligence/ai/openRouterProvider";
+import { generateWithModelGateway, isAIProviderError, resolveGatewayKeys } from "@/lib/intelligence/ai";
 
 const bodySchema = z.object({
   question: z.string().trim().min(1, "Falta el parámetro question"),
@@ -61,13 +60,14 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const { provider, providerId } = createDefaultProvider({
+    const gatewayKeys = {
       clientGeminiKey: clientApiKey || undefined,
       headerGeminiKey: headerGeminiKey,
       openrouterKey: headerOpenRouterKey,
-    });
+    };
+    const { hasGeminiKey, hasOpenRouterKey } = resolveGatewayKeys(gatewayKeys);
 
-    if (!provider) {
+    if (!hasGeminiKey && !hasOpenRouterKey) {
       return sageErrorResponse("MIM_CREDENTIAL_MISSING");
     }
 
@@ -152,81 +152,19 @@ Respondé a la consulta del usuario de forma concisa y accionable.
       },
     ];
 
-    // ── 4. Generate via AIProvider ──
+    // ── 4. Generate via Model Gateway (BOT-GW: text → GLM, multimodal → Gemini) ──
     try {
-      let responseText: string;
-      let modelUsed: string;
+      const result = await generateWithModelGateway({
+        intent: "sage-chat",
+        messages: aiMessages,
+        temperature: isBully ? 0.5 : 0.2,
+        maxOutputTokens: isBully ? 280 : 700,
+        signal: request.signal,
+        ...gatewayKeys,
+      });
 
-      if (provider.id === "openrouter" && "generateWithFallback" in provider) {
-        // GLM cascade via OpenRouter
-        const result = await (provider as OpenRouterProvider).generateWithFallback({
-          messages: aiMessages,
-          temperature: isBully ? 0.5 : 0.2,
-          maxOutputTokens: isBully ? 280 : 700,
-          signal: request.signal,
-        });
-        responseText = result.text;
-        modelUsed = result.model;
-      } else {
-        // Gemini cascade: try models in order
-        const GEMINI_MODELS = [
-          "gemini-flash-lite-latest",
-          "gemini-3.5-flash-lite",
-          "gemini-3.5-flash",
-          "gemini-3.6-flash",
-        ];
-
-        let lastErr: unknown = null;
-        responseText = "";
-        modelUsed = GEMINI_MODELS[0];
-
-        for (const modelName of GEMINI_MODELS) {
-          try {
-            const result = await provider.generate({
-              model: modelName,
-              messages: aiMessages,
-              temperature: isBully ? 0.5 : 0.2,
-              maxOutputTokens: isBully ? 280 : 700,
-              signal: request.signal,
-            });
-
-            if (result.text) {
-              responseText = result.text;
-              modelUsed = modelName;
-              break;
-            }
-          } catch (err: unknown) {
-            lastErr = err;
-            const isRetryable =
-              isAIProviderError(err) &&
-              (err.code === "RATE_LIMITED" || (err.status !== undefined && err.status >= 500));
-
-            if (!isRetryable) {
-              // Non-retryable error — check for auth issues
-              if (isAIProviderError(err) && err.code === "NO_API_KEY") {
-                return sageErrorResponse("MIM_CREDENTIAL_MISSING");
-              }
-              const msg = errorMessage(err);
-              if (msg.toLowerCase().includes("api_key") || msg.toLowerCase().includes("api key")) {
-                return sageErrorResponse("MIM_CREDENTIAL_INVALID", { details: msg });
-              }
-              throw err;
-            }
-
-            console.warn(`[/api/sage/chat] Model ${modelName} failed, trying fallback...`);
-          }
-        }
-
-        if (!responseText) {
-          if (lastErr && isAIProviderError(lastErr) && lastErr.code === "RATE_LIMITED") {
-            return sageErrorResponse("MIM_PROVIDER_RATE_LIMIT", { details: errorMessage(lastErr) });
-          }
-          return sageErrorResponse("MIM_AI_GENERATION_FAILED", {
-            message: `MIM-Bot no pudo generar respuesta tras probar ${GEMINI_MODELS.length} modelos.`,
-            details: lastErr ? errorMessage(lastErr) : "Unknown error",
-          });
-        }
-      }
+      const responseText = result.text;
+      const modelUsed = result.model;
 
       // ── 5. Emit buffered response through SSE stream contract ──
       // The SageMimbotCopilot frontend expects the SSE stream format.

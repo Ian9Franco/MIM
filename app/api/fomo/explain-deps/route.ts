@@ -7,8 +7,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { createDefaultProvider, isAIProviderError } from "@/lib/intelligence/ai";
-import { OpenRouterProvider } from "@/lib/intelligence/ai/openRouterProvider";
+import { generateWithModelGateway, isAIProviderError, resolveGatewayKeys } from "@/lib/intelligence/ai";
 import { buildDependencyExplainContext, type DependencyInfo } from "@/lib/intelligence/contextBuilder";
 import { resolveBotPersonality } from "@/lib/intelligence/modExplainer";
 
@@ -43,12 +42,10 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const { provider } = createDefaultProvider({
-      headerGeminiKey,
-      openrouterKey: headerOpenRouterKey,
-    });
+    const gatewayKeys = { headerGeminiKey, openrouterKey: headerOpenRouterKey };
+    const { hasGeminiKey, hasOpenRouterKey } = resolveGatewayKeys(gatewayKeys);
 
-    if (!provider) {
+    if (!hasGeminiKey && !hasOpenRouterKey) {
       return NextResponse.json(
         { error: "NO_API_KEY", message: "No API key configured." },
         { status: 401 }
@@ -70,24 +67,14 @@ export const POST = withApiGuard(
     const promptText = `${ctx.systemPrompt}\n\n${ctx.userPrompt}`;
 
     try {
-      let result;
-
-      if (provider.id === "openrouter" && "generateWithFallback" in provider) {
-        result = await (provider as OpenRouterProvider).generateWithFallback({
-          messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
-          temperature: 0.5,
-          maxOutputTokens: 500,
-          signal: request.signal,
-        });
-      } else {
-        result = await provider.generate({
-          model: "gemini-flash-lite-latest",
-          messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
-          temperature: 0.5,
-          maxOutputTokens: 500,
-          signal: request.signal,
-        });
-      }
+      const result = await generateWithModelGateway({
+        intent: "dependency-explain",
+        messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
+        temperature: 0.5,
+        maxOutputTokens: 500,
+        signal: request.signal,
+        ...gatewayKeys,
+      });
 
       return NextResponse.json({
         modId,

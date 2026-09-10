@@ -20,6 +20,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - Transporte SFTP de solo lectura con huella de host obligatoria, descubrimiento remoto y `POST /api/server/inspect`.
   - Pantalla Desktop `/servers` (link en el header) que compara mods contra el último build AllHost.
   - Fixture local `npm run dev:server-fixture` y suite `npm run test:server`. Escritura remota, persistencia durable de snapshots y hosting externo siguen pendientes.
+  - Build Desktop (en revisión): `ssh2` queda marcado como `serverExternalPackages` para evitar que Turbopack intente empaquetar su implementación criptográfica nativa; la validación remota del build sigue siendo criterio de cierre.
 - **MIMBOT-GW / Model Gateway & Context Builder**:
   - BOT-05 en revisión: el ciclo de vida de requests del gateway propaga cancelación y timeout a Gemini/OpenRouter, y el mini-chat de proyectos deja de construir URLs con credenciales para usar el proveedor seleccionado.
   - Abstracción de proveedores `AIProvider` (`GeminiProvider`, `OpenRouterProvider`) con selector `createAIProvider.ts`. Gemini permanece como default; GLM vía OpenRouter es opt-in (`MIMBOT_AI_PROVIDER=openrouter`).

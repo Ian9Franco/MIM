@@ -25,6 +25,10 @@ export type AIRequest = {
   messages: AIMessage[];
   temperature?: number;
   maxOutputTokens?: number;
+  /** Cancels provider work when the originating request is no longer useful. */
+  signal?: AbortSignal;
+  /** Maximum duration for the provider call, including a bounded retry. */
+  timeoutMs?: number;
   tools?: {
     googleSearch?: boolean;
   };

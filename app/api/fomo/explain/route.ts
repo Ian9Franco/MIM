@@ -113,7 +113,9 @@ export const POST = withApiGuard(
           model,
           personality: requestedPersonality,
         },
-        resolvedApiKey
+        resolvedApiKey,
+        provider,
+        request.signal
       );
       return NextResponse.json(chatRes);
     }
@@ -133,8 +135,12 @@ export const POST = withApiGuard(
       personality: requestedPersonality,
     };
 
-    const result = await explainModWithGemini(input, resolvedApiKey, provider);
+    const result = await explainModWithGemini(
+      input,
+      resolvedApiKey,
+      provider,
+      request.signal
+    );
     return NextResponse.json(result);
   }
 );
-

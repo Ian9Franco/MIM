@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import { Maximize2, X } from "lucide-react";
 

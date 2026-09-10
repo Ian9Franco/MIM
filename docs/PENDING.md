@@ -48,12 +48,12 @@
 | **Gateway request lifecycle** | `BOT-05a` | PR #68 — cancelación, timeout 15s, retries cancelables, credenciales en headers |
 | **Naming MIM-Bot Chat** | — | PR #70 — `mim-bot-chat`, `mimBotChat()`, `MIM_BOT_CHAT_MODE` |
 | **Estado de conexión Gemini en copiloto** | `BOT-04` | Validación real vía `/api/settings/validate-keys` + badge en `SageMimbotCopilot` |
+| **Model Router por intención** | `BOT-GW` | `modelGateway.ts` — texto → GLM/OpenRouter, multimodal/búsqueda → Gemini |
 
 ### Pendiente (gateway y producto)
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Model Router Dinámico:** Ruteo inteligente por costo/latencia según intención (GLM-5.3 Flash para texto/explicaciones, Gemini para imágenes/búsqueda). | `BOT-GW` | 📑 [ADR-007](./adr/ADR-007-mimbot-model-gateway.md)<br/>📌 [ROADMAP.md (Sección 5)](./planning/ROADMAP.md#5-pipeline-de-inferencia--model-backlog-pendiente--futuro) |
 | **Multi-proveedor en SAGE follow-up:** Revisar rama OpenAI desconectada en `sageMimbotEngine.ts` vs contrato Gemini/OpenRouter. | `BOT-05b` | 🟢 [whosnext.md (BOT-05b)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Structured JSON Output:** Validación estricta con schemas Zod sobre las respuestas generadas por los modelos para prevenir alucinaciones de formato. | `BOT-JSON` | 📌 [ROADMAP.md (Sección 5)](./planning/ROADMAP.md#5-pipeline-de-inferencia--model-backlog-pendiente--futuro) |
 | **Caché Semántico / Hashing de Contexto:** Cachear por hash de evidencia para no reenviar inferencias ante consultas idénticas. | `BOT-08` | 🟢 [whosnext.md (BOT-08)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |

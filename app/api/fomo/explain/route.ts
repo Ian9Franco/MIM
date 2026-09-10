@@ -8,7 +8,7 @@ import {
   type ModExplainerInput,
   type BotPersonality,
 } from "@/lib/intelligence/modExplainer";
-import { createDefaultProvider } from "@/lib/intelligence/ai";
+import { resolveGatewayKeys } from "@/lib/intelligence/ai";
 
 const bodySchema = z.object({
   projectId: z.string().trim().min(1, "Faltan parámetros requeridos (projectId)"),
@@ -63,13 +63,15 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const { provider, providerId } = createDefaultProvider({
+    const gatewayKeys = {
       clientGeminiKey: clientApiKey,
       headerGeminiKey: headerGeminiKey,
       openrouterKey: headerOpenRouterKey,
-    });
+    };
+    const { hasGeminiKey, hasOpenRouterKey, geminiKey, openrouterKey } =
+      resolveGatewayKeys(gatewayKeys);
 
-    if (!provider) {
+    if (!hasGeminiKey && !hasOpenRouterKey) {
       return NextResponse.json(
         {
           error: "NO_API_KEY",
@@ -82,6 +84,8 @@ export const POST = withApiGuard(
 
     // Extract a resolved key for backward-compatible functions that still need it
     const resolvedApiKey =
+      geminiKey ||
+      openrouterKey ||
       (clientApiKey && clientApiKey.trim()) ||
       (headerGeminiKey && headerGeminiKey.trim()) ||
       (headerOpenRouterKey && headerOpenRouterKey.trim()) ||
@@ -114,8 +118,9 @@ export const POST = withApiGuard(
           personality: requestedPersonality,
         },
         resolvedApiKey,
-        provider,
-        request.signal
+        undefined,
+        request.signal,
+        gatewayKeys
       );
       return NextResponse.json(chatRes);
     }
@@ -138,8 +143,9 @@ export const POST = withApiGuard(
     const result = await explainModWithGemini(
       input,
       resolvedApiKey,
-      provider,
-      request.signal
+      undefined,
+      request.signal,
+      gatewayKeys
     );
     return NextResponse.json(result);
   }

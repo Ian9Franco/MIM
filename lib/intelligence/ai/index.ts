@@ -3,6 +3,17 @@ export { createAIProvider, createDefaultProvider, resolveConfiguredAIProviderId,
 export { GeminiProvider } from "./geminiProvider";
 export { OpenRouterProvider } from "./openRouterProvider";
 export { DEFAULT_AI_REQUEST_TIMEOUT_MS } from "./requestLifecycle";
+export { GEMINI_MODEL_CASCADE, DEFAULT_GEMINI_MODEL } from "./modelConstants";
+export type { AIIntent } from "./intents";
+export { classifyModExplainIntent } from "./intents";
+export { isIntentRoutingEnabled, resolveModelRoute } from "./modelRouter";
+export type { RouteDecision } from "./modelRouter";
+export {
+  createProviderForRoute,
+  generateWithModelGateway,
+  resolveGatewayKeys,
+} from "./modelGateway";
+export type { GatewayGenerateOptions, GatewayGenerateResult, GatewayKeyOptions } from "./modelGateway";
 export type {
   AIContentPart,
   AIGroundedSource,

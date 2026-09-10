@@ -40,4 +40,14 @@ MIMbot today calls Google Gemini (and a disconnected OpenAI branch) from feature
 
 ## 4. Revisión (2026-09-10)
 
-El código de esta entrega mantiene Gemini como default (`resolveConfiguredAIProviderId` → `"gemini"` salvo `MIMBOT_AI_PROVIDER=openrouter`). GLM-5.3 Flash está implementado como candidato detrás de esa variable y de BYOK OpenRouter. No hay cambio de modelo primario en producto hasta un PR posterior con comparación registrada.
+El código de esta entrega mantiene Gemini como default (`resolveConfiguredAIProviderId` → `"gemini"` salvo `MIMBOT_AI_PROVIDER=openrouter`). GLM-4 Flash (OpenRouter) está implementado como candidato detrás de esa variable y de BYOK OpenRouter. No hay cambio de modelo primario en producto hasta un PR posterior con comparación registrada.
+
+## 5. Revisión (2026-09-10) — BOT-GW intent routing
+
+`generateWithModelGateway()` en `lib/intelligence/ai/modelGateway.ts` enruta por intención cuando `MIMBOT_INTENT_ROUTING` no está desactivado:
+
+- **Texto** (`sage-chat`, `mim-bot-chat`, `mod-explain-text`, `dependency-explain`) → OpenRouter/GLM si hay clave; si no, Gemini.
+- **Multimodal** (`mod-explain-multimodal`) → Gemini (visión).
+- **Search grounding** (descripción escasa en mod explain) → Gemini con `tools.googleSearch`.
+
+`MIMBOT_AI_PROVIDER=openrouter` sigue aplicando como override global cuando `MIMBOT_INTENT_ROUTING=false`.

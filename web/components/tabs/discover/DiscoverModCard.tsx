@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink, ChevronRight } from "lucide-react";
 import { DefaultModIcon } from "../../DefaultModIcon";
@@ -19,6 +19,7 @@ export function DiscoverModCard({
   resultIndex,
   handleOpenModDetails,
 }: DiscoverModCardProps) {
+  const fallbackIconRef = useRef<HTMLDivElement>(null);
   const isCurse = mod._source === "curseforge";
   const cardRoundedClass = isCurse ? "rounded-xl" : "rounded-3xl";
   const iconRoundedClass = isCurse ? "rounded-lg" : "rounded-2xl";
@@ -98,11 +99,12 @@ export function DiscoverModCard({
                   className="object-cover w-full h-full"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
-                    const sibling = e.currentTarget.nextSibling as HTMLElement;
-                    if (sibling) sibling.style.display = "block";
+                    if (fallbackIconRef.current) {
+                      fallbackIconRef.current.style.display = "block";
+                    }
                   }}
                 />
-                <div className="hidden w-full h-full">
+                <div ref={fallbackIconRef} className="hidden w-full h-full">
                   <DefaultModIcon platform={mod._source} />
                 </div>
               </>

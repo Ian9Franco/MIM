@@ -1,4 +1,4 @@
-# SAGE Rescue Feature - Implementation & Test Suite Summary
+﻿# SAGE Rescue Feature - Implementation & Test Suite Summary
 
 ## ✅ Delivered
 

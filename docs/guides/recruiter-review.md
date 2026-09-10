@@ -302,11 +302,11 @@ Frases históricas como "100% completo" / "Production Ready" contrastan con la r
 | Documento | Descripción |
 |-----------|-------------|
 | [README.md](../README.md) | Overview técnico y benchmarks |
-| [PROJECT_STATUS.md](./planning/PROJECT_STATUS.md) | Estado real y deuda documentada |
-| [ROADMAP.md](./planning/ROADMAP.md) | Plan de evolución activo |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Guía para contribuidores |
-| [docs/adr/](./adr/) | Architecture Decision Records |
-| [review.md](./review.md) | Feedback de producto UX/UI pendiente |
+| [PROJECT_STATUS.md](../planning/project-status.md) | Estado real y deuda documentada |
+| [ROADMAP.md](../planning/ROADMAP.md) | Plan de evolución activo |
+| CONTRIBUTING.md | Guía para contribuidores |
+| [docs/adr/](../adr/) | Architecture Decision Records |
+| recruiter-review.md | Feedback de producto UX/UI pendiente |
 
 ---
 

@@ -68,13 +68,13 @@
 # 🚧 Roadmap y Próximos Pasos (Backlog & Propuestas)
 
 ### 🛡️ Propuesta de Arquitectura: MIM Sovereign Vault & Data Sovereignty
-- [x] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/proposals/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](../proposals/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md)).
+- [x] **MIM Sovereign Vault (`.mimvault`)**: Especificación de backup portable con verificación de integridad SHA-256 e importación idempotente para mitigación de dormancia/pausa en Supabase y migración fluida entre cuentas (ver especificación completa en [docs/PROPOSAL_DATA_SOVEREIGNTY_VAULT.md](../proposals/vault-data-sovereignty.md)).
 - [x] **Desktop Silent Rolling Snapshots & Local Vaulting**: Exportación e importación desacoplada de la nube en MIM Desktop y MIMweb para independencia total de conectividad cloud.
 - [x] **Cifrado Zero-Knowledge Opcional**: Cifrado del vault con `AES-256-GCM` y `PBKDF2` (100.000 iteraciones) en el cliente antes de la exportación.
 
 ### 🧠 Propuesta: Explicador Inteligente de Proyectos On-Demand (Public Gemini Grounding API)
 - [x] **Síntesis Contextual On-Demand**: Botón de acción explícita ("✨ Explicar con IA") en `ModDetailsSheet` y `FomoVersionOverlay` (sin ejecución en segundo plano no solicitada).
-- [x] **Grounding con Google Search para Metadatos Vacíos**: Para mods/texturas/shaders sin descripción o con información escueta, sintetizar su función investigando automáticamente vía Gemini Search Grounding con el título, autor, slug y enlaces de origen (ver especificación completa en [docs/proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](../proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md)).
+- [x] **Grounding con Google Search para Metadatos Vacíos**: Para mods/texturas/shaders sin descripción o con información escueta, sintetizar su función investigando automáticamente vía Gemini Search Grounding con el título, autor, slug y enlaces de origen (ver especificación completa en [docs/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](../proposals/mod-explainer.md)).
 - [x] **Arquitectura Serverless / Direct Public API**: Consumo directo mediante API pública (Gemini Flash) sin dependencia de servidores propietarios backend.
 - [x] **Caché Persistente en Almacenamiento Local**: Almacenamiento local de síntesis en `mim_explain_${projectId}` para costo cero en consultas repetidas.
 

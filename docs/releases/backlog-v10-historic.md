@@ -1,6 +1,6 @@
 # MIM Living Engineering Backlog & Technical Debt Tracker
 
-> **Referencia actual:** [cierres auditados del 2026-09-06](#revision-de-cierres-2026-09-06). Las métricas y estados de las secciones históricas no son una medición actual. Las tareas activas se mantienen en [Who's Next](../whosnext.md).
+> **Referencia actual:** [cierres auditados del 2026-09-06](#revision-de-cierres-2026-09-06). Las métricas y estados de las secciones históricas no son una medición actual. Las tareas activas se mantienen en [Who's Next](../planning/whosnext.md).
 
 Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estado de la deuda técnica, las prioridades de ingeniería (metodología MoSCoW) y las métricas de madurez de software a lo largo de los ciclos de desarrollo.
 
@@ -28,8 +28,8 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
 - [x] **Proveedor Oficial de Traducción**:
   - [x] Reemplazo de endpoint no oficial por API oficial de DeepL / Google Cloud Translation / LibreTranslate con cadena de fallback y degradación graceful en [`web/lib/translator.ts`](../../web/lib/translator.ts).
 - [x] **Mitigación del Bus Factor**:
-  - [x] Especificación de topología del sistema y diagramas de flujo de datos en [`docs/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md).
-  - [x] Guía de onboarding para nuevos colaboradores en [`docs/ONBOARDING.md`](../guides/ONBOARDING.md).
+  - [x] Especificación de topología del sistema y diagramas de flujo de datos en [`docs/architecture/overview.md`](../architecture/overview.md).
+  - [x] Guía de onboarding para nuevos colaboradores en [`docs/guides/onboarding.md`](../guides/onboarding.md).
 - [x] **Reducción Progresiva de `any` (Fase 2)**:
   - [x] Tipado estricto en los 14 endpoints de `web/app/api/`.
   - [x] Reducir `any` en capas de UI complejas (`web/components/`, `components/fomo/`).
@@ -44,7 +44,7 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
   - [x] CLI de inspección en [`scripts/audit-licenses.ts`](../../scripts/audit-licenses.ts).
 - [x] **Pentesting Dinámico y DAST**:
   - [x] Script automatizado [`scripts/security/dast-scan.js`](../../scripts/security/dast-scan.js) para validación de cabeceras en vivo y rate limiters.
-  - [x] Documentación de escaneo con OWASP ZAP y plantillas Nuclei en [`docs/THREAT_MODEL.md`](../security/THREAT_MODEL.md).
+  - [x] Documentación de escaneo con OWASP ZAP y plantillas Nuclei en [`docs/security/threat-model.md`](../security/threat-model.md).
 - [x] **CI/CD Pipeline Automatizado**:
   - [x] Flujo de GitHub Actions para ejecutar automáticamente `npm test`, validación DAST y chequeo de tipos en cada PR.
 
@@ -58,13 +58,13 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
   - [x] **Inteligencia de Grafo FOMO y Árbol de Descarte Lógico**: Análisis algorítmico sin azar ni suposiciones; cruce de árbol de dependencias de Modrinth/CurseForge, incompatibilidades documentadas y colisiones no documentadas por Mixin Injection ([`lib/intelligence/sage/fomoCorrelator.ts`](../../lib/intelligence/sage/fomoCorrelator.ts)).
   - [x] **Profiler Preventivo de Logs en Vivo (`latest.log`, `debug.log`)**: Análisis de estado del juego en cliente y servidor para detectar memory leaks, packet/entity spam, tick-lag y sugerir stacks de optimización (Sodium, Lithium, FerriteCore, ModernFix, flags JVM) ([`lib/intelligence/sage/logProfiler.ts`](../../lib/intelligence/sage/logProfiler.ts)).
   - [x] **UI Interactivo con Icono Saltarín**: Panel interactivo del copiloto y disparador en SAGE con animación `.animate-slime` ([`components/sage/parts/SageMimbotCopilot.tsx`](../../components/sage/parts/SageMimbotCopilot.tsx)).
-  - *Documento de arquitectura formal:* [`docs/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md`](../proposals/PROPOSAL_SAGE_MIMBOT_INTELLIGENCE.md).
+  - *Documento de arquitectura formal:* [`docs/proposals/mimbot-sage-graph.md`](../proposals/mimbot-sage-graph.md).
 - [x] **Modularización de Componentes Gigantes (`ModDetailsSheet.tsx`)**:
-  - [x] Desacoplamiento de componente monolítico de 2,347 líneas en submódulos especializados en [`web/components/mod-details/`](../../web/components/mod-details/).
+  - [x] Desacoplamiento de componente monolítico de 2,347 líneas en submódulos especializados en [`web/components/mod-details/`](../../web/components/mod-details).
   - [x] Todos los submódulos cumplen la regla estricta de permanecer por debajo de 500 líneas de código funcional.
 - [ ] **Modularización Progresiva de Monolitos (> 500 líneas)**:
   - [x] **Fase 1: `web/components/tabs/ProfileTab.tsx` (1,310 líneas)**:
-    - Descompuesto en 11 submódulos en [`web/components/profile/`](../../web/components/profile/) (`ProfileAuthForm`, `ProfileHeader`, `ProfileDraftsSection`, `ProfileFavoritesSection`, `ProfileSharesSection`, `ProfileFollowedAuthorsSection`, `ProfileSovereignVaultCard`, `ProfileVaultModals`, `useProfileVault`, `utils`, `types`).
+    - Descompuesto en 11 submódulos en [`web/components/profile/`](../../web/components/profile) (`ProfileAuthForm`, `ProfileHeader`, `ProfileDraftsSection`, `ProfileFavoritesSection`, `ProfileSharesSection`, `ProfileFollowedAuthorsSection`, `ProfileSovereignVaultCard`, `ProfileVaultModals`, `useProfileVault`, `utils`, `types`).
     - Orquestador reducido a 283 líneas; todos los submódulos por debajo de 300 líneas.
   - [ ] **Fase 2: `web/components/tabs/DiscoverTab.tsx` (862 líneas)** y **`web/components/DraftDetailView.tsx` (819 líneas)**:
     - Extraer subcomponentes atómicos para reducir la complejidad ciclomática de las vistas clave.
@@ -94,7 +94,7 @@ Este documento actúa como el backlog vivo del proyecto MIM, rastreando el estad
 
 ## Revision de cierres 2026-09-06
 
-Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sobre los estados y métricas históricos anteriores: registra capacidades existentes, no atribuye todas ellas a una nueva release. Los pendientes activos están en [whosnext](../whosnext.md). Evidencia de implementación no equivale a una prueba visual o a validación de producción.
+Auditoría del checkout `ad7f939` (package v11.4.5). Esta sección prevalece sobre los estados y métricas históricos anteriores: registra capacidades existentes, no atribuye todas ellas a una nueva release. Los pendientes activos están en [whosnext](../planning/whosnext.md). Evidencia de implementación no equivale a una prueba visual o a validación de producción.
 
 | Cierre trasladado desde whosnext / Unicorn | Evidencia y alcance comprobado |
 |---|---|

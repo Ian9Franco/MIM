@@ -1,6 +1,6 @@
 # MIM — Who's Next
 
-Roadmap pendiente revisado el 2026-09-06 contra el checkout local v11.4.5 (`ad7f939`). Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](releases/BACKLOG_v10_HISTORIC.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](releases/RELEASE_DOCUMENTATION_AUDIT.md).
+Roadmap pendiente revisado el 2026-09-06 contra el checkout local v11.4.5 (`ad7f939`). Las evaluaciones son insumos de revisión; sus recomendaciones no autorizan implementaciones ni publicaciones por sí mismas. Los cierres comprobados están en [el backlog histórico](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06). Ver [auditoría y flujo de release](../releases/release-audit.md).
 
 ## 1. Proceso y contratos API
 
@@ -20,7 +20,7 @@ Roadmap pendiente revisado el 2026-09-06 contra el checkout local v11.4.5 (`ad7f
 
 ## 3. Calidad y arquitectura — revisión recruiter
 
-Fuente: [RECRUITER_REVIEW.md](RECRUITER_REVIEW.md), señales amarillas/rojas y próximos pasos. Las métricas y opiniones del informe requieren fuentes; no se toman sus percentiles, autoría inferida ni usuarios reales como hechos comprobados.
+Fuente: [recruiter-review.md](../guides/recruiter-review.md), señales amarillas/rojas y próximos pasos. Las métricas y opiniones del informe requieren fuentes; no se toman sus percentiles, autoría inferida ni usuarios reales como hechos comprobados.
 
 - [ ] **REC-01 — Reducir `any` con baseline reproducible.** Extiende la deuda de tipado existente: medir por carpeta con criterio documentado, priorizar `useHomeController`, `useAlertManager` y fronteras core, sustituir por tipos/unknown validado. Cierre: comparación antes/después y typecheck sin errores; no usar 935 como conteo actualizado.
 - [ ] **REC-02 — Reducir warnings de ESLint.** El techo ya bajó a 471; falta reducir deuda. Agrupar reglas y módulos, corregir una categoría por PR y bajar el presupuesto tras medir. No cerrar por cambiar sólo el número ni ocultar warnings.
@@ -34,7 +34,7 @@ Fuente: [RECRUITER_REVIEW.md](RECRUITER_REVIEW.md), señales amarillas/rojas y p
 
 ## 4. Evaluación SAGE y MimBot
 
-Fuente: [SAGE_EVALUATION.md](SAGE_EVALUATION.md) y su generador `scripts/evaluation/sage-eval.ts`. El documento reporta resultados y límites; las tareas siguientes surgen de contrastarlos con el evaluador. Su benchmark determinista no cierra Unicorn §1.3/Fase 3 para MimBot.
+Fuente: [sage-eval.md](../engines/sage-eval.md) y su generador `scripts/evaluation/sage-eval.ts`. El documento reporta resultados y límites; las tareas siguientes surgen de contrastarlos con el evaluador. Su benchmark determinista no cierra Unicorn §1.3/Fase 3 para MimBot.
 
 - [ ] **SAGE-01 — Procedencia y generalización del corpus.** Registrar origen, anonimización, licencia y distinción real/sintético/representativo por caso; detectar duplicados y separar un conjunto reservado de logs no usados para ajustar reglas. Incluir trazas truncadas, wrappers, categorías ambiguas y errores combinados. Cierre: resultado independiente por loader/categoría y límites explícitos.
 - [ ] **SAGE-02 — Métricas Top-1/Top-3 correctamente denominadas.** El evaluador incluye los casos sin culpable en el denominador y los cuenta por categoría correcta. Separar atribución sobre casos con culpable de acierto sistémico sin culpable, mostrando numerador/denominador; conservar una métrica histórica claramente etiquetada para comparar.
@@ -42,8 +42,9 @@ Fuente: [SAGE_EVALUATION.md](SAGE_EVALUATION.md) y su generador `scripts/evaluat
 - [ ] **SAGE-04 — Latencia reproducible.** Informar entorno, versión, calentamiento, repeticiones y p50/p95 además de media; distinguir diagnóstico local de latencia/costo de la llamada LLM. No extrapolar 0.06 ms al chat.
 - [ ] **SAGE-05 — Evals de MimBot y evidencia visible.** Dataset fijo de 15–20 preguntas (crash, dependencias, mods, cuota y ambigüedad), baseline versionada por modelo/prompt, medir exactitud, cobertura causal, referencias, alucinaciones, costo y latencia. Distinguir log, proveedor, sistema local e inferencia en la respuesta; vincular con Unicorn §1.3/1.6.
 - [ ] **SAGE-06 — Verificar guardrails en el recorrido real.** Probar atribuciones contradictorias, consejos peligrosos, prompt injection y ausencia de evidencia contra el endpoint/stream. `guardrails.ts` existe, pero su existencia y la instrucción del prompt no prueban que cada respuesta de chat esté validada. Cierre: política definida ante violación y tests que ejecuten el flujo; retirar garantías absolutas del reporte y su generador.
-- [ ] **SAGE-07 — Una fuente de evaluación.** Resolver la duplicación entre `docs/SAGE_EVALUATION.md` (salida real del script) y `docs/engines/SAGE_EVALUATION.md`; documentar cuál es canónica y sincronizar referencias/generación para que no diverjan.
+- [ ] **SAGE-07 — Una fuente de evaluación.** Duplicación resuelta: la fuente canónica es `docs/engines/sage-eval.md`.
 
 ## 5. Seguimiento de Unicorn
 
-Ver [matriz de estado del plan](MIM_UNICORN_ENGINEERING_PLAN.md#revision-de-estado-2026-09-06). Permanecen abiertos los alcances completos de tool calling, recuperación contextual, routing por complejidad, capacidades, pipeline de confianza, idempotencia/jobs generales, storage avanzado, matrix/mutation/fault testing y contratos entre dominios. Una implementación parcial no cierra la fase completa. Las decisiones pospuestas no se contabilizan como funcionalidades entregadas.
+Ver [matriz de estado del plan](unicorn.md#revision-de-estado-2026-09-06). Permanecen abiertos los alcances completos de tool calling, recuperación contextual, routing por complejidad, capacidades, pipeline de confianza, idempotencia/jobs generales, storage avanzado, matrix/mutation/fault testing y contratos entre dominios. Una implementación parcial no cierra la fase completa. Las decisiones pospuestas no se contabilizan como funcionalidades entregadas.
+

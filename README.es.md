@@ -18,7 +18,7 @@
 [![Tests: Passing](https://img.shields.io/badge/Tests-All%20Passing-brightgreen)](scripts/test-runner.js)
 [![Coverage](https://img.shields.io/badge/Coverage-91.0%25%20(V8%20Runtime)-brightgreen)](https://github.com/Ian9Franco/MIM/actions)
 
-**[🎬 Demo en Vivo](./docs/guides/DEMO.md)** • **[🌐 Web Hub](https://mim-hub.vercel.app/)** • **[🏛️ Arquitectura](#-arquitectura-del-sistema)** • **[📑 ADRs (Decisiones)](./docs/adr/)** • **[🛡️ Motor SAGE](#motor-01--sistema-de-inteligencia-forense-sage)** • **[⚡ Motor Aduana](#motor-02--motor-de-almacenamiento-aduana--benchmarks)** • **[🌐 FOMO Cloud](#motor-03--fomo-cloud--arquitectura-de-sistemas-distribuidos)** • **[🔒 Seguridad](#motor-04--análisis-estático-de-amenazas-en-bytecode-java)** • **[💾 NBT Rescue](#motor-05--motor-de-rescate-nbt--recuperación-de-datos-binarios)** • **[🐳 Reproducibilidad](./docs/guides/REPRODUCIBILITY.md)**
+**[🎬 Demo en Vivo](./docs/guides/demo.md)** • **[🌐 Web Hub](https://mim-hub.vercel.app/)** • **[🏛️ Arquitectura](#-arquitectura-del-sistema)** • **[📑 ADRs (Decisiones)](./docs/adr/)** • **[🛡️ Motor SAGE](#motor-01--sistema-de-inteligencia-forense-sage)** • **[⚡ Motor Aduana](#motor-02--motor-de-almacenamiento-aduana--benchmarks)** • **[🌐 FOMO Cloud](#motor-03--fomo-cloud--arquitectura-de-sistemas-distribuidos)** • **[🔒 Seguridad](#motor-04--análisis-estático-de-amenazas-en-bytecode-java)** • **[💾 NBT Rescue](#motor-05--motor-de-rescate-nbt--recuperación-de-datos-binarios)** • **[🐳 Reproducibilidad](./docs/guides/reproducibility.md)**
 
 </div>
 
@@ -136,7 +136,7 @@ Reporte de Crash Estructurado → JSON determinista consumido por la UI o por la
 | **Latencia Media de Diagnóstico** | **0.06 ms/log** | < 15.0 ms | Determinista Local Sub-Milisegundo | ⚡ Real-Time |
 
 > [!NOTE]
-> **Frontera Operativa y Non-Goals:** SAGE evalúa evidencia estática de logs. No ejecuta bytecode de Java no confiable, no se acopla a la memoria de la JVM en ejecución, y la capa de LLM tiene terminantemente prohibido inventar culpables. El 100% Macro F1 refleja el rendimiento contra el corpus de benchmark de 125 casos canónicos en 8 categorías; trazas no canónicas o dañadas degradan con seguridad a `UNKNOWN_RUNTIME` con un score bajo acotado. Documentación completa en [docs/engines/SAGE_EVALUATION.md](./docs/engines/SAGE_EVALUATION.md).
+> **Frontera Operativa y Non-Goals:** SAGE evalúa evidencia estática de logs. No ejecuta bytecode de Java no confiable, no se acopla a la memoria de la JVM en ejecución, y la capa de LLM tiene terminantemente prohibido inventar culpables. El 100% Macro F1 refleja el rendimiento contra el corpus de benchmark de 125 casos canónicos en 8 categorías; trazas no canónicas o dañadas degradan con seguridad a `UNKNOWN_RUNTIME` con un score bajo acotado. Documentación completa en [docs/engines/sage-eval.md](./docs/engines/sage-eval.md).
 
 #### Invariante de Arquitectura: Por qué Heurísticas Deterministas en vez de LLMs / RAG Vectorial
 > *"La IA debe explicar la evidencia, no manufacturarla."*
@@ -190,7 +190,7 @@ Escaneo Cálido (100% Caché): ████ 1.68 s (8.0x Aceleración)
 
 - **Throughput SHA-1:** **2,083.9 MB/s** | **Throughput SHA-512:** **940.3 MB/s**
 - **Latencia de Búsqueda Fast-Path:** **227.45 µs/op** | **Tasa de Aciertos en Caché:** **99.4%**
-- Metodología completa en [docs/engines/ADUANA_BENCHMARKS.md](./docs/engines/ADUANA_BENCHMARKS.md).
+- Metodología completa en [docs/engines/aduana.md](./docs/engines/aduana.md).
 
 ---
 
@@ -214,7 +214,7 @@ Cliente Desktop (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ 
 4. **¿Cómo se evita duplicar mutaciones al reconectar?**
    - *Solución:* **Claves de Idempotencia Criptográficas**. Cada mutación encolada lleva un UUID determinista (`UUIDv5(resourceId + action + timestamp)`). PostgreSQL ejecuta upserts idempotentes con `ON CONFLICT DO UPDATE`, evitando duplicaciones.
 
-> Documentación de sistemas distribuidos en [docs/architecture/DISTRIBUTED_ARCHITECTURE.md](./docs/architecture/DISTRIBUTED_ARCHITECTURE.md).
+> Documentación de sistemas distribuidos en [docs/architecture/distributed-sync.md](./docs/architecture/distributed-sync.md).
 
 #### 🤖 MIM-Bot — Explicador Multimodal On-Demand & Asistente AI Bully
 *Síntesis contextual de proyectos on-demand, evidencia visual en capturas y mini-chat interactivo.*
@@ -224,7 +224,7 @@ Cliente Desktop (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ 
 - **Identidad Visual Slime Animada:** Integra el icono animado de MIM (`/icon.png` con `.animate-slime`) en botones pill, banners de análisis y burbujas de respuesta, retirando emojis genéricos.
 - **Cascada Resiliente y Fallback Local:** Degrada automáticamente entre Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash -> Motor Heurístico Local ante límites de cuota (HTTP 429).
 
-> Especificación completa en [docs/proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md](./docs/proposals/PROPOSAL_INTELLIGENT_MOD_EXPLAINER.md).
+> Especificación completa en [docs/proposals/mod-explainer.md](./docs/proposals/mod-explainer.md).
 
 ---
 
@@ -241,7 +241,7 @@ Cliente Desktop (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ 
 - **Concurrencia y Rate Limits:** Pools de workers limitados (5 archivos/lote) para no saturar I/O de disco; consultas a VirusTotal en segundo plano cacheadas para respetar cuotas gratuitas de API.
 - **Salida:** Emite un Threat Score determinista (0–100) con referencias de evidencia exactas.
 
-> Taxonomía de seguridad en [docs/security/SECURITY_ENGINE.md](./docs/security/SECURITY_ENGINE.md) y árboles de ataque STRIDE en [docs/security/THREAT_MODEL.md](./docs/security/THREAT_MODEL.md).
+> Taxonomía de seguridad en [docs/security/bytecode-scanner.md](./docs/security/bytecode-scanner.md) y árboles de ataque STRIDE en [docs/security/threat-model.md](./docs/security/threat-model.md).
 
 ---
 
@@ -257,7 +257,7 @@ $$\text{INVARIANTE}: \quad \text{El binario original NUNCA se sobreescribe sin u
 4. **Buffer de Escritura Atómica:** Codifica el árbol reparado en un archivo temporal `.tmp`, valida magic bytes y renombra atómicamente sobre el archivo destino.
 5. **Tests de Integración:** **12/12 casos de test superados** (`npm run test:nbt`).
 
-> Especificación binaria técnica en [docs/engines/NBT_RESCUE_SPEC.md](./docs/engines/NBT_RESCUE_SPEC.md).
+> Especificación binaria técnica en [docs/engines/nbt-rescue.md](./docs/engines/nbt-rescue.md).
 
 ---
 
@@ -303,16 +303,18 @@ manager/
 │   ├── fomo/                     # Comunidad, Showcases, Descubrimiento, Colecciones
 │   ├── sage/                     # Inteligencia de Crashes, Rescate de Jugador, Visor NBT
 │   └── ui/                       # Primitivas del Design System (Glassmorphism)
-├── docs/                         # Especificaciones de Sistemas y Ciclo de Vida
-│   ├── ARCHITECTURE.md           # Arquitectura de 7 motores y topología de bus de eventos
-│   ├── SAGE_EVALUATION.md        # Reporte de evaluación cuantitativa (125 casos)
-│   ├── ADUANA_BENCHMARKS.md      # Throughput de I/O y benchmarks multiescala
-│   ├── SECURITY_ENGINE.md        # Especificación de análisis estático de bytecode Java
-│   ├── THREAT_MODEL.md           # Modelo de amenazas STRIDE y árboles de ataque
-│   ├── NBT_RESCUE_SPEC.md        # Recuperación binaria e invariante de cero pérdida
-│   ├── DISTRIBUTED_ARCHITECTURE.md # Whitepaper de sistemas distribuidos y fallos
-│   ├── DEMO.md                   # Documentación del tour interactivo CLI
-│   └── REPRODUCIBILITY.md        # Guía de verificación en Docker, local y CI
+├── docs/                         # Especificaciones de Sistemas, Ciclo de Vida y Roadmap
+│   ├── planning/                 # unicorn (norte), whosnext (próximas tareas), status, roadmap
+│   ├── architecture/             # Arquitectura modular, contratos, auditoría y monorepo
+│   ├── engines/                  # sage, sage-eval, aduana (CAS), nbt-rescue, fomo
+│   ├── security/                 # Bytecode scanner, threat model STRIDE, secrets, hardening
+│   ├── cloud/                    # Esquemas Supabase, RLS y contratos de persistencia
+│   ├── guides/                   # Onboarding, reproducibilidad y demo en vivo
+│   ├── adr/                      # Architecture Decision Records (ADR-001 a ADR-007)
+│   ├── proposals/                # Propuestas técnicas (MIMbot SAGE Graph, Mod Explainer)
+│   ├── releases/                 # CHANGELOG, UNRELEASED, hogwarts (registro de PRs)
+│   ├── PENDING.md                # Índice maestro de pendientes y roadmap detallado
+│   └── README.md                 # Índice general de navegación técnica
 ├── lib/                          # Motores de Dominio Centrales
 │   ├── core/                     # Contratos base, logger estructurado, settings
 │   ├── events/                   # Bus de eventos tipado (MimEventMap)
@@ -331,7 +333,7 @@ manager/
 
 ## 🔒 Verificación de Calidad y Alcance de Arquitectura
 
-MIM se mantiene como una plataforma modular de ingeniería de sistemas y proyecto de portfolio bajo estrictos estándares de verificación. Para un desglose honesto de la realidad de desarrollo solo-dev, benchmarks empíricos y gestión de deuda técnica, consultar [**Estado Real del Proyecto**](./docs/planning/PROJECT_STATUS.md):
+MIM se mantiene como una plataforma modular de ingeniería de sistemas y proyecto de portfolio bajo estrictos estándares de verificación. Para un desglose honesto de la realidad de desarrollo solo-dev, benchmarks empíricos y gestión de deuda técnica, consultar [**Estado Real del Proyecto**](./docs/planning/project-status.md):
 
 - [x] **Gestión Disciplinada del Alcance:** Evolución controlada de funcionalidades sin desvíos especulativos; cada decisión arquitectónica está respaldada por ADRs, años de experiencia operativa en modding y benchmarks reales.
 - [x] **Afirmaciones Técnicas Defendibles:** Todas las afirmaciones de rendimiento, seguridad y algoritmos se verifican contra código y tests.

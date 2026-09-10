@@ -7,10 +7,11 @@ This file is an operational index, not a marketing summary. Use it to find the c
 1. `package.json` — current application version, scripts, Electron build configuration and dependency graph.
 2. `.github/workflows/ci.yml` — actual CI gates executed on push and pull requests.
 3. `docs/README.md` — canonical documentation index. Prefer the paths listed there over historical links.
-4. `docs/planning/PROJECT_STATUS.md` — maturity/transparency audit; use it when README language and implementation maturity differ.
+4. `docs/planning/project-status.md` — maturity/transparency audit; use it when README language and implementation maturity differ.
 5. `docs/planning/ROADMAP.md` — active technical roadmap.
-6. `docs/whosnext.md` — tactical debt / next-work list; verify every item against current `main` before acting.
-7. Current code and CI results override stale prose.
+6. `docs/planning/whosnext.md` — tactical debt / next-work list; verify every item against current `main` before acting.
+7. `docs/PENDING.md` — consolidated master checklist of all pending tasks.
+8. Current code and CI results override stale prose.
 
 Do not infer the current version from prose or badges. Read `package.json`.
 
@@ -26,20 +27,20 @@ Do not infer the current version from prose or badges. Read `package.json`.
 
 ## Canonical technical documentation
 
-- General technical manual: `docs/architecture/MIM.md`
-- System architecture: `docs/architecture/ARCHITECTURE.md`
-- Architecture boundaries: `docs/architecture-boundaries.md`
-- HTTP API catalog: `docs/architecture/API.md`
-- Distributed architecture: `docs/architecture/DISTRIBUTED_ARCHITECTURE.md`
-- Security engine: `docs/security/SECURITY_ENGINE.md`
-- Threat model: `docs/security/THREAT_MODEL.md`
-- Web hardening: `docs/security/WEB_HARDENING.md`
-- SAGE rescue: `docs/engines/SAGE_RESCUE.md`
-- SAGE evaluation: `docs/engines/SAGE_EVALUATION.md`
-- NBT recovery specification: `docs/engines/NBT_RESCUE_SPEC.md`
-- Aduana benchmarks: `docs/engines/ADUANA_BENCHMARKS.md`
-- FOMO engine documentation: `docs/engines/FOMO_CLOUD.md`
-- Supabase/cloud setup: `docs/cloud/supabase_setup_and_api.md`
+- General technical manual: `docs/architecture/mim-core.md`
+- System architecture: `docs/architecture/overview.md`
+- Architecture boundaries: `docs/architecture/boundaries.md`
+- HTTP API catalog: `docs/architecture/api-catalog.md`
+- Distributed architecture: `docs/architecture/distributed-sync.md`
+- Security engine: `docs/security/bytecode-scanner.md`
+- Threat model: `docs/security/threat-model.md`
+- Web hardening: `docs/security/web-hardening.md`
+- SAGE rescue: `docs/engines/sage.md`
+- SAGE evaluation: `docs/engines/sage-eval.md`
+- NBT recovery specification: `docs/engines/nbt-rescue.md`
+- Aduana benchmarks: `docs/engines/aduana.md`
+- FOMO engine documentation: `docs/engines/fomo.md`
+- Supabase/cloud setup: `docs/cloud/supabase.md`
 - Changelog: `docs/releases/CHANGELOG.md`
 - Active roadmap: `docs/planning/ROADMAP.md`
 

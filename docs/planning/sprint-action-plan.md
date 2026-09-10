@@ -6,7 +6,15 @@ Fuentes: [#57](https://github.com/Ian9Franco/MIM/issues/57), [#58](https://githu
 
 Este documento propone el trabajo restante. La revisión de código fue dirigida a estas iniciativas; el inventario exhaustivo de #60 sigue pendiente. No se implementaron funciones ni se modificaron issues.
 
-## Estado comprobado
+## Estado actual de Server Manager — 2026-09-09
+
+La primera superficie integrada está en `/servers`: conexión SSH/SFTP con verificación de host y comparación de mods contra un build AllHost existente. La lectura incompleta devuelve advertencias y **ningún diff**, para no confundir errores con archivos ausentes. Las credenciales no se persisten; la conexión se cierra al terminar/cancelar.
+
+La matriz actual de implementación/integración/validación está en [ROADMAP §9](ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso). Los módulos SRV-3 a SRV-7 existentes no cierran su aceptación. Persistencia, reinicio, escrituras, configs/mundos, hosting externo y packaging Electron siguen pendientes.
+
+La tabla y el orden siguientes conservan el plan histórico y no prevalecen sobre esa matriz.
+
+## Estado comprobado al redactar el plan original
 
 | Issue | Existe / Completado | Falta |
 |---|---|---|

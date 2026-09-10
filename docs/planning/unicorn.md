@@ -752,7 +752,7 @@ El objetivo es que **la sofisticación sea la razón por la cual el usuario no n
 
 ## Revision de estado 2026-09-06
 
-Contraste con el checkout local `ad7f939` (v11.4.5). Esta matriz prevalece sobre el tiempo futuro de las propuestas originales. Los cierres se archivan en [backlog](releases/BACKLOG_v10_HISTORIC.md#revision-de-cierres-2026-09-06); los siguientes pasos están en [whosnext](whosnext.md). “Sin cierre verificado” significa que esta revisión no acredita el alcance completo, no que no exista ningún código relacionado.
+Contraste con el checkout local `ad7f939` (v11.4.5). Esta matriz prevalece sobre el tiempo futuro de las propuestas originales. Los cierres se archivan en [backlog](../releases/backlog-v10-historic.md#revision-de-cierres-2026-09-06); los siguientes pasos están en [whosnext](whosnext.md). “Sin cierre verificado” significa que esta revisión no acredita el alcance completo, no que no exista ningún código relacionado.
 
 | Propuesta | Estado y evidencia / alcance restante |
 |---|---|

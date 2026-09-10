@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Info, AlertTriangle, CheckCircle, Download, Trash2 } from "lucide-react";
+import { Info, AlertTriangle, CheckCircle, Download } from "lucide-react";
 import { SecurityHeader, getSecurityConfig } from "./parts/SecurityHeader";
 import { SecurityOverview } from "./parts/SecurityOverview";
 

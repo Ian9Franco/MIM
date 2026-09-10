@@ -3,7 +3,7 @@ import { DefaultModIcon } from "../DefaultModIcon";
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Compass, Loader2, ChevronRight } from "lucide-react";
+import { Compass, Loader2 } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 
 interface RankingsTabProps {

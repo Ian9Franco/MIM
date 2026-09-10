@@ -177,7 +177,7 @@ export function useProfileVault({
         setShowImportModal(true);
         playFomoSound("pop");
       }
-    } catch (err: any) {
+    } catch {
       setImportValidation({ valid: false, error: "El archivo seleccionado no es un formato .mimvault válido." });
       setShowImportModal(true);
     } finally {

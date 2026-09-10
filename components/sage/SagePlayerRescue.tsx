@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Heart, Loader2, CheckCircle2, ChevronRight, FileUp, Trash2, AlertCircle, Upload } from "lucide-react";
+import { User, Heart, Loader2, CheckCircle2, ChevronRight, AlertCircle, Upload } from "lucide-react";
 import { NbtTreeViewer } from "./rescue/NbtTreeViewer";
 import { InventoryManager } from "./rescue/InventoryManager";
 import { RescueActions } from "./rescue/RescueActions";
@@ -18,7 +18,7 @@ interface PlayerFile {
 }
 
 export function SagePlayerRescue({ 
-  players, loadingPlayers, selectedPlayer, setSelectedPlayer, rescuingPlayer, rescueLogs, rescueSuccess, onRescue 
+  players, loadingPlayers, selectedPlayer, setSelectedPlayer 
 }: any) {
   const [parsedData, setParsedData] = useState<any>(null);
   const [loadingParse, setLoadingParse] = useState(false);

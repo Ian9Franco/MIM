@@ -158,7 +158,7 @@ export async function updateYtdlp(): Promise<{
         // Remove previous backup if exists
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         fs.renameSync(BIN_PATH, oldPath);
-      } catch (renameErr) {
+      } catch {
         // Windows might have the file locked — try a copy-based approach
         console.warn("[ytdlp-updater] Could not rename old binary, trying direct overwrite");
       }

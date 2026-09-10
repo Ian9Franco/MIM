@@ -9,9 +9,7 @@ import {
   Box,
   Copy,
   Edit2,
-  Trash2,
-  X,
-  Check
+  Trash2
 } from "lucide-react";
 import { TagType, NBTTag } from "@/lib/modding/nbt";
 
@@ -247,7 +245,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
 
         {isExpanded && isCompound && (
           <div>
-            {Object.entries(tag.value as Record<string, NBTTag>).map(([_, childTag]) => {
+            {Object.values(tag.value as Record<string, NBTTag>).map((childTag) => {
               const childKeyPath = `${keyPath}.${childTag.name}`;
               return renderTag(childTag, childKeyPath, depth + 1);
             })}

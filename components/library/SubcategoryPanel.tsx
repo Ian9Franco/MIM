@@ -22,7 +22,6 @@ const CATEGORY_META: Record<string, { label: string; color: string; bg: string; 
 export function SubcategoryPanel({ activeCategory, fileName, projectName, onSelect, onBack }: SubcategoryPanelProps) {
   const {
     subcategories,
-    loading,
     addSubcategory,
     removeSubcategory,
   } = useProjectSubcategories(projectName);

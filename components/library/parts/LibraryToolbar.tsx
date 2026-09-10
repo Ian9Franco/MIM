@@ -1,5 +1,4 @@
-import React from "react";
-import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2, Trash2, Puzzle, Layers, Database, Glasses } from "lucide-react";
+import { BookOpen, Copy, FolderOpen, ArrowLeftRight, Loader2, Trash2, Puzzle, Layers, Database, Glasses } from "lucide-react";
 
 /**
  * @fileoverview Barra de Herramientas de Gestión Masiva (Librería).
@@ -12,7 +11,7 @@ import { BookOpen, Copy, FolderOpen, Cpu, ArrowLeftRight, Loader2, Trash2, Puzzl
 
 export function LibraryToolbar({ 
   selectedLibFiles, loadingDescription, showDupOptions, setShowDupOptions, 
-  handleDuplicateTo, handleUnclassify, autoClassify, setAutoClassify, 
+  handleDuplicateTo, handleUnclassify, 
   setTransferOpen, handleOpenFolder, openingFolder, libraryCount,
   onDeleteSelected, filterType, setFilterType, previewMode, setPreviewMode
 }: any) {

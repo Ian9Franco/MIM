@@ -8,7 +8,7 @@
  * 4. Stale-while-revalidate para mejor UX
  */
 
-import { mimDB, type CacheEntry } from "@/lib/storage/indexeddb";
+import { mimDB } from "@/lib/storage/indexeddb";
 
 interface CacheStrategy {
   ttl: number; // Time to live en ms
@@ -242,7 +242,7 @@ class SmartCache {
    * Obtener keys críticos que necesitan refresh
    */
   private async getCriticalKeys(): Promise<string[]> {
-    const stats = await mimDB.getStorageStats();
+    await mimDB.getStorageStats();
     const criticalKeys: string[] = [];
 
     // Buscar keys de alta prioridad en cache

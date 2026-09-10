@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Keyboard, Package, History, Layers, Zap, Wand2, AlertTriangle, CheckCircle2, FolderOpen, XCircle, RefreshCw } from "lucide-react";
+import { Keyboard, Package, History, Layers, Zap, Wand2, AlertTriangle, CheckCircle2, FolderOpen, RefreshCw } from "lucide-react";
 
 /**
  * @fileoverview Pestaña de Resumen de Ajustes del Juego (Tweak Overview).

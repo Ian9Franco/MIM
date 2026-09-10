@@ -112,7 +112,7 @@ export async function buildLocalResumenSnapshot(): Promise<UserResumenData> {
   };
 }
 
-export async function syncMyResumenToCloud(userId: string): Promise<boolean> {
+export async function syncMyResumenToCloud(_userId?: string): Promise<boolean> {
   // Función desactivada: El resumen es ahora un resumen en vivo (no requiere sync manual)
   return true;
 }

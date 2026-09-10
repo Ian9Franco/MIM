@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Package, Loader2, Search, Trash2, Image, Check, Sparkles, Database, Layers2, Puzzle, Glasses, Info } from "lucide-react";
+import { Loader2, Search, Trash2, Image, Check, Database, Layers2, Puzzle, Glasses, Info } from "lucide-react";
 import { SectionHeading } from "../ui/SectionHeading";
 
 interface ContentItem {

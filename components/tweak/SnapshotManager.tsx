@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { 
-  History, Save, Upload, Trash2, CheckCircle, AlertCircle,
+  History, Save, Upload, Trash2,
   ChevronDown, ChevronRight, Package, Keyboard, Monitor, Volume2,
-  Calendar, Hash, Box, X
+  Hash, Box
 } from "lucide-react";
 
 interface SnapshotMetadata {

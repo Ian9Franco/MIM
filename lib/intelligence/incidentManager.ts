@@ -7,7 +7,6 @@
  */
 
 import { eventBus } from "@/lib/events/eventBus";
-import { MimEventMap } from "@/lib/events/eventContract";
 import { incidentStorage } from "@/lib/intelligence/incidentStorage";
 
 export interface Incident {

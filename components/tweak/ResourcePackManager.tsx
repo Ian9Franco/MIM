@@ -24,7 +24,7 @@ export function ResourcePackManager({ resourcePacks, projectName, version, onUpd
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const displayStack = useMemo(() => {
-    return localOrder.map((packName, i) => {
+    return localOrder.map((packName) => {
       const analysis = resourcePacks.visualStack.find((p: any) => p.packName === packName);
       return {
         packName,

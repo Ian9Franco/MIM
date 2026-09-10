@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from "react";
-import { Shield, ShieldCheck, ShieldAlert, ShieldX, Info, ExternalLink } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldX, ExternalLink } from "lucide-react";
 
 interface SecurityBadgeProps {
   riskScore: number;

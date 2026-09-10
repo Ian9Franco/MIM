@@ -1,4 +1,4 @@
-import { EventFlowTrace, DebugEvent } from "./types";
+import { EventFlowTrace } from "./types";
 import { EventSource } from "@/lib/events/eventContract";
 
 export function analyzeFlow(trace: EventFlowTrace) {

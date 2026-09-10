@@ -47,7 +47,8 @@ export function CollectionsTab(p: Props) {
   const [detailType, setDetailType] = useState("all");
   const [detailVersion, setDetailVersion] = useState("all");
   const [detailLoader, setDetailLoader] = useState("all");
-  const favorites = p.userFavorites || [], authors = p.userFollowedAuthors || [];
+  const favorites = useMemo(() => p.userFavorites || [], [p.userFavorites]);
+  const authors = useMemo(() => p.userFollowedAuthors || [], [p.userFollowedAuthors]);
   const current = p.modrinthFeatured[0], recent = p.modrinthFeatured.slice(1, 5), archive = p.modrinthFeatured.slice(5);
   const years = useMemo(() => Array.from(new Set(archive.map(yearOf))), [archive]);
   const visibleArchive = useMemo(() => archive.filter(c => `${c.name} ${c.description || ""}`.toLowerCase().includes(archiveQuery.toLowerCase()) && (archiveYear === "Todos" || yearOf(c) === archiveYear)), [archive, archiveQuery, archiveYear]);

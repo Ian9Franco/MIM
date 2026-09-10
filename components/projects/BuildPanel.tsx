@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck, Pickaxe } from "lucide-react";
+import { Archive, Server, Loader2, CheckCircle, XCircle, FolderOpen, ShieldCheck } from "lucide-react";
 import type { PackHealthReport } from "@/lib/core/types";
 
 type BuildType = "alluser" | "allhost";
@@ -39,6 +39,7 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
   const [result, setResult]           = useState<{ type: BuildType; data: BuildResult } | null>(null);
   const [healthReport, setHealthReport] = useState<PackHealthReport | null>(null);
   const [pendingBuildType, setPendingBuildType] = useState<BuildType | null>(null);
+  const busy = !!(validating || building);
 
   // ── Core build execution (called after validation passes) ─────────────────
   const executeBuild = useCallback(async (buildType: BuildType) => {
@@ -147,16 +148,6 @@ export function BuildPanel({ projectName, version, loader }: BuildPanelProps) {
     setHealthReport(null);
   }
 
-  // ── FOMO search integration ────────────────────────────────────────────────
-  const handleFomoSearch = useCallback((query: string) => {
-    setHealthReport(null);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("fomo-search-and-open", { detail: { query } }));
-    }
-  }, []);
-
-  const busy = !!(building || validating);
-
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -253,12 +244,10 @@ function BuildButton({
   disabled:      boolean;
   onClick:       () => void;
 }) {
-  const busy = isValidating || isBuilding;
-
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || isValidating || isBuilding}
       className="group relative text-left rounded-[1.5rem] overflow-hidden transition-all duration-250 disabled:opacity-40 disabled:cursor-not-allowed"
       style={{
         background:     accentBg,

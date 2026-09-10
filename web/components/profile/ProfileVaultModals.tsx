@@ -13,7 +13,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import type { MimVaultSchema, EncryptedVaultEnvelope } from "../../lib/vault/vaultEngine";
+import type { MimVaultSchema } from "../../lib/vault/vaultEngine";
 import type { VaultImportResult } from "../../lib/vault/vaultImporter";
 
 interface ProfileVaultModalsProps {

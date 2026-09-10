@@ -242,7 +242,7 @@ export class NBTWriter {
       }
       case TagType.Compound: {
         const compound = value as Record<string, NBTTag>;
-        for (const [_, innerTag] of Object.entries(compound)) {
+        for (const innerTag of Object.values(compound)) {
           this.writeByte(innerTag.type);
           this.writeString(innerTag.name);
           this.writeTagValue(innerTag.type, innerTag.value);

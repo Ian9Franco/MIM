@@ -4,7 +4,7 @@
 
 import { eventBus } from "@/lib/events/eventBus";
 import { 
-  EventName, EventPayload, EventMetadata, EventSource, Incident, Recommendation, createCorrelationId 
+  EventName, EventPayload, EventSource, Incident, createCorrelationId 
 } from "@/lib/events/eventContract";
 import { DebugEvent, DebugCorrelation, DebugIncident, EventFlowTrace } from "@/lib/debugger/types";
 import { analyzeFlow } from "@/lib/debugger/AnalysisEngine";

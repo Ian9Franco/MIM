@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { RefreshCw, ScanSearch, ShieldCheck, ShieldAlert, ShieldBan, ShieldX, Loader2, ChevronDown, ChevronUp, ExternalLink, Eye } from "lucide-react";
+import { RefreshCw, ScanSearch, ShieldCheck, ShieldAlert, ShieldBan, ShieldX, Loader2, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -190,7 +190,6 @@ function ResultCard({ entry }: { entry: any }) {
   const { riskLevel, riskScore, virusTotal, findings, sha256, summary, scannedLocally, scannedVirusTotal, whitelisted } = entry.result;
   const cfg = LEVEL_CONFIG[riskLevel as keyof typeof LEVEL_CONFIG] || LEVEL_CONFIG.clean;
   const Icon = cfg.icon;
-  const hasFatal = findings?.some((f: any) => f.severity === "critical");
 
   return (
     <div className="rounded-xl border overflow-hidden transition-all duration-200"

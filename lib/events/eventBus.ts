@@ -13,15 +13,11 @@ import {
   EventPayload,
   EventHandler,
   EventMetadata,
-  EventSource,
-  createEventMetadata,
-  validateEventPayload
+  EventSource
 } from "@/lib/events/eventContract";
 
 export type { MimEventMap, EventName, EventPayload, EventHandler, EventMetadata, EventSource };
 
-// Enhanced handler con metadata
-type EnhancedHandler<T extends EventName> = EventHandler<T>;
 export type Handler<T extends EventName> = (payload: EventPayload<T>) => void;
 
 class MimEventBus {

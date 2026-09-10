@@ -6,6 +6,7 @@ import type {
   AIRequest,
   AIResponse,
 } from "./types";
+import { createAIRequestSignal, waitForRetry } from "./requestLifecycle";
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -48,11 +49,12 @@ export class OpenRouterProvider implements AIProvider {
       max_tokens: request.maxOutputTokens ?? 800,
     };
 
-    let response = await postOpenRouter(this.apiKey, payload);
+    const signal = createAIRequestSignal(request.signal, request.timeoutMs);
+    let response = await postOpenRouter(this.apiKey, payload, signal);
 
     if (response.status === 429) {
-      await sleep(3000);
-      response = await postOpenRouter(this.apiKey, payload);
+      await waitForRetry(3000, signal);
+      response = await postOpenRouter(this.apiKey, payload, signal);
     }
 
     if (!response.ok) {
@@ -150,7 +152,11 @@ function toOpenRouterContent(parts: AIContentPart[]): string | OpenRouterContent
   });
 }
 
-async function postOpenRouter(apiKey: string, payload: unknown): Promise<Response> {
+async function postOpenRouter(
+  apiKey: string,
+  payload: unknown,
+  signal: AbortSignal
+): Promise<Response> {
   return fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
     headers: {
@@ -160,6 +166,7 @@ async function postOpenRouter(apiKey: string, payload: unknown): Promise<Respons
       "X-Title": "MIM MIMbot",
     },
     body: JSON.stringify(payload),
+    signal,
   });
 }
 
@@ -174,9 +181,5 @@ function extractOpenRouterText(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

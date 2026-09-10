@@ -7,6 +7,7 @@ import type {
   AIRequest,
   AIResponse,
 } from "./types";
+import { createAIRequestSignal, waitForRetry } from "./requestLifecycle";
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -39,14 +40,15 @@ export class GeminiProvider implements AIProvider {
     };
 
     const endpoint = `${GEMINI_ENDPOINT}/${encodeURIComponent(request.model)}:generateContent`;
-    let response = await postGemini(endpoint, this.apiKey, payload);
+    const signal = createAIRequestSignal(request.signal, request.timeoutMs);
+    let response = await postGemini(endpoint, this.apiKey, payload, signal);
 
     if (response.status === 429) {
       const errText = await response.text();
       const retryMatch = errText.match(/retry in\s*([\d.]+)\s*s/i);
       const waitSeconds = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1])), 8) : 3;
-      await sleep(waitSeconds * 1000);
-      response = await postGemini(endpoint, this.apiKey, payload);
+      await waitForRetry(waitSeconds * 1000, signal);
+      response = await postGemini(endpoint, this.apiKey, payload, signal);
     }
 
     if (!response.ok) {
@@ -94,7 +96,8 @@ function toGeminiPart(part: AIContentPart): GeminiPart {
 async function postGemini(
   endpoint: string,
   apiKey: string,
-  payload: unknown
+  payload: unknown,
+  signal: AbortSignal
 ): Promise<Response> {
   return fetch(endpoint, {
     method: "POST",
@@ -103,6 +106,7 @@ async function postGemini(
       "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(payload),
+    signal,
   });
 }
 
@@ -149,8 +153,4 @@ function parseGeminiResponse(value: unknown): {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

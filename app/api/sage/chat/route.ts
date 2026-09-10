@@ -163,6 +163,7 @@ Respondé a la consulta del usuario de forma concisa y accionable.
           messages: aiMessages,
           temperature: isBully ? 0.5 : 0.2,
           maxOutputTokens: isBully ? 280 : 700,
+          signal: request.signal,
         });
         responseText = result.text;
         modelUsed = result.model;
@@ -186,6 +187,7 @@ Respondé a la consulta del usuario de forma concisa y accionable.
               messages: aiMessages,
               temperature: isBully ? 0.5 : 0.2,
               maxOutputTokens: isBully ? 280 : 700,
+              signal: request.signal,
             });
 
             if (result.text) {
@@ -281,4 +283,3 @@ function createBufferedStreamResponse(text: string, model: string): Response {
     },
   });
 }
-

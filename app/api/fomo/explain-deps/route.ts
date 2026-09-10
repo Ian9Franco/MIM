@@ -77,6 +77,7 @@ export const POST = withApiGuard(
           messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
           temperature: 0.5,
           maxOutputTokens: 500,
+          signal: request.signal,
         });
       } else {
         result = await provider.generate({
@@ -84,6 +85,7 @@ export const POST = withApiGuard(
           messages: [{ role: "user", parts: [{ type: "text", text: promptText }] }],
           temperature: 0.5,
           maxOutputTokens: 500,
+          signal: request.signal,
         });
       }
 

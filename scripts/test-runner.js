@@ -107,6 +107,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/critical-api-integration.test.ts"]
     },
     {
+      name: "AI Provider Request Lifecycle Contract",
+      cmd: "npm",
+      args: ["run", "test:ai-provider"]
+    },
+    {
       name: "MIM-Bot Personality & Heuristic Fallback Engine",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/bot-personality.test.ts"]

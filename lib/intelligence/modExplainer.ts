@@ -5,7 +5,14 @@
  * remains a Gemini response field when the provider returns it.
  */
 
-import { GeminiProvider, isAIProviderError, type AIContentPart, type AIProvider } from "./ai";
+import {
+  GeminiProvider,
+  isAIProviderError,
+  type AIContentPart,
+  type AIMessage,
+  type AIProvider,
+} from "./ai";
+import { createAIRequestSignal } from "./ai/requestLifecycle";
 import { OpenRouterProvider } from "./ai/openRouterProvider";
 import { buildProjectExplainContext } from "./contextBuilder";
 
@@ -82,7 +89,8 @@ export interface InlineImageData {
 export async function fetchImagesAsInlineData(
   urls: string[] = [],
   maxImages = 4,
-  timeoutMs = 2500
+  timeoutMs = 2500,
+  parentSignal?: AbortSignal
 ): Promise<InlineImageData[]> {
   if (!urls || urls.length === 0) return [];
 
@@ -94,17 +102,12 @@ export async function fetchImagesAsInlineData(
 
   const fetchPromises = candidates.map(async (imgUrl) => {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-
       const res = await fetch(imgUrl, {
-        signal: controller.signal,
+        signal: createAIRequestSignal(parentSignal, timeoutMs),
         headers: {
           Accept: "image/webp,image/png,image/jpeg,*/*",
         },
       });
-
-      clearTimeout(timer);
 
       if (!res.ok) return null;
 
@@ -268,13 +271,19 @@ ${imagesCount > 0 ? `- **📸 En capturas:** Hay ${imagesCount} captura(s) ofici
 export async function explainModWithGemini(
   input: ModExplainerInput,
   resolvedApiKey: string,
-  provider: AIProvider = new GeminiProvider(resolvedApiKey)
+  provider: AIProvider = new GeminiProvider(resolvedApiKey),
+  signal?: AbortSignal
 ): Promise<ModExplanationResult> {
   if (!resolvedApiKey) {
     throw new Error("NO_API_KEY");
   }
 
-  const inlineImages = await fetchImagesAsInlineData(input.galleryUrls, 3, 2000);
+  const inlineImages = await fetchImagesAsInlineData(
+    input.galleryUrls,
+    3,
+    2000,
+    signal
+  );
   const imagesCount = inlineImages.length;
 
   // Build evidence-tagged context via the Context Builder
@@ -290,12 +299,13 @@ export async function explainModWithGemini(
   ];
 
   // Route through the appropriate cascade based on provider type
-  if (provider.id === "openrouter" && "generateWithFallback" in provider) {
+  if (provider instanceof OpenRouterProvider) {
     try {
-      const result = await (provider as OpenRouterProvider).generateWithFallback({
+      const result = await provider.generateWithFallback({
         messages: [{ role: "user", parts: contentParts }],
         temperature: 0.65,
         maxOutputTokens: 800,
+        signal,
       });
 
       return {
@@ -322,6 +332,7 @@ export async function explainModWithGemini(
           messages: [{ role: "user", parts: contentParts }],
           temperature: 0.65,
           maxOutputTokens: 800,
+          signal,
         });
 
         return {
@@ -400,7 +411,9 @@ export interface MimBotChatResult {
 
 export async function mimBotChat(
   input: MimBotChatInput,
-  resolvedApiKey: string
+  resolvedApiKey: string,
+  provider: AIProvider = new GeminiProvider(resolvedApiKey),
+  signal?: AbortSignal
 ): Promise<MimBotChatResult> {
   if (!resolvedApiKey) {
     throw new Error("NO_API_KEY");
@@ -474,42 +487,37 @@ PAUTAS DE BULLY:
     parts: [{ text: input.question.trim() }],
   });
 
-  const requestPayload = {
-    contents: formattedContents,
-    generationConfig: {
-      temperature: personality === "standard" ? 0.3 : 0.7,
-      maxOutputTokens: 320,
-    },
-  };
+  const messages: AIMessage[] = formattedContents.map((message) => ({
+    role: message.role === "model" ? "assistant" : "user",
+    parts: message.parts.map((part) => ({ type: "text", text: part.text })),
+  }));
 
-  for (const currentModel of modelsToTry) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(
-      resolvedApiKey
-    )}`;
-
+  if (provider instanceof OpenRouterProvider) {
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestPayload),
+      const result = await provider.generateWithFallback({
+        messages,
+        temperature: personality === "standard" ? 0.3 : 0.7,
+        maxOutputTokens: 320,
+        signal,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        const candidate = data.candidates?.[0];
-        const reply = candidate?.content?.parts?.[0]?.text;
-        if (reply && reply.trim()) {
-          return {
-            reply: reply.trim(),
-            modelUsed: currentModel,
-          };
-        }
+      return { reply: result.text, modelUsed: result.model };
+    } catch (error: unknown) {
+      console.warn("[MimBotChat] OpenRouter cascade failed:", getErrorMessage(error));
+    }
+  } else {
+    for (const currentModel of modelsToTry) {
+      try {
+        const result = await provider.generate({
+          model: currentModel,
+          messages,
+          temperature: personality === "standard" ? 0.3 : 0.7,
+          maxOutputTokens: 320,
+          signal,
+        });
+        return { reply: result.text, modelUsed: result.model };
+      } catch (error: unknown) {
+        console.warn(`[MimBotChat] Error con modelo ${currentModel}:`, getErrorMessage(error));
       }
-
-      console.warn(`[MimBotChat] Modelo ${currentModel} respondió ${response.status}. Probando modelo de respaldo...`);
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      console.warn(`[MimBotChat] Error con modelo ${currentModel}:`, errMsg);
     }
   }
 
@@ -524,6 +532,10 @@ PAUTAS DE BULLY:
     reply: `Pará un poco la ansiedad, enfermo del teclado. Saturaste la API de Google de tanto spamear preguntas boludas. Bancá 20 segundos antes de volver a molestar. Igual sobre **${ctx.title}** te voy avisando: si vas a llorar porque crashea, fijate que el loader (${(ctx.loaders || []).join(", ") || "Forge/Fabric"}) coincida y aprendé a leer un crash report antes de pedir ayuda como un nene chiquito.`,
     modelUsed: "mim-bot-chat-fallback",
   };
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** @deprecated Use MimBotChatMessage */

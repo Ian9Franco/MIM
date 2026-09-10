@@ -1,7 +1,7 @@
 import { GeminiProvider } from "../../lib/intelligence/ai/geminiProvider";
 import { OpenRouterProvider } from "../../lib/intelligence/ai/openRouterProvider";
 import type { AIRequest } from "../../lib/intelligence/ai/types";
-import { chatWithProjectAssistant } from "../../lib/intelligence/modExplainer";
+import { mimBotChat } from "../../lib/intelligence/modExplainer";
 
 const baseRequest: AIRequest = {
   model: "test-model",
@@ -76,23 +76,23 @@ async function testProviderTimeout(): Promise<void> {
   assert(receivedSignal?.aborted, "Provider timeout aborts the underlying fetch signal");
 }
 
-async function testProjectChatUsesSelectedProvider(): Promise<void> {
+async function testMimBotChatUsesSelectedProvider(): Promise<void> {
   let url = "";
   globalThis.fetch = (async (input) => {
     url = inputUrl(input);
     return Response.json({ choices: [{ message: { content: "respuesta" } }] });
   }) as typeof fetch;
 
-  const result = await chatWithProjectAssistant({
+  const result = await mimBotChat({
     projectContext: { projectId: "mod-1", title: "Test Mod" },
     messages: [],
     question: "¿Es compatible?",
     personality: "standard",
   }, "provider-managed", new OpenRouterProvider("openrouter-secret"));
 
-  assert(result.reply === "respuesta", "Project mini-chat returns the selected provider response");
-  assert(url.startsWith("https://openrouter.ai/"), "Project mini-chat honors the selected provider");
-  assert(!url.includes("openrouter-secret"), "Project mini-chat keeps provider credentials out of URLs");
+  assert(result.reply === "respuesta", "MIM-Bot Chat returns the selected provider response");
+  assert(url.startsWith("https://openrouter.ai/"), "MIM-Bot Chat honors the selected provider");
+  assert(!url.includes("openrouter-secret"), "MIM-Bot Chat keeps provider credentials out of URLs");
 }
 
 async function main(): Promise<void> {
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
     await testGeminiRequestContract();
     await testOpenRouterRequestContract();
     await testProviderTimeout();
-    await testProjectChatUsesSelectedProvider();
+    await testMimBotChatUsesSelectedProvider();
     console.log("AI provider request lifecycle contract passed.");
   } finally {
     globalThis.fetch = originalFetch;

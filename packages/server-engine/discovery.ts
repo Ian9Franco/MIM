@@ -1,141 +1,94 @@
 import path from "node:path";
+import crypto from "node:crypto";
+import AdmZip from "adm-zip";
 import { scanModBuffer } from "@/lib/modding/enhanced-mod-scanner";
 import { createInstanceManifest, toModArtifact, type ModArtifact } from "@/lib/instances";
-import type {
-  ReadOnlyFileTransport,
-  RemoteDiscoveryOptions,
-  RemoteServerDiscoveryResult,
-  SftpConnectionConfig,
-} from "@mim/contracts-core/server";
-
-/**
- * Resolves and validates a path relative to a base directory, strictly preventing path traversal.
- */
-export function safeResolveRemotePath(baseDir: string, relativePath: string): string {
-  const normalizedBase = path.posix.normalize(baseDir.replace(/\\/g, "/"));
-  const normalizedTarget = path.posix.normalize(path.posix.join(normalizedBase, relativePath.replace(/\\/g, "/")));
-
-  if (!normalizedTarget.startsWith(normalizedBase)) {
-    throw new Error(`[Security] Path traversal attempt detected: ${relativePath} escapes base ${baseDir}`);
-  }
-
-  return normalizedTarget;
-}
-
+import type { ReadOnlyFileTransport, RemoteDiscoveryOptions, RemoteServerDiscoveryResult, SftpConnectionConfig } from "@mim/contracts-core/server";
 import { parseServerProperties } from "./configAdmin";
 
+export function safeResolveRemotePath(baseDir: string, relativePath: string): string {
+  const base = path.posix.normalize(baseDir.replace(/\\/g, "/"));
+  const relative = relativePath.replace(/\\/g, "/");
+  const target = path.posix.normalize(path.posix.join(base, relative));
+  if (path.posix.isAbsolute(relative) || (target !== base && !target.startsWith(base === "/" ? "/" : `${base}/`))) {
+    throw new Error(`[Security] Path traversal attempt detected: ${relativePath} escapes base ${baseDir}`);
+  }
+  return target;
+}
 
-/**
- * Returns a sanitized clone of SFTP connection settings with passwords and private keys stripped.
- */
 export function sanitizeSftpConfig(config: SftpConnectionConfig): Record<string, unknown> {
   return {
-    host: config.host,
-    port: config.port ?? 22,
-    username: config.username,
-    authType: config.auth.type,
-    rootPath: config.rootPath ?? "/",
+    host: config.host, port: config.port ?? 22, username: config.username,
+    authType: config.auth.type, rootPath: config.rootPath ?? "/",
     knownHostFingerprint: config.knownHostFingerprint ? "[CONFIGURED]" : "[UNCONFIGURED]",
     timeoutMs: config.timeoutMs,
   };
 }
 
-/**
- * Inspects and discovers the remote Minecraft server state using a read-only transport.
- * Reads mods and configurations without performing any remote mutations.
- */
+/** Reads mod evidence only. Failed reads remain explicit and never mean absence. */
 export async function discoverRemoteServerState(
-  transport: ReadOnlyFileTransport,
-  options?: RemoteDiscoveryOptions
+  transport: ReadOnlyFileTransport, options?: RemoteDiscoveryOptions
 ): Promise<RemoteServerDiscoveryResult> {
   const startTime = Date.now();
-  const rootPath = options?.rootPath ?? "/";
-  const modsDirName = options?.modsDir ?? "mods";
-  const modsPath = safeResolveRemotePath(rootPath, modsDirName);
-  const scanProps = options?.scanServerProperties ?? true;
+  const root = options?.rootPath ?? "/";
+  const modsPath = safeResolveRemotePath(root, options?.modsDir ?? "mods");
   const signal = options?.signal;
-
-  if (signal?.aborted) {
-    const abortErr = new Error("Remote server discovery was aborted");
-    abortErr.name = "AbortError";
-    throw abortErr;
-  }
-
-  // 1. Discover and scan mods directory
-  const modArtifacts: ModArtifact[] = [];
+  signal?.throwIfAborted();
+  const warnings: string[] = [];
+  const mods: ModArtifact[] = [];
   let totalJarFiles = 0;
-  let loader: "fabric" | "forge" | "neoforge" | "quilt" | "vanilla" = "fabric";
-  let detectedMinecraftVersion = "1.20.1";
-
+  // Dependency ranges in JAR metadata cannot prove the server's running version.
+  const loader = options?.loader || "unknown";
+  const minecraftVersion = options?.minecraftVersion || "unknown";
+  if (loader === "unknown" || minecraftVersion === "unknown") warnings.push("No se verificó la versión o el loader del servidor.");
   try {
-    const fileEntries = await transport.list(modsPath);
-
-    for (const entry of fileEntries) {
-      if (signal?.aborted) {
-        const abortErr = new Error("Remote server discovery was aborted");
-        abortErr.name = "AbortError";
-        throw abortErr;
-      }
-
-      if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".jar")) {
-        totalJarFiles++;
-        const remoteFilePath = safeResolveRemotePath(modsPath, entry.name);
-        const rawBytes = await transport.read(remoteFilePath);
-
-        // Convert Uint8Array to Buffer for scanner
-        const buffer = Buffer.isBuffer(rawBytes) ? rawBytes : Buffer.from(rawBytes);
+    const entries = await transport.list(modsPath);
+    if (entries.length > 2000) throw new Error("Too many directory entries");
+    for (const entry of entries) {
+      signal?.throwIfAborted();
+      if (entry.kind !== "file" || !entry.name.toLowerCase().endsWith(".jar")) continue;
+      totalJarFiles++;
+      try {
+        const remotePath = safeResolveRemotePath(modsPath, entry.name);
+        const buffer = Buffer.from(await transport.read(remotePath));
+        // Bound archive input before the existing scanner touches compressed metadata.
+        if (buffer.length > 64 * 1024 * 1024) throw new Error("Archive exceeds limit");
+        const archiveEntries = new AdmZip(buffer).getEntries();
+        if (archiveEntries.length > 20000 || archiveEntries.reduce((sum, item) => sum + item.header.size, 0) > 256 * 1024 * 1024) {
+          throw new Error("Expanded archive exceeds limit");
+        }
         const scanned = await scanModBuffer(buffer, entry.name);
-        const artifact = toModArtifact(scanned, {
-          fileName: entry.name,
-          source: { kind: "remote", path: remoteFilePath },
-        });
-        modArtifacts.push(artifact);
-
-        if (artifact.loader !== "unknown") {
-          loader = artifact.loader as typeof loader;
+        if (scanned.extractionWarnings?.length || !scanned.modId || scanned.modId === "unknown") {
+          warnings.push(`Metadata incompleta: ${entry.name}`);
         }
-        if (artifact.minecraftVersion !== "unknown") {
-          detectedMinecraftVersion = artifact.minecraftVersion;
-        }
+        mods.push(toModArtifact(scanned, {
+          fileName: entry.name, sha256: crypto.createHash("sha256").update(buffer).digest("hex"),
+          source: { kind: "remote", path: remotePath },
+        }));
+      } catch {
+        signal?.throwIfAborted();
+        warnings.push(`No se pudo analizar ${entry.name}; no se lo considera ausente.`);
       }
     }
-  } catch (err: unknown) {
-    if (signal?.aborted) throw err;
-    console.warn(`[ServerDiscovery] Notice: could not read mods directory at ${modsPath}:`, err);
+  } catch {
+    signal?.throwIfAborted();
+    warnings.push("No se pudo leer completamente la carpeta de mods. Revisá la ruta y los permisos.");
   }
-
-  // 2. Read server.properties if requested and available
-  let serverProperties: Record<string, string> | undefined = undefined;
-  if (scanProps) {
+  let serverProperties: Record<string, string> | undefined;
+  if (options?.scanServerProperties !== false) {
     try {
-      const propsPath = safeResolveRemotePath(rootPath, "server.properties");
-      const propsBytes = await transport.read(propsPath);
-      const propsStr = Buffer.from(propsBytes).toString("utf-8");
-      serverProperties = parseServerProperties(propsStr).properties;
+      const bytes = await transport.read(safeResolveRemotePath(root, "server.properties"));
+      serverProperties = parseServerProperties(Buffer.from(bytes).toString("utf8")).properties;
     } catch {
-      // server.properties is optional
+      signal?.throwIfAborted();
+      warnings.push("No se pudo leer server.properties.");
     }
   }
-
-  // 3. Construct the observed server instance manifest
+  signal?.throwIfAborted();
   const manifest = createInstanceManifest({
-    instanceId: `remote-server-${Date.now()}`,
-    minecraftVersion: detectedMinecraftVersion,
-    loader,
-    side: "server",
-    mods: modArtifacts,
-    metadata: {
-      displayName: serverProperties?.["motd"] || "Remote Minecraft Server",
-    },
+    instanceId: "remote-server", minecraftVersion, loader, side: "server", mods,
+    metadata: { displayName: serverProperties?.["motd"] || "Remote Minecraft Server" },
   });
-
-  const durationMs = Date.now() - startTime;
-
-  return {
-    manifest,
-    serverProperties,
-    discoveredAt: new Date(startTime).toISOString(),
-    durationMs,
-    totalJarFiles,
-  };
+  return { manifest, serverProperties, discoveredAt: new Date(startTime).toISOString(),
+    durationMs: Date.now() - startTime, totalJarFiles, isPartialAudit: warnings.length > 0, warnings };
 }

@@ -44,6 +44,7 @@ next-env.d.ts
 
 # scratch y tests locales
 /scratch/
+/.server-*
 
 # electron y empaquetado
 /dist/

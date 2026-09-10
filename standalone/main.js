@@ -79,6 +79,7 @@ function startNextServer(secretEnvironment = {}) {
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
+      MIM_DESKTOP_RUNTIME: '1',
       ...secretEnvironment
     },
     silent: false // Lets us see server logs in the terminal

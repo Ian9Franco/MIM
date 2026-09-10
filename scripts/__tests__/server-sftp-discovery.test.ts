@@ -116,6 +116,8 @@ async function testRemoteDiscovery(): Promise<void> {
 }
 
 async function testSecurityPathTraversal(): Promise<void> {
+  assert.throws(() => safeResolveRemotePath("/server", "../server-other/mod.jar"), /Path traversal/);
+  assert.throws(() => safeResolveRemotePath("/server", "..\\server-other\\mod.jar"), /Path traversal/);
   // 1. Safe paths
   assert.equal(safeResolveRemotePath("/server", "mods"), "/server/mods");
   assert.equal(safeResolveRemotePath("/server/mods", "fabric.jar"), "/server/mods/fabric.jar");

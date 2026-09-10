@@ -11,12 +11,14 @@ interface ServerAuditSummaryCardsProps {
   summary: ServerAuditSummary;
   activeFilter: DiffFilterTab;
   onSelectFilter: (tab: DiffFilterTab) => void;
+  compact?: boolean;
 }
 
 export function ServerAuditSummaryCards({
   summary,
   activeFilter,
   onSelectFilter,
+  compact = false,
 }: ServerAuditSummaryCardsProps) {
   const cards = [
     {
@@ -82,7 +84,7 @@ export function ServerAuditSummaryCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className={`grid grid-cols-2 md:grid-cols-3 ${compact ? "" : "lg:grid-cols-6"} gap-3`}>
       {cards.map((card, idx) => {
         const Icon = card.icon;
         const isActive = activeFilter === card.id;
@@ -91,6 +93,7 @@ export function ServerAuditSummaryCards({
           <motion.button
             key={card.id}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onSelectFilter(card.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -100,7 +103,7 @@ export function ServerAuditSummaryCards({
             }`}
           >
             <div className="flex items-center justify-between w-full mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider opacity-80 truncate">
+              <span className="text-xs font-semibold uppercase tracking-wider opacity-80 break-words">
                 {card.label}
               </span>
               <Icon className="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />

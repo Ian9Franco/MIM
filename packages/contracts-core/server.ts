@@ -99,6 +99,9 @@ export interface RemoteDiscoveryOptions {
   rootPath?: string;
   modsDir?: string;
   scanServerProperties?: boolean;
+  /** Runtime supplied by the operator; dependency ranges are not runtime evidence. */
+  minecraftVersion?: string;
+  loader?: string;
   signal?: AbortSignal;
 }
 
@@ -108,6 +111,8 @@ export interface RemoteServerDiscoveryResult {
   discoveredAt: string;
   durationMs: number;
   totalJarFiles: number;
+  isPartialAudit?: boolean;
+  warnings?: string[];
 }
 
 // ==========================================

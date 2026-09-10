@@ -4,8 +4,11 @@ import type { PackHealthReport } from "@/lib/core/types";
 import type { InstanceManifest, ModArtifact } from "./types";
 
 function toValidatorMod(artifact: ModArtifact, manifest: InstanceManifest): ValidatorMod {
+  // Platform requirements are not downloadable JARs. A requirement for a
+  // different loader remains visible instead of being treated as satisfied.
+  const platformIds = new Set(["minecraft", "java", ...(manifest.loader === "fabric" ? ["fabricloader"] : [manifest.loader])]);
   const requiredDependencies = artifact.dependencies
-    .filter((dependency) => dependency.type === "required")
+    .filter((dependency) => dependency.type === "required" && !platformIds.has(dependency.modId.toLowerCase()))
     .map((dependency) => dependency.modId);
   const incompatibleDependencies = artifact.dependencies
     .filter((dependency) => dependency.type === "incompatible")

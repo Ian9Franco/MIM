@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
   Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles 
@@ -128,6 +129,8 @@ export function LayoutHeader({
               <ChevronRight className={`w-3 h-3 transition-colors ${fomoOpen ? 'text-primary' : 'text-foreground/40 group-hover/fomo:text-primary'}`} />
             </div>
           </button>
+
+          <Link href="/servers" className="rounded-lg border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/10">MIM Server</Link>
 
           <div className="flex flex-col relative group/title">
             <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">

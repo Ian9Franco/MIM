@@ -3,6 +3,25 @@ import { X } from "lucide-react";
 import { markdownToHtml } from "@/utils/markdown";
 import { openExternal } from "@/utils/format";
 
+interface RichDescriptionBlockProps {
+  html: string;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+}
+
+/** Sanitized rich HTML from markdownToHtml / formatCurseForgeHtml — shared with FOMO description tab. */
+export function RichDescriptionBlock({ html, className, style, onClick }: RichDescriptionBlockProps) {
+  return (
+    <div
+      className={className}
+      style={style}
+      onClick={onClick}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
 interface DescriptionModalProps {
   modDescription: {
     title?: string;
@@ -70,11 +89,11 @@ export function DescriptionModal({ modDescription, onClose }: DescriptionModalPr
               "{modDescription.description}"
             </p>
           )}
-          <div
+          <RichDescriptionBlock
+            html={descriptionHtml}
             className="text-sm leading-relaxed break-words"
             style={{ color: "var(--color-muted)", lineHeight: "1.7" }}
             onClick={handleBodyClick}
-            dangerouslySetInnerHTML={{ __html: descriptionHtml }}
           />
         </div>
       </div>

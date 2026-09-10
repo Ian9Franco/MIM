@@ -1,5 +1,3 @@
-import React from "react";
-
 function escapeAttribute(input: string): string {
   return input.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
@@ -66,17 +64,6 @@ export function sanitizeHtml(input: string): string {
 
       return `<${tag}${attrs.length ? ` ${attrs.join(" ")}` : ""}>`;
     });
-}
-
-export function createRichHtmlElement(
-  html: string,
-  options?: { className?: string; onClick?: React.MouseEventHandler<HTMLDivElement> },
-): React.ReactElement {
-  return React.createElement("div", {
-    className: options?.className,
-    onClick: options?.onClick,
-    dangerouslySetInnerHTML: { __html: html },
-  });
 }
 
 function cleanEmbeddedUrl(url: string, defaultDomain = "https://modrinth.com"): string {

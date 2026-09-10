@@ -10,7 +10,7 @@
 
 | Métrica | Valor Actual | Umbral Deseado | Estado |
 |---|---|---|---|
-| **Archivos que violan límite modular (> 600 líneas funcionales)** | **9 archivos** | 0 archivos | 🔴 Requiere Descomposición |
+| **Archivos que violan límite modular (> 600 líneas funcionales)** | **6 archivos** (3 completados) | 0 archivos | 🟡 En Descomposición Progresiva |
 | **Archivos en zona de riesgo (450 a 600 líneas funcionales)** | **17 archivos** | Monitoreo | 🟡 Atención Preventiva |
 | **Archivos duplicados / bifurcados (`web/` vs `root`)** | **14 módulos clave** | 0 (Shared Packages) | 🟠 Sincronizar en ARCH-5 |
 | **Ciclos de dependencia en grafo interno** | **4 ciclos** | 0 ciclos | 🟡 Romper dependencias |
@@ -27,9 +27,9 @@
 │ Archivo                                      │ Líneas Func.     │ Total Líneas  │ Dominio / Surface                        │
 ├──────────────────────────────────────────────┼──────────────────┼───────────────┼──────────────────────────────────────────┤
 │ web/hooks/useHomeController.ts               │ 957 func.        │ 1057 tot.     │ Web / Hub Orchestration Hook             │
-│ web/components/tabs/DiscoverTab.tsx          │ 860 func.        │ 921 tot.      │ Web / Feed & Discover UI                 │
-│ components/fomo/core/FomoVersionOverlay.tsx  │ 839 func.        │ 925 tot.      │ Desktop / Version Modal & Downloader     │
-│ web/components/DraftDetailView.tsx           │ 812 func.        │ 865 tot.      │ Web / Modpack Draft Inspector            │
+│ web/components/tabs/DiscoverTab.tsx          │ 158 func. [OK]   │ 158 tot. [OK] │ Web / Feed & Discover UI (Modularizado)  │
+│ components/fomo/core/FomoVersionOverlay.tsx  │ 186 func. [OK]   │ 186 tot. [OK] │ Desktop / Version Modal (Modularizado)   │
+│ web/components/DraftDetailView.tsx           │ 188 func. [OK]   │ 188 tot. [OK] │ Web / Modpack Draft (Modularizado)       │
 │ components/fomo/sidebar/FomoSidebarDiscover. │ 744 func.        │ 782 tot.      │ Desktop / Navigation Sidebar Branch      │
 │ components/fomo/showcase/FomoYoutubeShowcase │ 711 func.        │ 834 tot.      │ Desktop / Video Player & Cards           │
 │ web/components/MobileFloatingPlayer.tsx      │ 701 func.        │ 796 tot.      │ Web / Floating Video Player & Gestures   │
@@ -48,27 +48,38 @@
   3. `useHomeDraftSync.ts`: Sincronización del draft activo con LocalStorage / Vault.
   4. `useHomeController.ts`: Reducir a un compositor delgado (< 150 líneas) que combine los sub-hooks.
 
-#### B. `web/components/tabs/DiscoverTab.tsx` (860 líneas)
-- **Problema**: Renderiza simultáneamente la barra de búsqueda rápida, badges de categorías, carrusel de destacados, selector de orden y lista virtualizada de tarjetas.
-- **Propuesta de Refactorización**:
-  1. `components/tabs/discover/DiscoverSearchBar.tsx`: Input, filtros de orden y debounce.
-  2. `components/tabs/discover/DiscoverCategoryPills.tsx`: Badges de modloader y categoría.
-  3. `components/tabs/discover/DiscoverFeaturedGrid.tsx`: Grid de proyectos promocionados.
-  4. `DiscoverTab.tsx`: Contenedor orquestador (< 200 líneas).
+#### B. `web/components/tabs/DiscoverTab.tsx` (Completado ✅ — Reducido de 921 a 158 líneas)
+- **Modularización implementada** en `web/components/tabs/discover/`:
+  1. `discoverConstants.tsx` (272L): Constantes, tabs, badges de modloader, categorías y tipos.
+  2. `DiscoverPlatformHeader.tsx` (164L): Banner hero, selector animado de plataforma con `layoutId` y búsqueda.
+  3. `DiscoverControls.tsx` (136L): Pestañas de tipo de proyecto con spring animation y filtros contextuales.
+  4. `DiscoverFiltersPanel.tsx` (224L): Panel desplegable de filtros avanzados (categorías, versiones, orden).
+  5. `DiscoverModCard.tsx` (160L): Renderizado de tarjetas de proyectos y estados de instalación/descarga.
+  6. `DiscoverPagination.tsx` (59L): Controles de paginación responsiva.
+  7. `DiscoverTab.tsx` (158L): Orquestador delgado.
 
-#### C. `components/fomo/core/FomoVersionOverlay.tsx` (839 líneas)
-- **Problema**: Mezcla la lógica de resolución de dependencias CurseForge/Modrinth, cálculo de hashes SHA-1/SHA-512, estado del selector de versión y animaciones de descarga.
-- **Propuesta de Refactorización**:
-  1. `components/fomo/core/version-overlay/VersionList.tsx`: Tabla de versiones y filtrado por modloader.
-  2. `components/fomo/core/version-overlay/VersionDependencies.tsx`: Lista de dependencias requeridas e incompatibilidades.
-  3. `components/fomo/core/version-overlay/VersionDownloadAction.tsx`: Botón de acción con barra de progreso y estado.
+#### C. `components/fomo/core/FomoVersionOverlay.tsx` (Completado ✅ — Reducido de 925 a 186 líneas)
+- **Modularización implementada** en `components/fomo/details/`:
+  1. `FomoOverlayTopBar.tsx` (51L): Barra de navegación con botón volver y título.
+  2. `FomoDescriptionTab.tsx` (320L): Renderizado de markdown/HTML, badges de metadata y panel de ayuda contextual.
+  3. `FomoGalleryTab.tsx` (76L): Grid de capturas de pantalla con hover interactivo.
+  4. `FomoDependenciesTab.tsx` (46L): Lista de dependencias requeridas e incompatibilidades.
+  5. `FomoVersionsTab.tsx` (187L): Selector de versiones, filtros por modloader y botón de descarga.
+  6. `FomoLightbox.tsx` (84L): Modal flotante de visualización de imágenes a pantalla completa.
+  7. `FomoVersionOverlay.tsx` (186L): Contenedor orquestador.
 
-#### D. `web/components/DraftDetailView.tsx` (812 líneas)
-- **Problema**: Contiene visualización de items, exportación a `.zip`, cálculo de dependencias de modpack, estadísticas y edición de título/descripción.
-- **Propuesta de Refactorización**:
-  1. `components/draft/DraftHeader.tsx`: Título editable, badge de loader/versión y acciones de exportación.
-  2. `components/draft/DraftStatsPanel.tsx`: Resumen de tamaño, número de mods y compatibilidad.
-  3. `components/draft/DraftModList.tsx`: Grid/lista con eliminación e inspección individual.
+#### D. `web/components/DraftDetailView.tsx` (Completado ✅ — Reducido de 865 a 188 líneas)
+- **Modularización implementada** en `web/components/draft-detail/`:
+  1. `draftDetailConstants.ts` (24L): Constantes y tipos de pestañas.
+  2. `DraftDetailBanner.tsx` (86L): Header con título editable, badges y exportación ZIP.
+  3. `DraftDetailTabs.tsx` (48L): Selector animado de pestañas (`summary`, `items`, `members`, `activity`).
+  4. `DraftSummaryTab.tsx` (78L): Estadísticas, modloaders y compatibilidad.
+  5. `DraftItemsTab.tsx` (134L): Grid de mods incluidos con acciones de eliminación y configuración.
+  6. `DraftMembersTab.tsx` (65L): Colaboradores y permisos.
+  7. `DraftActivityTab.tsx` (68L): Registro cronológico de cambios.
+  8. `DraftMetadataModal.tsx` (179L): Modal de edición de metadata del modpack.
+  9. `DraftItemEditModal.tsx` (148L): Modal de edición de versión y configuración de mod individual.
+  10. `DraftDetailView.tsx` (188L): Contenedor orquestador.
 
 #### E. `web/components/MobileFloatingPlayer.tsx` (701 líneas) vs `FomoFloatingPlayer.tsx` (535 líneas)
 - **Problema**: Existe una duplicación masiva de lógica entre el reproductor de YouTube de Web y el de Desktop, incluyendo manejo de gestos táctiles y minimización.
@@ -150,5 +161,5 @@ graph TD
    - Consolidar `vaultEngine.ts`, `rateLimiter.ts` y `modExplainer.ts` para que `web/` consuma directamente desde packages puros sin duplicar código.
 
 3. **Fase 3: Descomposición de God Components**:
-   - Descomponer `useHomeController.ts` (957 l.) y `DiscoverTab.tsx` (860 l.) en sub-hooks y subcomponentes modulares (< 300 líneas c/u).
-   - Descomponer `FomoVersionOverlay.tsx` (839 l.) y `DraftDetailView.tsx` (812 l.).
+   - Subalcance UI: `DiscoverTab.tsx`, `FomoVersionOverlay.tsx` y `DraftDetailView.tsx` extraídos a subcomponentes (< 200L orquestadores).
+   - Pendiente: `useHomeController.ts` (957 l.) — Phase 2 verificación autenticada y Phase 3 Profile/Community. REC-03 global permanece abierto.

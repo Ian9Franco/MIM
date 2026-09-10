@@ -5,7 +5,7 @@ import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSe
 import { useSettingsManager } from "@/hooks/useSettingsManager";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
-  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
+  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, MimbotPrivacySettingsPanel, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
 } from "./SettingsComponents";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -159,6 +159,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <ApiKeyInputGroup label="Modrinth Token" value={modrinthApiKey} onChange={setModrinthApiKey} show={showModrinth} onToggleShow={() => setShowModrinth(!showModrinth)} canEdit={canEdit} isValid={keyValidation.modrinth} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.modrinthApiKey} placeholder="mrp_..." badge="Opcional" color="emerald" link="https://modrinth.com/settings/pats" />
                     <ApiKeyInputGroup label="VirusTotal API Key" value={virusTotalApiKey} onChange={setVirusTotalApiKey} show={showVirusTotal} onToggleShow={() => setShowVirusTotal(!showVirusTotal)} canEdit={canEdit} isValid={keyValidation.virusTotal} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.virusTotalApiKey} placeholder="Tu clave API..." badge="Opcional" color="blue" link="https://www.virustotal.com/gui/user/join" />
                     <AiQuotaStatusPanel />
+                    <MimbotPrivacySettingsPanel />
                   </div>
                 )}
                 {activeTab === "tools" && (

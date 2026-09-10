@@ -56,6 +56,9 @@
 | **Observabilidad de cuotas IA** | `BOT-06` | PR #75 — `quotaClassifier.ts`, `GET /api/settings/ai-quota`, panel en Settings |
 | **Seguimientos contextuales post-chat** | `BOT-03` | PR #77 — `deriveFollowUpSuggestions()` — dos chips tras primer intercambio |
 | **Caché 24 h quick questions** | `BOT-08` | PR #77 — `quickQuestionCache.ts` — clave crash/pregunta/modo en `SageMimbotCopilot` |
+| **Historial local opt-in** | `BOT-01` | PR #78 — `chatHistoryStore.ts` — persistencia por crash + Settings + borrado |
+| **Vista previa estática pre-BYOK** | `BOT-02` | PR #78 — `MimbotDemoPreview` — ejemplo fijo sin backend gratuito |
+| **Transparencia BYOK** | `BOT-09` | PR #78 — `mimbotByokTransparency.ts` — panel Settings + modal config |
 
 Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): eval fixtures MIMbot (`SAGE-05`), migración de rutas legacy en `web/`, flags de modelo en UI.
 
@@ -63,11 +66,16 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
+<<<<<<< HEAD
 | **Historial de Conversación Local:** Persistir conversaciones por firma de crash de forma opt-in con botón de borrado explícito. | `BOT-01` | 🟢 [whosnext.md (BOT-01)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Primera Experiencia sin BYOK:** Ejemplos estáticos y explicación de valor antes de pedir clave; backend gratuito requiere decisión de presupuesto/cuota. | `BOT-02` | 🟢 [whosnext.md (BOT-02)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Cola para Análisis por Lotes (condicional):** Concurrencia acotada, cancelación y espera según cuota real — solo si se incorpora ese flujo. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 | **Transparencia BYOK:** Aviso verificable sobre qué datos se envían, retención y uso; no prometer privacidad solo por usar key propia. | `BOT-09` | 🟢 [whosnext.md (BOT-09)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+=======
+| **Costos OpenRouter en UI:** Costo acumulado y dashboard del proveedor (BOT-06 cubre clasificación RPM/TPM/daily y contadores locales). | `BOT-06b` | 🟢 [whosnext.md (BOT-06)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Cola para Análisis por Lotes (condicional):** Solo si se incorpora ese flujo de producto. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+>>>>>>> 95af4f5 (feat(BOT-01,BOT-02,BOT-09): history, demo preview, BYOK transparency)
 
 ---
 

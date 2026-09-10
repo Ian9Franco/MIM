@@ -21,10 +21,13 @@ import {
 } from "lucide-react";
 import { SageAnalysisResult } from "@/utils/sageAnalyzer";
 import {
+  MimbotChatHistoryControls,
   MimbotConfigModal,
+  MimbotDemoPreview,
   MimbotMessageBubble,
   MimbotQuickQuestions,
 } from "./mimbot";
+import { MIMBOT_HISTORY_SETTINGS_EVENT } from "@/components/layout/SettingsComponents";
 import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
 import {
   consumeSageStream,
@@ -42,6 +45,13 @@ import {
   getCachedQuickQuestionResponse,
   saveQuickQuestionResponse,
 } from "@/lib/intelligence/sage/quickQuestionCache";
+import {
+  clearChatHistory,
+  isChatHistoryEnabled,
+  loadChatHistory,
+  saveChatHistory,
+} from "@/lib/intelligence/sage/chatHistoryStore";
+import { buildMimbotDemoPreview } from "@/lib/intelligence/sage/mimbotDemoExamples";
 
 type GeminiConnectionState = "none" | "validating" | GeminiKeyStatus;
 
@@ -82,6 +92,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   const [isSending, setIsSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [chatHistoryEnabled, setChatHistoryEnabled] = useState(false);
 
   // Mecanismo de deshacer al reiniciar conversación
   const [undoMessages, setUndoMessages] = useState<ChatMessage[] | null>(null);
@@ -120,6 +131,8 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
 
   const suggestionChips =
     chatMessages.length === 0 ? initialQuickQuestions : followUpQuestions;
+
+  const demoPreview = useMemo(() => buildMimbotDemoPreview(analysis), [analysis]);
 
   const refreshGeminiConnection = useCallback(async () => {
     try {
@@ -162,17 +175,37 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
       .catch(() => {});
   }, [refreshGeminiConnection]);
 
-  // Reset de conversación al cambiar el reporte analizado
   useEffect(() => {
-    const sig = `${analysis.exceptionType}|${analysis.category}|${analysis.title}`;
-    if (sig === prevSigRef.current) return;
+    setChatHistoryEnabled(isChatHistoryEnabled());
+    const syncHistorySetting = () => {
+      const enabled = isChatHistoryEnabled();
+      setChatHistoryEnabled(enabled);
+      if (!enabled) {
+        setChatMessages([]);
+        setUndoMessages(null);
+      }
+    };
+    window.addEventListener(MIMBOT_HISTORY_SETTINGS_EVENT, syncHistorySetting);
+    return () => window.removeEventListener(MIMBOT_HISTORY_SETTINGS_EVENT, syncHistorySetting);
+  }, []);
+
+  // Restaurar o limpiar conversación al cambiar el crash analizado
+  useEffect(() => {
+    if (crashSignature === prevSigRef.current) return;
     activeRequestRef.current?.abort();
-    prevSigRef.current = sig;
-    setChatMessages([]);
+    prevSigRef.current = crashSignature;
     setChatInput("");
     setChatError(null);
     setUndoMessages(null);
-  }, [analysis]);
+    setChatMessages(
+      isChatHistoryEnabled() ? loadChatHistory(crashSignature) : []
+    );
+  }, [crashSignature]);
+
+  useEffect(() => {
+    if (!chatHistoryEnabled || chatMessages.length === 0) return;
+    saveChatHistory(crashSignature, chatMessages);
+  }, [chatHistoryEnabled, chatMessages, crashSignature]);
 
   useEffect(() => () => activeRequestRef.current?.abort(), []);
 
@@ -238,11 +271,21 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
   };
 
   // Reiniciar chat con soporte de Deshacer
+  const handleClearHistory = () => {
+    activeRequestRef.current?.abort();
+    clearChatHistory(crashSignature);
+    setChatMessages([]);
+    setChatInput("");
+    setChatError(null);
+    setUndoMessages(null);
+  };
+
   const handleResetChat = () => {
     if (chatMessages.length === 0) return;
     activeRequestRef.current?.abort();
     setUndoMessages(chatMessages);
     setChatMessages([]);
+    if (chatHistoryEnabled) clearChatHistory(crashSignature);
     setChatError(null);
 
     if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
@@ -471,6 +514,11 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
               <RotateCcw className="w-3 h-3" />
             </button>
           )}
+          <MimbotChatHistoryControls
+            enabled={chatHistoryEnabled}
+            hasMessages={chatMessages.length > 0}
+            onClearHistory={handleClearHistory}
+          />
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -579,6 +627,13 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
           </div>
           <GeminiConnectionBadge state={connectionState} />
         </div>
+
+        {connectionState !== "valid" && chatMessages.length === 0 && (
+          <MimbotDemoPreview
+            preview={demoPreview}
+            onConfigureKey={() => setShowConfig(true)}
+          />
+        )}
 
         {/* Historial de mensajes */}
         {chatMessages.length > 0 && (

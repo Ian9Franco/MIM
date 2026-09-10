@@ -12,7 +12,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/modding/builder";
 import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/core/constants";
 import { mimMsg } from "@/lib/core/voice";
@@ -24,41 +25,24 @@ import { withApiGuard } from "@/lib/apiGuard";
 const BUILD_TYPES = ["alluser", "allhost"] as const;
 type BuildType = (typeof BUILD_TYPES)[number];
 
+const buildBodySchema = z.object({
+  version: z.string().min(1),
+  loader: z.string().refine(isValidLoader, {
+    message: 'Loader no válido. Debe ser: forge, neoforge o fabric',
+  }),
+  projectName: z.string().min(1),
+  buildType: z.enum(BUILD_TYPES),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: buildBodySchema },
+  async ({ body }) => {
   try {
-    const { version, loader, projectName, buildType } = await req.json();
-
-    // ── Validate required fields ───────────────────────────────────────────────
-    if (!version || !loader || !projectName || !buildType) {
-      return NextResponse.json(
-        { error: mimMsg.classifyMissingFields() },
-        { status: 400 }
-      );
-    }
-
-    // ── Validate loader via shared helper (avoids duplicating the LOADERS cast) ─
-    if (!isValidLoader(loader)) {
-      return NextResponse.json(
-        { error: mimMsg.badRequest(`Loader "${loader}" no válido. Debe ser: forge, neoforge o fabric`) },
-        { status: 400 }
-      );
-    }
-
-    // ── Validate build type ────────────────────────────────────────────────────
-    if (!(BUILD_TYPES as readonly string[]).includes(buildType)) {
-      return NextResponse.json(
-        { error: mimMsg.badRequest('buildType debe ser "alluser" o "allhost"') },
-        { status: 400 }
-      );
-    }
+    const { version, loader, projectName, buildType } = body;
 
     // ── Sanitize projectName — strip Windows/Linux illegal path characters ─────
     // Strips: < > : " / \ | ? *
-    const safeName = (projectName as string).replace(/[<>:"/\\|?*]/g, "_").trim();
+    const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
 
     // Guard: sanitization may produce an empty string (e.g. projectName = "???")
     if (!safeName) {

@@ -2,7 +2,8 @@
  * /api/tweak — GET / POST
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -20,18 +21,50 @@ import { getRecommendations } from "./lib/RecommendationEngine";
 import { readProjectConfig, saveProjectConfig } from "@/lib/modding/projectSubcategories";
 import { withApiGuard } from "@/lib/apiGuard";
 
-export const GET = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
+const tweakGetQuerySchema = z.object({
+  projectName: z.string().optional(),
+  version: z.string().default("1.20.1"),
+  ram: z.string().optional(),
+  gpu: z.string().default("dedicated"),
+  loader: z.string().default("forge"),
+});
 
+const tweakKeybindSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string().optional(),
+  category: z.string().optional(),
+  modSource: z.string().optional(),
+});
+
+const tweakPostSchema = z.object({
+  action: z.enum([
+    "analyze-packs",
+    "save",
+    "save-draft",
+    "initialize",
+    "restore-backup",
+    "sync-resourcepacks",
+    "create-snapshot",
+    "apply-snapshot",
+    "autofix-packs",
+  ]),
+  projectName: z.string().optional(),
+  keybinds: z.array(tweakKeybindSchema).optional(),
+  resourcePacks: z.array(z.string()).optional(),
+  settings: z.record(z.string(), z.string()).optional(),
+  activePacks: z.array(z.string()).optional(),
+  profileName: z.string().optional(),
+  version: z.string().optional(),
+  loader: z.string().optional(),
+  snapshotId: z.string().optional(),
+});
+
+export const GET = withApiGuard(
+  { querySchema: tweakGetQuerySchema },
+  async ({ query }) => {
   try {
-    const { searchParams } = new URL(req.url);
-    const projectName = searchParams.get("projectName");
-    const version = searchParams.get("version") || "1.20.1";
-    const ramParam = searchParams.get("ram");
-    const gpuParam = searchParams.get("gpu") || "dedicated";
-    const loader = searchParams.get("loader") || "forge";
+    const { projectName, version, ram: ramParam, gpu: gpuParam, loader } = query;
 
     // projectName is now optional for standalone Tweak mode
 
@@ -292,12 +325,9 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: tweakPostSchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const { action, projectName, keybinds, resourcePacks, settings, activePacks } = body;
     const { sourceBase, minecraftPath } = getSettings();
     
@@ -316,7 +346,7 @@ export const POST = withApiGuard(
         }
       }
       
-      const analysis = analyzePackOrder(activePacks, installedMods);
+      const analysis = analyzePackOrder(activePacks ?? [], installedMods);
       return NextResponse.json(analysis);
     }
     const projectDir = projectName ? path.join(sourceBase, "_projects", projectName) : null;
@@ -603,15 +633,6 @@ export const POST = withApiGuard(
 
       fs.writeFileSync(optionsPath, lines.join("\n") + "\n");
       return NextResponse.json({ success: true, message: mimMsg.tweakSnapshotApplied(snap.profileName) });
-    }
-
-    if (action === "restore-backup") {
-      const backupPath = `${optionsPath}.mim_bak`;
-      if (fs.existsSync(backupPath)) {
-        fs.copyFileSync(backupPath, optionsPath);
-        return NextResponse.json({ success: true, message: mimMsg.tweakRestored() });
-      }
-      return NextResponse.json({ error: mimMsg.tweakNoBackup() }, { status: 404 });
     }
 
     if (action === "autofix-packs") {

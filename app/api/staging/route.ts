@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSettings } from "@/lib/core/settings";
 import { mimMsg } from "@/lib/core/voice";
@@ -55,27 +55,10 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: stagingPostSchema },
+  async ({ body }) => {
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body payload" }, { status: 400 });
-    }
-
-    const parsed = stagingPostSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Validation error", details: parsed.error.format() },
-        { status: 400 }
-      );
-    }
-
-    const { action, filePath } = parsed.data;
+    const { action, filePath } = body;
     const settings = getSettings();
     const stagingDir = settings.stagingPath;
     const mcPath = settings.minecraftPath;

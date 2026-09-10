@@ -12,13 +12,8 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
-import { RichHtmlBlock } from "@/components/ui/RichHtmlBlock";
-import { markdownToHtml } from "@/utils/markdown";
-import { sanitizeHtml } from "@/utils/sanitizeHtml";
-
 interface FomoDescriptionTabProps {
   rawDesc: string;
-  descHtml: string;
   translatedBody: string | null;
   isTranslating: boolean;
   handleTranslate: () => void;
@@ -42,12 +37,13 @@ interface FomoDescriptionTabProps {
   isChatSending: boolean;
   handleSendChatMessage: (text?: string) => void;
   chatBottomRef: React.RefObject<HTMLDivElement | null>;
-  handleFomoLinkClick: (e: React.MouseEvent) => void;
+  renderExplainedHtml: () => React.ReactNode;
+  renderDescriptionHtml: () => React.ReactNode;
+  renderChatMessageHtml: (text: string) => React.ReactNode;
 }
 
 export function FomoDescriptionTab({
   rawDesc,
-  descHtml,
   translatedBody,
   isTranslating,
   handleTranslate,
@@ -71,7 +67,9 @@ export function FomoDescriptionTab({
   isChatSending,
   handleSendChatMessage,
   chatBottomRef,
-  handleFomoLinkClick,
+  renderExplainedHtml,
+  renderDescriptionHtml,
+  renderChatMessageHtml,
 }: FomoDescriptionTabProps) {
   return (
     <div className="space-y-4">
@@ -263,11 +261,7 @@ export function FomoDescriptionTab({
             </div>
           </div>
 
-          <RichHtmlBlock
-            onClick={handleFomoLinkClick}
-            className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer"
-            html={markdownToHtml(explainedBody)}
-          />
+          {renderExplainedHtml()}
 
           {explanationSources.length > 0 && (
             <div className="pt-2 border-t border-white/5 space-y-1.5">
@@ -328,11 +322,7 @@ export function FomoDescriptionTab({
                         </>
                       )}
                     </span>
-                    <RichHtmlBlock
-                      onClick={handleFomoLinkClick}
-                      className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
-                      html={markdownToHtml(msg.text)}
-                    />
+                    {renderChatMessageHtml(msg.text)}
                   </div>
                 ))}
                 {isChatSending && (
@@ -400,10 +390,7 @@ export function FomoDescriptionTab({
           </div>
         </div>
       ) : (
-        <RichHtmlBlock
-          className="prose prose-invert prose-sm max-w-none text-sm text-foreground"
-          html={sanitizeHtml(descHtml)}
-        />
+        renderDescriptionHtml()
       )}
     </div>
   );

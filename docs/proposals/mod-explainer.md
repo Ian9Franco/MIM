@@ -33,7 +33,7 @@ Users historically had to manually leave the app, open Google, search for the au
   - *Veredicto*: Sentencia final sobre si vale la pena o es puro humo.
 - **Search-Grounded Fallback:** Query Google Search through Gemini Search Grounding (`googleSearch`) to extract real-world context from GitHub, CurseForge, Modrinth, and community wikis.
 - **Client-Side Cache & Zero Redundancy:** Store synthesized summaries in local storage (`mim_explain_${projectId}`) with image counts and sources for instant 0 ms re-renders.
-- **Interactive Project Mini-Chat (`chatWithProjectAssistant`):** Lightweight conversational sub-panel scoped exclusively to the open mod to answer questions about recipes, commands, compatibility, or configuration.
+- **MIM-Bot Chat — project scope (`mimBotChat`):** Lightweight conversational sub-panel scoped exclusively to the open mod to answer questions about recipes, commands, compatibility, or configuration.
 
 ---
 
@@ -102,6 +102,6 @@ interface ModExplanationCache {
 - [x] **Config & Key Management:** Soporte de API Key de Gemini configurable por usuario en UI (`x-gemini-key` / `mim_gemini_api_key`) y fallback seguro con mensaje guía.
 - [x] **Intelligence Explainer Service (`lib/intelligence/modExplainer.ts`):** Motor multimodal unificado en `web/lib/intelligence/modExplainer.ts` y raíz `lib/intelligence/modExplainer.ts` con cascada de modelos y fallback heurístico local.
 - [x] **Bully Persona Specification:** Instrucciones de sistema agresivas y humorísticas con respuestas técnicas 100% exactas tanto en síntesis como en chat interactivo.
-- [x] **Interactive Mini-Chat:** Sub-panel de chat interactivo en `ModDetailsSheet.tsx` y `FomoVersionOverlay.tsx` conectado al endpoint `/api/fomo/explain` (`mode: "chat"`).
+- [x] **MIM-Bot Chat (project scope):** Sub-panel de chat interactivo en `ModDetailsSheet.tsx` y `FomoVersionOverlay.tsx` conectado al endpoint `/api/fomo/explain` (`mode: "mim-bot-chat"`; legacy alias `"chat"`).
 - [x] **UI Action Trigger & Slime Branding:** Botones pill y burbujas de respuesta con micro-animación `.animate-slime` y sin emojis de rayo.
 - [x] **Strict Type Safety:** Interfaz `ModHit` actualizada con `slug` y `loaders`, y llamadas de Web Crypto en `vaultEngine` compatibles con TypeScript 5+.

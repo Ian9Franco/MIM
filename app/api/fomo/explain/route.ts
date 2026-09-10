@@ -3,7 +3,8 @@ import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 import {
   explainModWithGemini,
-  chatWithProjectAssistant,
+  isMimBotChatRequest,
+  mimBotChat,
   type ModExplainerInput,
   type BotPersonality,
 } from "@/lib/intelligence/modExplainer";
@@ -92,9 +93,9 @@ export const POST = withApiGuard(
       (headerPersonality === "standard" || headerPersonality === "bully" ? headerPersonality : undefined) ||
       (process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully");
 
-    // Modo Mini-Chat: Responder pregunta de seguimiento
-    if (question || mode === "chat") {
-      const chatRes = await chatWithProjectAssistant(
+    // MIM-Bot Chat (project scope): follow-up question about the open mod
+    if (isMimBotChatRequest(question, mode)) {
+      const chatRes = await mimBotChat(
         {
           projectContext: (projectContext as any) || {
             projectId,

@@ -317,7 +317,7 @@ export function ModDetailsDescTab({
             </div>
           )}
 
-          {/* Mini-Chat Interactivo del Proyecto */}
+          {/* MIM-Bot Chat (project scope) */}
           <div className="mt-4 pt-3.5 border-t border-purple-500/20 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">

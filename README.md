@@ -217,10 +217,10 @@ Desktop Client (Electron) ⟷ Supabase Realtime (WebSocket) ⟷ PostgreSQL ⟷ M
 > Complete distributed systems whitepaper in [docs/architecture/distributed-sync.md](./docs/architecture/distributed-sync.md).
 
 #### 🤖 MIM-Bot — Multimodal On-Demand Explainer & Bully AI Assistant
-*On-demand project synthesis, multimodal screenshot grounding, and contextual project mini-chat.*
+*On-demand project synthesis, multimodal screenshot grounding, and contextual MIM-Bot Chat.*
 - **Multimodal Visual Grounding:** Inspects 3–5 gallery screenshots alongside Google Search Grounding to decipher mods, shaders, and resource packs with missing descriptions.
 - **Bully Gamer Persona:** Delivers uninhibited, humorous gamer trash-talk roasting potato PCs and configuration mistakes, while maintaining **100% technical factual accuracy** on loaders, dependencies, and mechanics.
-- **Interactive Project Mini-Chat:** Scoped conversational sub-panel (`chatWithProjectAssistant`) for recipes, compatibility, and configs directly within the mod details overlay.
+- **MIM-Bot Chat (project scope):** Scoped conversational sub-panel (`mimBotChat`) for recipes, compatibility, and configs directly within the mod details overlay.
 - **Slime Micro-Animation Branding:** Replaces generic icons with the bouncing slime favicon (`/icon.png` with `.animate-slime`) across pill buttons, banners, and chat bubbles.
 - **Resilient Cascade & Local Fallback:** Automatically cascades across Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash -> Local Heuristic Engine on quota exhaustion (HTTP 429).
 

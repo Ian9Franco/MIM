@@ -1,6 +1,6 @@
 # MIM v10.5.1 — MIM-Bot Bully Intelligence, Slime UI Branding & CI Hardening
 
-Version 10.5.1 introduces the official **MIM-Bot** intelligent mod assistant with an aggressive gamer bully personality, interactive on-demand project mini-chat, responsive slime micro-animations, and strict TypeScript/Web Crypto type safety hardening across Web and Desktop engines.
+Version 10.5.1 introduces the official **MIM-Bot** intelligent mod assistant with an aggressive gamer bully personality, interactive on-demand MIM-Bot Chat, responsive slime micro-animations, and strict TypeScript/Web Crypto type safety hardening across Web and Desktop engines.
 
 ---
 
@@ -9,7 +9,7 @@ Version 10.5.1 introduces the official **MIM-Bot** intelligent mod assistant wit
 ### 🤖 MIM-Bot: Bully Persona & Multimodal Grounding
 - **Ruthless Bully Persona:** Sarcastic, condescending, hilarious gamer trash-talk that roasts potato PCs, noob setups, and lack of log reading, while maintaining **100% technical factual accuracy** on loaders, dependencies, and mechanics.
 - **Multimodal Visual Evidence:** Inspects 3–5 gallery screenshots alongside Google Search Grounding to decipher mods, shaders, and resource packs with missing descriptions.
-- **Interactive Project Mini-Chat (`chatWithProjectAssistant`):** Scoped conversational sub-panel for recipes, compatibility, and configs without leaving the mod view.
+- **MIM-Bot Chat — project scope (`mimBotChat`):** Scoped conversational sub-panel for recipes, compatibility, and configs without leaving the mod view.
 - **Resilient Cascade & Local Fallback:** Automatically cascades across Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash -> Local Heuristic Engine on quota exhaustion (HTTP 429).
 
 ### 🎨 Visual Identity: Animated Slime Micro-Interactions

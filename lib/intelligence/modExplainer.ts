@@ -351,12 +351,31 @@ export async function explainModWithGemini(
 export const explainProject = explainModWithGemini;
 
 
-export interface ProjectChatMessage {
+// ── MIM-Bot Chat (project scope) ─────────────────────────────────────────────
+
+export const MIM_BOT_CHAT_MODE = "mim-bot-chat" as const;
+
+/** @deprecated Legacy API mode — use MIM_BOT_CHAT_MODE */
+export const LEGACY_MIM_BOT_CHAT_MODE = "chat" as const;
+
+export function isMimBotChatRequest(
+  question: string | undefined,
+  mode: string | undefined
+): boolean {
+  const hasQuestion = Boolean(question?.trim());
+  return (
+    hasQuestion ||
+    mode === MIM_BOT_CHAT_MODE ||
+    mode === LEGACY_MIM_BOT_CHAT_MODE
+  );
+}
+
+export interface MimBotChatMessage {
   role: "user" | "model";
   text: string;
 }
 
-export interface ProjectChatInput {
+export interface MimBotChatInput {
   projectContext: {
     projectId: string;
     title: string;
@@ -368,21 +387,21 @@ export interface ProjectChatInput {
     descriptionSnippet?: string;
     initialSummary?: string;
   };
-  messages: ProjectChatMessage[];
+  messages: MimBotChatMessage[];
   question: string;
   model?: string;
   personality?: BotPersonality;
 }
 
-export interface ProjectChatResult {
+export interface MimBotChatResult {
   reply: string;
   modelUsed: string;
 }
 
-export async function chatWithProjectAssistant(
-  input: ProjectChatInput,
+export async function mimBotChat(
+  input: MimBotChatInput,
   resolvedApiKey: string
-): Promise<ProjectChatResult> {
+): Promise<MimBotChatResult> {
   if (!resolvedApiKey) {
     throw new Error("NO_API_KEY");
   }
@@ -487,10 +506,10 @@ PAUTAS DE BULLY:
         }
       }
 
-      console.warn(`[ProjectChat] Modelo ${currentModel} respondió ${response.status}. Probando modelo de respaldo...`);
+      console.warn(`[MimBotChat] Modelo ${currentModel} respondió ${response.status}. Probando modelo de respaldo...`);
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : String(e);
-      console.warn(`[ProjectChat] Error con modelo ${currentModel}:`, errMsg);
+      console.warn(`[MimBotChat] Error con modelo ${currentModel}:`, errMsg);
     }
   }
 
@@ -506,3 +525,15 @@ PAUTAS DE BULLY:
     modelUsed: "mim-bot-chat-fallback",
   };
 }
+
+/** @deprecated Use MimBotChatMessage */
+export type ProjectChatMessage = MimBotChatMessage;
+
+/** @deprecated Use MimBotChatInput */
+export type ProjectChatInput = MimBotChatInput;
+
+/** @deprecated Use MimBotChatResult */
+export type ProjectChatResult = MimBotChatResult;
+
+/** @deprecated Use mimBotChat */
+export const chatWithProjectAssistant = mimBotChat;

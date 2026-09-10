@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { ModHit } from "../SpotlightMarquees";
 import type { FomoGalleryItem } from "../../types/fomo";
 import { playFomoSound } from "../../lib/sounds";
+import { MIM_BOT_CHAT_MODE } from "../../lib/intelligence/modExplainer";
 
 interface UseModExplainerOptions {
   selectedMod: ModHit | null;
@@ -35,7 +36,7 @@ export function useModExplainer({
     return process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully";
   });
 
-  // Project Mini-Chat
+  // MIM-Bot Chat (project scope)
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatSending, setIsChatSending] = useState(false);
@@ -216,7 +217,7 @@ export function useModExplainer({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            mode: "chat",
+            mode: MIM_BOT_CHAT_MODE,
             projectId: selectedMod.projectId,
             title: selectedMod.title,
             author: selectedMod.author,

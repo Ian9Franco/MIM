@@ -9,6 +9,7 @@ import {
   type BotPersonality,
 } from "@/lib/intelligence/modExplainer";
 import { resolveGatewayKeys } from "@/lib/intelligence/ai";
+import { withStoredGatewayKeys } from "@/lib/intelligence/ai/storedGatewayKeys";
 
 const bodySchema = z.object({
   projectId: z.string().trim().min(1, "Faltan parámetros requeridos (projectId)"),
@@ -63,11 +64,11 @@ export const POST = withApiGuard(
     const headerGeminiKey = request.headers.get("x-gemini-key") || "";
     const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    const gatewayKeys = {
+    const gatewayKeys = withStoredGatewayKeys({
       clientGeminiKey: clientApiKey,
-      headerGeminiKey: headerGeminiKey,
+      headerGeminiKey,
       openrouterKey: headerOpenRouterKey,
-    };
+    });
     const { hasGeminiKey, hasOpenRouterKey, geminiKey, openrouterKey } =
       resolveGatewayKeys(gatewayKeys);
 

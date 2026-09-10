@@ -452,7 +452,7 @@ export function SageMimbotCopilot({ analysis, onClose }: SageMimbotCopilotProps)
         </div>
       )}
 
-      {/* Mini-Chat Interactivo */}
+      {/* MIM-Bot Chat (incident scope) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-purple-300/80 font-semibold text-[11px]">

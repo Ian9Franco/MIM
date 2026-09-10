@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/core/types";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
+import { MIM_BOT_CHAT_MODE } from "@/lib/intelligence/modExplainer";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
 
@@ -58,7 +59,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
     return process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully";
   });
-  // Project Mini-Chat
+  // MIM-Bot Chat (project scope)
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "model"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatSending, setIsChatSending] = useState(false);
@@ -465,7 +466,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "chat",
+          mode: MIM_BOT_CHAT_MODE,
           projectId: mod.projectId,
           title: mod.title,
           author: mod.author,
@@ -489,7 +490,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
         ]);
       }
     } catch (err: any) {
-      console.error("[ProjectChat] Error:", err);
+      console.error("[MimBotChat] Error:", err);
       setChatMessages([
         ...newMessages,
         { role: "model" as const, text: `⚠️ Error de red al consultar el asistente.` },
@@ -533,7 +534,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     handleExplain,
     botPersonality,
     handleTogglePersonality,
-    // Mini-Chat additions:
+    // MIM-Bot Chat additions:
     chatMessages,
     chatInput,
     setChatInput,

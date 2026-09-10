@@ -259,7 +259,7 @@ export async function analyzeWithSageMimbot(input: SageMimbotInput): Promise<Sag
 
 
 /**
- * Lightweight interactive follow-up mini-chat scoped to the diagnosed crash.
+ * MIM-Bot Chat (incident scope): lightweight follow-up scoped to the diagnosed crash.
  * Uses the AIProvider abstraction instead of raw fetch calls.
  */
 export async function chatWithSageMimbot(

@@ -504,7 +504,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                       </div>
                     )}
 
-                    {/* ── Mini-Chat Interactivo MIM-Bot ── */}
+                    {/* ── MIM-Bot Chat (project scope) ── */}
                     <div className="mt-4 pt-3.5 border-t border-purple-500/20 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">

@@ -62,7 +62,7 @@ Los cambios nuevos de esta revisión (planificación y corrección del workflow 
 
 ## 🚀 Versión 10.5.1 — MIM-Bot Bully Intelligence & CI Type Hardening (2026-09-03)
 
-### 🤖 MIM-Bot: Bully Gamer Persona & Mini-Chat On-Demand
+### 🤖 MIM-Bot: Bully Gamer Persona & MIM-Bot Chat On-Demand
 - **Personalidad Bully Auténtica**: Transformación de MIM-Bot en un asistente ácido, condescendiente y burlón que roastea tostadoras y preguntas novatas, garantizando al mismo tiempo un 100% de precisión técnica en compatibilidad, loaders y mecánicas de mods.
 - **Identidad Visual Slime Animada**: Reemplazo de emojis de rayo (`⚡`) e iconos de chispas por el favicon animado saltarín (`.animate-slime` con `@keyframes slime-squish`) en botones pill de activación, banners de análisis y burbujas de respuesta en el chat interactivo.
 - **Resiliencia & Fallback Offline**: Cascada de modelos (Gemini 2.5 Flash -> 2.0 Flash -> 1.5 Flash) con generación heurística local en caso de cuota agotada (HTTP 429), manteniendo la misma personalidad incisiva sin degradar la UI.

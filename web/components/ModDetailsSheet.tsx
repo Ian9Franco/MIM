@@ -128,7 +128,7 @@ export function ModDetailsSheet({
   const isSheetOpen = !!selectedMod;
   const isReadingTab = modalTab === "versions" || modalTab === "deps";
 
-  // Specialized hooks for Explainer/Mini-Chat and Version filtering
+  // Specialized hooks for Explainer/MIM-Bot Chat and Version filtering
   const explainer = useModExplainer({ selectedMod, descriptionBody, galleryImages });
   const versions = useModVersions({ selectedMod, selectedModDetails });
 

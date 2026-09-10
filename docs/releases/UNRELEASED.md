@@ -17,7 +17,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 - ARCH-01: separada y verificada la persistencia del caché SAGE en adaptadores Node/browser; `cacheEngine.ts` ya no usa `eval("require")`, conserva su API pública y CI valida tests de runtime, typecheck, DAST y build Web. El empaquetado Windows/Electron no fue ejecutado y no se presenta como evidencia.
 - **REC-02 (Reducción de Deuda y Techo de Warnings ESLint)**:
   - Limpieza sistemática de código muerto, imports no utilizados, capturas de errores sin variable innecesaria (`optional catch`) y estados no leídos en `lib/`, `components/` y `web/`.
-  - Presupuesto Desktop (`lint`) rebajado de `--max-warnings=471` a `--max-warnings=400` (medido: 392 warnings, reducción de -79).
+  - Presupuesto Desktop (`lint`) rebajado de `--max-warnings=471` a `--max-warnings=400` (medido en CI #221: 395 warnings; la cifra documental 392 no se reproduce en CI).
   - Presupuesto Hub Web (`lint:hub`) rebajado de `--max-warnings=100` a `--max-warnings=75` (medido: 69 warnings, reducción de -14).
   - Verificados el suite completo de linters (`npm run lint:all`), los 27 suites de pruebas y el build de producción.
 - REC-03 Phase 2: mergeada en PR #63 la extracción de Drafts desde `useHomeController` a `useHomeDrafts`, con contrato público preservado, validación defensiva y regresiones dedicadas. La fase sigue pendiente de verificación final porque no se reprodujo todavía el recorrido visible create/edit/delete/refresh con sesión browser/Supabase; Phase 3 permanece bloqueada.
@@ -40,3 +40,8 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - BOT-05b: `sageChatEngine.ts` unifica chat SAGE HTTP + `sageMimbotEngine`; sin rama OpenAI legacy.
   - BOT-JSON: `dependencyExplain.ts` con schema Zod y fallback determinista en `POST /api/fomo/explain-deps`.
   - BOT-06: clasificación de cuotas (`quotaClassifier.ts`), tracker local, `GET /api/settings/ai-quota`, panel en Ajustes → Conectividad.
+- **REC-03 (subalcance UI de tres componentes; REC-03 global permanece abierto)**:
+  - `web/components/tabs/DiscoverTab.tsx` reducido de 921 a 158 líneas mediante descomposición en `web/components/tabs/discover/` (`DiscoverPlatformHeader`, `DiscoverControls`, `DiscoverFiltersPanel`, `DiscoverModCard`, `DiscoverPagination`, `discoverConstants`).
+  - `web/components/DraftDetailView.tsx` reducido de 865 a 188 líneas mediante descomposición en `web/components/draft-detail/` (`DraftDetailBanner`, `DraftDetailTabs`, `DraftSummaryTab`, `DraftItemsTab`, `DraftMembersTab`, `DraftActivityTab`, `DraftMetadataModal`, `DraftItemEditModal`, `draftDetailConstants`).
+  - `components/fomo/core/FomoVersionOverlay.tsx` reducido de 925 a 186 líneas mediante descomposición en `components/fomo/details/` (`FomoOverlayTopBar`, `FomoDescriptionTab`, `FomoGalleryTab`, `FomoDependenciesTab`, `FomoVersionsTab`, `FomoLightbox`).
+  - Preservados contratos públicos, animaciones Framer Motion con `layoutId`, integraciones Supabase y accesibilidad. Drafts Phase 2 sigue `NEEDS_USER`; Phase 3 (Profile/Community) pendiente.

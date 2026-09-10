@@ -193,3 +193,25 @@ Mantengo esta bitácora como historial, no como roadmap. Las entradas histórica
 - **Resultado:** `MERGEADO`
 - **PR:** https://github.com/Ian9Franco/MIM/pull/64
 - **Resumen:** reconcilió SAGE-08 como verificado en la documentación canónica, mantuvo REC-03 Phase 2 explícitamente bloqueada por falta de validación visible autenticada y registró los cierres #62 y #63 en la bitácora Hogwarts.
+
+## 2026-09-09 19:08:06 — Hermione — PR #67
+
+- **Título:** 🧪 Hermione: reparo el build del Hub en CI
+- **Resultado:** `CERRADO SIN MERGE`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/67
+- **Resumen:** corrigió en su rama la raíz de Turbopack del Hub y demostró el build remoto; el PR se cerró sin merge porque el mismo arreglo causal ya había ingresado a `main` por otra vía.
+- **Motivo:** supersedido por el arreglo equivalente ya presente y verificado en `main`.
+
+## 2026-09-10 11:41:31 — Hermione — PR #69
+
+- **Título:** 🧪 Hermione: externalizo ssh2 del build Desktop
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/69
+- **Resumen:** externalizó `ssh2` del bundle de Next mediante `serverExternalPackages`; el cambio quedó integrado en la rama de #68 y luego llegó a `main`, donde CI #191 verificó el build Desktop y el Hub.
+
+## 2026-09-10 14:14:40 — McGonagall — PR #68
+
+- **Título:** 🏰 McGonagall: cierro el ciclo de vida del gateway
+- **Resultado:** `MERGEADO`
+- **PR:** https://github.com/Ian9Franco/MIM/pull/68
+- **Resumen:** cerró el subalcance de lifecycle/credenciales del gateway MIMBOT-GW: propagación de cancelación y timeout, retry cancelable, uso efectivo del proveedor seleccionado en mini-chat y credenciales fuera de URLs; el merge exacto pasó el CI obligatorio en `main`.

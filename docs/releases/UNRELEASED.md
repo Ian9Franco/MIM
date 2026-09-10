@@ -20,9 +20,9 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - Transporte SFTP de solo lectura con huella de host obligatoria, descubrimiento remoto y `POST /api/server/inspect`.
   - Pantalla Desktop `/servers` (link en el header) que compara mods contra el último build AllHost.
   - Fixture local `npm run dev:server-fixture` y suite `npm run test:server`. Escritura remota, persistencia durable de snapshots y hosting externo siguen pendientes.
-  - Build Desktop (en revisión): `ssh2` queda marcado como `serverExternalPackages` para evitar que Turbopack intente empaquetar su implementación criptográfica nativa; la validación remota del build sigue siendo criterio de cierre.
+  - Build Desktop verificado post-merge: `ssh2` queda marcado como `serverExternalPackages`; MIM Systems Engineering CI #191 sobre `d098d7ad` pasó el build Desktop y el Hub. Esto cierra la regresión de empaquetado, no verifica por sí mismo la semántica funcional SFTP ni cierra #58.
 - **MIMBOT-GW / Model Gateway & Context Builder**:
-  - BOT-05 en revisión: el ciclo de vida de requests del gateway propaga cancelación y timeout a Gemini/OpenRouter, y MIM-Bot Chat (alcance proyecto) deja de construir URLs con credenciales para usar el proveedor seleccionado.
+  - BOT-05, subalcance lifecycle/credenciales verificado post-merge en PR #68 / `d098d7ad`: cancelación y timeout se propagan a Gemini/OpenRouter, los retries respetan el mismo ciclo cancelable y MIM-Bot Chat (alcance proyecto) usa el proveedor seleccionado sin credenciales en URLs. BOT-05 global permanece abierto.
   - Abstracción de proveedores `AIProvider` (`GeminiProvider`, `OpenRouterProvider`) con selector `createAIProvider.ts`. Gemini permanece como default; GLM vía OpenRouter es opt-in (`MIMBOT_AI_PROVIDER=openrouter`).
   - GLM-5.3 Flash disponible como candidato (`z-ai/glm-5.3-flash:free` con cascada al tier pago), no como reemplazo silencioso de Gemini.
   - Capa de ensamblado `ContextBuilder` con etiquetado estricto de evidencia (`[EVIDENCE: MANIFEST]`, `[EVIDENCE: LOCAL]`, `[EVIDENCE: SAGE]`, `[EVIDENCE: FOMO_GRAPH]`, `[EVIDENCE: GALLERY]`) e invariantes de grounding que impiden al LLM inventar hechos o contradecir diagnósticos deterministas.

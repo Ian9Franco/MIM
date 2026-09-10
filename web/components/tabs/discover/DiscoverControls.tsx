@@ -8,16 +8,16 @@ import type { ModHit } from "../../SpotlightMarquees";
 
 interface DiscoverControlsProps {
   discoverType: string;
-  setDiscoverType: (t: string) => void;
+  setDiscoverType: (type: string) => void;
   discoverSort: string;
-  setDiscoverSort: (s: string) => void;
+  setDiscoverSort: (sort: string) => void;
   discoverQuery: string;
-  setDiscoverQuery: (q: string) => void;
+  setDiscoverQuery: (query: string) => void;
   runDiscoverSearch: (page?: number) => void;
-  setDiscoverResults: (r: ModHit[]) => void;
-  setDiscoverPage: (p: number) => void;
-  setDiscoverCategory: (v: string[]) => void;
-  setDiscoverLoader: (v: string[]) => void;
+  setDiscoverResults: (results: ModHit[]) => void;
+  setDiscoverPage: (page: number) => void;
+  setDiscoverCategory: (categories: string[]) => void;
+  setDiscoverLoader: (loaders: string[]) => void;
 }
 
 export function DiscoverControls({

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { createRichHtmlElement, markdownToHtml } from "@/utils/markdown";
 import {
   ExternalLink,
   Images,
@@ -37,9 +38,8 @@ interface FomoDescriptionTabProps {
   isChatSending: boolean;
   handleSendChatMessage: (text?: string) => void;
   chatBottomRef: React.RefObject<HTMLDivElement | null>;
-  renderExplainedHtml: () => React.ReactNode;
-  renderDescriptionHtml: () => React.ReactNode;
-  renderChatMessageHtml: (text: string) => React.ReactNode;
+  descHtml: string;
+  onFomoLinkClick: (e: React.MouseEvent) => void;
 }
 
 export function FomoDescriptionTab({
@@ -67,9 +67,8 @@ export function FomoDescriptionTab({
   isChatSending,
   handleSendChatMessage,
   chatBottomRef,
-  renderExplainedHtml,
-  renderDescriptionHtml,
-  renderChatMessageHtml,
+  descHtml,
+  onFomoLinkClick,
 }: FomoDescriptionTabProps) {
   return (
     <div className="space-y-4">
@@ -261,7 +260,13 @@ export function FomoDescriptionTab({
             </div>
           </div>
 
-          {renderExplainedHtml()}
+          {explainedBody
+            ? createRichHtmlElement(markdownToHtml(explainedBody), {
+                className:
+                  "prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer",
+                onClick: onFomoLinkClick,
+              })
+            : null}
 
           {explanationSources.length > 0 && (
             <div className="pt-2 border-t border-white/5 space-y-1.5">
@@ -322,7 +327,11 @@ export function FomoDescriptionTab({
                         </>
                       )}
                     </span>
-                    {renderChatMessageHtml(msg.text)}
+                    {createRichHtmlElement(markdownToHtml(msg.text), {
+                      className:
+                        "prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words",
+                      onClick: onFomoLinkClick,
+                    })}
                   </div>
                 ))}
                 {isChatSending && (
@@ -390,7 +399,9 @@ export function FomoDescriptionTab({
           </div>
         </div>
       ) : (
-        renderDescriptionHtml()
+        createRichHtmlElement(descHtml, {
+          className: "prose prose-invert prose-sm max-w-none text-sm text-foreground",
+        })
       )}
     </div>
   );

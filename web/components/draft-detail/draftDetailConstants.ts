@@ -14,7 +14,7 @@ export const typeLabel = (type?: string) => {
   return "Mod";
 };
 
-export const typeColor = (type?: string) => TYPE_COLORS[type || "mod"] || TYPE_COLORS.mod;
+export const typeColor = (type?: string) => TYPE_COLORS[type ?? "mod"] ?? TYPE_COLORS.mod;
 
 export const TYPE_FILTERS = [
   { id: "all", label: "Todo" },

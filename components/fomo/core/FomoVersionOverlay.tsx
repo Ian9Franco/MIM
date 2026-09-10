@@ -306,28 +306,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 isChatSending={isChatSending}
                 handleSendChatMessage={handleSendChatMessage}
                 chatBottomRef={chatBottomRef}
-                renderExplainedHtml={() =>
-                  explainedBody ? (
-                    <div
-                      onClick={handleFomoLinkClick}
-                      className="prose prose-invert prose-sm max-w-none text-sm bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed cursor-pointer"
-                      dangerouslySetInnerHTML={{ __html: markdownToHtml(explainedBody) }}
-                    />
-                  ) : null
-                }
-                renderDescriptionHtml={() => (
-                  <div
-                    className="prose prose-invert prose-sm max-w-none text-sm text-foreground"
-                    dangerouslySetInnerHTML={{ __html: descHtml }}
-                  />
-                )}
-                renderChatMessageHtml={(text) => (
-                  <div
-                    onClick={handleFomoLinkClick}
-                    className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed space-y-1.5 break-words"
-                    dangerouslySetInnerHTML={{ __html: markdownToHtml(text) }}
-                  />
-                )}
+                descHtml={descHtml}
+                onFomoLinkClick={handleFomoLinkClick}
               />
             )}
             {activeTab === "gallery" && (

@@ -10,25 +10,24 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
+import { z } from "zod";
 import { getSettings } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const openFolderBodySchema = z.object({
+  folderPath: z.string().min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  try {
-    const { folderPath } = await req.json();
-
-    if (!folderPath) {
-      return NextResponse.json({ error: "Missing folderPath" }, { status: 400 });
-    }
+  { bodySchema: openFolderBodySchema },
+  async ({ body }) => {
+    try {
+      const { folderPath } = body;
 
     let resolvedPath = path.resolve(folderPath);
 

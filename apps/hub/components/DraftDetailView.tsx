@@ -16,17 +16,52 @@ import {
   type DraftTab,
 } from "./draft-detail";
 
+export interface DraftDetailModel {
+  id: string;
+  name: string;
+  minecraft_version?: string;
+  loader?: string;
+  cover_image?: string | null;
+  visibility?: string;
+  owner_id?: string;
+  [key: string]: unknown;
+}
+
+export interface DraftMemberProfile {
+  username?: string | null;
+  avatar_url?: string | null;
+  color?: string | null;
+}
+
+export interface DraftMemberRecord {
+  id: string;
+  draft_id: string;
+  profile_id: string;
+  role: "owner" | "editor" | "viewer" | string;
+  profiles?: DraftMemberProfile | null;
+  [key: string]: unknown;
+}
+
+export interface DraftActivityRecord {
+  id: string;
+  draft_id: string;
+  action: string;
+  created_at: string;
+  profiles?: DraftMemberProfile | null;
+  [key: string]: unknown;
+}
+
 export interface DraftDetailViewProps {
-  draft: any;
+  draft: DraftDetailModel;
   activeCollectionMods: ModHit[];
   loadingActiveMods: boolean;
-  session: any;
+  session: { user?: { id?: string } } | null;
   onBack: () => void;
-  onEditDraft?: (draft: any) => void;
+  onEditDraft?: (draft: DraftDetailModel) => void;
   handleOpenModDetails: (mod: ModHit) => void;
   onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRefreshDrafts?: () => void;
-  onUpdateDraftMetadata?: (draftId: string, updates: any) => Promise<boolean>;
+  onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
 }
@@ -47,13 +82,13 @@ export function DraftDetailView({
   onRecategorizeDraftItem,
   onUpdateDraftItemSide,
 }: DraftDetailViewProps) {
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState<DraftDetailModel>(initialDraft);
   const [tab, setTab] = useState<DraftTab>("items");
   const [typeFilter, setTypeFilter] = useState("all");
 
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const [members, setMembers] = useState<any[]>([]);
-  const [activity, setActivity] = useState<any[]>([]);
+  const [members, setMembers] = useState<DraftMemberRecord[]>([]);
+  const [activity, setActivity] = useState<DraftActivityRecord[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
 
@@ -70,7 +105,7 @@ export function DraftDetailView({
   const [savingMetadata, setSavingMetadata] = useState(false);
 
   // Item edit modal state
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<ModHit | null>(null);
   const [itemType, setItemType] = useState("");
   const [itemSide, setItemSide] = useState("");
   const [savingItem, setSavingItem] = useState(false);
@@ -152,7 +187,7 @@ export function DraftDetailView({
       visibility: editVisibility,
     });
     if (ok) {
-      setDraft((prev: any) => ({
+      setDraft((prev) => ({
         ...prev,
         name: editName,
         minecraft_version: editVersion,
@@ -192,7 +227,7 @@ export function DraftDetailView({
     }
   };
 
-  const handleRemoveMod = async (mod: any) => {
+  const handleRemoveMod = async (mod: ModHit) => {
     if (!onRemoveModFromDraft || !draft?.id) return;
     const itemId = mod.itemId || mod.projectId;
     await onRemoveModFromDraft(draft.id, mod.projectId, itemId);

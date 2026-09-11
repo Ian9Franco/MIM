@@ -9,25 +9,25 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import os from "os";
+import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const projectOpenBodySchema = z.object({
+  version: z.string().min(1),
+  projectName: z.string().min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  try {
-    const { version, projectName } = await req.json();
-
-    if (!version || !projectName) {
-      return NextResponse.json({ error: "Missing version or projectName" }, { status: 400 });
-    }
+  { bodySchema: projectOpenBodySchema },
+  async ({ body }) => {
+    try {
+      const { version: _version, projectName } = body;
 
     const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
     if (!safeName) {

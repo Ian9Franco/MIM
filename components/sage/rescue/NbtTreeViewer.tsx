@@ -24,9 +24,9 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
-  const updateNbtAtPath = (root: NBTTag, keyPath: string, newValue: any, isDelete: boolean = false): NBTTag => {
-    const newRoot = JSON.parse(JSON.stringify(root));
-    if (keyPath === 'root') return isDelete ? { type: TagType.Compound, name: "", value: {} } : newValue;
+  const updateNbtAtPath = (root: NBTTag, keyPath: string, newValue: unknown, isDelete: boolean = false): NBTTag => {
+    const newRoot: NBTTag = JSON.parse(JSON.stringify(root));
+    if (keyPath === 'root') return isDelete ? { type: TagType.Compound, name: "", value: {} } : (newValue as NBTTag);
 
     const pathParts = keyPath.replace(/\[(\d+)\]/g, '.$1').split('.').filter(Boolean);
     if (pathParts[0] === 'root') pathParts.shift();
@@ -57,13 +57,13 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
     return newRoot;
   };
 
-  const handleCopy = (type: TagType, value: any) => {
+  const handleCopy = (type: TagType, value: unknown) => {
     let text = renderValue(type, value);
-    if (type === TagType.String) text = value;
+    if (type === TagType.String && typeof value === "string") text = value;
     navigator.clipboard.writeText(text);
   };
 
-  const startEdit = (keyPath: string, type: TagType, currentValue: any) => {
+  const startEdit = (keyPath: string, type: TagType, currentValue: unknown) => {
     if ([TagType.Compound, TagType.List, TagType.ByteArray, TagType.IntArray, TagType.LongArray].includes(type)) {
       alert("No se pueden editar compuestos o arreglos directamente.");
       return;
@@ -74,10 +74,10 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
 
   const submitEdit = (keyPath: string, type: TagType) => {
     setEditingKey(null);
-    let parsedVal: any = editValue;
+    let parsedVal: unknown = editValue;
     if ([TagType.Byte, TagType.Short, TagType.Int, TagType.Long, TagType.Float, TagType.Double].includes(type)) {
       parsedVal = Number(editValue);
-      if (isNaN(parsedVal)) {
+      if (typeof parsedVal === "number" && isNaN(parsedVal)) {
         alert("Valor numérico inválido");
         return;
       }
@@ -145,7 +145,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
     return names[type] || "Unknown";
   };
 
-  const renderValue = (type: TagType, value: any): string => {
+  const renderValue = (type: TagType, value: unknown): string => {
     switch (type) {
       case TagType.Byte:
       case TagType.Short:
@@ -157,7 +157,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
       case TagType.String:
         return `"${value}"`;
       case TagType.List:
-        const listData = value as { itemType: TagType; list: any[] };
+        const listData = value as { itemType: TagType; list: unknown[] };
         return `List<${getTagTypeName(listData.itemType)}> [${listData.list.length}]`;
       case TagType.Compound:
         const compound = value as Record<string, NBTTag>;
@@ -165,7 +165,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
       case TagType.ByteArray:
       case TagType.IntArray:
       case TagType.LongArray:
-        const arr = value as any[];
+        const arr = value as unknown[];
         return `${getTagTypeName(type)} [${arr.length}]`;
       default:
         return String(value);
@@ -255,7 +255,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
         {isExpanded && isList && (
           <div>
             {(() => {
-              const listData = tag.value as { itemType: TagType; list: any[] };
+              const listData = tag.value as { itemType: TagType; list: unknown[] };
               return listData.list.map((item, index) => {
                 const childKeyPath = `${keyPath}[${index}]`;
                 return (
@@ -287,7 +287,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
                         </button>
                         {![TagType.Compound, TagType.List, TagType.ByteArray, TagType.IntArray, TagType.LongArray].includes(listData.itemType) && (
                           <button
-                            onClick={() => startEdit(childKeyPath, listData.itemType, typeof item === 'object' && item.value !== undefined ? item.value : item)}
+                            onClick={() => startEdit(childKeyPath, listData.itemType, typeof item === 'object' && item !== null && 'value' in item ? (item as { value: unknown }).value : item)}
                             className="p-1 hover:bg-white/10 rounded text-white/40 hover:text-white/60"
                             title="Editar"
                           >

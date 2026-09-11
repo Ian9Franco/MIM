@@ -21,8 +21,8 @@ export type { MimEventMap, EventName, EventPayload, EventHandler, EventMetadata,
 export type Handler<T extends EventName> = (payload: EventPayload<T>) => void;
 
 class MimEventBus {
-  private listeners: Map<EventName, Handler<any>[]> = new Map();
-  private eventQueue: Array<{ event: EventName; payload: any; timestamp: number }> = [];
+  private listeners: Map<EventName, Array<(payload: EventPayload<EventName>) => void>> = new Map();
+  private eventQueue: Array<{ event: EventName; payload: EventPayload<EventName>; timestamp: number }> = [];
   private processingQueue = false;
   private readonly BATCH_SIZE = 10;
   private readonly FLUSH_INTERVAL = 16; // ~60fps
@@ -34,7 +34,7 @@ class MimEventBus {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    this.listeners.get(event)!.push(handler);
+    this.listeners.get(event)!.push(handler as (payload: EventPayload<EventName>) => void);
 
     // Retorna una función para des-suscribirse fácilmente (útil en useEffect)
     return () => this.unsubscribe(event, handler);
@@ -48,7 +48,7 @@ class MimEventBus {
     if (handlers) {
       this.listeners.set(
         event,
-        handlers.filter((h) => h !== handler)
+        handlers.filter((h) => h !== (handler as unknown))
       );
     }
   }
@@ -58,7 +58,7 @@ class MimEventBus {
    */
   emit<T extends EventName>(event: T, payload: EventPayload<T>): void {
     // Agregar a la cola para procesamiento por lotes
-    this.eventQueue.push({ event, payload, timestamp: Date.now() });
+    this.eventQueue.push({ event, payload: payload as EventPayload<EventName>, timestamp: Date.now() });
     
     // Iniciar procesamiento si no está activo
     if (!this.processingQueue) {
@@ -91,7 +91,7 @@ class MimEventBus {
     const batch = this.eventQueue.splice(0, this.BATCH_SIZE);
     
     // Agrupar eventos por tipo para procesamiento eficiente
-    const eventsByType = new Map<EventName, any[]>();
+    const eventsByType = new Map<EventName, Array<EventPayload<EventName>>>();
     batch.forEach(({ event, payload }) => {
       if (!eventsByType.has(event)) {
         eventsByType.set(event, []);

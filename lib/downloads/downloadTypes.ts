@@ -20,6 +20,10 @@ export interface DownloadTask extends DownloadIntent {
   error?: string;
   startedAt?: number;
   completedAt?: number;
+  gameVersion?: string;
+  loader?: string;
+  title?: string;
+  iconUrl?: string;
 }
 
 export interface DownloadSessionState {

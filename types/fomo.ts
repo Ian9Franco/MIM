@@ -15,7 +15,7 @@ export interface FomoGalleryItem {
   title?: string;
   description?: string;
   featured?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoVersionFile {
@@ -24,7 +24,7 @@ export interface FomoVersionFile {
   primary?: boolean;
   size?: number;
   hashes?: Record<string, string>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoDependencyItem {
@@ -36,7 +36,7 @@ export interface FomoDependencyItem {
   name?: string;
   description?: string;
   author?: string;
-  categories?: any[];
+  categories?: FomoCategory[];
   iconUrl?: string | null;
   icon_url?: string | null;
   dependencyType?: string;
@@ -49,7 +49,7 @@ export interface FomoDependencyItem {
   file_name?: string | null;
   url?: string | null;
   _source?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoVersion {
@@ -72,21 +72,21 @@ export interface FomoVersion {
   changelog_url?: string | null;
   changelogUrl?: string | null;
   dependencies?: FomoDependencyItem[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoModMember {
   name: string;
   role?: string;
   avatar_url?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoModCategoryObject {
   name?: string;
   slug?: string;
   id?: string | number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type FomoCategory = string | FomoModCategoryObject;
@@ -103,7 +103,7 @@ export interface FomoModDetails {
   author?: string;
   downloads?: number;
   follows?: number;
-  categories?: any[];
+  categories?: FomoCategory[];
   client_side?: string;
   server_side?: string;
   clientSide?: string;
@@ -114,8 +114,8 @@ export interface FomoModDetails {
   gallery?: FomoGalleryItem[];
   dependencies?: FomoDependencyItem[];
   members?: FomoModMember[];
-  license?: { name?: string; id?: string; [key: string]: any };
-  organization_info?: { slug?: string; name?: string; icon_url?: string; [key: string]: any };
+  license?: { name?: string; id?: string; [key: string]: unknown };
+  organization_info?: { slug?: string; name?: string; icon_url?: string; [key: string]: unknown };
   wiki_url?: string;
   source_url?: string;
   issues_url?: string;
@@ -127,14 +127,14 @@ export interface FomoModDetails {
     discord?: string;
   };
   source?: "modrinth" | "curseforge";
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ModStackItem {
   mod: ModHit;
   details?: FomoModDetails | null;
   deps?: FomoDependencyItem[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoUserDraftItem {
@@ -142,7 +142,7 @@ export interface FomoUserDraftItem {
   title?: string;
   iconUrl?: string;
   platform?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoUserDraft {
@@ -157,7 +157,7 @@ export interface FomoUserDraft {
   is_public?: boolean;
   user_id?: string;
   author_name?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FomoFollowedAuthor {
@@ -168,7 +168,7 @@ export interface FomoFollowedAuthor {
   iconUrl?: string;
   avatar_url?: string;
   platform?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type FomoFavoriteItem = ModHit | {
@@ -180,7 +180,7 @@ export type FomoFavoriteItem = ModHit | {
   title?: string;
   author?: string;
   iconUrl?: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export interface FomoCommunityShare {
@@ -196,20 +196,76 @@ export interface FomoCommunityShare {
   color?: string | null;
   comment?: string;
   created_at?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export interface FomoUserSession {
-  user?: {
-    id: string;
-    email?: string;
-    user_metadata?: {
-      avatar_url?: string;
-      user_name?: string;
-      full_name?: string;
-      [key: string]: any;
-    };
-    [key: string]: any;
-  } | null;
-  [key: string]: any;
+export interface CommunityDraftItem {
+  id?: string;
+  draft_id?: string;
+  projectId?: string;
+  project_id?: string;
+  mod_name?: string;
+  title?: string;
+  icon_url?: string | null;
+  iconUrl?: string | null;
+  summary?: string;
+  description?: string;
+  source?: "curseforge" | "modrinth" | string;
+  contentType?: string;
+  content_type?: string;
+  category?: string;
+  side?: "client" | "server" | "both" | string;
+  environment?: string;
+  version_id?: string;
+  versionId?: string;
+  added_by?: string;
+  created_at?: string;
+  dependencies?: Array<{ project_id?: string; dependency_type?: string; [key: string]: unknown }>;
+  [key: string]: unknown;
 }
+
+export interface CommunityDraftSnapshot {
+  id: string;
+  draft_id?: string;
+  version_number?: string | number;
+  created_at?: string;
+  manifest?: {
+    mods?: CommunityDraftItem[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface CommunityDraftMember {
+  id?: string;
+  draft_id?: string;
+  user_id: string;
+  role: "owner" | "editor" | "viewer" | string;
+  profile?: {
+    username?: string;
+    avatar_url?: string;
+    [key: string]: unknown;
+  };
+  user?: {
+    email?: string;
+    user_metadata?: Record<string, unknown>;
+  };
+  [key: string]: unknown;
+}
+
+export interface CommunityDraft {
+  id: string;
+  name: string;
+  description?: string;
+  cover_url?: string | null;
+  owner_id: string;
+  is_public?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  allow_contributions?: boolean;
+  game_version?: string;
+  loader?: string;
+  member_role?: string;
+  [key: string]: unknown;
+}
+

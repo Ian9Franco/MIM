@@ -1,22 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import { z } from "zod";
 import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/core/constants";
 import { updateModOverride } from "@/lib/modding/projectConfig";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const fixIssueBodySchema = z.object({
+  projectName: z.string().min(1),
+  version: z.string().min(1),
+  loader: z.string().min(1),
+  fileName: z.string().min(1),
+  action: z.string().min(1),
+  payload: z.record(z.unknown()).optional(),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  try {
-    const body = await req.json();
-    const { projectName, version, loader, fileName, action, payload } = body;
-
-    if (!projectName || !version || !loader || !fileName || !action) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+  { bodySchema: fixIssueBodySchema },
+  async ({ body }) => {
+    try {
+      const { projectName, version, loader, fileName, action, payload } = body;
 
     const projectModsPath = path.join(SOURCE_BASE, "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
     const loaderPath = fs.existsSync(projectModsPath)

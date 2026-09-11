@@ -7,13 +7,60 @@ import type { ModHit } from "../SpotlightMarquees";
 import { PublicProfileSkeleton } from "../FomoSkeletons";
 import { formatCommunityDate, parseShareMeta } from "./communityUtils";
 
+export interface PublicProfileData {
+  username?: string | null;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  color?: string | null;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+export interface PublicProfileFavorite {
+  id: string;
+  mod_id?: string;
+  name?: string;
+  icon_url?: string;
+  platform?: string;
+  [key: string]: unknown;
+}
+
+export interface PublicProfileAuthor {
+  id: string;
+  author_name: string;
+  icon_url?: string;
+  platform?: string;
+  [key: string]: unknown;
+}
+
+export interface PublicProfileDraft {
+  id: string;
+  name: string;
+  minecraft_version?: string;
+  loader?: string;
+  [key: string]: unknown;
+}
+
+export interface PublicProfileShare {
+  id: string;
+  mod_id?: string;
+  project_id?: string;
+  name?: string;
+  summary?: string;
+  icon_url?: string;
+  platform?: string;
+  pinned?: boolean | null;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
 interface CommunityPublicProfileProps {
-  profile: any;
-  favorites: any[];
-  authors: any[];
-  drafts: any[];
+  profile: PublicProfileData | null;
+  favorites: PublicProfileFavorite[];
+  authors: PublicProfileAuthor[];
+  drafts: PublicProfileDraft[];
   channels: string[];
-  shares?: any[];
+  shares?: PublicProfileShare[];
   loading: boolean;
   onBack: () => void;
   onOpenMod: (mod: ModHit) => void;
@@ -54,7 +101,7 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
           {(() => {
             const sortedShares = [...shares].sort((a, b) => {
               // Prefer the real DB column; fall back to the summary blob for older rows.
-              const parsePri = (row: any) => {
+              const parsePri = (row: PublicProfileShare) => {
                 // pinned = true means explicitly pinned via DB. pinned = false means explicitly NOT pinned.
                 // Only fall back to blob parsing when the column is null/undefined (pre-migration rows).
                 if (row.pinned === true) return true;
@@ -99,7 +146,7 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
                 type="button"
                 onClick={() => onOpenMod({
                   projectId: favorite.mod_id || favorite.id,
-                  title: favorite.name,
+                  title: favorite.name || "",
                   description: "",
                   iconUrl: favorite.icon_url,
                   author: "",
@@ -163,7 +210,7 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
   );
 }
 
-function ShareProfileCard({ share, onOpenMod }: { share: any; onOpenMod: (mod: ModHit) => void }) {
+function ShareProfileCard({ share, onOpenMod }: { share: PublicProfileShare; onOpenMod: (mod: ModHit) => void }) {
   const meta = parseShareMeta(share.summary);
   const isYoutube = share.platform === "youtube" || meta.projectType?.startsWith("youtube-");
   const isPriority = share.pinned === true ? true : share.pinned == null ? !!meta.priority : false;
@@ -172,7 +219,7 @@ function ShareProfileCard({ share, onOpenMod }: { share: any; onOpenMod: (mod: M
   const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
   const openMod = () => onOpenMod({
     projectId,
-    title: share.name,
+    title: share.name || "",
     description: meta.comment || "",
     iconUrl: share.icon_url,
     author: "",

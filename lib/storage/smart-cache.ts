@@ -91,7 +91,7 @@ interface SmartCacheOptions {
 }
 
 class SmartCache {
-  private backgroundRefreshQueue: Map<string, () => Promise<any>> = new Map();
+  private backgroundRefreshQueue: Map<string, () => Promise<unknown>> = new Map();
   private isRefreshing = new Set<string>();
 
   /**
@@ -122,7 +122,7 @@ class SmartCache {
 
     // Datos frescos
     if (!isExpired) {
-      return cached.data;
+      return cached.data as T;
     }
 
     // Datos stale pero válidos (stale-while-revalidate)
@@ -131,7 +131,7 @@ class SmartCache {
       if (strategy.backgroundRefresh && !this.isRefreshing.has(key)) {
         this.backgroundRefresh(key, fetcher, strategy);
       }
-      return cached.data; // Servir datos viejos mientras se actualizan
+      return cached.data as T; // Servir datos viejos mientras se actualizan
     }
 
     // Datos muy viejos - esperar refresh
@@ -141,7 +141,7 @@ class SmartCache {
   /**
    * Forzar refresh de datos específicos
    */
-  async refresh(key: string, fetcher: () => Promise<any>): Promise<any> {
+  async refresh<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
     const strategy = CACHE_STRATEGIES[this.detectType(key)];
     return this.fetchAndCache(key, fetcher, strategy || { ttl: 12 * 60 * 60 * 1000, priority: 'medium' });
   }
@@ -278,7 +278,7 @@ class SmartCache {
   /**
    * Refetch data por key (implementar según tipo)
    */
-  private async refetchByKey(key: string): Promise<any> {
+  private async refetchByKey(key: string): Promise<unknown> {
     const type = this.detectType(key);
     
     // Implementar lógica de refetch según tipo
@@ -291,7 +291,7 @@ class SmartCache {
     }
   }
 
-  private async refetchModUpdates(): Promise<any> {
+  private async refetchModUpdates(): Promise<unknown> {
     // Implementar lógica para refrescar updates
     // Esto llamaría al endpoint de check-updates
     throw new Error('Not implemented yet');
@@ -327,18 +327,18 @@ class SmartCache {
 export const smartCache = new SmartCache();
 
 // Funciones helper para uso común
-export const cachedModrinthSearch = (query: string, fetcher: () => Promise<any>) =>
+export const cachedModrinthSearch = <T = unknown>(query: string, fetcher: () => Promise<T>) =>
   smartCache.get(`modrinth_search:${query}`, fetcher, { strategy: 'modrinth_search' });
 
-export const cachedModDescription = (modId: string, fetcher: () => Promise<any>) =>
+export const cachedModDescription = <T = unknown>(modId: string, fetcher: () => Promise<T>) =>
   smartCache.get(`modrinth_description:${modId}`, fetcher, { strategy: 'modrinth_description' });
 
-export const cachedModUpdates = (mods: any[], fetcher: () => Promise<any>) =>
+export const cachedModUpdates = <T = unknown>(mods: { fileName?: string; [key: string]: unknown }[], fetcher: () => Promise<T>) =>
   smartCache.get(`mod_updates:${mods.map(m => m.fileName).join(',')}`, fetcher, { strategy: 'mod_updates' });
 
 /**
  * Cache para YouTube Showcase — TTL 2h, stale 6h, background refresh.
  * Clave: `youtube_showcase:<channelUrl>:<limit>`
  */
-export const cachedYoutubeShowcase = (channelUrl: string, limit: number, fetcher: () => Promise<any>) =>
+export const cachedYoutubeShowcase = <T = unknown>(channelUrl: string, limit: number, fetcher: () => Promise<T>) =>
   smartCache.get(`youtube_showcase:${channelUrl}:${limit}`, fetcher, { strategy: 'youtube_showcase' });

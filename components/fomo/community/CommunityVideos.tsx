@@ -5,7 +5,7 @@ import { TvMinimalPlay, Play, RefreshCw, Puzzle, Globe, ChevronDown, ChevronUp }
 import { CommunityUserAvatar } from "@/components/fomo/community/CommunityUserAvatar";
 import { CommunityDeleteButton } from "@/components/fomo/community/CommunityDeleteButton";
 
-interface ShowcaseVideo {
+export interface ShowcaseVideo {
   id: string;
   profile_id: string;
   youtube_video_id: string;

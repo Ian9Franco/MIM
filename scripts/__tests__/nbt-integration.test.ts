@@ -45,7 +45,7 @@ function assert(condition: boolean, message: string) {
   }
 }
 
-function assertEquals(actual: any, expected: any, message: string) {
+function assertEquals(actual: unknown, expected: unknown, message: string) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`${message}\nExpected: ${JSON.stringify(expected)}\nActual: ${JSON.stringify(actual)}`);
   }
@@ -56,10 +56,11 @@ async function runTest(name: string, testFn: () => Promise<void>): Promise<void>
     await testFn();
     results.push({ name, passed: true });
     log(`✓ ${name}`, "green");
-  } catch (error: any) {
-    results.push({ name, passed: false, error: error.message });
+  } catch (error: unknown) {
+    const err = error as Error;
+    results.push({ name, passed: false, error: err.message });
     log(`✗ ${name}`, "red");
-    log(`  ${error.message}`, "red");
+    log(`  ${err.message}`, "red");
   }
 }
 
@@ -249,7 +250,7 @@ async function testCoordinateTypes() {
     // Pos should be List<Double>
     const posTag = rootValue["Pos"];
     assert(posTag.type === TagType.List, "Pos should be List");
-    const posValue = posTag.value as { itemType: TagType; list: any[] };
+    const posValue = posTag.value as { itemType: TagType; list: unknown[] };
     assertEquals(
       posValue.itemType,
       TagType.Double,
@@ -271,7 +272,7 @@ async function testRotationTypes() {
 
     const rotTag = rootValue["Rotation"];
     assert(rotTag.type === TagType.List, "Rotation should be List");
-    const rotValue = rotTag.value as { itemType: TagType; list: any[] };
+    const rotValue = rotTag.value as { itemType: TagType; list: unknown[] };
     assertEquals(
       rotValue.itemType,
       TagType.Float,
@@ -319,7 +320,7 @@ async function testInventoryStructure() {
     const invTag = rootValue["Inventory"];
     assertEquals(invTag.type, TagType.List, "Inventory should be List");
 
-    const invValue = invTag.value as { itemType: TagType; list: any[] };
+    const invValue = invTag.value as { itemType: TagType; list: unknown[] };
     assertEquals(
       invValue.itemType,
       TagType.Compound,
@@ -352,7 +353,7 @@ async function testCoordinateModification() {
 
     // Modify coordinates
     const rootValue = original.value as Record<string, NBTTag>;
-    const posValue = rootValue["Pos"].value as { itemType: TagType; list: any[] };
+    const posValue = rootValue["Pos"].value as { itemType: TagType; list: unknown[] };
     posValue.list[0] = 500.25; // New X
     posValue.list[1] = 120.0; // New Y
     posValue.list[2] = 300.75; // New Z
@@ -366,7 +367,7 @@ async function testCoordinateModification() {
     const buffer = await writeNBT(original, true);
     const read = await readNBT(buffer);
     const readValue = read.value as Record<string, NBTTag>;
-    const readPos = readValue["Pos"].value as { itemType: TagType; list: any[] };
+    const readPos = readValue["Pos"].value as { itemType: TagType; list: unknown[] };
 
     assertEquals(readPos.list[0], 500.25, "X should be updated");
     assertEquals(readPos.list[1], 120.0, "Y should be updated");
@@ -412,7 +413,7 @@ async function testInventoryModification() {
   await runTest("Modify Inventory: Delete and Add Items", async () => {
     const original = createMockPlayerNBT();
     const rootValue = original.value as Record<string, NBTTag>;
-    const invValue = rootValue["Inventory"].value as { itemType: TagType; list: any[] };
+    const invValue = rootValue["Inventory"].value as { itemType: TagType; list: unknown[] };
 
     // Check initial state
     assertEquals(invValue.list.length, 2, "Should start with 2 items");
@@ -425,7 +426,7 @@ async function testInventoryModification() {
     let buffer = await writeNBT(original, true);
     let read = await readNBT(buffer);
     let readValue = read.value as Record<string, NBTTag>;
-    let readInv = readValue["Inventory"].value as { itemType: TagType; list: any[] };
+    let readInv = readValue["Inventory"].value as { itemType: TagType; list: unknown[] };
     assertEquals(readInv.list.length, 1, "Deleted item should not be present");
 
     // Add new item
@@ -452,7 +453,7 @@ async function testInventoryModification() {
     buffer = await writeNBT(read, true);
     read = await readNBT(buffer);
     readValue = read.value as Record<string, NBTTag>;
-    readInv = readValue["Inventory"].value as { itemType: TagType; list: any[] };
+    readInv = readValue["Inventory"].value as { itemType: TagType; list: unknown[] };
     assertEquals(readInv.list.length, 2, "Should have 2 items after addition");
   });
 }
@@ -501,7 +502,7 @@ async function testLargeInventory() {
   await runTest("Large Inventory: Handle 100+ items", async () => {
     const original = createMockPlayerNBT();
     const rootValue = original.value as Record<string, NBTTag>;
-    const invValue = rootValue["Inventory"].value as { itemType: TagType; list: any[] };
+    const invValue = rootValue["Inventory"].value as { itemType: TagType; list: unknown[] };
 
     // Add many items
     for (let i = 0; i < 100; i++) {
@@ -528,7 +529,7 @@ async function testLargeInventory() {
     const buffer = await writeNBT(original, true);
     const read = await readNBT(buffer);
     const readValue = read.value as Record<string, NBTTag>;
-    const readInv = readValue["Inventory"].value as { itemType: TagType; list: any[] };
+    const readInv = readValue["Inventory"].value as { itemType: TagType; list: unknown[] };
 
     assertEquals(
       readInv.list.length,

@@ -10,16 +10,44 @@ import { ModCard } from "./ModCard";
 import { PendingIncompatibleGroup } from "./parts/PendingIncompatibleGroup";
 import { usePendingFiles } from "@/hooks/library/usePendingFiles";
 
+import { PendingFile, Project } from "@/lib/core/types";
+
+export interface PendingFilesSectionProps {
+  pendingFiles: PendingFile[];
+  loading?: boolean;
+  selectedFiles: PendingFile[];
+  setSelectedFiles: React.Dispatch<React.SetStateAction<PendingFile[]>>;
+  activeProject?: Project | null;
+  onDeleteFile?: (file: PendingFile) => Promise<void> | void;
+  layout?: "sidebar" | "main";
+  modrinthStatus?: Record<string, { gameVersions?: string[]; loaders?: string[]; iconUrl?: string }>;
+  onCloseSidebar?: () => void;
+  detectedVersion?: string;
+  availableVersions?: string[];
+  setDetectedVersion?: (version: string) => void;
+}
+
 /**
  * PendingFilesSection — Gestiona los archivos detectados en la carpeta de Descargas.
  * Clasifica los archivos en compatibles e incompatibles y permite su eliminación o selección para clasificación.
  */
 export function PendingFilesSection({
-  pendingFiles, loading, selectedFiles, setSelectedFiles, activeProject, onDeleteFile, layout = "sidebar", modrinthStatus = {}, onCloseSidebar, detectedVersion, availableVersions, setDetectedVersion
-}: any) {
+  pendingFiles,
+  loading = false,
+  selectedFiles,
+  setSelectedFiles,
+  activeProject,
+  onDeleteFile,
+  layout = "sidebar",
+  modrinthStatus = {},
+  onCloseSidebar,
+  detectedVersion,
+  availableVersions,
+  setDetectedVersion,
+}: PendingFilesSectionProps) {
   
   const [openingFolder, setOpeningFolder] = useState(false);
-  const { compatibleFiles, incompatibleFiles, conflicts, deletingFiles, filesToDelete, setFilesToDelete, setDeletingFiles } = usePendingFiles(pendingFiles, activeProject, onDeleteFile, detectedVersion, modrinthStatus);
+  const { compatibleFiles, incompatibleFiles, conflicts, deletingFiles, filesToDelete, setFilesToDelete, setDeletingFiles } = usePendingFiles(pendingFiles, activeProject || null, onDeleteFile, detectedVersion, modrinthStatus);
 
   // Atajo de teclado: D para seleccionar todo
   React.useEffect(() => {
@@ -57,13 +85,13 @@ export function PendingFilesSection({
 
   const handleConfirmDelete = async () => {
     if (filesToDelete.length === 0 || !onDeleteFile) return;
-    const paths = filesToDelete.map((f: any) => f.path);
-    paths.forEach((p: string) => setDeletingFiles((prev: any) => ({ ...prev, [p]: true })));
+    const paths = filesToDelete.map((f) => f.path);
+    paths.forEach((p: string) => setDeletingFiles((prev) => ({ ...prev, [p]: true })));
     try {
       for (const file of filesToDelete) await onDeleteFile(file);
-      setSelectedFiles((prev: any) => prev.filter((s: any) => !paths.includes(s.path)));
+      setSelectedFiles((prev) => prev.filter((s) => !paths.includes(s.path)));
     } finally {
-      paths.forEach((p: string) => setDeletingFiles((prev: any) => ({ ...prev, [p]: false })));
+      paths.forEach((p: string) => setDeletingFiles((prev) => ({ ...prev, [p]: false })));
       setFilesToDelete([]);
     }
   };
@@ -144,18 +172,18 @@ export function PendingFilesSection({
                   iconBase64={f.meta?.iconBase64 || modrinthStatus[f.path]?.iconUrl}
                   loader={f.meta?.loader && f.meta.loader !== "unknown" ? f.meta.loader : modrinthStatus[f.path]?.loaders?.[0] || "unknown"}
                   projectType={f.meta?.projectType}
-                  isSelected={selectedFiles.some((p: any) => p.path === f.path)} 
-                  onClick={() => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
+                  isSelected={selectedFiles.some((p) => p.path === f.path)} 
+                  onClick={() => setSelectedFiles((prev) => prev.find((p) => p.path === f.path) ? prev.filter((p) => p.path !== f.path) : [...prev, f])}
                   activeVersion={activeProject?.version} activeLoader={activeProject?.loader} isPending={true}
                   onDelete={() => setFilesToDelete([f])} isDeleting={deletingFiles[f.path]} conflict={conflicts[f.path]}
-                  confidence={(f.meta as any)?.confidence} warnings={(f.meta as any)?.warnings}
+                  confidence={f.meta?.confidence} warnings={f.meta?.warnings}
                 />
               ))
             )}
             <PendingIncompatibleGroup 
-              files={incompatibleFiles} activeProject={activeProject} modrinthStatus={modrinthStatus}
-              conflicts={conflicts} onDeleteRequest={(f: any) => setFilesToDelete([f])} deletingFiles={deletingFiles}
-              onSelect={(f: any) => setSelectedFiles((prev: any) => prev.find((p: any) => p.path === f.path) ? prev.filter((p: any) => p.path !== f.path) : [...prev, f])}
+              files={incompatibleFiles} activeProject={activeProject || undefined} modrinthStatus={modrinthStatus}
+              conflicts={conflicts} onDeleteRequest={(f) => setFilesToDelete([f])} deletingFiles={deletingFiles}
+              onSelect={(f) => setSelectedFiles((prev) => prev.find((p) => p.path === f.path) ? prev.filter((p) => p.path !== f.path) : [...prev, f])}
               selectedFiles={selectedFiles}
             />
           </>

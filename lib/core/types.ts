@@ -212,19 +212,23 @@ export interface TweakRecommendation {
 export interface TweakData {
   optionsExists: boolean;
   keybinds: Keybind[];
-  keybindsGrouped?: any;
-  keybindConflicts?: any[];
+  keybindsGrouped?: Record<string, Keybind[]>;
+  keybindConflicts?: Array<{ id: string; key: string; conflictingWith: string[] }>;
   settings: Record<string, string>;
   resourcePacks: {
     active: string[];
     available: string[];
-    issues?: any[];
-    autoFixable?: any[];
+    issues?: Array<{ pack: string; issue: string; severity?: string }>;
+    autoFixable?: Array<{ pack: string; fix: string }>;
+    visualStack?: unknown[];
   };
   shadersInGame: { name: string; size: number }[];
   recommendations: TweakRecommendation[];
   snapshots: TweakSnapshot[];
   modCount: number;
+  globalModCount?: number;
+  minecraftPathUsed?: string;
+  installations?: Array<{ path: string; name?: string; version?: string; isSelected?: boolean }>;
   hardware?: {
     profile: string;
     ram: number;

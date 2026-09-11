@@ -44,7 +44,7 @@ export class CurseForgeProvider implements DownloadProvider {
 
     const hashes: Record<string, string> = {};
     if (targetFile.hashes) {
-        targetFile.hashes.forEach((h: any) => {
+        (targetFile.hashes as Array<{ algo: number; value: string }>).forEach((h) => {
             if (h.algo === 1) hashes["sha1"] = h.value;
             if (h.algo === 2) hashes["md5"] = h.value;
         });
@@ -69,10 +69,10 @@ export class CurseForgeProvider implements DownloadProvider {
     const title = data.name || task.modName || "";
     const iconUrl = data.logo?.thumbnailUrl || data.logo?.url || "";
 
-    (task as any).title = title;
-    (task as any).iconUrl = iconUrl;
-    (task as any).gameVersion = gameVersion;
-    (task as any).loader = loader;
+    task.title = title;
+    task.iconUrl = iconUrl;
+    task.gameVersion = gameVersion;
+    task.loader = loader;
 
     return {
         url: targetFile.downloadUrl,
@@ -91,10 +91,10 @@ export class CurseForgeProvider implements DownloadProvider {
         projectId: task.projectId,
         projectType: task.projectType,
         hashes,
-        iconUrl: (task as any).iconUrl,
-        loader: (task as any).loader,
-        gameVersion: (task as any).gameVersion,
-        title: (task as any).title || task.modName
+        iconUrl: task.iconUrl,
+        loader: task.loader,
+        gameVersion: task.gameVersion,
+        title: task.title || task.modName
       })
     });
 

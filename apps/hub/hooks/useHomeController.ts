@@ -7,6 +7,15 @@ import { supabase } from "../lib/supabaseClient";
 import type { CollectionItem } from "../app/types";
 import { attachDependencyTypes, buildDependencyTypeMap } from "../lib/dependencies";
 import { fetchUserShares, isFavoritePlatformConstraintError, sortSharesByPriority } from "../lib/shareMeta";
+import type {
+  FomoModDetails,
+  FomoDependencyItem,
+  ModStackItem,
+  FomoFavoriteItem,
+  FomoCommunityShare,
+  FomoFollowedAuthor,
+} from "../types/fomo";
+import type { Session } from "@supabase/supabase-js";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
 
@@ -81,65 +90,67 @@ const FALLBACK_CURSEFORGE_COLLECTIONS: CollectionItem[] = [
   },
 ];
 
-function normalizeFavorite(fav: any): ModHit {
-  let meta: any = {};
+function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
+  let meta: Record<string, unknown> = {};
+  const summaryStr = typeof fav.summary === "string" ? fav.summary : "";
   try {
-    meta = fav.summary && fav.summary.trim().startsWith("{") ? JSON.parse(fav.summary) : {};
+    meta = summaryStr.trim().startsWith("{") ? JSON.parse(summaryStr) : {};
   } catch (e) {
     console.debug("[useHomeController] Could not parse favorite summary JSON:", e);
   }
-  const projectId = fav.project_id || fav.mod_id || fav.id;
-  const projectType = fav.project_type || meta.project_type || fav.content_type || "mod";
+  const projectId = String(fav.project_id || (fav as ModHit).projectId || (fav as Record<string, unknown>).mod_id || (fav as Record<string, unknown>).id || "");
+  const projectType = String(fav.project_type || meta.project_type || (fav as Record<string, unknown>).content_type || "mod");
   
-  let title = fav.name || fav.mod_name || projectId;
-  let author = fav.author || "Comunidad";
-  if (fav.name && fav.name.includes(" ::: ")) {
-    const parts = fav.name.split(" ::: ");
-    title = parts[0];
-    author = parts[1];
+  const rawName = String(fav.name || (fav as ModHit).title || (fav as Record<string, unknown>).mod_name || projectId);
+  let title = rawName;
+  let author = String(fav.author || "Comunidad");
+  if (rawName.includes(" ::: ")) {
+    const parts = rawName.split(" ::: ");
+    title = parts[0] ?? rawName;
+    author = parts[1] ?? author;
   }
 
   return {
     projectId,
     title,
-    description: fav.description || meta.description || fav.summary || "",
-    iconUrl: fav.icon_url,
+    description: String(fav.description || meta.description || summaryStr || ""),
+    iconUrl: typeof fav.icon_url === "string" ? fav.icon_url : typeof (fav as ModHit).iconUrl === "string" ? (fav as ModHit).iconUrl : undefined,
     author,
     projectType,
-    categories: fav.categories || meta.categories || [],
-    url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
-    _source: fav.platform || fav.source || "modrinth",
+    categories: Array.isArray(fav.categories) ? (fav.categories as string[]) : (Array.isArray(meta.categories) ? meta.categories as string[] : []),
+    url: typeof fav.url === "string" ? fav.url : typeof meta.url === "string" ? meta.url : `https://modrinth.com/${projectType}/${projectId}`,
+    _source: (fav as ModHit)._source || (typeof (fav as Record<string, unknown>).platform === "string" ? (fav as Record<string, unknown>).platform : typeof (fav as Record<string, unknown>).source === "string" ? (fav as Record<string, unknown>).source : "modrinth"),
   };
 }
 
 export function useHomeController() {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedMod, setSelectedMod] = useState<ModHit | null>(null);
-  const [selectedModDetails, setSelectedModDetails] = useState<any>(null);
-  const [selectedModDeps, setSelectedModDeps] = useState<any[]>([]);
+  const [selectedModDetails, setSelectedModDetails] = useState<FomoModDetails | null>(null);
+  const [selectedModDeps, setSelectedModDeps] = useState<FomoDependencyItem[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [modalTab, setModalTab] = useState<"summary" | "gallery" | "desc" | "versions" | "deps">("summary");
-  const [modStack, setModStack] = useState<any[]>([]);
+  const [modStack, setModStack] = useState<ModStackItem[]>([]);
   const [activeStackIndex, setActiveStackIndex] = useState(-1);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const collectionsLastLoadedRef = useRef(0);
   const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, any> | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [showcaseChannels, setShowcaseChannels] = useState<string[]>([]);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
-  const [userFavorites, setUserFavorites] = useState<any[]>([]);
-  const [userShares, setUserShares] = useState<any[]>([]);
-  const [userFollowedAuthors, setUserFollowedAuthors] = useState<any[]>([]);
+  const [userFavorites, setUserFavorites] = useState<FomoFavoriteItem[]>([]);
+  const [userShares, setUserShares] = useState<FomoCommunityShare[]>([]);
+  const [userFollowedAuthors, setUserFollowedAuthors] = useState<FomoFollowedAuthor[]>([]);
   const [loadingUserData, setLoadingUserData] = useState(false);
 
   const [updatedMods, setUpdatedMods] = useState<ModHit[]>(mockUpdatedMods);
@@ -157,11 +168,11 @@ export function useHomeController() {
 
   const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
   const [customAlert, setCustomAlert] = useState<{ title: string; message: string } | null>(null);
-  const [youtubePosts, setYoutubePosts] = useState<any[]>([]);
+  const [youtubePosts, setYoutubePosts] = useState<Array<Record<string, unknown>>>([]);
   const [loadingYoutube, setLoadingYoutube] = useState(false);
   const [currentChannel, setCurrentChannel] = useState("https://www.youtube.com/@EnderVerseMC");
   const [youtubeFeedType, setYoutubeFeedType] = useState<"posts" | "videos" | "shorts">("posts");
-  const [followedChannels, setFollowedChannels] = useState<any[]>([
+  const [followedChannels, setFollowedChannels] = useState<Array<{ name: string; url: string; visible?: boolean }>>([
     { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite", visible: true },
     { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC", visible: true },
   ]);
@@ -197,7 +208,7 @@ export function useHomeController() {
     showAlert,
   });
 
-  const ensureMaxThreeVisible = useCallback((channels: any[]) => {
+  const ensureMaxThreeVisible = useCallback((channels: Array<{ name: string; url: string; visible?: boolean }>) => {
     if (!Array.isArray(channels)) return [];
     const hasVisible = channels.some(c => c.visible === true);
     if (!hasVisible && channels.length > 0) {
@@ -215,8 +226,8 @@ export function useHomeController() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("mim-theme") as any;
-    if (saved && ["official", "vampire", "modern"].includes(saved)) {
+    const saved = localStorage.getItem("mim-theme");
+    if (saved && (saved === "official" || saved === "vampire" || saved === "modern")) {
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
     }
@@ -401,8 +412,9 @@ export function useHomeController() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-    } catch (err: any) {
-      showAlert("Error de autenticación", err.message || "Error en la autenticación");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error en la autenticación";
+      showAlert("Error de autenticación", message);
     } finally {
       setAuthLoading(false);
     }
@@ -411,7 +423,7 @@ export function useHomeController() {
   const syncFollowedChannels = async (channels: typeof followedChannels) => {
     if (session?.user?.id) {
       await supabase.from("profiles").update({ banner_meta: { ...profile?.banner_meta, youtube_channels: channels } }).eq("id", session.user.id);
-      setProfile((prev: any) => ({ ...prev, banner_meta: { ...prev?.banner_meta, youtube_channels: channels } }));
+      setProfile((prev: Record<string, any> | null) => ({ ...prev, banner_meta: { ...(prev?.banner_meta as Record<string, any> | undefined), youtube_channels: channels } }));
     } else {
       localStorage.setItem("mim_web_youtube_channels", JSON.stringify(channels));
     }
@@ -541,17 +553,17 @@ export function useHomeController() {
   }, []);
 
   const loadCollections = useCallback(async () => {
-    const applyCachedCollections = (payload: any) => {
-      if (Array.isArray(payload?.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured);
-      if (Array.isArray(payload?.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured);
-      if (Array.isArray(payload?.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections);
+    const applyCachedCollections = (payload: Record<string, unknown>) => {
+      if (Array.isArray(payload?.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured as CollectionItem[]);
+      if (Array.isArray(payload?.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured as CollectionItem[]);
+      if (Array.isArray(payload?.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections as CollectionItem[]);
       if (typeof payload?.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
-      if (Array.isArray(payload?.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods);
+      if (Array.isArray(payload?.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods as ModHit[]);
       if (typeof payload?.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
     };
 
     const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);
-    let cachedPayload: any = null;
+    let cachedPayload: Record<string, unknown> | null = null;
     if (cachedRaw) {
       try {
         cachedPayload = JSON.parse(cachedRaw);
@@ -580,7 +592,7 @@ export function useHomeController() {
       setModrinthFeatured(mrColls);
       setCurseForgeFeatured(cfPicks);
       setCurseForgeCollections(cfCollections);
-      let latestFeatured: any[] = [];
+      let latestFeatured: ModHit[] = [];
       if (mrColls[0]) {
         setLatestCollectionName(mrColls[0].name);
         if (Array.isArray(mrRes.latestFeaturedMods) && mrRes.latestFeaturedMods.length > 0) {
@@ -635,16 +647,16 @@ export function useHomeController() {
         fetch(`https://api.modrinth.com/v2/search?index=updated&limit=12&facets=${facets}`).then((r) => r.json()),
         fetch(`https://api.modrinth.com/v2/search?index=newest&limit=12&facets=${facets}`).then((r) => r.json()),
       ]);
-      const mapHits = (hits: any[], backup: ModHit[]) => hits?.length ? hits.map((m: any) => ({
-        projectId: m.project_id,
-        title: m.title,
-        description: m.description,
-        iconUrl: m.icon_url,
-        author: m.author,
-        projectType: m.project_type,
-        categories: m.categories,
-        url: `https://modrinth.com/${m.project_type}/${m.slug}`,
-        _source: "modrinth",
+      const mapHits = (hits: Array<Record<string, unknown>>, backup: ModHit[]) => hits?.length ? hits.map((m) => ({
+        projectId: String(m.project_id || m.id || ""),
+        title: String(m.title || ""),
+        description: String(m.description || ""),
+        iconUrl: typeof m.icon_url === "string" ? m.icon_url : undefined,
+        author: String(m.author || "Comunidad"),
+        projectType: String(m.project_type || "mod"),
+        categories: Array.isArray(m.categories) ? (m.categories as string[]) : [],
+        url: `https://modrinth.com/${String(m.project_type || "mod")}/${String(m.slug || m.project_id || "")}`,
+        _source: "modrinth" as const,
       })) : backup;
       setUpdatedMods(mapHits(updatedRes.hits, mockUpdatedMods));
       setNewestMods(mapHits(newestRes.hits, mockNewestMods));
@@ -709,8 +721,8 @@ export function useHomeController() {
     setLoadingDetails(true);
     setModalTab("summary");
 
-    let details = null;
-    let depsData: any[] = [];
+    let details: FomoModDetails | null = null;
+    let depsData: FomoDependencyItem[] = [];
     let realAuthor: string | null = null;
 
     try {
@@ -722,8 +734,8 @@ export function useHomeController() {
           depsData = data.dependencies || [];
           setSelectedModDetails(details);
           setSelectedModDeps(depsData);
-          if (details?.authors && details.authors.length > 0) {
-            realAuthor = details.authors[0].name;
+          if (details?.authors && Array.isArray(details.authors) && details.authors.length > 0) {
+            realAuthor = (details.authors[0] as { name?: string }).name || null;
           }
         }
       } else {
@@ -775,9 +787,9 @@ export function useHomeController() {
         normalizedMod.author = realAuthor;
         modChanged = true;
       }
-      const resolvedIcon = details?.icon_url || details?.iconUrl;
+      const resolvedIcon = (details as Record<string, unknown> | null)?.icon_url || details?.iconUrl;
       if (resolvedIcon && !normalizedMod.iconUrl) {
-        normalizedMod.iconUrl = resolvedIcon;
+        normalizedMod.iconUrl = typeof resolvedIcon === "string" ? resolvedIcon : undefined;
         modChanged = true;
       }
       if (modChanged) {
@@ -801,9 +813,9 @@ export function useHomeController() {
     const item = modStack[index];
     setActiveStackIndex(index);
     setSelectedMod(item.mod);
-    setSelectedModDetails(item.details);
-    setSelectedModDeps(item.deps);
-    setModalTab(item.tab);
+    setSelectedModDetails(item.details ?? null);
+    setSelectedModDeps(item.deps ?? []);
+    setModalTab((item as { tab?: "summary" | "gallery" | "desc" | "versions" | "deps" }).tab || "summary");
   };
 
   const onToggleFavorite = async (mod: ModHit) => {
@@ -849,9 +861,10 @@ export function useHomeController() {
       const { error } = await request;
       if (error) throw error;
       await loadUserData(userId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserFavorites(previousFavorites);
-      showAlert("Error", `Error al guardar favorito: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al guardar favorito: ${message}`);
     }
   };
 
@@ -878,8 +891,9 @@ export function useHomeController() {
       const { error } = await request;
       if (error) throw error;
       await loadUserData(session.user.id, true);
-    } catch (err: any) {
-      showAlert("Error", `Error al seguir autor: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al seguir autor: ${message}`);
     }
   };
 
@@ -904,8 +918,9 @@ export function useHomeController() {
         return isUuid ? itemId !== shareId : itemModId !== shareId;
       }));
       await loadUserData(session.user.id, true);
-    } catch (err: any) {
-      showAlert("Error", `Error al eliminar compartido: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al eliminar compartido: ${message}`);
     }
   };
 
@@ -938,13 +953,14 @@ export function useHomeController() {
       }
       const { error } = await query.select("id,pinned").single();
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserShares(previousShares);
-      showAlert("Error", `No se pudo actualizar la prioridad: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `No se pudo actualizar la prioridad: ${message}`);
     }
   };
 
-  const shareYoutubePost = async (post: any) => {
+  const shareYoutubePost = async (post: Record<string, any>) => {
     if (!session?.user?.id) {
       showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
       return;
@@ -1021,9 +1037,10 @@ export function useHomeController() {
         if (fallbackError) throw fallbackError;
       }
       await loadUserData(userId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserShares(previousShares);
-      showAlert("Error", `No se pudo compartir: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `No se pudo compartir: ${message}`);
     }
   };
 

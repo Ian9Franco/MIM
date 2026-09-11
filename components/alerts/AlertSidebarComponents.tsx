@@ -133,14 +133,34 @@ export function ActionButton({ primary, danger, onClick, disabled, icon, label, 
   );
 }
 
+import type { LibraryFile } from "@/lib/core/types";
+import type { Incident } from "@/lib/intelligence/incidentManager";
+
 // ── UpdateCard ───────────────────────────────────────────────────────────────
+
+export interface UpdateCardStatusItem {
+  isNewChannelVideo?: boolean;
+  isNewAuthorMod?: boolean;
+  title?: string;
+  slug?: string;
+  thumbnail?: string;
+  iconUrl?: string;
+  author?: string;
+  latestVersion?: string;
+  downloadUrl?: string;
+  changelog?: string;
+  projectId?: string;
+  channelUrl?: string;
+  videoId?: string;
+  [key: string]: unknown;
+}
 
 interface UpdateCardProps {
   path: string;
-  s: any;
+  s: UpdateCardStatusItem;
   type: "mod" | "collection" | "shader" | "resourcepack" | "showcase";
-  library: any[];
-  followedMods?: any[];
+  library: LibraryFile[];
+  followedMods?: Array<{ project_id?: string; icon_url?: string }>;
   downloadingMods: Record<string, boolean>;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
   handleDismissUpdate: (path: string) => void;
@@ -206,7 +226,9 @@ export function UpdateCard({
             window.dispatchEvent(new CustomEvent("fomo-unread-channels-updated"));
             
             // Open video
-            window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: s.videoId } }));
+            if (s.videoId) {
+              window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: s.videoId } }));
+            }
             setSidebarOpen(false);
           }} icon={<TvMinimalPlay className="w-3.5 h-3.5" />} label="Reproducir" /><ActionButton onClick={() => handleDismissUpdate(path)} label="Descartar" /></>
         ) : (s.isNewAuthorMod ? (
@@ -219,7 +241,7 @@ export function UpdateCard({
             window.dispatchEvent(new CustomEvent("fomo-unread-authors-updated"));
             
             // Open FOMO details
-            const modHit = { projectId: path.replace("author-new-mod:", ""), title: s.title, slug: s.slug || "", author: s.author, description: s.description || "", iconUrl: s.iconUrl, url: `https://modrinth.com/mod/${s.slug}`, downloads: 0, follows: 0, _source: "modrinth", projectType: "mod" };
+            const modHit = { projectId: path.replace("author-new-mod:", ""), title: s.title || "", slug: s.slug || "", author: s.author || "", description: (s.description as string) || "", iconUrl: s.iconUrl, url: `https://modrinth.com/mod/${s.slug}`, downloads: 0, follows: 0, _source: "modrinth", projectType: "mod" };
             window.dispatchEvent(new CustomEvent("fomo-toggle", { detail: true }));
             setTimeout(() => window.dispatchEvent(new CustomEvent("fomo-open-details", { detail: modHit })), 400);
             setSidebarOpen(false);
@@ -251,7 +273,7 @@ export function UpdateCard({
 
 // ── EmptyState ───────────────────────────────────────────────────────────────
 
-export function EmptyState({ icon: Icon, title, desc, color }: { icon: any, title: string, desc: string, color?: string }) {
+export function EmptyState({ icon: Icon, title, desc, color }: { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>, title: string, desc: string, color?: string }) {
   return (
     <div className="text-center py-12 flex flex-col items-center justify-center min-h-[300px]">
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-110" style={{ background: color ? `${color}1f` : "var(--color-success-bg)", border: `1px solid ${color ? color + '33' : 'var(--color-success-border)'}` }}>
@@ -266,7 +288,7 @@ export function EmptyState({ icon: Icon, title, desc, color }: { icon: any, titl
 // ── IncidentCard ──────────────────────────────────────────────────────────────
 
 interface IncidentCardProps {
-  inc: any;
+  inc: Incident;
   onResolve: (id: string) => void;
   onViewSage: () => void;
 }

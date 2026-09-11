@@ -31,9 +31,9 @@ export async function fetchCollectionMods(id: string): Promise<{ mods: ModHit[],
       const resLocal = await fetch("/api/local-collections");
       if (resLocal.ok) {
         const data = await resLocal.json();
-        const coll = data.collections.find((c: any) => c.id === id);
+        const coll = (data.collections as CollectionEntry[] || []).find((c) => c.id === id);
         if (coll && coll.projects && coll.projects.length > 0) {
-          const pIds = coll.projects.map((p: any) => p.projectId);
+          const pIds = coll.projects.map((p) => p.projectId);
           return await fetchModsByIds(pIds);
         }
       }
@@ -166,22 +166,22 @@ export async function fetchOfficialCollections(): Promise<{ collections: Collect
       throw new Error("Expected array of collections");
     }
 
-    const mapped = data.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      projectCount: Array.isArray(c.projects) ? c.projects.length : (c.project_count ?? 0),
-      iconUrl: c.icon_url,
+    const mapped: Array<CollectionEntry & { created?: string }> = data.map((c: Record<string, unknown>) => ({
+      id: String(c.id || ""),
+      name: String(c.name || ""),
+      description: String(c.description || ""),
+      projectCount: Array.isArray(c.projects) ? c.projects.length : (typeof c.project_count === "number" ? c.project_count : 0),
+      iconUrl: typeof c.icon_url === "string" ? c.icon_url : null,
       isLocal: false,
       source: "modrinth" as const,
-      webUrl: `https://modrinth.com/collection/${c.slug || c.id}`,
-      visibility: c.status,
-      created: c.created,
-      previewIcons: c.previewIcons
+      webUrl: `https://modrinth.com/collection/${String(c.slug || c.id || "")}`,
+      visibility: (typeof c.status === "string" ? c.status : "public") as "private" | "unlisted" | "public" | "unknown",
+      created: typeof c.created === "string" ? c.created : undefined,
+      previewIcons: Array.isArray(c.previewIcons) ? (c.previewIcons as string[]) : undefined
     }));
     
     // Sort by created descending so the latest month (Vol. XX) is first
-    mapped.sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    mapped.sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime());
     
     return { collections: mapped, error: null };
   } catch (err) {
@@ -202,8 +202,9 @@ export async function fetchCurseForgeFeatured(): Promise<{ featured: ModHit[], p
       recentlyUpdated: data.recentlyUpdated || [], 
       error: null 
     };
-  } catch (err: any) {
-    return { featured: [], popular: [], recentlyUpdated: [], error: err.message || "Error al cargar destacados de CurseForge" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al cargar destacados de CurseForge";
+    return { featured: [], popular: [], recentlyUpdated: [], error: message };
   }
 }
 
@@ -213,8 +214,9 @@ export async function fetchCurseForgePicks(): Promise<{ picks: CollectionEntry[]
     if (!res.ok) throw new Error("Error fetching picks");
     const data = await res.json();
     return { picks: data.picks || [], error: null };
-  } catch (err: any) {
-    return { picks: [], error: err.message || "Error al cargar CurseForge Picks" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al cargar CurseForge Picks";
+    return { picks: [], error: message };
   }
 }
 
@@ -224,8 +226,9 @@ export async function fetchCurseForgePickMods(slug: string): Promise<{ mods: Mod
     if (!res.ok) throw new Error("Error fetching pick mods");
     const data = await res.json();
     return { mods: data.mods || [], error: null };
-  } catch (err: any) {
-    return { mods: [], error: err.message || "Error al cargar mods del pick" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al cargar mods del pick";
+    return { mods: [], error: message };
   }
 }
 

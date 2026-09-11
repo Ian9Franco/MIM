@@ -12,9 +12,38 @@ import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
 
+export interface ModpackDependency {
+  projectId: string;
+  dependencyType: string;
+}
+
+interface CurseForgeFileHash {
+  algo: number;
+  value: string;
+}
+
+interface CurseForgeFileDep {
+  modId: number;
+  relationType: number;
+}
+
+interface CurseForgeFileItem {
+  id: number;
+  displayName: string;
+  fileName: string;
+  releaseType: number;
+  gameVersions: string[];
+  fileDate: string;
+  downloadCount?: number;
+  downloadUrl: string;
+  fileLength: number;
+  hashes?: CurseForgeFileHash[];
+  dependencies?: CurseForgeFileDep[];
+}
+
 const CACHE_FILE = path.join(getPortableDir(), "cache", "fomo_modpack_dependencies_cache.json");
 
-function getModpackCache(): Record<string, any[]> {
+function getModpackCache(): Record<string, ModpackDependency[]> {
   if (fs.existsSync(CACHE_FILE)) {
     try {
       return JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
@@ -25,7 +54,7 @@ function getModpackCache(): Record<string, any[]> {
   return {};
 }
 
-function saveModpackCache(cache: Record<string, any[]>) {
+function saveModpackCache(cache: Record<string, ModpackDependency[]>) {
   try {
     const dir = path.dirname(CACHE_FILE);
     if (!fs.existsSync(dir)) {
@@ -37,7 +66,7 @@ function saveModpackCache(cache: Record<string, any[]>) {
   }
 }
 
-async function fetchModpackDependencies(projectId: string, fileId: string, fileName: string): Promise<any[]> {
+async function fetchModpackDependencies(projectId: string, fileId: string, fileName: string): Promise<ModpackDependency[]> {
   const cache = getModpackCache();
   const cacheKey = `${projectId}_${fileId}`;
   if (cache[cacheKey]) {
@@ -63,7 +92,7 @@ async function fetchModpackDependencies(projectId: string, fileId: string, fileN
     }
     const manifest = JSON.parse(manifestEntry.getData().toString("utf-8"));
     const files = manifest.files || [];
-    const deps = files.map((f: any) => ({
+    const deps: ModpackDependency[] = files.map((f: { projectID: number; required?: boolean }) => ({
       projectId: String(f.projectID),
       dependencyType: f.required !== false ? "required" : "optional",
     }));
@@ -138,13 +167,13 @@ export const GET = withApiGuard(
       const cfLoaderId = LOADER_TO_CF_ID[loader];
 
       // Mapear al formato VersionEntry unificado
-      const versions = (data.data || []).map((v: any) => ({
+      const versions = (data.data || []).map((v: CurseForgeFileItem) => ({
         id: String(v.id),
         versionNumber: v.displayName,
         name: v.fileName,
-        versionType: v.releaseType === 1 ? "release" : v.releaseType === 2 ? "beta" : "alpha",
-        gameVersions: v.gameVersions,
-        loaders: v.gameVersions.filter((gv: string) => ["Forge", "Fabric", "NeoForge", "Quilt"].includes(gv)),
+        versionType: (v.releaseType === 1 ? "release" : v.releaseType === 2 ? "beta" : "alpha") as "release" | "beta" | "alpha",
+        gameVersions: v.gameVersions || [],
+        loaders: (v.gameVersions || []).filter((gv: string) => ["Forge", "Fabric", "NeoForge", "Quilt"].includes(gv)),
         datePublished: v.fileDate,
         downloads: v.downloadCount || 0,
         primaryFile: {
@@ -152,27 +181,27 @@ export const GET = withApiGuard(
           filename: v.fileName,
           primary: true,
           size: v.fileLength,
-          hashes: v.hashes?.reduce((acc: any, h: any) => ({ ...acc, [h.algo === 1 ? "sha1" : "md5"]: h.value }), {}),
+          hashes: (v.hashes || []).reduce((acc: Record<string, string>, h: CurseForgeFileHash) => ({ ...acc, [h.algo === 1 ? "sha1" : "md5"]: h.value }), {}),
         },
-        dependencies: (v.dependencies || []).map((d: any) => ({
+        dependencies: (v.dependencies || []).map((d: CurseForgeFileDep) => ({
           projectId: String(d.modId),
-          dependencyType: d.relationType === 3 ? "required" : 
-                         (d.relationType === 1 || d.relationType === 6) ? "embedded" : 
-                         d.relationType === 5 ? "incompatible" : "optional",
+          dependencyType: d.relationType === 3 ? ("required" as const) : 
+                         (d.relationType === 1 || d.relationType === 6) ? ("embedded" as const) : 
+                         d.relationType === 5 ? ("incompatible" as const) : ("optional" as const),
         })),
       }));
 
       // Filtrar por versión y loader si se proveen
       let filtered = versions;
       if (gameVersion) {
-        filtered = filtered.filter((v: any) => v.gameVersions.includes(gameVersion));
+        filtered = filtered.filter((v: (typeof versions)[0]) => v.gameVersions.includes(gameVersion));
       }
       
       // El filtro de loader solo aplica para mods
       if (cfLoaderId && projectType === "mod") {
         const loaderName = Object.keys(LOADER_TO_CF_ID).find(k => LOADER_TO_CF_ID[k] === cfLoaderId);
         if (loaderName) {
-          filtered = filtered.filter((v: any) => 
+          filtered = filtered.filter((v: (typeof versions)[0]) => 
             v.gameVersions.some((gv: string) => gv.toLowerCase() === loaderName.toLowerCase())
           );
         }
@@ -184,7 +213,10 @@ export const GET = withApiGuard(
           if (!v.dependencies || v.dependencies.length === 0) {
             const modpackDeps = await fetchModpackDependencies(resolvedId, v.id, v.primaryFile.filename);
             if (modpackDeps.length > 0) {
-              v.dependencies = modpackDeps;
+              v.dependencies = modpackDeps.map(d => ({
+                projectId: d.projectId,
+                dependencyType: d.dependencyType as "required" | "optional" | "incompatible" | "embedded"
+              }));
             }
           }
         }
@@ -192,8 +224,8 @@ export const GET = withApiGuard(
 
       // Resolver nombres de dependencias
       const depIds = new Set<number>();
-      filtered.forEach((v: any) => {
-        v.dependencies?.forEach((d: any) => { depIds.add(Number(d.projectId)); });
+      filtered.forEach((v: (typeof versions)[0]) => {
+        v.dependencies?.forEach((d: { projectId: string }) => { depIds.add(Number(d.projectId)); });
       });
 
       const projectMeta: Record<string, { title: string; url: string }> = {};
@@ -209,8 +241,8 @@ export const GET = withApiGuard(
           });
           if (pRes.ok) {
             const pData = await pRes.json();
-            (pData.data || []).forEach((p: any) => {
-              projectMeta[p.id.toString()] = { title: p.name, url: p.links?.websiteUrl };
+            (pData.data || []).forEach((p: { id: number; name: string; links?: { websiteUrl?: string } }) => {
+              projectMeta[p.id.toString()] = { title: p.name, url: p.links?.websiteUrl || "" };
             });
           }
         } catch (e) {
@@ -219,8 +251,8 @@ export const GET = withApiGuard(
       }
 
       // Aplicar títulos y urls
-      filtered.forEach((v: any) => {
-        v.dependencies.forEach((d: any) => {
+      filtered.forEach((v: (typeof versions)[0]) => {
+        v.dependencies.forEach((d: { projectId: string; title?: string; url?: string }) => {
           const meta = projectMeta[d.projectId];
           if (meta) {
             d.title = meta.title;
@@ -233,7 +265,7 @@ export const GET = withApiGuard(
 
       // Priorizar ZIPs y entradas que coincidan con el tipo para datapacks/resourcepacks
       if (projectType === "datapack" || projectType === "resourcepack") {
-        const matching = filtered.filter((v: any) => {
+        const matching = filtered.filter((v: (typeof versions)[0]) => {
           const nameMatch = v.name?.toLowerCase().includes(projectType) || v.versionNumber?.toLowerCase().includes(projectType);
           const fileMatch = v.primaryFile.filename.toLowerCase().endsWith(".zip");
           const loaderMatch = v.gameVersions.some((gv: string) => gv.toLowerCase() === projectType.toLowerCase());

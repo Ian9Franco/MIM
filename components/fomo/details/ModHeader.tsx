@@ -9,8 +9,16 @@ import { openExternal } from "@/utils/format";
 import type { ModHit } from "@/lib/core/types";
 import type { FomoFollowedAuthor, FomoFavoriteItem, FomoCommunityShare, FomoCategory } from "@/types/fomo";
 
+export interface ModHeaderSharingInfo {
+  profiles?: {
+    username?: string;
+    avatar_url?: string;
+    color?: string | null;
+  } | null;
+}
+
 export interface ModHeaderProps {
-  mod: ModHit & { id?: string; sharingInfo?: any; [key: string]: any };
+  mod: ModHit & { id?: string; sharingInfo?: ModHeaderSharingInfo; [key: string]: unknown };
   bannerUrl?: string;
   bannerProjectType?: string;
   onSearchAuthor?: (author: string, platform?: string) => void;
@@ -21,9 +29,16 @@ export interface ModHeaderProps {
   toggleFollowMod?: (mod: ModHit) => void;
   selectedProjectType?: string;
   onSelectProjectType?: (type: string) => void;
-  communitySharers?: any[];
+  communitySharers?: FomoCommunityShare[];
   communitySharedByMe?: boolean;
   currentUserCommunityColor?: string | null;
+}
+
+function getFavId(m: FomoFavoriteItem): string | undefined {
+  if ("projectId" in m && typeof m.projectId === "string") return m.projectId;
+  if ("mod_id" in m && typeof m.mod_id === "string") return m.mod_id;
+  if ("id" in m && typeof m.id === "string") return m.id;
+  return undefined;
 }
 
 export function ModHeader({
@@ -207,7 +222,7 @@ export function ModHeader({
                   <Globe className="w-2.5 h-2.5 text-orange-400" /> Compartido
                 </span>
               )}
-              {followedMods?.some((f: any) => (f.projectId || f.mod_id) === mod.projectId) && (
+              {followedMods?.some((f: FomoFavoriteItem) => getFavId(f) === mod.projectId) && (
                 <span className="mim-project-badge flex items-center gap-1 text-rose-300 border-rose-500/30">
                   <Heart className="w-2.5 h-2.5 text-rose-400 fill-current" /> Favorito
                 </span>
@@ -279,9 +294,9 @@ export function ModHeader({
             </button>
             <button 
               onClick={() => toggleFollowMod?.(mod)} 
-              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
+              className={`flex items-center justify-center h-7 px-3 rounded-lg text-[10px] font-black transition-all ${followedMods.some((m: FomoFavoriteItem) => getFavId(m) === mod.projectId) ? "bg-amber-500/40 backdrop-blur-md text-amber-300 border border-amber-500/50 hover:bg-amber-500/50" : isModern ? "bg-slate-200/50 border border-slate-300 text-slate-500 hover:text-slate-700" : "bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:bg-black/60 hover:text-white"}`}
             >
-               {followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? <HeartCrack className="w-3.5 h-3.5 mr-1.5 fill-current" /> : <Heart className="w-3.5 h-3.5 mr-1.5" />} {followedMods.some((m: FomoFavoriteItem) => ((m as any).projectId || (m as any).mod_id) === mod.projectId) ? "Quitar Favorito" : "Favorito"}
+               {followedMods.some((m: FomoFavoriteItem) => getFavId(m) === mod.projectId) ? <HeartCrack className="w-3.5 h-3.5 mr-1.5 fill-current" /> : <Heart className="w-3.5 h-3.5 mr-1.5" />} {followedMods.some((m: FomoFavoriteItem) => getFavId(m) === mod.projectId) ? "Quitar Favorito" : "Favorito"}
             </button>
             {isProjectInDraft(mod.projectId || mod.id || mod.slug) ? (
               <button 

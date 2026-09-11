@@ -115,7 +115,7 @@ class AlrtIntelligence {
     this.createIncidentFromCorrelation(correlation);
     eventBus.emit("alrt:incident-created", {
       incidentId: `alrt-correlation-${id}`, title: `Correlación: ${pattern.name}`,
-      description: pattern.description, severity: pattern.severity as any,
+      description: pattern.description, severity: pattern.severity,
       status: "unseen", module: "SYSTEM", correlationId: id
     });
   }

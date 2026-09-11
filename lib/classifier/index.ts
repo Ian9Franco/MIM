@@ -13,8 +13,8 @@ export interface ClassificationInput {
   fileName: string;
   modName?: string;
   categories?: string[];
-  clientSide?: any;
-  serverSide?: any;
+  clientSide?: string | boolean | null;
+  serverSide?: string | boolean | null;
   environment?: "client" | "server" | "both" | "unknown";
 }
 
@@ -46,18 +46,18 @@ export class MimClassifier {
     // Estas reglas tienen prioridad absoluta sobre el sistema de puntuación.
     for (const anchor of ANCHOR_RULES) {
       if (anchor.test(searchName)) {
-        return { category: anchor.category as any, sub: anchor.sub, confidence: 1.0, matchedRules: [anchor.name] };
+        return { category: anchor.category, sub: anchor.sub, confidence: 1.0, matchedRules: [anchor.name] };
       }
     }
 
     // CAPA 2: Hierarchy (Entorno declarado en metadatos del Loader)
-    let strictCategory: any = null;
+    let strictCategory: ".local" | ".essential" | ".server" | null = null;
     if (input.environment === "client") strictCategory = ".local";
     else if (input.environment === "server") strictCategory = ".server";
     else if (input.environment === "both") strictCategory = ".essential";
 
     // Sistema de Puntuación (Scoring)
-    const scores: any = { ".local": {}, ".essential": {}, ".server": {} };
+    const scores: Record<string, Record<string, number>> = { ".local": {}, ".essential": {}, ".server": {} };
     const addScore = (cat: string, sub: string, val: number) => {
       if (!scores[cat]) scores[cat] = {};
       scores[cat][sub] = (scores[cat][sub] || 0) + val;
@@ -66,7 +66,7 @@ export class MimClassifier {
     // CAPA 3: Explicit Tags (Categorías de plataformas externas)
     input.categories?.forEach(tag => {
       const mappings = EXPLICIT_TAG_MAPPING[tag.toLowerCase().trim()];
-      mappings?.forEach((m: any) => addScore(m.category, m.sub, m.weight));
+      mappings?.forEach((m) => addScore(m.category, m.sub, m.weight));
     });
 
     // CAPA 4: Semantic Keywords (Búsqueda difusa en nombres)
@@ -82,15 +82,15 @@ export class MimClassifier {
     });
 
     // Evaluación Final de Resultados
-    let bestCat: any = strictCategory || ".essential";
+    let bestCat: ".local" | ".essential" | ".server" = strictCategory || ".essential";
     let bestSub = "vanilla + & qol"; // Fallback más genérico (mods de contenido/utilidad)
     let maxScore = 0;
 
-    Object.entries(scores).forEach(([cat, subs]: any) => {
-      Object.entries(subs).forEach(([sub, score]: any) => {
+    Object.entries(scores).forEach(([cat, subs]) => {
+      Object.entries(subs).forEach(([sub, score]) => {
         if (score > maxScore) { 
           maxScore = score; 
-          if (!strictCategory) bestCat = cat; 
+          if (!strictCategory) bestCat = cat as ".local" | ".essential" | ".server"; 
           bestSub = sub; 
         }
       });

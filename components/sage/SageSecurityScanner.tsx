@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { RefreshCw, ScanSearch, ShieldCheck, ShieldAlert, ShieldBan, ShieldX, Loader2, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import type { SecurityScanResult, SecurityFinding } from "@/lib/core/types";
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -10,12 +11,36 @@ const LEVEL_CONFIG = {
   critical:   { label: "Crítico",    text: "text-red-400",     bg: "rgba(239,68,68,0.08)",    border: "rgba(239,68,68,0.2)",   icon: ShieldX },
 } as const;
 
+export interface SecurityScanFileItem {
+  filePath: string;
+  fileName: string;
+  assetType?: string;
+  [key: string]: unknown;
+}
+
+export interface SecurityScanEntry {
+  filePath: string;
+  fileName: string;
+  result: SecurityScanResult;
+}
+
+export interface SageSecurityScannerProps {
+  secLoading: boolean;
+  secError?: string | null;
+  secScanning: boolean;
+  secScanned: boolean;
+  secScannable: SecurityScanFileItem[];
+  secResults: SecurityScanEntry[];
+  onScan: () => void;
+  onReset: () => void;
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function SageSecurityScanner({
   secLoading, secError, secScanning, secScanned,
   secScannable, secResults, onScan, onReset
-}: any) {
+}: SageSecurityScannerProps) {
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -38,7 +63,7 @@ export function SageSecurityScanner({
         >
           {secScanning ? (
             secResults.length === secScannable.length ? (
-              <><RefreshCw className="w-4 h-4 animate-spin" /> Verificando VT ({secResults.filter((r: any) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length}/{secScannable.length})...</>
+              <><RefreshCw className="w-4 h-4 animate-spin" /> Verificando VT ({secResults.filter((r: SecurityScanEntry) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length}/{secScannable.length})...</>
             ) : (
               <><RefreshCw className="w-4 h-4 animate-spin" /> Escaneo Local...</>
             )
@@ -68,7 +93,7 @@ export function SageSecurityScanner({
               <RefreshCw className="w-4 h-4 animate-spin" />
               <span>Verificando reputación en VirusTotal...</span>
             </div>
-            <span className="font-bold">{secResults.filter((r: any) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length} / {secScannable.length}</span>
+            <span className="font-bold">{secResults.filter((r: SecurityScanEntry) => r.result.virusTotal?.fromCache !== undefined || r.result.whitelisted).length} / {secScannable.length}</span>
           </div>
         ) : (
           <ScanningAnimation count={secScannable.length} />
@@ -115,7 +140,7 @@ function ScanningAnimation({ count }: { count: number }) {
   );
 }
 
-function PreScanListing({ files }: { files: any[] }) {
+function PreScanListing({ files }: { files: SecurityScanFileItem[] }) {
   const typeMap = {
     mod:          { label: "Mods",          color: "#818cf8" },
     resourcepack: { label: "Resource Packs", color: "#22d3ee" },
@@ -126,7 +151,7 @@ function PreScanListing({ files }: { files: any[] }) {
 
   const groups = (["mod","resourcepack","shader","datapack","zip"] as const).map(type => ({
     type,
-    files: files.filter((f: any) => f.assetType === type),
+    files: files.filter((f: SecurityScanFileItem) => f.assetType === type),
     ...( typeMap[type] || { label: type, color: "#94a3b8" })
   })).filter(g => g.files.length > 0);
 
@@ -137,7 +162,7 @@ function PreScanListing({ files }: { files: any[] }) {
         <div key={g.type} className="p-4 rounded-xl border" style={{ borderColor: g.color + "30", background: g.color + "08" }}>
           <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: g.color }}>{g.label} ({g.files.length})</p>
           <div className="space-y-1">
-            {g.files.map((f: any) => (
+            {g.files.map((f: SecurityScanFileItem) => (
               <div key={f.filePath} className="text-xs text-white/50 font-mono truncate">{f.fileName}</div>
             ))}
           </div>
@@ -147,7 +172,7 @@ function PreScanListing({ files }: { files: any[] }) {
   );
 }
 
-function ScanResults({ results }: { results: any[] }) {
+function ScanResults({ results }: { results: SecurityScanEntry[] }) {
   const critical   = results.filter(r => r.result.riskLevel === "critical");
   const suspicious = results.filter(r => r.result.riskLevel === "suspicious");
   const caution    = results.filter(r => r.result.riskLevel === "caution");
@@ -165,7 +190,7 @@ function ScanResults({ results }: { results: any[] }) {
 
       {/* Sorted results — worst first */}
       <div className="space-y-2.5">
-        {[...critical, ...suspicious, ...caution, ...clean].map((entry: any) => (
+        {[...critical, ...suspicious, ...caution, ...clean].map((entry: SecurityScanEntry) => (
           <ResultCard key={entry.filePath} entry={entry} />
         ))}
       </div>
@@ -185,7 +210,7 @@ function SummaryCard({ label, count, level }: { label: string; count: number; le
   );
 }
 
-function ResultCard({ entry }: { entry: any }) {
+function ResultCard({ entry }: { entry: SecurityScanEntry }) {
   const [expanded, setExpanded] = useState(false);
   const { riskLevel, riskScore, virusTotal, findings, sha256, summary, scannedLocally, scannedVirusTotal, whitelisted } = entry.result;
   const cfg = LEVEL_CONFIG[riskLevel as keyof typeof LEVEL_CONFIG] || LEVEL_CONFIG.clean;
@@ -258,7 +283,7 @@ function ResultCard({ entry }: { entry: any }) {
         <div className="border-t px-4 pb-4 pt-3 space-y-2 animate-in slide-in-from-top-1"
           style={{ borderColor: cfg.border }}>
           <p className="text-xs font-black uppercase tracking-widest text-white/30 mb-2">Detecciones ({findings.length})</p>
-          {findings.map((f: any, i: number) => (
+          {findings.map((f: SecurityFinding, i: number) => (
             <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-black/20">
               <span className={`shrink-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded mt-0.5 ${
                 f.severity === "critical" ? "bg-red-500/20 text-red-400" :
@@ -268,7 +293,7 @@ function ResultCard({ entry }: { entry: any }) {
               }`}>{f.severity}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-white/80">{f.description}</p>
-                {f.details?.length > 0 && (
+                {f.details && f.details.length > 0 && (
                   <p className="text-[10px] text-white/30 font-mono mt-0.5 truncate">{f.details[0]}{f.details.length > 1 ? ` +${f.details.length - 1}` : ""}</p>
                 )}
               </div>

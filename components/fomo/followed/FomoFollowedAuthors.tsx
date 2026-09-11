@@ -19,16 +19,60 @@ import { PillToggleGroup } from "@/components/ui/primitives";
 import { FomoFollowedRankings } from "@/components/fomo/followed/FomoFollowedRankings";
 import { FomoFollowedShowcases } from "@/components/fomo/followed/FomoFollowedShowcases";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
+import type { ModHit } from "@/lib/core/types";
+import type { FomoFollowedAuthor } from "@/types/fomo";
 
 function platformKeyForMod(mod: { _source?: string }): "modrinth" | "curseforge" {
   return mod._source === "curseforge" ? "curseforge" : "modrinth";
 }
 
+interface SharedModRow {
+  id: string;
+  profile_id: string;
+  mod_id: string;
+  platform?: string;
+  name?: string;
+  profiles?: {
+    username?: string;
+    avatar_url?: string;
+    color?: string | null;
+  } | null;
+}
+
+interface SharedVideoRow {
+  id: string;
+  profile_id: string;
+  youtube_video_id: string;
+  title?: string;
+  profiles?: {
+    username?: string;
+    avatar_url?: string;
+    color?: string | null;
+  } | null;
+}
+
+interface ShareModalPayload {
+  id?: string;
+  projectId?: string;
+  isAuthor?: boolean;
+  name?: string;
+  title?: string;
+  icon_url?: string | null;
+  iconUrl?: string | null;
+  description?: string;
+  summary?: string;
+  gameVersions?: string[];
+  gameVersion?: string;
+  loader?: string;
+  _source?: string;
+  [key: string]: unknown;
+}
+
 interface FomoFollowedAuthorsProps {
   onSearchAuthor: (author: string) => void;
   onSearchProject?: (title: string, type?: string, source?: string, loader?: string, version?: string) => void;
-  onOpenVersions?: (mod: any) => void;
-  onDownloadMod?: (mod: any) => Promise<void>;
+  onOpenVersions?: (mod: ModHit) => void;
+  onDownloadMod?: (mod: ModHit) => Promise<void>;
   downloading?: Record<string, boolean>;
 }
 
@@ -54,9 +98,9 @@ export function FomoFollowedAuthors({
   } = useFomoFollowedManager();
   
   // Community sharing — favorite_mods + showcase_videos for sub-tabs
-  const [allSharedMods, setAllSharedMods] = React.useState<any[]>([]);
-  const [allSharedVideos, setAllSharedVideos] = React.useState<any[]>([]);
-  const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [allSharedMods, setAllSharedMods] = React.useState<SharedModRow[]>([]);
+  const [allSharedVideos, setAllSharedVideos] = React.useState<SharedVideoRow[]>([]);
+  const [currentUser, setCurrentUser] = React.useState<{ id: string } | null>(null);
   const [currentUserColor, setCurrentUserColor] = React.useState<string | null>(null);
   const [unreadAuthors, setUnreadAuthors] = React.useState<Set<string>>(new Set());
 
@@ -92,11 +136,11 @@ export function FomoFollowedAuthors({
   }, []);
 
   // Share modal state — declared BEFORE handleShareToCommunity that uses them
-  const [shareModalItem, setShareModalItem] = React.useState<any>(null);
+  const [shareModalItem, setShareModalItem] = React.useState<ShareModalPayload | null>(null);
   const [shareComment, setShareComment] = React.useState("");
   const [isSharing, setIsSharing] = React.useState(false);
 
-  const openShareModal = async (item: any) => {
+  const openShareModal = async (item: ShareModalPayload) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
@@ -184,7 +228,7 @@ export function FomoFollowedAuthors({
         fetchCommunitySharingInfo();
         window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[ShareError]:", err);
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "Error al compartir en la comunidad.", type: "error" }
@@ -194,9 +238,9 @@ export function FomoFollowedAuthors({
     }
   };
 
-  const [history, setHistory] = React.useState<any[]>([]);
-  const [rankings, setRankings] = React.useState<Record<string, any[]>>({});
-  const [communityRankings, setCommunityRankings] = React.useState<Record<string, any[]>>({});
+  const [history, setHistory] = React.useState<Array<{ author?: string; iconUrl?: string; [key: string]: unknown }>>([]);
+  const [rankings, setRankings] = React.useState<Record<string, unknown[]>>({});
+  const [communityRankings, setCommunityRankings] = React.useState<Record<string, unknown[]>>({});
   const [loadingHistory, setLoadingHistory] = React.useState(false);
   const [loadingCommunityRankings, setLoadingCommunityRankings] = React.useState(false);
   const [historyFetchError, setHistoryFetchError] = React.useState<string | null>(null);
@@ -375,8 +419,8 @@ export function FomoFollowedAuthors({
             { value: "history", label: "Rank/Historial", icon: <Timeline className="w-4 h-4" /> },
           ]} 
           value={subTab} 
-          onChange={(v: any) => {
-            setSubTab(v);
+          onChange={(v: string) => {
+            setSubTab(v as "projects" | "authors" | "history");
             if (v === "history") setPage(1);
           }} 
           ariaLabel="Seleccionar sub-pestaña"
@@ -427,7 +471,7 @@ export function FomoFollowedAuthors({
             {followedAuthors.length === 0 ? (
               <div className="py-20 text-center flex flex-col items-center opacity-40"><Heart className="w-16 h-16 mb-4" /><h3 className="font-headline text-lg">Todavia no seguís a ningún autor</h3><p className="text-xs max-w-sm">Segui a creadores para ver sus novedades.</p></div>
             ) : (() => {
-              const getAuthorIcons = (author: any) => {
+              const getAuthorIcons = (author: FomoFollowedAuthor | string) => {
                 const icons = new Set<string>();
                 const name = typeof author === "string" ? author : author?.name;
                 if (typeof author !== "string" && author?.iconUrl) icons.add(author.iconUrl);

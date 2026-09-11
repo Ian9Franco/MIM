@@ -24,6 +24,36 @@ const querySchema = z.object({
   projectType: z.string().optional().default("mod"),
 });
 
+interface ModrinthVersionFile {
+  url: string;
+  filename: string;
+  primary?: boolean;
+  size?: number;
+  hashes?: Record<string, string>;
+}
+
+interface ModrinthVersionDep {
+  project_id?: string;
+  version_id?: string;
+  dependency_type: "required" | "optional" | "incompatible" | "embedded";
+  file_name?: string;
+  external_secure_url?: string;
+}
+
+interface ModrinthRawVersion {
+  id: string;
+  version_number: string;
+  name: string;
+  version_type?: "release" | "beta" | "alpha";
+  game_versions?: string[];
+  loaders?: string[];
+  date_published: string;
+  downloads?: number;
+  changelog?: string;
+  dependencies?: ModrinthVersionDep[];
+  files?: ModrinthVersionFile[];
+}
+
 export const GET = withApiGuard(
   {
     rateLimit: { windowMs: 60 * 1000, maxRequests: 60 },
@@ -49,7 +79,7 @@ export const GET = withApiGuard(
 
       let url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params.toString()}`;
       let res = await fetch(url, { headers, cache: "no-store" });
-      let rawVersions = await res.json();
+      let rawVersions: ModrinthRawVersion[] = await res.json();
 
       // 2. Fallback: si no hay versiones con filtros estrictos, traer TODAS
       if (Array.isArray(rawVersions) && rawVersions.length === 0 && (gameVersion || loader)) {
@@ -63,10 +93,10 @@ export const GET = withApiGuard(
       // 2.5 Filter versions based on projectType priority
       if (projectType === "datapack" || projectType === "resourcepack") {
         // Split into "matching" and "non-matching" entries
-        const matching = rawVersions.filter((v: any) => {
+        const matching = rawVersions.filter((v: ModrinthRawVersion) => {
           const nameMatch = v.name?.toLowerCase().includes(projectType) || v.version_number?.toLowerCase().includes(projectType);
           const loaderMatch = v.loaders?.includes(projectType);
-          const fileMatch = v.files?.some((f: any) => f.filename.toLowerCase().endsWith(".zip"));
+          const fileMatch = v.files?.some((f: ModrinthVersionFile) => f.filename.toLowerCase().endsWith(".zip"));
           return nameMatch || loaderMatch || fileMatch;
         });
 
@@ -77,8 +107,8 @@ export const GET = withApiGuard(
 
       // 3. Recolectar todos los IDs de dependencias para resolverlos en un único batch
       const depIds = new Set<string>();
-      rawVersions.forEach((v: any) => {
-        v.dependencies?.forEach((d: any) => { if (d.project_id) depIds.add(d.project_id); });
+      rawVersions.forEach((v: ModrinthRawVersion) => {
+        v.dependencies?.forEach((d: ModrinthVersionDep) => { if (d.project_id) depIds.add(d.project_id); });
       });
 
       // Mapa de project_id → metadatos del proyecto (título, slug, icon, tipo)
@@ -90,8 +120,8 @@ export const GET = withApiGuard(
             { headers, cache: "no-store" }
           );
           if (pRes.ok) {
-            const pData = await pRes.json();
-            pData.forEach((p: any) => {
+            const pData: Array<{ id: string; title?: string; slug?: string; icon_url?: string; project_type?: string }> = await pRes.json();
+            pData.forEach((p) => {
               projectMeta[p.id] = {
                 title:       p.title ?? p.id,
                 slug:        p.slug  ?? p.id,
@@ -106,12 +136,12 @@ export const GET = withApiGuard(
       }
 
       // 4. Mapear versiones al formato VersionEntry normalizado
-      const versions = rawVersions.map((v: any) => {
+      const versions = rawVersions.map((v: ModrinthRawVersion) => {
         // Prioritize ZIP files if it's a datapack and no primary is marked, or if we need to force it
-        let primaryFile = v.files?.find((f: any) => f.primary);
-        if (!primaryFile && v.files?.length > 0) {
+        let primaryFile = v.files?.find((f: ModrinthVersionFile) => f.primary);
+        if (!primaryFile && v.files && v.files.length > 0) {
           if (projectType === "datapack" || projectType === "resourcepack") {
-            primaryFile = v.files.find((f: any) => f.filename.endsWith(".zip")) ?? v.files[0];
+            primaryFile = v.files.find((f: ModrinthVersionFile) => f.filename.endsWith(".zip")) ?? v.files[0];
           } else {
             primaryFile = v.files[0];
           }
@@ -119,7 +149,7 @@ export const GET = withApiGuard(
         
         // Secondary safety: if it IS a datapack filter, but the primary file is a .jar, try to find a .zip fallback
         if (projectType === "datapack" && primaryFile && primaryFile.filename.endsWith(".jar")) {
-          const zipFile = v.files.find((f: any) => f.filename.endsWith(".zip"));
+          const zipFile = v.files?.find((f: ModrinthVersionFile) => f.filename.endsWith(".zip"));
           if (zipFile) primaryFile = zipFile;
         }
         return {
@@ -132,20 +162,23 @@ export const GET = withApiGuard(
           datePublished: v.date_published,
           downloads:     v.downloads ?? 0,
           changelog:     v.changelog ?? "",
-          dependencies:  (v.dependencies ?? []).map((d: any) => ({
-            projectId:      d.project_id,
-            dependencyType: d.dependency_type,
-            title:          projectMeta[d.project_id]?.title || d.project_id || d.file_name || "Dependencia externa",
-            slug:           projectMeta[d.project_id]?.slug,
-            iconUrl:        projectMeta[d.project_id]?.iconUrl ?? null,
-            projectType:    projectMeta[d.project_id]?.projectType ?? "mod",
-            url:            projectMeta[d.project_id]?.slug
-              ? `https://modrinth.com/project/${projectMeta[d.project_id].slug}`
-              : undefined,
-            versionId:      d.version_id,
-            fileName:       d.file_name ?? null,
-            externalUrl:    d.external_secure_url ?? null,
-          })),
+          dependencies:  (v.dependencies ?? []).map((d: ModrinthVersionDep) => {
+            const projId = d.project_id || "";
+            return {
+              projectId:      projId,
+              dependencyType: d.dependency_type,
+              title:          projectMeta[projId]?.title || projId || d.file_name || "Dependencia externa",
+              slug:           projectMeta[projId]?.slug,
+              iconUrl:        projectMeta[projId]?.iconUrl ?? null,
+              projectType:    projectMeta[projId]?.projectType ?? "mod",
+              url:            projectMeta[projId]?.slug
+                ? `https://modrinth.com/project/${projectMeta[projId].slug}`
+                : undefined,
+              versionId:      d.version_id,
+              fileName:       d.file_name ?? null,
+              externalUrl:    d.external_secure_url ?? null,
+            };
+          }),
           primaryFile: primaryFile ? {
             url:      primaryFile.url,
             filename: primaryFile.filename,

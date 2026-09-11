@@ -8,8 +8,8 @@ import { supabase } from "@/lib/core/supabaseClient";
 
 // Subcomponents
 import { CommunityEditProfileModal } from "@/components/fomo/community/CommunityEditProfileModal";
-import { CommunityModPool } from "@/components/fomo/community/CommunityModPool";
-import { CommunityVideos } from "@/components/fomo/community/CommunityVideos";
+import { CommunityModPool, type SharedFavorite } from "@/components/fomo/community/CommunityModPool";
+import { CommunityVideos, type ShowcaseVideo } from "@/components/fomo/community/CommunityVideos";
 
 import { CommunityDrafts } from "@/components/fomo/community/CommunityDrafts";
 import { CommunityUserProfile } from "@/components/fomo/community/CommunityUserProfile";
@@ -34,7 +34,10 @@ function CommunityPanelInner({
     "modpacks" | "drafts" | "videos" | "profile"
   >(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("fomo_community_subtab") as any) || "modpacks";
+      const saved = localStorage.getItem("fomo_community_subtab");
+      if (saved === "modpacks" || saved === "drafts" || saved === "videos" || saved === "profile") {
+        return saved;
+      }
     }
     return "modpacks";
   });
@@ -44,7 +47,7 @@ function CommunityPanelInner({
   }, [activeSubTab]);
   
   // States for Videos
-  const [videos, setVideos] = useState<any[]>([]);
+  const [videos, setVideos] = useState<ShowcaseVideo[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   
   // Profile view
@@ -60,7 +63,7 @@ function CommunityPanelInner({
   const [savingProfile, setSavingProfile] = useState(false);
 
   // States for Favorites
-  const [cloudFavorites, setCloudFavorites] = useState<any[]>([]);
+  const [cloudFavorites, setCloudFavorites] = useState<SharedFavorite[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
 
   // Auto-fetch data trigger (only used after publish/profile update)
@@ -74,7 +77,7 @@ function CommunityPanelInner({
   const [insideDraft, setInsideDraft] = useState(false);
 
   useEffect(() => {
-    const handler = (e: any) => setInsideDraft(e.detail);
+    const handler = (e: Event) => setInsideDraft(Boolean((e as CustomEvent<boolean>).detail));
     window.addEventListener("fomo-draft-selected", handler);
     return () => window.removeEventListener("fomo-draft-selected", handler);
   }, []);
@@ -200,7 +203,7 @@ function CommunityPanelInner({
       if (onStatus) onStatus("¡Perfil actualizado con éxito!", "success");
       setShowEditProfileModal(false);
       setReloadTrigger(prev => prev + 1);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       if (onStatus) {
         onStatus("Error al actualizar perfil.", "error");
@@ -228,10 +231,11 @@ function CommunityPanelInner({
         console.error("Error fetching videos:", error.message);
         return;
       }
-      setVideos(data || []);
-    } catch (err: any) {
+      setVideos((data as unknown as ShowcaseVideo[]) || []);
+    } catch (err: unknown) {
       if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchVideos(retries - 1); }
-      console.error("Error fetching videos:", err?.message || err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Error fetching videos:", msg);
     } finally {
       setLoadingVideos(false);
     }
@@ -249,10 +253,11 @@ function CommunityPanelInner({
         console.error("Error fetching favorites:", error.message);
         return;
       }
-      setCloudFavorites(data || []);
-    } catch (err: any) {
+      setCloudFavorites((data as unknown as SharedFavorite[]) || []);
+    } catch (err: unknown) {
       if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchFavorites(retries - 1); }
-      console.error("Error fetching favorites:", err?.message || err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Error fetching favorites:", msg);
     } finally {
       setLoadingFavorites(false);
     }
@@ -291,8 +296,8 @@ function CommunityPanelInner({
   const isModern = currentTheme === "modern";
   const profileBannerMeta = profile?.banner_meta ?? { zoom: 1, x: 0, y: 0, blur: 0 };
   
-  const switchTab = (tab: typeof activeSubTab) => {
-    const idx = tabOrder.indexOf(tab as any);
+  const switchTab = (tab: "modpacks" | "drafts" | "videos" | "profile") => {
+    const idx = tabOrder.indexOf(tab as (typeof tabOrder)[number]);
     if (idx !== -1) setTabIndex(idx);
     setActiveSubTab(tab);
   };
@@ -412,15 +417,15 @@ function CommunityPanelInner({
           />
 
           {[
-            { id: "modpacks", icon: <Blocks className="w-4 h-4" />, label: "Pool" },
-            { id: "drafts", icon: <FlaskConical className="w-4 h-4" />, label: "Drafts" },
-            { id: "videos", icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
+            { id: "modpacks" as const, icon: <Blocks className="w-4 h-4" />, label: "Pool" },
+            { id: "drafts" as const, icon: <FlaskConical className="w-4 h-4" />, label: "Drafts" },
+            { id: "videos" as const, icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
           ].map((tab) => {
             const isActive = activeSubTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => switchTab(tab.id as any)}
+                onClick={() => switchTab(tab.id)}
                 className="relative z-10 flex-1 h-full flex items-center justify-center gap-2 text-xs font-headline font-bold tracking-wide rounded-xl transition-all duration-300 cursor-pointer"
                 style={{
                   color: isActive

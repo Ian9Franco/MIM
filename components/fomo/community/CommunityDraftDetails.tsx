@@ -12,6 +12,7 @@ import { CommunityDraftInviteModal } from "@/components/fomo/community/Community
 import { useAuth } from "@/components/security/AuthContext";
 import { ImageCropper } from "@/components/fomo/core/ImageCropper";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import type { CommunityDraft, CommunityDraftItem, CommunityDraftSnapshot, CommunityDraftMember } from "@/types/fomo";
 import { DraftOverviewTab } from "./draft-tabs/DraftOverviewTab";
 import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 import { DraftMembersTab } from "./draft-tabs/DraftMembersTab";
@@ -28,10 +29,10 @@ export function CommunityDraftDetails({
   currentTheme: string;
   onBack: () => void;
 }) {
-  const [draft, setDraft] = useState<any>(null);
-  const [draftItems, setDraftItems] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [draft, setDraft] = useState<CommunityDraft | null>(null);
+  const [draftItems, setDraftItems] = useState<CommunityDraftItem[]>([]);
+  const [snapshots, setSnapshots] = useState<CommunityDraftSnapshot[]>([]);
+  const [members, setMembers] = useState<CommunityDraftMember[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [creatingSnapshot, setCreatingSnapshot] = useState(false);
@@ -230,19 +231,19 @@ export function CommunityDraftDetails({
     }
   };
 
-  const handleInstallSnapshot = (snap: any) => {
+  const handleInstallSnapshot = (snap: CommunityDraftSnapshot) => {
     if (!snap.manifest || !snap.manifest.mods || snap.manifest.mods.length === 0) {
       alert("El snapshot está vacío. No hay mods para descargar.");
       return;
     }
 
-    const snapshotProjectIds = new Set(snap.manifest.mods.map((m: any) => String(m.projectId)));
+    const snapshotProjectIds = new Set(snap.manifest.mods.map((m: CommunityDraftItem) => String(m.projectId || m.project_id)));
     const missingDeps = new Map<string, string>();
 
     // Calculate missing dependencies from the snapshot manifest
-    snap.manifest.mods.forEach((m: any) => {
+    snap.manifest.mods.forEach((m: CommunityDraftItem) => {
       if (m.dependencies && Array.isArray(m.dependencies)) {
-        m.dependencies.forEach((dep: any) => {
+        m.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
           if (dep.dependency_type === "required" && dep.project_id) {
             const depId = String(dep.project_id);
             if (!snapshotProjectIds.has(depId)) {
@@ -267,12 +268,16 @@ export function CommunityDraftDetails({
       }
     }
 
-    const intents: DownloadIntent[] = snap.manifest.mods.map((m: any) => ({
+    const intents: DownloadIntent[] = snap.manifest.mods.map((m: CommunityDraftItem) => ({
       id: crypto.randomUUID(),
-      projectId: m.projectId,
-      versionId: m.versionId,
-      platform: m.source as "modrinth" | "curseforge",
-      projectType: m.contentType,
+      projectId: (m.projectId || m.project_id)!,
+      versionId: m.versionId || m.version_id,
+      platform: (m.source as "modrinth" | "curseforge") || "modrinth",
+      projectType: (m.contentType || m.content_type || "mod") as "mod" | "resourcepack" | "shader" | "datapack",
+      side: (m.side as "client" | "server" | "both") || "both",
+      required: m.required !== false,
+      title: m.mod_name || m.title || m.projectId || m.project_id,
+      iconUrl: m.icon_url || m.iconUrl || undefined
     }));
     
     const finalIntents = [...intents, ...additionalIntents];

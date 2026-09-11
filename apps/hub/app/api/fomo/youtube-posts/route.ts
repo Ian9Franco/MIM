@@ -8,32 +8,47 @@ export const HARDCODED_POSTS_CHANNELS = [
   "https://www.youtube.com/@EnderVerseMC",
 ];
 
+export interface YouTubePostItem {
+  postId: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  embeddedVideoId: string;
+  videoUrl: string;
+  modSlugs: string[];
+  publishedAt: string;
+  mode: "post" | "video" | "short";
+}
+
 // Simple in-memory cache for serverless environment
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours cache
 
-function findKeys(obj: any, key: string, results: any[] = []): any[] {
+function findKeys(obj: unknown, key: string, results: Array<Record<string, unknown>> = []): Array<Record<string, unknown>> {
   if (!obj || typeof obj !== "object") return results;
-  if (obj[key]) {
-    results.push(obj[key]);
+  const record = obj as Record<string, unknown>;
+  if (record[key] && typeof record[key] === "object") {
+    results.push(record[key] as Record<string, unknown>);
   }
-  for (const k in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, k)) {
-      findKeys(obj[k], key, results);
+  for (const k in record) {
+    if (Object.prototype.hasOwnProperty.call(record, k)) {
+      findKeys(record[k], key, results);
     }
   }
   return results;
 }
 
-function findFirstValueForKey(obj: any, key: string): any {
+function findFirstValueForKey(obj: unknown, key: string): unknown {
   if (!obj || typeof obj !== "object") return null;
-  if (obj[key] !== undefined) return obj[key];
-  for (const k in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, k)) {
-      const val = findFirstValueForKey(obj[k], key);
-      if (val !== null) return val;
+  const record = obj as Record<string, unknown>;
+  if (record[key] !== undefined) return record[key];
+  for (const k in record) {
+    if (Object.prototype.hasOwnProperty.call(record, k)) {
+      const val = findFirstValueForKey(record[k], key);
+      if (val !== null && val !== undefined) return val;
     }
   }
+  return null;
 }
 
 const MODRINTH_REGEX =
@@ -93,7 +108,7 @@ function extractModSlugs(text: string): string[] {
   return [...new Set(found)];
 }
 
-function extractJsonObjectAfter(html: string, marker: string): any | null {
+function extractJsonObjectAfter(html: string, marker: string): Record<string, unknown> | null {
   const markerIndex = html.indexOf(marker);
   if (markerIndex === -1) return null;
   const start = html.indexOf("{", markerIndex);
@@ -178,7 +193,8 @@ async function fetchVideoDescription(videoId: string, title = ""): Promise<{ des
     let description = "";
 
     const playerResponse = extractJsonObjectAfter(html, "ytInitialPlayerResponse");
-    const playerDescription = playerResponse?.videoDetails?.shortDescription;
+    const videoDetails = playerResponse?.videoDetails as Record<string, unknown> | undefined;
+    const playerDescription = videoDetails?.shortDescription;
     if (typeof playerDescription === "string" && isUsefulVideoDescription(playerDescription, title)) {
       description = playerDescription;
     }
@@ -335,7 +351,7 @@ export const GET = withApiGuard(
       rawJson = match2[1];
     }
 
-    let data: any;
+    let data: Record<string, unknown>;
     try {
       data = JSON.parse(rawJson);
     } catch {
@@ -347,7 +363,7 @@ export const GET = withApiGuard(
     const CURSEFORGE_REGEX =
       /curseforge\.com\/minecraft\/(mc-mods|texture-packs|customization|mc-addons)\/([a-zA-Z0-9-_]+)/g;
 
-    const posts: any[] = [];
+    const posts: YouTubePostItem[] = [];
 
     const parsedIds = new Set<string>();
 
@@ -355,18 +371,26 @@ export const GET = withApiGuard(
       // 1. Try videoRenderer
       const videoItems = findKeys(data, "videoRenderer");
       for (const item of videoItems) {
-        const videoId = item.videoId || "";
+        const videoId = String(item.videoId || "");
         if (!videoId || parsedIds.has(videoId)) continue;
         parsedIds.add(videoId);
 
-        const title = item.title?.runs?.[0]?.text || item.title?.accessibility?.accessibilityData?.label || "";
-        const thumbs = item.thumbnail?.thumbnails || [];
-        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        const titleObj = item.title as Record<string, unknown> | undefined;
+        const runs = titleObj?.runs as Array<{ text?: string }> | undefined;
+        const accLabel = (titleObj?.accessibility as Record<string, unknown> | undefined)?.accessibilityData as { label?: string } | undefined;
+        const title = String(runs?.[0]?.text || accLabel?.label || "");
+        const thumbObj = item.thumbnail as Record<string, unknown> | undefined;
+        const thumbs = Array.isArray(thumbObj?.thumbnails) ? (thumbObj?.thumbnails as Array<{ url?: string }>) : [];
+        let thumbnail = String(thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
         if (thumbnail.startsWith("//")) {
           thumbnail = "https:" + thumbnail;
         }
-        const publishedAt = item.publishedTimeText?.simpleText || item.publishedTimeText?.runs?.[0]?.text || "";
-        const description = item.descriptionSnippet?.runs?.map((r: any) => r.text).join("") || "";
+        const publishedTimeText = item.publishedTimeText as Record<string, unknown> | undefined;
+        const pubRuns = publishedTimeText?.runs as Array<{ text?: string }> | undefined;
+        const publishedAt = String(publishedTimeText?.simpleText || pubRuns?.[0]?.text || "");
+        const descObj = item.descriptionSnippet as Record<string, unknown> | undefined;
+        const descRuns = Array.isArray(descObj?.runs) ? (descObj?.runs as Array<{ text?: string }>) : [];
+        const description = descRuns.map((r: { text?: string }) => r.text || "").join("");
         
         const modSlugs: string[] = [];
         MODRINTH_REGEX.lastIndex = 0;
@@ -395,25 +419,37 @@ export const GET = withApiGuard(
       // 2. Try lockupViewModel (new YouTube layout)
       const lockupItems = findKeys(data, "lockupViewModel");
       for (const item of lockupItems) {
-        const videoId = item.contentId || "";
+        const videoId = String(item.contentId || "");
         if (!videoId || parsedIds.has(videoId)) continue;
         parsedIds.add(videoId);
 
-        const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
-        const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
-        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        const metaObj = item.metadata as Record<string, unknown> | undefined;
+        const lockupMeta = metaObj?.lockupMetadataViewModel as Record<string, unknown> | undefined;
+        const lockupTitle = lockupMeta?.title as { content?: string } | undefined;
+        const title = String(lockupTitle?.content || "");
+        const contentImg = item.contentImage as Record<string, unknown> | undefined;
+        const thumbView = contentImg?.thumbnailViewModel as Record<string, unknown> | undefined;
+        const thumbInner = thumbView?.thumbnail as Record<string, unknown> | undefined;
+        const thumbs = Array.isArray(thumbInner?.thumbnails)
+          ? (thumbInner?.thumbnails as Array<{ url?: string }>)
+          : [];
+        let thumbnail = String(thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
         if (thumbnail.startsWith("//")) {
           thumbnail = "https:" + thumbnail;
         }
         
-        const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
+        const innerMeta = lockupMeta?.metadata as Record<string, unknown> | undefined;
+        const contentMeta = innerMeta?.contentMetadataViewModel as Record<string, unknown> | undefined;
+        const rows = Array.isArray(contentMeta?.metadataRows)
+          ? (contentMeta?.metadataRows as Array<{ metadataParts?: Array<{ text?: { content?: string } }> }>)
+          : [];
         let publishedAt = "";
         if (rows.length > 0) {
-          const parts = rows[0].metadataParts || [];
+          const parts = Array.isArray(rows[0].metadataParts) ? rows[0].metadataParts : [];
           if (parts.length > 1) {
-            publishedAt = parts[1].text?.content || "";
+            publishedAt = String(parts[1].text?.content || "");
           } else if (parts.length > 0) {
-            publishedAt = parts[0].text?.content || "";
+            publishedAt = String(parts[0].text?.content || "");
           }
         }
 
@@ -433,17 +469,21 @@ export const GET = withApiGuard(
       // 1. Try reelItemRenderer
       const reelItems = findKeys(data, "reelItemRenderer");
       for (const item of reelItems) {
-        const videoId = item.videoId || "";
+        const videoId = String(item.videoId || "");
         if (!videoId || parsedIds.has(videoId)) continue;
         parsedIds.add(videoId);
 
-        const title = item.headline?.simpleText || item.headline?.runs?.[0]?.text || "";
-        const thumbs = item.thumbnail?.thumbnails || [];
-        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        const headline = item.headline as Record<string, unknown> | undefined;
+        const headRuns = headline?.runs as Array<{ text?: string }> | undefined;
+        const title = String(headline?.simpleText || headRuns?.[0]?.text || "");
+        const thumbObj = item.thumbnail as Record<string, unknown> | undefined;
+        const thumbs = Array.isArray(thumbObj?.thumbnails) ? (thumbObj?.thumbnails as Array<{ url?: string }>) : [];
+        let thumbnail = String(thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
         if (thumbnail.startsWith("//")) {
           thumbnail = "https:" + thumbnail;
         }
-        const publishedAt = item.viewsText?.simpleText || "";
+        const viewsText = item.viewsText as Record<string, unknown> | undefined;
+        const publishedAt = String(viewsText?.simpleText || "");
 
         posts.push({
           postId: videoId,
@@ -461,25 +501,37 @@ export const GET = withApiGuard(
       // 2. Try lockupViewModel
       const lockupItems = findKeys(data, "lockupViewModel");
       for (const item of lockupItems) {
-        const videoId = item.contentId || "";
+        const videoId = String(item.contentId || "");
         if (!videoId || parsedIds.has(videoId)) continue;
         parsedIds.add(videoId);
 
-        const title = item.metadata?.lockupMetadataViewModel?.title?.content || "";
-        const thumbs = item.contentImage?.thumbnailViewModel?.thumbnail?.thumbnails || [];
-        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        const metaObj = item.metadata as Record<string, unknown> | undefined;
+        const lockupMeta = metaObj?.lockupMetadataViewModel as Record<string, unknown> | undefined;
+        const lockupTitle = lockupMeta?.title as { content?: string } | undefined;
+        const title = String(lockupTitle?.content || "");
+        const contentImg = item.contentImage as Record<string, unknown> | undefined;
+        const thumbView = contentImg?.thumbnailViewModel as Record<string, unknown> | undefined;
+        const thumbInner = thumbView?.thumbnail as Record<string, unknown> | undefined;
+        const thumbs = Array.isArray(thumbInner?.thumbnails)
+          ? (thumbInner?.thumbnails as Array<{ url?: string }>)
+          : [];
+        let thumbnail = String(thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
         if (thumbnail.startsWith("//")) {
           thumbnail = "https:" + thumbnail;
         }
         
-        const rows = item.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows || [];
+        const innerMeta = lockupMeta?.metadata as Record<string, unknown> | undefined;
+        const contentMeta = innerMeta?.contentMetadataViewModel as Record<string, unknown> | undefined;
+        const rows = Array.isArray(contentMeta?.metadataRows)
+          ? (contentMeta?.metadataRows as Array<{ metadataParts?: Array<{ text?: { content?: string } }> }>)
+          : [];
         let publishedAt = "";
         if (rows.length > 0) {
-          const parts = rows[0].metadataParts || [];
+          const parts = Array.isArray(rows[0].metadataParts) ? rows[0].metadataParts : [];
           if (parts.length > 1) {
-            publishedAt = parts[1].text?.content || "";
+            publishedAt = String(parts[1].text?.content || "");
           } else if (parts.length > 0) {
-            publishedAt = parts[0].text?.content || "";
+            publishedAt = String(parts[0].text?.content || "");
           }
         }
 
@@ -499,17 +551,27 @@ export const GET = withApiGuard(
       // 3. Try shortsLockupViewModel (new YouTube Shorts layout)
       const shortsItems = findKeys(data, "shortsLockupViewModel");
       for (const item of shortsItems) {
-        const videoId = findFirstValueForKey(item, "videoId") || item.entityId?.split("-").pop() || "";
+        const foundId = findFirstValueForKey(item, "videoId");
+        const entityId = typeof item.entityId === "string" ? item.entityId.split("-").pop() : "";
+        const videoId = String(foundId || entityId || "");
         if (!videoId || parsedIds.has(videoId)) continue;
         parsedIds.add(videoId);
 
-        const title = item.overlayMetadata?.primaryText?.content || "";
-        const thumbs = item.thumbnailViewModel?.thumbnailViewModel?.image?.sources || [];
-        let thumbnail = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+        const overlayMeta = item.overlayMetadata as Record<string, unknown> | undefined;
+        const primaryText = overlayMeta?.primaryText as { content?: string } | undefined;
+        const secondaryText = overlayMeta?.secondaryText as { content?: string } | undefined;
+        const title = String(primaryText?.content || "");
+        const thumbView = item.thumbnailViewModel as Record<string, unknown> | undefined;
+        const innerThumb = thumbView?.thumbnailViewModel as Record<string, unknown> | undefined;
+        const imageObj = innerThumb?.image as Record<string, unknown> | undefined;
+        const thumbs = Array.isArray(imageObj?.sources)
+          ? (imageObj?.sources as Array<{ url?: string }>)
+          : [];
+        let thumbnail = String(thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
         if (thumbnail.startsWith("//")) {
           thumbnail = "https:" + thumbnail;
         }
-        const publishedAt = item.overlayMetadata?.secondaryText?.content || "";
+        const publishedAt = String(secondaryText?.content || "");
 
         posts.push({
           postId: videoId,
@@ -525,55 +587,81 @@ export const GET = withApiGuard(
       }
     } else {
       // Default: posts
-      const tabs: any[] = data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-      const communityTab = tabs.find(
-        (t: any) =>
-          t.tabRenderer?.title === "Comunidad" ||
-          t.tabRenderer?.title === "Community" ||
-          t.tabRenderer?.title === "Publicaciones" ||
-          t.tabRenderer?.title === "Posts" ||
-          t.tabRenderer?.endpoint?.browseEndpoint?.browseId === undefined
-      );
+      const contentsObj = data.contents as Record<string, unknown> | undefined;
+      const twoCol = contentsObj?.twoColumnBrowseResultsRenderer as Record<string, unknown> | undefined;
+      const tabs: Array<Record<string, unknown>> = Array.isArray(twoCol?.tabs)
+        ? (twoCol?.tabs as Array<Record<string, unknown>>)
+        : [];
+      const communityTab = tabs.find((t) => {
+        const tabRenderer = t.tabRenderer as Record<string, unknown> | undefined;
+        const title = tabRenderer?.title;
+        const endpoint = tabRenderer?.endpoint as Record<string, unknown> | undefined;
+        const browseEndpoint = endpoint?.browseEndpoint as Record<string, unknown> | undefined;
+        return (
+          title === "Comunidad" ||
+          title === "Community" ||
+          title === "Publicaciones" ||
+          title === "Posts" ||
+          browseEndpoint?.browseId === undefined
+        );
+      });
 
-      const contents: any[] =
-        communityTab?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
-          ?.itemSectionRenderer?.contents || [];
+      const tabRenderer = communityTab?.tabRenderer as Record<string, unknown> | undefined;
+      const content = tabRenderer?.content as Record<string, unknown> | undefined;
+      const secList = content?.sectionListRenderer as Record<string, unknown> | undefined;
+      const secContents = Array.isArray(secList?.contents) ? (secList?.contents as Array<Record<string, unknown>>) : [];
+      const itemSection = secContents[0]?.itemSectionRenderer as Record<string, unknown> | undefined;
+      const contents: Array<Record<string, unknown>> = Array.isArray(itemSection?.contents)
+        ? (itemSection?.contents as Array<Record<string, unknown>>)
+        : [];
 
       for (const item of contents) {
-        const postRenderer = item.backstagePostThreadRenderer?.post?.backstagePostRenderer;
+        const backstagePostThread = item.backstagePostThreadRenderer as Record<string, unknown> | undefined;
+        const post = backstagePostThread?.post as Record<string, unknown> | undefined;
+        const postRenderer = post?.backstagePostRenderer as Record<string, unknown> | undefined;
         if (!postRenderer) continue;
 
-        const postId: string = postRenderer.postId || "";
+        const postId: string = String(postRenderer.postId || "");
         if (!postId) continue;
 
-        const rawText: string =
-          postRenderer.contentText?.runs?.map((r: any) => r.text).join("") || "";
+        const contentText = postRenderer.contentText as Record<string, unknown> | undefined;
+        const runs = Array.isArray(contentText?.runs) ? (contentText?.runs as Array<{ text?: string }>) : [];
+        const rawText: string = runs.map((r) => r.text || "").join("") || "";
 
-        const publishedTime: string =
-          postRenderer.publishedTimeText?.runs?.[0]?.text ||
-          postRenderer.publishedTimeText?.simpleText ||
-          "";
+        const pubTimeText = postRenderer.publishedTimeText as Record<string, unknown> | undefined;
+        const pubTimeRuns = Array.isArray(pubTimeText?.runs) ? (pubTimeText?.runs as Array<{ text?: string }>) : [];
+        const publishedTime: string = String(
+          pubTimeRuns[0]?.text ||
+          pubTimeText?.simpleText ||
+          ""
+        );
 
-        const attachment = postRenderer.backstageAttachment?.backstageImageRenderer;
-        const multiImages = postRenderer.backstageAttachment?.postMultiImageRenderer?.images;
-        const videoAttachment = postRenderer.backstageAttachment?.videoRenderer;
+        const backstageAttachment = postRenderer.backstageAttachment as Record<string, unknown> | undefined;
+        const attachment = backstageAttachment?.backstageImageRenderer as Record<string, unknown> | undefined;
+        const postMulti = backstageAttachment?.postMultiImageRenderer as Record<string, unknown> | undefined;
+        const multiImages = Array.isArray(postMulti?.images) ? (postMulti?.images as Array<Record<string, unknown>>) : undefined;
+        const videoAttachment = backstageAttachment?.videoRenderer as Record<string, unknown> | undefined;
 
         let thumbnail = "";
         let embeddedVideoId = "";
 
-        if (attachment?.image?.thumbnails?.length) {
-          const thumbs = attachment.image.thumbnails;
-          thumbnail = thumbs[thumbs.length - 1]?.url || thumbs[0]?.url || "";
+        const attachImg = attachment?.image as Record<string, unknown> | undefined;
+        const attachThumbs = Array.isArray(attachImg?.thumbnails) ? (attachImg?.thumbnails as Array<{ url?: string }>) : [];
+        if (attachThumbs.length) {
+          thumbnail = attachThumbs[attachThumbs.length - 1]?.url || attachThumbs[0]?.url || "";
         } else if (multiImages?.length) {
-          const firstImg = multiImages[0]?.backstageImageRenderer?.image?.thumbnails;
-          if (firstImg?.length) {
-            thumbnail = firstImg[firstImg.length - 1]?.url || firstImg[0]?.url || "";
+          const firstImageRenderer = multiImages[0]?.backstageImageRenderer as Record<string, unknown> | undefined;
+          const firstImgObj = firstImageRenderer?.image as Record<string, unknown> | undefined;
+          const firstThumbs = Array.isArray(firstImgObj?.thumbnails) ? (firstImgObj?.thumbnails as Array<{ url?: string }>) : [];
+          if (firstThumbs.length) {
+            thumbnail = firstThumbs[firstThumbs.length - 1]?.url || firstThumbs[0]?.url || "";
           }
         } else if (videoAttachment) {
-          embeddedVideoId = videoAttachment.videoId || "";
-          if (videoAttachment.thumbnail?.thumbnails?.length) {
-            const thumbs = videoAttachment.thumbnail.thumbnails;
-            thumbnail = thumbs[thumbs.length - 1]?.url || thumbs[0]?.url || "";
+          embeddedVideoId = String(videoAttachment.videoId || "");
+          const vidThumb = videoAttachment.thumbnail as Record<string, unknown> | undefined;
+          const vidThumbs = Array.isArray(vidThumb?.thumbnails) ? (vidThumb?.thumbnails as Array<{ url?: string }>) : [];
+          if (vidThumbs.length) {
+            thumbnail = vidThumbs[vidThumbs.length - 1]?.url || vidThumbs[0]?.url || "";
           }
         }
         if (thumbnail && thumbnail.startsWith("//")) {

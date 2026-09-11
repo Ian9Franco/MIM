@@ -10,30 +10,52 @@ import { DraftDetailView } from "../DraftDetailView";
 import { CollectionsSkeleton } from "../FomoSkeletons";
 
 interface Props {
-  activeCollection: CollectionItem | null; modrinthFeatured: CollectionItem[]; curseForgeFeatured: CollectionItem[];
-  activeCollectionMods: ModHit[]; loadingActiveMods: boolean; session: any; userDrafts: any[]; activeDraft?: any;
-  handleEnterCollection: (coll: CollectionItem) => void; handleExitCollection: () => void;
-  handleOpenModDetails: (mod: ModHit) => void; handleEnterDraftCollection: (draft: any) => void;
+  activeCollection: CollectionItem | null;
+  modrinthFeatured: CollectionItem[];
+  curseForgeFeatured: CollectionItem[];
+  activeCollectionMods: ModHit[];
+  loadingActiveMods: boolean;
+  session: { user?: { id: string } } | null;
+  userDrafts: Array<{ id: string; name?: string; minecraft_version?: string; loader?: string; visibility?: string; cover_image?: string | null; updated_at?: string; created_at?: string; items?: unknown[] }>;
+  activeDraft?: { id: string; name?: string; minecraft_version?: string; loader?: string; visibility?: string; cover_image?: string | null; items?: unknown[] };
+  handleEnterCollection: (coll: CollectionItem) => void;
+  handleExitCollection: () => void;
+  handleOpenModDetails: (mod: ModHit) => void;
+  handleEnterDraftCollection: (draft: unknown) => void;
   onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
-  onRefreshDrafts?: () => void; onEditDraft?: (draft: any) => void; onCreateDraft?: () => void;
-  onUpdateDraftMetadata?: (draftId: string, updates: any) => Promise<boolean>;
+  onRefreshDrafts?: () => void;
+  onEditDraft?: (draft: unknown) => void;
+  onCreateDraft?: () => void;
+  onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
-  userFavorites?: any[]; userFollowedAuthors?: any[];
-  onSearchAuthor?: (name: string, platform: string) => void; onAddToDraft?: (mod: ModHit) => void;
+  userFavorites?: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string; name?: string; description?: string; icon_url?: string; iconUrl?: string; categories?: string[]; url?: string; project_type?: string; content_type?: string }>;
+  userFollowedAuthors?: Array<{ id?: string; platform?: string; author_name?: string; icon_url?: string }>;
+  onSearchAuthor?: (name: string, platform: string) => void;
+  onAddToDraft?: (mod: ModHit) => void;
 }
 
 type View = "editorial" | "mine" | "saved";
 const VIEWS: Array<[View, string]> = [["editorial", "Editoriales"], ["mine", "Mis colecciones"], ["saved", "Guardados"]];
 const yearOf = (c: CollectionItem) => `${c.name} ${c.description || ""}`.match(/\b(20\d{2})\b/)?.[1] || "Otros";
 
-function toMod(f: any): ModHit {
+function toMod(f: Record<string, unknown>): ModHit {
   const projectId = String(f.mod_id || f.project_id || f.projectId || f.id);
-  const projectType = f.project_type || f.content_type || "mod";
-  let title = f.name || "Proyecto", author = "Comunidad";
+  const projectType = String(f.project_type || f.content_type || "mod");
+  let title = String(f.name || "Proyecto"), author = "Comunidad";
   if (title.includes(" ::: ")) [title, author] = title.split(" ::: ");
-  const source = f.platform || f.source || "modrinth";
-  return { projectId, title, author, projectType, description: f.description || "", iconUrl: f.icon_url || f.iconUrl || null, categories: f.categories || [], _source: source, url: f.url || (source === "curseforge" ? `https://www.curseforge.com/projects/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`) };
+  const source = String(f.platform || f.source || "modrinth");
+  return {
+    projectId,
+    title,
+    author,
+    projectType,
+    description: String(f.description || ""),
+    iconUrl: (f.icon_url || f.iconUrl || null) as string | null,
+    categories: (f.categories as string[]) || [],
+    _source: source,
+    url: (f.url as string) || (source === "curseforge" ? `https://www.curseforge.com/projects/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`)
+  };
 }
 
 export function CollectionsTab(p: Props) {
@@ -55,14 +77,14 @@ export function CollectionsTab(p: Props) {
   const drafts = useMemo(() => [...p.userDrafts].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [p.userDrafts]);
   const savedMods = useMemo(() => favorites.map(toMod).filter(m => `${m.title} ${m.author}`.toLowerCase().includes(savedQuery.toLowerCase())), [favorites, savedQuery]);
   const detailMeta = useMemo(() => {
-    const rows = p.activeCollectionMods as any[];
+    const rows = p.activeCollectionMods as Array<ModHit & { versions?: string[]; game_versions?: string[]; loaders?: string[]; loader?: string }>;
     return {
       versions: Array.from(new Set<string>(rows.flatMap(m => m.versions || m.game_versions || []).filter(Boolean))).sort().reverse(),
       loaders: Array.from(new Set<string>(rows.flatMap(m => m.loaders || (m.loader ? [m.loader] : [])).filter(Boolean))).sort(),
     };
   }, [p.activeCollectionMods]);
-  const visibleMods = useMemo(() => (p.activeCollectionMods as any[]).filter(m => {
-    const type = String(m.projectType || m.project_type || "mod").toLowerCase();
+  const visibleMods = useMemo(() => (p.activeCollectionMods as Array<ModHit & { versions?: string[]; game_versions?: string[]; loaders?: string[]; loader?: string; itemId?: string; id?: string }>).filter(m => {
+    const type = String(m.projectType || "mod").toLowerCase();
     const versions = m.versions || m.game_versions || [], loaders = m.loaders || (m.loader ? [m.loader] : []);
     return String(m.title || "").toLowerCase().includes(detailQuery.toLowerCase()) && (detailType === "all" || type === detailType) && (detailVersion === "all" || versions.includes(detailVersion)) && (detailLoader === "all" || loaders.includes(detailLoader));
   }), [p.activeCollectionMods, detailLoader, detailQuery, detailType, detailVersion]);
@@ -105,12 +127,12 @@ export function CollectionsTab(p: Props) {
 
           {view === "saved" && <motion.section key="saved" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
             <div><Title eyebrow="Tu biblioteca" title="Guardados para construir" /><div className="mt-2 grid grid-cols-2 gap-2"><Summary active={savedView === "favorites"} icon={<Bookmark className="h-4 w-4" />} count={favorites.length} label="Proyectos" click={() => setSavedView("favorites")} /><Summary active={savedView === "authors"} icon={<UserCheck className="h-4 w-4" />} count={authors.length} label="Autores" click={() => setSavedView("authors")} /></div></div>
-            {savedView === "favorites" ? <><SearchBox value={savedQuery} setValue={setSavedQuery} placeholder="Buscar proyecto o autor..." /><div className="space-y-2">{savedMods.map(m => <div key={`${m._source}:${m.projectId}`} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] capitalize text-white/40">{m.author} · {m._source}</p></div><button type="button" onClick={() => p.handleOpenModDetails(m)} className="mim-control-3d h-8 rounded-lg border border-border px-2 text-[8px] font-bold text-white/60">Ver</button>{p.onAddToDraft && <button type="button" onClick={() => p.onAddToDraft?.(m)} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}</div>)}{!savedMods.length && <Empty icon={<Bookmark className="h-9 w-9" />} title="Sin resultados" text="Guardá proyectos desde Explorar o Detalles." />}</div></> : <div className="grid grid-cols-2 gap-2">{authors.map((a: any) => <button key={a.id || `${a.platform}:${a.author_name}`} type="button" onClick={() => p.onSearchAuthor?.(a.author_name, a.platform || "modrinth")} className="mim-collection-card flex min-w-0 items-center gap-2.5 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={a.icon_url} fallback={<span className="text-[9px] font-black uppercase text-white/40">{a.author_name?.slice(0, 2)}</span>} small /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-white">{a.author_name}</p><p className="mt-1 text-[7px] uppercase text-white/35">{a.platform || "modrinth"}</p></div></button>)}{!authors.length && <div className="col-span-2"><Empty icon={<UserCheck className="h-9 w-9" />} title="Todavía no seguís autores" text="Podés seguirlos desde los detalles." /></div>}</div>}
+            {savedView === "favorites" ? <><SearchBox value={savedQuery} setValue={setSavedQuery} placeholder="Buscar proyecto o autor..." /><div className="space-y-2">{savedMods.map(m => <div key={`${m._source}:${m.projectId}`} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] capitalize text-white/40">{m.author} · {m._source}</p></div><button type="button" onClick={() => p.handleOpenModDetails(m)} className="mim-control-3d h-8 rounded-lg border border-border px-2 text-[8px] font-bold text-white/60">Ver</button>{p.onAddToDraft && <button type="button" onClick={() => p.onAddToDraft?.(m)} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}</div>)}{!savedMods.length && <Empty icon={<Bookmark className="h-9 w-9" />} title="Sin resultados" text="Guardá proyectos desde Explorar o Detalles." />}</div></> : <div className="grid grid-cols-2 gap-2">{authors.map((a) => <button key={a.id || `${a.platform}:${a.author_name}`} type="button" onClick={() => p.onSearchAuthor?.(a.author_name || "", a.platform || "modrinth")} className="mim-collection-card flex min-w-0 items-center gap-2.5 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={a.icon_url} fallback={<span className="text-[9px] font-black uppercase text-white/40">{a.author_name?.slice(0, 2)}</span>} small /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-white">{a.author_name}</p><p className="mt-1 text-[7px] uppercase text-white/35">{a.platform || "modrinth"}</p></div></button>)}{!authors.length && <div className="col-span-2"><Empty icon={<UserCheck className="h-9 w-9" />} title="Todavía no seguís autores" text="Podés seguirlos desde los detalles." /></div>}</div>}
           </motion.section>}
         </AnimatePresence>
       </motion.div> : isDraft && p.activeDraft ? <DraftDetailView key={`draft-${p.activeCollection.id}`} draft={p.activeDraft} activeCollectionMods={p.activeCollectionMods} loadingActiveMods={p.loadingActiveMods} session={p.session} onBack={p.handleExitCollection} onEditDraft={p.onEditDraft} handleOpenModDetails={p.handleOpenModDetails} onRemoveModFromDraft={p.onRemoveModFromDraft} onRefreshDrafts={p.onRefreshDrafts} onUpdateDraftMetadata={p.onUpdateDraftMetadata} onRecategorizeDraftItem={p.onRecategorizeDraftItem} onUpdateDraftItemSide={p.onUpdateDraftItemSide} /> : <motion.div key="detail" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="flex min-h-0 flex-1 flex-col">
         <div className="mb-3 flex items-center gap-3"><button type="button" onClick={p.handleExitCollection} aria-label="Volver a colecciones" className="mim-control-3d flex h-9 w-9 items-center justify-center rounded-xl border border-border text-white/65"><ArrowLeft className="h-4 w-4" /></button><div className="min-w-0 flex-1"><span className="text-[8px] font-mono font-bold uppercase text-emerald-400">Colección abierta</span><h2 className="truncate text-sm font-black text-white">{p.activeCollection.name}</h2></div><span className="rounded-lg border border-border px-2 py-1 font-mono text-[8px] text-white/45">{visibleMods.length}/{p.activeCollectionMods.length}</span></div>
-        {p.loadingActiveMods ? <CollectionsSkeleton /> : <div className="flex min-h-0 flex-1 flex-col"><div className="mb-3 space-y-2"><SearchBox value={detailQuery} setValue={setDetailQuery} placeholder="Buscar dentro de la colección..." /><div className="mim-chip-scroll">{[["all","Todo"],["mod","Mods"],["resourcepack","Texturas"],["shader","Shaders"],["datapack","Datapacks"]].map(([id,label]) => <Chip key={id} active={detailType === id} click={() => setDetailType(id)}>{label}</Chip>)}</div><div className="grid grid-cols-2 gap-2"><Select label="Versión" value={detailVersion} options={detailMeta.versions} set={setDetailVersion} /><Select label="Loader" value={detailLoader} options={detailMeta.loaders} set={setDetailLoader} /></div></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-28 pr-1 scrollbar-none">{p.activeCollection.description && <p className="px-1 pb-1 text-[9px] text-white/40">{p.activeCollection.description}</p>}{visibleMods.map((m: any) => <div key={m.itemId || m.id || m.projectId} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/78 p-3"><button type="button" onClick={() => p.handleOpenModDetails(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] text-white/40">{(m.loaders || []).slice(0,2).join(" · ")} {(m.versions || m.game_versions || []).slice(0,1).join("")}</p></div></button>{p.onAddToDraft && <button type="button" onClick={() => p.onAddToDraft?.(m)} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}<ChevronRight className="h-4 w-4 text-white/25" /></div>)}{!visibleMods.length && <Empty icon={<Compass className="h-9 w-9" />} title="Sin coincidencias" text="Probá otra búsqueda, versión o loader." />}</div></div>}
+        {p.loadingActiveMods ? <CollectionsSkeleton /> : <div className="flex min-h-0 flex-1 flex-col"><div className="mb-3 space-y-2"><SearchBox value={detailQuery} setValue={setDetailQuery} placeholder="Buscar dentro de la colección..." /><div className="mim-chip-scroll">{[["all","Todo"],["mod","Mods"],["resourcepack","Texturas"],["shader","Shaders"],["datapack","Datapacks"]].map(([id,label]) => <Chip key={id} active={detailType === id} click={() => setDetailType(id)}>{label}</Chip>)}</div><div className="grid grid-cols-2 gap-2"><Select label="Versión" value={detailVersion} options={detailMeta.versions} set={setDetailVersion} /><Select label="Loader" value={detailLoader} options={detailMeta.loaders} set={setDetailLoader} /></div></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-28 pr-1 scrollbar-none">{p.activeCollection.description && <p className="px-1 pb-1 text-[9px] text-white/40">{p.activeCollection.description}</p>}{visibleMods.map((m) => <div key={m.itemId || m.id || m.projectId} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/78 p-3"><button type="button" onClick={() => p.handleOpenModDetails(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] text-white/40">{(m.loaders || []).slice(0,2).join(" · ")} {(m.versions || m.game_versions || []).slice(0,1).join("")}</p></div></button>{p.onAddToDraft && <button type="button" onClick={() => p.onAddToDraft?.(m)} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}<ChevronRight className="h-4 w-4 text-white/25" /></div>)}{!visibleMods.length && <Empty icon={<Compass className="h-9 w-9" />} title="Sin coincidencias" text="Probá otra búsqueda, versión o loader." />}</div></div>}
       </motion.div>}
     </AnimatePresence>
   </motion.div>;

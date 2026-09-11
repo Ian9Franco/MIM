@@ -7,7 +7,12 @@ import { useFomoDownload } from "./fomo/useFomoDownload";
 import { useFomoSelection } from "./fomo/useFomoSelection";
 import { useFomoDetails } from "./fomo/useFomoDetails";
 
-export function useFomoDiscover(defaultLoader: string, defaultGameVersion: string, showStatus: any, projectName?: string) {
+export function useFomoDiscover(
+  defaultLoader: string,
+  defaultGameVersion: string,
+  showStatus: (msg: string, type?: "info" | "success" | "warning" | "error") => void,
+  projectName?: string
+) {
   const filters = useFomoFilters(defaultLoader, defaultGameVersion);
   const search = useFomoSearch(filters);
   const download = useFomoDownload(showStatus, filters.loader, filters.gameVersions, projectName);
@@ -16,12 +21,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
 
   const handleDownload = useCallback(async (mod: ModHit, version?: VersionEntry) => {
     // ── Bedrock Marketplace: redirigir al navegador externo ──────────────────
-    if ((mod as any)._source === "chunk") {
+    if (mod._source === "chunk") {
       showStatus("Redirigiendo al Minecraft Marketplace para obtener el addon...", "info");
-      window.open((mod as any).url || `https://chunk.gg`, "_blank");
+      window.open(mod.url || `https://chunk.gg`, "_blank");
       return;
     }
-    let url = version?.primaryFile?.url || (mod as any).downloadUrl || mod.url;
+    let url = version?.primaryFile?.url || (mod as unknown as { downloadUrl?: string }).downloadUrl || mod.url;
     let filename = version?.primaryFile?.filename || mod.title;
     let targetVer = version;
 
@@ -30,7 +35,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     const isMrProjectPage = url ? /modrinth\.com\/(mod|resourcepack|shader|datapack|modpack)\//.test(url) : false;
     if (mod.allowModDistribution === false || !url || !targetVer || isMrProjectPage || url.includes("curseforge.com")) {
       showStatus("Obteniendo metadatos de la versión...", "info");
-      let allFetchedVersions: any[] = [];
+      let allFetchedVersions: VersionEntry[] = [];
       try {
         const apiSource = mod._source === "curseforge" ? "curseforge" : "modrinth";
         const res = await fetch(`/api/${apiSource}/versions?projectId=${mod.projectId}&loader=${filters.loader}&projectType=${mod.projectType || filters.projectType}&gameVersion=${filters.gameVersions?.[0] || ""}`);
@@ -49,14 +54,14 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
       }
       // Agregar todas las deps requeridas de TODAS las versiones al targetVer si éste no las tiene
       if (targetVer && allFetchedVersions.length > 0) {
-        const allDepsMap = new Map<string, any>();
+        const allDepsMap = new Map<string, { projectId: string; dependencyType?: string; title?: string; iconUrl?: string; projectType?: string }>();
         allFetchedVersions.forEach(v => {
-          (v.dependencies || []).forEach((d: any) => {
+          (v.dependencies || []).forEach((d) => {
             if (!allDepsMap.has(d.projectId)) allDepsMap.set(d.projectId, d);
           });
         });
         if (allDepsMap.size > 0 && (!targetVer.dependencies || targetVer.dependencies.length === 0)) {
-          (targetVer as any).dependencies = Array.from(allDepsMap.values());
+          targetVer.dependencies = Array.from(allDepsMap.values());
         }
       }
     }
@@ -68,7 +73,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         const searchRes = await fetch(`/api/modrinth/discover?q=${encodeURIComponent(mod.title)}&loader=${filters.loader}`);
         if (searchRes.ok) {
           const sData = await searchRes.json();
-          const mrMod = sData.mods?.find((m: any) => m.title.toLowerCase() === mod.title.toLowerCase() || m.slug.toLowerCase() === mod.slug.toLowerCase() || m.title.toLowerCase().includes(mod.title.toLowerCase()));
+          const mrMod = sData.mods?.find((m: ModHit) => m.title.toLowerCase() === mod.title.toLowerCase() || m.slug?.toLowerCase() === mod.slug?.toLowerCase() || m.title.toLowerCase().includes(mod.title.toLowerCase()));
           if (mrMod) {
             showStatus("Descargando desde Modrinth...", "info");
             const vRes = await fetch(`/api/modrinth/versions?projectId=${mrMod.projectId}&loader=${filters.loader}&gameVersion=${filters.gameVersions?.[0] || ""}`);
@@ -91,7 +96,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
     if (filters.projectType === "datapack" && filename.toLowerCase().endsWith(".jar")) {
       filename = filename.slice(0, -4) + ".zip";
     } else if (!/\.(jar|zip|mrpack)$/i.test(filename)) {
-      const pType = filters.projectType || mod.projectType || (mod as any).project_type || "mod";
+      const pType = filters.projectType || mod.projectType || "mod";
       const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
       filename = `${filename}${ext}`;
     }
@@ -103,7 +108,7 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
         download.setDependencyPrompt({
           mod,
           version: targetVer!,
-          dependencies: requiredDeps as any,
+          dependencies: requiredDeps,
           downloadUrl: url,
           filename,
           hashes: targetVer?.primaryFile?.hashes
@@ -118,9 +123,10 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
 
   const confirmDownloadWithDeps = useCallback(async (include: boolean) => {
     if (!download.dependencyPrompt) return;
-    let { mod, downloadUrl, filename, dependencies } = download.dependencyPrompt;
+    const { mod, downloadUrl, filename: origFilename, dependencies } = download.dependencyPrompt;
+    let filename = origFilename;
     if (!/\.(jar|zip|mrpack)$/i.test(filename)) {
-      const pType = mod.projectType || (mod as any).project_type || filters.projectType || "mod";
+      const pType = mod.projectType || filters.projectType || "mod";
       const ext = pType === "mod" ? ".jar" : pType === "modpack" ? ".mrpack" : ".zip";
       filename = `${filename}${ext}`;
     }
@@ -143,11 +149,12 @@ export function useFomoDiscover(defaultLoader: string, defaultGameVersion: strin
             const data = await res.json();
             const firstVer = data.versions?.[0];
             if (firstVer?.primaryFile?.url) {
-              const depMod: any = {
+              const depMod: ModHit = {
                 projectId: dep.projectId,
                 title: dep.title || dep.projectId,
                 iconUrl: dep.iconUrl || null,
                 projectType: dep.projectType || "mod",
+                categories: [],
                 _source: mod._source
               };
               let depFilename = firstVer.primaryFile.filename;

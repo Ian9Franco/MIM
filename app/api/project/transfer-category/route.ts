@@ -9,10 +9,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 
 function copyFolderRecursive(src: string, dest: string): number {
@@ -36,20 +37,19 @@ function copyFolderRecursive(src: string, dest: string): number {
   return count;
 }
 
+const transferCategoryBodySchema = z.object({
+  sourceProject: z.string().min(1),
+  targetProject: z.string().min(1),
+  version: z.string().min(1),
+  category: z.string().min(1),
+  loader: z.string().optional(),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  try {
-    const { sourceProject, targetProject, version, category, loader } = await req.json();
-
-    if (!sourceProject || !targetProject || !version || !category) {
-      return NextResponse.json(
-        { error: "Missing required fields: sourceProject, targetProject, version, category" },
-        { status: 400 }
-      );
-    }
+  { bodySchema: transferCategoryBodySchema },
+  async ({ body }) => {
+    try {
+      const { sourceProject, targetProject, version, category, loader = "fabric" } = body;
 
     if (sourceProject === targetProject) {
       return NextResponse.json(

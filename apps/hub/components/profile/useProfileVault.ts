@@ -14,14 +14,20 @@ import {
 } from "../../lib/vault/vaultEngine";
 import { importVaultToSupabase, type VaultImportResult } from "../../lib/vault/vaultImporter";
 import { playFomoSound } from "../../lib/sounds";
+import type {
+  FomoUserDraft,
+  FomoFavoriteItem,
+  FomoFollowedAuthor,
+} from "../../types/fomo";
+import type { Session } from "@supabase/supabase-js";
 
 interface UseProfileVaultParams {
-  session: any;
-  profile: any;
+  session: Session | null;
+  profile: Record<string, any> | null;
   username: string;
-  userDrafts: any[];
-  userFavorites: any[];
-  userFollowedAuthors: any[];
+  userDrafts: FomoUserDraft[];
+  userFavorites: FomoFavoriteItem[];
+  userFollowedAuthors: FomoFollowedAuthor[];
 }
 
 export function useProfileVault({
@@ -53,7 +59,7 @@ export function useProfileVault({
     try {
       setIsExportingVault(true);
 
-      const formattedDrafts = (userDrafts || []).map((d: any) => ({
+      const formattedDrafts = (userDrafts || []).map((d: Record<string, any>) => ({
         name: d.name || "Borrador sin título",
         description: d.description || "",
         minecraft_version: d.minecraft_version || "1.20.1",
@@ -61,34 +67,34 @@ export function useProfileVault({
         visibility: d.visibility || "private",
         cover_image: d.cover_image || undefined,
         created_at: d.created_at,
-        items: (d.draft_items || d.items || []).map((it: any) => ({
-          project_id: it.project_id,
-          mod_name: it.mod_name || it.project_id,
-          source: it.source || "modrinth",
+        items: ((d.draft_items || d.items || []) as Array<Record<string, any>>).map((it) => ({
+          project_id: it.project_id || it.projectId,
+          mod_name: it.mod_name || it.title || it.project_id || it.projectId,
+          source: it.source || it.platform || "modrinth",
           category: it.category || "mods",
           content_type: it.content_type || "mods",
           side: it.side || "both",
-          version_id: it.version_id || undefined,
+          version_id: it.version_id || it.versionId || undefined,
           dependencies: it.dependencies || [],
         })),
       }));
 
-      const formattedFavorites = (userFavorites || []).map((f: any) => ({
-        project_id: f.mod_id || f.project_id || f.id,
+      const formattedFavorites = (userFavorites || []).map((f: Record<string, any>) => ({
+        project_id: f.mod_id || f.project_id || f.id || f.projectId,
         mod_name: f.mod_name || f.title || f.name,
-        platform: f.platform || f.source || "modrinth",
-        summary: f.summary,
+        platform: f.platform || f.source || f._source || "modrinth",
+        summary: typeof f.summary === "string" ? f.summary : undefined,
         author: f.author,
-        icon_url: f.icon_url,
+        icon_url: f.icon_url || f.iconUrl,
         pinned: !!f.pinned,
         created_at: f.created_at,
       }));
 
-      const formattedAuthors = (userFollowedAuthors || []).map((a: any) => ({
+      const formattedAuthors = (userFollowedAuthors || []).map((a: Record<string, any>) => ({
         author_id: a.author_id,
-        author_name: a.author_name,
+        author_name: a.author_name || a.name,
         platform: a.platform || a.source || "modrinth",
-        avatar_url: a.avatar_url,
+        avatar_url: a.avatar_url || a.iconUrl,
         created_at: a.created_at,
       }));
 
@@ -194,8 +200,9 @@ export function useProfileVault({
       setIsEncryptedVault(false);
       setImportValidation({ valid: true });
       playFomoSound("sparkle");
-    } catch (err: any) {
-      setImportPassError(err?.message || "Contraseña incorrecta o archivo dañado.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "Contraseña incorrecta o archivo dañado.");
+      setImportPassError(message);
     }
   };
 
@@ -208,14 +215,15 @@ export function useProfileVault({
       if (res.success) {
         playFomoSound("sparkle");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "Error al sincronizar con la base de datos.");
       setImportResult({
         success: false,
         draftsImported: 0,
         itemsImported: 0,
         favoritesImported: 0,
         authorsImported: 0,
-        error: err?.message || "Error al sincronizar con la base de datos.",
+        error: message,
       });
     } finally {
       setIsImporting(false);

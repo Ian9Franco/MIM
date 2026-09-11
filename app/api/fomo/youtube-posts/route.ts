@@ -89,7 +89,7 @@ export const GET = withApiGuard(
       }
 
       const rawJson = (match || html.match(/ytInitialData\s*=\s*({.+?})\s*;/s))![1];
-      let data: any;
+      let data: Record<string, unknown>;
       try {
         data = JSON.parse(rawJson);
       } catch {
@@ -97,21 +97,33 @@ export const GET = withApiGuard(
       }
 
       // Recorrer el árbol JSON para encontrar los posts de comunidad
-      const tabs: any[] =
-        data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-      const communityTab = tabs.find(
-        (t: any) =>
-          t.tabRenderer?.title === "Comunidad" ||
-          t.tabRenderer?.title === "Community" ||
-          t.tabRenderer?.title === "Publicaciones" ||
-          t.tabRenderer?.title === "Posts" ||
-          t.tabRenderer?.endpoint?.browseEndpoint?.params?.includes("community") ||
-          t.tabRenderer?.endpoint?.browseEndpoint?.params?.includes("posts")
-      );
+      const contentsObj = data.contents as Record<string, unknown> | undefined;
+      const twoCol = contentsObj?.twoColumnBrowseResultsRenderer as Record<string, unknown> | undefined;
+      const tabs: Array<Record<string, unknown>> = Array.isArray(twoCol?.tabs) ? (twoCol?.tabs as Array<Record<string, unknown>>) : [];
+      const communityTab = tabs.find((t) => {
+        const tabRenderer = t.tabRenderer as Record<string, unknown> | undefined;
+        const title = tabRenderer?.title;
+        const endpoint = tabRenderer?.endpoint as Record<string, unknown> | undefined;
+        const browseEndpoint = endpoint?.browseEndpoint as Record<string, unknown> | undefined;
+        const params = typeof browseEndpoint?.params === "string" ? browseEndpoint.params : "";
+        return (
+          title === "Comunidad" ||
+          title === "Community" ||
+          title === "Publicaciones" ||
+          title === "Posts" ||
+          params.includes("community") ||
+          params.includes("posts")
+        );
+      });
 
-      const contents: any[] =
-        communityTab?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
-          ?.itemSectionRenderer?.contents || [];
+      const tabRenderer = communityTab?.tabRenderer as Record<string, unknown> | undefined;
+      const tabContent = tabRenderer?.content as Record<string, unknown> | undefined;
+      const secList = tabContent?.sectionListRenderer as Record<string, unknown> | undefined;
+      const secContents = Array.isArray(secList?.contents) ? (secList?.contents as Array<Record<string, unknown>>) : [];
+      const itemSection = secContents[0]?.itemSectionRenderer as Record<string, unknown> | undefined;
+      const contents: Array<Record<string, unknown>> = Array.isArray(itemSection?.contents)
+        ? (itemSection?.contents as Array<Record<string, unknown>>)
+        : [];
 
       // Regex para detectar slugs/enlaces de Modrinth y CurseForge en el texto del post
       const MODRINTH_REGEX =
@@ -119,48 +131,69 @@ export const GET = withApiGuard(
       const CURSEFORGE_REGEX =
         /curseforge\.com\/minecraft\/(mc-mods|texture-packs|customization|mc-addons)\/([a-zA-Z0-9-_]+)/g;
 
-      const posts: any[] = [];
+      interface SimplePostItem {
+        postId: string;
+        title: string;
+        description: string;
+        thumbnail: string;
+        embeddedVideoId: string;
+        videoUrl: string;
+        modSlugs: string[];
+        publishedAt: string;
+        mode: string;
+      }
+      const posts: SimplePostItem[] = [];
 
       for (const item of contents) {
-        const postRenderer =
-          item.backstagePostThreadRenderer?.post?.backstagePostRenderer;
+        const backstagePostThread = item.backstagePostThreadRenderer as Record<string, unknown> | undefined;
+        const post = backstagePostThread?.post as Record<string, unknown> | undefined;
+        const postRenderer = post?.backstagePostRenderer as Record<string, unknown> | undefined;
         if (!postRenderer) continue;
 
-        const postId: string = postRenderer.postId || "";
+        const postId: string = String(postRenderer.postId || "");
         if (!postId) continue;
 
         // Extraer texto completo del post
-        const rawText: string =
-          postRenderer.contentText?.runs?.map((r: any) => r.text).join("") || "";
+        const contentText = postRenderer.contentText as Record<string, unknown> | undefined;
+        const runs = Array.isArray(contentText?.runs) ? (contentText?.runs as Array<{ text?: string }>) : [];
+        const rawText: string = runs.map((r) => r.text || "").join("") || "";
 
-        const publishedTime: string =
-          postRenderer.publishedTimeText?.runs?.[0]?.text ||
-          postRenderer.publishedTimeText?.simpleText ||
-          "";
+        const pubTimeText = postRenderer.publishedTimeText as Record<string, unknown> | undefined;
+        const pubTimeRuns = Array.isArray(pubTimeText?.runs) ? (pubTimeText?.runs as Array<{ text?: string }>) : [];
+        const publishedTime: string = String(
+          pubTimeRuns[0]?.text ||
+          pubTimeText?.simpleText ||
+          ""
+        );
 
         // Extraer imagen o video adjunto si existe
-        const attachment = postRenderer.backstageAttachment?.backstageImageRenderer;
-        const multiImages =
-          postRenderer.backstageAttachment?.postMultiImageRenderer?.images;
-        const videoAttachment = postRenderer.backstageAttachment?.videoRenderer;
+        const backstageAttachment = postRenderer.backstageAttachment as Record<string, unknown> | undefined;
+        const attachment = backstageAttachment?.backstageImageRenderer as Record<string, unknown> | undefined;
+        const postMulti = backstageAttachment?.postMultiImageRenderer as Record<string, unknown> | undefined;
+        const multiImages = Array.isArray(postMulti?.images) ? (postMulti?.images as Array<Record<string, unknown>>) : undefined;
+        const videoAttachment = backstageAttachment?.videoRenderer as Record<string, unknown> | undefined;
 
         let thumbnail = "";
         let embeddedVideoId = "";
         
-        if (attachment?.image?.thumbnails?.length) {
+        const attachImg = attachment?.image as Record<string, unknown> | undefined;
+        const attachThumbs = Array.isArray(attachImg?.thumbnails) ? (attachImg?.thumbnails as Array<{ url?: string }>) : [];
+        if (attachThumbs.length) {
           // Preferir la miniatura más grande
-          const thumbs = attachment.image.thumbnails;
-          thumbnail = thumbs[thumbs.length - 1]?.url || thumbs[0]?.url || "";
+          thumbnail = attachThumbs[attachThumbs.length - 1]?.url || attachThumbs[0]?.url || "";
         } else if (multiImages?.length) {
-          const firstImg = multiImages[0]?.backstageImageRenderer?.image?.thumbnails;
-          if (firstImg?.length) {
-            thumbnail = firstImg[firstImg.length - 1]?.url || firstImg[0]?.url || "";
+          const firstImgRenderer = multiImages[0]?.backstageImageRenderer as Record<string, unknown> | undefined;
+          const firstImg = firstImgRenderer?.image as Record<string, unknown> | undefined;
+          const firstThumbs = Array.isArray(firstImg?.thumbnails) ? (firstImg?.thumbnails as Array<{ url?: string }>) : [];
+          if (firstThumbs.length) {
+            thumbnail = firstThumbs[firstThumbs.length - 1]?.url || firstThumbs[0]?.url || "";
           }
         } else if (videoAttachment) {
-          embeddedVideoId = videoAttachment.videoId || "";
-          if (videoAttachment.thumbnail?.thumbnails?.length) {
-            const thumbs = videoAttachment.thumbnail.thumbnails;
-            thumbnail = thumbs[thumbs.length - 1]?.url || thumbs[0]?.url || "";
+          embeddedVideoId = String(videoAttachment.videoId || "");
+          const vidThumb = videoAttachment.thumbnail as Record<string, unknown> | undefined;
+          const vidThumbs = Array.isArray(vidThumb?.thumbnails) ? (vidThumb?.thumbnails as Array<{ url?: string }>) : [];
+          if (vidThumbs.length) {
+            thumbnail = vidThumbs[vidThumbs.length - 1]?.url || vidThumbs[0]?.url || "";
           }
         }
 
@@ -206,9 +239,10 @@ export const GET = withApiGuard(
       fs.writeFileSync(cacheFile, JSON.stringify(responseData, null, 2), "utf-8");
 
       return NextResponse.json(responseData);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
       return NextResponse.json(
-        { error: err.message || "Error desconocido" },
+        { error: errorMsg },
         { status: 500 }
       );
     }

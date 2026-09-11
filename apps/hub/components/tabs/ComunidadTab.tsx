@@ -11,18 +11,45 @@ import { CommunityRankings } from "../community/CommunityRankings";
 import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
 import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 
-function normalizeCommunityProfile(profile: any) {
+export interface CommunityProfile {
+  id: string;
+  username?: string;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  color?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  banner_meta?: {
+    youtube_channels?: Array<{ name?: string; url?: string; visible?: boolean }>;
+    theme?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface CommunityShareItem {
+  id: string;
+  mod_id?: string;
+  platform?: string;
+  name?: string;
+  icon_url?: string | null;
+  summary?: string;
+  pinned?: boolean;
+  created_at?: string;
+  profile?: CommunityProfile | CommunityProfile[];
+}
+
+function normalizeCommunityProfile(profile: unknown): CommunityProfile | null {
   if (!profile) return null;
-  return Array.isArray(profile) ? profile[0] : profile;
+  return Array.isArray(profile) ? (profile[0] as CommunityProfile) : (profile as CommunityProfile);
 }
 
 interface ComunidadTabProps {
   rankings: ModHit[];
   loadingRankings: boolean;
   handleOpenModDetails: (mod: ModHit) => void;
-  session: any;
-  userFavorites: any[];
-  userFollowedAuthors: any[];
+  session: { user?: { id: string } } | null;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  userFollowedAuthors: Array<{ platform?: string; author_name?: string; name?: string }>;
   onToggleFavorite: (mod: ModHit) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
   showAlert?: (title: string, message: string) => void;
@@ -35,18 +62,19 @@ function updateKey(source: string | undefined, projectId: string) {
   return `${source || "modrinth"}:${projectId}`;
 }
 
-function isMissingPinnedColumnError(error: any) {
-  const message = String(error?.message || error?.details || "");
-  return error?.code === "42703" || error?.code === "PGRST204" || /\bpinned\b/i.test(message);
+function isMissingPinnedColumnError(error: unknown) {
+  const err = error as { message?: string; details?: string; code?: string } | null;
+  const message = String(err?.message || err?.details || "");
+  return err?.code === "42703" || err?.code === "PGRST204" || /\bpinned\b/i.test(message);
 }
 
-function isSharePinned(row: any) {
+function isSharePinned(row: CommunityShareItem) {
   if (row?.pinned === true) return true;
   if (row?.pinned === false) return false;
   return !!parseShareMeta(row?.summary).priority;
 }
 
-function sortSharesByPinned(rows: any[]) {
+function sortSharesByPinned(rows: CommunityShareItem[]) {
   return [...rows].sort((a, b) => {
     const priorityOrder = Number(isSharePinned(b)) - Number(isSharePinned(a));
     if (priorityOrder) return priorityOrder;
@@ -54,7 +82,7 @@ function sortSharesByPinned(rows: any[]) {
   });
 }
 
-async function loadCommunitySharesPage(page: number) {
+async function loadCommunitySharesPage(page: number): Promise<{ items: CommunityShareItem[]; hasNext: boolean }> {
   const from = page * SHARES_PAGE_SIZE;
   const to = from + SHARES_PAGE_SIZE;
   const query = supabase
@@ -67,7 +95,7 @@ async function loadCommunitySharesPage(page: number) {
 
   const { data, error } = await query;
   if (!error) {
-    const sorted = sortSharesByPinned(data || []);
+    const sorted = sortSharesByPinned((data || []) as CommunityShareItem[]);
     return { items: sorted.slice(0, SHARES_PAGE_SIZE), hasNext: sorted.length > SHARES_PAGE_SIZE };
   }
   if (!isMissingPinnedColumnError(error)) throw error;
@@ -79,11 +107,11 @@ async function loadCommunitySharesPage(page: number) {
     .range(0, 240);
 
   if (fallback.error) throw fallback.error;
-  const sorted = sortSharesByPinned((fallback.data || []).filter(isSharePinned));
+  const sorted = sortSharesByPinned(((fallback.data || []) as CommunityShareItem[]).filter(isSharePinned));
   return { items: sorted.slice(from, to), hasNext: sorted.length > to };
 }
 
-async function loadProfileShares(profileId: string) {
+async function loadProfileShares(profileId: string): Promise<CommunityShareItem[]> {
   const withPinned = await supabase
     .from("favorite_mods")
     .select("*")
@@ -91,7 +119,7 @@ async function loadProfileShares(profileId: string) {
     .order("pinned", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
-  if (!withPinned.error) return sortSharesByPinned(withPinned.data || []);
+  if (!withPinned.error) return sortSharesByPinned((withPinned.data || []) as CommunityShareItem[]);
   if (!isMissingPinnedColumnError(withPinned.error)) throw withPinned.error;
 
   const fallback = await supabase
@@ -101,7 +129,7 @@ async function loadProfileShares(profileId: string) {
     .order("created_at", { ascending: false });
 
   if (fallback.error) throw fallback.error;
-  return sortSharesByPinned(fallback.data || []);
+  return sortSharesByPinned((fallback.data || []) as CommunityShareItem[]);
 }
 
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
@@ -118,16 +146,16 @@ async function fetchProjectUpdatedAt(source: string | undefined, projectId: stri
 export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, userFavorites, userFollowedAuthors, onToggleFavorite, onSearchAuthor, showAlert }: ComunidadTabProps) {
   const [section, setSection] = useState<CommunitySection>("compartidos");
   const [profileView, setProfileView] = useState<"list" | "profile">("list");
-  const [selectedProfile, setSelectedProfile] = useState<any>(null);
-  const [shares, setShares] = useState<any[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<CommunityProfile | null>(null);
+  const [shares, setShares] = useState<CommunityShareItem[]>([]);
   const [loadingShares, setLoadingShares] = useState(false);
   const [sharesPage, setSharesPage] = useState(0);
   const [hasNextSharesPage, setHasNextSharesPage] = useState(false);
-  const sharePageCache = useRef(new Map<number, { items: any[]; hasNext: boolean }>());
+  const sharePageCache = useRef(new Map<number, { items: CommunityShareItem[]; hasNext: boolean }>());
   const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<CommunityProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [publicData, setPublicData] = useState({ favorites: [] as any[], authors: [] as any[], drafts: [] as any[], channels: [] as string[], shares: [] as any[] });
+  const [publicData, setPublicData] = useState<{ favorites: unknown[]; authors: unknown[]; drafts: unknown[]; channels: string[]; shares: CommunityShareItem[] }>({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
   const [loadingPublic, setLoadingPublic] = useState(false);
   const [communityMetrics, setCommunityMetrics] = useState({ members: 0, recommendations: 0, featured: 0 });
   const [creatorIds, setCreatorIds] = useState<Set<string>>(new Set());
@@ -189,13 +217,13 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       supabase.from("followed_mods").select("profile_id, mod_id, platform"),
       supabase.from("followed_authors").select("profile_id, author_name, platform"),
     ]).then(([draftRows, favoriteRows, authorRows]) => {
-      setCreatorIds(new Set((draftRows.data || []).map((row: any) => row.owner_id)));
+      setCreatorIds(new Set((draftRows.data || []).map((row: { owner_id: string }) => row.owner_id)));
       const next: Record<string, { favorites: number; creators: number }> = {};
-      (favoriteRows.data || []).forEach((row: any) => {
+      (favoriteRows.data || []).forEach((row: { profile_id: string; mod_id: string; platform?: string }) => {
         next[row.profile_id] ||= { favorites: 0, creators: 0 };
         if (myFavoriteKeys.has(`${row.platform || "modrinth"}:${row.mod_id}`)) next[row.profile_id].favorites++;
       });
-      (authorRows.data || []).forEach((row: any) => {
+      (authorRows.data || []).forEach((row: { profile_id: string; author_name: string; platform?: string }) => {
         next[row.profile_id] ||= { favorites: 0, creators: 0 };
         if (myAuthorKeys.has(`${row.platform || "modrinth"}:${row.author_name}`)) next[row.profile_id].creators++;
       });
@@ -206,7 +234,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   useEffect(() => {
     if (!session?.user?.id) return;
     supabase.from("followed_profiles").select("followed_id").eq("follower_id", session.user.id)
-      .then(({ data }) => setFollowedProfileIds(new Set((data || []).map((row: any) => row.followed_id))));
+      .then(({ data }) => setFollowedProfileIds(new Set((data || []).map((row: { followed_id: string }) => row.followed_id))));
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -219,7 +247,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
           return;
         }
         const next: Record<string, { count: number; mine: boolean }> = {};
-        (data || []).forEach((row: any) => {
+        (data || []).forEach((row: { share_id: string; profile_id: string }) => {
           next[row.share_id] ||= { count: 0, mine: false };
           next[row.share_id].count++;
           if (row.profile_id === session?.user?.id) next[row.share_id].mine = true;
@@ -286,7 +314,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     return () => { cancelled = true; };
   }, [shares]);
 
-  const openProfile = async (profile: any) => {
+  const openProfile = async (profile: CommunityProfile | unknown) => {
     const resolved = normalizeCommunityProfile(profile);
     if (!resolved?.id) {
       showAlert?.("Perfil no disponible", "No pudimos abrir este perfil.");
@@ -303,7 +331,10 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", resolved.id).eq("visibility", "public"),
       loadProfileShares(resolved.id),
     ]);
-    const channels = resolved.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
+    const channels = resolved.banner_meta?.youtube_channels
+      ?.filter((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" || channel.visible !== false)
+      .map((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" ? channel : channel.name || channel.url || "")
+      .filter(Boolean) || [];
     setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels, shares: sharesData || [] });
     setLoadingPublic(false);
   };
@@ -321,13 +352,26 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
         {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={setSharesPage} onOpenProfile={openProfile} onOpenMod={handleOpenModDetails} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reactions={reactions} onToggleReaction={toggleReaction} />}
         {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={handleOpenModDetails} /></motion.div>}
         {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={openProfile} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={toggleProfileFollow} />}
-        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => setProfileView("list")} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id)} onToggleFollow={() => toggleProfileFollow(selectedProfile?.id)} />}
+        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => setProfileView("list")} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id || ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id || "")} onToggleFollow={() => toggleProfileFollow(selectedProfile?.id || "")} />}
       </AnimatePresence>
     </motion.div>
   );
 }
 
-interface FeedProps { shares: any[]; loading: boolean; recentUpdates: Record<string, boolean>; page: number; hasNext: boolean; onPageChange: (page: number) => void; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; userFavorites: any[]; onToggleFavorite: (mod: ModHit) => void; reactions: Record<string, { count: number; mine: boolean }>; onToggleReaction: (shareId: string) => void; }
+interface FeedProps {
+  shares: CommunityShareItem[];
+  loading: boolean;
+  recentUpdates: Record<string, boolean>;
+  page: number;
+  hasNext: boolean;
+  onPageChange: (page: number) => void;
+  onOpenProfile: (profile: CommunityProfile | unknown) => void;
+  onOpenMod: (mod: ModHit) => void;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  onToggleFavorite: (mod: ModHit) => void;
+  reactions: Record<string, { count: number; mine: boolean }>;
+  onToggleReaction: (shareId: string) => void;
+}
 
 /** The feed keeps user context first, then presents the shared media as one clear action. */
 function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageChange, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reactions, onToggleReaction }: FeedProps) {
@@ -363,7 +407,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
   );
 }
 
-function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: any; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; userFavorites: any[]; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
+function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: CommunityShareItem; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: CommunityProfile | null | unknown) => void; onOpenMod: (mod: ModHit) => void; userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
   const meta = parseShareMeta(item.summary);
   const projectId = item.mod_id || item.id;
   const platform = item.platform || "modrinth";
@@ -438,7 +482,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
   );
 }
 
-function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: any[]; loading: boolean; onOpen: (profile: any) => void; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: (profileId: string) => void }) {
+function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: CommunityProfile[]; loading: boolean; onOpen: (profile: CommunityProfile) => void; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: (profileId: string) => void }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"new" | "active" | "creators">("new");
   const visibleProfiles = useMemo(() => profiles

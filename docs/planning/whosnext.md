@@ -28,9 +28,29 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 
 Fuente: [recruiter-review.md](../guides/recruiter-review.md), señales amarillas/rojas y próximos pasos. Las métricas y opiniones del informe requieren fuentes; no se toman sus percentiles, autoría inferida ni usuarios reales como hechos comprobados.
 
-- [ ] **REC-01 — Reducir `any` con baseline reproducible.** Extiende la deuda de tipado existente: medir por carpeta con criterio documentado, priorizar `useHomeController`, `useAlertManager` y fronteras core, sustituir por tipos/unknown validado. Cierre: comparación antes/después y typecheck sin errores; no usar 935 como conteo actualizado.
+- [ ] **REC-01 — Reducir `any` con baseline reproducible.** **Estado:** 🟡 Activo / En Progreso (2026-09-11)
+  - **Línea Base Medida (2026-09-11):** **901 ocurrencias totales** (699 explicit `: any`, 127 assertions `as any`, 75 generic `<any>`) en 212 archivos.
+  - **Progreso Actual:** Reducido a **487 ocurrencias totales** (**-414 ocurrencias eliminadas** desde la línea base inicial, superando con holgura la meta de 500-600).
+  - **Desglose Actual por Carpeta:**
+    - `components/`: 183
+    - `app/`: 98
+    - `apps/`: 79
+    - `hooks/`: 59
+    - `lib/`: 52
+    - `services/`: 8
+    - `scripts/`: 4
+    - `workers/`: 4
+  - **Refactorizaciones Completadas:**
+    - [lib/events/taxonomy.ts](file:///d:/Dev/CodeProjects/MIM/lib/events/taxonomy.ts): Tipado exhaustivo de taxonomía de eventos (`EventSource`, payloads).
+    - [lib/events/eventBus.ts](file:///d:/Dev/CodeProjects/MIM/lib/events/eventBus.ts) & [lib/events/eventDebugger.ts](file:///d:/Dev/CodeProjects/MIM/lib/events/eventDebugger.ts): Contrato formal `Handler`, `TimelineOptions`, `TimelineItem`.
+    - [lib/storage/smart-cache.ts](file:///d:/Dev/CodeProjects/MIM/lib/storage/smart-cache.ts): Genéricos `<T>` para cache reactivo.
+    - [types/fomo.ts](file:///d:/Dev/CodeProjects/MIM/types/fomo.ts) & [apps/hub/types/fomo.ts](file:///d:/Dev/CodeProjects/MIM/apps/hub/types/fomo.ts): Tipado estricto `FomoCategory` e index signatures seguras `Record<string, unknown>`.
+    - [hooks/useAlertManager.ts](file:///d:/Dev/CodeProjects/MIM/hooks/useAlertManager.ts): Eliminación completa de `any` usando interfaces de incidentes, proyectos y mods.
+    - [apps/hub/hooks/useHomeController.ts](file:///d:/Dev/CodeProjects/MIM/apps/hub/hooks/useHomeController.ts): Tipado de sesión, drafts, y favoritos.
+    - [app/api/curseforge/versions/route.ts](file:///d:/Dev/CodeProjects/MIM/app/api/curseforge/versions/route.ts) & [app/api/modrinth/versions/route.ts](file:///d:/Dev/CodeProjects/MIM/app/api/modrinth/versions/route.ts): Tipado estricto de APIs externas de versiones.
+    - [apps/hub/app/api/fomo/youtube-posts/route.ts](file:///d:/Dev/CodeProjects/MIM/apps/hub/app/api/fomo/youtube-posts/route.ts): Tipado de posts y traversal seguro de JSON.
 - [ ] **REC-02 — Reducir warnings de ESLint.** El techo Desktop bajó de 471 a 400 (medido en CI #221: 395 warnings); el techo Hub bajó de 100 a 75 (medido: 69 warnings). Limpieza modular sin `eslint-disable` cosméticos. Corregidas variables muertas, optional catches e imports huérfanos.
-- [ ] **REC-03 — Modularizar responsabilidades y documentar decisiones.** Subalcance UI cerrado en `DiscoverTab.tsx` (921L ➔ 158L en `web/components/tabs/discover/`), `DraftDetailView.tsx` (865L ➔ 188L en `web/components/draft-detail/`) y `FomoVersionOverlay.tsx` (925L ➔ 186L en `components/fomo/details/`), con contratos públicos preservados. Drafts Phase 2: capa `draftRepository` + tests CRUD + cableado de create/edit/delete/refresh en `useHomeDrafts` (PR pendiente); sigue `NEEDS_USER` hasta el recorrido autenticado en browser/Supabase real. Phase 3 (Profile/Community) no está desbloqueada.
+- [ ] **REC-03 — Modularizar responsabilidades y documentar decisiones.** Subalcance UI cerrado en `DiscoverTab.tsx` (921L ➔ 158L en `apps/hub/components/tabs/discover/`), `DraftDetailView.tsx` (865L ➔ 188L en `apps/hub/components/draft-detail/`) y `FomoVersionOverlay.tsx` (925L ➔ 186L en `components/fomo/details/`), con contratos públicos preservados. Drafts Phase 2 integrada en `main` (PR #86: capa `draftRepository` CRUD + tests unitarios + `useHomeDrafts`); sigue `NEEDS_USER` hasta el recorrido autenticado en browser/Supabase real. Phase 3 (Profile/Community) no está desbloqueada.
 - [ ] **REC-04 — Cubrir UI y flujos completos.** Agregar 3–5 E2E reproducibles (Discover → detalle → descarga, errores y reintentos) y tests de componentes críticos. Aislar proveedores/datos y documentar ejecución en CI. Reportar cobertura UI separada de SAGE/NBT; no presentar la cobertura acotada como global.
 - [ ] **REC-05 — Onboarding verificable y continuidad.** Partir de las guías existentes; documentar mapa de responsabilidades, diagnóstico de fallos y recuperación. Cierre: una persona distinta sigue el recorrido y se registran obstáculos y correcciones. Documentar no equivale a eliminar el bus factor.
 - [ ] **REC-06 — Trazabilidad del trabajo con IA.** Documentar decisiones humanas, asistencia de agentes y revisión aplicada con ejemplos verificables de PRs. No deducir identidad o autoría por nombres de commits ni afirmar competencias sin evidencia.
@@ -47,7 +67,7 @@ Fuente: [sage-eval.md](../engines/sage-eval.md) y su generador `scripts/evaluati
 - [x] **SAGE-03 — Reporte y umbrales verificables (cerrado).** Gate real en `npm run eval:sage` (Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia ≤ 15 ms) con `--self-test-fail` y suite `sage-eval-metrics.test.ts`.
 - [ ] **SAGE-04 — Latencia reproducible.** Informar entorno, versión, calentamiento, repeticiones y p50/p95 además de media; distinguir diagnóstico local de latencia/costo de la llamada LLM. No extrapolar 0.06 ms al chat.
 - [x] **SAGE-05 — Fixtures baseline MIMbot (cerrado, estructura).** `mimbot-fixtures.json` con 18 casos (crash, deps, mods, cuota, ambigüedad), validador `npm run eval:mimbot`, scoring live opt-in con `RUN_MIMBOT_LIVE=1`. Pendiente gate CI y métricas de latencia/costo (SAGE-05b).
-- [ ] **SAGE-06 — Verificar guardrails en el recorrido real.** Probar atribuciones contradictorias, consejos peligrosos, prompt injection y ausencia de evidencia contra el endpoint/stream. `guardrails.ts` existe, pero su existencia y la instrucción del prompt no prueban que cada respuesta de chat esté validada. Cierre: política definida ante violación y tests que ejecuten el flujo; retirar garantías absolutas del reporte y su generador.
+- [x] **SAGE-06 — Verificar guardrails en el recorrido real (cerrado).** PR #82: `chatGuardrails.ts` valida respuestas contra el `SageCrashContext`, bloquea atribuciones no soportadas, remedios peligrosos (desactivar antivirus) y prompt injection (`<untrusted-user-content>`), exigiendo referencias a evidencia y emitiendo `X-MIM-SAGE-Guardrail: blocked` con fallback seguro. Suite dedicada en `sage-chat-guardrails.test.ts`.
 - [ ] **SAGE-07 — Una fuente de evaluación.** Duplicación resuelta: la fuente canónica es `docs/engines/sage-eval.md`.
 
 ## 5. Seguimiento de Unicorn

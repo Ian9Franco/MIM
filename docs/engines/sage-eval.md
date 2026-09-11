@@ -1,43 +1,59 @@
 # SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
 > **Evaluation Date:** 2026-09-11  
-> **Gate dataset (`split: train`):** 125 cases (107 unique logs in the full corpus)  
-> **Provenance:** origin is per-case; unlabeled historical cases are `unknown`, not attested community logs  
-> **Holdout real:** 0 cases — SAGE-01 remains open until unseen real logs exist  
+> **Regression gate (`crash-corpus-regression.json`):** 125 templated cases — CI only, not real captured logs  
+> **Real corpus (`crash-corpus.json`):** 0 cases — add server/client logs here when available  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; not mixed into this file yet  
 
 ---
 
 ## Limits (SAGE-01)
 
-These numbers describe the current corpus. They are not a generalization claim.
+This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
 
-- Historical cases are `origin: unknown` / `license: unspecified` until a human fills provenance.
-- 28 extra copies share an identical `rawLog` with another case (unique logs: 107/135).
-- Log length on the full corpus: min 160, p50 305, mean 331, max 611 characters. Typical Minecraft crash reports are much longer.
-- Train loader mix is Fabric-heavy. Quilt has no train cases. NeoForge has a single train case unless listed below.
-- No launcher wrappers (Prism, MultiMC, CurseForge) exist in `train`. Truncated stacks and combined errors live only in `split: stress` and are **not** part of the SAGE-03 gate.
-- 100% train F1 means the engine matches this regression set. It does not prove performance on unseen logs.
+- `crash-corpus-regression.json` holds templated snippets (`origin: synthetic`) for the SAGE-03 CI gate only.
+- `crash-corpus.json` is intentionally **empty** until you capture real logs (client crash or server `latest.log` excerpts) without contaminating regression.
+- 100% regression F1 does not prove generalization. Real holdout lives only in `crash-corpus.json`.
 
-### Duplicate audit
+### Regression fixture audit
+
+- Samples: 125 (97 unique logs; 28 exact duplicate extras)
+- Log length: min 160, p50 303, mean 325, max 611 chars
+- Origin: unknown 0, synthetic 125, community 0, public-issue 0
+- Split: train 125, stress 0, holdout 0
 
 Exact groups:
 
 - exact CASE-086: 15 copies (14 extras)
 - exact CASE-101: 15 copies (14 extras)
 
-Near-duplicate prefix groups (distinct hashes, shared prefix):
+Near-duplicate prefix groups:
 
 - near CASE-001: 14 samples sharing a 180-char prefix
-- near CASE-036: 21 samples sharing a 180-char prefix
-- near CASE-056: 9 samples sharing a 180-char prefix
+- near CASE-036: 20 samples sharing a 180-char prefix
+- near CASE-056: 8 samples sharing a 180-char prefix
 - near CASE-058: 7 samples sharing a 180-char prefix
 
-Origin counts: unknown 125, synthetic 10, community 0, public-issue 0.  
-Split counts: train 125, stress 10, holdout 0.
+
+### Real corpus audit
+
+- Samples: 0 (0 unique logs; 0 exact duplicate extras)
+- Log length: min 0, p50 0, mean 0, max 0 chars
+- Origin: unknown 0, synthetic 0, community 0, public-issue 0
+- Split: train 0, stress 0, holdout 0
+
+Exact groups:
+
+- none
+
+Near-duplicate prefix groups:
+
+- none
+
 
 ---
 
-## 📊 Summary Performance Metrics (train / SAGE-03 gate)
+## 📊 Summary Performance Metrics (regression / SAGE-03 gate)
 
 | Metric | Measured Value | Benchmark Target | Status |
 |:---|:---:|:---:|:---:|
@@ -48,7 +64,7 @@ Split counts: train 125, stress 10, holdout 0.
 | **Top-1 atribución (con culpable)** | **71.4%** | informativo | 50/70 |
 | **Top-3 atribución (con culpable)** | **100.0%** | informativo | 70/70 |
 | **Acierto sistémico sin culpable** | **100.0%** | informativo | 55/55 |
-| **Mean Inference Latency** | **0.06 ms** | < 15.0 ms | ✅ Pass (0.06 ms) |
+| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ✅ Pass (0.05 ms) |
 
 ### Métricas desglosadas (SAGE-02)
 
@@ -60,7 +76,7 @@ Split counts: train 125, stress 10, holdout 0.
 
 ---
 
-## 🔬 Category Breakdown (train)
+## 🔬 Category Breakdown (regression)
 
 | Crash Category | Sample Count | Precision | Recall | F1-Score |
 |:---|:---:|:---:|:---:|:---:|
@@ -73,7 +89,7 @@ Split counts: train 125, stress 10, holdout 0.
 | `OUT_OF_MEMORY` | 15 | 100.0% | 100.0% | 100.0% |
 | `UNKNOWN_RUNTIME` | 10 | 100.0% | 100.0% | 100.0% |
 
-## Loader Breakdown (train)
+## Loader Breakdown (regression)
 
 | Loader | Samples | Category accuracy |
 |:---|---:|---:|
@@ -84,26 +100,9 @@ Split counts: train 125, stress 10, holdout 0.
 
 ---
 
-## Stress set (synthetic, not gated)
+## Real holdout (`crash-corpus.json`, not gated)
 
-| Metric | Value |
-|:---|---:|
-| Samples | 10 |
-| Category accuracy | 70.0% |
-| Macro F1 | 64.2% |
-| Top-3 histórico | 90.0% (9/10) |
-
-| Loader | Samples | Category accuracy |
-|:---|---:|---:|
-| fabric | 4 | 75.0% |
-| forge | 4 | 75.0% |
-| neoforge | 1 | 0.0% |
-| quilt | 1 | 100.0% |
-
-
-## Holdout set (unseen real logs)
-
-Holdout is empty. SAGE-01 Capa B needs 10–20 real logs never used to tune rules.
+`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.
 
 
 ---
@@ -111,10 +110,9 @@ Holdout is empty. SAGE-01 Capa B needs 10–20 real logs never used to tune rule
 ## 🚀 Reproducibility
 
 ```bash
-npm run eval:sage              # train split + SAGE-03 gate + write this report
-npm run eval:sage -- --stress  # synthetic stress only (no gate)
-npm run eval:sage -- --holdout # real holdout only (no gate; empty until Capa B)
-npm run eval:sage -- --audit   # duplicate / provenance counts
+npm run eval:sage              # regression gate + write this report
+npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --audit   # regression + real corpus audits
 ```
 
-CI gate thresholds (`SAGE-03`) apply **only** to `split: train`: Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia media ≤ 15 ms.
+CI gate thresholds (`SAGE-03`) apply **only** to `crash-corpus-regression.json`: Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia media ≤ 15 ms.

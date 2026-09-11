@@ -89,7 +89,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Generalización del Dataset SAGE:** Capa A lista (schema de procedencia, audit de duplicados, split train/stress/holdout, desglose por loader, 10 sintéticos stress). Sigue `NEEDS_USER`: origen/licencia reales y ≥10 logs holdout no usados para tunear reglas. | `SAGE-01` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-01)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
+| **Generalización del Dataset SAGE:** Infra lista (`crash-corpus.json` vacío + regression aislado). Sigue `NEEDS_USER`: capturar logs reales (cliente o servidor) tras probar host/VPS; no mezclar con el fixture de regresión. Distinto de SRV-5 (ingesta remota). | `SAGE-01` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-01)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Métricas Top-1/Top-3 Rigurosas:** Separar formalmente en el reporte casos con culpable atribuible de aciertos sistémicos sin culpable. | `SAGE-02` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-02)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Gate Automatizado de CI:** Hacer que `npm run eval:sage` falle el pipeline si las métricas caen por debajo de los umbrales históricos. | `SAGE-03` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-03)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Scoring live MIMbot en CI:** Ejecutar fixtures contra LLM real (`RUN_MIMBOT_LIVE=1`) y gate de regresión. | `SAGE-05b` | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md)<br/>Baseline en `scripts/evaluation/mimbot-fixtures.json` |

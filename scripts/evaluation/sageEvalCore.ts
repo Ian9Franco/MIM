@@ -455,10 +455,14 @@ export function formatRatioLine(label: string, metric: RatioMetric): string {
 
 export interface SageEvalReportInput {
   evaluationDate: string;
-  train: SageEvaluationResult;
-  audit: CorpusAudit;
-  stress?: SageEvaluationResult;
-  holdout?: SageEvaluationResult;
+  regression: {
+    train: SageEvaluationResult;
+    audit: CorpusAudit;
+  };
+  real: {
+    audit: CorpusAudit;
+    holdout?: SageEvaluationResult;
+  };
 }
 
 function formatSplitResult(title: string, result: SageEvaluationResult | undefined, emptyNote: string): string {
@@ -483,15 +487,7 @@ ${loaderRows.join("\n")}
 `;
 }
 
-export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string {
-  const { train, audit, evaluationDate, stress, holdout } = input;
-  const markdownRows = train.categoryRows.map(
-    (row) =>
-      `| \`${row.category}\` | ${row.samples} | ${row.precision.toFixed(1)}% | ${row.recall.toFixed(1)}% | ${row.f1.toFixed(1)}% |`,
-  );
-  const loaderRows = train.loaderRows.map(
-    (row) => `| ${row.loader} | ${row.samples} | ${row.categoryAccuracy.toFixed(1)}% |`,
-  );
+function formatAuditSection(title: string, audit: CorpusAudit): string {
   const exactDupLines = audit.exactDuplicateGroups
     .map((group) => `- exact ${group.canonicalId}: ${group.sampleCount} copies (${group.duplicateIds.length} extras)`)
     .join("\n");
@@ -499,42 +495,59 @@ export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string 
     .map((group) => `- near ${group.canonicalId}: ${group.sampleCount} samples sharing a ${NEAR_DUPLICATE_PREFIX_LENGTH}-char prefix`)
     .join("\n");
 
-  return `# SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
+  return `### ${title}
 
-> **Evaluation Date:** ${evaluationDate}  
-> **Gate dataset (\`split: train\`):** ${train.sampleCount} cases (${audit.uniqueLogCount} unique logs in the full corpus)  
-> **Provenance:** origin is per-case; unlabeled historical cases are \`unknown\`, not attested community logs  
-> **Holdout real:** ${audit.splitCounts.holdout} cases — SAGE-01 remains open until unseen real logs exist  
-
----
-
-## Limits (SAGE-01)
-
-These numbers describe the current corpus. They are not a generalization claim.
-
-- Historical cases are \`origin: unknown\` / \`license: unspecified\` until a human fills provenance.
-- ${audit.exactDuplicateExtraCount} extra copies share an identical \`rawLog\` with another case (unique logs: ${audit.uniqueLogCount}/${audit.totalSamples}).
-- Log length on the full corpus: min ${audit.logLength.min}, p50 ${audit.logLength.p50}, mean ${audit.logLength.mean.toFixed(0)}, max ${audit.logLength.max} characters. Typical Minecraft crash reports are much longer.
-- Train loader mix is Fabric-heavy. Quilt has no train cases. NeoForge has a single train case unless listed below.
-- No launcher wrappers (Prism, MultiMC, CurseForge) exist in \`train\`. Truncated stacks and combined errors live only in \`split: stress\` and are **not** part of the SAGE-03 gate.
-- 100% train F1 means the engine matches this regression set. It does not prove performance on unseen logs.
-
-### Duplicate audit
+- Samples: ${audit.totalSamples} (${audit.uniqueLogCount} unique logs; ${audit.exactDuplicateExtraCount} exact duplicate extras)
+- Log length: min ${audit.logLength.min}, p50 ${audit.logLength.p50}, mean ${audit.logLength.mean.toFixed(0)}, max ${audit.logLength.max} chars
+- Origin: unknown ${audit.originCounts.unknown}, synthetic ${audit.originCounts.synthetic}, community ${audit.originCounts.community}, public-issue ${audit.originCounts["public-issue"]}
+- Split: train ${audit.splitCounts.train}, stress ${audit.splitCounts.stress}, holdout ${audit.splitCounts.holdout}
 
 Exact groups:
 
 ${exactDupLines || "- none"}
 
-Near-duplicate prefix groups (distinct hashes, shared prefix):
+Near-duplicate prefix groups:
 
 ${nearDupLines || "- none"}
+`;
+}
 
-Origin counts: unknown ${audit.originCounts.unknown}, synthetic ${audit.originCounts.synthetic}, community ${audit.originCounts.community}, public-issue ${audit.originCounts["public-issue"]}.  
-Split counts: train ${audit.splitCounts.train}, stress ${audit.splitCounts.stress}, holdout ${audit.splitCounts.holdout}.
+export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string {
+  const { regression, real, evaluationDate } = input;
+  const train = regression.train;
+  const regressionAudit = regression.audit;
+  const markdownRows = train.categoryRows.map(
+    (row) =>
+      `| \`${row.category}\` | ${row.samples} | ${row.precision.toFixed(1)}% | ${row.recall.toFixed(1)}% | ${row.f1.toFixed(1)}% |`,
+  );
+  const loaderRows = train.loaderRows.map(
+    (row) => `| ${row.loader} | ${row.samples} | ${row.categoryAccuracy.toFixed(1)}% |`,
+  );
+
+  return `# SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
+
+> **Evaluation Date:** ${evaluationDate}  
+> **Regression gate (\`crash-corpus-regression.json\`):** ${train.sampleCount} templated cases — CI only, not real captured logs  
+> **Real corpus (\`crash-corpus.json\`):** ${real.audit.totalSamples} cases — add server/client logs here when available  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/\`latest.log\`; not mixed into this file yet  
 
 ---
 
-## 📊 Summary Performance Metrics (train / SAGE-03 gate)
+## Limits (SAGE-01)
+
+This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
+
+- \`crash-corpus-regression.json\` holds templated snippets (\`origin: synthetic\`) for the SAGE-03 CI gate only.
+- \`crash-corpus.json\` is intentionally **empty** until you capture real logs (client crash or server \`latest.log\` excerpts) without contaminating regression.
+- 100% regression F1 does not prove generalization. Real holdout lives only in \`crash-corpus.json\`.
+
+${formatAuditSection("Regression fixture audit", regressionAudit)}
+
+${formatAuditSection("Real corpus audit", real.audit)}
+
+---
+
+## 📊 Summary Performance Metrics (regression / SAGE-03 gate)
 
 | Metric | Measured Value | Benchmark Target | Status |
 |:---|:---:|:---:|:---:|
@@ -557,13 +570,13 @@ ${formatRatioLine("Categoría correcta sin culpable atribuible", train.systemicC
 
 ---
 
-## 🔬 Category Breakdown (train)
+## 🔬 Category Breakdown (regression)
 
 | Crash Category | Sample Count | Precision | Recall | F1-Score |
 |:---|:---:|:---:|:---:|:---:|
 ${markdownRows.join("\n")}
 
-## Loader Breakdown (train)
+## Loader Breakdown (regression)
 
 | Loader | Samples | Category accuracy |
 |:---|---:|---:|
@@ -572,15 +585,9 @@ ${loaderRows.join("\n")}
 ---
 
 ${formatSplitResult(
-  "Stress set (synthetic, not gated)",
-  stress,
-  "No `split: stress` cases in the corpus.",
-)}
-
-${formatSplitResult(
-  "Holdout set (unseen real logs)",
-  holdout,
-  "Holdout is empty. SAGE-01 Capa B needs 10–20 real logs never used to tune rules.",
+  "Real holdout (\`crash-corpus.json\`, not gated)",
+  real.holdout,
+  "`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.",
 )}
 
 ---
@@ -588,13 +595,12 @@ ${formatSplitResult(
 ## 🚀 Reproducibility
 
 \`\`\`bash
-npm run eval:sage              # train split + SAGE-03 gate + write this report
-npm run eval:sage -- --stress  # synthetic stress only (no gate)
-npm run eval:sage -- --holdout # real holdout only (no gate; empty until Capa B)
-npm run eval:sage -- --audit   # duplicate / provenance counts
+npm run eval:sage              # regression gate + write this report
+npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --audit   # regression + real corpus audits
 \`\`\`
 
-CI gate thresholds (\`SAGE-03\`) apply **only** to \`split: train\`: Macro F1 ≥ ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}%, Top-3 histórico ≥ ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}%, latencia media ≤ ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS} ms.
+CI gate thresholds (\`SAGE-03\`) apply **only** to \`crash-corpus-regression.json\`: Macro F1 ≥ ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}%, Top-3 histórico ≥ ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}%, latencia media ≤ ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS} ms.
 `;
 }
 

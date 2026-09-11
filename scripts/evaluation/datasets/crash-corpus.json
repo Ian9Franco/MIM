@@ -5,6 +5,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "flywheel",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install flywheel, any version.\nMore details:\n\t - Mod 'create' requires any version of flywheel, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -13,6 +17,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'sodium' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -21,6 +29,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "sodium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install sodium, any version.\nMore details:\n\t - Mod 'iris' requires any version of sodium, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -29,6 +41,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.19.2",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'cloth-config' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.19.2\nFabric Loader: 0.15.11"
   },
   {
@@ -37,6 +53,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'modmenu' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -45,6 +65,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "cloth-config",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'cloth-config', Requested by: 'applied-energistics-2', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.20.1\nForge: 47.2.0"
   },
   {
@@ -53,6 +77,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "mekanismgenerators",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'mekanismgenerators', Requested by: 'mekanism', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.20.1\nForge: 47.2.0"
   },
   {
@@ -61,6 +89,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "curios",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'curios', Requested by: 'botania', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.20.1\nForge: 47.2.0"
   },
   {
@@ -69,6 +101,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.2",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'xaeros-minimap' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.2\nFabric Loader: 0.15.11"
   },
   {
@@ -77,6 +113,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'jei' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -85,6 +125,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabricloader",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabricloader, any version.\nMore details:\n\t - Mod 'architectury-api' requires any version of fabricloader, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -93,6 +137,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "malilib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install malilib, any version.\nMore details:\n\t - Mod 'litematica' requires any version of malilib, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -101,6 +149,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "malilib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install malilib, any version.\nMore details:\n\t - Mod 'tweakeroo' requires any version of malilib, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -109,6 +161,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "malilib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install malilib, any version.\nMore details:\n\t - Mod 'itemscroller' requires any version of malilib, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -117,6 +173,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "reborncore",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install reborncore, any version.\nMore details:\n\t - Mod 'techreborn' requires any version of reborncore, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -125,6 +185,10 @@
     "loader": "forge",
     "minecraftVersion": "1.18.2",
     "expectedCulprit": "forge",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'forge', Requested by: 'immersive-engineering', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.18.2\nForge: 47.2.0"
   },
   {
@@ -133,6 +197,10 @@
     "loader": "neoforge",
     "minecraftVersion": "1.20.4",
     "expectedCulprit": "cloth-config",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'cloth-config', Requested by: 'refined-storage', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.20.4\nForge: 47.2.0"
   },
   {
@@ -141,6 +209,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "balm",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Missing or unsupported mandatory dependencies:\n\tMod ID: 'balm', Requested by: 'waystones', Expected range: '[1.0,)', Actual: 'null'\nMinecraft Version: 1.20.1\nForge: 47.2.0"
   },
   {
@@ -149,6 +221,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'journeymap' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -157,6 +233,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install fabric-api, any version.\nMore details:\n\t - Mod 'appleskin' requires any version of fabric-api, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -165,6 +245,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "sodium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 0.5.8 of sodium, but currently 0.5.3 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -173,6 +257,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "fabric-api",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 0.92.0 of fabric-api, but currently 0.85.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -181,6 +269,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "cloth-config",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 11.0.0 of cloth-config, but currently 10.0.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -189,6 +281,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "iris",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 1.6.4 of iris, but currently 1.6.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -197,6 +293,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "curios",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 5.8.0 of curios, but currently 5.4.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -205,6 +305,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "geckolib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 4.4.2 of geckolib, but currently 4.2.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -213,6 +317,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "architectury",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 9.2.14 of architectury, but currently 9.1.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -221,6 +329,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "patchouli",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 1.20.1-84 of patchouli, but currently 1.20.1-70 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -229,6 +341,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "citadel",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 2.5.4 of citadel, but currently 2.4.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -237,6 +353,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "malilib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 0.16.0 of malilib, but currently 0.15.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -245,6 +365,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "balm",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 7.2.0 of balm, but currently 7.0.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -253,6 +377,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "puzzleslib",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 8.1.0 of puzzleslib, but currently 8.0.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -261,6 +389,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "bookshelf",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 20.1.8 of bookshelf, but currently 20.0.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -269,6 +401,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "konkrete",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 1.8.0 of konkrete, but currently 1.6.0 is installed.\nMinecraft Version: 1.20.1\nLoader: forge"
   },
   {
@@ -277,6 +413,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "camerautils",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [FabricLoader/]: Incompatible mod versions detected!\nMod requires version 1.20.1-1.0.8 of camerautils, but currently 1.20.1-1.0.0 is installed.\nMinecraft Version: 1.20.1\nLoader: fabric"
   },
   {
@@ -285,6 +425,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "sodium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in sodium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -293,6 +437,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "iris",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in iris.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -301,6 +449,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "create",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in create.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -309,6 +461,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "botania",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in botania.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -317,6 +473,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "starlight",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in starlight.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -325,6 +485,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "lithium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in lithium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -333,6 +497,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "ferritecore",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in ferritecore.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -341,6 +509,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "entityculling",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in entityculling.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -349,6 +521,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "immediatelyfast",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in immediatelyfast.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -357,6 +533,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "indium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in indium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -365,6 +545,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "embeddium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in embeddium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -373,6 +557,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "oculus",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in oculus.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -381,6 +569,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "modernfix",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in modernfix.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -389,6 +581,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "rubidium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in rubidium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -397,6 +593,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "krypton",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in krypton.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -405,6 +605,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "canary",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in canary.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -413,6 +617,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "radium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in radium.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -421,6 +629,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "connectivity",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in connectivity.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -429,6 +641,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "dashloader",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in dashloader.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -437,6 +653,10 @@
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "cullleaves",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\n\tat org.spongepowered.asm.mixin.transformer.MixinTransformer.transformClass(MixinTransformer.java:250)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in cullleaves.mixins.json:RenderMixin failed injection check\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -444,6 +664,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.4",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.8\nMinecraft Version: 1.20.4"
   },
   {
@@ -451,6 +675,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.6",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.10\nMinecraft Version: 1.20.6"
   },
   {
@@ -458,6 +686,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.18.2",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 11.0.12\nMinecraft Version: 1.18.2"
   },
   {
@@ -465,6 +697,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.18.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 1.8.0_351\nMinecraft Version: 1.18.1"
   },
   {
@@ -472,6 +708,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.21",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.2\nMinecraft Version: 1.21"
   },
   {
@@ -479,6 +719,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.19",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 1.8.0_292\nMinecraft Version: 1.19"
   },
   {
@@ -486,6 +730,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.4",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 11.0.2\nMinecraft Version: 1.20.4"
   },
   {
@@ -493,6 +741,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.19.2",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 1.8.0_202\nMinecraft Version: 1.19.2"
   },
   {
@@ -500,6 +752,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.5",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.5\nMinecraft Version: 1.20.5"
   },
   {
@@ -507,6 +763,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.18",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 11.0.18\nMinecraft Version: 1.18"
   },
   {
@@ -514,6 +774,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.21",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.1\nMinecraft Version: 1.21"
   },
   {
@@ -521,6 +785,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.17.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 1.8.0_181\nMinecraft Version: 1.17.1"
   },
   {
@@ -528,6 +796,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.6",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.9\nMinecraft Version: 1.20.6"
   },
   {
@@ -535,6 +807,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.19.4",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 11.0.15\nMinecraft Version: 1.19.4"
   },
   {
@@ -542,6 +818,10 @@
     "category": "JAVA_INCOMPATIBILITY",
     "loader": "fabric",
     "minecraftVersion": "1.20.4",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\nJava Version: 17.0.6\nMinecraft Version: 1.20.4"
   },
   {
@@ -550,6 +830,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "rubidium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'rubidium' from mod files: rubidium-1.20.1-1.0.jar, rubidium-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -558,6 +842,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "sodium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'sodium' from mod files: sodium-1.20.1-1.0.jar, sodium-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -566,6 +854,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "embeddium",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'embeddium' from mod files: embeddium-1.20.1-1.0.jar, embeddium-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -574,6 +866,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "oculus",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'oculus' from mod files: oculus-1.20.1-1.0.jar, oculus-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -582,6 +878,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "iris",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'iris' from mod files: iris-1.20.1-1.0.jar, iris-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -590,6 +890,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "jei",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'jei' from mod files: jei-1.20.1-1.0.jar, jei-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -598,6 +902,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "rei",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'rei' from mod files: rei-1.20.1-1.0.jar, rei-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -606,6 +914,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "optifine",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'optifine' from mod files: optifine-1.20.1-1.0.jar, optifine-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -614,6 +926,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "create",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'create' from mod files: create-1.20.1-1.0.jar, create-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -622,6 +938,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "botania",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'botania' from mod files: botania-1.20.1-1.0.jar, botania-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -630,6 +950,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "curios",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'curios' from mod files: curios-1.20.1-1.0.jar, curios-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -638,6 +962,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "architectury",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'architectury' from mod files: architectury-1.20.1-1.0.jar, architectury-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -646,6 +974,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "cloth-config",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'cloth-config' from mod files: cloth-config-1.20.1-1.0.jar, cloth-config-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -654,6 +986,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "appleskin",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'appleskin' from mod files: appleskin-1.20.1-1.0.jar, appleskin-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -662,6 +998,10 @@
     "loader": "forge",
     "minecraftVersion": "1.20.1",
     "expectedCulprit": "journeymap",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/FATAL] [neoforge/]: Found duplicate mods:\n\tMod ID: 'journeymap' from mod files: journeymap-1.20.1-1.0.jar, journeymap-1.20.1-1.1.jar\nMinecraft Version: 1.20.1\nNeoForge: 47.1.0"
   },
   {
@@ -669,6 +1009,10 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -676,6 +1020,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -683,6 +1032,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -690,6 +1044,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -697,6 +1056,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -704,6 +1068,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -711,6 +1080,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -718,6 +1092,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -725,6 +1104,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -732,6 +1116,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -739,6 +1128,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -746,6 +1140,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -753,6 +1152,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -760,6 +1164,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -767,6 +1176,11 @@
     "category": "CORRUPTED_WORLD",
     "loader": "vanilla",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-086",
     "rawLog": "[Server thread/ERROR] [MinecraftServer/]: Encountered an unexpected exception com.mojang.datafixers\njava.util.zip.ZipException: Corrupted NBT tag in world/region/r.0.-1.mca\n\tat net.minecraft.world.level.chunk.storage.RegionFile.readChunk(RegionFile.java:142)\n\tat net.minecraft.server.MinecraftServer.loadLevel(MinecraftServer.java:312)\nMinecraft Version: 1.20.1"
   },
   {
@@ -774,6 +1188,10 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -781,6 +1199,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -788,6 +1211,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -795,6 +1223,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -802,6 +1235,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -809,6 +1247,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -816,6 +1259,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -823,6 +1271,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -830,6 +1283,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -837,6 +1295,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -844,6 +1307,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -851,6 +1319,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -858,6 +1331,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -865,6 +1343,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -872,6 +1355,11 @@
     "category": "OUT_OF_MEMORY",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
+    "duplicateOf": "CASE-101",
     "rawLog": "[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.chunk.RenderChunkRegion.<init>(RenderChunkRegion.java:45)\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
   },
   {
@@ -879,6 +1367,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_1\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -886,6 +1378,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_2\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -893,6 +1389,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_3\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -900,6 +1400,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_4\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -907,6 +1411,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_5\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -914,6 +1422,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_6\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -921,6 +1433,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_7\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -928,6 +1444,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_8\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -935,6 +1455,10 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_9\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
   },
   {
@@ -942,6 +1466,137 @@
     "category": "UNKNOWN_RUNTIME",
     "loader": "fabric",
     "minecraftVersion": "1.20.1",
+    "origin": "unknown",
+    "license": "unspecified",
+    "anonymized": false,
+    "split": "train",
     "rawLog": "[main/INFO] [Minecraft/]: Setting user: Player_10\n[main/INFO] [Minecraft/]: Backend library initialized\n[main/INFO] [Minecraft/]: Stopping game with exit code 0\nMinecraft Version: 1.20.1"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-001",
+    "category": "MIXIN_FAILURE",
+    "loader": "fabric",
+    "expectedCulprit": "sodium",
+    "notes": "Truncated stack mid Caused-by; synthetic stress, not gated.",
+    "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\n\tat org.spongepowered.asm.mixin.transformer.MixinProcessor.applyMixins(MixinProcessor.java:392)\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: Callback method handler$zfa000$render in sodium.mixins.json from"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-002",
+    "category": "MISSING_DEPENDENCY",
+    "loader": "fabric",
+    "expectedCulprit": "flywheel",
+    "notes": "Prism Launcher wrapper around a missing-dependency crash.",
+    "rawLog": "Prism Launcher version: 8.4\nMinecraft folder is: /home/user/PrismLauncher/instances/Create/.minecraft\nJava path: /usr/lib/jvm/java-17/bin/java\nMinecraft 1.20.1\n[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined, this may resolve your issue:\n\t - Install flywheel, any version.\nMore details:\n\t - Mod 'create' requires any version of flywheel, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-003",
+    "category": "OUT_OF_MEMORY",
+    "loader": "forge",
+    "notes": "MultiMC wrapper around an OOM crash.",
+    "rawLog": "MultiMC version: 0.7.0\nMinecraft folder is:\n/home/user/.local/share/multimc/instances/AllTheMods/.minecraft\nJava Arguments: [-Xms2G, -Xmx2G]\nMinecraft process ID: 44120\n[Render thread/FATAL] [Minecraft/]: Unreported exception thrown!\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.Arrays.copyOf(Arrays.java:3537)\n\tat net.minecraft.client.renderer.texture.TextureAtlas.stitch(TextureAtlas.java:118)\nMinecraft Version: 1.20.1\nForge: 47.2.0"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-004",
+    "category": "MIXIN_FAILURE",
+    "loader": "fabric",
+    "expectedCulprit": "iris",
+    "notes": "Combined mixin failure plus missing sodium dependency; labeled mixin as the first fatal.",
+    "rawLog": "[main/CRITICAL] [MixinTransformer/]: org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered\nCaused by: org.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: iris.mixins.json:WorldRendererMixin\n[main/FATAL] [FabricLoader/]: A critical error occurred\nnet.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\n\t - Mod 'iris' requires any version of sodium, which is missing!\nMinecraft Version: 1.20.1\nFabric Loader: 0.15.11"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-005",
+    "category": "UNKNOWN_RUNTIME",
+    "loader": "forge",
+    "notes": "Ambiguous truncated launcher dump without a classifiable exception.",
+    "rawLog": "---- Minecraft Crash Report ----\n// I just don't know what went wrong :(\nTime: 2026-09-11\nDescription: Unexpected error\n\njava.lang.RuntimeException: null\n\tat TRANSFORMER/minecraft@1.20.1/net.minecraft.client.Minecraft.tick(Minecraft.java:1)\n... 12 more\n[truncated]\nA detailed walkthrough of the error, its code path and all known details is as follows:"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-006",
+    "category": "MISSING_DEPENDENCY",
+    "loader": "quilt",
+    "expectedCulprit": "qsl",
+    "notes": "Quilt loader missing QSL; no Quilt cases exist in train.",
+    "rawLog": "[main/ERROR] [QuiltLoader/]: Error parsing mods\norg.quiltmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!\nA potential solution has been determined:\n\t - Install qsl, any version.\nMore details:\n\t - Mod 'sodium' requires any version of qsl, which is missing!\nMinecraft Version: 1.20.1\nQuilt Loader: 0.26.1"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-007",
+    "category": "VERSION_CONFLICT",
+    "loader": "neoforge",
+    "expectedCulprit": "create",
+    "notes": "NeoForge version range conflict; train has a single NeoForge case.",
+    "rawLog": "[main/FATAL] [neoforge.userdev/]: Failed to load mods\nnet.neoforged.fml.ModLoadingException: Mod create requires minecraft 1.21.1 but 1.20.1 is loaded\n\tMod ID: 'create', Requested by: 'create', Expected range: '[1.21.1]', Actual: '1.20.1'\nMinecraft Version: 1.20.1\nNeoForge: 20.4.237"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-008",
+    "category": "MIXIN_FAILURE",
+    "loader": "forge",
+    "expectedCulprit": "embeddium",
+    "notes": "Forge mixin injector failure.",
+    "rawLog": "[main/CRITICAL] [mixin/]: Mixin apply failed embeddium.mixins.json:LevelRendererMixin from mod embeddium during WRITE\norg.spongepowered.asm.mixin.injection.throwables.InjectionError: Critical injection failure: @Inject annotation on redirectRender in embeddium.mixins.json:LevelRendererMixin from mod embeddium could not find any targets matching\nMinecraft Version: 1.20.1\nForge: 47.2.20"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-009",
+    "category": "JAVA_INCOMPATIBILITY",
+    "loader": "fabric",
+    "notes": "Truncated UnsupportedClassVersionError (two frames only).",
+    "rawLog": "[main/ERROR] [Main/]: java.lang.UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0\n\tat java.lang.ClassLoader.defineClass1(Native Method)"
+  },
+  {
+    "origin": "synthetic",
+    "license": "unspecified",
+    "anonymized": true,
+    "split": "stress",
+    "minecraftVersion": "1.20.1",
+    "id": "STRESS-010",
+    "category": "MOD_CONFLICT",
+    "loader": "forge",
+    "expectedCulprit": "optifine",
+    "notes": "CurseForge launcher wrapper around a duplicate renderer conflict.",
+    "rawLog": "CurseForge app 1.259.2\nInstance: ATM9\nMinecraft: 1.20.1\n[main/FATAL] [net.minecraftforge.fml.ModLoader/]: Detected duplicate rendering mods\nMod optifine is incompatible with embeddium. Both transform net.minecraft.client.renderer.LevelRenderer\nRemove one of: optifine, embeddium\nMinecraft Version: 1.20.1\nForge: 47.2.0"
   }
 ]

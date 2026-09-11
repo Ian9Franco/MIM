@@ -8,6 +8,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 
 ### Planificación auditada y publicación manual por tag
 
+- SAGE-01 Capa A: cada caso del corpus SAGE declara procedencia (`origin`/`license`/`anonymized`/`split`). Los 125 históricos quedan `unknown`/`train`; hay 10 sintéticos `stress` (truncado, wrappers, Quilt/NeoForge, error combinado) fuera del gate; holdout real sigue vacío. El reporte deja de llamar al set “real-world & representative”.
 - SAGE-06 (en revisión): el chat exige una salida estructurada con referencias a evidencia, valida atribuciones y acciones antes del stream y reemplaza respuestas contradictorias, peligrosas o manipuladas por un fallback local seguro. La suite ejecuta el motor y el endpoint reales con proveedores controlados; no constituye verificación post-merge ni cierra otros objetivos de evaluación.
 - Reconciliados Who's Next y Unicorn con evidencia de código: los cierres anteriores quedan en el backlog histórico y los alcances incompletos permanecen pendientes.
 - Incorporadas tareas de calidad de código, UI/E2E, onboarding, trazabilidad y rigor de evaluación SAGE/MimBot, con criterios de cierre. Son planificación, no nuevas capacidades entregadas.

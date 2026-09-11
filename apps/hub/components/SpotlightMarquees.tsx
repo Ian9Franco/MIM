@@ -13,7 +13,7 @@ export interface ModHit {
   slug?: string;
   title: string;
   author: string;
-  iconUrl?: string;
+  iconUrl?: string | null;
   projectType: string;
   categories?: string[];
   description?: string;

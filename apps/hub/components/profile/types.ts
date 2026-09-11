@@ -1,11 +1,11 @@
 import React from "react";
 import type { ModHit } from "../SpotlightMarquees";
 import type {
-  FomoUserDraft,
   FomoFavoriteItem,
   FomoCommunityShare,
   FomoFollowedAuthor,
 } from "../../types/fomo";
+import type { HomeDraft } from "../../lib/drafts/draftContract";
 import type { Session } from "@supabase/supabase-js";
 
 export interface ProfileTabProps {
@@ -21,7 +21,7 @@ export interface ProfileTabProps {
   setIsRegistering: (v: boolean) => void;
   authLoading: boolean;
   loadingUserData: boolean;
-  userDrafts: FomoUserDraft[];
+  userDrafts: HomeDraft[];
   userFavorites: FomoFavoriteItem[];
   userShares?: FomoCommunityShare[];
   userFollowedAuthors?: FomoFollowedAuthor[];
@@ -29,9 +29,9 @@ export interface ProfileTabProps {
   handleLogout: () => void;
   handleOpenEditProfile: () => void;
   handleOpenModDetails: (mod: ModHit) => void;
-  handleEnterDraftCollection: (draft: FomoUserDraft) => void;
+  handleEnterDraftCollection: (draft: HomeDraft) => void;
   onCreateDraft: () => void;
-  onEditDraft?: (draft: FomoUserDraft) => void;
+  onEditDraft?: (draft: HomeDraft) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
   onRemoveShare?: (projectId: string) => Promise<void>;
   onUpdateSharePriority?: (projectId: string, priority: boolean) => Promise<void>;

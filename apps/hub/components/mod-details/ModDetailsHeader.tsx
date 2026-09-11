@@ -234,7 +234,7 @@ export function ModDetailsHeader({
           {selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl ? (
             <>
               <img
-                src={selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl}
+                src={(selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl) ?? undefined}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {

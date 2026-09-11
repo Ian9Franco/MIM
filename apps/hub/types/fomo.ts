@@ -156,27 +156,46 @@ export interface FomoUserDraft {
 }
 
 export interface FomoFollowedAuthor {
+  id?: string;
   name?: string;
   author_name?: string;
   url?: string;
   authorUrl?: string;
-  iconUrl?: string;
-  avatar_url?: string;
+  icon_url?: string | null;
+  iconUrl?: string | null;
+  avatar_url?: string | null;
   platform?: string;
   [key: string]: unknown;
 }
 
-export type FomoFavoriteItem = ModHit | {
+export interface FomoFavoriteItem {
+  /** Raw DB columns */
   id?: string;
   mod_id?: string;
   project_id?: string;
+  profile_id?: string;
+  name?: string;
+  icon_url?: string | null;
+  platform?: string;
+  source?: string;
+  project_type?: string;
+  content_type?: string;
+  summary?: string;
+  pinned?: boolean | null;
+  created_at?: string;
+  /** Normalised / camelCase variants */
   projectId?: string;
   slug?: string;
   title?: string;
   author?: string;
   iconUrl?: string | null;
+  description?: string;
+  projectType?: string;
+  categories?: string[];
+  url?: string;
+  _source?: string;
   [key: string]: unknown;
-};
+}
 
 export interface FomoCommunityShare {
   id: string;

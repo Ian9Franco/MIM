@@ -40,7 +40,7 @@ export function ModShareModal({
       const alreadyShared = !!existingShare;
       const summaryText = buildShareMetaFromMod(selectedMod, {
         comment: shareComment.trim() || selectedMod.description || "",
-        priority: existingShare?.pinned ?? readSharePriority(existingShare?.summary as string | undefined),
+        priority: (existingShare?.pinned as boolean | null | undefined) ?? readSharePriority(existingShare?.summary as string | undefined),
       });
 
       const request = alreadyShared

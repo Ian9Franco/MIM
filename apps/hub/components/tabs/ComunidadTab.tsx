@@ -8,7 +8,7 @@ import { MiembrosSkeleton } from "../FomoSkeletons";
 import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
 import { CommunityRankings } from "../community/CommunityRankings";
-import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
+import { CommunityPublicProfile, type PublicProfileFavorite, type PublicProfileAuthor, type PublicProfileDraft, type PublicProfileShare } from "../community/CommunityPublicProfile";
 import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 
 export interface CommunityProfile {
@@ -24,6 +24,7 @@ export interface CommunityProfile {
     theme?: string;
     [key: string]: unknown;
   };
+  [key: string]: unknown;
 }
 
 export interface CommunityShareItem {
@@ -155,7 +156,13 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
   const [profiles, setProfiles] = useState<CommunityProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [publicData, setPublicData] = useState<{ favorites: unknown[]; authors: unknown[]; drafts: unknown[]; channels: string[]; shares: CommunityShareItem[] }>({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
+  const [publicData, setPublicData] = useState<{
+    favorites: PublicProfileFavorite[];
+    authors: PublicProfileAuthor[];
+    drafts: PublicProfileDraft[];
+    channels: string[];
+    shares: PublicProfileShare[];
+  }>({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
   const [loadingPublic, setLoadingPublic] = useState(false);
   const [communityMetrics, setCommunityMetrics] = useState({ members: 0, recommendations: 0, featured: 0 });
   const [creatorIds, setCreatorIds] = useState<Set<string>>(new Set());
@@ -331,11 +338,17 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", resolved.id).eq("visibility", "public"),
       loadProfileShares(resolved.id),
     ]);
-    const channels = resolved.banner_meta?.youtube_channels
+    const channels = (resolved.banner_meta?.youtube_channels
       ?.filter((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" || channel.visible !== false)
       .map((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" ? channel : channel.name || channel.url || "")
-      .filter(Boolean) || [];
-    setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels, shares: sharesData || [] });
+      .filter(Boolean) || []) as string[];
+    setPublicData({
+      favorites: (favorites || []) as PublicProfileFavorite[],
+      authors: (authors || []) as PublicProfileAuthor[],
+      drafts: (drafts || []) as PublicProfileDraft[],
+      channels,
+      shares: (sharesData || []) as PublicProfileShare[],
+    });
     setLoadingPublic(false);
   };
 
@@ -462,7 +475,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
 
       {isYoutube ? (
         <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025]">
-          {(meta.thumbnail || item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={meta.thumbnail || item.icon_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
+          {(meta.thumbnail || item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={(meta.thumbnail || item.icon_url) ?? undefined} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
           <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
         </div>
       ) : (
@@ -488,7 +501,7 @@ function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentP
   const visibleProfiles = useMemo(() => profiles
     .filter((profile) => profile.username?.toLowerCase().includes(query.trim().toLowerCase()))
     .filter((profile) => filter !== "creators" || creatorIds.has(profile.id))
-    .sort((a, b) => new Date(filter === "active" ? b.updated_at || b.created_at : b.created_at).getTime() - new Date(filter === "active" ? a.updated_at || a.created_at : a.created_at).getTime()), [creatorIds, filter, profiles, query]);
+    .sort((a, b) => new Date(filter === "active" ? b.updated_at || b.created_at || 0 : b.created_at || 0).getTime() - new Date(filter === "active" ? a.updated_at || a.created_at || 0 : a.created_at || 0).getTime()), [creatorIds, filter, profiles, query]);
 
   return <motion.div key="members-list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-3 overflow-y-auto pb-28 scrollbar-none">
     <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface/80 px-3"><Search className="h-4 w-4 text-white/35" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario..." className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30" /></label>

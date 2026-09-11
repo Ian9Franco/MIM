@@ -70,7 +70,7 @@ const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
     name: "Modrinth Featured",
     description: "Selección local de mods destacados para mantener Spotlight visible sin depender del cache de desarrollo.",
     projectCount: mockUpdatedMods.length,
-    iconUrl: mockUpdatedMods[0]?.iconUrl,
+    iconUrl: mockUpdatedMods[0]?.iconUrl ?? undefined,
     source: "modrinth",
     previewIcons: mockUpdatedMods.map((m) => m.iconUrl).filter(Boolean) as string[],
     mods: mockUpdatedMods,
@@ -83,7 +83,7 @@ const FALLBACK_CURSEFORGE_COLLECTIONS: CollectionItem[] = [
     name: "CurseForge Picks",
     description: "Picks editoriales de respaldo para el carrusel mobile.",
     projectCount: mockNewestMods.length,
-    iconUrl: mockNewestMods[0]?.iconUrl,
+    iconUrl: mockNewestMods[0]?.iconUrl ?? undefined,
     source: "curseforge",
     previewIcons: mockNewestMods.map((m) => m.iconUrl).filter(Boolean) as string[],
     mods: mockNewestMods.map((m) => ({ ...m, _source: "curseforge" })),
@@ -91,19 +91,21 @@ const FALLBACK_CURSEFORGE_COLLECTIONS: CollectionItem[] = [
 ];
 
 function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
+  const r = fav as Record<string, unknown>;
+  const m = fav as ModHit;
   let meta: Record<string, unknown> = {};
-  const summaryStr = typeof fav.summary === "string" ? fav.summary : "";
+  const summaryStr = typeof r.summary === "string" ? r.summary : "";
   try {
     meta = summaryStr.trim().startsWith("{") ? JSON.parse(summaryStr) : {};
   } catch (e) {
     console.debug("[useHomeController] Could not parse favorite summary JSON:", e);
   }
-  const projectId = String(fav.project_id || (fav as ModHit).projectId || (fav as Record<string, unknown>).mod_id || (fav as Record<string, unknown>).id || "");
-  const projectType = String(fav.project_type || meta.project_type || (fav as Record<string, unknown>).content_type || "mod");
+  const projectId = String(r.project_id || m.projectId || r.mod_id || r.id || "");
+  const projectType = String(r.project_type || meta.project_type || r.content_type || "mod");
   
-  const rawName = String(fav.name || (fav as ModHit).title || (fav as Record<string, unknown>).mod_name || projectId);
+  const rawName = String(r.name || m.title || r.mod_name || projectId);
   let title = rawName;
-  let author = String(fav.author || "Comunidad");
+  let author = String(r.author || m.author || "Comunidad");
   if (rawName.includes(" ::: ")) {
     const parts = rawName.split(" ::: ");
     title = parts[0] ?? rawName;
@@ -113,13 +115,13 @@ function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
   return {
     projectId,
     title,
-    description: String(fav.description || meta.description || summaryStr || ""),
-    iconUrl: typeof fav.icon_url === "string" ? fav.icon_url : typeof (fav as ModHit).iconUrl === "string" ? (fav as ModHit).iconUrl : undefined,
+    description: String(r.description || m.description || meta.description || summaryStr || ""),
+    iconUrl: (typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined) || undefined,
     author,
     projectType,
-    categories: Array.isArray(fav.categories) ? (fav.categories as string[]) : (Array.isArray(meta.categories) ? meta.categories as string[] : []),
-    url: typeof fav.url === "string" ? fav.url : typeof meta.url === "string" ? meta.url : `https://modrinth.com/${projectType}/${projectId}`,
-    _source: (fav as ModHit)._source || (typeof (fav as Record<string, unknown>).platform === "string" ? (fav as Record<string, unknown>).platform : typeof (fav as Record<string, unknown>).source === "string" ? (fav as Record<string, unknown>).source : "modrinth"),
+    categories: Array.isArray(r.categories) ? (r.categories as string[]) : (Array.isArray(meta.categories) ? (meta.categories as string[]) : []),
+    url: typeof r.url === "string" ? r.url : typeof meta.url === "string" ? (meta.url as string) : `https://modrinth.com/${projectType}/${projectId}`,
+    _source: String(m._source || (typeof r.platform === "string" ? r.platform : typeof r.source === "string" ? r.source : "modrinth")),
   };
 }
 

@@ -77,8 +77,10 @@ export function ProfileTab({
   // Ordenamiento de favoritos priorizando mods con actualizaciones recientes
   const sortedUserFavorites = React.useMemo(() => {
     return [...userFavorites].sort((a, b) => {
-      const aKey = projectUpdateKey(a.platform || a.source || "modrinth", a.mod_id || a.project_id || a.id);
-      const bKey = projectUpdateKey(b.platform || b.source || "modrinth", b.mod_id || b.project_id || b.id);
+      const aId = String(a.mod_id || a.project_id || a.projectId || a.id || "");
+      const bId = String(b.mod_id || b.project_id || b.projectId || b.id || "");
+      const aKey = projectUpdateKey(a.platform || a.source || "modrinth", aId);
+      const bKey = projectUpdateKey(b.platform || b.source || "modrinth", bId);
       const updateOrder = Number(!!recentUpdates[bKey]) - Number(!!recentUpdates[aKey]);
       return updateOrder || getCreatedTime(b) - getCreatedTime(a);
     });
@@ -87,14 +89,17 @@ export function ProfileTab({
   const filteredUserFavorites = React.useMemo(
     () => favoriteFilter === "all"
       ? sortedUserFavorites
-      : sortedUserFavorites.filter((item) => recentUpdates[projectUpdateKey(item.platform || item.source || "modrinth", item.mod_id || item.project_id || item.id)]),
+      : sortedUserFavorites.filter((item) => {
+          const id = String(item.mod_id || item.project_id || item.projectId || item.id || "");
+          return recentUpdates[projectUpdateKey(item.platform || item.source || "modrinth", id)];
+        }),
     [favoriteFilter, recentUpdates, sortedUserFavorites]
   );
 
   const latestDraft = React.useMemo(
     () => userDrafts.reduce<any | null>((latest, draft) => {
-      const draftTime = new Date(draft.updated_at || draft.updatedAt || draft.created_at || 0).getTime();
-      const latestTime = latest ? new Date(latest.updated_at || latest.updatedAt || latest.created_at || 0).getTime() : -1;
+      const draftTime = new Date((draft.updated_at || draft.updatedAt || draft.created_at || 0) as string | number).getTime();
+      const latestTime = latest ? new Date((latest.updated_at || latest.updatedAt || latest.created_at || 0) as string | number).getTime() : -1;
       return draftTime >= latestTime ? draft : latest;
     }, null),
     [userDrafts]
@@ -110,15 +115,19 @@ export function ProfileTab({
   // Ordenamiento de recomendados (prioridad / fijados > recientemente actualizados > fecha)
   const sortedUserShares = React.useMemo(() => {
     return [...userShares].sort((a, b) => {
-      const aPriority = a.pinned === true ? true : (a.pinned == null && !!parseShareMeta(a.summary).priority);
-      const bPriority = b.pinned === true ? true : (b.pinned == null && !!parseShareMeta(b.summary).priority);
+      const aSummary = typeof a.summary === "string" ? a.summary : undefined;
+      const bSummary = typeof b.summary === "string" ? b.summary : undefined;
+      const aPriority = a.pinned === true ? true : (a.pinned == null && !!parseShareMeta(aSummary).priority);
+      const bPriority = b.pinned === true ? true : (b.pinned == null && !!parseShareMeta(bSummary).priority);
 
       if (aPriority !== bPriority) {
         return bPriority ? 1 : -1;
       }
 
-      const aKey = projectUpdateKey(a.platform || "modrinth", a.mod_id || a.project_id || a.id);
-      const bKey = projectUpdateKey(b.platform || "modrinth", b.mod_id || b.project_id || b.id);
+      const aId = String(a.mod_id || a.project_id || a.id || "");
+      const bId = String(b.mod_id || b.project_id || b.id || "");
+      const aKey = projectUpdateKey((a.platform as string) || "modrinth", aId);
+      const bKey = projectUpdateKey((b.platform as string) || "modrinth", bId);
       const aUpdated = !aKey.startsWith("youtube:") && !!recentUpdates[aKey];
       const bUpdated = !bKey.startsWith("youtube:") && !!recentUpdates[bKey];
 
@@ -135,13 +144,14 @@ export function ProfileTab({
     let cancelled = false;
     const entries = [...userFavorites, ...userShares]
       .map((item) => {
-        const meta = item.summary?.trim?.().startsWith("{") ? readFavoriteMeta(item) : {};
-        const projectId = item.mod_id || item.project_id || item.id;
-        const source = item.platform || item.source || "modrinth";
-        const projectType = item.project_type || meta.project_type || meta.projectType || "mod";
+        const summaryStr = typeof item.summary === "string" ? item.summary : "";
+        const meta = summaryStr.trim().startsWith("{") ? readFavoriteMeta(item) : {};
+        const projectId = String(item.mod_id || item.project_id || item.projectId || item.id || "");
+        const source = String(item.platform || item.source || "modrinth");
+        const projectType = String(item.project_type || meta.project_type || meta.projectType || "mod");
         return { projectId, source, projectType };
       })
-      .filter((item) => item.projectId && item.source !== "youtube" && !String(item.projectId).startsWith("youtube:"));
+      .filter((item) => item.projectId && item.source !== "youtube" && !item.projectId.startsWith("youtube:"));
     const unique = Array.from(new Map(entries.map((item) => [projectUpdateKey(item.source, item.projectId), item])).values());
 
     if (!unique.length) {

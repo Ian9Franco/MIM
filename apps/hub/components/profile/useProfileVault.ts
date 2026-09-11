@@ -15,17 +15,17 @@ import {
 import { importVaultToSupabase, type VaultImportResult } from "../../lib/vault/vaultImporter";
 import { playFomoSound } from "../../lib/sounds";
 import type {
-  FomoUserDraft,
   FomoFavoriteItem,
   FomoFollowedAuthor,
 } from "../../types/fomo";
+import type { HomeDraft } from "../../lib/drafts/draftContract";
 import type { Session } from "@supabase/supabase-js";
 
 interface UseProfileVaultParams {
   session: Session | null;
   profile: Record<string, any> | null;
   username: string;
-  userDrafts: FomoUserDraft[];
+  userDrafts: HomeDraft[];
   userFavorites: FomoFavoriteItem[];
   userFollowedAuthors: FomoFollowedAuthor[];
 }

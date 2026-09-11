@@ -148,12 +148,13 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Visualización de mods client-only e incompatibilidades de entorno.
   - [x] Indicador de salud `ServerHealthBadge` con soporte para auditorías parciales/incompletas.
   - [x] Panel orquestador `ServerAuditPanel` con micro-animaciones Framer Motion y suites de tests al 100%.
-- [x] **Hito SRV-3: Preflight, builder y contratos de snapshots (persistencia pendiente):**
+- [x] **Hito SRV-3: Preflight, builder y contratos de snapshots (persistencia en disco; recuperación de planes pendiente):**
   - [x] Validación bidireccional exhaustiva (compatibilidad de versión de Minecraft, mod loader, exclusión de client-only mods en servidor y resolución de dependencias requeridas).
   - [x] Reconciliación explícita de archivos de configuración (`diff.configDiffs`).
   - [x] Snapshot obligatorio pre-mutación para cualquier acción destructiva o aditiva (`createPreMutationSnapshot`).
   - [x] Detección determinista de planes obsoletos y drift de estado remoto (`validatePlanFreshness` con fingerprints SHA-256).
-  - [ ] Persistencia durable y recuperación tras reinicio. Existen `MemorySnapshotStore` e `ISnapshotStore`, todavía sin backend en disco.
+  - [x] Persistencia durable en disco (`FileSnapshotStore`: JSON por snapshot + journal NDJSON, reapertura). `MemorySnapshotStore` se conserva para tests y runtime no persistente.
+  - [ ] Recuperación de planes abiertos tras reinicio (T1.2): detectar snapshots no terminales y exponerlos; no ejecuta rollback automático.
   - [x] Suite de tests `server-preflight-snapshot.test.ts` pasando al 100%.
 - [x] **Hito SRV-4: Executor de despliegue con staging, verificación atómica y rollback:**
   - [x] Motor de staging atómico en `.mim_staging/` y validación de hash SHA-256 pre/post ejecución.

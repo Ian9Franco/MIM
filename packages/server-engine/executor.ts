@@ -217,6 +217,9 @@ export async function executeServerDeployment(
     }
 
     if (snapshotStore) {
+      if (snapshot) {
+        await snapshotStore.updateSnapshotStatus(snapshot.snapshotId, "discarded");
+      }
       await snapshotStore.recordChange({
         id: `chg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         serverId,
@@ -260,6 +263,13 @@ export async function executeServerDeployment(
         status = "rolled-back";
       } else {
         status = "recovery-required";
+      }
+
+      if (snapshotStore && snapshot) {
+        await snapshotStore.updateSnapshotStatus(
+          snapshot.snapshotId,
+          rbResult.success ? "restored" : "active"
+        );
       }
 
       if (snapshotStore) {

@@ -26,6 +26,12 @@ export function ServerInspectionResultView({ result, deploy }: Props) {
         sub={`${result.scannedMods} de ${result.totalJarFiles} archivos JAR detectados analizados.`}
         accentColor="#10b981"
       />
+      {result.pendingOperations > 0 && (
+        <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+          Hay {result.pendingOperations === 1 ? "una operación" : `${result.pendingOperations} operaciones`} de servidor sin cerrar
+          desde un reinicio o cierre anterior. Revisá el estado del servidor antes de volver a desplegar.
+        </div>
+      )}
       {result.warnings.length > 0 && (
         <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-400">
           <ul className="list-inside list-disc space-y-1">{result.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>

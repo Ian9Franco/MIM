@@ -15,6 +15,7 @@ export * from "./preflight";
 export * from "./snapshot";
 export * from "./snapshotStore";
 export * from "./fileSnapshotStore";
+export * from "./pendingOperations";
 export * from "./rollback";
 export * from "./executor";
 export * from "./sageRemote";

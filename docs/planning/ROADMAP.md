@@ -154,7 +154,8 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Snapshot obligatorio pre-mutación para cualquier acción destructiva o aditiva (`createPreMutationSnapshot`).
   - [x] Detección determinista de planes obsoletos y drift de estado remoto (`validatePlanFreshness` con fingerprints SHA-256).
   - [x] Persistencia durable en disco (`FileSnapshotStore`: JSON por snapshot + journal NDJSON, reapertura). `MemorySnapshotStore` se conserva para tests y runtime no persistente.
-  - [ ] Recuperación de planes abiertos tras reinicio (T1.2): detectar snapshots no terminales y exponerlos; no ejecuta rollback automático.
+  - [x] Recuperación de planes abiertos tras reinicio (T1.2): `loadPendingServerOperations()` detecta snapshots `active` y expone el último journal; no ejecuta rollback automático.
+  - [x] Cableado Desktop read-only (T1.3): `FileSnapshotStore` bajo `.mim-index/server-manager`, `pendingOperations` en inspect, aviso en `/servers`, deploy persiste snapshots y cierra status al completar.
   - [x] Suite de tests `server-preflight-snapshot.test.ts` pasando al 100%.
 - [x] **Hito SRV-4: Executor de despliegue con staging, verificación atómica y rollback:**
   - [x] Motor de staging atómico en `.mim_staging/` y validación de hash SHA-256 pre/post ejecución.

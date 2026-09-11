@@ -157,6 +157,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-drafts.test.ts"]
     },
     {
+      name: "Home Drafts CRUD Repository (REC-03)",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-drafts-crud.test.ts"]
+    },
+    {
       name: "Server Manager Manifest & Reconciliation Foundation",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/server-manager-foundation.test.ts"]

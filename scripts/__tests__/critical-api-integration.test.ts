@@ -234,8 +234,14 @@ async function run() {
           : input.url;
     capturedGeminiHeaders = new Headers(init?.headers);
 
+    const safeCompletion = JSON.stringify({
+      answer: "Respuesta de prueba",
+      evidenceRefs: [],
+      culpritClaims: [],
+      actions: [],
+    });
     const payload = JSON.stringify({
-      candidates: [{ content: { parts: [{ text: "Respuesta de prueba" }] } }],
+      candidates: [{ content: { parts: [{ text: safeCompletion }] } }],
     });
     return new Response(payload, {
       status: 200,

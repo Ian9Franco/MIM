@@ -19,7 +19,7 @@ export interface GuardrailValidationResult {
   sanitizedActions: string[];
 }
 
-const FORBIDDEN_PHRASES = [
+export const FORBIDDEN_REMEDIATION_PHRASES = [
   "disable antivirus",
   "turn off windows defender",
   "format c:",
@@ -29,6 +29,11 @@ const FORBIDDEN_PHRASES = [
   "download crack",
   "pirate"
 ];
+
+export function containsForbiddenRemediation(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return FORBIDDEN_REMEDIATION_PHRASES.some(phrase => normalized.includes(phrase));
+}
 
 export class SageSafetyValidator {
   /**
@@ -58,8 +63,7 @@ export class SageSafetyValidator {
 
     // 2. Prohibited & Unsafe Instructions Check
     for (const action of proposedActions) {
-      const lower = action.toLowerCase();
-      const hasForbidden = FORBIDDEN_PHRASES.some(phrase => lower.includes(phrase));
+      const hasForbidden = containsForbiddenRemediation(action);
 
       if (hasForbidden) {
         violations.push(`Security Violation: Remediation contains prohibited advice: "${action}".`);

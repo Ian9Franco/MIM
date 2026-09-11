@@ -82,6 +82,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-unit.test.ts"]
     },
     {
+      name: "SAGE Real Chat Guardrail Contract",
+      cmd: "npm",
+      args: ["run", "test:sage-chat-guardrails"]
+    },
+    {
       name: "SAGE 2.0 Knowledge Base Matcher & Safety Validator",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/evaluation/test-rag.ts"]

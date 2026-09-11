@@ -75,6 +75,9 @@ jobs:
       - name: Verify SAGE Streaming Contract
         run: npm run test:sage-stream
 
+      - name: Verify SAGE Real Chat Guardrails
+        run: npm run test:sage-chat-guardrails
+
       - name: Upload Coverage to Codacy
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}

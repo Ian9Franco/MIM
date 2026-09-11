@@ -77,7 +77,18 @@ export const POST = withApiGuard(
         signal: request.signal,
       });
 
-      return createBufferedStreamResponse(result.text, result.model);
+      if (result.guardrails.status === "blocked") {
+        console.warn(
+          "[/api/sage/chat] Provider response blocked by SAGE guardrails:",
+          result.guardrails.violations.join(", "),
+        );
+      }
+
+      return createBufferedStreamResponse(
+        result.text,
+        result.model,
+        result.guardrails.status,
+      );
     } catch (err: unknown) {
       const msg = errorMessage(err);
       console.warn("[/api/sage/chat] Provider generation failed:", msg);
@@ -116,7 +127,11 @@ export const POST = withApiGuard(
   }
 );
 
-function createBufferedStreamResponse(text: string, model: string): Response {
+function createBufferedStreamResponse(
+  text: string,
+  model: string,
+  guardrailStatus: "passed" | "blocked",
+): Response {
   let step = 0;
 
   const stream = new ReadableStream<Uint8Array>({
@@ -141,6 +156,7 @@ function createBufferedStreamResponse(text: string, model: string): Response {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       "X-Accel-Buffering": "no",
+      "X-MIM-SAGE-Guardrail": guardrailStatus,
     },
   });
 }

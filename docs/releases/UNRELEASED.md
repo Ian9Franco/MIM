@@ -8,6 +8,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 
 ### Planificación auditada y publicación manual por tag
 
+- SAGE-06 (en revisión): el chat exige una salida estructurada con referencias a evidencia, valida atribuciones y acciones antes del stream y reemplaza respuestas contradictorias, peligrosas o manipuladas por un fallback local seguro. La suite ejecuta el motor y el endpoint reales con proveedores controlados; no constituye verificación post-merge ni cierra otros objetivos de evaluación.
 - Reconciliados Who's Next y Unicorn con evidencia de código: los cierres anteriores quedan en el backlog histórico y los alcances incompletos permanecen pendientes.
 - Incorporadas tareas de calidad de código, UI/E2E, onboarding, trazabilidad y rigor de evaluación SAGE/MimBot, con criterios de cierre. Son planificación, no nuevas capacidades entregadas.
 - Corregida la selección de tag en la release manual de GitHub Actions: el tag solicitado fija checkout, notas y publicación; las entradas inválidas se rechazan antes de compilar. Agregada regresión local del bloque real de resolución y sus consumidores.

@@ -1,12 +1,59 @@
 # SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
 > **Evaluation Date:** 2026-09-11  
-> **Benchmark Dataset:** 125 real-world & representative Minecraft crash logs  
-> **Target Loaders:** Fabric, Forge, NeoForge, Quilt, Vanilla  
+> **Regression gate (`crash-corpus-regression.json`):** 125 templated cases — CI only, not real captured logs  
+> **Real corpus (`crash-corpus.json`):** 0 cases — add server/client logs here when available  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; not mixed into this file yet  
 
 ---
 
-## 📊 Summary Performance Metrics
+## Limits (SAGE-01)
+
+This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
+
+- `crash-corpus-regression.json` holds templated snippets (`origin: synthetic`) for the SAGE-03 CI gate only.
+- `crash-corpus.json` is intentionally **empty** until you capture real logs (client crash or server `latest.log` excerpts) without contaminating regression.
+- 100% regression F1 does not prove generalization. Real holdout lives only in `crash-corpus.json`.
+
+### Regression fixture audit
+
+- Samples: 125 (97 unique logs; 28 exact duplicate extras)
+- Log length: min 160, p50 303, mean 325, max 611 chars
+- Origin: unknown 0, synthetic 125, community 0, public-issue 0
+- Split: train 125, stress 0, holdout 0
+
+Exact groups:
+
+- exact CASE-086: 15 copies (14 extras)
+- exact CASE-101: 15 copies (14 extras)
+
+Near-duplicate prefix groups:
+
+- near CASE-001: 14 samples sharing a 180-char prefix
+- near CASE-036: 20 samples sharing a 180-char prefix
+- near CASE-056: 8 samples sharing a 180-char prefix
+- near CASE-058: 7 samples sharing a 180-char prefix
+
+
+### Real corpus audit
+
+- Samples: 0 (0 unique logs; 0 exact duplicate extras)
+- Log length: min 0, p50 0, mean 0, max 0 chars
+- Origin: unknown 0, synthetic 0, community 0, public-issue 0
+- Split: train 0, stress 0, holdout 0
+
+Exact groups:
+
+- none
+
+Near-duplicate prefix groups:
+
+- none
+
+
+---
+
+## 📊 Summary Performance Metrics (regression / SAGE-03 gate)
 
 | Metric | Measured Value | Benchmark Target | Status |
 |:---|:---:|:---:|:---:|
@@ -29,7 +76,7 @@
 
 ---
 
-## 🔬 Category Breakdown
+## 🔬 Category Breakdown (regression)
 
 | Crash Category | Sample Count | Precision | Recall | F1-Score |
 |:---|:---:|:---:|:---:|:---:|
@@ -42,14 +89,30 @@
 | `OUT_OF_MEMORY` | 15 | 100.0% | 100.0% | 100.0% |
 | `UNKNOWN_RUNTIME` | 10 | 100.0% | 100.0% | 100.0% |
 
+## Loader Breakdown (regression)
+
+| Loader | Samples | Category accuracy |
+|:---|---:|---:|
+| fabric | 81 | 100.0% |
+| forge | 28 | 100.0% |
+| vanilla | 15 | 100.0% |
+| neoforge | 1 | 100.0% |
+
+---
+
+## Real holdout (`crash-corpus.json`, not gated)
+
+`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.
+
+
 ---
 
 ## 🚀 Reproducibility
 
-To re-run this evaluation benchmark on your local environment:
-
 ```bash
-npm run eval:sage
+npm run eval:sage              # regression gate + write this report
+npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --audit   # regression + real corpus audits
 ```
 
-CI gate thresholds (`SAGE-03`): Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia media ≤ 15 ms.
+CI gate thresholds (`SAGE-03`) apply **only** to `crash-corpus-regression.json`: Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia media ≤ 15 ms.

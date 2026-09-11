@@ -8,6 +8,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 
 ### Planificación auditada y publicación manual por tag
 
+- SAGE-01: `crash-corpus.json` vacío para logs reales; fixture de regresión aislado en `crash-corpus-regression.json` (`origin: synthetic`). Sin casos stress mock. Logs de servidor/host van al corpus real cuando existan (distinto de SRV-5 ingesta remota).
 - SAGE-06 (en revisión): el chat exige una salida estructurada con referencias a evidencia, valida atribuciones y acciones antes del stream y reemplaza respuestas contradictorias, peligrosas o manipuladas por un fallback local seguro. La suite ejecuta el motor y el endpoint reales con proveedores controlados; no constituye verificación post-merge ni cierra otros objetivos de evaluación.
 - Reconciliados Who's Next y Unicorn con evidencia de código: los cierres anteriores quedan en el backlog histórico y los alcances incompletos permanecen pendientes.
 - Incorporadas tareas de calidad de código, UI/E2E, onboarding, trazabilidad y rigor de evaluación SAGE/MimBot, con criterios de cierre. Son planificación, no nuevas capacidades entregadas.

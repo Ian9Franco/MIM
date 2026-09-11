@@ -14,6 +14,7 @@ function test(name: string, fn: () => void): void {
 test("resolves root aliases and relative imports inside the repository", () => {
   assert.equal(resolveRepoImport("lib/modding/foo.ts", "@/components/Foo"), "components/Foo");
   assert.equal(resolveRepoImport("lib/modding/foo.ts", "../../app/api/shared"), "app/api/shared");
+  assert.equal(resolveRepoImport("apps/hub/lib/runtime.ts", "../../../standalone/main"), "standalone/main");
   assert.equal(resolveRepoImport("lib/modding/foo.ts", "zod"), null);
 });
 
@@ -39,7 +40,7 @@ test("rejects dynamic imports and require calls that cross boundaries", () => {
 });
 
 test("rejects hub imports from the Electron standalone runtime", () => {
-  const violations = inspectSource("apps/hub/lib/runtime.ts", 'import x from "../../standalone/main";');
+  const violations = inspectSource("apps/hub/lib/runtime.ts", 'import x from "../../../standalone/main";');
   assert.equal(violations.length, 1);
   assert.equal(violations[0].rule, "hub-must-not-depend-on-desktop-runtime");
 });

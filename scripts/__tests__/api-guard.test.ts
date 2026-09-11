@@ -13,7 +13,7 @@ import os from "os";
 import path from "path";
 import { z } from "zod";
 import { withApiGuard as withDesktopApiGuard } from "../../lib/apiGuard";
-import { withApiGuard as withWebApiGuard } from "../../web/lib/apiGuard";
+import { withApiGuard as withWebApiGuard } from "../../apps/hub/lib/apiGuard";
 import { assertPathSegment, resolveWithin } from "../../lib/security/safePaths";
 import {
   analyzeRouteSource,

@@ -206,5 +206,10 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Workspace `@mim/desktop` configurado en `apps/desktop/` con `package.json` y `tsconfig.json`.
   - [x] Scripts de build, prepare:standalone y packaging para Windows.
   - [x] Suite de tests `scripts/__tests__/monorepo-arch3-arch4.test.ts` pasando al 100%.
-- [ ] **Hito ARCH-5: Traslado de `web/` a `apps/hub` y eliminación de duplicados (Pendiente).**
+- [x] **Hito ARCH-5: Traslado de `web/` a `apps/hub`:**
+  - [x] Workspace `mim-fomo-web` en `apps/hub/` con `package.json` y `tsconfig.json`.
+  - [x] Eliminación de `web/`; renames git preservan historial.
+  - [x] Scripts scoped (`build:hub`, `lint:hub`, `build:all`, `lint:all`) y CI (`tsc --project apps/hub/tsconfig.json`).
+  - [x] Tests y tooling de arquitectura actualizados a rutas `apps/hub/*`.
+  - [ ] Unificación de módulos duplicados hub ↔ root vía `@mim/*` (backlog post-ARCH-5).
 - [ ] **Hitos ARCH-6 a ARCH-8: Surface Server Manager, CI scoped y versionado semántico (Pendiente).**

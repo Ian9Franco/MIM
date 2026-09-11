@@ -1,7 +1,7 @@
 # Auditoría Integral de Refactorización y Deuda Técnica (MIM Monorepo)
 
 **Fecha**: 9 de Septiembre de 2026  
-**Alcance**: Todo el repositorio (`apps/`, `packages/`, `components/`, `lib/`, `web/`, `app/`, `scripts/`)  
+**Alcance**: Todo el repositorio (`apps/`, `packages/`, `components/`, `lib/`, `apps/hub/`, `app/`, `scripts/`)  
 **Objetivo**: Identificar componentes sobredimensionados (> 600 líneas), código duplicado o bifurcado entre surfaces, ciclos de importación y oportunidades de modularización y reutilización.
 
 ---
@@ -12,7 +12,7 @@
 |---|---|---|---|
 | **Archivos que violan límite modular (> 600 líneas funcionales)** | **6 archivos** (3 completados) | 0 archivos | 🟡 En Descomposición Progresiva |
 | **Archivos en zona de riesgo (450 a 600 líneas funcionales)** | **17 archivos** | Monitoreo | 🟡 Atención Preventiva |
-| **Archivos duplicados / bifurcados (`web/` vs `root`)** | **14 módulos clave** | 0 (Shared Packages) | 🟠 Sincronizar en ARCH-5 |
+| **Archivos duplicados / bifurcados (`apps/hub/` vs `root`)** | **14 módulos clave** | 0 (Shared Packages) | 🟠 Backlog post-ARCH-5 |
 | **Ciclos de dependencia en grafo interno** | **4 ciclos** | 0 ciclos | 🟡 Romper dependencias |
 | **Anomalías de acoplamiento inverso (Engine importa UI)** | **2 archivos** | 0 violaciones | 🟡 Extraer contratos |
 
@@ -107,19 +107,21 @@ Estos componentes funcionan correctamente pero se encuentran cerca del límite m
 
 ---
 
-## 4. Oportunidades de Deduplicación y Consolidación (`web/` vs `root`)
+## 4. Oportunidades de Deduplicación y Consolidación (`apps/hub/` vs `root`)
 
-Durante el análisis del grafo se detectaron múltiples módulos con lógica paralela o forkeada entre `web/` y la raíz del proyecto. Estos son los candidatos prioritarios para ser unificados en `packages/*` antes o durante **`ARCH-5`**:
+> **Nota (2026-09-10):** El traslado estructural `web/` → `apps/hub` (ARCH-5) está cerrado. La tabla siguiente describe el backlog de unificación semántica pendiente.
 
-| Módulo en `root` | Módulo en `web/` | Diagnóstico | Acción Recomendada |
+Durante el análisis del grafo se detectaron múltiples módulos con lógica paralela o forkeada entre `apps/hub/` y la raíz del proyecto. Estos son los candidatos prioritarios para ser unificados en `packages/*`:
+
+| Módulo en `root` | Módulo en `apps/hub/` | Diagnóstico | Acción Recomendada |
 |---|---|---|---|
-| `types/fomo.ts` (192 l.) | `web/types/fomo.ts` (192 l.) | **100% Idénticos** | Mover a `@mim/contracts-core/fomo` |
-| `lib/vault/vaultEngine.ts` (289 l.) | `web/lib/vault/vaultEngine.ts` (292 l.) | Fork leve con schema V1 | Unificar en `@mim/vault-engine` |
-| `lib/rateLimiter.ts` (72 l.) | `web/lib/rateLimiter.ts` (73 l.) | Mismo algoritmo token-bucket | Unificar en `@mim/network-resilience` |
-| `lib/intelligence/modExplainer.ts` (433 l.) | `web/lib/intelligence/modExplainer.ts` (428 l.) | Prompts y lógica gemelos | Extraer a `@mim/intelligence-core` |
-| `components/fomo/spotlight/SpotlightMarquees.tsx` | `web/components/SpotlightMarquees.tsx` | Versión desktop vs web con estilos divergentes | Extraer hook común de marquee (`useSmoothMarquee`) |
-| `services/curseforge/CurseForgeMapper.ts` | `web/app/api/curseforge/discover/CurseForgeMapper.ts` | Mapeo de categorías y loaders duplicado | Extraer a package `@mim/mod-mappers` |
-| `app/api/bedrock/discover/route.ts` | `web/app/api/bedrock/discover/route.ts` | Endpoint de catálogo Bedrock duplicado | Compartir handler puro |
+| `types/fomo.ts` (192 l.) | `apps/hub/types/fomo.ts` (192 l.) | **100% Idénticos** | Mover a `@mim/contracts-core/fomo` |
+| `lib/vault/vaultEngine.ts` (289 l.) | `apps/hub/lib/vault/vaultEngine.ts` (292 l.) | Fork leve con schema V1 | Unificar en `@mim/vault-engine` |
+| `lib/rateLimiter.ts` (72 l.) | `apps/hub/lib/rateLimiter.ts` (73 l.) | Mismo algoritmo token-bucket | Unificar en `@mim/network-resilience` |
+| `lib/intelligence/modExplainer.ts` (433 l.) | `apps/hub/lib/intelligence/modExplainer.ts` (428 l.) | Prompts y lógica gemelos | Extraer a `@mim/intelligence-core` |
+| `components/fomo/spotlight/SpotlightMarquees.tsx` | `apps/hub/components/SpotlightMarquees.tsx` | Versión desktop vs web con estilos divergentes | Extraer hook común de marquee (`useSmoothMarquee`) |
+| `services/curseforge/CurseForgeMapper.ts` | `apps/hub/app/api/curseforge/discover/CurseForgeMapper.ts` | Mapeo de categorías y loaders duplicado | Extraer a package `@mim/mod-mappers` |
+| `app/api/bedrock/discover/route.ts` | `apps/hub/app/api/bedrock/discover/route.ts` | Endpoint de catálogo Bedrock duplicado | Compartir handler puro |
 
 ---
 
@@ -150,7 +152,7 @@ Durante el análisis del grafo se detectaron múltiples módulos con lógica par
 graph TD
     A["1. Quick Wins: Tipos y Acoplamiento Inverso"] --> B["2. Deduplicación de Utilidades (Vault, RateLimit, Mappers)"]
     B --> C["3. Descomposición de God Components (>600 líneas)"]
-    C --> D["4. Hito ARCH-5: Unificación Web -> apps/hub"]
+    C --> D["4. Hito ARCH-5: Unificación Web -> apps/hub (cerrado)"]
 ```
 
 1. **Fase 1: Quick Wins (Bajo Riesgo)**:

@@ -8,13 +8,13 @@ import {
   readActiveDraft,
   writeActiveDraft,
   type DraftStorage,
-} from "../../web/lib/drafts/draftContract";
+} from "../../apps/hub/lib/drafts/draftContract";
 import {
   fetchDraftIcons,
   fetchDraftVersions,
   resolveDraftModrinthItem,
-} from "../../web/lib/drafts/draftRemote";
-import { HOME_DRAFTS_PUBLIC_KEYS } from "../../web/hooks/useHomeDrafts";
+} from "../../apps/hub/lib/drafts/draftRemote";
+import { HOME_DRAFTS_PUBLIC_KEYS } from "../../apps/hub/hooks/useHomeDrafts";
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);

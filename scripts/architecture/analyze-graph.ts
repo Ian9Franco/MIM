@@ -59,19 +59,19 @@ function normalizeRepoPath(value: string): string {
 export function categorizePath(filePath: string): ModuleCategory {
   const p = normalizeRepoPath(filePath);
 
-  if (p.startsWith("web/")) return "surface:hub";
-  if (p.startsWith("app/") || p.startsWith("components/") || p.startsWith("standalone/")) return "surface:desktop";
+  if (p.startsWith("apps/hub/") || p.startsWith("web/")) return "surface:hub";
+  if (p.startsWith("app/") || p.startsWith("components/") || p.startsWith("standalone/") || p.startsWith("apps/desktop/")) return "surface:desktop";
   if (p.startsWith("scripts/")) return "tooling:scripts";
 
-  if (p.startsWith("types/") || p.endsWith("/types.ts") || p.endsWith("/types.d.ts")) return "contracts";
+  if (p.startsWith("packages/contracts-core/") || p.startsWith("types/") || p.endsWith("/types.ts") || p.endsWith("/types.d.ts")) return "contracts";
 
   if (p.startsWith("lib/modding/") || p.startsWith("lib/mod-scanner/") || p.startsWith("lib/scanner")) return "engine:modding";
   if (p.startsWith("lib/intelligence/")) return "engine:sage";
-  if (p.startsWith("lib/server/")) return "engine:server";
+  if (p.startsWith("packages/server-engine/") || p.startsWith("lib/server/")) return "engine:server";
+  if (p.startsWith("packages/network-resilience/") || p.startsWith("lib/network/")) return "infra:network";
   if (p.startsWith("lib/security/") || p.startsWith("lib/apiGuard.ts") || p.startsWith("lib/rateLimiter.ts")) return "engine:security";
   if (p.startsWith("lib/fomo/")) return "engine:fomo";
   if (p.startsWith("lib/downloads/")) return "engine:downloads";
-  if (p.startsWith("lib/network/")) return "infra:network";
   if (p.startsWith("lib/storage/") || p.startsWith("lib/vault/") || p.startsWith("lib/db/")) return "infra:storage";
   if (p.startsWith("lib/core/")) return "infra:core";
 
@@ -80,14 +80,26 @@ export function categorizePath(filePath: string): ModuleCategory {
 
 export function resolveImportTarget(sourceFile: string, specifier: string, rootDir: string): string | null {
   const normalizedSource = normalizeRepoPath(sourceFile);
-  const isInsideWeb = normalizedSource.startsWith("web/");
+  const isInsideHub = normalizedSource.startsWith("apps/hub/") || normalizedSource.startsWith("web/");
 
   let resolvedRelative: string | null = null;
 
-  if (specifier.startsWith("@/")) {
-    if (isInsideWeb) {
-      // Inside web, @/ maps to web/*
-      resolvedRelative = normalizeRepoPath(path.posix.join("web", specifier.slice(2)));
+  if (specifier === "@mim/contracts-core") {
+    resolvedRelative = "packages/contracts-core/index.ts";
+  } else if (specifier.startsWith("@mim/contracts-core/")) {
+    resolvedRelative = normalizeRepoPath(path.posix.join("packages/contracts-core", specifier.slice("@mim/contracts-core/".length)));
+  } else if (specifier === "@mim/network-resilience") {
+    resolvedRelative = "packages/network-resilience/index.ts";
+  } else if (specifier.startsWith("@mim/network-resilience/")) {
+    resolvedRelative = normalizeRepoPath(path.posix.join("packages/network-resilience", specifier.slice("@mim/network-resilience/".length)));
+  } else if (specifier === "@mim/server-engine") {
+    resolvedRelative = "packages/server-engine/index.ts";
+  } else if (specifier.startsWith("@mim/server-engine/")) {
+    resolvedRelative = normalizeRepoPath(path.posix.join("packages/server-engine", specifier.slice("@mim/server-engine/".length)));
+  } else if (specifier.startsWith("@/")) {
+    if (isInsideHub) {
+      const hubPrefix = normalizedSource.startsWith("apps/hub/") ? "apps/hub" : "web";
+      resolvedRelative = normalizeRepoPath(path.posix.join(hubPrefix, specifier.slice(2)));
     } else {
       // In root, @/ maps to root /*
       resolvedRelative = normalizeRepoPath(specifier.slice(2));
@@ -308,15 +320,15 @@ export function analyzeArchitectureGraph(rootDir: string): AnalysisResult {
 
   const cycles = findCycles(adjacencyList);
 
-  // Identify duplicate candidates between Hub (web/) and root
+  // Identify duplicate candidates between Hub (apps/hub/) and root
   const duplicateCandidates: { hubPath: string; rootPath: string; similarity: string }[] = [];
   const hubFiles = filesByCategory["surface:hub"];
   for (const hubFile of hubFiles) {
-    const relativeToWeb = hubFile.replace(/^web\//, "");
-    if (fs.existsSync(path.join(rootDir, relativeToWeb))) {
+    const relativeToHub = hubFile.replace(/^(?:apps\/hub|web)\//, "");
+    if (fs.existsSync(path.join(rootDir, relativeToHub))) {
       duplicateCandidates.push({
         hubPath: hubFile,
-        rootPath: relativeToWeb,
+        rootPath: relativeToHub,
         similarity: "Identical relative path in root",
       });
     }

@@ -114,10 +114,13 @@ d:\.mine\manager\
 ├── sql/                    → Esquemas DDL y políticas de seguridad RLS de PostgreSQL
 ├── constants/              → Constantes del ecosistema, categorías y loaders
 │
-├── web/                    → Subproyecto MIMweb (Next.js independiente en Vercel)
-│   ├── app/api/            → API routes públicas (explain, translate, community...)
-│   ├── components/         → Componentes del hub web (ModDetailsSheet, marquees...)
-│   └── lib/                → Rate limiter sliding window, traductor oficial y voice
+├── apps/
+│   ├── desktop/            → Entrada de empaquetado Desktop
+│   └── hub/                → Subproyecto MIM Hub (Next.js independiente en Vercel)
+│       ├── app/api/        → API routes públicas (explain, translate, community...)
+│       ├── components/     → Componentes del hub web (ModDetailsSheet, marquees...)
+│       └── lib/            → Rate limiter sliding window, traductor oficial y voice
+├── packages/               → Paquetes puros compartidos (@mim/*)
 │
 ├── standalone/             → Electron shell nativo
 │   └── main.js             → Entry point con sandbox OS y contextIsolation
@@ -286,7 +289,7 @@ chore(deps): update electron to 42.1.0
 
 ### TypeScript — zonas estrictamente sin `any`
 
-En `lib/intelligence/sage/`, `lib/security/` y las API routes (`app/api/*/route.ts`, `web/app/api/*/route.ts`), está prohibido el uso de `any`. Se deben utilizar interfaces bien delimitadas, genéricos o `unknown` con type guards.
+En `lib/intelligence/sage/`, `lib/security/` y las API routes (`app/api/*/route.ts`, `apps/hub/app/api/*/route.ts`), está prohibido el uso de `any`. Se deben utilizar interfaces bien delimitadas, genéricos o `unknown` con type guards.
 
 ### Error handling — regla mínima
 
@@ -305,7 +308,7 @@ try {
 
 ### Blindaje de Rutas API (`withApiGuard`) — Mandatorio
 
-Toda nueva ruta API (`route.ts`) que consuma APIs externas (Modrinth, CurseForge, YouTube), modelos de IA (SAGE, Bedrock, Copilot) o que esté expuesta en MIMweb (`web/app/api/`) **DEBE** estar blindada con `withApiGuard`.
+Toda nueva ruta API (`route.ts`) que consuma APIs externas (Modrinth, CurseForge, YouTube), modelos de IA (SAGE, Bedrock, Copilot) o que esté expuesta en MIM Hub (`apps/hub/app/api/`) **DEBE** estar blindada con `withApiGuard`.
 
 La regla es auditada en CI por `npm run lint:api-guard`, fallando automáticamente el build si se detecta un `route.ts` crítico desprotegido.
 

@@ -32,7 +32,7 @@ function scanDir(dir) {
       };
 
       fileStats.push(record);
-      if (fullPath.startsWith("web/")) {
+      if (fullPath.startsWith("apps/hub/") || fullPath.startsWith("web/")) {
         webFiles.push(record);
       } else {
         rootFiles.push(record);

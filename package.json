@@ -9,18 +9,17 @@
   "main": "standalone/main.js",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "web"
+    "packages/*"
   ],
   "scripts": {
     "dev": "next dev",
     "dev:server-fixture": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/dev/server-audit-fixture.ts",
     "build": "next build",
-    "build:hub": "npm --prefix web run build",
+    "build:hub": "npm --prefix apps/hub run build",
     "build:all": "npm run build && npm run build:hub",
     "start": "next start",
     "lint": "eslint app components lib --max-warnings=400",
-    "lint:hub": "eslint web/app web/components web/lib --max-warnings=75",
+    "lint:hub": "eslint apps/hub/app apps/hub/components apps/hub/lib --max-warnings=75",
     "lint:all": "npm run lint && npm run lint:hub && npm run lint:architecture && npm run lint:api-guard",
     "test:nbt": "ts-node --project tsconfig.scripts.json scripts/__tests__/nbt-integration.test.ts",
     "test:api": "ts-node --project tsconfig.scripts.json scripts/__tests__/api-integration.test.ts",

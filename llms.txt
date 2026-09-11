@@ -20,7 +20,9 @@ Do not infer the current version from prose or badges. Read `package.json`.
 - `app/` — Next.js desktop-facing application and API routes.
 - `components/` — shared React UI, including FOMO, SAGE, library and project surfaces.
 - `lib/` — domain logic and engines: modding, security, intelligence/SAGE, storage, events, downloads and related contracts.
-- `web/` — MIMweb / FOMO Hub web application and its TypeScript project.
+- `apps/hub/` — MIM Hub / FOMO Hub web application and its TypeScript project.
+- `apps/desktop/` — Desktop application packaging entrypoint.
+- `packages/` — Shared standalone packages (@mim/contracts-core, @mim/network-resilience, @mim/server-engine).
 - `standalone/` — Electron runtime, standalone packaging support and encrypted secret persistence.
 - `scripts/` — test runner, architecture checks, security checks, benchmarks, release tooling and PR workflow helpers.
 - `docs/` — canonical engineering documentation organized by topic.
@@ -52,7 +54,7 @@ Primary commands from `package.json`:
 
 - `npm run lint` — ESLint over `app`, `components` and `lib`. The current warning budget is intentionally bounded; CI must not silently increase it.
 - `npx tsc --noEmit` — root TypeScript check.
-- `npx tsc --project web/tsconfig.json --noEmit` — MIMweb TypeScript check.
+- `npx tsc --project apps/hub/tsconfig.json --noEmit` — MIM Hub TypeScript check.
 - `npm run lint:api-guard` — structural API guard verification.
 - `npm run lint:architecture` — architecture boundary verification.
 - `npm run test:architecture` — architecture boundary contract tests.

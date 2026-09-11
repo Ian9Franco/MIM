@@ -189,7 +189,7 @@ async function runAllQualityGates(contextLabel = "COMPUERTAS DE CALIDAD") {
     { title: "2. Verificación de Fronteras de Arquitectura", cmd: "npm", args: ["run", "lint:architecture"], reason: "Fallo en las fronteras de arquitectura (dependencias cruzadas no permitidas)." },
     { title: "3. Contratos de Fronteras Arquitectónicas", cmd: "npm", args: ["run", "test:architecture"], reason: "Fallo en la suite de pruebas de contratos arquitectónicos." },
     { title: "4. Verificación de Tipos TypeScript (Raíz / Desktop)", cmd: "npx", args: ["tsc", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (Raíz)." },
-    { title: "5. Verificación de Tipos TypeScript (MIMweb)", cmd: "npx", args: ["tsc", "--project", "web/tsconfig.json", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (web/tsconfig.json)." },
+    { title: "5. Verificación de Tipos TypeScript (MIM Hub)", cmd: "npx", args: ["tsc", "--project", "apps/hub/tsconfig.json", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (apps/hub/tsconfig.json)." },
     { title: "6. Suite de Tests Unificados (npm test)", cmd: "node", args: ["scripts/test-runner.js"], reason: "Fallo en una o más suites del Test Runner unificado de MIM." },
   ];
 

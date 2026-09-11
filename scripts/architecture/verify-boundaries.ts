@@ -38,8 +38,8 @@ export const BOUNDARY_RULES: BoundaryRule[] = [
     forbiddenTargetPrefixes: ["app/", "components/", "web/", "standalone/", "apps/"],
   },
   {
-    name: "web-must-not-depend-on-desktop-runtime",
-    sourcePrefixes: ["web/"],
+    name: "hub-must-not-depend-on-desktop-runtime",
+    sourcePrefixes: ["apps/hub/", "web/"],
     forbiddenTargetPrefixes: ["standalone/", "apps/desktop/"],
   },
 ];
@@ -57,7 +57,7 @@ function normalizeRepoPath(value: string): string {
 
 export function resolveRepoImport(sourceFile: string, specifier: string): string | null {
   const normalizedSource = normalizeRepoPath(sourceFile);
-  const isInsideWeb = normalizedSource.startsWith("web/");
+  const isInsideHub = normalizedSource.startsWith("apps/hub/") || normalizedSource.startsWith("web/");
 
   if (specifier === "@mim/contracts-core") {
     return "packages/contracts-core/index.ts";
@@ -87,8 +87,9 @@ export function resolveRepoImport(sourceFile: string, specifier: string): string
   }
 
   if (specifier.startsWith("@/")) {
-    if (isInsideWeb) {
-      return normalizeRepoPath(path.posix.join("web", specifier.slice(2)));
+    if (isInsideHub) {
+      const hubPrefix = normalizedSource.startsWith("apps/hub/") ? "apps/hub" : "web";
+      return normalizeRepoPath(path.posix.join(hubPrefix, specifier.slice(2)));
     }
     return normalizeRepoPath(specifier.slice(2));
   }

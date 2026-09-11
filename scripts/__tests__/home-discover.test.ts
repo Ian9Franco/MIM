@@ -1,11 +1,11 @@
-import type { ModHit } from "../../web/components/SpotlightMarquees";
+import type { ModHit } from "../../apps/hub/components/SpotlightMarquees";
 import {
   DISCOVER_CACHE_KEYS,
   readDiscoverCache,
   shouldRunInitialDiscoverSearch,
   type DiscoverStorage,
-} from "../../web/lib/discover/discoverCache";
-import { decodeDiscoverPayload } from "../../web/lib/discover/discoverPayload";
+} from "../../apps/hub/lib/discover/discoverCache";
+import { decodeDiscoverPayload } from "../../apps/hub/lib/discover/discoverPayload";
 import {
   BEDROCK_DISCOVER_ENDPOINT,
   PROVIDER_ENDPOINTS,
@@ -15,8 +15,8 @@ import {
   resolveProviderEndpoint,
   type DiscoverFetch,
   type DiscoverFilters,
-} from "../../web/lib/discover/discoverSearch";
-import { HOME_DISCOVER_PUBLIC_KEYS } from "../../web/hooks/useHomeDiscover";
+} from "../../apps/hub/lib/discover/discoverSearch";
+import { HOME_DISCOVER_PUBLIC_KEYS } from "../../apps/hub/hooks/useHomeDiscover";
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);

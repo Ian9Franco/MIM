@@ -18,5 +18,5 @@
     }
   },
   "include": ["../../**/*.ts", "../../**/*.tsx"],
-  "exclude": ["../../node_modules", "../../web"]
+  "exclude": ["../../node_modules", "../../apps/hub"]
 }

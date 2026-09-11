@@ -92,13 +92,15 @@ El análisis automatizado identificó **3 anomalías de frontera** y **4 ciclos 
 
 ---
 
-## 4. Análisis de Duplicación (`web/` vs Raíz)
+## 4. Análisis de Duplicación (`apps/hub/` vs Raíz)
+
+> **Estado (2026-09-10):** Traslado estructural `web/` → `apps/hub` completado (ARCH-5). La unificación semántica sigue pendiente.
 
 Se detectaron **23 archivos candidatos a duplicación** entre el Hub web y la raíz del proyecto:
-- **Rutas de API (`app/api/*` vs `web/app/api/*`):** `bedrock/discover`, `curseforge/discover`, `curseforge/picks`, `curseforge/project`, `fomo/*`, `modrinth/*`.
+- **Rutas de API (`app/api/*` vs `apps/hub/app/api/*`):** `bedrock/discover`, `curseforge/discover`, `curseforge/picks`, `curseforge/project`, `fomo/*`, `modrinth/*`.
 - **Módulos auxiliares:** `lib/apiGuard.ts`, `lib/rateLimiter.ts`, `lib/vault/vaultEngine.ts`, `lib/intelligence/modExplainer.ts`, `hooks/useSmoothMarquee.ts`, `types/fomo.ts`.
 
-*Estrategia:* En `ARCH-5`, las rutas y módulos duplicados se unificarán importando desde los packages compartidos (`@mim/security-engine`, `@mim/modding-engine`, etc.), eliminando la redundancia de código.
+*Estrategia:* Unificar rutas y módulos duplicados importando desde packages compartidos (`@mim/security-engine`, `@mim/modding-engine`, etc.). Backlog post-ARCH-5; ver [refactoring-backlog.md](../planning/refactoring-backlog.md).
 
 ---
 

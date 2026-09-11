@@ -86,8 +86,8 @@ npm run release
 Si querés probar tus cambios locales manualmente antes de lanzar un commit o PR:
 
 ```bash
-# 1. Chequeo estricto de tipos de TypeScript (Desktop y Web)
-npx tsc --noEmit; npx tsc --project web/tsconfig.json --noEmit
+# 1. Chequeo estricto de tipos de TypeScript (Desktop y Hub)
+npx tsc --noEmit; npx tsc --project apps/hub/tsconfig.json --noEmit
 
 # 2. Verificación de blindaje estructural de APIs y Fronteras Arquitectónicas
 npm run lint:api-guard

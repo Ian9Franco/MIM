@@ -17,7 +17,7 @@ import { POST as stagingPost } from "../../app/api/staging/route";
 import { POST as savePlayerPost } from "../../app/api/sage/player-rescue/save/route";
 import { POST as sageChatPost } from "../../app/api/sage/chat/route";
 import { consumeSageStream } from "../../lib/intelligence/sage/streamContract";
-import { translateText } from "../../web/lib/translator";
+import { translateText } from "../../apps/hub/lib/translator";
 import { POST as deletePost } from "../../app/api/delete/route";
 import { POST as buildPost } from "../../app/api/build/route";
 import { POST as tweakPost } from "../../app/api/tweak/route";

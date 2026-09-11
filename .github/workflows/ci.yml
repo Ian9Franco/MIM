@@ -31,13 +31,13 @@ jobs:
       - name: Verify Root TypeScript Types
         run: npx tsc --noEmit
 
-      - name: Verify MIMweb TypeScript Types
-        run: npx tsc --project web/tsconfig.json --noEmit
+      - name: Verify MIM Hub TypeScript Types
+        run: npx tsc --project apps/hub/tsconfig.json --noEmit
 
       - name: Run Root Linter
         run: npm run lint
 
-      - name: Run MIMweb Linter
+      - name: Run MIM Hub Linter
         run: npm run lint:hub
 
       - name: Verify API Guard Route Shielding

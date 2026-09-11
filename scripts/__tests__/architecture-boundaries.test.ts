@@ -38,10 +38,10 @@ test("rejects dynamic imports and require calls that cross boundaries", () => {
   assert.equal(violations.length, 2);
 });
 
-test("rejects web imports from the Electron standalone runtime", () => {
-  const violations = inspectSource("web/lib/runtime.ts", 'import x from "../../standalone/main";');
+test("rejects hub imports from the Electron standalone runtime", () => {
+  const violations = inspectSource("apps/hub/lib/runtime.ts", 'import x from "../../standalone/main";');
   assert.equal(violations.length, 1);
-  assert.equal(violations[0].rule, "web-must-not-depend-on-desktop-runtime");
+  assert.equal(violations[0].rule, "hub-must-not-depend-on-desktop-runtime");
 });
 
 test("allows dependencies toward core and third-party packages", () => {

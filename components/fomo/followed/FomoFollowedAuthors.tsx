@@ -8,7 +8,7 @@
 import React from "react";
 import { 
   Heart, FolderHeart, RefreshCw, 
-  Timeline, ChefHat, CookingPot, TvMinimalPlay,
+  Timeline, ChefHat, CookingPot,
   CircleFadingPlus, X, Loader2
 } from "lucide-react";
 import { useFomoFollowedManager } from "@/hooks/useFomoFollowedManager";
@@ -17,7 +17,6 @@ import { fetchJsonWithRetry } from "@/lib/core/fetchJsonWithRetry";
 import { FollowedProjectCard, FollowedAuthorCard } from "@/components/fomo/followed/FomoFollowedComponents";
 import { PillToggleGroup } from "@/components/ui/primitives";
 import { FomoFollowedRankings } from "@/components/fomo/followed/FomoFollowedRankings";
-import { FomoFollowedShowcases } from "@/components/fomo/followed/FomoFollowedShowcases";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
 import type { ModHit } from "@/lib/core/types";
 import type { FomoFollowedAuthor } from "@/types/fomo";
@@ -39,17 +38,7 @@ interface SharedModRow {
   } | null;
 }
 
-interface SharedVideoRow {
-  id: string;
-  profile_id: string;
-  youtube_video_id: string;
-  title?: string;
-  profiles?: {
-    username?: string;
-    avatar_url?: string;
-    color?: string | null;
-  } | null;
-}
+const FOLLOWED_TABS = ["projects", "authors", "history"];
 
 interface ShareModalPayload {
   id?: string;
@@ -97,9 +86,8 @@ export function FomoFollowedAuthors({
     isRecent 
   } = useFomoFollowedManager();
   
-  // Community sharing — favorite_mods + showcase_videos for sub-tabs
+  // Community sharing — favorite_mods for sub-tabs
   const [allSharedMods, setAllSharedMods] = React.useState<SharedModRow[]>([]);
-  const [allSharedVideos, setAllSharedVideos] = React.useState<SharedVideoRow[]>([]);
   const [currentUser, setCurrentUser] = React.useState<{ id: string } | null>(null);
   const [currentUserColor, setCurrentUserColor] = React.useState<string | null>(null);
   const [unreadAuthors, setUnreadAuthors] = React.useState<Set<string>>(new Set());
@@ -125,11 +113,6 @@ export function FomoFollowedAuthors({
         .from("favorite_mods")
         .select("id, profile_id, mod_id, platform, name, profiles ( username, avatar_url, color )");
       if (modsData) setAllSharedMods(modsData as unknown as SharedModRow[]);
-
-      const { data: videosRows } = await supabase
-        .from("showcase_videos")
-        .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
-      if (videosRows) setAllSharedVideos(videosRows as unknown as SharedVideoRow[]);
     } catch (err) {
       console.error("Error loading community shared info:", err);
     }
@@ -249,15 +232,6 @@ export function FomoFollowedAuthors({
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
 
-  const [currentTheme, setCurrentTheme] = React.useState("official");
-  React.useEffect(() => {
-    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
-    update();
-    const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => obs.disconnect();
-  }, []);
-
   // Load unread authors from localStorage
   React.useEffect(() => {
     const unreadAuthRaw = localStorage.getItem("mim_fomo_unread_authors");
@@ -282,14 +256,13 @@ export function FomoFollowedAuthors({
     return () => window.removeEventListener("fomo-refresh-sharing", handleRefresh);
   }, [fetchCommunitySharingInfo, subTab]);
 
-  const TABS = ["projects", "authors", "history"];
   const [direction, setDirection] = React.useState("forward");
   const prevTabRef = React.useRef(subTab);
 
   React.useEffect(() => {
     if (subTab !== prevTabRef.current) {
-      const idx = TABS.indexOf(subTab);
-      const prevIdx = TABS.indexOf(prevTabRef.current);
+      const idx = FOLLOWED_TABS.indexOf(subTab);
+      const prevIdx = FOLLOWED_TABS.indexOf(prevTabRef.current);
       setDirection(idx >= prevIdx ? "forward" : "backward");
       prevTabRef.current = subTab;
     }

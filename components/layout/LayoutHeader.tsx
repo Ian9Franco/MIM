@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
-  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles, Server 
+  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Server 
 } from "lucide-react";
 
 import type { Project } from "@/lib/core/types";
@@ -265,7 +265,7 @@ export function LayoutHeader({
   );
 }
 
-function headerButtonClasses(active: boolean, color: string, disabled = false) {
+function headerButtonClasses(active: boolean, color: string, _disabled = false) {
   const colors: Record<string, string> = {
     red: "bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]",
     indigo: "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]",

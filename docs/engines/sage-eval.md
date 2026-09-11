@@ -17,7 +17,7 @@
 | **Top-1 atribución (con culpable)** | **71.4%** | informativo | 50/70 |
 | **Top-3 atribución (con culpable)** | **100.0%** | informativo | 70/70 |
 | **Acierto sistémico sin culpable** | **100.0%** | informativo | 55/55 |
-| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ✅ Pass (0.05 ms) |
+| **Mean Inference Latency** | **0.09 ms** | < 15.0 ms | ✅ Pass (0.09 ms) |
 
 ### Métricas desglosadas (SAGE-02)
 

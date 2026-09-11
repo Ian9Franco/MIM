@@ -8,11 +8,11 @@
 import React, { useRef, useEffect } from "react";
 import { 
   Settings2, Zap, X, RefreshCw, CheckCircle2, AlertTriangle, Save, 
-  History as HistoryIcon, Layers, Search, Sparkles, Keyboard, Package, File, Check 
+  History as HistoryIcon, Layers, Sparkles, Keyboard, File, Check 
 } from "lucide-react";
 import { useTweakManager } from "@/hooks/useTweakManager";
 import { 
-  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, ResourcePackItem, AvailablePackItem, DetectedInstallations 
+  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, DetectedInstallations 
 } from "./TweakSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { FolderOpen } from "lucide-react";
@@ -30,13 +30,16 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   const sidebarRef = useRef<HTMLDivElement>(null);
   const {
     activeTab, setActiveTab, data, setData, loading, saving, message, setMessage,
-    listeningKey, setListeningKey, handleAction, handleUndo, hasPackChanges,
-    setHasPackChanges, draggedPackIdx, setDraggedPackIdx, addToHistory
+    listeningKey, setListeningKey, handleAction, handleUndo,
+    draggedPackIdx: _draggedPackIdx, setDraggedPackIdx: _setDraggedPackIdx, addToHistory,
+    setHasPackChanges
   } = useTweakManager(isOpen, activeProject);
   const [selectedSnapshot, setSelectedSnapshot] = React.useState<string>("");
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   const packManagerRef = useRef<PackHierarchyManagerRef>(null);
+
+  const uiPacks = data?.resourcePacks?.active ? [...data.resourcePacks.active].reverse() : [];
 
   useEffect(() => {
     const seen = localStorage.getItem("onboarding_tweak");
@@ -105,79 +108,9 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [listeningKey, data, setData, addToHistory, handleAction]);
+  }, [listeningKey, data, setData, addToHistory, handleAction, setListeningKey]);
 
   if (!isOpen) return null;
-
-  // ── Pack Helpers ──
-  const uiPacks = data ? [...data.resourcePacks.active].reverse() : [];
-
-  const handlePackDrop = async (dropUiIdx: number) => {
-    if (draggedPackIdx === null || draggedPackIdx === dropUiIdx || !data) { setDraggedPackIdx(null); return; }
-    const arr = [...data.resourcePacks.active];
-    const fromActual = arr.length - 1 - draggedPackIdx;
-    const toActual   = arr.length - 1 - dropUiIdx;
-    const [moved] = arr.splice(fromActual, 1);
-    arr.splice(toActual, 0, moved);
-    
-    setData({ ...data, resourcePacks: { ...data.resourcePacks, active: arr } });
-    setHasPackChanges(true);
-    setDraggedPackIdx(null);
-
-    // Fetch new analysis from backend
-    try {
-      const res = await fetch("/api/tweak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "analyze-packs",
-          activePacks: arr 
-        })
-      });
-      if (res.ok) {
-        const newAnalysis = await res.json();
-        setData((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            resourcePacks: {
-              ...prev.resourcePacks,
-              visualStack: newAnalysis.visualStack,
-              issues: newAnalysis.issues,
-              autoFixable: newAnalysis.autoFixable
-            }
-          };
-        });
-      }
-    } catch (error) {
-      console.error("Failed to re-analyze packs:", error);
-    }
-  };
-
-  const handleTogglePack = (p: string) => {
-    if (!data) return;
-    const isActive = data.resourcePacks.active.includes(p);
-    if (isActive) {
-      setData({ 
-        ...data, 
-        resourcePacks: { 
-          ...data.resourcePacks, 
-          active: data.resourcePacks.active.filter((x: string) => x !== p), 
-          available: [...(data.resourcePacks.available || []), p] 
-        } 
-      });
-    } else {
-      setData({ 
-        ...data, 
-        resourcePacks: { 
-          ...data.resourcePacks, 
-          active: [p, ...data.resourcePacks.active], 
-          available: (data.resourcePacks.available || []).filter((x: string) => x !== p) 
-        } 
-      });
-    }
-    setHasPackChanges(true);
-  };
 
   return (
     <>

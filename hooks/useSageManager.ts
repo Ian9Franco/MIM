@@ -16,7 +16,7 @@ export interface LocalLogFile {
 
 export type SageMode = "crash" | "latest-log" | "paste" | "security" | "player-rescue";
 
-export function useSageManager(activeProject: Project | null, isOpen: boolean, onClose: () => void) {
+export function useSageManager(activeProject: Project | null, isOpen: boolean, _onClose?: () => void) {
   const [mode, setMode] = useState<SageMode>("security");
   
   // ── Persistence for mode ──
@@ -119,7 +119,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       const data = await res.json();
       if (data.success) setSecScannable(data.scannable || []);
       else setSecError(data.error || "Error listando archivos");
-    } catch (e) { setSecError("No se pudo contactar el servidor"); }
+    } catch { setSecError("No se pudo contactar el servidor"); }
     setSecLoading(false);
   }, [activeProject]);
 
@@ -202,7 +202,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       } else {
         setSecError(dataLocal.error || "Error en el escaneo local");
       }
-    } catch (e) { 
+    } catch { 
       setSecError("Error de conexión al ejecutar el scan"); 
     } finally {
       setSecScanning(false);

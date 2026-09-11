@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, Heart, HeartCrack, Layers, Sparkles, Database, Archive, LayoutGrid, Puzzle, Glasses, CircleFadingPlus, Globe, X, FlaskConical, FlaskConicalOff, Package, Workflow, Loader2 } from "lucide-react";
+import { ExternalLink, Heart, HeartCrack, Layers, Database, Archive, LayoutGrid, Puzzle, Glasses, CircleFadingPlus, Globe, X, FlaskConical, FlaskConicalOff, Package, Workflow, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
@@ -68,16 +68,8 @@ export function ModHeader({
     return () => obs.disconnect();
   }, []);
 
-  const getProjectTypeIcon = (type: string, categories: (string | FomoCategory)[] = []) => {
+  const getProjectTypeIcon = (type: string, _categories: (string | FomoCategory)[] = []) => {
     const t = type.toLowerCase();
-    const cats = categories.map((c: FomoCategory) => {
-      if (typeof c === "string") return c.toLowerCase();
-      if (c && typeof c === "object") {
-        if (typeof c.name === "string") return c.name.toLowerCase();
-        if (typeof c.slug === "string") return c.slug.toLowerCase();
-      }
-      return "";
-    }).filter(Boolean);
     
     if (t === "resourcepack") return <Layers className="w-3.5 h-3.5" />;
     if (t === "shader") return <Glasses className="w-3.5 h-3.5" />;

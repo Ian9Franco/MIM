@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { HardDrive, Trash2, Puzzle, Image, Glasses, Database, Download, ChevronDown, ChevronRight, Package, Calendar, Fingerprint, Archive, Search } from "lucide-react";
+import { Trash2, Puzzle, Image as ImageIcon, Glasses, Database, Download, ChevronDown, ChevronRight, Package, Calendar, Archive, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CommunityDraft, CommunityDraftSnapshot, CommunityDraftItem } from "@/types/fomo";
 
 const TYPE_META: Record<string, { label: string; icon: typeof Puzzle; color: string }> = {
   mod:          { label: "Mods",      icon: Puzzle,   color: "text-primary" },
-  resourcepack: { label: "Texturas",  icon: Image,    color: "text-amber-400" },
+  resourcepack: { label: "Texturas",  icon: ImageIcon,    color: "text-amber-400" },
   shader:       { label: "Shaders",   icon: Glasses,  color: "text-purple-400" },
   datapack:     { label: "Datapacks", icon: Database, color: "text-emerald-400" },
 };
@@ -28,7 +28,7 @@ export function DraftSnapshotsTab({
   setSnapshotToDelete,
   handleInstallSnapshot,
 }: {
-  draft: CommunityDraft | null;
+  draft?: CommunityDraft | null;
   snapshots: CommunityDraftSnapshot[];
   user: { id?: string } | null;
   isModern: boolean;
@@ -148,7 +148,7 @@ export function DraftSnapshotsTab({
                     )}
                     {counts.resourcepacks > 0 && (
                       <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">
-                        <Image className="w-2.5 h-2.5" /> {counts.resourcepacks}
+                        <ImageIcon className="w-2.5 h-2.5" /> {counts.resourcepacks}
                       </span>
                     )}
                     {counts.shaders > 0 && (

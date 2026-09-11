@@ -19,7 +19,7 @@ interface VersionCardProps {
   selectedProjectType?: string;
 }
 
-export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions, activeLoader, selectedProjectType }: VersionCardProps) {
+export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions: _gameVersions, activeLoader, selectedProjectType }: VersionCardProps) {
   const modLoaders = v.loaders || [v.loader];
   
   // Robust detection for non-mod projects
@@ -57,7 +57,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
           } else {
             translatedLine = cleanLine;
           }
-        } catch (e) {
+        } catch {
           translatedLine = cleanLine;
         }
 

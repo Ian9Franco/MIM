@@ -1,24 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Box, CheckCircle, Clock, Eye, EyeOff, FileEdit, HardDrive, Info, Blend, ListPlus, Users, RefreshCw, FlaskConical, FlaskConicalOff, UserPlus, Puzzle, Image, Sun, Database, ImagePlus, SwitchCamera, Trash2 } from "lucide-react";
+import { ArrowLeft, Box, CheckCircle, Clock, Eye, EyeOff, Info, Blend, Users, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/core/supabaseClient";
 import { downloadBroker } from "@/lib/downloads/DraftDownloadBroker";
 import { DownloadIntent } from "@/lib/downloads/downloadTypes";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
-import { DraftActivityFeed } from "@/components/fomo/community/DraftActivityFeed";
 import { CommunityDraftInviteModal } from "@/components/fomo/community/CommunityDraftInviteModal";
 import { useAuth } from "@/components/security/AuthContext";
 import { ImageCropper } from "@/components/fomo/core/ImageCropper";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { CommunityDraft, CommunityDraftItem, CommunityDraftSnapshot, CommunityDraftMember } from "@/types/fomo";
 import { DraftOverviewTab } from "./draft-tabs/DraftOverviewTab";
-import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 import { DraftMembersTab } from "./draft-tabs/DraftMembersTab";
 import { DraftSnapshotsTab } from "./draft-tabs/DraftSnapshotsTab";
 import { DraftItemsTab } from "./draft-tabs/DraftItemsTab";
 import { DraftValidationTab } from "./draft-tabs/DraftValidationTab";
+import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 
 export function CommunityDraftDetails({
   draftId,

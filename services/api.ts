@@ -19,7 +19,7 @@ export async function fetchCollections(): Promise<{ collections: CollectionEntry
     }
 
     return { collections: combined, error: null };
-  } catch (err) {
+  } catch {
     return { collections: [], error: "Error al conectar con el servidor" };
   }
 }
@@ -53,7 +53,7 @@ export async function fetchCollectionMods(id: string): Promise<{ mods: ModHit[],
       return { mods: data.mods || [], error: null };
     }
     return { mods: [], error: "No se pudieron cargar los mods" };
-  } catch (err) {
+  } catch {
     return { mods: [], error: "Error de red" };
   }
 }
@@ -67,7 +67,7 @@ export async function fetchModsByIds(ids: string[]): Promise<{ mods: ModHit[], e
       return { mods: data.mods || [], error: null };
     }
     return { mods: [], error: "No se pudieron cargar los proyectos" };
-  } catch (err) {
+  } catch {
     return { mods: [], error: "Error de red" };
   }
 }
@@ -95,7 +95,7 @@ export async function createCollection(
     }
     const data = await res.json().catch(() => ({}));
     return { collection: null, error: data.error || "Error al crear colección" };
-  } catch (err) {
+  } catch {
     return { collection: null, error: "Error de red" };
   }
 }
@@ -115,7 +115,7 @@ export async function addModToCollection(collId: string, mod: ModHit, target: "l
     if (res.ok) return { error: null };
     const data = await res.json().catch(() => ({}));
     return { error: data.error || "Error al añadir a la colección" };
-  } catch (err) {
+  } catch {
     return { error: "Error de red" };
   }
 }
@@ -137,7 +137,7 @@ export async function downloadCollection(collId: string, loader: string, gameVer
     }
     const data = await res.json().catch(() => ({}));
     return { count: 0, skipped: 0, error: data.error || "Error al descargar colección" };
-  } catch (err) {
+  } catch {
     return { count: 0, skipped: 0, error: "Error de red" };
   }
 }

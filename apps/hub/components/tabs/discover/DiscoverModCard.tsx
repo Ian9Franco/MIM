@@ -21,7 +21,7 @@ export function DiscoverModCard({
 }: DiscoverModCardProps) {
   const fallbackIconRef = useRef<HTMLDivElement>(null);
   const isCurse = mod._source === "curseforge";
-  const cardRoundedClass = isCurse ? "rounded-xl" : "rounded-3xl";
+  const cardShapeClass = isCurse ? "mim-discover-card--curse" : "";
   const iconRoundedClass = isCurse ? "rounded-lg" : "rounded-2xl";
 
   const pType = mod.projectType || "mod";
@@ -37,19 +37,18 @@ export function DiscoverModCard({
       key={mod.projectId}
       onClick={() => handleOpenModDetails(mod)}
       label={`Ver detalles de ${mod.title}`}
-      className={`mim-discover-card flex flex-col overflow-hidden ${cardRoundedClass} ${platformBorderClass}`}
+      className={`mim-discover-card ${cardShapeClass} flex flex-col ${platformBorderClass}`}
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(resultIndex * 0.025, 0.18) }}
-        whileHover={{ y: -3 }}
         whileTap={{ scale: 0.985 }}
         className="flex h-full flex-col"
       >
         {/* Banner/Header of the card */}
         <div
-          className="h-12 w-full relative shrink-0 overflow-hidden"
+          className="relative h-12 w-full shrink-0 overflow-hidden"
           style={
             bannerUrl
               ? {

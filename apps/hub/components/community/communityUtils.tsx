@@ -1,5 +1,7 @@
 "use client";
 
+import type { ModHit } from "../SpotlightMarquees";
+
 export interface ShareMeta {
   comment: string;
   gameVersion?: string;
@@ -50,6 +52,29 @@ export function parseShareMeta(summary?: string | null): ShareMeta {
     }
   }
   return { comment: trimmed };
+}
+
+/** Maps a community share row into the shared ModHit shape used across the hub. */
+export function shareRowToModHit(share: any): ModHit | null {
+  if (!share?.mod_id && !share?.id) return null;
+  const meta = parseShareMeta(share.summary);
+  const projectId = share.mod_id || share.id;
+  const platform = share.platform || "modrinth";
+  const projectType = meta.projectType || "mod";
+  const profile = Array.isArray(share.profile) ? share.profile[0] : share.profile;
+  return {
+    projectId,
+    title: share.name || "Proyecto",
+    description: meta.comment || "",
+    iconUrl: share.icon_url || null,
+    author: profile?.username || "Comunidad",
+    projectType,
+    categories: [platform],
+    url: platform === "curseforge"
+      ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+      : `https://modrinth.com/${projectType}/${projectId}`,
+    _source: platform,
+  };
 }
 
 export function formatCommunityDate(iso?: string) {

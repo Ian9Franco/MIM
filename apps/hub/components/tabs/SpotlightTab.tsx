@@ -18,6 +18,7 @@ const PICKS_VARIANTS = {
   center: { y: 0, opacity: 1 },
   exit: (direction: number) => ({ y: direction >= 0 ? "-100%" : "100%", opacity: 0 }),
 };
+const PICKS_TRACK_TRANSITION = { duration: 1.15, ease: [0.22, 1, 0.36, 1] as const };
 
 interface SpotlightTabProps {
   latestCollectionName: string;
@@ -52,7 +53,7 @@ export function SpotlightTab({
   // Freeze both tracks during the crossfade, then resume only the visible platform.
   useEffect(() => {
     setIsPlatformTransitioning(true);
-    const timer = window.setTimeout(() => setIsPlatformTransitioning(false), 260);
+    const timer = window.setTimeout(() => setIsPlatformTransitioning(false), 1180);
     return () => window.clearTimeout(timer);
   }, [activeSpotlightPlatform]);
 
@@ -132,19 +133,24 @@ export function SpotlightTab({
                 </span>
               </motion.span>
             </AnimatePresence>
-            <ChevronRight className={`w-3 h-3 transform transition-transform ${activeSpotlightPlatform === "curseforge" ? "rotate-180" : ""}`} />
+            <ChevronRight className={`w-3 h-3 transform transition-transform duration-[1150ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${activeSpotlightPlatform === "curseforge" ? "rotate-180" : ""}`} />
           </button>
         </div>
 
         {loadingLatestMods ? (
           <SpotlightSkeleton />
         ) : (
-          <div className="grid w-full">
+          <div className="relative grid w-full overflow-hidden">
             {/* Both tracks remain mounted so switching platform never resets their position. */}
             <motion.div
               className="col-start-1 row-start-1 min-w-0"
-              animate={{ opacity: activeSpotlightPlatform === "modrinth" ? 1 : 0 }}
-              transition={{ duration: 0.24, ease: "easeInOut" }}
+              initial={false}
+              animate={
+                activeSpotlightPlatform === "modrinth"
+                  ? { opacity: 1, x: "0%", scale: 1, filter: "blur(0px)" }
+                  : { opacity: 0, x: "-12%", scale: 0.97, filter: "blur(5px)" }
+              }
+              transition={PICKS_TRACK_TRANSITION}
               style={{ pointerEvents: activeSpotlightPlatform === "modrinth" ? "auto" : "none" }}
               aria-hidden={activeSpotlightPlatform !== "modrinth"}
             >
@@ -159,8 +165,13 @@ export function SpotlightTab({
             </motion.div>
             <motion.div
               className="col-start-1 row-start-1 min-w-0"
-              animate={{ opacity: activeSpotlightPlatform === "curseforge" ? 1 : 0 }}
-              transition={{ duration: 0.24, ease: "easeInOut" }}
+              initial={false}
+              animate={
+                activeSpotlightPlatform === "curseforge"
+                  ? { opacity: 1, x: "0%", scale: 1, filter: "blur(0px)" }
+                  : { opacity: 0, x: "12%", scale: 0.97, filter: "blur(5px)" }
+              }
+              transition={PICKS_TRACK_TRANSITION}
               style={{ pointerEvents: activeSpotlightPlatform === "curseforge" ? "auto" : "none" }}
               aria-hidden={activeSpotlightPlatform !== "curseforge"}
             >

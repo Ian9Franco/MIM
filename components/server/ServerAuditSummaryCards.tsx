@@ -29,7 +29,7 @@ export function ServerAuditSummaryCards({
       icon: CheckCircle2,
       color: "emerald",
       borderActive: "border-emerald-500 bg-emerald-500/10 text-emerald-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
     {
       id: "missing" as DiffFilterTab,
@@ -39,7 +39,7 @@ export function ServerAuditSummaryCards({
       icon: Download,
       color: "rose",
       borderActive: "border-rose-500 bg-rose-500/10 text-rose-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
     {
       id: "extra" as DiffFilterTab,
@@ -49,7 +49,7 @@ export function ServerAuditSummaryCards({
       icon: Trash2,
       color: "amber",
       borderActive: "border-amber-500 bg-amber-500/10 text-amber-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
     {
       id: "updates" as DiffFilterTab,
@@ -59,7 +59,7 @@ export function ServerAuditSummaryCards({
       icon: RefreshCw,
       color: "sky",
       borderActive: "border-sky-500 bg-sky-500/10 text-sky-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
     {
       id: "mismatches" as DiffFilterTab,
@@ -69,7 +69,7 @@ export function ServerAuditSummaryCards({
       icon: Monitor,
       color: "purple",
       borderActive: "border-purple-500 bg-purple-500/10 text-purple-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
     {
       id: "duplicates" as DiffFilterTab,
@@ -79,7 +79,7 @@ export function ServerAuditSummaryCards({
       icon: Copy,
       color: "orange",
       borderActive: "border-orange-500 bg-orange-500/10 text-orange-300",
-      borderInactive: "border-zinc-800/80 hover:border-zinc-700 bg-zinc-900/60 text-zinc-400",
+      borderInactive: "border-[var(--color-border)] hover:border-white/15 bg-white/[0.03] text-[var(--color-muted)]",
     },
   ];
 
@@ -109,11 +109,11 @@ export function ServerAuditSummaryCards({
               <Icon className="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
             </div>
 
-            <div className="text-2xl font-bold tracking-tight text-white mb-1">
+            <div className="text-2xl font-bold tracking-tight text-[var(--color-foreground)] mb-1">
               {card.count}
             </div>
 
-            <p className="text-[11px] leading-tight text-zinc-400 line-clamp-2">
+            <p className="text-[11px] leading-tight text-[var(--color-muted)] line-clamp-2">
               {card.description}
             </p>
 

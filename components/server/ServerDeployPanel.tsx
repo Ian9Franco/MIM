@@ -3,6 +3,9 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, ShieldAlert, Undo2 } from "lucide-react";
 import type { DeploymentReport } from "@mim/contracts-core/server";
 import type { DeployPlanCounts } from "@/lib/server/deployEligibility";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Rocket } from "lucide-react";
+import { serverPanelClass, serverPanelStyle } from "./serverUi";
 
 export type DesktopDeployPhase =
   | "idle"
@@ -34,7 +37,7 @@ function CountLine({ counts }: { counts: DeployPlanCounts }) {
     counts.remove ? `${counts.remove} quitar` : null,
     counts.config ? `${counts.config} config` : null,
   ].filter(Boolean);
-  return <p className="text-sm font-medium">{parts.length ? parts.join(" · ") : "Sin cambios de archivos"}</p>;
+  return <p className="text-sm font-medium text-[var(--color-foreground)]">{parts.length ? parts.join(" · ") : "Sin cambios de archivos"}</p>;
 }
 
 function PhaseStrip({ phase }: { phase: DesktopDeployPhase }) {
@@ -51,7 +54,7 @@ function PhaseStrip({ phase }: { phase: DesktopDeployPhase }) {
         const current = index === active && (phase === "preflight" || phase === "executing");
         const done = index < active || (index === 2 && (phase === "completed" || failed));
         return (
-          <li key={step.id} className={current ? "font-semibold text-emerald-400" : done ? "opacity-80" : "opacity-50"}>
+          <li key={step.id} className={current ? "font-semibold text-emerald-400" : done ? "text-[var(--color-muted)]" : "text-[var(--color-muted)]/50"}>
             {done && !current ? "✓ " : current ? "● " : "○ "}
             {step.label}
           </li>
@@ -194,15 +197,19 @@ export function ServerDeployPanel({
   }
 
   return (
-    <section aria-label="Aplicar plan" className="space-y-3 rounded-xl border border-[var(--color-border)] p-4">
-      <h3 className="font-semibold">Aplicar cambios en el servidor</h3>
-      <p className="text-sm opacity-80">La comparación no escribe nada. El siguiente paso copia JAR desde el último build AllHost y puede borrar mods que no estén en ese build.</p>
+    <section aria-label="Aplicar plan" className={`${serverPanelClass} space-y-4`} style={{ ...serverPanelStyle, borderColor: "rgba(16,185,129,0.25)" }}>
+      <SectionHeading
+        icon={<Rocket className="w-4 h-4" />}
+        title="Aplicar cambios en el servidor"
+        sub="La comparación no escribe nada. El siguiente paso copia JAR desde el último build AllHost y puede borrar mods que no estén en ese build."
+        accentColor="#10b981"
+      />
       <CountLine counts={counts} />
       <button
         type="button"
         onClick={() => { setAcknowledged(false); onBeginConfirm(); }}
         disabled={busy || mutating === 0}
-        className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+        className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98] disabled:opacity-50"
       >
         Revisar y aplicar…
       </button>

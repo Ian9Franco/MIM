@@ -101,7 +101,7 @@ export function ModDetailsSummaryTab({
                 setModalTab("desc");
               }}
               disabled={isExplaining}
-              className={`mim-control-3d px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 text-purple-300 bg-purple-500/10 border-purple-500/25 hover:bg-purple-500/20 ${explainedBody || isExplaining ? "mim-control-3d-active" : ""}`}
+              className={`mim-control-3d mim-mimbot-btn px-2 py-1 rounded-md border text-[9px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${explainedBody || isExplaining ? "mim-control-3d-active mim-mimbot-btn-active" : ""}`}
               title="Explicar e investigar con MIM-Bot"
             >
               {isExplaining ? (
@@ -149,9 +149,9 @@ export function ModDetailsSummaryTab({
       {/* Compatibility */}
       <div className="grid grid-cols-2 gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 text-[11px] text-white/70">
         <div className={`col-span-2 rounded-xl border p-3 ${environmentToneClass(environment.tone)}`}>
-          <span className="text-[9px] uppercase font-mono block opacity-60">Entorno</span>
-          <span className="font-black block text-[12px] mt-1">{environment.label}</span>
-          <p className="text-[10px] leading-relaxed mt-1 opacity-75">{environment.description}</p>
+          <span className="mim-env-kicker text-[9px] uppercase font-mono block">Entorno</span>
+          <span className="mim-env-title font-black block text-[12px] mt-1">{environment.label}</span>
+          <p className="mim-env-desc text-[10px] leading-relaxed mt-1">{environment.description}</p>
         </div>
         <div>
           <span className="text-[9px] text-white/30 uppercase font-mono block">Cliente</span>

@@ -6,7 +6,7 @@
 import React, { memo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ListTree, Package, Images, FileText, Loader2 } from "lucide-react";
-import { renderBodyText } from "@/web/components/mod-details/utils";
+import { markdownToHtml, formatCurseForgeHtml } from "@/utils/markdown";
 import { useFomoOverlayManager } from "@/hooks/useFomoOverlayManager";
 import {
   TabButton,
@@ -219,11 +219,19 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
     source: string,
     className: string,
     onClick?: React.MouseEventHandler<HTMLDivElement>,
-  ) =>
-    React.cloneElement(renderBodyText(body, source), {
-      className,
-      onClick,
-    } as React.HTMLAttributes<HTMLDivElement>);
+  ) => {
+    if (!body) {
+      return <p className="text-xs text-white/40 italic">Sin descripción detallada disponible.</p>;
+    }
+    const html = source === "curseforge" ? formatCurseForgeHtml(body) : markdownToHtml(body);
+    return (
+      <div
+        className={`mim-rich-description ${className}`}
+        onClick={onClick}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  };
 
   const descriptionHtmlNode = renderStyledBody(
     translatedBody ?? descText,

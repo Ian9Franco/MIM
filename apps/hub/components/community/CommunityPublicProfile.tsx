@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, ChevronRight, Heart, Layers, Tv2, UserCheck, Share2, Play, Pin, UserPlus } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import { PublicProfileSkeleton } from "../FomoSkeletons";
-import { formatCommunityDate } from "./communityUtils";
+import { formatCommunityDate, parseShareMeta } from "./communityUtils";
 
 interface CommunityPublicProfileProps {
   profile: any;
@@ -80,103 +80,10 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
             });
 
             return (
-              <ProfileSection icon={<Share2 className="h-3.5 w-3.5" />} title="Recomendados (Compartidos)" count={sortedShares.length} color="text-amber-500" empty="No tiene recomendaciones públicas.">
-                {sortedShares.map((share) => {
-                  const summaryTrimmed = (share.summary || "").trim();
-                  let comment = summaryTrimmed;
-                  let isYoutube = share.platform === "youtube";
-                  let embeddedVideoId = "";
-                  if (summaryTrimmed.startsWith("{")) {
-                    try {
-                      const p = JSON.parse(summaryTrimmed);
-                      comment = p.comment || p.description || "";
-                      embeddedVideoId = p.embeddedVideoId || "";
-                      if (p.projectType?.startsWith("youtube-")) isYoutube = true;
-                    } catch (e) {
-                      console.debug("[CommunityPublicProfile] Could not parse direct JSON summary:", e);
-                    }
-                  } else {
-                    const match = summaryTrimmed.match(/<!--mim:([\s\S]*?)-->/);
-                    comment = summaryTrimmed.replace(/<!--mim:([\s\S]*?)-->/, "").trim();
-                    if (match?.[1]) {
-                      try {
-                        const p = JSON.parse(match[1]);
-                        embeddedVideoId = p.embeddedVideoId || "";
-                        if (p.projectType?.startsWith("youtube-")) isYoutube = true;
-                      } catch (e) {
-                        console.debug("[CommunityPublicProfile] Could not parse HTML comment summary:", e);
-                      }
-                    }
-                  }
-
-                  // pinned = true → DB column is the source of truth.
-                  // pinned = null/undefined → pre-migration row, fall back to summary blob.
-                  // pinned = false → explicitly NOT pinned, don't fall back.
-                  let isPriority = false;
-                  if (share.pinned === true) {
-                    isPriority = true;
-                  } else if (share.pinned == null) {
-                    if (summaryTrimmed.startsWith("{")) {
-                      try { 
-                        isPriority = !!JSON.parse(summaryTrimmed).priority; 
-                      } catch (e) {
-                        console.debug("[CommunityPublicProfile] Could not parse priority from JSON summary:", e);
-                      }
-                    } else {
-                      const match = summaryTrimmed.match(/<!--mim:([\s\S]*?)-->/);
-                      if (match?.[1]) { 
-                        try { 
-                          isPriority = !!JSON.parse(match[1]).priority; 
-                        } catch (e) {
-                          console.debug("[CommunityPublicProfile] Could not parse priority from comment summary:", e);
-                        } 
-                      }
-                    }
-                  }
-
-                  const projectId = share.mod_id || share.project_id || share.id;
-                  const playVideo = () => embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: embeddedVideoId } }));
-
-                  return (
-                    <div
-                      key={share.id}
-                      className={`relative flex flex-col gap-2 rounded-xl border bg-white/[0.025] p-3 ${
-                        isPriority
-                          ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.20)]"
-                          : "border-white/[0.06]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <SquareAvatar src={share.icon_url} fallback={share.name} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-semibold text-white">{share.name}</p>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-[9px] capitalize text-white/35">
-                            <span>{share.platform}</span>
-                            {isPriority && (
-                              <span className="inline-flex items-center gap-0.5 text-amber-400 font-bold uppercase text-[7px] tracking-wider bg-amber-500/10 px-1 py-0.5 rounded">
-                                <Pin className="h-2.5 w-2.5 fill-current" /> Fijado
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        {isYoutube ? (
-                          embeddedVideoId && (
-                            <button type="button" onClick={playVideo} className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 active:scale-95 transition-all">
-                              <Play className="h-3 w-3 fill-current ml-0.5" />
-                            </button>
-                          )
-                        ) : (
-                          <button type="button" onClick={() => onOpenMod({ projectId, title: share.name, description: "", iconUrl: share.icon_url, author: "", projectType: "mod", categories: [], url: share.platform === "curseforge" ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}` : `https://modrinth.com/mod/${projectId}`, _source: share.platform || "modrinth" })} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.05] text-white/60 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all">
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      {comment && (
-                        <p className="text-[10px] text-white/60 leading-relaxed border-t border-white/[0.04] pt-2 mt-1 whitespace-pre-wrap">{comment}</p>
-                      )}
-                    </div>
-                  );
-                })}
+              <ProfileSection icon={<Share2 className="h-3.5 w-3.5" />} title="Recomendados (Compartidos)" count={sortedShares.length} color="text-amber-500" empty="No tiene recomendaciones públicas." layout="horizontal" horizontalMaxClass="max-h-52">
+                {sortedShares.map((share) => (
+                  <ShareProfileCard key={share.id} share={share} onOpenMod={onOpenMod} />
+                ))}
               </ProfileSection>
             );
           })()}
@@ -185,35 +92,182 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
             {drafts.map((draft) => <InfoRow key={draft.id} icon={<Layers className="h-4 w-4 text-emerald-400" />} title={draft.name} meta={`${draft.minecraft_version} · ${draft.loader}`} />)}
           </ProfileSection>
 
-          <ProfileSection icon={<Heart className="h-3.5 w-3.5" />} title="Proyectos favoritos" count={favorites.length} color="text-red-400" empty="No tiene proyectos favoritos públicos.">
+          <ProfileSection icon={<Heart className="h-3.5 w-3.5" />} title="Proyectos favoritos" count={favorites.length} color="text-red-400" empty="No tiene proyectos favoritos públicos." layout="horizontal">
             {favorites.map((favorite) => (
-              <button key={favorite.id} type="button" onClick={() => onOpenMod({ projectId: favorite.mod_id || favorite.id, title: favorite.name, description: "", iconUrl: favorite.icon_url, author: "", projectType: "mod", categories: [], url: `https://modrinth.com/mod/${favorite.mod_id || favorite.id}`, _source: favorite.platform || "modrinth" })} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 text-left transition-all hover:border-white/15 hover:bg-white/[0.045] active:scale-[0.985]">
-                <SquareAvatar src={favorite.icon_url} fallback={favorite.name} />
-                <div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{favorite.name}</p><p className="mt-0.5 text-[9px] capitalize text-white/35">{favorite.platform}</p></div>
-                <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-white/20" />
+              <button
+                key={favorite.id}
+                type="button"
+                onClick={() => onOpenMod({
+                  projectId: favorite.mod_id || favorite.id,
+                  title: favorite.name,
+                  description: "",
+                  iconUrl: favorite.icon_url,
+                  author: "",
+                  projectType: "mod",
+                  categories: [],
+                  url: favorite.platform === "curseforge"
+                    ? `https://www.curseforge.com/minecraft/mc-mods/${favorite.mod_id || favorite.id}`
+                    : `https://modrinth.com/mod/${favorite.mod_id || favorite.id}`,
+                  _source: favorite.platform || "modrinth",
+                })}
+                className="flex w-[112px] shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] p-2.5 text-center transition-all hover:border-white/15 hover:bg-white/[0.045] active:scale-[0.985]"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.04]">
+                  {favorite.icon_url ? (
+                    <img src={favorite.icon_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase text-white/35">{favorite.name?.slice(0, 2)}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-white">{favorite.name}</p>
+                  <p className="mt-1 text-[8px] capitalize text-white/35">{favorite.platform}</p>
+                </div>
               </button>
             ))}
           </ProfileSection>
 
-          <ProfileSection icon={<UserCheck className="h-3.5 w-3.5" />} title="Autores seguidos" count={authors.length} color="text-blue-400" empty="No sigue a ningún autor todavía.">
+          <ProfileSection icon={<UserCheck className="h-3.5 w-3.5" />} title="Autores seguidos" count={authors.length} color="text-blue-400" empty="No sigue a ningún autor todavía." layout="horizontal">
             {authors.map((author) => (
-              <button key={author.id} type="button" disabled={!onSearchAuthor} onClick={() => onSearchAuthor?.(author.author_name, author.platform || "modrinth")} className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 text-left transition-all enabled:hover:border-white/15 enabled:hover:bg-white/[0.045] enabled:active:scale-[0.985]">
+              <button
+                key={author.id}
+                type="button"
+                disabled={!onSearchAuthor}
+                onClick={() => onSearchAuthor?.(author.author_name, author.platform || "modrinth")}
+                className="flex w-[112px] shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] p-2.5 text-center transition-all enabled:hover:border-white/15 enabled:hover:bg-white/[0.045] enabled:active:scale-[0.985] disabled:opacity-60"
+              >
                 <SquareAvatar src={author.icon_url} fallback={author.author_name} round />
-                <div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{author.author_name}</p><p className="mt-0.5 text-[9px] capitalize text-white/35">{author.platform}</p></div>
-                {onSearchAuthor && <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-white/20" />}
+                <div className="min-w-0">
+                  <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-white">{author.author_name}</p>
+                  <p className="mt-1 text-[8px] capitalize text-white/35">{author.platform}</p>
+                </div>
               </button>
             ))}
           </ProfileSection>
 
-          {!!channels.length && <ProfileSection icon={<Tv2 className="h-3.5 w-3.5" />} title="Canales de showcase" count={channels.length} color="text-rose-400" empty="">{channels.map((channel, index) => <div key={`${channel}-${index}`} className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2.5"><p className="truncate font-mono text-xs text-white/65">{channel}</p></div>)}</ProfileSection>}
+          {!!channels.length && (
+            <ProfileSection icon={<Tv2 className="h-3.5 w-3.5" />} title="Canales de showcase" count={channels.length} color="text-rose-400" empty="" layout="horizontal">
+              {channels.map((channel, index) => (
+                <div
+                  key={`${channel}-${index}`}
+                  className="flex w-[148px] shrink-0 snap-start items-center rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2.5"
+                >
+                  <p className="truncate font-mono text-[11px] text-white/65">{channel}</p>
+                </div>
+              ))}
+            </ProfileSection>
+          )}
         </div>
       )}
     </motion.div>
   );
 }
 
-function ProfileSection({ icon, title, count, color, empty, children }: { icon: React.ReactNode; title: string; count: number; color: string; empty: string; children?: React.ReactNode }) {
-  return <section className="flex flex-col gap-2"><div className="flex items-center gap-2 px-1"><span className={color}>{icon}</span><h4 className="text-xs font-bold text-white/80">{title}</h4><span className="ml-auto rounded-md bg-white/[0.04] px-1.5 py-0.5 font-mono text-[8px] text-white/35">{count}</span></div>{count === 0 ? <div className="rounded-xl border border-dashed border-white/[0.07] p-4 text-center"><p className="text-[10px] text-white/30">{empty}</p></div> : <div className="flex flex-col gap-2">{children}</div>}</section>;
+function ShareProfileCard({ share, onOpenMod }: { share: any; onOpenMod: (mod: ModHit) => void }) {
+  const meta = parseShareMeta(share.summary);
+  const isYoutube = share.platform === "youtube" || meta.projectType?.startsWith("youtube-");
+  const isPriority = share.pinned === true ? true : share.pinned == null ? !!meta.priority : false;
+  const projectId = share.mod_id || share.project_id || share.id;
+  const platform = share.platform || "modrinth";
+  const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
+  const openMod = () => onOpenMod({
+    projectId,
+    title: share.name,
+    description: meta.comment || "",
+    iconUrl: share.icon_url,
+    author: "",
+    projectType: meta.projectType || "mod",
+    categories: [],
+    url: platform === "curseforge"
+      ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}`
+      : `https://modrinth.com/${meta.projectType || "mod"}/${projectId}`,
+    _source: platform,
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => (isYoutube && meta.embeddedVideoId ? playVideo() : openMod())}
+      className={`flex w-[248px] shrink-0 snap-start flex-col gap-2 rounded-xl border bg-white/[0.025] p-3 text-left transition-all active:scale-[0.985] ${
+        isPriority
+          ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.20)] hover:border-amber-400/80"
+          : "border-white/[0.06] hover:border-white/15 hover:bg-white/[0.045]"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <SquareAvatar src={share.icon_url} fallback={share.name} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-white">{share.name}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] capitalize text-white/35">
+            <span>{platform}</span>
+            {isPriority && (
+              <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-amber-400">
+                <Pin className="h-2.5 w-2.5 fill-current" /> Fijado
+              </span>
+            )}
+          </p>
+        </div>
+        {isYoutube && meta.embeddedVideoId ? (
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600/20 text-orange-400">
+            <Play className="h-3 w-3 fill-current ml-0.5" />
+          </span>
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/20" />
+        )}
+      </div>
+      {meta.comment && (
+        <p className="line-clamp-3 border-t border-white/[0.04] pt-2 text-[10px] leading-relaxed text-white/60">
+          {meta.comment}
+        </p>
+      )}
+    </button>
+  );
+}
+
+function ProfileSection({
+  icon,
+  title,
+  count,
+  color,
+  empty,
+  children,
+  layout = "vertical",
+  horizontalMaxClass = "max-h-40",
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  color: string;
+  empty: string;
+  children?: React.ReactNode;
+  layout?: "vertical" | "horizontal";
+  horizontalMaxClass?: string;
+}) {
+  const isHorizontal = layout === "horizontal";
+
+  return (
+    <section className={`flex flex-col gap-2 ${isHorizontal ? horizontalMaxClass : ""}`}>
+      <div className="flex items-center gap-2 px-1">
+        <span className={color}>{icon}</span>
+        <h4 className="text-xs font-bold text-white/80">{title}</h4>
+        <span className="ml-auto rounded-md bg-white/[0.04] px-1.5 py-0.5 font-mono text-[8px] text-white/35">{count}</span>
+        {isHorizontal && count > 0 && (
+          <span className="text-[7px] font-mono uppercase text-white/25">Deslizá →</span>
+        )}
+      </div>
+      {count === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/[0.07] p-4 text-center">
+          <p className="text-[10px] text-white/30">{empty}</p>
+        </div>
+      ) : isHorizontal ? (
+        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-0.5 pb-1 pr-2 scrollbar-none">
+          {children}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">{children}</div>
+      )}
+    </section>
+  );
 }
 
 function InfoRow({ icon, title, meta }: { icon: React.ReactNode; title: string; meta: string }) {

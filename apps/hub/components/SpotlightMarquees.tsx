@@ -85,10 +85,10 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated mim-marquee-vertical absolute inset-0 overflow-hidden mask-vertical-edges cursor-pointer"
+      className="mim-marquee-isolated mim-marquee-vertical mim-marquee-stage absolute inset-0 cursor-pointer overflow-hidden"
       {...handlers}
     >
-      <div ref={innerRef} className="flex flex-col gap-3.5 w-full px-1 pb-4">
+      <div ref={innerRef} className="flex w-full flex-col gap-3.5 px-1 py-3 pb-4">
         {duplicatedMods.map((mod, i) => {
           const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
           const loaderTag = mod.categories?.map((c: any) => {
@@ -100,18 +100,16 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
           const pType = mod.projectType === "mod" ? "Mod" : mod.projectType === "resourcepack" ? "Texture" : "Shader";
 
           return (
-            <div
-              key={`${mod.projectId}-${i}`}
+            <div key={`${mod.projectId}-${i}`} className="mim-marquee-card-slot">
+            <CollectibleSurface
+              variant="row"
+              label={`Ver detalles de ${mod.title}`}
               onClick={() => onSelectMod(mod)}
-              className="rounded-xl p-3.5 flex gap-3 transition-all duration-300 relative overflow-hidden group active:scale-[0.98]"
-              style={{
-                background: "color-mix(in srgb, var(--color-card) 90%, transparent)",
-                border: "1px solid var(--color-border)",
-              }}
+              className="group flex w-full gap-3 p-3.5 active:scale-[0.98]"
             >
               {/* Image box */}
               <div
-                className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 relative"
+                className="mim-collectible-media relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg"
                 style={{
                   background: "color-mix(in srgb, var(--color-surface) 60%, transparent)",
                   border: "1px solid var(--color-border)",
@@ -182,10 +180,11 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
               </div>
 
               {/* Dot indicators */}
-              <div className="flex flex-col justify-center gap-1 opacity-30 group-hover:opacity-60 transition-opacity">
-                <span className="w-1 h-1 rounded-full" style={{ background: "var(--color-muted)" }} />
-                <span className="w-1 h-1 rounded-full" style={{ background: "var(--color-muted)" }} />
+              <div className="flex flex-col justify-center gap-1 opacity-30 transition-opacity group-hover:opacity-60">
+                <span className="h-1 w-1 rounded-full" style={{ background: "var(--color-muted)" }} />
+                <span className="h-1 w-1 rounded-full" style={{ background: "var(--color-muted)" }} />
               </div>
+            </CollectibleSurface>
             </div>
           );
         })}
@@ -197,6 +196,8 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
 /**
  * Horizontal auto-scrolling marquee for mods or collections.
  */
+const PICK_CARD_SIZE = "h-[228px] w-[200px] min-w-[200px] max-w-[200px] shrink-0";
+
 export function HorizontalEditorialMarquee({
   items,
   type = "mod",
@@ -220,19 +221,20 @@ export function HorizontalEditorialMarquee({
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated mim-marquee-horizontal relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
+      className="mim-marquee-isolated mim-marquee-horizontal mim-marquee-stage relative w-full overflow-x-auto mask-horizontal-edges cursor-grab active:cursor-grabbing select-none scrollbar-none"
       {...handlers}
     >
-      <div ref={innerRef} className="flex gap-4 w-max px-1">
+      <div ref={innerRef} className="flex w-max items-start gap-4 px-1">
         {duplicatedItems.map((item, i) => {
           if (type === "collection") {
             return (
-              <div
-                key={`${item.id}-${i}`}
+              <div key={`${item.id}-${i}`} className="mim-marquee-card-slot">
+              <CollectibleSurface
+                label={`Abrir colección ${item.name}`}
                 onClick={() => onSelectCollection?.(item)}
-                className="mim-themed-card border rounded-2xl p-4 flex flex-col gap-3 min-w-[200px] max-w-[200px] hover:border-border active:scale-[0.98] transition-all shadow-sm"
+                className={`flex flex-col ${PICK_CARD_SIZE}`}
               >
-                <div className="h-24 rounded-xl bg-white/5 border border-white/[0.05] overflow-hidden relative flex items-center justify-center">
+                <div className="mim-collectible-media relative flex h-24 shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.06] bg-white/5">
                   {item.iconUrl ? (
                     <>
                       <img
@@ -256,21 +258,24 @@ export function HorizontalEditorialMarquee({
                     {item.projectCount || item.mods?.length || 0} mods
                   </span>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
-                  <p className="text-[9px] text-white/40 mt-1 leading-relaxed line-clamp-2">{item.description}</p>
+                <div className="flex h-[132px] flex-col px-4 pb-3 pt-3">
+                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{item.name}</h4>
+                  <p className="mt-1.5 h-[2.625rem] line-clamp-2 text-[9px] leading-[1.45] text-white/40">
+                    {item.description || "\u00A0"}
+                  </p>
                 </div>
+              </CollectibleSurface>
               </div>
             );
           } else {
             return (
+              <div key={`${item.projectId}-${i}`} className="mim-marquee-card-slot">
               <CollectibleSurface
-                key={`${item.projectId}-${i}`}
                 label={`Ver detalles de ${item.title}`}
                 onClick={() => onSelectMod?.(item)}
-                className="overflow-hidden flex flex-col min-w-[200px] max-w-[200px]"
+                className={`flex flex-col ${PICK_CARD_SIZE}`}
               >
-                <div className="h-24 bg-white/5 border-b border-white/[0.06] flex items-center justify-center overflow-hidden relative">
+                <div className="mim-collectible-media relative flex h-24 shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.06] bg-white/5">
                   {(() => {
                     const bannerImg = item.gallery?.find((g: any) => g.featured)?.url || item.gallery?.[0]?.url;
                     if (bannerImg) {
@@ -336,15 +341,18 @@ export function HorizontalEditorialMarquee({
                     {item.projectType || "mod"}
                   </span>
                 </div>
-                <div className="p-4 flex flex-col gap-3.5">
-                  <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
-                  <p className="text-[9px] text-white/40 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
-                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.04] mt-0.5">
+                <div className="flex h-[132px] flex-col px-4 pb-3 pt-3">
+                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{item.title}</h4>
+                  <p className="mt-1.5 h-[2.625rem] line-clamp-2 text-[9px] leading-[1.45] text-white/40">
+                    {item.description || "\u00A0"}
+                  </p>
+                  <div className="mt-auto flex h-5 items-center justify-between border-t border-white/[0.04] pt-1.5">
                     <span className="text-[9px] text-orange-400 capitalize">{item._source || "modrinth"}</span>
-                    <span className="text-[9px] text-white/30 font-mono">#{String((i % items.length) + 1).padStart(2, "0")}</span>
+                    <span className="text-[9px] font-mono text-white/30">#{String((i % items.length) + 1).padStart(2, "0")}</span>
                   </div>
                 </div>
               </CollectibleSurface>
+              </div>
             );
           }
         })}
@@ -376,11 +384,36 @@ const DEFAULT_SHOWCASE_CHANNELS = [
   "https://www.youtube.com/@Wero_lovernite",
 ];
 
+type YouTubeThumbQuality = "maxres" | "hq" | "sd" | "mq";
+
+function getYouTubeThumbnail(videoId: string, quality: YouTubeThumbQuality = "hq"): string {
+  const file =
+    quality === "maxres" ? "maxresdefault"
+    : quality === "sd" ? "sddefault"
+    : quality === "mq" ? "mqdefault"
+    : "hqdefault";
+  return `https://i.ytimg.com/vi/${videoId}/${file}.jpg`;
+}
+
+function normalizeYouTubeThumbnail(videoId: string, thumbnail?: string): string {
+  if (thumbnail && thumbnail.startsWith("http")) {
+    return thumbnail.startsWith("//") ? `https:${thumbnail}` : thumbnail;
+  }
+  return getYouTubeThumbnail(videoId, "hq");
+}
+
+function cycleYouTubeThumbnail(videoId: string, currentSrc: string): string | null {
+  if (currentSrc.includes("maxresdefault")) return getYouTubeThumbnail(videoId, "hq");
+  if (currentSrc.includes("hqdefault")) return getYouTubeThumbnail(videoId, "sd");
+  if (currentSrc.includes("sddefault")) return getYouTubeThumbnail(videoId, "mq");
+  return null;
+}
+
 const FALLBACK_SHOWCASES: ShowcaseVideo[] = [
   {
     videoId: "M7lc1UVf-VE",
     title: "Showcase de mods detectado por FOMO",
-    thumbnail: "https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg",
+    thumbnail: getYouTubeThumbnail("M7lc1UVf-VE", "hq"),
     videoUrl: "https://www.youtube.com/results?search_query=minecraft+mod+showcase",
     channelName: "Fallback",
     publishedAt: "20260707",
@@ -389,7 +422,7 @@ const FALLBACK_SHOWCASES: ShowcaseVideo[] = [
   {
     videoId: "aqz-KE-bpKQ",
     title: "Ideas rápidas para armar un modpack mobile first",
-    thumbnail: "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg",
+    thumbnail: getYouTubeThumbnail("aqz-KE-bpKQ", "hq"),
     videoUrl: "https://www.youtube.com/results?search_query=minecraft+modpack+showcase",
     channelName: "Fallback",
     publishedAt: "20260625",
@@ -452,11 +485,12 @@ export function HorizontalShowcaseMarquee({
             const entries: ShowcaseVideo[] = (data.showcases || []).map((v: any) => ({
               videoId: v.videoId,
               title: v.title,
-              thumbnail: v.thumbnail,
+              thumbnail: normalizeYouTubeThumbnail(v.videoId, v.thumbnail),
               videoUrl: v.videoUrl,
               channelName: v.channelName || getHandle(channelUrl),
               publishedAt: v.publishedAt,
               modSlugs: v.modSlugs || [],
+              description: v.description,
             }));
             results.push(...entries);
           } catch {
@@ -514,46 +548,42 @@ export function HorizontalShowcaseMarquee({
   return (
     <div
       ref={containerRef}
-      className="mim-marquee-isolated mim-marquee-horizontal relative w-full overflow-x-auto overflow-y-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing select-none py-1.5 scrollbar-none"
+      className="mim-marquee-isolated mim-marquee-horizontal mim-marquee-stage relative w-full overflow-x-auto mask-horizontal-edges cursor-grab active:cursor-grabbing select-none scrollbar-none"
       {...handlers}
     >
-      <div ref={innerRef} className="flex gap-4 w-max px-1">
+      <div ref={innerRef} className="flex w-max items-start gap-4 px-1">
         {displayVideos.map((video, i) => (
-          <button
-            key={`${video.videoId}-${i}`}
-            type="button"
+          <div key={`${video.videoId}-${i}`} className="mim-marquee-card-slot">
+          <CollectibleSurface
+            variant="compact"
+            label={`Reproducir ${video.title}`}
             onClick={() => {
               window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
             }}
-            style={{ width: "180px", height: "255px" }}
-            className="mim-themed-card shrink-0 rounded-2xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-0.5 border text-left"
+            className="group flex h-[255px] w-[180px] flex-col"
           >
             {/* Thumbnail */}
-            <div style={{ height: "125px" }} className="relative overflow-hidden rounded-t-[calc(1rem-1px)] bg-black/40 shrink-0">
+            <div style={{ height: "125px" }} className="mim-collectible-media mim-showcase-thumb relative shrink-0 overflow-hidden rounded-t-[calc(1rem-1px)] bg-[#0b0f17]">
               <img
                 src={video.thumbnail}
                 alt={video.title}
-                referrerPolicy="no-referrer"
+                loading="lazy"
+                decoding="async"
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                className="opacity-70 group-hover:opacity-90 transition-opacity duration-300"
+                className="transition-transform duration-300 group-hover:scale-[1.03]"
                 onError={(e) => {
-                  // Try sddefault as fallback before giving up
                   const img = e.currentTarget;
-                  if (img.src.includes("hqdefault")) {
-                    img.src = `https://i.ytimg.com/vi/${video.videoId}/sddefault.jpg`;
-                  } else if (img.src.includes("sddefault")) {
-                    img.src = `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
-                  } else {
-                    img.style.display = "none";
+                  const next = cycleYouTubeThumbnail(video.videoId, img.src);
+                  if (next && next !== img.src) {
+                    img.src = next;
+                    return;
                   }
+                  img.src = getYouTubeThumbnail(video.videoId, "mq");
                 }}
               />
 
-              {/* Gradient overlay */}
-              <div
-                className="absolute inset-0"
-                style={{ background: "linear-gradient(to bottom, transparent 30%, var(--color-surface) 100%)" }}
-              />
+              {/* Subtle bottom vignette for badges */}
+              <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/55 via-black/10 to-transparent" />
 
               {/* YouTube badge */}
               <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-600/90 backdrop-blur-sm px-1.5 py-0.5 rounded-full z-10">
@@ -618,7 +648,8 @@ export function HorizontalShowcaseMarquee({
                 </div>
               )}
             </div>
-          </button>
+          </CollectibleSurface>
+          </div>
         ))}
       </div>
 

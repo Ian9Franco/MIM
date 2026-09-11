@@ -1,9 +1,10 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
-  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles 
+  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles, Server 
 } from "lucide-react";
 
 interface LayoutHeaderProps {
@@ -36,6 +37,8 @@ export function LayoutHeader({
   sageOpen, onToggleSage, tweakOpen, onToggleTweak, packHealthOpen, onCheckHealth,
   activeProject, isValidatingHealth, watcherStatus
 }: LayoutHeaderProps) {
+  const pathname = usePathname();
+  const serverActive = pathname === "/servers" || pathname.startsWith("/servers/");
   const [appMode, setAppMode] = React.useState<string>("MIMU");
   const [guidesActive, setGuidesActive] = React.useState(false);
   const [profile, setProfile] = React.useState<any>(null);
@@ -97,40 +100,38 @@ export function LayoutHeader({
       
       <div className="max-w-400 mx-auto px-6 py-4 flex items-center justify-between gap-6 relative z-10">
         
-        {/* Left side: FOMO toggle + App Title */}
+        {/* Left side: FOMO + App Title */}
         <div className="flex items-center gap-6 animate-fade-up">
-          <button
-            id="onboarding-fomo-button"
-            data-header-toggle="true"
-            onClick={() => onToggleFomo(!fomoOpen)}
-            className={`flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass ${!fomoOpen ? "animate-led-border" : ""}`}
-            style={{
-              background: fomoOpen ? "rgba(187,150,228,0.15)" : "rgba(255,255,255,0.03)",
-              borderColor: fomoOpen ? "rgba(187,150,228,0.4)" : undefined,
-              color: fomoOpen ? "var(--color-primary)" : "var(--color-muted)",
-              boxShadow: fomoOpen ? "0 8px 32px rgba(187,150,228,0.15)" : undefined,
-            }}
-          >
-            <div className="relative flex items-center justify-center">
-              {!fomoOpen && (
-                <>
-                  <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-15px", "--tw-translate-y": "-15px", animationDelay: "0s" } as any} />
-                  <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
-                </                >
-              )}
-              <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
-              <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
-            </div>
-            <div className="flex flex-col items-start leading-tight">
-              <span className={`font-headline text-[11px] tracking-[0.15em] transition-colors duration-300 ${fomoOpen ? 'text-primary' : 'text-foreground/80'}`}>FOMO</span>
-              <span className="text-[8px] opacity-30 font-bold tracking-[0.2em] uppercase">Descubrir</span>
-            </div>
-            <div className={`flex items-center justify-center w-5 h-5 rounded-full bg-white/5 border border-white/10 transition-all duration-500 ${fomoOpen ? 'rotate-180 bg-primary/10 border-primary/20' : 'rotate-180 group-hover/fomo:rotate-0 bg-white/5 border-white/10 group-hover/fomo:bg-primary/10 group-hover/fomo:border-primary/20'}`}>
-              <ChevronRight className={`w-3 h-3 transition-colors ${fomoOpen ? 'text-primary' : 'text-foreground/40 group-hover/fomo:text-primary'}`} />
-            </div>
-          </button>
-
-          <Link href="/servers" className="rounded-lg border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/10">MIM Server</Link>
+            <button
+              id="onboarding-fomo-button"
+              data-header-toggle="true"
+              onClick={() => onToggleFomo(!fomoOpen)}
+              className={`flex items-center gap-3 pl-2.5 pr-4 py-2 rounded-2xl transition-all duration-500 group/fomo relative overflow-hidden glass shrink-0 ${!fomoOpen ? "animate-led-border" : ""}`}
+              style={{
+                background: fomoOpen ? "rgba(187,150,228,0.15)" : "rgba(255,255,255,0.03)",
+                borderColor: fomoOpen ? "rgba(187,150,228,0.4)" : undefined,
+                color: fomoOpen ? "var(--color-primary)" : "var(--color-muted)",
+                boxShadow: fomoOpen ? "0 8px 32px rgba(187,150,228,0.15)" : undefined,
+              }}
+            >
+              <div className="relative flex items-center justify-center">
+                {!fomoOpen && (
+                  <>
+                    <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-15px", "--tw-translate-y": "-15px", animationDelay: "0s" } as any} />
+                    <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
+                  </>
+                )}
+                <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
+                <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
+              </div>
+              <div className="flex flex-col items-start leading-tight">
+                <span className={`font-headline text-[11px] tracking-[0.15em] transition-colors duration-300 ${fomoOpen ? 'text-primary' : 'text-foreground/80'}`}>FOMO</span>
+                <span className="text-[8px] opacity-30 font-bold tracking-[0.2em] uppercase">Descubrir</span>
+              </div>
+              <div className={`flex items-center justify-center w-5 h-5 rounded-full bg-white/5 border border-white/10 transition-all duration-500 ${fomoOpen ? 'rotate-180 bg-primary/10 border-primary/20' : 'rotate-180 group-hover/fomo:rotate-0 bg-white/5 border-white/10 group-hover/fomo:bg-primary/10 group-hover/fomo:border-primary/20'}`}>
+                <ChevronRight className={`w-3 h-3 transition-colors ${fomoOpen ? 'text-primary' : 'text-foreground/40 group-hover/fomo:text-primary'}`} />
+              </div>
+            </button>
 
           <div className="flex flex-col relative group/title">
             <h1 className="relative font-headline text-2xl tracking-tighter leading-none flex items-center gap-3">
@@ -190,10 +191,22 @@ export function LayoutHeader({
 
         {/* Right side: Global controls */}
         <div id="onboarding-header-tools" className="flex items-center gap-3 animate-fade-up stagger-2">
-          <div id="onboarding-refresh">
-            <HeaderButton onClick={onRefresh} title="Sincronizar con Disco" active={isRefreshing}>
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </HeaderButton>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div id="onboarding-refresh">
+              <HeaderButton onClick={onRefresh} title="Sincronizar con Disco" active={isRefreshing}>
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </HeaderButton>
+            </div>
+
+            <HeaderNavLink
+              href="/servers"
+              title="Sincronización remota (MIM Server)"
+              active={serverActive}
+              color="emerald"
+              label="SERVER"
+            >
+              <Server className="w-3.5 h-3.5" />
+            </HeaderNavLink>
           </div>
 
           <HeaderButton onClick={onOpenSettings} title="Ajustes de Ubicaciones">
@@ -248,22 +261,29 @@ export function LayoutHeader({
   );
 }
 
+function headerButtonClasses(active: boolean, color: string, disabled = false) {
+  const colors: Record<string, string> = {
+    red: "bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]",
+    indigo: "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]",
+    emerald: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.25)]",
+    primary: "bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_rgba(187,150,228,0.25)]",
+    amber: "bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)]",
+    default: "hover:bg-white/5",
+  };
+
+  const layout = "h-9 items-center justify-center px-3";
+
+  return `group flex ${layout} rounded-xl transition-all duration-300 relative border disabled:opacity-30 ${active ? colors[color] : colors.default}`;
+}
+
 function HeaderButton({ 
   onClick, title, children, active, color = 'default', label, badge, badgeColor = 'amber', iconClass = '', disabled = false 
 }: any) {
-  const colors: any = {
-    red: "bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]",
-    indigo: "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]",
-    primary: "bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_rgba(187,150,228,0.25)]",
-    amber: "bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)]",
-    default: "hover:bg-white/5"
-  };
-  
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`group h-9 flex items-center justify-center px-3 rounded-xl transition-all duration-300 relative border disabled:opacity-30 ${active ? colors[color] : colors.default}`}
+      className={headerButtonClasses(active, color, disabled)}
       style={{ borderColor: active ? "" : "var(--color-border)", color: active ? "" : "var(--color-muted)" }}
       title={title}
     >
@@ -276,6 +296,29 @@ function HeaderButton({
         </span>
       )}
     </button>
+  );
+}
+
+function HeaderNavLink({
+  href, title, children, active, color = "default", label,
+}: {
+  href: string;
+  title: string;
+  children: React.ReactNode;
+  active?: boolean;
+  color?: string;
+  label?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={headerButtonClasses(!!active, color)}
+      style={{ borderColor: active ? "" : "var(--color-border)", color: active ? "" : "var(--color-muted)" }}
+      title={title}
+    >
+      <div className={`transition-all ${active ? "scale-110" : ""}`}>{children}</div>
+      {label && <span className="ml-2 text-[10px] font-headline tracking-widest font-bold">{label}</span>}
+    </Link>
   );
 }
 

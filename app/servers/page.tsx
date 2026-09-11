@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Server, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Server, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { ServerConnectionForm } from "@/components/server/ServerConnectionForm";
 import { ServerInspectionResultView } from "@/components/server/ServerInspectionResultView";
@@ -9,6 +9,8 @@ import { inspectServerSchema, type InspectServerRequest } from "@/lib/server/ins
 import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import type { DesktopDeployPhase } from "@/components/server/ServerDeployPanel";
 import type { DeploymentReport } from "@mim/contracts-core/server";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { serverPanelClass, serverPanelStyle } from "@/components/server/serverUi";
 
 function recoveryKey(input: InspectServerRequest): string {
   return `mim-server-recovery:${input.connection.host}:${input.connection.port}:${input.connection.rootPath}`;
@@ -96,43 +98,100 @@ export default function ServersPage() {
     }
   }
 
-  return <section className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 md:px-8">
-    <Link href="/" className="text-sm underline underline-offset-4">← Volver a proyectos</Link>
-    <header className="space-y-3">
-      <div className="flex items-center gap-3"><Server className="h-8 w-8 text-emerald-500" /><h1 className="text-3xl font-bold">MIM Server</h1><span className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs">En desarrollo</span></div>
-      <p className="max-w-3xl text-sm opacity-80">Compará los mods del último build de servidor de tu proyecto con los archivos del servidor remoto. Después de una auditoría completa podés aplicar el plan con confirmación explícita.</p>
-      <p className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-500" />La comparación es de solo lectura. Aplicar el plan escribe, reemplaza o borra JAR en el servidor.</p>
-      <p className="text-xs opacity-70">Alcance de esta entrega: archivos JAR en mods. Configuraciones, mundos y sincronización quedan pendientes.</p>
-    </header>
-    {!projects.length && <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">Creá un proyecto en MIM y generá su build de servidor (AllHost) para poder compararlo.</p>}
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(340px,440px)_1fr]">
-      <div className="space-y-3">
-        <ServerConnectionForm projects={projects} busy={busy} onInspect={inspect} onChange={() => { setResult(null); setError(null); if (deployPhase !== "recovery-required") resetDeploy(); }} />
-        {busy && deployPhase !== "preflight" && deployPhase !== "executing" && <button onClick={() => request.current?.abort()} className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm">Cancelar auditoría</button>}
-      </div>
-      <div ref={resultArea} className="space-y-4 scroll-mt-28" aria-live="polite">
-        {busy && !result && deployPhase !== "preflight" && deployPhase !== "executing" && <p role="status" className="rounded-xl border border-[var(--color-border)] p-6">Conectando y leyendo mods… La consulta puede tardar hasta 90 segundos.</p>}
-        {error && <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-5 text-sm">{error}</p>}
-        {result && <ServerInspectionResultView result={result} deploy={{
-          phase: deployPhase,
-          report: deployReport,
-          error: deployError,
-          busy,
-          onBeginConfirm: () => setDeployPhase("confirming"),
-          onCancelConfirm: () => setDeployPhase("idle"),
-          onApply: () => { void deploy(); },
-          onCancelApply: () => request.current?.abort(),
-          onReaudit: () => { if (lastInspect.current) void inspect(lastInspect.current); },
-          onAcknowledgeRecovery: () => {
-            if (!lastInspect.current) return;
-            try { sessionStorage.removeItem(recoveryKey(lastInspect.current)); } catch { /* ignore */ }
-            setDeployPhase("idle");
-            setDeployReport(null);
-            setDeployError(null);
-          },
-        }} />}
-        {!result && !busy && !error && <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-8"><h2 className="font-semibold">El resultado aparecerá acá</h2><p className="mt-2 text-sm opacity-70">Vas a poder revisar diferencias de versiones, mods faltantes, sobrantes y, si la auditoría está completa, aplicar el plan en el servidor.</p></div>}
+  return (
+    <div className="space-y-8 animate-fade-up pb-8">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white/5 px-3 py-2 text-xs font-medium text-[var(--color-muted)] transition-colors hover:border-primary/30 hover:text-primary"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Volver a proyectos
+      </Link>
+
+      <header className={`${serverPanelClass} space-y-4`} style={serverPanelStyle}>
+        <SectionHeading
+          icon={<Server className="w-4 h-4" />}
+          title="MIM Server"
+          sub="Compará y sincronizá mods del build AllHost contra tu servidor remoto por SFTP."
+          accentColor="#10b981"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-label text-[9px] uppercase tracking-wider rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-400">
+            En desarrollo
+          </span>
+          <span className="font-label text-[9px] uppercase tracking-wider rounded-lg border border-[var(--color-border)] bg-white/5 px-2.5 py-1 text-[var(--color-muted)]">
+            Solo JAR en mods/
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <p className="flex items-start gap-2 text-sm text-[var(--color-muted)]">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+            La auditoría es de solo lectura. Aplicar el plan escribe, reemplaza o quita JAR en el servidor.
+          </p>
+          <p className="flex items-start gap-2 text-sm text-[var(--color-muted)]">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            Configs, mundos y sync multiplayer siguen pendientes. Las credenciales no se guardan.
+          </p>
+        </div>
+      </header>
+
+      {!projects.length && (
+        <p role="status" className={`${serverPanelClass} border border-amber-500/30 bg-amber-500/10 text-sm text-amber-400`} style={serverPanelStyle}>
+          Creá un proyecto en MIM y generá su build de servidor (AllHost) para poder compararlo.
+        </p>
+      )}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(340px,420px)_1fr]">
+        <ServerConnectionForm
+          projects={projects}
+          busy={busy}
+          onInspect={inspect}
+          onChange={() => { setResult(null); setError(null); if (deployPhase !== "recovery-required") resetDeploy(); }}
+        />
+        <div ref={resultArea} className="space-y-4 scroll-mt-28" aria-live="polite">
+          {busy && !result && deployPhase !== "preflight" && deployPhase !== "executing" && (
+            <div className={serverPanelClass} style={serverPanelStyle} role="status">
+              <p className="text-sm text-[var(--color-muted)]">Conectando y leyendo mods… La consulta puede tardar hasta 90 segundos.</p>
+            </div>
+          )}
+          {error && (
+            <p role="alert" className={`${serverPanelClass} text-sm text-rose-200`} style={{ ...serverPanelStyle, borderColor: "rgba(244,63,94,0.35)", background: "rgba(244,63,94,0.08)" }}>
+              {error}
+            </p>
+          )}
+          {result && (
+            <ServerInspectionResultView
+              result={result}
+              deploy={{
+                phase: deployPhase,
+                report: deployReport,
+                error: deployError,
+                busy,
+                onBeginConfirm: () => setDeployPhase("confirming"),
+                onCancelConfirm: () => setDeployPhase("idle"),
+                onApply: () => { void deploy(); },
+                onCancelApply: () => request.current?.abort(),
+                onReaudit: () => { if (lastInspect.current) void inspect(lastInspect.current); },
+                onAcknowledgeRecovery: () => {
+                  if (!lastInspect.current) return;
+                  try { sessionStorage.removeItem(recoveryKey(lastInspect.current)); } catch { /* ignore */ }
+                  setDeployPhase("idle");
+                  setDeployReport(null);
+                  setDeployError(null);
+                },
+              }}
+            />
+          )}
+          {!result && !busy && !error && (
+            <div className={`${serverPanelClass} border-dashed`} style={serverPanelStyle}>
+              <h2 className="font-headline text-base text-[var(--color-foreground)]">El resultado aparecerá acá</h2>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
+                Vas a poder revisar diferencias de versiones, mods faltantes, sobrantes y, si la auditoría está completa, aplicar el plan en el servidor.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </section>;
+  );
 }

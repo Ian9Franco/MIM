@@ -123,10 +123,10 @@ export function interpretModEnvironment(clientValue?: string | null, serverValue
 }
 
 export function environmentToneClass(tone: string) {
-  if (tone === "client") return "border-sky-500/20 bg-sky-500/10 text-sky-200";
-  if (tone === "server") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
-  if (tone === "both") return "border-orange-500/25 bg-orange-500/10 text-orange-200";
-  if (tone === "optional") return "border-purple-500/20 bg-purple-500/10 text-purple-200";
-  if (tone === "danger") return "border-red-500/25 bg-red-500/10 text-red-200";
-  return "border-white/[0.08] bg-white/[0.04] text-white/65";
+  if (tone === "client") return "mim-env-tone mim-env-tone-client";
+  if (tone === "server") return "mim-env-tone mim-env-tone-server";
+  if (tone === "both") return "mim-env-tone mim-env-tone-both";
+  if (tone === "optional") return "mim-env-tone mim-env-tone-optional";
+  if (tone === "danger") return "mim-env-tone mim-env-tone-danger";
+  return "mim-env-tone mim-env-tone-unknown";
 }

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Download, Trash2, RefreshCw, Monitor, Copy, CheckCircle2, AlertCircle } from "lucide-react";
 import type { InstanceManifestDiff } from "@/lib/instances/types";
 import type { DiffFilterTab } from "./ServerAuditSummaryCards";
+import { serverInputClass } from "./serverUi";
 
 interface ServerDiffTableProps {
   diff: InstanceManifestDiff;
@@ -154,29 +155,28 @@ export function ServerDiffTable({ diff, activeFilter }: ServerDiffTableProps) {
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Search Header */}
-      <div className="flex items-center justify-between gap-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/80">
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-white/[0.03] p-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
           <input
             type="text"
             placeholder="Buscar por mod, archivo o razón..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-zinc-800/60 border border-zinc-700/60 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
+            className={`${serverInputClass} py-1.5 pl-9 text-xs`}
           />
         </div>
 
-        <div className="text-xs text-zinc-400">
-          Mostrando <strong className="text-white">{filteredRows.length}</strong> de{" "}
-          <strong className="text-zinc-300">{rows.length}</strong> elementos
+        <div className="text-xs text-[var(--color-muted)]">
+          Mostrando <strong className="text-[var(--color-foreground)]">{filteredRows.length}</strong> de{" "}
+          <strong className="text-[var(--color-foreground)]/80">{rows.length}</strong> elementos
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="w-full overflow-x-auto rounded-xl border border-zinc-800/80 bg-zinc-900/20">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="w-full overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white/[0.02]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-zinc-800 text-zinc-400 uppercase tracking-wider text-[10px] bg-zinc-900/50">
+            <tr className="border-b border-[var(--color-border)] bg-white/[0.03] text-[10px] uppercase tracking-wider text-[var(--color-muted)]">
               <th className="py-3 px-4">Estado</th>
               <th className="py-3 px-4">Mod / Artefacto</th>
               <th className="py-3 px-4">Proyecto Deseado</th>
@@ -184,13 +184,13 @@ export function ServerDiffTable({ diff, activeFilter }: ServerDiffTableProps) {
               <th className="py-3 px-4">Diagnóstico / Acción</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/50">
+          <tbody className="divide-y divide-[var(--color-border)]/60">
             <AnimatePresence mode="popLayout">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-zinc-500">
+                  <td colSpan={5} className="py-8 text-center text-[var(--color-muted)]">
                     <div className="flex flex-col items-center gap-2">
-                      <AlertCircle className="w-6 h-6 text-zinc-600" />
+                      <AlertCircle className="h-6 w-6 text-[var(--color-muted)]/60" />
                       <span>No hay discrepancias que coincidan con el filtro actual</span>
                     </div>
                   </td>
@@ -206,52 +206,52 @@ export function ServerDiffTable({ diff, activeFilter }: ServerDiffTableProps) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="hover:bg-zinc-800/30 transition-colors"
+                      className="transition-colors hover:bg-white/[0.03]"
                     >
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium ${badge.bg}`}>
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${badge.bg}`}>
+                          <Icon className="h-3.5 w-3.5 shrink-0" />
                           {badge.label}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-zinc-200">{row.modName}</div>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-[var(--color-foreground)]">{row.modName}</div>
                         {row.modId && row.modId !== "unknown" && (
-                          <div className="text-[10px] text-zinc-500 font-mono">{row.modId}</div>
+                          <div className="font-mono text-[10px] text-[var(--color-muted)]">{row.modId}</div>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-zinc-300">
+                      <td className="px-4 py-3 text-[var(--color-muted)]">
                         {row.desiredFileName ? (
                           <div>
-                            <div className="font-medium text-zinc-200">{row.desiredVersion || "v?"}</div>
-                            <div className="text-[10px] text-zinc-500 truncate max-w-[180px]" title={row.desiredFileName}>
+                            <div className="font-medium text-[var(--color-foreground)]">{row.desiredVersion || "v?"}</div>
+                            <div className="max-w-[180px] truncate text-[10px] text-[var(--color-muted)]" title={row.desiredFileName}>
                               {row.desiredFileName}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-zinc-600 italic">No requerido</span>
+                          <span className="italic text-[var(--color-muted)]/60">No requerido</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-zinc-300">
+                      <td className="px-4 py-3 text-[var(--color-muted)]">
                         {row.actualFileName ? (
                           <div>
-                            <div className="font-medium text-zinc-200">{row.actualVersion || "v?"}</div>
-                            <div className="text-[10px] text-zinc-500 truncate max-w-[180px]" title={row.actualFileName}>
+                            <div className="font-medium text-[var(--color-foreground)]">{row.actualVersion || "v?"}</div>
+                            <div className="max-w-[180px] truncate text-[10px] text-[var(--color-muted)]" title={row.actualFileName}>
                               {row.actualFileName}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-zinc-600 italic">No instalado</span>
+                          <span className="italic text-[var(--color-muted)]/60">No instalado</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-zinc-400 max-w-xs">
+                      <td className="max-w-xs px-4 py-3 text-[var(--color-muted)]">
                         <div className="text-xs leading-relaxed">{row.reason}</div>
                         {row.sideRequirement && (
-                          <span className="inline-block mt-1 text-[10px] text-zinc-500 bg-zinc-800/80 px-1.5 py-0.5 rounded">
+                          <span className="mt-1 inline-block rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-[var(--color-muted)]">
                             {row.sideRequirement}
                           </span>
                         )}

@@ -333,7 +333,7 @@ export function ModDetailsSheet({
             />
 
             {/* Body Content Area (Tabs + Scrollable Content) */}
-            <div className={`flex flex-col flex-1 min-h-0 ${isReadingTab ? "gap-1.5 px-3 pt-2 pb-2" : "gap-2.5 px-4 pt-3 pb-3"}`}>
+            <div className="flex flex-col flex-1 min-h-0 gap-2.5 px-4 pt-3 pb-3">
               {/* Modular Animated Tabs */}
               <ModDetailsTabs
                 modalTab={modalTab}

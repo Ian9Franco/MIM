@@ -103,9 +103,7 @@ export function ModDetailsHeader({
 
   return (
     <div
-      className={`relative overflow-hidden border-b border-white/[0.06] shrink-0 select-none ${
-        isReadingTab ? "px-4 pt-2 pb-3" : "px-6 pt-3 pb-5"
-      }`}
+      className="relative overflow-hidden border-b border-white/[0.06] shrink-0 select-none px-5 pt-3 pb-4"
     >
       {/* Banner Image or Fallback */}
       <div
@@ -199,10 +197,21 @@ export function ModDetailsHeader({
 
       {/* Mod info */}
       <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} detail className="relative z-10">
-        {!isReadingTab && bannerUrl && (
-          <div className="relative h-24 sm:h-28 overflow-hidden rounded-xl mb-3 bg-surface">
-            <img src={bannerUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer"
-              onError={e => { e.currentTarget.style.display = "none"; }} />
+        {bannerUrl && (
+          <div
+            className={`relative overflow-hidden rounded-xl mb-3 bg-surface ${
+              isReadingTab ? "h-20" : "h-24 sm:h-28"
+            }`}
+          >
+            <img
+              src={bannerUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
             <div className="absolute left-2 top-2 z-10 flex flex-col items-start gap-1">
               {isFavorited && session && (
                 <span className="mim-project-badge flex items-center gap-1"><Heart className="h-2.5 w-2.5 fill-current" /> @{viewerName}</span>
@@ -218,9 +227,9 @@ export function ModDetailsHeader({
         )}
         <div className={`flex ${isReadingTab ? "gap-3" : "gap-4"}`}>
         <div
-          className={`${
+          className={`mim-mod-icon-3d ${
             isReadingTab ? "w-12 h-12" : "w-16 h-16"
-          } rounded-xl bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg backdrop-blur-md`}
+          } rounded-xl flex items-center justify-center overflow-hidden shrink-0`}
         >
           {selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl ? (
             <>

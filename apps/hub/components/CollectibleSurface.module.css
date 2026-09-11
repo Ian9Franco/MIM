@@ -1,30 +1,145 @@
 .surface {
   --rx: 0deg;
   --ry: 0deg;
+  --ty: 0px;
+  --scale: 1;
+  --glare-x: 50%;
+  --glare-y: 50%;
   position: relative;
-  isolation: isolate;
   border: 1px solid color-mix(in srgb, var(--color-primary) 36%, var(--color-border-strong));
   border-radius: 18px;
   background: var(--color-card);
-  transform: perspective(850px) rotateX(var(--rx)) rotateY(var(--ry));
-  box-shadow: 0 3px 0 color-mix(in srgb, var(--color-primary) 22%, var(--color-surface)), 0 8px 16px #0002;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  overflow: hidden;
+  transform: perspective(920px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--ty)) scale(var(--scale));
+  transform-style: preserve-3d;
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--color-primary) 24%, var(--color-surface)),
+    0 14px 28px rgba(0, 0, 0, 0.22);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
-.surface[role="button"] { cursor: pointer; text-align: left; }
-.surface:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
-.detail { padding: 14px; margin-top: 2px; overflow: hidden; }
+
+.surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    520px circle at var(--glare-x) var(--glare-y),
+    rgba(255, 255, 255, 0.11) 0%,
+    rgba(255, 255, 255, 0.035) 18%,
+    transparent 52%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.surface[role="button"] {
+  cursor: pointer;
+  text-align: left;
+}
+
+.surface:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.row {
+  border-radius: 14px;
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--color-primary) 20%, var(--color-surface)),
+    0 10px 20px rgba(0, 0, 0, 0.18);
+}
+
+.compact {
+  border-radius: 16px;
+}
+
+.detail {
+  padding: 14px;
+  margin-top: 2px;
+}
+
+@media (hover: hover) {
+  .surface[role="button"]:hover {
+    --ty: -7px;
+    --scale: 1.035;
+    box-shadow:
+      0 7px 0 color-mix(in srgb, var(--color-primary) 28%, var(--color-surface)),
+      0 24px 36px rgba(0, 0, 0, 0.28);
+  }
+
+  .surface[role="button"]:hover::before {
+    opacity: 0.55;
+  }
+
+  .row[role="button"]:hover {
+    --ty: -4px;
+    --scale: 1.02;
+  }
+
+  .surface :global(.mim-collectible-media) {
+    overflow: hidden;
+  }
+
+  .surface :global(.mim-collectible-media img) {
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .surface[role="button"]:hover :global(.mim-collectible-media img) {
+    transform: scale(1.1);
+  }
+}
+
+.surface[role="button"]:active {
+  --ty: -1px;
+  --scale: 0.985;
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--color-primary) 22%, var(--color-surface)),
+    0 8px 14px rgba(0, 0, 0, 0.18);
+}
+
 [data-theme="modern"] .surface {
-  border-color: rgba(13, 39, 80, .16);
+  border-color: rgba(13, 39, 80, 0.16);
   background: linear-gradient(145deg, #fff, #eef1f6);
-  box-shadow: 0 4px 0 rgba(93, 74, 160, .16), 0 16px 24px -17px rgba(13, 39, 80, .42), 0 -8px 18px -14px rgba(255, 255, 255, .95);
+  box-shadow:
+    0 5px 0 rgba(93, 74, 160, 0.16),
+    0 18px 28px -16px rgba(13, 39, 80, 0.42),
+    0 -8px 18px -14px rgba(255, 255, 255, 0.95);
 }
+
+[data-theme="modern"] .surface[role="button"]:hover {
+  box-shadow:
+    0 8px 0 rgba(93, 74, 160, 0.2),
+    0 26px 34px -18px rgba(13, 39, 80, 0.5),
+    0 -8px 18px -14px rgba(255, 255, 255, 0.95);
+}
+
 [data-theme="modern"] .surface[role="button"]:active {
-  box-shadow: 0 2px 0 rgba(93, 74, 160, .16), 0 9px 16px -12px rgba(13, 39, 80, .34);
+  box-shadow:
+    0 2px 0 rgba(93, 74, 160, 0.16),
+    0 10px 16px -12px rgba(13, 39, 80, 0.34);
 }
+
 [data-theme="modern"] .detail {
-  border-color: rgba(93, 74, 160, .24);
-  box-shadow: 0 3px 0 rgba(93, 74, 160, .14), 0 8px 16px rgba(13, 39, 80, .12);
+  border-color: rgba(93, 74, 160, 0.24);
+  box-shadow:
+    0 3px 0 rgba(93, 74, 160, 0.14),
+    0 8px 16px rgba(13, 39, 80, 0.12);
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .surface { transition: none; transform: none; animation: none; }
+  .surface {
+    transition: none;
+    transform: none;
+    animation: none;
+  }
+
+  .surface::before {
+    display: none;
+  }
 }

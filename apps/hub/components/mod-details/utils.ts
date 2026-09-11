@@ -359,11 +359,7 @@ export function inferTypeFromModHit(mod: {
   return "mod";
 }
 
-export function getSheetTargetHeight(modalTab: string, hasDeps: boolean): string {
-  if (modalTab === "deps") return hasDeps ? "96dvh" : "72dvh";
-  if (modalTab === "versions") return "96dvh";
-  if (modalTab === "gallery") return "76vh";
-  if (modalTab === "desc") return "84vh";
-  return "88vh";
+export function getSheetTargetHeight(_modalTab: string, _hasDeps: boolean): string {
+  return "96dvh";
 }
 

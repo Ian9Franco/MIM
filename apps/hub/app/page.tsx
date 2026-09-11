@@ -134,6 +134,16 @@ export default function Home() {
 
   const hubAnimationDirection = themeTransition.direction;
 
+  const headerAnim = React.useMemo(
+    () => ({
+      fomoDuration: `${(6.1 + Math.random() * 3.8).toFixed(2)}s`,
+      fomoDelay: `-${(Math.random() * 6).toFixed(2)}s`,
+      slimeDuration: `${(5.4 + Math.random() * 3.2).toFixed(2)}s`,
+      slimeDelay: `-${(Math.random() * 5).toFixed(2)}s`,
+    }),
+    []
+  );
+
   /**
    * Fetches the latest MIM release from GitHub and opens it.
    * Falls back to the releases page if the API call fails.
@@ -167,8 +177,20 @@ export default function Home() {
     <div className="flex-1 flex flex-col h-full overflow-hidden px-4 pt-6">
       <header className="flex justify-between items-center mb-6 px-1 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="mim-web-logo mim-web-logo-fomo w-8 h-8 rounded-xl overflow-hidden bg-white/5 border border-white/[0.08] shrink-0">
-            <img src="/fomoico.png" alt="" className="w-full h-full object-contain transition-all duration-700 animate-fomo-blink" />
+          <div
+            className="mim-web-logo mim-web-logo-fomo w-8 h-8 rounded-xl overflow-hidden bg-white/5 border border-white/[0.08] shrink-0"
+            style={
+              {
+                "--fomo-eye-duration": headerAnim.fomoDuration,
+                "--fomo-eye-delay": headerAnim.fomoDelay,
+              } as React.CSSProperties
+            }
+          >
+            <div className="mim-fomo-eye" aria-hidden>
+              <img src="/fomoico.png" alt="" className="mim-fomo-eye-gaze h-full w-full object-contain" />
+              <span className="mim-fomo-eye-lid mim-fomo-eye-lid-left" />
+              <span className="mim-fomo-eye-lid mim-fomo-eye-lid-right" />
+            </div>
           </div>
           <div className="min-w-0">
             <h1 className="text-xl font-black tracking-tighter leading-none" style={{ color: "var(--color-foreground)" }}>
@@ -219,13 +241,32 @@ export default function Home() {
               return (
                 <button
                   key={opt.id}
+                  type="button"
                   onClick={() => c.handleThemeChange(opt.id)}
                   data-active={active}
-                  className={`mim-theme-option relative z-10 w-8 h-full flex items-center justify-center rounded-lg transition-all duration-300 ${active ? "" : "opacity-40 hover:opacity-100"}`}
+                  data-theme-icon={opt.id}
+                  className={`mim-theme-option relative z-10 flex h-full w-8 items-center justify-center rounded-lg transition-all duration-300 ${active ? "" : "opacity-40 hover:opacity-100"}`}
                   style={{ color: active ? "var(--color-primary)" : "var(--color-foreground)" }}
                   title={opt.label}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <span className="mim-theme-icon-wrap relative flex items-center justify-center">
+                    <Icon className="mim-theme-icon h-3.5 w-3.5" />
+                    {active && opt.id === "official" && (
+                      <>
+                        <span className="mim-theme-steam mim-theme-steam-a" aria-hidden />
+                        <span className="mim-theme-steam mim-theme-steam-b" aria-hidden />
+                        <span className="mim-theme-steam mim-theme-steam-c" aria-hidden />
+                      </>
+                    )}
+                    {active && opt.id === "modern" && (
+                      <>
+                        <span className="mim-theme-spark mim-theme-spark-a" aria-hidden />
+                        <span className="mim-theme-spark mim-theme-spark-b" aria-hidden />
+                        <span className="mim-theme-spark mim-theme-spark-c" aria-hidden />
+                        <span className="mim-theme-spark mim-theme-spark-d" aria-hidden />
+                      </>
+                    )}
+                  </span>
                 </button>
               );
             })}
@@ -238,7 +279,17 @@ export default function Home() {
           >
             <Share2 className="w-4 h-4" />
           </button>
-          <img src="/icon.png" alt="" className="w-9 h-9 object-contain animate-slime shrink-0" />
+          <img
+            src="/icon.png"
+            alt=""
+            className="animate-slime h-9 w-9 shrink-0 object-contain"
+            style={
+              {
+                "--slime-duration": headerAnim.slimeDuration,
+                "--slime-delay": headerAnim.slimeDelay,
+              } as React.CSSProperties
+            }
+          />
         </div>
       </header>
 
@@ -365,6 +416,7 @@ export default function Home() {
               userFollowedAuthors={c.userFollowedAuthors}
               onToggleFavorite={c.onToggleFavorite}
               onSearchAuthor={c.handleSearchAuthor}
+              showAlert={c.showAlert}
             />
           )}
 

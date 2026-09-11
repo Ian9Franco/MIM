@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: path.resolve(__dirname, ".."),
+    // Monorepo: next is hoisted to the repo root (npm workspaces).
+    root: path.resolve(__dirname, "../.."),
   },
   /* config options here */
   experimental: {

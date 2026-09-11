@@ -9,7 +9,12 @@ import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
 import { CommunityRankings } from "../community/CommunityRankings";
 import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
-import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
+import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta, shareRowToModHit } from "../community/communityUtils";
+
+function normalizeCommunityProfile(profile: any) {
+  if (!profile) return null;
+  return Array.isArray(profile) ? profile[0] : profile;
+}
 
 interface ComunidadTabProps {
   rankings: ModHit[];
@@ -20,6 +25,7 @@ interface ComunidadTabProps {
   userFollowedAuthors: any[];
   onToggleFavorite: (mod: ModHit) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
+  showAlert?: (title: string, message: string) => void;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -98,8 +104,27 @@ async function loadProfileShares(profileId: string) {
   return sortSharesByPinned(fallback.data || []);
 }
 
+async function loadUserLikedShares(profileId: string) {
+  const { data, error } = await supabase
+    .from("community_reactions")
+    .select(`
+      created_at,
+      share:favorite_mods (
+        id, mod_id, platform, name, icon_url, summary, pinned, created_at,
+        profile:profiles (id, username, avatar_url, color)
+      )
+    `)
+    .eq("profile_id", profileId)
+    .eq("reaction", "like")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data || [])
+    .map((row: any) => row.share)
+    .filter(Boolean);
+}
+
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
-  if (!projectId || projectId.startsWith("youtube:")) return null;
   const url = source === "curseforge"
     ? `/api/curseforge/project?projectId=${encodeURIComponent(projectId)}`
     : `https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}`;
@@ -110,7 +135,7 @@ async function fetchProjectUpdatedAt(source: string | undefined, projectId: stri
 }
 
 /** Comunidad orchestrates data and delegates each visual surface to a focused component. */
-export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, userFavorites, userFollowedAuthors, onToggleFavorite, onSearchAuthor }: ComunidadTabProps) {
+export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, userFavorites, userFollowedAuthors, onToggleFavorite, onSearchAuthor, showAlert }: ComunidadTabProps) {
   const [section, setSection] = useState<CommunitySection>("compartidos");
   const [profileView, setProfileView] = useState<"list" | "profile">("list");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
@@ -208,7 +233,11 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     const shareIds = shares.map((item) => item.id).filter(Boolean);
     if (!shareIds.length) return;
     supabase.from("community_reactions").select("share_id, profile_id").in("share_id", shareIds)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error loading community reactions:", error);
+          return;
+        }
         const next: Record<string, { count: number; mine: boolean }> = {};
         (data || []).forEach((row: any) => {
           next[row.share_id] ||= { count: 0, mine: false };
@@ -243,14 +272,20 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   };
 
   const toggleReaction = async (shareId: string) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      showAlert?.("Iniciá sesión", "Necesitás iniciar sesión para dar me gusta.");
+      return;
+    }
     const current = reactions[shareId] || { count: 0, mine: false };
     setReactions((state) => ({ ...state, [shareId]: { mine: !current.mine, count: Math.max(0, current.count + (current.mine ? -1 : 1)) } }));
     const request = current.mine
-      ? supabase.from("community_reactions").delete().eq("profile_id", session.user.id).eq("share_id", shareId).eq("reaction", "like")
+      ? supabase.from("community_reactions").delete().eq("profile_id", session.user.id).eq("share_id", shareId)
       : supabase.from("community_reactions").insert({ profile_id: session.user.id, share_id: shareId, reaction: "like" });
     const { error } = await request;
-    if (error) setReactions((state) => ({ ...state, [shareId]: current }));
+    if (error) {
+      setReactions((state) => ({ ...state, [shareId]: current }));
+      showAlert?.("Error", `No se pudo guardar tu reacción: ${error.message}`);
+    }
   };
 
   useEffect(() => {
@@ -272,19 +307,23 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   }, [shares]);
 
   const openProfile = async (profile: any) => {
-    if (!profile?.id) return;
-    setSelectedProfile(profile);
+    const resolved = normalizeCommunityProfile(profile);
+    if (!resolved?.id) {
+      showAlert?.("Perfil no disponible", "No pudimos abrir este perfil.");
+      return;
+    }
+    setSection("miembros");
+    setSelectedProfile(resolved);
     setProfileView("profile");
     setLoadingPublic(true);
     setPublicData({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
     const [{ data: favorites }, { data: authors }, { data: drafts }, sharesData] = await Promise.all([
-      supabase.from("followed_mods").select("*").eq("profile_id", profile.id),
-      supabase.from("followed_authors").select("*").eq("profile_id", profile.id),
-      supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", profile.id).eq("visibility", "public"),
-      loadProfileShares(profile.id),
+      supabase.from("followed_mods").select("*").eq("profile_id", resolved.id),
+      supabase.from("followed_authors").select("*").eq("profile_id", resolved.id),
+      supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", resolved.id).eq("visibility", "public"),
+      loadProfileShares(resolved.id),
     ]);
-    // Showcase preferences live in profile metadata and are already public.
-    const channels = profile.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
+    const channels = resolved.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
     setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels, shares: sharesData || [] });
     setLoadingPublic(false);
   };
@@ -347,9 +386,11 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
 function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: any; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; userFavorites: any[]; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
   const meta = parseShareMeta(item.summary);
   const projectId = item.mod_id || item.id;
+  const platform = item.platform || "modrinth";
+  const shareProfile = normalizeCommunityProfile(item.profile);
   const projectType = meta.projectType || "mod";
   const isYoutube = item.platform === "youtube" || projectType.startsWith("youtube-");
-  const userColor = item.profile?.color || "var(--color-primary)";
+  const userColor = shareProfile?.color || "var(--color-primary)";
   const videoUrl = meta.videoUrl || (meta.embeddedVideoId ? `https://www.youtube.com/watch?v=${meta.embeddedVideoId}` : "");
   // share.pinned = true → pinned via DB column (source of truth).
   // share.pinned = null/undefined → old row, fall back to summary blob.
@@ -357,8 +398,11 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
   const isPinned: boolean = item.pinned === true ? true
     : item.pinned == null ? (meta.priority ?? false)
     : false;
-  const mod: ModHit = { projectId, title: item.name || "Proyecto", description: meta.comment || "", iconUrl: item.icon_url || null, author: "Comunidad", projectType, categories: [item.platform || "modrinth"], url: item.platform === "curseforge" ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`, _source: item.platform || "modrinth" };
-  const isFavorited = userFavorites.some((favorite) => String(favorite.mod_id || favorite.project_id || favorite.projectId || favorite.id) === String(projectId));
+  const mod: ModHit = { projectId, title: item.name || "Proyecto", description: meta.comment || "", iconUrl: item.icon_url || null, author: shareProfile?.username || "Comunidad", projectType, categories: [platform], url: platform === "curseforge" ? `https://www.curseforge.com/minecraft/mc-mods/${projectId}` : `https://modrinth.com/${projectType}/${projectId}`, _source: platform };
+  const isFavorited = userFavorites.some((favorite) =>
+    String(favorite.mod_id || favorite.project_id || favorite.projectId || favorite.id) === String(projectId)
+    && (favorite.platform || favorite.source || "modrinth") === platform
+  );
   const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
 
   return (
@@ -380,10 +424,10 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
         </span>
       )}
       <span className={`absolute inset-y-4 left-0 w-px transition-colors ${isPinned ? "bg-amber-400/50" : "bg-white/10 group-hover:bg-[var(--color-primary)]"}`} />
-      <button type="button" onClick={() => onOpenProfile(item.profile)} className="flex w-fit items-center gap-2.5 text-left">
-        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-surface text-xs font-bold uppercase shadow-md transition-transform group-hover:scale-105" style={{ borderColor: userColor }}>{item.profile?.avatar_url ? <img src={item.profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span style={{ color: userColor }}>{item.profile?.username?.slice(0, 2) || "U"}</span>}</div>
+      <button type="button" onClick={() => onOpenProfile(shareProfile)} className="flex w-fit items-center gap-2.5 text-left">
+        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-surface text-xs font-bold uppercase shadow-md transition-transform group-hover:scale-105" style={{ borderColor: userColor }}>{shareProfile?.avatar_url ? <img src={shareProfile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span style={{ color: userColor }}>{shareProfile?.username?.slice(0, 2) || "U"}</span>}</div>
         <div>
-          <span className="block text-[11px] font-bold text-white">@{item.profile?.username || "Usuario"}</span>
+          <span className="block text-[11px] font-bold text-white">@{shareProfile?.username || "Usuario"}</span>
           <span className="mt-0.5 flex items-center gap-1 text-[8px] text-white/35">
             <Clock className="h-2.5 w-2.5" />{formatTimeAgo(item.created_at)}
           </span>
@@ -404,10 +448,10 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
       )}
 
       <div className="grid grid-cols-4 gap-1.5">
-        <button type="button" onClick={() => isYoutube ? playVideo() : onOpenMod(mod)} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
-        {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={() => onToggleFavorite(mod)} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
-        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine || false} onClick={() => onToggleReaction(item.id)} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count || 0}</button>
-        <button type="button" onClick={() => onOpenProfile(item.profile)} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); if (isYoutube) playVideo(); else onOpenMod(mod); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
+        {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={(event) => { event.stopPropagation(); onToggleFavorite(mod); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
+        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine || false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count || 0}</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); onOpenProfile(shareProfile); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
       </div>
 
     </motion.article>

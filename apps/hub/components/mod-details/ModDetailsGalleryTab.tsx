@@ -29,9 +29,9 @@ export function ModDetailsGalleryTab({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -12 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col gap-3 w-full pb-3"
+      className="flex flex-col gap-3 w-full min-h-[52dvh] pb-3"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider block font-semibold">
           Galería de Imágenes ({galleryImages.length})
         </span>
@@ -41,7 +41,7 @@ export function ModDetailsGalleryTab({
       </div>
 
       {galleryImages.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2.5 pb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 flex-1 content-start">
           {galleryImages.map((img: FomoGalleryItem, i: number) => {
             const imgUrl = img.url || (img as unknown as Record<string, string>)?.raw_url || "";
             return (
@@ -49,7 +49,7 @@ export function ModDetailsGalleryTab({
                 type="button"
                 key={i}
                 onClick={() => setActiveImageIndex(i)}
-                className="group relative aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/[0.08] cursor-pointer hover:border-orange-500/50 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center text-left"
+                className="group relative aspect-[4/3] w-full min-h-[180px] rounded-xl overflow-hidden bg-white/5 border border-white/[0.08] cursor-pointer hover:border-orange-500/50 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center text-left"
               >
                 <img
                   src={imgUrl}

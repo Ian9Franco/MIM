@@ -120,11 +120,11 @@ export function DiscoverTab({
 
       {/* Resultados de búsqueda */}
       {discoverLoading ? (
-        <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto px-1.5 pr-1 scrollbar-none flex flex-col gap-4">
           <DiscoverSkeleton />
         </div>
       ) : discoverResults.length > 0 ? (
-        <div className="flex-1 overflow-y-auto pr-1 scrollbar-none flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto px-1.5 pr-1 scrollbar-none flex flex-col gap-4">
           <DiscoverPagination
             position="top"
             discoverPage={discoverPage}
@@ -133,14 +133,15 @@ export function DiscoverTab({
             runDiscoverSearch={runDiscoverSearch}
           />
 
-          <div className="grid grid-cols-2 gap-3.5 w-full">
+          <div className="mim-discover-grid grid w-full grid-cols-2 gap-3.5">
             {discoverResults.map((mod, resultIndex) => (
-              <DiscoverModCard
-                key={mod.projectId}
-                mod={mod}
-                resultIndex={resultIndex}
-                handleOpenModDetails={handleOpenModDetails}
-              />
+              <div key={mod.projectId} className="mim-discover-card-slot min-w-0">
+                <DiscoverModCard
+                  mod={mod}
+                  resultIndex={resultIndex}
+                  handleOpenModDetails={handleOpenModDetails}
+                />
+              </div>
             ))}
           </div>
 

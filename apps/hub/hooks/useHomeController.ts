@@ -807,7 +807,10 @@ export function useHomeController() {
   };
 
   const onToggleFavorite = async (mod: ModHit) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      showAlert("Iniciá sesión", "Necesitás iniciar sesión para guardar favoritos.");
+      return;
+    }
     const previousFavorites = userFavorites;
     const userId = session.user.id;
     const favoriteId = mod.projectId;
@@ -1032,7 +1035,7 @@ export function useHomeController() {
     loadingUserData: loadingUserData || drafts.loadingDrafts,
     updatedMods, newestMods, modrinthFeatured, curseForgeFeatured, curseForgeCollections, latestFeaturedMods, latestCollectionName,
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
-    loadingActiveMods, theme, customAlert, setCustomAlert, youtubePosts, loadingYoutube, currentChannel,
+    loadingActiveMods, theme, customAlert, setCustomAlert, showAlert, youtubePosts, loadingYoutube, currentChannel,
     setCurrentChannel, youtubeFeedType, setYoutubeFeedType, followedChannels, showChannelManager, setShowChannelManager, newChannelInput, setNewChannelInput,
     rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,

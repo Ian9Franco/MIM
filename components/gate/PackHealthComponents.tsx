@@ -49,7 +49,13 @@ export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: Valida
     if (!issue.fixAction) return null;
     
     const map: Record<string, { label: string; icon: React.ReactNode; fn: () => void }> = {
-      fomo_search:    { label: "Buscar en FOMO", icon: <Search      className="w-3 h-3" />, fn: () => onFomoSearch(issue.fixPayload?.query ?? issue.affectedMod ?? "") },
+      fomo_search:    {
+        label: "Buscar en FOMO",
+        icon: <Search className="w-3 h-3" />,
+        fn: () => onFomoSearch(
+          typeof issue.fixPayload?.query === "string" ? issue.fixPayload.query : (issue.affectedMod ?? ""),
+        ),
+      },
       move_to_local:  { label: "→ .local",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_local", issue.fixPayload) },
       move_to_server: { label: "→ .server",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_server", issue.fixPayload) },
       disable:        { label: "Deshabilitar",     icon: <Settings   className="w-3 h-3" />, fn: () => handleFix("disable") },

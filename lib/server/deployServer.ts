@@ -10,6 +10,7 @@ import { openSftpWritableTransport } from "./transport/sftpWritableTransport";
 import { SftpAuditError } from "./transport/sftpReadTransport";
 import { acquireServerSession } from "./sessionLock";
 import { isCompleteDeployableAudit, summarizeReconciliationPlan, type DeployPlanCounts } from "./deployEligibility";
+import { createServerSnapshotStore } from "./snapshotStoreFactory";
 
 export interface ServerDeploymentResult {
   deployment: DeploymentReport;
@@ -73,12 +74,13 @@ async function performDeployment(input: DeployServerRequest, buildsBase: string,
     }
 
     const buildTransport = await openBuildReadTransport(buildsBase, input.project.name);
+    const snapshotStore = createServerSnapshotStore();
     const deployment = await executeServerDeployment(
       session.transport,
       plan,
       desired.manifest,
       observed.manifest,
-      undefined,
+      snapshotStore,
       async (identity) => {
         const action = plan.actions.find((item) => item.identity === identity);
         if (!action) return null;

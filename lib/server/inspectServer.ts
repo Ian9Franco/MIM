@@ -1,9 +1,12 @@
 import type { InspectServerRequest } from "./inspectSchema";
 import { discoverRemoteServerState } from "@mim/server-engine/discovery";
 import { auditServerInstance } from "@mim/server-engine/audit";
+import { loadPendingServerOperations } from "@mim/server-engine/pendingOperations";
 import { openBuildReadTransport } from "./transport/buildReadTransport";
 import { openSftpReadTransport, SftpAuditError } from "./transport/sftpReadTransport";
 import { acquireServerSession } from "./sessionLock";
+import { REMOTE_SERVER_INSTANCE_ID } from "./serverIdentity";
+import { createServerSnapshotStore } from "./snapshotStoreFactory";
 
 async function performInspection(input: InspectServerRequest, buildsBase: string, signal: AbortSignal) {
   let desired;
@@ -27,8 +30,17 @@ async function performInspection(input: InspectServerRequest, buildsBase: string
     if (runtimeMismatch) warnings.push("La versión o el loader indicado para el servidor no coincide con el proyecto.");
     // Missing rows in a partial inventory cannot authorize installation/removal.
     if (report && runtimeMismatch) report.readyForPlanning = false;
-    return { report, warnings, isPartialAudit: Boolean(observed.isPartialAudit), runtimeMismatch,
-      scope: "mods" as const, scannedMods: observed.manifest.mods.length, totalJarFiles: observed.totalJarFiles };
+    const pending = await loadPendingServerOperations(createServerSnapshotStore(), REMOTE_SERVER_INSTANCE_ID);
+    return {
+      report,
+      warnings,
+      isPartialAudit: Boolean(observed.isPartialAudit),
+      runtimeMismatch,
+      scope: "mods" as const,
+      scannedMods: observed.manifest.mods.length,
+      totalJarFiles: observed.totalJarFiles,
+      pendingOperations: pending.pendingOperationCount,
+    };
   } finally { session.close(); }
 }
 export type ServerInspectionResult = Awaited<ReturnType<typeof inspectServer>>;

@@ -12,8 +12,8 @@ import {
   parseBenchmarkCorpus,
 } from "./sageEvalCore";
 
-const CORPUS_PATH = path.join(__dirname, "datasets", "crash-corpus.json");
-const REPORT_OUTPUT_PATH = path.join(__dirname, "..", "..", "docs", "engines", "sage-eval.md");
+const CORPUS_PATH = path.resolve(__dirname, "datasets", "crash-corpus.json");
+const REPORT_OUTPUT_PATH = path.resolve(__dirname, "..", "..", "docs", "engines", "sage-eval.md");
 
 function printConsoleSummary(result: ReturnType<typeof evaluateSageCorpus>): void {
   console.log(`\n===============================================================`);
@@ -40,19 +40,23 @@ function printConsoleSummary(result: ReturnType<typeof evaluateSageCorpus>): voi
   console.log(`===============================================================\n`);
 }
 
+function handleSelfTest(): number {
+  const forced = evaluateSageCorpus([]);
+  const failures = collectSageGateFailures(forced, {
+    ...SAGE_EVAL_THRESHOLDS,
+    MACRO_F1_MIN: 101,
+  });
+  if (failures.length === 0) {
+    console.error("❌ Self-test gate expected at least one failure but found none.");
+    return 1;
+  }
+  console.log("✔ Self-test gate failure path verified.");
+  return 1;
+}
+
 function runEvaluation(): number {
   if (process.argv.includes("--self-test-fail")) {
-    const forced = evaluateSageCorpus([]);
-    const failures = collectSageGateFailures(forced, {
-      ...SAGE_EVAL_THRESHOLDS,
-      MACRO_F1_MIN: 101,
-    });
-    if (failures.length === 0) {
-      console.error("❌ Self-test gate expected at least one failure but found none.");
-      return 1;
-    }
-    console.log("✔ Self-test gate failure path verified.");
-    return 1;
+    return handleSelfTest();
   }
 
   if (!fs.existsSync(CORPUS_PATH)) {
@@ -60,12 +64,14 @@ function runEvaluation(): number {
     return 1;
   }
 
-  const samples = parseBenchmarkCorpus(JSON.parse(fs.readFileSync(CORPUS_PATH, "utf-8")));
+  const rawCorpus = fs.readFileSync(CORPUS_PATH, "utf-8");
+  const samples = parseBenchmarkCorpus(JSON.parse(rawCorpus));
   const result = evaluateSageCorpus(samples);
   printConsoleSummary(result);
 
   const evaluationDate = new Date().toISOString().split("T")[0];
-  fs.writeFileSync(REPORT_OUTPUT_PATH, buildSageEvaluationMarkdown(result, evaluationDate), "utf-8");
+  const markdown = buildSageEvaluationMarkdown(result, evaluationDate);
+  fs.writeFileSync(REPORT_OUTPUT_PATH, markdown, "utf-8");
   console.log(`📄 Written complete evaluation report to: ${REPORT_OUTPUT_PATH}`);
 
   const failures = collectSageGateFailures(result);
@@ -82,3 +88,4 @@ function runEvaluation(): number {
 }
 
 process.exit(runEvaluation());
+

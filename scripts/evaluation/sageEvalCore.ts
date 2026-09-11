@@ -101,18 +101,25 @@ interface HistoricalCounters {
   systemicDenominator: number;
 }
 
+function computePercentage(numerator: number, denominator: number): number {
+  if (denominator <= 0) return 100;
+  return (numerator / denominator) * 100;
+}
+
 function ratio(numerator: number, denominator: number): RatioMetric {
   return {
     numerator,
     denominator,
-    percentage: denominator > 0 ? (numerator / denominator) * 100 : 100,
+    percentage: computePercentage(numerator, denominator),
   };
 }
 
 function createEmptyCategoryStats(): CategoryStats {
-  return new Map(
-    SAGE_EVAL_CATEGORIES.map((category) => [category, { tp: 0, fp: 0, fn: 0, totalExpected: 0 }]),
-  );
+  const stats: CategoryStats = new Map();
+  for (const category of SAGE_EVAL_CATEGORIES) {
+    stats.set(category, { tp: 0, fp: 0, fn: 0, totalExpected: 0 });
+  }
+  return stats;
 }
 
 function isKnownCategory(value: string): value is CrashCategory {
@@ -128,16 +135,18 @@ function recordCategoryOutcome(
   const expectedStat = stats.get(expected);
   if (!expectedStat) return;
 
-  expectedStat.totalExpected++;
+  expectedStat.totalExpected += 1;
   if (categoryMatch) {
-    expectedStat.tp++;
+    expectedStat.tp += 1;
     return;
   }
 
-  expectedStat.fn++;
+  expectedStat.fn += 1;
   if (isKnownCategory(predicted)) {
     const predictedStat = stats.get(predicted);
-    if (predictedStat) predictedStat.fp++;
+    if (predictedStat) {
+      predictedStat.fp += 1;
+    }
   }
 }
 
@@ -159,33 +168,53 @@ function scoreAttributionCase(
   report: ReturnType<typeof SageCrashEngine.diagnose>,
   expectedCulprit: string,
 ): void {
-  counters.attributionDenominator++;
+  counters.attributionDenominator += 1;
   const expected = expectedCulprit.toLowerCase();
   const top1Match = report.culpritMod?.toLowerCase() === expected;
   const top3Match = report.suspectedMods.slice(0, 3).some((mod) => mod.toLowerCase() === expected);
 
-  if (top1Match) counters.top1AttributionMatches++;
-  if (top3Match) counters.top3AttributionMatches++;
-  if (top1Match) counters.top1HistoricalMatches++;
-  if (top3Match) counters.top3HistoricalMatches++;
+  if (top1Match) {
+    counters.top1AttributionMatches += 1;
+    counters.top1HistoricalMatches += 1;
+  }
+  if (top3Match) {
+    counters.top3AttributionMatches += 1;
+    counters.top3HistoricalMatches += 1;
+  }
 }
 
 function scoreSystemicCase(counters: HistoricalCounters, categoryMatch: boolean): void {
-  counters.systemicDenominator++;
-  if (!categoryMatch) return;
-  counters.systemicCategoryMatches++;
-  counters.top1HistoricalMatches++;
-  counters.top3HistoricalMatches++;
+  counters.systemicDenominator += 1;
+  if (categoryMatch) {
+    counters.systemicCategoryMatches += 1;
+    counters.top1HistoricalMatches += 1;
+    counters.top3HistoricalMatches += 1;
+  }
+}
+
+function computeF1Row(category: CrashCategory, stat: CategoryStat): CategoryStatRow {
+  const precision = computePercentage(stat.tp, stat.tp + stat.fp);
+  const recall = computePercentage(stat.tp, stat.tp + stat.fn);
+  const sum = precision + recall;
+  const f1 = sum > 0 ? (2 * precision * recall) / sum : 0;
+  return {
+    category,
+    samples: stat.totalExpected,
+    precision,
+    recall,
+    f1,
+  };
 }
 
 function buildCategoryRows(stats: CategoryStats): CategoryStatRow[] {
-  return SAGE_EVAL_CATEGORIES.map((category) => {
-    const row = stats.get(category) ?? { tp: 0, fp: 0, fn: 0, totalExpected: 0 };
-    const precision = row.tp + row.fp > 0 ? (row.tp / (row.tp + row.fp)) * 100 : 100;
-    const recall = row.tp + row.fn > 0 ? (row.tp / (row.tp + row.fn)) * 100 : 100;
-    const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
-    return { category, samples: row.totalExpected, precision, recall, f1 };
-  });
+  const emptyStat: CategoryStat = { tp: 0, fp: 0, fn: 0, totalExpected: 0 };
+  return SAGE_EVAL_CATEGORIES.map((category) => computeF1Row(category, stats.get(category) ?? emptyStat));
+}
+
+function computeMacroF1(categoryRows: CategoryStatRow[]): number {
+  if (categoryRows.length === 0) return 0;
+  const total = categoryRows.reduce((sum, row) => sum + row.f1, 0);
+  return total / categoryRows.length;
 }
 
 export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationResult {
@@ -200,9 +229,11 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
 
     const categoryMatch = report.category === sample.category;
     recordCategoryOutcome(stats, sample.category, report.category, categoryMatch);
-    if (categoryMatch) totalCorrectCategory++;
+    if (categoryMatch) {
+      totalCorrectCategory += 1;
+    }
 
-    counters.historicalDenominator++;
+    counters.historicalDenominator += 1;
     if (sample.expectedCulprit) {
       scoreAttributionCase(counters, report, sample.expectedCulprit);
     } else {
@@ -211,13 +242,13 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
   }
 
   const categoryRows = buildCategoryRows(stats);
-  const macroF1 = categoryRows.reduce((sum, row) => sum + row.f1, 0) / SAGE_EVAL_CATEGORIES.length;
+  const sampleCount = samples.length;
 
   return {
-    sampleCount: samples.length,
-    overallCategoryAccuracy: samples.length > 0 ? (totalCorrectCategory / samples.length) * 100 : 0,
-    macroF1,
-    meanLatencyMs: samples.length > 0 ? totalLatencyMs / samples.length : 0,
+    sampleCount,
+    overallCategoryAccuracy: sampleCount > 0 ? (totalCorrectCategory / sampleCount) * 100 : 0,
+    macroF1: computeMacroF1(categoryRows),
+    meanLatencyMs: sampleCount > 0 ? totalLatencyMs / sampleCount : 0,
     top1Historical: ratio(counters.top1HistoricalMatches, counters.historicalDenominator),
     top3Historical: ratio(counters.top3HistoricalMatches, counters.historicalDenominator),
     top1Attribution: ratio(counters.top1AttributionMatches, counters.attributionDenominator),
@@ -258,9 +289,16 @@ export function collectSageGateFailures(
   return failures;
 }
 
-function formatMetricStatus(measured: number, threshold: number, higherIsBetter: boolean): string {
-  const pass = higherIsBetter ? measured >= threshold : measured <= threshold;
-  return pass ? `✅ Pass (${measured.toFixed(higherIsBetter ? 1 : 2)}${higherIsBetter ? "%" : " ms"})` : `❌ Fail (${measured.toFixed(higherIsBetter ? 1 : 2)}${higherIsBetter ? "%" : " ms"})`;
+function formatPercentageStatus(measured: number, threshold: number): string {
+  const pass = measured >= threshold;
+  const icon = pass ? "✅ Pass" : "❌ Fail";
+  return `${icon} (${measured.toFixed(1)}%)`;
+}
+
+function formatLatencyStatus(measured: number, threshold: number): string {
+  const pass = measured <= threshold;
+  const icon = pass ? "✅ Pass" : "❌ Fail";
+  return `${icon} (${measured.toFixed(2)} ms)`;
 }
 
 export function formatRatioLine(label: string, metric: RatioMetric): string {
@@ -285,14 +323,14 @@ export function buildSageEvaluationMarkdown(result: SageEvaluationResult, evalua
 
 | Metric | Measured Value | Benchmark Target | Status |
 |:---|:---:|:---:|:---:|
-| **Benchmark Classification Accuracy** | **${result.overallCategoryAccuracy.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatMetricStatus(result.overallCategoryAccuracy, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN, true)} |
-| **Macro F1-Score** | **${result.macroF1.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatMetricStatus(result.macroF1, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN, true)} |
+| **Benchmark Classification Accuracy** | **${result.overallCategoryAccuracy.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(result.overallCategoryAccuracy, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
+| **Macro F1-Score** | **${result.macroF1.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(result.macroF1, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
 | **Top-1 (histórico, mezclado)** | **${result.top1Historical.percentage.toFixed(1)}%** | informativo | ${result.top1Historical.numerator}/${result.top1Historical.denominator} |
-| **Top-3 (histórico, mezclado)** | **${result.top3Historical.percentage.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}.0% | ${formatMetricStatus(result.top3Historical.percentage, SAGE_EVAL_THRESHOLDS.TOP3_MIN, true)} |
+| **Top-3 (histórico, mezclado)** | **${result.top3Historical.percentage.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}.0% | ${formatPercentageStatus(result.top3Historical.percentage, SAGE_EVAL_THRESHOLDS.TOP3_MIN)} |
 | **Top-1 atribución (con culpable)** | **${result.top1Attribution.percentage.toFixed(1)}%** | informativo | ${result.top1Attribution.numerator}/${result.top1Attribution.denominator} |
 | **Top-3 atribución (con culpable)** | **${result.top3Attribution.percentage.toFixed(1)}%** | informativo | ${result.top3Attribution.numerator}/${result.top3Attribution.denominator} |
 | **Acierto sistémico sin culpable** | **${result.systemicCategoryCorrect.percentage.toFixed(1)}%** | informativo | ${result.systemicCategoryCorrect.numerator}/${result.systemicCategoryCorrect.denominator} |
-| **Mean Inference Latency** | **${result.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatMetricStatus(result.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS, false)} |
+| **Mean Inference Latency** | **${result.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatLatencyStatus(result.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS)} |
 
 ### Métricas desglosadas (SAGE-02)
 
@@ -323,3 +361,4 @@ npm run eval:sage
 CI gate thresholds (\`SAGE-03\`): Macro F1 ≥ ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}%, Top-3 histórico ≥ ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}%, latencia media ≤ ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS} ms.
 `;
 }
+

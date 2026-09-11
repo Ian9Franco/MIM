@@ -82,10 +82,11 @@ function testGateFailsWhenThresholdBroken(): void {
 }
 
 function testSelfTestFailExitCode(): void {
-  const script = path.join(process.cwd(), "scripts/evaluation/sage-eval.ts");
+  const script = path.join(process.cwd(), "scripts", "evaluation", "sage-eval.ts");
+  const tsNodeBin = require.resolve("ts-node/dist/bin.js");
   const run = spawnSync(
-    "npx",
-    ["ts-node", "--project", "tsconfig.scripts.json", script, "--self-test-fail"],
+    process.execPath,
+    [tsNodeBin, "--project", "tsconfig.scripts.json", script, "--self-test-fail"],
     { encoding: "utf8" },
   );
   assert.equal(run.status, 1, run.stderr || run.stdout);

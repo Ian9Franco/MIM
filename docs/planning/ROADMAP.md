@@ -212,4 +212,8 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Scripts scoped (`build:hub`, `lint:hub`, `build:all`, `lint:all`) y CI (`tsc --project apps/hub/tsconfig.json`).
   - [x] Tests y tooling de arquitectura actualizados a rutas `apps/hub/*`.
   - [ ] Unificación de módulos duplicados hub ↔ root vía `@mim/*` (backlog post-ARCH-5).
-- [ ] **Hitos ARCH-6 a ARCH-8: Surface Server Manager, CI scoped y versionado semántico (Pendiente).**
+- [x] **Hito ARCH-6: Surface explícita de Server Manager (Desktop `/servers`):**
+  - [x] Decisión registrada en [ADR-008](../adr/ADR-008-server-manager-desktop-surface.md): sección Desktop, no Hub ni app separada.
+  - [x] Ownership: `app/servers/`, `components/server/`, `app/api/server/*` → Desktop; motor en `@mim/server-engine`.
+  - [ ] `@mim/server-ui` diferido hasta segundo consumidor o gate ARCH-7.
+- [ ] **Hitos ARCH-7 y ARCH-8: CI scoped y versionado semántico (Pendiente).**

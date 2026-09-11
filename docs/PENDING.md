@@ -33,7 +33,7 @@
 | Ítem Pendiente | Estado | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
 | **Mover `web/` a `apps/hub`:** Trasladar la aplicación PWA/Web al workspace `apps/hub`, unificando aliases y eliminando dependencias duplicadas. | `ARCH-5` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md)<br/>📦 [monorepo-inventory.md](./architecture/monorepo-inventory.md) |
-| **Surface explícita de Server Manager:** Resolver si Server Manager vive como sección en `apps/desktop` o package modular `@mim/server-ui`. | `ARCH-6` | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **Surface explícita de Server Manager:** Sección Desktop `/servers` (no Hub, no app separada). Ver [ADR-008](./adr/ADR-008-server-manager-desktop-surface.md). | `ARCH-6` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 | **CI Scoped por Superficie:** Pipeline de GitHub Actions que solo ejecute builds/tests de los packages y apps afectados por cada commit. | `ARCH-7` | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 | **Versionado Semántico Independiente:** Política de releases separadas por app/package sin forzar un bump global de versión. | `ARCH-8` | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 

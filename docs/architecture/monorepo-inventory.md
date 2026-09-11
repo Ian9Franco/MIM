@@ -121,7 +121,6 @@ Se detectaron **23 archivos candidatos a duplicación** entre el Hub web y la ra
    - Mover `app/`, `components/`, `standalone/` a `apps/desktop`.
 5. **ARCH-5 (Apps Hub):**
    - Mover `web/` a `apps/hub` y reemplazar duplicados por imports de `@mim/*`.
-6. **ARCH-6 (Surface Server Manager):**
-   - Composición clara en `apps/desktop` cuando la auditoría y SFTP estén estables.
+6. **ARCH-6 (Surface Server Manager):** ✅ Cerrado — sección Desktop `/servers`; ver [ADR-008](../adr/ADR-008-server-manager-desktop-surface.md). Sin `@mim/server-ui` hasta segundo consumidor.
 7. **ARCH-7 & ARCH-8 (CI Scoped & Releases):**
    - Gates de CI por package afectado y versionado semántico de plataforma.

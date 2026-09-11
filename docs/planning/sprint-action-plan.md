@@ -89,7 +89,7 @@ La Definition of Done textual de #58 llega hasta deploy con rollback y SAGE remo
 | ARCH-3 | Extraer fronteras estables de diff/reconciliation, scanner/validator, SAGE, NBT, Aduana y security. | Un dominio por PR, pruebas conservadas, I/O en adapters; no confundir independencia de UI con compatibilidad browser. |
 | ARCH-4 | Desktop explícito en apps/desktop: UI y Electron. | Assets, tracing, prepare, secret-store, scraper, packaging y release correctos; probar instalador y portable Windows. |
 | ARCH-5 | web → apps/hub; eliminar duplicación semántica comprobada. | ✅ *CERRADO* (Move a apps/hub, workspaces apps/*, types/lints/builds OK) |
-| ARCH-6 | Surface explícita de Server Manager cuando la auditoría esté estable. | Propuesta inicial: sección Desktop; resolver app separada o composición antes del traslado, sin app vacía. |
+| ARCH-6 | Surface explícita de Server Manager cuando la auditoría esté estable. | ✅ *CERRADO* — Sección Desktop `/servers`; sin `@mim/server-ui` ni Hub. [ADR-008](../adr/ADR-008-server-manager-desktop-surface.md) |
 | ARCH-7 | CI por superficie y dependencias afectadas, con gate global de contratos/ciclos. | Builds independientes, coverage preservado, exports públicos y ausencia de dependencias inversas. |
 | ARCH-8 | Política de versión de plataforma, releases por app y compatibilidad de schemas. | Documentación verificable; packages privados salvo necesidad concreta de publicación. |
 

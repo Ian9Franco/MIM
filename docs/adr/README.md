@@ -21,3 +21,5 @@ Each record follows the standard Michael Nygard format:
 | **[ADR-004](./ADR-004-atomic-writes-nbt-recovery.md)** | Atomic writes and snapshot backups for corrupted NBT recovery | NBT Rescue Engine | ✅ Accepted |
 | **[ADR-005](./ADR-005-static-bytecode-inspection-vs-execution.md)** | Static bytecode inspection instead of executing unknown JARs | Security Engine | ✅ Accepted |
 | **[ADR-006](./ADR-006-typed-event-bus.md)** | Reactive typed event bus for cross-engine fault isolation | Core Architecture | ✅ Accepted |
+| **[ADR-007](./ADR-007-mimbot-model-gateway.md)** | MIMbot Model Gateway (provider-agnostic routing) | MIMbot / AI | ✅ Accepted |
+| **[ADR-008](./ADR-008-server-manager-desktop-surface.md)** | Server Manager as Desktop surface, not Hub or `@mim/server-ui` | Server Manager / ARCH-6 | ✅ Accepted |

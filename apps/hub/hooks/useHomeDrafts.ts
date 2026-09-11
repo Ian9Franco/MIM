@@ -25,7 +25,10 @@ import {
   resolveDraftModrinthItem,
 } from "../lib/drafts/draftRemote";
 import { inferSide, normalizeContentType } from "../lib/projectTypes";
+import { createDraftRepository, type DraftRepositoryClient } from "../lib/drafts/draftRepository";
 import { supabase } from "../lib/supabaseClient";
+
+const draftRepository = createDraftRepository(supabase as unknown as DraftRepositoryClient);
 
 interface UseHomeDraftsOptions {
   userId?: string;
@@ -131,10 +134,7 @@ export function useHomeDrafts({
 
     try {
       if (!silent) setLoadingDrafts(true);
-      const { data, error } = await supabase
-        .from("drafts")
-        .select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)")
-        .eq("owner_id", userId);
+      const { data, error } = await draftRepository.listDrafts(userId);
       if (error) throw error;
       const icons = await fetchDraftIcons(collectDraftProjectIds(data));
       setUserDrafts(decodeHomeDrafts(data, icons));
@@ -205,13 +205,12 @@ export function useHomeDrafts({
   ): Promise<HomeDraft | null> => {
     if (!userId) return null;
     try {
-      const { data, error } = await supabase.from("drafts").insert({
-        owner_id: userId,
+      const { data, error } = await draftRepository.createDraft({
+        ownerId: userId,
         name,
-        minecraft_version: version,
+        minecraftVersion: version,
         loader,
-        visibility: "private",
-      }).select().single();
+      });
       if (error) throw error;
       notifyDraftsChanged();
       await refreshDrafts();
@@ -324,15 +323,12 @@ export function useHomeDrafts({
     const item = userDrafts.find((draft) => draft.id === draftId)?.items?.find(
       (candidate) => (itemId && candidate.id === itemId) || candidate.project_id === projectId,
     );
-    const query = supabase.from("draft_items").delete();
-    const { error } = itemId
-      ? await query.eq("id", itemId)
-      : await query.eq("draft_id", draftId).eq("project_id", projectId);
+    const { error } = await draftRepository.deleteDraftItem({ draftId, projectId, itemId });
     if (error) showAlert("Error", `Error al eliminar del draft: ${error.message}`);
     else {
-      await supabase.from("draft_activity").insert({
-        draft_id: draftId,
-        profile_id: userId,
+      await draftRepository.recordDraftActivity({
+        draftId,
+        profileId: userId,
         action: "eliminó un ítem",
         payload: {
           name: item?.name || item?.mod_name || projectId,
@@ -386,7 +382,7 @@ export function useHomeDrafts({
 
   const deleteDraft = useCallback(async (draftId: string): Promise<void> => {
     if (!userId) return;
-    const { error } = await supabase.from("drafts").delete().eq("id", draftId);
+    const { error } = await draftRepository.deleteDraft(draftId);
     if (error) showAlert("Error", `Error al eliminar el draft: ${error.message}`);
     notifyDraftsChanged();
     await refreshDrafts();
@@ -397,22 +393,23 @@ export function useHomeDrafts({
     updates: DraftMetadataUpdates,
   ): Promise<boolean> => {
     if (!userId) return false;
-    const { error } = await supabase.from("drafts")
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("id", draftId);
+    const { error } = await draftRepository.updateDraftMetadata(draftId, {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    });
     if (error) {
       showAlert("Error", `No se pudo guardar la configuración: ${error.message}`);
       return false;
     }
 
     const changedFields = changedDraftMetadata(updates);
-    await supabase.from("draft_activity").insert({
-      draft_id: draftId,
-      profile_id: userId,
+    await draftRepository.recordDraftActivity({
+      draftId,
+      profileId: userId,
       action: changedFields.length > 0
         ? `actualizó la configuración (${changedFields.join(", ")})`
         : "actualizó el draft",
-      payload: updates,
+      payload: { ...updates },
     });
     await refreshDrafts();
     return true;

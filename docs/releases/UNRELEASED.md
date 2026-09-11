@@ -31,6 +31,9 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - Transporte SFTP escribible con la misma verificación de host y contención de rutas; payloads desde el build AllHost.
   - `/servers` ofrece confirmación explícita, progreso `preflight` → `executing` → `completed` | `failed` | `recovery-required`, y bloqueo de nuevos deploys en recuperación.
   - Persistencia durable de snapshots, SAGE remoto, admin/RCON y sync multiplayer siguen pendientes.
+- **Server Manager SRV-3 persistencia en disco (T1.1, no cierra #58):**
+  - `FileSnapshotStore` en `@mim/server-engine`: un JSON por snapshot, journal NDJSON por servidor, escritura atómica (tmp + rename) y reapertura desde la misma carpeta.
+  - `MemorySnapshotStore` se conserva. Recuperación de planes abiertos (T1.2) y cableado en inspect/deploy (T1.3) siguen pendientes.
 - **MIMBOT-GW / Model Gateway & Context Builder**:
   - BOT-05, subalcance lifecycle/credenciales verificado post-merge en PR #68 / `d098d7ad`: cancelación y timeout se propagan a Gemini/OpenRouter, los retries respetan el mismo ciclo cancelable y MIM-Bot Chat (alcance proyecto) usa el proveedor seleccionado sin credenciales en URLs. BOT-05 global permanece abierto.
   - Abstracción de proveedores `AIProvider` (`GeminiProvider`, `OpenRouterProvider`) con selector `createAIProvider.ts`. Gemini permanece como default; GLM vía OpenRouter es opt-in (`MIMBOT_AI_PROVIDER=openrouter`).

@@ -14,6 +14,7 @@ export * from "./audit";
 export * from "./preflight";
 export * from "./snapshot";
 export * from "./snapshotStore";
+export * from "./fileSnapshotStore";
 export * from "./rollback";
 export * from "./executor";
 export * from "./sageRemote";

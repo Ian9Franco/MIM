@@ -127,8 +127,8 @@ export function ProfileTab({
 
       const aId = String(a.mod_id ?? a.project_id ?? a.id);
       const bId = String(b.mod_id ?? b.project_id ?? b.id);
-      const aKey = projectUpdateKey((a.platform as string) ?? "modrinth", aId);
-      const bKey = projectUpdateKey((b.platform as string) ?? "modrinth", bId);
+      const aKey = projectUpdateKey(typeof a.platform === "string" ? a.platform : "modrinth", aId);
+      const bKey = projectUpdateKey(typeof b.platform === "string" ? b.platform : "modrinth", bId);
       const aUpdated = !aKey.startsWith("youtube:") && !!recentUpdates[aKey];
       const bUpdated = !bKey.startsWith("youtube:") && !!recentUpdates[bKey];
 

@@ -8,6 +8,7 @@ import type {
 import type { HomeDraft } from "../../lib/drafts/draftContract";
 import type { HubUserProfile } from "../../types/profile";
 import type { FomoUserSession } from "../../types/fomo";
+import type { Fn } from "../../types/fn";
 
 export interface ProfileTabProps {
   session: FomoUserSession | null;
@@ -30,9 +31,9 @@ export interface ProfileTabProps {
   handleLogout: () => void;
   handleOpenEditProfile: () => void;
   handleOpenModDetails: (mod: ModHit) => void;
-  handleEnterDraftCollection(draft: HomeDraft): void;
-  onCreateDraft(): void;
-  onEditDraft?(draft: HomeDraft): void;
+  handleEnterDraftCollection: Fn<[HomeDraft]>;
+  onCreateDraft: Fn<[]>;
+  onEditDraft?: Fn<[HomeDraft]>;
   onSearchAuthor?: (name: string, platform: string) => void;
   onRemoveShare?: (projectId: string) => Promise<void>;
   onUpdateSharePriority?: (projectId: string, priority: boolean) => Promise<void>;

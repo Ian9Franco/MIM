@@ -1,12 +1,7 @@
 /**
  * /api/project/transfer-category — POST
- * ─────────────────────────────────────────────────────────────────────────────
  * Copia mods de una categoría (o todos) entre dos proyectos locales
  * que comparten la misma versión de Minecraft.
- *
- * Body: { sourceProject: string, targetProject: string, version: string, category: string }
- * Respuesta: { success: true, count: number }
- * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { NextResponse } from "next/server";
@@ -19,22 +14,21 @@ import { withApiGuard } from "@/lib/apiGuard";
 function copyFolderRecursive(src: string, dest: string): number {
   if (!fs.existsSync(src)) return 0;
   let count = 0;
-
   fs.mkdirSync(dest, { recursive: true });
-
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
-
-    if (entry.isDirectory()) {
-      count += copyFolderRecursive(srcPath, destPath);
-    } else if (entry.isFile()) {
+    if (entry.isDirectory()) count += copyFolderRecursive(srcPath, destPath);
+    else if (entry.isFile()) {
       fs.copyFileSync(srcPath, destPath);
       count++;
     }
   }
-
   return count;
+}
+
+function sanitizeSegment(value: string) {
+  return value.replace(/[<>:"/\\|?*]/g, "_").trim();
 }
 
 const transferCategoryBodySchema = z.object({
@@ -45,73 +39,40 @@ const transferCategoryBodySchema = z.object({
   loader: z.string().optional(),
 });
 
-export const POST = withApiGuard(
-  { bodySchema: transferCategoryBodySchema },
-  async ({ body }) => {
-    try {
-      const { sourceProject, targetProject, version, category, loader = "fabric" } = body;
+export const POST = withApiGuard({ bodySchema: transferCategoryBodySchema }, async ({ body }) => {
+  try {
+    const { sourceProject, targetProject, version, category, loader = "fabric" } = body;
+    const safeSource = sourceProject === "__global__" ? "__global__" : sanitizeSegment(sourceProject);
+    const safeTarget = sanitizeSegment(targetProject);
+    if (safeSource === safeTarget) {
+      return NextResponse.json({ error: "Source and target project cannot be the same" }, { status: 400 });
+    }
 
-      const safeSource = sourceProject === "__global__" ? "__global__" : sourceProject.replace(/[<>:"/\\|?*]/g, "_").trim();
-      const safeTarget = targetProject.replace(/[<>:"/\\|?*]/g, "_").trim();
-      const safeVersion = version.replace(/[<>:"/\\|?*]/g, "_").trim();
-      const safeLoader = loader.replace(/[<>:"/\\|?*]/g, "_").trim();
-
-      if (safeSource === safeTarget) {
-        return NextResponse.json(
-          { error: "Source and target project cannot be the same" },
-          { status: 400 }
-        );
-      }
-
-      // Determine source directory: either a project-specific mods folder or the global loader folder
-      const sourceBaseDir = safeSource === "__global__"
-        ? path.join(SOURCE_BASE, safeVersion, safeLoader)
-        : path.join(SOURCE_BASE, "_projects", safeSource, "mods");
-
-      const targetBaseDir = path.join(SOURCE_BASE, "_projects", safeTarget, "mods");
-
+    const sourceBaseDir = safeSource === "__global__"
+      ? path.join(SOURCE_BASE, sanitizeSegment(version), sanitizeSegment(loader))
+      : path.join(SOURCE_BASE, "_projects", safeSource, "mods");
+    const targetBaseDir = path.join(SOURCE_BASE, "_projects", safeTarget, "mods");
     if (!fs.existsSync(sourceBaseDir)) {
       const errorMsg = sourceProject === "__global__"
         ? `La librería global para ${version}/${loader} no existe o está vacía.`
         : `El proyecto origen "${sourceProject}" no tiene mods instalados.`;
-        
-      return NextResponse.json(
-        { error: errorMsg },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: errorMsg }, { status: 404 });
+    }
+
+    if (category !== "all" && !(CATEGORIES as readonly string[]).includes(category)) {
+      return NextResponse.json({ error: `Categoría inválida: ${category}` }, { status: 400 });
     }
 
     let copiedCount = 0;
-
-    if (category === "all") {
-      // Transfer all categories
-      for (const cat of CATEGORIES) {
-        const srcCatDir = path.join(sourceBaseDir, cat);
-        const destCatDir = path.join(targetBaseDir, cat);
-        if (fs.existsSync(srcCatDir)) {
-          copiedCount += copyFolderRecursive(srcCatDir, destCatDir);
-        }
-      }
-    } else {
-      // Transfer specific category (e.g. .local, .essential, .server)
-      if (!(CATEGORIES as readonly string[]).includes(category)) {
-        return NextResponse.json(
-          { error: `Categoría inválida: ${category}` },
-          { status: 400 }
-        );
-      }
-
-      const srcCatDir = path.join(sourceBaseDir, category);
-      const destCatDir = path.join(targetBaseDir, category);
-
+    for (const cat of category === "all" ? CATEGORIES : [category]) {
+      const srcCatDir = path.join(sourceBaseDir, cat);
       if (!fs.existsSync(srcCatDir)) {
-        return NextResponse.json(
-          { error: `La categoría "${category}" no existe en el proyecto origen.` },
-          { status: 404 }
-        );
+        if (category !== "all") {
+          return NextResponse.json({ error: `La categoría "${category}" no existe en el proyecto origen.` }, { status: 404 });
+        }
+        continue;
       }
-
-      copiedCount = copyFolderRecursive(srcCatDir, destCatDir);
+      copiedCount += copyFolderRecursive(srcCatDir, path.join(targetBaseDir, cat));
     }
 
     console.log(`[/api/project/transfer-category] Transferred ${copiedCount} files from ${sourceProject} to ${targetProject}`);
@@ -121,6 +82,4 @@ export const POST = withApiGuard(
     console.error("[/api/project/transfer-category] Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  }
-);
+});

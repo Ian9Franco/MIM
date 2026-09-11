@@ -10,6 +10,7 @@ import { CommunityHeader, type CommunitySection } from "../community/CommunitySh
 import { CommunityRankings } from "../community/CommunityRankings";
 import { CommunityPublicProfile, type PublicProfileFavorite, type PublicProfileAuthor, type PublicProfileDraft, type PublicProfileShare } from "../community/CommunityPublicProfile";
 import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
+import type { Fn } from "../../types/fn";
 
 export interface CommunityProfile {
   id: string;
@@ -362,10 +363,10 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     <motion.div key="comunidad" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="flex min-h-0 flex-1 flex-col">
       <CommunityHeader active={section} onChange={changeSection} metrics={communityMetrics} />
       <AnimatePresence mode="wait">
-        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={setSharesPage} onOpenProfile={openProfile} onOpenMod={handleOpenModDetails} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reactions={reactions} onToggleReaction={toggleReaction} />}
-        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={handleOpenModDetails} /></motion.div>}
-        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={openProfile} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={toggleProfileFollow} />}
-        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id ?? ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile?.id ?? ""); }} />}
+        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={(nextPage) => { setSharesPage(nextPage); }} onOpenProfile={(value) => { void openProfile(value); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} userFavorites={userFavorites} onToggleFavorite={(mod) => { onToggleFavorite(mod); }} reactions={reactions} onToggleReaction={(shareId) => { void toggleReaction(shareId); }} />}
+        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={(mod) => { handleOpenModDetails(mod); }} /></motion.div>}
+        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={(value) => { void openProfile(value); }} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={(profileId) => { void toggleProfileFollow(profileId); }} />}
+        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id ?? ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile?.id ?? ""); }} />}
       </AnimatePresence>
     </motion.div>
   );
@@ -377,13 +378,13 @@ interface FeedProps {
   recentUpdates: Record<string, boolean>;
   page: number;
   hasNext: boolean;
-  onPageChange(page: number): void;
-  onOpenProfile(value: unknown): void;
-  onOpenMod(mod: ModHit): void;
+  onPageChange: Fn<[number]>;
+  onOpenProfile: Fn<[unknown]>;
+  onOpenMod: Fn<[ModHit]>;
   userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
-  onToggleFavorite(mod: ModHit): void;
+  onToggleFavorite: Fn<[ModHit]>;
   reactions: Record<string, { count: number; mine: boolean }>;
-  onToggleReaction(shareId: string): void;
+  onToggleReaction: Fn<[string]>;
 }
 
 interface ShareCardProps {
@@ -391,12 +392,12 @@ interface ShareCardProps {
   index: number;
   updated: boolean;
   featured?: boolean;
-  onOpenProfile(value: unknown): void;
-  onOpenMod(mod: ModHit): void;
+  onOpenProfile: Fn<[unknown]>;
+  onOpenMod: Fn<[ModHit]>;
   userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
-  onToggleFavorite(mod: ModHit): void;
+  onToggleFavorite: Fn<[ModHit]>;
   reaction?: { count: number; mine: boolean };
-  onToggleReaction(shareId: string): void;
+  onToggleReaction: Fn<[string]>;
 }
 
 /** The feed keeps user context first, then presents the shared media as one clear action. */
@@ -488,7 +489,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
 
       {isYoutube ? (
         <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025]">
-          {(meta.thumbnail || item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={(meta.thumbnail || item.icon_url) ?? undefined} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
+          {(meta.thumbnail ?? item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={(meta.thumbnail ?? item.icon_url) ?? undefined} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
           <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
         </div>
       ) : (
@@ -500,7 +501,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
       <div className="grid grid-cols-4 gap-1.5">
         <button type="button" onClick={(event) => { event.stopPropagation(); if (isYoutube) playVideo(); else onOpenMod(mod); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
         {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={(event) => { event.stopPropagation(); onToggleFavorite(mod); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
-        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine || false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count || 0}</button>
+        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine ?? false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count ?? 0}</button>
         <button type="button" onClick={(event) => { event.stopPropagation(); onOpenProfile(shareProfile); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
       </div>
 
@@ -508,13 +509,13 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
   );
 }
 
-function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: CommunityProfile[]; loading: boolean; onOpen: (profile: CommunityProfile) => void; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: (profileId: string) => void }) {
+function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: CommunityProfile[]; loading: boolean; onOpen: Fn<[CommunityProfile]>; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: Fn<[string]> }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"new" | "active" | "creators">("new");
   const visibleProfiles = useMemo(() => profiles
     .filter((profile) => profile.username?.toLowerCase().includes(query.trim().toLowerCase()))
     .filter((profile) => filter !== "creators" || creatorIds.has(profile.id))
-    .sort((a, b) => new Date(filter === "active" ? b.updated_at || b.created_at || 0 : b.created_at || 0).getTime() - new Date(filter === "active" ? a.updated_at || a.created_at || 0 : a.created_at || 0).getTime()), [creatorIds, filter, profiles, query]);
+    .sort((a, b) => new Date(filter === "active" ? b.updated_at ?? b.created_at ?? 0 : b.created_at ?? 0).getTime() - new Date(filter === "active" ? a.updated_at ?? a.created_at ?? 0 : a.created_at ?? 0).getTime()), [creatorIds, filter, profiles, query]);
 
   return <motion.div key="members-list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-3 overflow-y-auto pb-28 scrollbar-none">
     <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface/80 px-3"><Search className="h-4 w-4 text-white/35" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario..." className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30" /></label>

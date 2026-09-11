@@ -15,83 +15,55 @@ const fixIssueBodySchema = z.object({
   payload: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const POST = withApiGuard(
-  { bodySchema: fixIssueBodySchema },
-  async ({ body }) => {
-    try {
-      const { projectName, version, loader, fileName, action, payload } = body;
+function jsonError(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
+}
 
+export const POST = withApiGuard({ bodySchema: fixIssueBodySchema }, async ({ body }) => {
+  try {
+    const { projectName, version, loader, fileName, action, payload } = body;
     const projectModsPath = path.join(SOURCE_BASE, "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
-    const loaderPath = fs.existsSync(projectModsPath)
-      ? projectModsPath
-      : path.join(SOURCE_BASE, version, loader);
+    const loaderPath = fs.existsSync(projectModsPath) ? projectModsPath : path.join(SOURCE_BASE, version, loader);
+    if (!fs.existsSync(loaderPath)) return jsonError("Project mods directory not found", 404);
 
-    if (!fs.existsSync(loaderPath)) {
-      return NextResponse.json({ error: "Project mods directory not found" }, { status: 404 });
-    }
-
-    // Find the file in the loaderPath
     let sourceFilePath = "";
-    let sourceCategory = "";
     let sourceSub = "";
-
     for (const category of Object.keys(SUBCATEGORIES)) {
       const catPath = path.join(loaderPath, category);
       if (!fs.existsSync(catPath)) continue;
-
-      const subs = fs.readdirSync(catPath);
-      for (const sub of subs) {
+      for (const sub of fs.readdirSync(catPath)) {
         const subPath = path.join(catPath, sub);
         if (!fs.statSync(subPath).isDirectory()) continue;
-
         const potentialFile = path.join(subPath, fileName);
         if (fs.existsSync(potentialFile)) {
           sourceFilePath = potentialFile;
-          sourceCategory = category;
           sourceSub = sub;
           break;
         }
       }
       if (sourceFilePath) break;
     }
-
-    if (!sourceFilePath) {
-      return NextResponse.json({ error: "File not found in project" }, { status: 404 });
-    }
+    if (!sourceFilePath) return jsonError("File not found in project", 404);
 
     if (action.startsWith("move_to_")) {
       const targetCategory = typeof payload?.targetCategory === "string" ? payload.targetCategory : "";
       const targetSub = typeof payload?.targetSub === "string" ? payload.targetSub : sourceSub;
-
-      if (!targetCategory || !targetSub) {
-        return NextResponse.json({ error: "Missing targetCategory/targetSub" }, { status: 400 });
-      }
-
+      if (!targetCategory || !targetSub) return jsonError("Missing targetCategory/targetSub", 400);
       const targetPath = path.join(loaderPath, targetCategory, targetSub);
       if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath, { recursive: true });
-
       fs.renameSync(sourceFilePath, path.join(targetPath, fileName));
       return NextResponse.json({ success: true, message: `Moved ${fileName} to ${targetCategory}/${targetSub}` });
-    } 
-    
-    if (action === "disable") {
-      fs.renameSync(sourceFilePath, sourceFilePath + ".disabled");
-      return NextResponse.json({ success: true, message: `Disabled ${fileName}` });
-    } 
-    
-    if (action === "override") {
-      if (payload) {
-        updateModOverride(projectName, fileName, payload as Record<string, unknown>);
-      }
-      return NextResponse.json({ success: true, message: `Applied overrides to ${fileName}` });
     }
-
-    return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    if (action === "disable") {
+      fs.renameSync(sourceFilePath, `${sourceFilePath}.disabled`);
+      return NextResponse.json({ success: true, message: `Disabled ${fileName}` });
+    }
+    if (action === "override" && payload) updateModOverride(projectName, fileName, payload);
+    if (action === "override") return NextResponse.json({ success: true, message: `Applied overrides to ${fileName}` });
+    return jsonError(`Unknown action: ${action}`, 400);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("[/api/project/fix-issue] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, 500);
   }
-
-  }
-);
+});

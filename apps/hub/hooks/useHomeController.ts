@@ -117,12 +117,50 @@ function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
     projectId,
     title,
     description: String(r.description ?? m.description ?? meta.description ?? summaryStr ?? ""),
-    iconUrl: (typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined) ?? undefined,
+    iconUrl: typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined,
     author,
     projectType,
     categories: Array.isArray(r.categories) ? (r.categories as string[]) : (Array.isArray(meta.categories) ? (meta.categories as string[]) : []),
     url: typeof r.url === "string" ? r.url : typeof meta.url === "string" ? (meta.url as string) : `https://modrinth.com/${projectType}/${projectId}`,
     _source: String(m._source ?? (typeof r.platform === "string" ? r.platform : typeof r.source === "string" ? r.source : "modrinth")),
+  };
+}
+
+function shareProjectKey(share: { mod_id?: string; project_id?: string; id?: string }) {
+  return share.mod_id ?? share.project_id ?? share.id;
+}
+
+function buildYoutubeSharePayload(post: Record<string, unknown>, currentChannel: string) {
+  const postId = (typeof post.postId === "string" ? post.postId : undefined)
+    ?? (typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined);
+  const mode = typeof post.mode === "string" ? post.mode : "video";
+  const embeddedVideoId = typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined;
+  const title = typeof post.title === "string" ? post.title
+    : (mode === "short" ? "Short de YouTube" : mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
+  const videoUrl = typeof post.videoUrl === "string" ? post.videoUrl
+    : (embeddedVideoId ? `https://www.youtube.com/watch?v=${embeddedVideoId}` : currentChannel);
+  const thumbnail = typeof post.thumbnail === "string" ? post.thumbnail
+    : (embeddedVideoId ? `https://i.ytimg.com/vi/${embeddedVideoId}/mqdefault.jpg` : null);
+  const contentKind = mode === "short" || mode === "video-short"
+    ? "youtube-short"
+    : mode === "post"
+      ? "youtube-post"
+      : "youtube-video";
+  return {
+    postId,
+    projectId: postId ? `youtube:${postId}` : "",
+    title,
+    thumbnail,
+    summary: JSON.stringify({
+      comment: typeof post.description === "string" ? post.description : "",
+      projectType: contentKind,
+      videoUrl,
+      thumbnail,
+      embeddedVideoId: embeddedVideoId ?? null,
+      mode,
+      publishedAt: typeof post.publishedAt === "string" ? post.publishedAt : "",
+      channelUrl: currentChannel,
+    }),
   };
 }
 
@@ -292,8 +330,8 @@ export function useHomeController() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session as FomoUserSession | null));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession as FomoUserSession | null));
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session as FomoUserSession | null); });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => { setSession(nextSession as FomoUserSession | null); });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -650,7 +688,7 @@ export function useHomeController() {
         fetch(`https://api.modrinth.com/v2/search?index=updated&limit=12&facets=${facets}`).then((r) => r.json()),
         fetch(`https://api.modrinth.com/v2/search?index=newest&limit=12&facets=${facets}`).then((r) => r.json()),
       ]);
-      const mapHits = (hits: Array<Record<string, unknown>>, backup: ModHit[]) => hits?.length ? hits.map((m) => ({
+      const mapHits = (hits: Array<Record<string, unknown>>, backup: ModHit[]) => hits.length ? hits.map((m) => ({
         projectId: String(m.project_id || m.id || ""),
         title: String(m.title || ""),
         description: String(m.description || ""),
@@ -734,11 +772,11 @@ export function useHomeController() {
         if (res.ok) {
           const data = await res.json();
           details = data.details;
-          depsData = data.dependencies || [];
+          depsData = data.dependencies ?? [];
           setSelectedModDetails(details);
           setSelectedModDeps(depsData);
           if (details?.authors && Array.isArray(details.authors) && details.authors.length > 0) {
-            realAuthor = (details.authors[0] as { name?: string }).name || null;
+            realAuthor = (details.authors[0] as { name?: string }).name ?? null;
           }
         }
       } else {
@@ -755,7 +793,7 @@ export function useHomeController() {
               const teamRes = await fetch(`https://api.modrinth.com/v2/team/${details.team}/members`);
               if (teamRes.ok) {
                 const members = await teamRes.json() as Array<{ role?: string; is_owner?: boolean; user?: { username?: string } }>;
-                const owner = members.find((m) => m.role?.toLowerCase() === "owner" || m.is_owner) || members[0];
+                const owner = members.find((m) => m.role?.toLowerCase() === "owner" || m.is_owner) ?? members[0];
                 if (owner?.user?.username) {
                   realAuthor = owner.user.username;
                 }
@@ -818,7 +856,7 @@ export function useHomeController() {
     setSelectedMod(item.mod);
     setSelectedModDetails(item.details ?? null);
     setSelectedModDeps(item.deps ?? []);
-    setModalTab((item as { tab?: "summary" | "gallery" | "desc" | "versions" | "deps" }).tab || "summary");
+    setModalTab((item as { tab?: "summary" | "gallery" | "desc" | "versions" | "deps" }).tab ?? "summary");
   };
 
   const onToggleFavorite = async (mod: ModHit) => {
@@ -968,46 +1006,20 @@ export function useHomeController() {
       showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
       return;
     }
-
-    const postId = (typeof post.postId === "string" ? post.postId : undefined)
-      ?? (typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined);
-    if (!postId) {
+    const payload = buildYoutubeSharePayload(post, currentChannel);
+    if (!payload.postId) {
       showAlert("Sin contenido", "No encontré un identificador válido para compartir este contenido.");
       return;
     }
-
-    const mode = typeof post.mode === "string" ? post.mode : "video";
-    const embeddedVideoId = typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined;
+    const { projectId, title, thumbnail, summary } = payload;
     const userId = session.user.id;
-    const projectId = `youtube:${postId}`;
-    const title = typeof post.title === "string" ? post.title
-      : (mode === "short" ? "Short de YouTube" : mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
-    const videoUrl = typeof post.videoUrl === "string" ? post.videoUrl
-      : (embeddedVideoId ? `https://www.youtube.com/watch?v=${embeddedVideoId}` : currentChannel);
-    const thumbnail = typeof post.thumbnail === "string" ? post.thumbnail
-      : (embeddedVideoId ? `https://i.ytimg.com/vi/${embeddedVideoId}/mqdefault.jpg` : null);
-    const contentKind = mode === "short" || mode === "video-short"
-      ? "youtube-short"
-      : mode === "post"
-        ? "youtube-post"
-        : "youtube-video";
-    const existingShare = userShares.find((share) => (share.mod_id || share.project_id || share.id) === projectId);
-    const summary = JSON.stringify({
-      comment: typeof post.description === "string" ? post.description : "",
-      projectType: contentKind,
-      videoUrl,
-      thumbnail,
-      embeddedVideoId: embeddedVideoId ?? null,
-      mode,
-      publishedAt: typeof post.publishedAt === "string" ? post.publishedAt : "",
-      channelUrl: currentChannel,
-    });
+    const existingShare = userShares.find((share) => shareProjectKey(share) === projectId);
     const previousShares = userShares;
-    const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);
+    const alreadyShared = userShares.some((share) => shareProjectKey(share) === projectId);
 
     setUserShares((prev) => [
       {
-        id: alreadyShared ? prev.find((share) => (share.mod_id || share.project_id || share.id) === projectId)?.id || `optimistic-${projectId}` : `optimistic-${projectId}`,
+        id: alreadyShared ? prev.find((share) => shareProjectKey(share) === projectId)?.id ?? `optimistic-${projectId}` : `optimistic-${projectId}`,
         profile_id: userId,
         mod_id: projectId,
         platform: "youtube",
@@ -1017,25 +1029,14 @@ export function useHomeController() {
         pinned: existingShare?.pinned ?? false,
         created_at: new Date().toISOString(),
       },
-      ...prev.filter((share) => (share.mod_id || share.project_id || share.id) !== projectId),
+      ...prev.filter((share) => shareProjectKey(share) !== projectId),
     ]);
 
     const saveShare = (platform: "youtube" | "modrinth") => {
-      const payload = {
-        platform,
-        name: title,
-        icon_url: thumbnail,
-        summary,
-        pinned: existingShare?.pinned ?? false,
-      };
-
+      const row = { platform, name: title, icon_url: thumbnail, summary, pinned: existingShare?.pinned ?? false };
       return alreadyShared
-        ? supabase.from("favorite_mods").update(payload).eq("profile_id", userId).eq("mod_id", projectId)
-        : supabase.from("favorite_mods").insert({
-          profile_id: userId,
-          mod_id: projectId,
-          ...payload,
-        });
+        ? supabase.from("favorite_mods").update(row).eq("profile_id", userId).eq("mod_id", projectId)
+        : supabase.from("favorite_mods").insert({ profile_id: userId, mod_id: projectId, ...row });
     };
 
     try {

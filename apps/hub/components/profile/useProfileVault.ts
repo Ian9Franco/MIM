@@ -65,19 +65,19 @@ export function useProfileVault({
         const rawItems = d.items ?? (d.draft_items as HomeDraftItem[] | undefined) ?? [];
         const visibility = d.visibility === "public" || d.visibility === "unlisted" ? d.visibility : "private";
         return {
-          name: d.name ?? "Borrador sin título",
+          name: d.name || "Borrador sin título",
           description: d.description ?? "",
-          minecraft_version: d.minecraft_version ?? "1.20.1",
-          loader: d.loader ?? "fabric",
+          minecraft_version: d.minecraft_version || "1.20.1",
+          loader: d.loader || "fabric",
           visibility,
           cover_image: d.cover_image ?? undefined,
           created_at: d.created_at,
           items: rawItems.map((it) => ({
-            project_id: it.project_id ?? it.projectId,
-            mod_name: it.mod_name ?? it.title ?? it.project_id ?? it.projectId,
-            source: (it.source as string | undefined) ?? (it.platform as string | undefined) ?? "modrinth",
-            category: it.category ?? "mods",
-            content_type: it.content_type ?? "mods",
+            project_id: it.project_id,
+            mod_name: it.mod_name ?? it.title ?? it.project_id,
+            source: (typeof it.source === "string" ? it.source : undefined) ?? (typeof it.platform === "string" ? it.platform : undefined) ?? "modrinth",
+            category: it.category,
+            content_type: it.content_type,
             side: it.side,
             version_id: typeof it.version_id === "string" ? it.version_id : (typeof it.versionId === "string" ? it.versionId : undefined),
             dependencies: it.dependencies,

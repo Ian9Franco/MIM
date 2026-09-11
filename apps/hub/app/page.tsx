@@ -169,7 +169,7 @@ export default function Home() {
     }
   }, []);
 
-  const handleOpenDraftEditor = React.useCallback((draft: any) => {
+  const handleOpenDraftEditor = React.useCallback((draft: { id: string }) => {
     setEditingDraftId(draft.id);
     c.setPendingMod(null);
     c.setShowDraftPicker(true);

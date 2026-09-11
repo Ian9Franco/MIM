@@ -31,7 +31,7 @@ export function NbtTreeViewer({ nbtRoot, onModify, readOnly = false }: NBTTreeVi
     const pathParts = keyPath.replace(/\[(\d+)\]/g, '.$1').split('.').filter(Boolean);
     if (pathParts[0] === 'root') pathParts.shift();
 
-    let current: any = newRoot;
+    let current: NBTTag = newRoot;
     for (let i = 0; i < pathParts.length - 1; i++) {
       const part = pathParts[i];
       if (current.type === TagType.Compound) current = current.value[part];

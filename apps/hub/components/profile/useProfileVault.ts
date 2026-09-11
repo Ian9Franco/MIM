@@ -11,6 +11,7 @@ import {
   type MimVaultSchema,
   type EncryptedVaultEnvelope,
   type VaultData,
+  type VaultDraft,
 } from "../../lib/vault/vaultEngine";
 import { importVaultToSupabase, type VaultImportResult } from "../../lib/vault/vaultImporter";
 import { playFomoSound } from "../../lib/sounds";
@@ -18,12 +19,13 @@ import type {
   FomoFavoriteItem,
   FomoFollowedAuthor,
 } from "../../types/fomo";
-import type { HomeDraft } from "../../lib/drafts/draftContract";
+import type { HomeDraft, HomeDraftItem } from "../../lib/drafts/draftContract";
+import type { HubUserProfile } from "../../types/profile";
 import type { Session } from "@supabase/supabase-js";
 
 interface UseProfileVaultParams {
   session: Session | null;
-  profile: Record<string, any> | null;
+  profile: HubUserProfile | null;
   username: string;
   userDrafts: HomeDraft[];
   userFavorites: FomoFavoriteItem[];
@@ -59,43 +61,47 @@ export function useProfileVault({
     try {
       setIsExportingVault(true);
 
-      const formattedDrafts = (userDrafts || []).map((d: Record<string, any>) => ({
-        name: d.name || "Borrador sin título",
-        description: d.description || "",
-        minecraft_version: d.minecraft_version || "1.20.1",
-        loader: d.loader || "fabric",
-        visibility: d.visibility || "private",
-        cover_image: d.cover_image || undefined,
-        created_at: d.created_at,
-        items: ((d.draft_items || d.items || []) as Array<Record<string, any>>).map((it) => ({
-          project_id: it.project_id || it.projectId,
-          mod_name: it.mod_name || it.title || it.project_id || it.projectId,
-          source: it.source || it.platform || "modrinth",
-          category: it.category || "mods",
-          content_type: it.content_type || "mods",
-          side: it.side || "both",
-          version_id: it.version_id || it.versionId || undefined,
-          dependencies: it.dependencies || [],
-        })),
-      }));
+      const formattedDrafts: VaultDraft[] = userDrafts.map((d: HomeDraft) => {
+        const rawItems = d.items ?? (d.draft_items as HomeDraftItem[] | undefined) ?? [];
+        const visibility = d.visibility === "public" || d.visibility === "unlisted" ? d.visibility : "private";
+        return {
+          name: d.name || "Borrador sin título",
+          description: d.description || "",
+          minecraft_version: d.minecraft_version || "1.20.1",
+          loader: d.loader || "fabric",
+          visibility,
+          cover_image: d.cover_image || undefined,
+          created_at: d.created_at,
+          items: rawItems.map((it) => ({
+            project_id: it.project_id || it.projectId,
+            mod_name: it.mod_name || it.title || it.project_id || it.projectId,
+            source: (it.source as string | undefined) || (it.platform as string | undefined) || "modrinth",
+            category: it.category || "mods",
+            content_type: it.content_type || "mods",
+            side: it.side || "both",
+            version_id: typeof it.version_id === "string" ? it.version_id : (typeof it.versionId === "string" ? it.versionId : undefined),
+            dependencies: it.dependencies || [],
+          })),
+        };
+      });
 
-      const formattedFavorites = (userFavorites || []).map((f: Record<string, any>) => ({
-        project_id: f.mod_id || f.project_id || f.id || f.projectId,
-        mod_name: f.mod_name || f.title || f.name,
-        platform: f.platform || f.source || f._source || "modrinth",
+      const formattedFavorites = userFavorites.map((f) => ({
+        project_id: String(f.mod_id ?? f.project_id ?? f.id ?? f.projectId ?? ""),
+        mod_name: String(f.mod_name ?? f.title ?? f.name ?? "Proyecto"),
+        platform: String(f.platform ?? f.source ?? f._source ?? "modrinth"),
         summary: typeof f.summary === "string" ? f.summary : undefined,
-        author: f.author,
-        icon_url: f.icon_url || f.iconUrl,
+        author: typeof f.author === "string" ? f.author : undefined,
+        icon_url: f.icon_url ?? f.iconUrl ?? undefined,
         pinned: !!f.pinned,
-        created_at: f.created_at,
+        created_at: typeof f.created_at === "string" ? f.created_at : undefined,
       }));
 
-      const formattedAuthors = (userFollowedAuthors || []).map((a: Record<string, any>) => ({
-        author_id: a.author_id,
-        author_name: a.author_name || a.name,
-        platform: a.platform || a.source || "modrinth",
-        avatar_url: a.avatar_url || a.iconUrl,
-        created_at: a.created_at,
+      const formattedAuthors = userFollowedAuthors.map((a) => ({
+        author_id: typeof a.author_id === "string" ? a.author_id : undefined,
+        author_name: String(a.author_name ?? a.name ?? "Autor"),
+        platform: String(a.platform ?? (typeof a.source === "string" ? a.source : undefined) ?? "modrinth"),
+        avatar_url: a.avatar_url ?? a.iconUrl ?? undefined,
+        created_at: typeof a.created_at === "string" ? a.created_at : undefined,
       }));
 
       const vaultData: VaultData = {
@@ -111,9 +117,9 @@ export function useProfileVault({
 
       const identity = {
         username: profile?.username || username || "Usuario",
-        avatar_url: profile?.avatar_url,
-        color: profile?.color,
-        banner_url: profile?.banner_url,
+        avatar_url: profile?.avatar_url ?? undefined,
+        color: profile?.color ?? undefined,
+        banner_url: profile?.banner_url ?? undefined,
         banner_meta: profile?.banner_meta,
       };
 

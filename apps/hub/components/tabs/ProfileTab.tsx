@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import type { ProfileTabProps } from "../profile/types";
+import type { HomeDraft } from "../../lib/drafts/draftContract";
 import {
   projectUpdateKey,
   isUpdatedInLastMonth,
@@ -77,10 +78,10 @@ export function ProfileTab({
   // Ordenamiento de favoritos priorizando mods con actualizaciones recientes
   const sortedUserFavorites = React.useMemo(() => {
     return [...userFavorites].sort((a, b) => {
-      const aId = String(a.mod_id || a.project_id || a.projectId || a.id || "");
-      const bId = String(b.mod_id || b.project_id || b.projectId || b.id || "");
-      const aKey = projectUpdateKey(a.platform || a.source || "modrinth", aId);
-      const bKey = projectUpdateKey(b.platform || b.source || "modrinth", bId);
+      const aId = String(a.mod_id ?? a.project_id ?? a.projectId ?? a.id ?? "");
+      const bId = String(b.mod_id ?? b.project_id ?? b.projectId ?? b.id ?? "");
+      const aKey = projectUpdateKey(a.platform ?? a.source ?? "modrinth", aId);
+      const bKey = projectUpdateKey(b.platform ?? b.source ?? "modrinth", bId);
       const updateOrder = Number(!!recentUpdates[bKey]) - Number(!!recentUpdates[aKey]);
       return updateOrder || getCreatedTime(b) - getCreatedTime(a);
     });
@@ -90,16 +91,16 @@ export function ProfileTab({
     () => favoriteFilter === "all"
       ? sortedUserFavorites
       : sortedUserFavorites.filter((item) => {
-          const id = String(item.mod_id || item.project_id || item.projectId || item.id || "");
-          return recentUpdates[projectUpdateKey(item.platform || item.source || "modrinth", id)];
+          const id = String(item.mod_id ?? item.project_id ?? item.projectId ?? item.id ?? "");
+          return recentUpdates[projectUpdateKey(item.platform ?? item.source ?? "modrinth", id)];
         }),
     [favoriteFilter, recentUpdates, sortedUserFavorites]
   );
 
   const latestDraft = React.useMemo(
-    () => userDrafts.reduce<any | null>((latest, draft) => {
-      const draftTime = new Date((draft.updated_at || draft.updatedAt || draft.created_at || 0) as string | number).getTime();
-      const latestTime = latest ? new Date((latest.updated_at || latest.updatedAt || latest.created_at || 0) as string | number).getTime() : -1;
+    () => userDrafts.reduce<HomeDraft | null>((latest, draft) => {
+      const draftTime = new Date((draft.updated_at ?? draft.updatedAt ?? draft.created_at ?? 0) as string | number).getTime();
+      const latestTime = latest ? new Date((latest.updated_at ?? latest.updatedAt ?? latest.created_at ?? 0) as string | number).getTime() : -1;
       return draftTime >= latestTime ? draft : latest;
     }, null),
     [userDrafts]
@@ -124,9 +125,9 @@ export function ProfileTab({
         return bPriority ? 1 : -1;
       }
 
-      const aId = String(a.mod_id || a.project_id || a.id || "");
-      const bId = String(b.mod_id || b.project_id || b.id || "");
-      const aKey = projectUpdateKey((a.platform as string) || "modrinth", aId);
+      const aId = String(a.mod_id ?? a.project_id ?? a.id ?? "");
+      const bId = String(b.mod_id ?? b.project_id ?? b.id ?? "");
+      const aKey = projectUpdateKey((a.platform as string) ?? "modrinth", aId);
       const bKey = projectUpdateKey((b.platform as string) || "modrinth", bId);
       const aUpdated = !aKey.startsWith("youtube:") && !!recentUpdates[aKey];
       const bUpdated = !bKey.startsWith("youtube:") && !!recentUpdates[bKey];
@@ -189,9 +190,9 @@ export function ProfileTab({
           if (res.ok) {
             const projects = await res.json();
             if (Array.isArray(projects)) {
-              projects.forEach((proj: any) => {
-                const key = projectUpdateKey("modrinth", proj.id);
-                const updated = isUpdatedInLastMonth(proj.updated_at || proj.published);
+              projects.forEach((proj: { id?: string; updated_at?: string; published?: string }) => {
+                const key = projectUpdateKey("modrinth", String(proj.id ?? ""));
+                const updated = isUpdatedInLastMonth(proj.updated_at ?? proj.published);
                 globalRecentUpdatesCache[key] = updated;
                 globalRecentUpdatesFetchedAt[key] = Date.now();
                 pairs.push([key, updated]);

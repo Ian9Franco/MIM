@@ -35,7 +35,7 @@ export function ModShareModal({
     try {
       const platform = selectedMod._source === "curseforge" ? "curseforge" : "modrinth";
       const existingShare = userShares.find(
-        (f) => (f.mod_id || f.projectId || (f as any).project_id || f.id) === selectedMod.projectId
+        (f) => (f.mod_id || f.project_id || f.projectId || f.id) === selectedMod.projectId
       );
       const alreadyShared = !!existingShare;
       const summaryText = buildShareMetaFromMod(selectedMod, {
@@ -67,8 +67,9 @@ export function ModShareModal({
       if (refreshUserData) refreshUserData();
       setShowShareModal(false);
       setShareComment("");
-    } catch (err: any) {
-      alert(`Error al compartir: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      alert(`Error al compartir: ${message}`);
     } finally {
       setIsSharing(false);
     }

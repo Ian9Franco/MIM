@@ -39,7 +39,7 @@ export interface SagePlayerRescueProps {
   rescuingPlayer?: boolean;
   rescueLogs?: string[];
   rescueSuccess?: boolean;
-  onRescue?: (options: any) => Promise<any>;
+  onRescue?: (options: { clearInventory?: boolean; changeDimension?: boolean; [key: string]: unknown }) => Promise<unknown>;
 }
 
 export function SagePlayerRescue({ 

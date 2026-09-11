@@ -280,10 +280,10 @@ export interface ValidationIssue {
   autoFixable?: boolean;
   fixAction?:   ValidationFixAction;
   /** Payload para la acción de fix (ej. categoría destino, query de FOMO) */
-  fixPayload?:  Record<string, any>;
+  fixPayload?:  Record<string, unknown>;
   /** Segunda acción sugerida */
   secondaryAction?: ValidationFixAction;
-  secondaryPayload?: Record<string, any>;
+  secondaryPayload?: Record<string, unknown>;
 }
 
 export type PackGrade = "S" | "A" | "B" | "C" | "D" | "F";

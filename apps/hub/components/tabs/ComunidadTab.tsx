@@ -65,7 +65,7 @@ function updateKey(source: string | undefined, projectId: string) {
 
 function isMissingPinnedColumnError(error: unknown) {
   const err = error as { message?: string; details?: string; code?: string } | null;
-  const message = String(err?.message || err?.details || "");
+  const message = String(err?.message ?? err?.details ?? "");
   return err?.code === "42703" || err?.code === "PGRST204" || /\bpinned\b/i.test(message);
 }
 
@@ -241,7 +241,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   useEffect(() => {
     if (!session?.user?.id) return;
     supabase.from("followed_profiles").select("followed_id").eq("follower_id", session.user.id)
-      .then(({ data }) => setFollowedProfileIds(new Set((data || []).map((row: { followed_id: string }) => row.followed_id))));
+      .then(({ data }) => setFollowedProfileIds(new Set((data ?? []).map((row: { followed_id: string }) => row.followed_id))));
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -321,7 +321,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     return () => { cancelled = true; };
   }, [shares]);
 
-  const openProfile = async (profile: CommunityProfile | unknown) => {
+  const openProfile = async (profile: unknown) => {
     const resolved = normalizeCommunityProfile(profile);
     if (!resolved?.id) {
       showAlert?.("Perfil no disponible", "No pudimos abrir este perfil.");
@@ -340,12 +340,12 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     ]);
     const channels = (resolved.banner_meta?.youtube_channels
       ?.filter((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" || channel.visible !== false)
-      .map((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" ? channel : channel.name || channel.url || "")
-      .filter(Boolean) || []) as string[];
+      .map((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" ? channel : channel.name ?? channel.url ?? "")
+      .filter(Boolean) ?? []) as string[];
     setPublicData({
-      favorites: (favorites || []) as PublicProfileFavorite[],
-      authors: (authors || []) as PublicProfileAuthor[],
-      drafts: (drafts || []) as PublicProfileDraft[],
+      favorites: (favorites ?? []) as PublicProfileFavorite[],
+      authors: (authors ?? []) as PublicProfileAuthor[],
+      drafts: (drafts ?? []) as PublicProfileDraft[],
       channels,
       shares: (sharesData || []) as PublicProfileShare[],
     });
@@ -377,13 +377,13 @@ interface FeedProps {
   recentUpdates: Record<string, boolean>;
   page: number;
   hasNext: boolean;
-  onPageChange: (page: number) => void;
-  onOpenProfile: (profile: CommunityProfile | unknown) => void;
-  onOpenMod: (mod: ModHit) => void;
+  onPageChange: (_page: number) => void;
+  onOpenProfile: (_profile: unknown) => void;
+  onOpenMod: (_mod: ModHit) => void;
   userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
-  onToggleFavorite: (mod: ModHit) => void;
+  onToggleFavorite: (_mod: ModHit) => void;
   reactions: Record<string, { count: number; mine: boolean }>;
-  onToggleReaction: (shareId: string) => void;
+  onToggleReaction: (_shareId: string) => void;
 }
 
 /** The feed keeps user context first, then presents the shared media as one clear action. */
@@ -420,7 +420,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
   );
 }
 
-function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: CommunityShareItem; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: CommunityProfile | null | unknown) => void; onOpenMod: (mod: ModHit) => void; userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
+function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: CommunityShareItem; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: unknown) => void; onOpenMod: (mod: ModHit) => void; userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
   const meta = parseShareMeta(item.summary);
   const projectId = item.mod_id || item.id;
   const platform = item.platform || "modrinth";

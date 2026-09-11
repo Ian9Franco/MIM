@@ -94,7 +94,7 @@ export const POST = withApiGuard(
       }
     } else {
       // Transfer specific category (e.g. .local, .essential, .server)
-      if (!CATEGORIES.includes(category as any)) {
+      if (!(CATEGORIES as readonly string[]).includes(category)) {
         return NextResponse.json(
           { error: `Categoría inválida: ${category}` },
           { status: 400 }

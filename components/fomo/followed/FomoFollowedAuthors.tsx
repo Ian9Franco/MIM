@@ -280,8 +280,8 @@ export function FomoFollowedAuthors({
 
     const fetchPersonalData = async () => {
       const result = await fetchJsonWithRetry<{
-        history?: any[];
-        rankings?: Record<string, any[]>;
+        history?: Array<Record<string, unknown>>;
+        rankings?: Record<string, Array<Record<string, unknown>>>;
         hasMore?: boolean;
       }>(`/api/fomo/download-history?page=${page}&limit=20`, { retries: 4, retryDelayMs: 350 });
 
@@ -303,7 +303,7 @@ export function FomoFollowedAuthors({
     };
 
     const fetchCommunityRankings = async () => {
-      const result = await fetchJsonWithRetry<{ rankings?: Record<string, any[]> }>(
+      const result = await fetchJsonWithRetry<{ rankings?: Record<string, Array<Record<string, unknown>>> }>(
         "/api/fomo/community-rankings",
         { retries: 4, retryDelayMs: 350 }
       );
@@ -324,7 +324,7 @@ export function FomoFollowedAuthors({
   }, [subTab, page, rankingsRetryKey]);
 
   const communitySharedMap = React.useMemo(() => {
-    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: any[] }>();
+    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: Array<{ username: string; color?: string | null; avatar_url?: string | null }> }>();
     for (const m of allSharedMods) {
       const key = `${m.platform || "modrinth"}:${m.mod_id}`;
       if (!map.has(key)) map.set(key, { isSharedByMe: false, sharedByOthers: [] });
@@ -344,7 +344,7 @@ export function FomoFollowedAuthors({
   }, [allSharedMods, currentUser?.id]);
 
   const communityAuthorSharedMap = React.useMemo(() => {
-    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: any[] }>();
+    const map = new Map<string, { isSharedByMe: boolean; sharedByOthers: Array<{ username: string; color?: string | null; avatar_url?: string | null }> }>();
     for (const m of allSharedMods) {
       const key = m.mod_id;
       if (!map.has(key)) map.set(key, { isSharedByMe: false, sharedByOthers: [] });

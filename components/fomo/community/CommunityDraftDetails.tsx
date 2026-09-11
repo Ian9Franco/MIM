@@ -465,7 +465,7 @@ export function CommunityDraftDetails({
                     : (isModern ? 'rgba(13,39,80,0.5)' : 'rgba(255,255,255,0.4)'),
                 }}
               >
-                {React.cloneElement(tab.icon as any, {
+                {React.cloneElement(tab.icon as React.ReactElement<{ className?: string }>, {
                   className: `w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`
                 })}
                 {tab.label}
@@ -506,7 +506,7 @@ export function CommunityDraftDetails({
             snapshots={snapshots}
             user={user}
             isModern={isModern}
-            setSnapshotToDelete={setSnapshotToDelete as any}
+            setSnapshotToDelete={(id) => setSnapshotToDelete(id)}
             handleInstallSnapshot={handleInstallSnapshot}
           />
         )}
@@ -601,7 +601,7 @@ export function CommunityDraftDetails({
                 onClick={async () => {
                   try {
                     await supabase.from("drafts").update({ cover_image: coverUrlInput }).eq("id", draft.id);
-                    setDraft((d: any) => d ? { ...d, cover_image: coverUrlInput } : d);
+                    setDraft((d) => d ? { ...d, cover_image: coverUrlInput } : d);
                     setIsCoverModalOpen(false);
                     window.dispatchEvent(new CustomEvent("fomo-show-status", {
                       detail: { text: "Banner actualizado exitosamente.", type: "success" }
@@ -652,6 +652,6 @@ export function CommunityDraftDetails({
   );
 }
 
-function Loader(props: any) {
+function Loader(props: React.ComponentProps<typeof RefreshCw>) {
   return <RefreshCw {...props} />;
 }

@@ -16,6 +16,7 @@ import type {
   FomoFollowedAuthor,
 } from "../types/fomo";
 import type { Session } from "@supabase/supabase-js";
+import type { HubUserProfile } from "../types/profile";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
 
@@ -145,7 +146,7 @@ export function useHomeController() {
   const [username, setUsername] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [profile, setProfile] = useState<Record<string, any> | null>(null);
+  const [profile, setProfile] = useState<HubUserProfile | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [showcaseChannels, setShowcaseChannels] = useState<string[]>([]);
@@ -425,7 +426,7 @@ export function useHomeController() {
   const syncFollowedChannels = async (channels: typeof followedChannels) => {
     if (session?.user?.id) {
       await supabase.from("profiles").update({ banner_meta: { ...profile?.banner_meta, youtube_channels: channels } }).eq("id", session.user.id);
-      setProfile((prev: Record<string, any> | null) => ({ ...prev, banner_meta: { ...(prev?.banner_meta as Record<string, any> | undefined), youtube_channels: channels } }));
+      setProfile((prev) => prev ? ({ ...prev, banner_meta: { ...prev.banner_meta, youtube_channels: channels } }) : prev);
     } else {
       localStorage.setItem("mim_web_youtube_channels", JSON.stringify(channels));
     }
@@ -746,15 +747,15 @@ export function useHomeController() {
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/version`),
         ]);
-        let versionsData: any[] = [];
+        let versionsData: NonNullable<FomoModDetails["versions"]> = [];
         if (pRes.ok) {
           details = await pRes.json();
           if (details?.team) {
             try {
               const teamRes = await fetch(`https://api.modrinth.com/v2/team/${details.team}/members`);
               if (teamRes.ok) {
-                const members = await teamRes.json();
-                const owner = members.find((m: any) => m.role?.toLowerCase() === "owner" || m.is_owner) || members[0];
+                const members = await teamRes.json() as Array<{ role?: string; is_owner?: boolean; user?: { username?: string } }>;
+                const owner = members.find((m) => m.role?.toLowerCase() === "owner" || m.is_owner) || members[0];
                 if (owner?.user?.username) {
                   realAuthor = owner.user.username;
                 }
@@ -962,37 +963,43 @@ export function useHomeController() {
     }
   };
 
-  const shareYoutubePost = async (post: Record<string, any>) => {
+  const shareYoutubePost = async (post: Record<string, unknown>) => {
     if (!session?.user?.id) {
       showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
       return;
     }
 
-    const postId = post?.postId || post?.embeddedVideoId;
+    const postId = (typeof post.postId === "string" ? post.postId : undefined)
+      ?? (typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined);
     if (!postId) {
       showAlert("Sin contenido", "No encontré un identificador válido para compartir este contenido.");
       return;
     }
 
+    const mode = typeof post.mode === "string" ? post.mode : "video";
+    const embeddedVideoId = typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined;
     const userId = session.user.id;
     const projectId = `youtube:${postId}`;
-    const title = post.title || (post.mode === "short" ? "Short de YouTube" : post.mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
-    const videoUrl = post.videoUrl || (post.embeddedVideoId ? `https://www.youtube.com/watch?v=${post.embeddedVideoId}` : currentChannel);
-    const thumbnail = post.thumbnail || (post.embeddedVideoId ? `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg` : null);
-    const contentKind = post.mode === "short" || post.mode === "video-short"
+    const title = typeof post.title === "string" ? post.title
+      : (mode === "short" ? "Short de YouTube" : mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
+    const videoUrl = typeof post.videoUrl === "string" ? post.videoUrl
+      : (embeddedVideoId ? `https://www.youtube.com/watch?v=${embeddedVideoId}` : currentChannel);
+    const thumbnail = typeof post.thumbnail === "string" ? post.thumbnail
+      : (embeddedVideoId ? `https://i.ytimg.com/vi/${embeddedVideoId}/mqdefault.jpg` : null);
+    const contentKind = mode === "short" || mode === "video-short"
       ? "youtube-short"
-      : post.mode === "post"
+      : mode === "post"
         ? "youtube-post"
         : "youtube-video";
     const existingShare = userShares.find((share) => (share.mod_id || share.project_id || share.id) === projectId);
     const summary = JSON.stringify({
-      comment: post.description || "",
+      comment: typeof post.description === "string" ? post.description : "",
       projectType: contentKind,
       videoUrl,
       thumbnail,
-      embeddedVideoId: post.embeddedVideoId || null,
-      mode: post.mode || "video",
-      publishedAt: post.publishedAt || "",
+      embeddedVideoId: embeddedVideoId ?? null,
+      mode,
+      publishedAt: typeof post.publishedAt === "string" ? post.publishedAt : "",
       channelUrl: currentChannel,
     });
     const previousShares = userShares;

@@ -5,6 +5,11 @@ import { z } from "zod";
 import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/core/constants";
 import { updateModOverride } from "@/lib/modding/projectConfig";
 import { withApiGuard } from "@/lib/apiGuard";
+import {
+  assertPathSegment,
+  resolveWithin,
+  UnsafePathError,
+} from "@/lib/security/safePaths";
 
 const fixIssueBodySchema = z.object({
   projectName: z.string().min(1),
@@ -17,30 +22,38 @@ const fixIssueBodySchema = z.object({
 
 interface FoundModFile {
   sourceFilePath: string;
-  sourceCategory: string;
   sourceSub: string;
 }
 
 function resolveLoaderPath(projectName: string, version: string, loader: string): string | null {
-  const projectModsPath = path.join(SOURCE_BASE, "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
-  const loaderPath = fs.existsSync(projectModsPath)
-    ? projectModsPath
-    : path.join(SOURCE_BASE, version, loader);
-  return fs.existsSync(loaderPath) ? loaderPath : null;
+  const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
+  assertPathSegment(safeName);
+  assertPathSegment(version);
+  assertPathSegment(loader);
+
+  const projectModsPath = resolveWithin(SOURCE_BASE, `_projects/${safeName}/mods`);
+  if (fs.existsSync(projectModsPath)) return projectModsPath;
+
+  const globalLoaderPath = resolveWithin(SOURCE_BASE, `${version}/${loader}`);
+  return fs.existsSync(globalLoaderPath) ? globalLoaderPath : null;
 }
 
 function findModFile(loaderPath: string, fileName: string): FoundModFile | null {
+  assertPathSegment(fileName);
+
   for (const category of Object.keys(SUBCATEGORIES)) {
-    const catPath = path.join(loaderPath, category);
+    assertPathSegment(category);
+    const catPath = resolveWithin(loaderPath, category);
     if (!fs.existsSync(catPath)) continue;
 
     for (const sub of fs.readdirSync(catPath)) {
-      const subPath = path.join(catPath, sub);
+      assertPathSegment(sub);
+      const subPath = resolveWithin(catPath, sub);
       if (!fs.statSync(subPath).isDirectory()) continue;
 
-      const potentialFile = path.join(subPath, fileName);
+      const potentialFile = resolveWithin(subPath, fileName);
       if (fs.existsSync(potentialFile)) {
-        return { sourceFilePath: potentialFile, sourceCategory: category, sourceSub: sub };
+        return { sourceFilePath: potentialFile, sourceSub: sub };
       }
     }
   }
@@ -57,14 +70,13 @@ function handleMoveAction(
   const targetCategory = typeof payload?.targetCategory === "string" ? payload.targetCategory : "";
   const targetSub = typeof payload?.targetSub === "string" ? payload.targetSub : sourceSub;
 
-  if (!targetCategory || !targetSub) {
-    return NextResponse.json({ error: "Missing targetCategory/targetSub" }, { status: 400 });
-  }
+  assertPathSegment(targetCategory);
+  assertPathSegment(targetSub);
 
-  const targetPath = path.join(loaderPath, targetCategory, targetSub);
+  const targetPath = resolveWithin(loaderPath, `${targetCategory}/${targetSub}`);
   if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath, { recursive: true });
 
-  fs.renameSync(sourceFilePath, path.join(targetPath, fileName));
+  fs.renameSync(sourceFilePath, resolveWithin(targetPath, fileName));
   return NextResponse.json({ success: true, message: `Moved ${fileName} to ${targetCategory}/${targetSub}` });
 }
 
@@ -100,6 +112,8 @@ export const POST = withApiGuard(
   async ({ body }) => {
     try {
       const { projectName, version, loader, fileName, action, payload } = body;
+      assertPathSegment(fileName);
+
       const loaderPath = resolveLoaderPath(projectName, version, loader);
       if (!loaderPath) {
         return NextResponse.json({ error: "Project mods directory not found" }, { status: 404 });
@@ -112,6 +126,10 @@ export const POST = withApiGuard(
 
       return handleFixAction(action, projectName, fileName, loaderPath, found, payload);
     } catch (e: unknown) {
+      if (e instanceof UnsafePathError) {
+        return NextResponse.json({ error: "Invalid project path or file name" }, { status: 400 });
+      }
+
       const message = e instanceof Error ? e.message : "Unknown error";
       console.error("[/api/project/fix-issue] Error:", message);
       return NextResponse.json({ error: message }, { status: 500 });

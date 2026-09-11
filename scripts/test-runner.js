@@ -77,6 +77,11 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/evaluation/sage-eval.ts"]
     },
     {
+      name: "SAGE Eval Metrics & CI Gate (SAGE-02/03)",
+      cmd: "npx",
+      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-eval-metrics.test.ts"]
+    },
+    {
       name: "SAGE 2.0 Core Taxonomy & Parser Unit Suite",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-unit.test.ts"]

@@ -15,8 +15,8 @@ import type {
   FomoCommunityShare,
   FomoFollowedAuthor,
 } from "../types/fomo";
-import type { Session } from "@supabase/supabase-js";
 import type { HubUserProfile } from "../types/profile";
+import type { FomoUserSession } from "../types/fomo";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
 
@@ -116,13 +116,13 @@ function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
   return {
     projectId,
     title,
-    description: String(r.description || m.description || meta.description || summaryStr || ""),
-    iconUrl: (typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined) || undefined,
+    description: String(r.description ?? m.description ?? meta.description ?? summaryStr ?? ""),
+    iconUrl: (typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined) ?? undefined,
     author,
     projectType,
     categories: Array.isArray(r.categories) ? (r.categories as string[]) : (Array.isArray(meta.categories) ? (meta.categories as string[]) : []),
     url: typeof r.url === "string" ? r.url : typeof meta.url === "string" ? (meta.url as string) : `https://modrinth.com/${projectType}/${projectId}`,
-    _source: String(m._source || (typeof r.platform === "string" ? r.platform : typeof r.source === "string" ? r.source : "modrinth")),
+    _source: String(m._source ?? (typeof r.platform === "string" ? r.platform : typeof r.source === "string" ? r.source : "modrinth")),
   };
 }
 
@@ -140,7 +140,7 @@ export function useHomeController() {
   const collectionsLastLoadedRef = useRef(0);
   const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<FomoUserSession | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -292,8 +292,8 @@ export function useHomeController() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    supabase.auth.getSession().then(({ data }) => setSession(data.session as FomoUserSession | null));
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession as FomoUserSession | null));
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -557,12 +557,12 @@ export function useHomeController() {
 
   const loadCollections = useCallback(async () => {
     const applyCachedCollections = (payload: Record<string, unknown>) => {
-      if (Array.isArray(payload?.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured as CollectionItem[]);
-      if (Array.isArray(payload?.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured as CollectionItem[]);
-      if (Array.isArray(payload?.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections as CollectionItem[]);
-      if (typeof payload?.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
-      if (Array.isArray(payload?.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods as ModHit[]);
-      if (typeof payload?.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
+      if (Array.isArray(payload.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured as CollectionItem[]);
+      if (Array.isArray(payload.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured as CollectionItem[]);
+      if (Array.isArray(payload.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections as CollectionItem[]);
+      if (typeof payload.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
+      if (Array.isArray(payload.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods as ModHit[]);
+      if (typeof payload.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
     };
 
     const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);

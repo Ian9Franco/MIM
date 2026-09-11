@@ -241,7 +241,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   useEffect(() => {
     if (!session?.user?.id) return;
     supabase.from("followed_profiles").select("followed_id").eq("follower_id", session.user.id)
-      .then(({ data }) => setFollowedProfileIds(new Set((data ?? []).map((row: { followed_id: string }) => row.followed_id))));
+      .then(({ data }) => { setFollowedProfileIds(new Set((data ?? []).map((row: { followed_id: string }) => row.followed_id))); });
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -365,7 +365,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
         {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={setSharesPage} onOpenProfile={openProfile} onOpenMod={handleOpenModDetails} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reactions={reactions} onToggleReaction={toggleReaction} />}
         {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={handleOpenModDetails} /></motion.div>}
         {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={openProfile} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={toggleProfileFollow} />}
-        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => setProfileView("list")} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id || ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id || "")} onToggleFollow={() => toggleProfileFollow(selectedProfile?.id || "")} />}
+        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id ?? ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile?.id ?? ""); }} />}
       </AnimatePresence>
     </motion.div>
   );
@@ -377,13 +377,26 @@ interface FeedProps {
   recentUpdates: Record<string, boolean>;
   page: number;
   hasNext: boolean;
-  onPageChange: (_page: number) => void;
-  onOpenProfile: (_profile: unknown) => void;
-  onOpenMod: (_mod: ModHit) => void;
+  onPageChange(page: number): void;
+  onOpenProfile(value: unknown): void;
+  onOpenMod(mod: ModHit): void;
   userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
-  onToggleFavorite: (_mod: ModHit) => void;
+  onToggleFavorite(mod: ModHit): void;
   reactions: Record<string, { count: number; mine: boolean }>;
-  onToggleReaction: (_shareId: string) => void;
+  onToggleReaction(shareId: string): void;
+}
+
+interface ShareCardProps {
+  item: CommunityShareItem;
+  index: number;
+  updated: boolean;
+  featured?: boolean;
+  onOpenProfile(value: unknown): void;
+  onOpenMod(mod: ModHit): void;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  onToggleFavorite(mod: ModHit): void;
+  reaction?: { count: number; mine: boolean };
+  onToggleReaction(shareId: string): void;
 }
 
 /** The feed keeps user context first, then presents the shared media as one clear action. */
@@ -400,7 +413,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
           <span className="text-[8px] font-mono uppercase text-white/25">Deslizá →</span>
         </div>
         <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 pt-2 pr-10 scrollbar-none">
-          {featuredShares.map((item, index) => <ShareCard key={`featured-${item.id}`} item={item} index={index} featured updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
+          {featuredShares.map((item, index) => <ShareCard key={`featured-${item.id}`} item={item} index={index} featured updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
         </div>
       </section>
 
@@ -409,7 +422,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
           <div><p className="text-[9px] font-mono uppercase text-white/30">En tiempo real</p><h3 id="community-activity-title" className="mt-0.5 text-xs font-bold text-white/80">Actividad reciente</h3></div>
           <span className="text-[8px] font-mono uppercase text-white/25">Lo último</span>
         </div>
-        {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
+        {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
       </section>
       <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
         <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
@@ -420,10 +433,10 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
   );
 }
 
-function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: CommunityShareItem; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: unknown) => void; onOpenMod: (mod: ModHit) => void; userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
+function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: ShareCardProps) {
   const meta = parseShareMeta(item.summary);
-  const projectId = item.mod_id || item.id;
-  const platform = item.platform || "modrinth";
+  const projectId = item.mod_id ?? item.id;
+  const platform = item.platform ?? "modrinth";
   const shareProfile = normalizeCommunityProfile(item.profile);
   const projectType = meta.projectType || "mod";
   const isYoutube = item.platform === "youtube" || projectType.startsWith("youtube-");

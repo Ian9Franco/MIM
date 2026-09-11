@@ -5,7 +5,7 @@ import {
   XCircle, AlertTriangle, Info, ChevronDown,
   Search, FolderInput, Settings
 } from "lucide-react";
-import type { ValidationIssue, ValidationSeverity } from "@/lib/core/types";
+import type { Project, ValidationIssue, ValidationSeverity } from "@/lib/core/types";
 
 // ── Severity Config ───────────────────────────────────────────────────────────
 
@@ -19,11 +19,11 @@ export const SEVERITY_CONFIG: Record<ValidationSeverity, {
 
 // ── Issue Row ─────────────────────────────────────────────────────────────────
 
-export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: ValidationIssue; onFomoSearch: (q: string) => void, activeProject?: any }) {
+export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: ValidationIssue; onFomoSearch: (q: string) => void, activeProject?: Project }) {
   const cfg = SEVERITY_CONFIG[issue.severity];
   const [expanded, setExpanded] = useState(false);
 
-  const handleFix = async (action: string, payload?: any) => {
+  const handleFix = async (action: string, payload?: Record<string, unknown>) => {
     if (!activeProject) return;
     try {
       await fetch("/api/project/fix-issue", {
@@ -146,7 +146,7 @@ function IssueSectionRaw({
   onFomoSearch: (q: string) => void;
   dotColor: string;
   forceOpen?: boolean;
-  activeProject?: any;
+  activeProject?: Project;
 }, ref: React.ForwardedRef<HTMLDivElement>) {
   const [open, setOpen] = useState(defaultOpen);
 

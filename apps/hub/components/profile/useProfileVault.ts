@@ -21,10 +21,10 @@ import type {
 } from "../../types/fomo";
 import type { HomeDraft, HomeDraftItem } from "../../lib/drafts/draftContract";
 import type { HubUserProfile } from "../../types/profile";
-import type { Session } from "@supabase/supabase-js";
+import type { FomoUserSession } from "../../types/fomo";
 
 interface UseProfileVaultParams {
-  session: Session | null;
+  session: FomoUserSession | null;
   profile: HubUserProfile | null;
   username: string;
   userDrafts: HomeDraft[];
@@ -65,22 +65,22 @@ export function useProfileVault({
         const rawItems = d.items ?? (d.draft_items as HomeDraftItem[] | undefined) ?? [];
         const visibility = d.visibility === "public" || d.visibility === "unlisted" ? d.visibility : "private";
         return {
-          name: d.name || "Borrador sin título",
-          description: d.description || "",
-          minecraft_version: d.minecraft_version || "1.20.1",
-          loader: d.loader || "fabric",
+          name: d.name ?? "Borrador sin título",
+          description: d.description ?? "",
+          minecraft_version: d.minecraft_version ?? "1.20.1",
+          loader: d.loader ?? "fabric",
           visibility,
-          cover_image: d.cover_image || undefined,
+          cover_image: d.cover_image ?? undefined,
           created_at: d.created_at,
           items: rawItems.map((it) => ({
-            project_id: it.project_id || it.projectId,
-            mod_name: it.mod_name || it.title || it.project_id || it.projectId,
-            source: (it.source as string | undefined) || (it.platform as string | undefined) || "modrinth",
-            category: it.category || "mods",
-            content_type: it.content_type || "mods",
-            side: it.side || "both",
+            project_id: it.project_id ?? it.projectId,
+            mod_name: it.mod_name ?? it.title ?? it.project_id ?? it.projectId,
+            source: (it.source as string | undefined) ?? (it.platform as string | undefined) ?? "modrinth",
+            category: it.category ?? "mods",
+            content_type: it.content_type ?? "mods",
+            side: it.side,
             version_id: typeof it.version_id === "string" ? it.version_id : (typeof it.versionId === "string" ? it.versionId : undefined),
-            dependencies: it.dependencies || [],
+            dependencies: it.dependencies,
           })),
         };
       });

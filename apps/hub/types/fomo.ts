@@ -224,6 +224,6 @@ export interface FomoUserSession {
       [key: string]: unknown;
     };
     [key: string]: unknown;
-  } | null;
+  };
   [key: string]: unknown;
 }

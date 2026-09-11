@@ -125,10 +125,10 @@ export function ProfileTab({
         return bPriority ? 1 : -1;
       }
 
-      const aId = String(a.mod_id ?? a.project_id ?? a.id ?? "");
-      const bId = String(b.mod_id ?? b.project_id ?? b.id ?? "");
+      const aId = String(a.mod_id ?? a.project_id ?? a.id);
+      const bId = String(b.mod_id ?? b.project_id ?? b.id);
       const aKey = projectUpdateKey((a.platform as string) ?? "modrinth", aId);
-      const bKey = projectUpdateKey((b.platform as string) || "modrinth", bId);
+      const bKey = projectUpdateKey((b.platform as string) ?? "modrinth", bId);
       const aUpdated = !aKey.startsWith("youtube:") && !!recentUpdates[aKey];
       const bUpdated = !bKey.startsWith("youtube:") && !!recentUpdates[bKey];
 
@@ -147,8 +147,8 @@ export function ProfileTab({
       .map((item) => {
         const summaryStr = typeof item.summary === "string" ? item.summary : "";
         const meta = summaryStr.trim().startsWith("{") ? readFavoriteMeta(item) : {};
-        const projectId = String(item.mod_id || item.project_id || item.projectId || item.id || "");
-        const source = String(item.platform || item.source || "modrinth");
+        const projectId = String(item.mod_id ?? item.project_id ?? item.projectId ?? item.id ?? "");
+        const source = String(item.platform ?? item.source ?? "modrinth");
         const projectType = String(item.project_type || meta.project_type || meta.projectType || "mod");
         return { projectId, source, projectType };
       })

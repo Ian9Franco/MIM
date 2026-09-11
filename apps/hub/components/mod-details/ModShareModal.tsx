@@ -35,7 +35,7 @@ export function ModShareModal({
     try {
       const platform = selectedMod._source === "curseforge" ? "curseforge" : "modrinth";
       const existingShare = userShares.find(
-        (f) => (f.mod_id || f.project_id || f.projectId || f.id) === selectedMod.projectId
+        (f) => (f.mod_id ?? f.project_id ?? f.projectId ?? f.id) === selectedMod.projectId
       );
       const alreadyShared = !!existingShare;
       const summaryText = buildShareMetaFromMod(selectedMod, {

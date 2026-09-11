@@ -1,5 +1,12 @@
 import type { Loader } from "@/lib/core/constants";
 
+export interface ModMember {
+  name: string;
+  role?: string;
+  avatar_url?: string;
+  [key: string]: unknown;
+}
+
 export interface ModHit {
   projectId:     string;
   /** IDs explícitos para evitar colisiones entre plataformas */
@@ -26,7 +33,7 @@ export interface ModHit {
   client_side?:  string;
   server_side?:  string;
   allowModDistribution?: boolean;
-  members?:      any[];
+  members?:      ModMember[];
   _source?:      "modrinth" | "curseforge" | "chunk";
   availability?: {
     modrinth: boolean;

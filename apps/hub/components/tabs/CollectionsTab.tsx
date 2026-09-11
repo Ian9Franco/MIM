@@ -20,21 +20,21 @@ interface Props {
   session: { user?: { id: string } } | null;
   userDrafts: HomeDraft[];
   activeDraft?: DraftDetailModel | null;
-  handleEnterCollection: (_coll: CollectionItem) => void;
-  handleExitCollection: () => void;
-  handleOpenModDetails: (_mod: ModHit) => void;
-  handleEnterDraftCollection: (_draft: HomeDraft) => void;
-  onRemoveModFromDraft?: (_draftId: string, _projectId: string, _itemId?: string) => Promise<void>;
-  onRefreshDrafts?: () => void;
-  onEditDraft?: (_draft: HomeDraft) => void;
-  onCreateDraft?: () => void;
-  onUpdateDraftMetadata?: (_draftId: string, _updates: Record<string, unknown>) => Promise<boolean>;
-  onRecategorizeDraftItem?: (_draftId: string, _projectId: string, _category: string) => Promise<void>;
-  onUpdateDraftItemSide?: (_draftId: string, _projectId: string, _side: string, _itemId?: string) => Promise<void>;
+  handleEnterCollection(coll: CollectionItem): void;
+  handleExitCollection(): void;
+  handleOpenModDetails(mod: ModHit): void;
+  handleEnterDraftCollection(draft: HomeDraft): void;
+  onRemoveModFromDraft?(draftId: string, projectId: string, itemId?: string): Promise<void>;
+  onRefreshDrafts?(): void;
+  onEditDraft?(draft: HomeDraft): void;
+  onCreateDraft?(): void;
+  onUpdateDraftMetadata?(draftId: string, updates: Record<string, unknown>): Promise<boolean>;
+  onRecategorizeDraftItem?(draftId: string, projectId: string, category: string): Promise<void>;
+  onUpdateDraftItemSide?(draftId: string, projectId: string, side: string, itemId?: string): Promise<void>;
   userFavorites?: FomoFavoriteItem[];
   userFollowedAuthors?: FomoFollowedAuthor[];
-  onSearchAuthor?: (_name: string, _platform: string) => void;
-  onAddToDraft?: (_mod: ModHit) => void;
+  onSearchAuthor?(name: string, platform: string): void;
+  onAddToDraft?(mod: ModHit): void;
 }
 
 type View = "editorial" | "mine" | "saved";
@@ -129,7 +129,7 @@ export function CollectionsTab(p: Props) {
 
           {view === "saved" && <motion.section key="saved" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
             <div><Title eyebrow="Tu biblioteca" title="Guardados para construir" /><div className="mt-2 grid grid-cols-2 gap-2"><Summary active={savedView === "favorites"} icon={<Bookmark className="h-4 w-4" />} count={favorites.length} label="Proyectos" click={() => { setSavedView("favorites"); }} /><Summary active={savedView === "authors"} icon={<UserCheck className="h-4 w-4" />} count={authors.length} label="Autores" click={() => { setSavedView("authors"); }} /></div></div>
-            {savedView === "favorites" ? <><SearchBox value={savedQuery} setValue={setSavedQuery} placeholder="Buscar proyecto o autor..." /><div className="space-y-2">{savedMods.map(m => <div key={`${m._source}:${m.projectId}`} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] capitalize text-white/40">{m.author} · {m._source}</p></div><button type="button" onClick={() => p.handleOpenModDetails(m)} className="mim-control-3d h-8 rounded-lg border border-border px-2 text-[8px] font-bold text-white/60">Ver</button>{p.onAddToDraft && <button type="button" onClick={() => p.onAddToDraft?.(m)} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}</div>)}{!savedMods.length && <Empty icon={<Bookmark className="h-9 w-9" />} title="Sin resultados" text="Guardá proyectos desde Explorar o Detalles." />}</div></> : <div className="grid grid-cols-2 gap-2">{authors.map((a, idx) => <button key={String(a.id || `${a.platform || "modrinth"}:${a.author_name || a.name || idx}`)} type="button" onClick={() => p.onSearchAuthor?.(String(a.author_name || a.name || ""), String(a.platform || "modrinth"))} className="mim-collection-card flex min-w-0 items-center gap-2.5 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={(a.icon_url || a.iconUrl || a.avatar_url) as string | null | undefined} fallback={<span className="text-[9px] font-black uppercase text-white/40">{String(a.author_name || a.name || "AU").slice(0, 2)}</span>} small /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-white">{String(a.author_name || a.name || "Autor")}</p><p className="mt-1 text-[7px] uppercase text-white/35">{String(a.platform || "modrinth")}</p></div></button>)}{!authors.length && <div className="col-span-2"><Empty icon={<UserCheck className="h-9 w-9" />} title="Todavía no seguís autores" text="Podés seguirlos desde los detalles." /></div>}</div>}
+            {savedView === "favorites" ? <><SearchBox value={savedQuery} setValue={setSavedQuery} placeholder="Buscar proyecto o autor..." /><div className="space-y-2">{savedMods.map(m => <div key={`${m._source}:${m.projectId}`} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] capitalize text-white/40">{m.author} · {m._source}</p></div><button type="button" onClick={() => { p.handleOpenModDetails(m); }} className="mim-control-3d h-8 rounded-lg border border-border px-2 text-[8px] font-bold text-white/60">Ver</button>{p.onAddToDraft && <button type="button" onClick={() => { p.onAddToDraft?.(m); }} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}</div>)}{!savedMods.length && <Empty icon={<Bookmark className="h-9 w-9" />} title="Sin resultados" text="Guardá proyectos desde Explorar o Detalles." />}</div></> : <div className="grid grid-cols-2 gap-2">{authors.map((a, idx) => <button key={String(a.id ?? `${a.platform ?? "modrinth"}:${a.author_name ?? a.name ?? idx}`)} type="button" onClick={() => { p.onSearchAuthor?.(String(a.author_name ?? a.name ?? ""), String(a.platform ?? "modrinth")); }} className="mim-collection-card flex min-w-0 items-center gap-2.5 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={(a.icon_url ?? a.iconUrl ?? a.avatar_url) as string | null | undefined} fallback={<span className="text-[9px] font-black uppercase text-white/40">{String(a.author_name ?? a.name ?? "AU").slice(0, 2)}</span>} small /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-white">{String(a.author_name ?? a.name ?? "Autor")}</p><p className="mt-1 text-[7px] uppercase text-white/35">{String(a.platform ?? "modrinth")}</p></div></button>)}{!authors.length && <div className="col-span-2"><Empty icon={<UserCheck className="h-9 w-9" />} title="Todavía no seguís autores" text="Podés seguirlos desde los detalles." /></div>}</div>}
           </motion.section>}
         </AnimatePresence>
       </motion.div> : isDraft && p.activeDraft ? <DraftDetailView key={`draft-${p.activeCollection.id}`} draft={p.activeDraft} activeCollectionMods={p.activeCollectionMods} loadingActiveMods={p.loadingActiveMods} session={p.session} onBack={p.handleExitCollection} onEditDraft={p.onEditDraft ? (d) => p.onEditDraft?.(d as unknown as HomeDraft) : undefined} handleOpenModDetails={p.handleOpenModDetails} onRemoveModFromDraft={p.onRemoveModFromDraft} onRefreshDrafts={p.onRefreshDrafts} onUpdateDraftMetadata={p.onUpdateDraftMetadata} onRecategorizeDraftItem={p.onRecategorizeDraftItem} onUpdateDraftItemSide={p.onUpdateDraftItemSide} /> : <motion.div key="detail" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="flex min-h-0 flex-1 flex-col">

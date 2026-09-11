@@ -6,7 +6,10 @@ import { eventBus } from "@/lib/events/eventBus";
 import { 
   EventName, EventPayload, EventSource, Incident, createCorrelationId 
 } from "@/lib/events/eventContract";
-import { DebugEvent, DebugCorrelation, DebugIncident, EventFlowTrace } from "@/lib/debugger/types";
+import { 
+  DebugEvent, DebugCorrelation, DebugIncident, EventFlowTrace,
+  TimelineOptions, TimelineItem
+} from "@/lib/debugger/types";
 import { analyzeFlow } from "@/lib/debugger/AnalysisEngine";
 
 class EventDebugger {
@@ -98,8 +101,8 @@ class EventDebugger {
     if (this.activeTrace) this.flowTraces.get(this.activeTrace)?.incidents.push(debugIncident);
   }
 
-  generateTimeline(options: any = {}) {
-    const timeline: any[] = [];
+  generateTimeline(options: TimelineOptions = {}): TimelineItem[] {
+    const timeline: TimelineItem[] = [];
     this.eventHistory.forEach(e => { if (this.matches(e, options)) timeline.push({ timestamp: e.metadata.timestamp, type: "event", data: e, duration: e.processingTime }); });
     this.correlationHistory.forEach(c => { if (this.matchesCorr(c, options)) timeline.push({ timestamp: c.timestamp, type: "correlation", data: c, duration: c.processingTime }); });
     this.incidentHistory.forEach(i => { if (this.matchesInc(i, options)) timeline.push({ timestamp: i.incident.createdAt, type: "incident", data: i }); });
@@ -107,11 +110,11 @@ class EventDebugger {
     return options.limit ? timeline.slice(0, options.limit) : timeline;
   }
 
-  private matches(e: DebugEvent, o: any) { 
+  private matches(e: DebugEvent, o: TimelineOptions) { 
     return (!o.eventTypes || o.eventTypes.includes(e.type)) && (!o.sources || o.sources.includes(e.metadata.source)) && (!o.startTime || new Date(e.metadata.timestamp) >= new Date(o.startTime)) && (!o.endTime || new Date(e.metadata.timestamp) <= new Date(o.endTime)); 
   }
-  private matchesCorr(c: DebugCorrelation, o: any) { return (!o.startTime || new Date(c.timestamp) >= new Date(o.startTime)) && (!o.endTime || new Date(c.timestamp) <= new Date(o.endTime)); }
-  private matchesInc(i: DebugIncident, o: any) { return (!o.startTime || new Date(i.incident.createdAt) >= new Date(o.startTime)) && (!o.endTime || new Date(i.incident.createdAt) <= new Date(o.endTime)); }
+  private matchesCorr(c: DebugCorrelation, o: TimelineOptions) { return (!o.startTime || new Date(c.timestamp) >= new Date(o.startTime)) && (!o.endTime || new Date(c.timestamp) <= new Date(o.endTime)); }
+  private matchesInc(i: DebugIncident, o: TimelineOptions) { return (!o.startTime || new Date(i.incident.createdAt) >= new Date(o.startTime)) && (!o.endTime || new Date(i.incident.createdAt) <= new Date(o.endTime)); }
 
   generateFlowAnalysis(traceId?: string) {
     const trace = traceId ? this.flowTraces.get(traceId) : this.getConsolidatedData();

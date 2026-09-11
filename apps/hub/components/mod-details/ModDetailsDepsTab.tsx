@@ -83,7 +83,7 @@ export function ModDetailsDepsTab({
                               iconUrl: dep.icon_url || dep.iconUrl || undefined,
                               author: dep.author || "Comunidad",
                               projectType: depType,
-                              categories: dep.categories || [],
+                              categories: (dep.categories ?? []).map((c) => (typeof c === "string" ? c : (c as { name?: string }).name ?? "")) as string[],
                               url: depUrl,
                               _source: (depSource as "modrinth" | "curseforge") || "modrinth",
                               downloads: 0,

@@ -156,12 +156,14 @@ export class DraftDownloadBroker {
         downloadEvents.emit("task:completed", { task });
         return; // Success, exit loop
         
-      } catch (e: any) {
-        const isRateLimit = e.message === "RateLimited" || e.status === 429;
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        const status = typeof (e as { status?: unknown })?.status === "number" ? (e as { status: number }).status : undefined;
+        const isRateLimit = err.message === "RateLimited" || status === 429;
         const report = classifyNetworkError({
           rawUrl: task.url || `${task.platform}://${task.projectId}`,
-          error: e,
-          httpStatus: isRateLimit ? 429 : typeof e?.status === "number" ? e.status : undefined,
+          error: err,
+          httpStatus: isRateLimit ? 429 : status,
         });
 
         const decision = calculateNextRetry(
@@ -188,7 +190,7 @@ export class DraftDownloadBroker {
         } else {
           // Unrecoverable error or max retries/budget reached
           task.status = "failed";
-          const errorMessage = report.errorMessage || String(e.message || "Download failed");
+          const errorMessage = report.errorMessage || (e instanceof Error ? e.message : "Download failed");
           task.error = errorMessage;
           this.updateTask(task);
           downloadEvents.emit("task:failed", { task, error: errorMessage, report });

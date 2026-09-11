@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { 
-  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Sparkles, Server 
+  Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Server 
 } from "lucide-react";
+
+import type { Project } from "@/lib/core/types";
 
 interface LayoutHeaderProps {
   fomoOpen: boolean;
@@ -26,7 +28,7 @@ interface LayoutHeaderProps {
   onToggleTweak: (v: boolean) => void;
   packHealthOpen: boolean;
   onCheckHealth: () => void;
-  activeProject: any;
+  activeProject?: Project | null;
   isValidatingHealth: boolean;
   watcherStatus?: string;
 }
@@ -41,7 +43,7 @@ export function LayoutHeader({
   const serverActive = pathname === "/servers" || pathname.startsWith("/servers/");
   const [appMode, setAppMode] = React.useState<string>("MIMU");
   const [guidesActive, setGuidesActive] = React.useState(false);
-  const [profile, setProfile] = React.useState<any>(null);
+  const [profile, setProfile] = React.useState<{ username: string } | null>(null);
   const [isAutoClassify, setIsAutoClassify] = React.useState(false);
 
   React.useEffect(() => {
@@ -68,21 +70,23 @@ export function LayoutHeader({
       if (updated) setAppMode(updated);
     };
     
-    const handleModeChange = (e: any) => {
-      if (e.detail) setAppMode(e.detail);
+    const handleModeChange = (e: Event) => {
+      const custom = e as CustomEvent<string>;
+      if (custom.detail) setAppMode(custom.detail);
     };
 
-    const handleAutoClassify = (e: any) => {
-      setIsAutoClassify(e.detail);
+    const handleAutoClassify = (e: Event) => {
+      const custom = e as CustomEvent<boolean>;
+      setIsAutoClassify(Boolean(custom.detail));
     };
 
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("mim-mode-changed", handleModeChange as any);
+    window.addEventListener("mim-mode-changed", handleModeChange);
     window.addEventListener("auto-classify-changed", handleAutoClassify);
     
     return () => {
       window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("mim-mode-changed", handleModeChange as any);
+      window.removeEventListener("mim-mode-changed", handleModeChange);
       window.removeEventListener("auto-classify-changed", handleAutoClassify);
     };
   }, []);
@@ -117,8 +121,8 @@ export function LayoutHeader({
               <div className="relative flex items-center justify-center">
                 {!fomoOpen && (
                   <>
-                    <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "-15px", "--tw-translate-y": "-15px", animationDelay: "0s" } as any} />
-                    <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ "--tw-translate-x": "15px", "--tw-translate-y": "-10px", animationDelay: "0.5s" } as any} />
+                    <div className="absolute w-1 h-1 bg-primary/40 rounded-full animate-ender-particle" style={{ ["--tw-translate-x" as string]: "-15px", ["--tw-translate-y" as string]: "-15px", animationDelay: "0s" } as React.CSSProperties} />
+                    <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ ["--tw-translate-x" as string]: "15px", ["--tw-translate-y" as string]: "-10px", animationDelay: "0.5s" } as React.CSSProperties} />
                   </>
                 )}
                 <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
@@ -261,7 +265,7 @@ export function LayoutHeader({
   );
 }
 
-function headerButtonClasses(active: boolean, color: string, disabled = false) {
+function headerButtonClasses(active: boolean, color: string, _disabled = false) {
   const colors: Record<string, string> = {
     red: "bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]",
     indigo: "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]",
@@ -276,9 +280,22 @@ function headerButtonClasses(active: boolean, color: string, disabled = false) {
   return `group flex ${layout} rounded-xl transition-all duration-300 relative border disabled:opacity-30 ${active ? colors[color] : colors.default}`;
 }
 
+interface HeaderButtonProps {
+  onClick?: () => void;
+  title: string;
+  children: React.ReactNode;
+  active?: boolean;
+  color?: string;
+  label?: string;
+  badge?: boolean;
+  badgeColor?: string;
+  iconClass?: string;
+  disabled?: boolean;
+}
+
 function HeaderButton({ 
-  onClick, title, children, active, color = 'default', label, badge, badgeColor = 'amber', iconClass = '', disabled = false 
-}: any) {
+  onClick, title, children, active = false, color = 'default', label, badge, badgeColor = 'amber', iconClass = '', disabled = false 
+}: HeaderButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -322,14 +339,36 @@ function HeaderNavLink({
   );
 }
 
+interface SkinviewAnimationConstructor {
+  new (): { speed: number };
+}
+
+interface SkinviewModule {
+  SkinViewer: new (opts: { canvas: HTMLCanvasElement; width: number; height: number; skin: string }) => SkinViewerInstance;
+  WalkingAnimation: SkinviewAnimationConstructor;
+  RunningAnimation: SkinviewAnimationConstructor;
+  SneakingAnimation?: SkinviewAnimationConstructor;
+  FlyingAnimation?: SkinviewAnimationConstructor;
+  IdleAnimation: SkinviewAnimationConstructor;
+}
+
+interface SkinViewerInstance {
+  controls?: { enableRotate: boolean; enableZoom: boolean; enablePan: boolean; isDragging?: boolean };
+  camera?: { position: { z: number } };
+  playerObject?: { rotation: { y: number } };
+  onRender?: (() => void) | null;
+  animation?: { speed: number } | null;
+  dispose: () => void;
+}
+
 function ProfileCanvas({ username }: { username: string }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [clickCount, setClickCount] = React.useState(0);
   
   // Refs para controlar las instancias de skinview3d
-  const viewerRef = React.useRef<any>(null);
-  const animsRef = React.useRef<any>(null);
-  const rotateLoopRef = React.useRef<any>(null);
+  const viewerRef = React.useRef<SkinViewerInstance | null>(null);
+  const animsRef = React.useRef<SkinviewModule | null>(null);
+  const rotateLoopRef = React.useRef<(() => void) | null>(null);
 
   // Refs para discriminar Click vs Drag
   const mouseCoords = React.useRef({ x: 0, y: 0 });
@@ -338,7 +377,7 @@ function ProfileCanvas({ username }: { username: string }) {
   React.useEffect(() => {
     if (!canvasRef.current || !username) return;
 
-    let viewer: any = null;
+    let viewer: SkinViewerInstance | null = null;
     
     import("skinview3d").then((skinview3d) => {
       viewer = new skinview3d.SkinViewer({
@@ -346,18 +385,22 @@ function ProfileCanvas({ username }: { username: string }) {
         width: 120,
         height: 150,
         skin: `https://minotar.net/skin/${username}`
-      });
+      }) as unknown as SkinViewerInstance;
       viewerRef.current = viewer;
-      animsRef.current = skinview3d;
+      animsRef.current = skinview3d as unknown as SkinviewModule;
       
-      viewer.controls.enableRotate = true;
-      viewer.controls.enableZoom = false;
-      viewer.controls.enablePan = false;
-      viewer.camera.position.z = 65; 
+      if (viewer.controls) {
+        viewer.controls.enableRotate = true;
+        viewer.controls.enableZoom = false;
+        viewer.controls.enablePan = false;
+      }
+      if (viewer.camera) {
+        viewer.camera.position.z = 65; 
+      }
 
       // Loop de rotación automática inicial mapeado al hook nativo onRender
       rotateLoopRef.current = () => {
-        if (viewer.controls && !viewer.controls.isDragging) {
+        if (viewer?.controls && !viewer.controls.isDragging && viewer.playerObject) {
           viewer.playerObject.rotation.y += 0.015;
         }
       };

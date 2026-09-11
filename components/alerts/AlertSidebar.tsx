@@ -14,20 +14,40 @@ import { mimDB } from "@/lib/storage/indexeddb";
 import { TabButton, AlertSection, ActionButton, UpdateCard, EmptyState, IncidentCard } from "./AlertSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
+import type { LibraryFile } from "@/lib/core/types";
+import type { ModrinthStatusItem, AuthorModItem, ChannelVideoItem, FollowedModRef } from "@/hooks/useAlertManager";
+
+interface BytecodeConflictItem {
+  targetClass: string;
+  riskScore: number;
+  mods: Array<{ modName: string }>;
+}
+
+interface BytecodeConflictData {
+  totalConflicts?: number;
+  highRiskConflicts?: number;
+  conflicts: BytecodeConflictItem[];
+}
+
+interface FileConflictItem {
+  oldFile: LibraryFile;
+  newFile: LibraryFile;
+}
+
 interface AlertSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (o: boolean) => void;
-  conflicts: any[];
-  modrinthStatus: Record<string, any>;
-  library: any[];
+  conflicts: FileConflictItem[];
+  modrinthStatus: Record<string, ModrinthStatusItem>;
+  library: LibraryFile[];
   downloadingMods: Record<string, boolean>;
   ignoredUpdates: Set<string>;
-  handleResolveConflict: (c: any, replace: boolean) => void;
+  handleResolveConflict: (c: FileConflictItem, replace: boolean) => void;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
   handleDismissUpdate: (path: string) => void;
   checkingUpdates?: boolean;
   handleCheckUpdates?: () => void;
-  bytecodeConflicts?: any;
+  bytecodeConflicts?: BytecodeConflictData | null;
 }
 
 export function AlertSidebar({
@@ -36,7 +56,7 @@ export function AlertSidebar({
   checkingUpdates, handleCheckUpdates
 }: AlertSidebarProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const [followedMods, setFollowedMods] = useState<any[]>([]);
+  const [followedMods, setFollowedMods] = useState<FollowedModRef[]>([]);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -70,8 +90,8 @@ export function AlertSidebar({
         const mods = await mimDB.getAllFollowedMods();
         const authors = await mimDB.getAllFollowedAuthors();
         
-        setFollowedMods(mods.map((m: any) => m.data));
-        setFollowedAuthors(authors.map((a: any) => a.name));
+        setFollowedMods(mods.map((m: { data: unknown }) => m.data as FollowedModRef));
+        setFollowedAuthors(authors.map((a: { name: string }) => a.name));
       } catch (err) {
         console.error("Error loading followed data in AlertSidebar", err);
       }
@@ -94,7 +114,14 @@ export function AlertSidebar({
     newAuthorMods, newChannelVideos, handleMarkSeen 
   } = useAlertManager(sidebarOpen, library, modrinthStatus, followedMods, followedAuthors, ignoredUpdates);
 
-  const updates = [...modUpdates, ...collectionUpdates, ...shaderUpdates, ...resourcePackUpdates, ...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }]), ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }])];
+  const updates = [
+    ...modUpdates,
+    ...collectionUpdates,
+    ...shaderUpdates,
+    ...resourcePackUpdates,
+    ...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }] as [string, ModrinthStatusItem]),
+    ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }] as [string, ModrinthStatusItem])
+  ];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -115,7 +142,7 @@ export function AlertSidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [sidebarOpen, setSidebarOpen]);
 
-  const renderUpdates = (list: [string, any][], type: any) => (
+  const renderUpdates = (list: [string, ModrinthStatusItem][], type: "mod" | "collection" | "shader" | "resourcepack" | "showcase") => (
     <div className="flex flex-col gap-2">
       {list.map(([path, s]) => (
         <UpdateCard key={path} path={path} s={s} type={type} library={library} followedMods={followedMods} downloadingMods={downloadingMods} handleDownloadUpdate={handleDownloadUpdate} handleDismissUpdate={handleDismissUpdate} handleMarkSeen={handleMarkSeen} setSidebarOpen={setSidebarOpen} />
@@ -196,7 +223,11 @@ export function AlertSidebar({
         {(activeTab === "all" || activeTab === "sage" || activeTab === "config") && ["SAGE", "CONFIG", "SYSTEM"].map(mod => {
           const modIncidents = incidents.filter(i => i.status === "active" && i.module === mod);
           if (modIncidents.length === 0 || (activeTab === "sage" && mod !== "SAGE") || (activeTab === "config" && mod !== "CONFIG")) return null;
-          const infoMap: Record<string, any> = { SAGE: { i: <Activity className="w-4 h-4" />, t: "Diagnósticos SAGE", c: "#818cf8" }, CONFIG: { i: <Settings className="w-4 h-4" />, t: "Ajustes", c: "#a78bfa" }, SYSTEM: { i: <Shield className="w-4 h-4" />, t: "Sistema", c: "#fb7185" } };
+          const infoMap: Record<string, { i: React.ReactNode; t: string; c: string }> = {
+            SAGE: { i: <Activity className="w-4 h-4" />, t: "Diagnósticos SAGE", c: "#818cf8" },
+            CONFIG: { i: <Settings className="w-4 h-4" />, t: "Ajustes", c: "#a78bfa" },
+            SYSTEM: { i: <Shield className="w-4 h-4" />, t: "Sistema", c: "#fb7185" }
+          };
           const info = infoMap[mod];
           return (
             <AlertSection key={mod} icon={info.i} title={info.t} count={modIncidents.length} color={info.c}>
@@ -214,7 +245,7 @@ export function AlertSidebar({
 
         {(activeTab === "all" || activeTab === "updates") && (
           <>
-            {(newAuthorMods.length > 0 || newChannelVideos.length > 0) && <AlertSection icon={<MonitorPlay className="w-4 h-4" />} title="Showcases" count={newAuthorMods.length + newChannelVideos.length} color="#fb923c">{renderUpdates([...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }] as [string, any]), ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }] as [string, any])], "showcase")}</AlertSection>}
+            {(newAuthorMods.length > 0 || newChannelVideos.length > 0) && <AlertSection icon={<MonitorPlay className="w-4 h-4" />} title="Showcases" count={newAuthorMods.length + newChannelVideos.length} color="#fb923c">{renderUpdates([...newAuthorMods.map(m => [m.path, { ...m, status: "update_available" }] as [string, ModrinthStatusItem]), ...newChannelVideos.map(v => [v.path, { ...v, status: "update_available" }] as [string, ModrinthStatusItem])], "showcase")}</AlertSection>}
             {collectionUpdates.length > 0 && <AlertSection icon={<Heart className="w-4 h-4" />} title="Seguidos" count={collectionUpdates.length} color="var(--color-primary)">{renderUpdates(collectionUpdates, "collection")}</AlertSection>}
             {modUpdates.length > 0 && <AlertSection icon={<RefreshCw className="w-4 h-4" />} title="Mods" count={modUpdates.length} color="var(--color-accent)">{renderUpdates(modUpdates, "mod")}</AlertSection>}
           </>
@@ -223,8 +254,8 @@ export function AlertSidebar({
         {(activeTab === "all" || activeTab === "bytecode") && bytecodeConflicts && bytecodeConflicts.conflicts.length > 0 && (() => {
           // Contar combinaciones de mods para el resumen
           const pairCounts = new Map<string, { mods: string[], count: number }>();
-          bytecodeConflicts.conflicts.forEach((c: any) => {
-            const modNames = c.mods.map((m: any) => m.modName).sort();
+          bytecodeConflicts.conflicts.forEach((c) => {
+            const modNames = c.mods.map((m) => m.modName).sort();
             const key = modNames.join(' & ');
             if (!pairCounts.has(key)) {
               pairCounts.set(key, { mods: modNames, count: 0 });
@@ -269,7 +300,7 @@ export function AlertSidebar({
               )}
               
               <AlertSection icon={<Binary className="w-4 h-4" />} title="Conflictos de Bytecode" count={bytecodeConflicts.conflicts.length} color="#818cf8" defaultOpen={false}>
-                {bytecodeConflicts.conflicts.map((c: any, i: number) => (
+                {bytecodeConflicts.conflicts.map((c, i: number) => (
                   <div key={i} className="p-3 rounded-xl border animate-fade-in" style={{ borderColor: c.riskScore > 70 ? "var(--color-danger-border)" : "var(--color-border)", background: c.riskScore > 70 ? "var(--color-danger-bg)" : "rgba(129,138,248,0.05)" }}>
                     <div className="flex items-start gap-2">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: c.riskScore > 70 ? "var(--color-danger-hover)" : "rgba(129,138,248,0.1)" }}>
@@ -279,7 +310,7 @@ export function AlertSidebar({
                         <p className="font-subhead text-xs truncate text-white/90" title={c.targetClass}>{c.targetClass.split('.').pop()}</p>
                         <p className="text-[10px] text-white/40 truncate">{c.targetClass}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {c.mods.map((m: any, j: number) => (
+                          {c.mods.map((m, j: number) => (
                             <span key={j} className="px-1.5 py-0.5 rounded text-[9px] bg-white/5 text-white/60">
                               {m.modName}
                             </span>

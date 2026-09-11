@@ -18,6 +18,12 @@ import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 import { FomoModCard } from "@/components/fomo/discover/FomoModCard";
 import type { CollectionEntry, ModHit } from "@/lib/core/types";
 
+interface LibraryUpdateStatus {
+  projectId?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
 interface CollectionDetailViewProps {
   viewing: CollectionEntry;
   setViewing: (val: CollectionEntry | null) => void;
@@ -36,7 +42,7 @@ interface CollectionDetailViewProps {
   selectedMods: ModHit[];
   onToggleSelect?: (mod: ModHit) => void;
   sinytraActive?: boolean;
-  libraryUpdates: Record<string, any>;
+  libraryUpdates: Record<string, LibraryUpdateStatus>;
   handleRemoveModFromCollection: (collId: string, mod: ModHit) => void;
 }
 
@@ -68,7 +74,7 @@ export function CollectionDetailView({
   const availableVersions = React.useMemo(() => {
     const set = new Set<string>();
     viewMods.forEach((m) => {
-      const vers = (m as any).versions || (m as any).game_versions || [];
+      const vers = m.gameVersions || (m as unknown as { versions?: string[]; game_versions?: string[] }).versions || (m as unknown as { versions?: string[]; game_versions?: string[] }).game_versions || [];
       if (Array.isArray(vers)) {
         vers.forEach((v: string) => {
           if (typeof v === "string") set.add(v);
@@ -81,7 +87,7 @@ export function CollectionDetailView({
   const availableLoaders = React.useMemo(() => {
     const set = new Set<string>();
     viewMods.forEach((m) => {
-      const lds = (m as any).loaders || [];
+      const lds = m.loaders || (m as unknown as { loaders?: string[] }).loaders || [];
       if (Array.isArray(lds)) {
         lds.forEach((l: string) => {
           if (typeof l === "string") set.add(l.toLowerCase());
@@ -101,11 +107,11 @@ export function CollectionDetailView({
         if (!matchTitle && !matchAuthor) return false;
       }
       if (versionFilter !== "all") {
-        const vers = (m as any).versions || (m as any).game_versions || [];
+        const vers = m.gameVersions || (m as unknown as { versions?: string[]; game_versions?: string[] }).versions || (m as unknown as { versions?: string[]; game_versions?: string[] }).game_versions || [];
         if (Array.isArray(vers) && !vers.includes(versionFilter)) return false;
       }
       if (loaderFilter !== "all") {
-        const lds = ((m as any).loaders || []).map((l: string) => String(l).toLowerCase());
+        const lds = (m.loaders || (m as unknown as { loaders?: string[] }).loaders || []).map((l: string) => String(l).toLowerCase());
         if (Array.isArray(lds) && !lds.includes(loaderFilter.toLowerCase())) return false;
       }
       return true;
@@ -292,7 +298,7 @@ export function CollectionDetailView({
                       onToggleSelect={onToggleSelect}
                       sinytraActive={sinytraActive}
                       hasUpdateAvailable={Object.values(libraryUpdates).some(
-                        (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                        (s: LibraryUpdateStatus) => s.projectId === mod.projectId && s.status === "update_available"
                       )}
                     />
                     <button
@@ -312,7 +318,7 @@ export function CollectionDetailView({
                 if (!acc[type]) acc[type] = [];
                 acc[type].push(mod);
                 return acc;
-              }, {} as Record<string, any[]>);
+              }, {} as Record<string, ModHit[]>);
 
               return Object.entries(groupedMods).map(([type, mods]) => (
                 <React.Fragment key={type}>
@@ -333,7 +339,7 @@ export function CollectionDetailView({
                         onToggleSelect={onToggleSelect}
                         sinytraActive={sinytraActive}
                         hasUpdateAvailable={Object.values(libraryUpdates).some(
-                          (s: any) => s.projectId === mod.projectId && s.status === "update_available"
+                          (s: LibraryUpdateStatus) => s.projectId === mod.projectId && s.status === "update_available"
                         )}
                       />
                       <button

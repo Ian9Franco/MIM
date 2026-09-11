@@ -1,5 +1,12 @@
 import type { Loader } from "@/lib/core/constants";
 
+export interface ModMember {
+  name: string;
+  role?: string;
+  avatar_url?: string;
+  [key: string]: unknown;
+}
+
 export interface ModHit {
   projectId:     string;
   /** IDs explícitos para evitar colisiones entre plataformas */
@@ -26,7 +33,7 @@ export interface ModHit {
   client_side?:  string;
   server_side?:  string;
   allowModDistribution?: boolean;
-  members?:      any[];
+  members?:      ModMember[];
   _source?:      "modrinth" | "curseforge" | "chunk";
   availability?: {
     modrinth: boolean;
@@ -119,6 +126,8 @@ export interface ModMeta {
   clientSide?:  string;
   serverSide?:  string;
   environment?: "client" | "server" | "both" | "unknown";
+  confidence?:  "high" | "medium" | "low";
+  warnings?:    string[];
   mixinTargets?: string[];
 }
 
@@ -212,19 +221,23 @@ export interface TweakRecommendation {
 export interface TweakData {
   optionsExists: boolean;
   keybinds: Keybind[];
-  keybindsGrouped?: any;
-  keybindConflicts?: any[];
+  keybindsGrouped?: Record<string, Keybind[]>;
+  keybindConflicts?: Array<{ id: string; key: string; conflictingWith: string[] }>;
   settings: Record<string, string>;
   resourcePacks: {
     active: string[];
     available: string[];
-    issues?: any[];
-    autoFixable?: any[];
+    issues?: Array<{ pack: string; issue: string; severity?: string }>;
+    autoFixable?: Array<{ pack: string; fix: string }>;
+    visualStack?: unknown[];
   };
   shadersInGame: { name: string; size: number }[];
   recommendations: TweakRecommendation[];
   snapshots: TweakSnapshot[];
   modCount: number;
+  globalModCount?: number;
+  minecraftPathUsed?: string;
+  installations?: Array<{ path: string; name?: string; version?: string; isSelected?: boolean }>;
   hardware?: {
     profile: string;
     ram: number;
@@ -274,10 +287,10 @@ export interface ValidationIssue {
   autoFixable?: boolean;
   fixAction?:   ValidationFixAction;
   /** Payload para la acción de fix (ej. categoría destino, query de FOMO) */
-  fixPayload?:  Record<string, any>;
+  fixPayload?:  Record<string, unknown>;
   /** Segunda acción sugerida */
   secondaryAction?: ValidationFixAction;
-  secondaryPayload?: Record<string, any>;
+  secondaryPayload?: Record<string, unknown>;
 }
 
 export type PackGrade = "S" | "A" | "B" | "C" | "D" | "F";

@@ -15,7 +15,19 @@ import {
 const MODRINTH_API = "https://api.modrinth.com/v2";
 const MODRINTH_API_V3 = "https://api.modrinth.com/v3";
 
-function mapCollection(coll: any) {
+export interface ModrinthRawCollection {
+  id: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  projects?: string[];
+  project_count?: number;
+  icon_url?: string | null;
+  slug?: string;
+  status?: string;
+}
+
+function mapCollection(coll: ModrinthRawCollection) {
   return {
     id: coll.id,
     name: coll.name ?? coll.title ?? "Colección sin nombre",
@@ -45,11 +57,11 @@ export const GET = withApiGuard(
       if (collectionId && collectionId !== "followed-projects") {
         const res = await fetch(`${MODRINTH_API_V3}/collection/${collectionId}`, { headers });
         if (!res.ok) return NextResponse.json({ error: "No se pudo cargar la colección" }, { status: 502 });
-        const collection = await res.json();
+        const collection: ModrinthRawCollection = await res.json();
         const pIds = collection.projects || [];
         const pRes = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(pIds)}`, { headers });
-        const projects = await pRes.json();
-        const mods = await Promise.all(projects.map(async (m: any) => ({
+        const projects: Array<{ id: string; slug: string; title: string; description: string; icon_url?: string | null; downloads?: number; followers?: number; categories?: string[]; project_type?: string }> = await pRes.json();
+        const mods = await Promise.all(projects.map(async (m) => ({
           projectId: m.id, slug: m.slug, title: m.title, description: m.description,
           iconUrl: m.icon_url, author: await getAuthorName(m.id, headers),
           downloads: m.downloads, follows: m.followers, categories: m.categories,
@@ -63,9 +75,9 @@ export const GET = withApiGuard(
         
         const res = await fetch(`${MODRINTH_API}/user/${profile.id}/follows`, { headers });
         if (!res.ok) return NextResponse.json({ error: "No se pudo cargar los proyectos seguidos" }, { status: res.status });
-        const projects = await res.json();
+        const projects: Array<{ id: string; slug: string; title: string; description: string; icon_url?: string | null; downloads?: number; followers?: number; categories?: string[]; project_type?: string }> = await res.json();
         
-        const mods = await Promise.all(projects.map(async (m: any) => ({
+        const mods = await Promise.all(projects.map(async (m) => ({
           projectId: m.id, slug: m.slug, title: m.title, description: m.description,
           iconUrl: m.icon_url, author: await getAuthorName(m.id, headers),
           downloads: m.downloads, follows: m.followers, categories: m.categories,
@@ -83,16 +95,16 @@ export const GET = withApiGuard(
       let followsCount = 0;
       let previewIcons: string[] = [];
       if (followsRes.ok) {
-        const follows = await followsRes.json();
+        const follows: Array<{ icon_url?: string }> = await followsRes.json();
         followsCount = follows.length;
-        previewIcons = follows.slice(0, 20).map((p: any) => p.icon_url).filter(Boolean);
+        previewIcons = follows.slice(0, 20).map((p) => p.icon_url).filter(Boolean) as string[];
       }
 
       const remoteCollections = await tryFetchUserCollections(profile.id, headers);
       
       // Recopilar todos los IDs de proyectos de todas las colecciones para traer iconos en masa
       const allProjectIds = new Set<string>();
-      remoteCollections.forEach((coll: any) => {
+      remoteCollections.forEach((coll: ModrinthRawCollection) => {
         if (Array.isArray(coll.projects)) {
           coll.projects.slice(0, 20).forEach((id: string) => allProjectIds.add(id));
         }
@@ -104,14 +116,14 @@ export const GET = withApiGuard(
         const idsArray = Array.from(allProjectIds);
         const res = await fetch(`${MODRINTH_API}/projects?ids=${JSON.stringify(idsArray.slice(0, 100))}`, { headers });
         if (res.ok) {
-          const projects = await res.json();
-          projects.forEach((p: any) => {
-            projectsMap[p.id] = p.icon_url;
+          const projects: Array<{ id: string; icon_url?: string }> = await res.json();
+          projects.forEach((p) => {
+            if (p.icon_url) projectsMap[p.id] = p.icon_url;
           });
         }
       }
 
-      const mappedColls = remoteCollections.map((coll: any) => {
+      const mappedColls = remoteCollections.map((coll: ModrinthRawCollection) => {
         const mapped = mapCollection(coll);
         const collIcons = Array.isArray(coll.projects) 
           ? coll.projects.map((id: string) => projectsMap[id]).filter(Boolean).slice(0, 20)

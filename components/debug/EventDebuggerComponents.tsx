@@ -6,12 +6,39 @@ import {
   BarChart3, Zap, Target, Layers, Database
 } from "lucide-react";
 import { EventSource } from "@/lib/events/eventContract";
+import type { TimelineItem as ITimelineItem, DebugEvent, DebugCorrelation, DebugIncident } from "@/lib/debugger/types";
+import type { FilterState } from "@/hooks/useEventDebugger";
+
+export interface DebuggerStatsData {
+  eventsCaptured: number;
+  correlationsDetected: number;
+  incidentsCreated: number;
+  activeTraces: number;
+  memoryUsage: { events: number };
+}
+
+export type DebuggerFilterState = FilterState;
+
+export interface TimelineDisplayItem extends ITimelineItem {
+  id: string;
+  expanded?: boolean;
+}
 
 // ── DebuggerHeader ───────────────────────────────────────────────────────────
 
+export interface DebuggerHeaderProps {
+  isRecording: boolean;
+  activeTrace?: string | null;
+  showFilters: boolean;
+  setShowFilters: (v: boolean | ((prev: boolean) => boolean)) => void;
+  onExport: () => void;
+  onStart: () => void;
+  onStop: () => void;
+}
+
 export function DebuggerHeader({ 
   isRecording, activeTrace, showFilters, setShowFilters, onExport, onStart, onStop 
-}: any) {
+}: DebuggerHeaderProps) {
   return (
     <div className="p-4 border-b bg-white/5" style={{ borderColor: "var(--color-border)" }}>
       <div className="flex items-center justify-between mb-4">
@@ -51,7 +78,12 @@ export function DebuggerHeader({
 
 // ── DebuggerStats ────────────────────────────────────────────────────────────
 
-export function DebuggerStats({ stats, onRefresh }: any) {
+export interface DebuggerStatsProps {
+  stats: DebuggerStatsData | null;
+  onRefresh: () => void;
+}
+
+export function DebuggerStats({ stats, onRefresh }: DebuggerStatsProps) {
   if (!stats) return null;
   return (
     <div className="px-4 py-2 border-b bg-black/10 grid grid-cols-6 gap-4 text-xs" style={{ borderColor: "var(--color-border)" }}>
@@ -68,7 +100,7 @@ export function DebuggerStats({ stats, onRefresh }: any) {
   );
 }
 
-function StatItem({ icon, label, value }: any) {
+function StatItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="opacity-60">{icon}</div>
@@ -80,7 +112,14 @@ function StatItem({ icon, label, value }: any) {
 
 // ── DebuggerFilters ──────────────────────────────────────────────────────────
 
-export function DebuggerFilters({ filters, setFilters, onClear, onRefresh }: any) {
+export interface DebuggerFiltersProps {
+  filters: DebuggerFilterState;
+  setFilters: React.Dispatch<React.SetStateAction<DebuggerFilterState>>;
+  onClear: () => void;
+  onRefresh: () => void;
+}
+
+export function DebuggerFilters({ filters, setFilters, onClear, onRefresh }: DebuggerFiltersProps) {
   return (
     <div className="p-4 border-b bg-white/5" style={{ borderColor: "var(--color-border)" }}>
       <div className="grid grid-cols-4 gap-4">
@@ -90,7 +129,7 @@ export function DebuggerFilters({ filters, setFilters, onClear, onRefresh }: any
             <Search className="w-4 h-4 absolute left-3 top-2.5 opacity-60" />
             <input
               type="text" placeholder="Search events..." value={filters.searchQuery}
-              onChange={(e) => setFilters((prev: any) => ({ ...prev, searchQuery: e.target.value }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))}
               className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-black/20 border border-white/10 text-foreground"
             />
           </div>
@@ -100,12 +139,12 @@ export function DebuggerFilters({ filters, setFilters, onClear, onRefresh }: any
           <div className="flex gap-2">
             <input
               type="datetime-local" value={filters.timeRange.start.slice(0, 16)}
-              onChange={(e) => setFilters((prev: any) => ({ ...prev, timeRange: { ...prev.timeRange, start: new Date(e.target.value).toISOString() } }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, timeRange: { ...prev.timeRange, start: new Date(e.target.value).toISOString() } }))}
               className="flex-1 px-2 py-2 rounded-lg text-sm bg-black/20 border border-white/10 text-foreground"
             />
             <input
               type="datetime-local" value={filters.timeRange.end.slice(0, 16)}
-              onChange={(e) => setFilters((prev: any) => ({ ...prev, timeRange: { ...prev.timeRange, end: new Date(e.target.value).toISOString() } }))}
+              onChange={(e) => setFilters((prev) => ({ ...prev, timeRange: { ...prev.timeRange, end: new Date(e.target.value).toISOString() } }))}
               className="flex-1 px-2 py-2 rounded-lg text-sm bg-black/20 border border-white/10 text-foreground"
             />
           </div>
@@ -113,8 +152,8 @@ export function DebuggerFilters({ filters, setFilters, onClear, onRefresh }: any
         <div>
           <label className="text-xs font-medium mb-2 block text-muted-foreground uppercase">Quick Filters</label>
           <div className="flex gap-4 pt-2">
-            <FilterCheckbox label="Errors Only" checked={filters.showErrorsOnly} onChange={(v) => setFilters((prev: any) => ({ ...prev, showErrorsOnly: v }))} />
-            <FilterCheckbox label="Slow Events" checked={filters.showSlowEvents} onChange={(v) => setFilters((prev: any) => ({ ...prev, showSlowEvents: v }))} />
+            <FilterCheckbox label="Errors Only" checked={filters.showErrorsOnly} onChange={(v) => setFilters((prev) => ({ ...prev, showErrorsOnly: v }))} />
+            <FilterCheckbox label="Slow Events" checked={filters.showSlowEvents} onChange={(v) => setFilters((prev) => ({ ...prev, showSlowEvents: v }))} />
           </div>
         </div>
         <div>
@@ -140,18 +179,28 @@ function FilterCheckbox({ label, checked, onChange }: { label: string; checked: 
 
 // ── TimelineItem ─────────────────────────────────────────────────────────────
 
-export function TimelineItem({ event, onClick, onToggleExpand }: any) {
-  const getEventIcon = (type: string, data: any) => {
+export interface TimelineItemProps {
+  event: TimelineDisplayItem;
+  onClick: (event: TimelineDisplayItem) => void;
+  onToggleExpand: (id: string) => void;
+}
+
+export function TimelineItem({ event, onClick, onToggleExpand }: TimelineItemProps) {
+  const getEventIcon = (type: string, data: DebugEvent | DebugCorrelation | DebugIncident) => {
     switch (type) {
-      case "event":
-        if (data.errors?.length > 0) return <XCircle className="w-4 h-4 text-red-400" />;
-        if (data.processingTime > 100) return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+      case "event": {
+        const ev = data as DebugEvent;
+        if (ev.errors && ev.errors.length > 0) return <XCircle className="w-4 h-4 text-red-400" />;
+        if (ev.processingTime > 100) return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
         return <CheckCircle className="w-4 h-4 text-green-400" />;
+      }
       case "correlation": return <Layers className="w-4 h-4 text-blue-400" />;
-      case "incident":
-        if (data.incident.severity === "danger") return <AlertTriangle className="w-4 h-4 text-red-400" />;
-        if (data.incident.severity === "warning") return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+      case "incident": {
+        const inc = data as DebugIncident;
+        if (inc.incident.severity === "danger") return <AlertTriangle className="w-4 h-4 text-red-400" />;
+        if (inc.incident.severity === "warning") return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
         return <CheckCircle className="w-4 h-4 text-green-400" />;
+      }
       default: return <Activity className="w-4 h-4 text-gray-400" />;
     }
   };
@@ -160,6 +209,10 @@ export function TimelineItem({ event, onClick, onToggleExpand }: any) {
     const colors: Record<string, string> = { FOMO: "#10b981", SAGE: "#f59e0b", TWEAK: "#8b5cf6", ALRT: "#ef4444", SECURITY: "#dc2626", WATCHER: "#06b6d4", BUILDER: "#84cc16", SYSTEM: "#6b7280" };
     return colors[source] || "#6b7280";
   };
+
+  const evData = event.data as DebugEvent;
+  const corrData = event.data as DebugCorrelation;
+  const incData = event.data as DebugIncident;
 
   return (
     <div
@@ -174,12 +227,12 @@ export function TimelineItem({ event, onClick, onToggleExpand }: any) {
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold uppercase opacity-40 tracking-wider">{event.type}</span>
-                {event.data.metadata?.source && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: `${getSourceColor(event.data.metadata.source)}20`, color: getSourceColor(event.data.metadata.source) }}>
-                    {event.data.metadata.source}
+                {evData.metadata?.source && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: `${getSourceColor(evData.metadata.source)}20`, color: getSourceColor(evData.metadata.source) }}>
+                    {evData.metadata.source}
                   </span>
                 )}
-                {event.type === "event" && <span className="text-xs font-mono opacity-60">{event.data.type}</span>}
+                {event.type === "event" && <span className="text-xs font-mono opacity-60">{evData.type}</span>}
               </div>
               <div className="flex items-center gap-2 text-[10px] opacity-40 font-mono">
                 <Clock className="w-3 h-3" /> {new Date(event.timestamp).toLocaleTimeString()}
@@ -187,9 +240,9 @@ export function TimelineItem({ event, onClick, onToggleExpand }: any) {
               </div>
             </div>
             <div className="text-sm">
-              {event.type === "event" && <div><span className="font-medium">{event.data.type}</span>{event.data.errors?.length > 0 && <span className="ml-2 text-xs text-red-400">{event.data.errors.length} errors</span>}</div>}
-              {event.type === "correlation" && <div><span className="font-medium">{event.data.patternName}</span><span className="ml-2 text-xs opacity-60">{event.data.confidence}% confidence</span></div>}
-              {event.type === "incident" && <div><span className="font-medium">{event.data.incident.title}</span><span className="ml-2 text-xs opacity-60">{event.data.incident.severity}</span></div>}
+              {event.type === "event" && <div><span className="font-medium">{evData.type}</span>{evData.errors && evData.errors.length > 0 && <span className="ml-2 text-xs text-red-400">{evData.errors.length} errors</span>}</div>}
+              {event.type === "correlation" && <div><span className="font-medium">{corrData.patternName}</span><span className="ml-2 text-xs opacity-60">{corrData.confidence}% confidence</span></div>}
+              {event.type === "incident" && <div><span className="font-medium">{incData.incident.title}</span><span className="ml-2 text-xs opacity-60">{incData.incident.severity}</span></div>}
             </div>
             {event.expanded && (
               <div className="mt-3 pt-3 border-t border-white/5">
@@ -208,7 +261,12 @@ export function TimelineItem({ event, onClick, onToggleExpand }: any) {
 
 // ── EventDetailPanel ─────────────────────────────────────────────────────────
 
-export function EventDetailPanel({ event, onClose }: any) {
+export interface EventDetailPanelProps {
+  event: TimelineDisplayItem | null;
+  onClose: () => void;
+}
+
+export function EventDetailPanel({ event, onClose }: EventDetailPanelProps) {
   if (!event) return null;
   return (
     <div className="w-96 border-l border-white/10 bg-black/40 overflow-y-auto p-4 animate-fade-in">
@@ -229,7 +287,7 @@ export function EventDetailPanel({ event, onClose }: any) {
   );
 }
 
-function DetailItem({ label, value }: any) {
+function DetailItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">{label}</label>

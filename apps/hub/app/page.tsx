@@ -169,7 +169,7 @@ export default function Home() {
     }
   }, []);
 
-  const handleOpenDraftEditor = React.useCallback((draft: any) => {
+  const handleOpenDraftEditor = React.useCallback((draft: { id: string }) => {
     setEditingDraftId(draft.id);
     c.setPendingMod(null);
     c.setShowDraftPicker(true);
@@ -476,7 +476,7 @@ export default function Home() {
         handleSwitchStackIndex={c.handleSwitchStackIndex}
         handleOpenModDetails={c.handleOpenModDetails}
         userDrafts={c.userDrafts}
-        session={c.session}
+        session={c.session as import("../types/fomo").FomoUserSession | null}
         profile={c.profile}
         onAddToDraft={(mod, draftId) => c.addModToDraft(draftId, mod, mod.projectType || "mod").then(() => undefined)}
         onOpenDraftPicker={(mod) => {

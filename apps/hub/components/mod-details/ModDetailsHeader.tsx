@@ -231,10 +231,10 @@ export function ModDetailsHeader({
             isReadingTab ? "w-12 h-12" : "w-16 h-16"
           } rounded-xl flex items-center justify-center overflow-hidden shrink-0`}
         >
-          {selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl ? (
+          {selectedModDetails?.icon_url ?? selectedModDetails?.iconUrl ?? selectedMod.iconUrl ? (
             <>
               <img
-                src={selectedModDetails?.icon_url || selectedModDetails?.iconUrl || selectedMod.iconUrl}
+                src={selectedModDetails?.icon_url ?? selectedModDetails?.iconUrl ?? selectedMod.iconUrl ?? undefined}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {

@@ -74,11 +74,12 @@ export default function Page() {
   }, [appMode]);
 
   useEffect(() => {
-    const handleShowOnboarding = (e: any) => {
-      setShowOnboarding(e.detail);
+    const handleShowOnboarding = (e: Event) => {
+      const custom = e as CustomEvent<boolean>;
+      setShowOnboarding(custom.detail);
     };
-    window.addEventListener("show-onboarding", handleShowOnboarding as any);
-    return () => window.removeEventListener("show-onboarding", handleShowOnboarding as any);
+    window.addEventListener("show-onboarding", handleShowOnboarding);
+    return () => window.removeEventListener("show-onboarding", handleShowOnboarding);
   }, []);
 
   const onboardingSteps = [
@@ -210,16 +211,33 @@ export default function Page() {
   // ── Global Events ──────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
-    const events = {
-      "fomo-toggle": (e: any) => setFomoOpen(e.detail),
-      "sage-toggle": (e: any) => setSageOpen(e.detail),
-      "fomo-details-toggle": (e: any) => setDetailsOpen(e.detail.open),
-      "alert-sidebar-toggle": (e: any) => setSidebarOpen(e.detail),
-      "refresh-system": () => { lib.refreshLibrary(); fetch("/api/watcher/rescan").then(r => r.json()).then(d => d.pending && setPendingFiles(d.pending)).catch(()=>{}); },
-      "active-project-changed": (e: any) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: sidebarOpen })); }
+    const handleFomoToggle = (e: Event) => setFomoOpen((e as CustomEvent<boolean>).detail);
+    const handleSageToggle = (e: Event) => setSageOpen((e as CustomEvent<boolean>).detail);
+    const handleFomoDetails = (e: Event) => setDetailsOpen((e as CustomEvent<{ open: boolean }>).detail.open);
+    const handleAlertSidebar = (e: Event) => setSidebarOpen((e as CustomEvent<boolean>).detail);
+    const handleRefreshSystem = () => {
+      lib.refreshLibrary();
+      fetch("/api/watcher/rescan").then(r => r.json()).then(d => d.pending && setPendingFiles(d.pending)).catch(()=>{});
     };
-    Object.entries(events).forEach(([n, h]) => window.addEventListener(n, h as any));
-    return () => Object.entries(events).forEach(([n, h]) => window.removeEventListener(n, h as any));
+    const handleProjectChanged = () => {
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("alert-sidebar-toggle", { detail: sidebarOpen }));
+    };
+
+    window.addEventListener("fomo-toggle", handleFomoToggle);
+    window.addEventListener("sage-toggle", handleSageToggle);
+    window.addEventListener("fomo-details-toggle", handleFomoDetails);
+    window.addEventListener("alert-sidebar-toggle", handleAlertSidebar);
+    window.addEventListener("refresh-system", handleRefreshSystem);
+    window.addEventListener("active-project-changed", handleProjectChanged);
+
+    return () => {
+      window.removeEventListener("fomo-toggle", handleFomoToggle);
+      window.removeEventListener("sage-toggle", handleSageToggle);
+      window.removeEventListener("fomo-details-toggle", handleFomoDetails);
+      window.removeEventListener("alert-sidebar-toggle", handleAlertSidebar);
+      window.removeEventListener("refresh-system", handleRefreshSystem);
+      window.removeEventListener("active-project-changed", handleProjectChanged);
+    };
   }, [lib, sidebarOpen, setPendingFiles]);
 
   // ── Sync Details State with Global Events ──────────────────────────────────
@@ -279,7 +297,7 @@ export default function Page() {
           const data = await res.json();
           const worlds = data.worlds || [];
           if (worlds.length > 0) {
-            worlds.sort((a: any, b: any) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+            worlds.sort((a: { lastPlayed?: number }, b: { lastPlayed?: number }) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
             worldName = worlds[0].folderName;
           }
         } catch (e) {
@@ -317,7 +335,7 @@ export default function Page() {
         const data = await res.json();
         const worlds = data.worlds || [];
         if (worlds.length > 0) {
-          worlds.sort((a: any, b: any) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+          worlds.sort((a: { lastPlayed?: number }, b: { lastPlayed?: number }) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
           worldName = worlds[0].folderName;
           console.log(`[MIMU] Auto-selected last played world: ${worldName}`);
         }

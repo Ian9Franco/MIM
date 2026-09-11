@@ -5,7 +5,7 @@ import { TvMinimalPlay, Play, RefreshCw, Puzzle, Globe, ChevronDown, ChevronUp }
 import { CommunityUserAvatar } from "@/components/fomo/community/CommunityUserAvatar";
 import { CommunityDeleteButton } from "@/components/fomo/community/CommunityDeleteButton";
 
-interface ShowcaseVideo {
+export interface ShowcaseVideo {
   id: string;
   profile_id: string;
   youtube_video_id: string;
@@ -57,6 +57,13 @@ const typeLabels: Record<string, string> = {
   "mc-addons": "Addon"
 };
 
+interface YoutubeVideoAnalysis {
+  channelUrl?: string;
+  channelName?: string;
+  modSlugs?: string[];
+  [key: string]: unknown;
+}
+
 const typeToProjectType: Record<string, string> = {
   mod: "mod",
   plugin: "mod",
@@ -73,7 +80,7 @@ const typeToProjectType: Record<string, string> = {
 function CommunityVideoItem({ vid, currentUserId, onVideoDeleted, onOpenProjectDetails }: { vid: ShowcaseVideo, currentUserId?: string, onVideoDeleted?: (id: string) => void, onOpenProjectDetails?: (id: string, platform?: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [loadingMods, setLoadingMods] = useState(false);
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<YoutubeVideoAnalysis | null>(null);
 
   const toggleExpand = async () => {
     if (expanded) {

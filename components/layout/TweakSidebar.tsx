@@ -8,11 +8,11 @@
 import React, { useRef, useEffect } from "react";
 import { 
   Settings2, Zap, X, RefreshCw, CheckCircle2, AlertTriangle, Save, 
-  History as HistoryIcon, Layers, Search, Sparkles, Keyboard, Package, File, Check 
+  History as HistoryIcon, Layers, Sparkles, Keyboard, File, Check 
 } from "lucide-react";
 import { useTweakManager } from "@/hooks/useTweakManager";
 import { 
-  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, ResourcePackItem, AvailablePackItem, DetectedInstallations 
+  TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, DetectedInstallations 
 } from "./TweakSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { FolderOpen } from "lucide-react";
@@ -30,13 +30,16 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   const sidebarRef = useRef<HTMLDivElement>(null);
   const {
     activeTab, setActiveTab, data, setData, loading, saving, message, setMessage,
-    listeningKey, setListeningKey, handleAction, handleUndo, hasPackChanges,
-    setHasPackChanges, draggedPackIdx, setDraggedPackIdx, addToHistory
+    listeningKey, setListeningKey, handleAction, handleUndo,
+    draggedPackIdx: _draggedPackIdx, setDraggedPackIdx: _setDraggedPackIdx, addToHistory,
+    setHasPackChanges
   } = useTweakManager(isOpen, activeProject);
   const [selectedSnapshot, setSelectedSnapshot] = React.useState<string>("");
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   const packManagerRef = useRef<PackHierarchyManagerRef>(null);
+
+  const uiPacks = data?.resourcePacks?.active ? [...data.resourcePacks.active].reverse() : [];
 
   useEffect(() => {
     const seen = localStorage.getItem("onboarding_tweak");
@@ -96,85 +99,18 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
       e.preventDefault();
       const mcKey = e.code === "Escape" ? "key.keyboard.none" : `key.keyboard.${e.code.replace("Key", "").toLowerCase()}`;
       if (data) {
-        const newKbs = data.keybinds.map((kb: any) => kb.id === listeningKey ? { ...kb, key: mcKey } : kb);
+        const newKbs = data.keybinds.map((kb) => kb.id === listeningKey ? { ...kb, key: mcKey } : kb);
         setData({ ...data, keybinds: newKbs });
         addToHistory(newKbs);
-        handleAction("save", { keybinds: newKbs.map((k: any) => ({ id: k.id, key: k.key })) });
+        handleAction("save", { keybinds: newKbs.map((k) => ({ id: k.id, key: k.key })) });
       }
       setListeningKey(null);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [listeningKey, data, setData, addToHistory, handleAction]);
+  }, [listeningKey, data, setData, addToHistory, handleAction, setListeningKey]);
 
   if (!isOpen) return null;
-
-  // ── Pack Helpers ──
-  const uiPacks = data ? [...data.resourcePacks.active].reverse() : [];
-
-  const handlePackDrop = async (dropUiIdx: number) => {
-    if (draggedPackIdx === null || draggedPackIdx === dropUiIdx || !data) { setDraggedPackIdx(null); return; }
-    const arr = [...data.resourcePacks.active];
-    const fromActual = arr.length - 1 - draggedPackIdx;
-    const toActual   = arr.length - 1 - dropUiIdx;
-    const [moved] = arr.splice(fromActual, 1);
-    arr.splice(toActual, 0, moved);
-    
-    setData({ ...data, resourcePacks: { ...data.resourcePacks, active: arr } });
-    setHasPackChanges(true);
-    setDraggedPackIdx(null);
-
-    // Fetch new analysis from backend
-    try {
-      const res = await fetch("/api/tweak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "analyze-packs",
-          activePacks: arr 
-        })
-      });
-      if (res.ok) {
-        const newAnalysis = await res.json();
-        setData((prev: any) => ({
-          ...prev,
-          resourcePacks: {
-            ...prev.resourcePacks,
-            visualStack: newAnalysis.visualStack,
-            issues: newAnalysis.issues,
-            autoFixable: newAnalysis.autoFixable
-          }
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to re-analyze packs:", error);
-    }
-  };
-
-  const handleTogglePack = (p: string) => {
-    if (!data) return;
-    const isActive = data.resourcePacks.active.includes(p);
-    if (isActive) {
-      setData({ 
-        ...data, 
-        resourcePacks: { 
-          ...data.resourcePacks, 
-          active: data.resourcePacks.active.filter((x: string) => x !== p), 
-          available: [...(data.resourcePacks.available || []), p] 
-        } 
-      });
-    } else {
-      setData({ 
-        ...data, 
-        resourcePacks: { 
-          ...data.resourcePacks, 
-          active: [p, ...data.resourcePacks.active], 
-          available: (data.resourcePacks.available || []).filter((x: string) => x !== p) 
-        } 
-      });
-    }
-    setHasPackChanges(true);
-  };
 
   return (
     <>
@@ -215,7 +151,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
             <div className="flex items-center gap-2 mr-4">
               <button 
                 onClick={() => {
-                  const p = (data as any)?.minecraftPathUsed;
+                  const p = data?.minecraftPathUsed;
                   if (p) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: `${p}/resourcepacks` }) });
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] text-white/60 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
@@ -305,7 +241,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     </div>
                     <button 
                       onClick={() => {
-                        const p = (data as any).minecraftPathUsed;
+                        const p = data?.minecraftPathUsed;
                         if (p) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: p }) });
                       }}
                       className="flex items-center gap-1.5 text-[9px] text-muted/30 hover:text-primary font-black uppercase tracking-widest transition-colors group"
@@ -315,8 +251,8 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   </div>
 
                   <HardwareStats data={data} />
-                  <JvmArgBox jvmArgs={(data as any).jvmArgs} modCount={(data as any).globalModCount} />
-                  <DetectedInstallations installations={(data as any).installations} />
+                  <JvmArgBox jvmArgs={data.jvmArgs || ""} modCount={data.globalModCount || data.modCount || 0} />
+                  <DetectedInstallations installations={data.installations || []} />
                   
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 px-2">
@@ -324,7 +260,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-muted)]">Recomendaciones Inteligentes</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      {data.recommendations.map((rec: any, i: number) => (
+                      {data.recommendations.map((rec, i: number) => (
                         <div key={i} className="p-5 rounded-3xl bg-[var(--color-card)] border border-[var(--color-border)] hover:border-primary/20 hover:bg-[var(--color-hover)] transition-all group relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-4 bg-primary/5 rounded-full -mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                           <div className="flex items-start justify-between gap-3 mb-3">
@@ -336,7 +272,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           <p className="text-[11px] text-[var(--color-muted)] font-medium leading-relaxed mb-4 group-hover:text-[var(--color-foreground)] transition-colors uppercase tracking-tight">{rec.desc}</p>
                           {rec.settingKey && (
                             <button
-                              onClick={() => handleAction("save", { settings: { [rec.settingKey]: rec.recommendedValue } })}
+                              onClick={() => handleAction("save", { settings: { [rec.settingKey as string]: rec.recommendedValue } })}
                               className="w-full py-2 bg-[var(--color-primary)] text-white border border-transparent rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-[var(--color-accent)] transition-all active:scale-95 shadow-lg shadow-black/10"
                             >
                               Aplicar Ajuste
@@ -365,7 +301,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => {
-                          const p = (data as any).minecraftPathUsed;
+                          const p = data?.minecraftPathUsed;
                           if (p) fetch("/api/open-folder", { method: "POST", body: JSON.stringify({ folderPath: p }) });
                         }}
                         className="p-2.5 bg-white/[0.03] border border-white/5 text-muted/40 hover:text-white hover:border-white/10 rounded-xl transition-all active:scale-95 group"
@@ -384,7 +320,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                   
                   <div className="p-4">
                     <div className="rounded-3xl border border-white/[0.03] bg-white/[0.01] overflow-hidden divide-y divide-white/[0.03]">
-                      {data.keybinds.map((kb: any) => (
+                      {data.keybinds.map((kb) => (
                         <KeybindItem key={kb.id} kb={kb} listeningKey={listeningKey} setListeningKey={setListeningKey} />
                       ))}
                     </div>
@@ -424,7 +360,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ action: "analyze-packs", activePacks: reversedPacks })
                           }).then(r => r.json()).then(analysis => {
-                            setData((prev: any) => {
+                            setData((prev) => {
                               if (!prev) return null;
                               return {
                                 ...prev,
@@ -475,7 +411,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                         disabled={saving}
                         onClick={() => handleAction("save", { 
                           resourcePacks: data?.resourcePacks.active,
-                          keybinds: data?.keybinds.map((k: any) => ({ id: k.id, key: k.key }))
+                          keybinds: data?.keybinds.map((k) => ({ id: k.id, key: k.key }))
                         })}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-emerald-600/20"
                       >
@@ -551,7 +487,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           >
                             <span className={selectedSnapshot ? "text-[var(--color-foreground)]" : "text-[var(--color-muted)]"}>
                               {selectedSnapshot ? 
-                                data.snapshots.find((s: any) => s.id === selectedSnapshot)?.profileName : 
+                                data.snapshots.find((s) => s.id === selectedSnapshot)?.profileName : 
                                 "Seleccionar Cápsula..."}
                             </span>
                             <Layers className={`w-4 h-4 transition-colors ${dropdownOpen ? "text-indigo-500" : "text-[var(--color-muted)] group-hover:text-primary"}`} />
@@ -562,7 +498,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
                               <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar animate-fade-in">
-                                {data.snapshots.map((snap: any) => (
+                                {data.snapshots.map((snap) => (
                                   <div 
                                     key={snap.id}
                                     onClick={() => {

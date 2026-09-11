@@ -26,6 +26,7 @@ export interface HomeDraftItem {
   dependencies: HomeDraftDependency[];
   game_versions?: string[];
   loaders?: string[];
+  [key: string]: unknown;
 }
 
 export interface HomeDraft {
@@ -37,6 +38,14 @@ export interface HomeDraft {
   cover_image?: string | null;
   description?: string;
   items?: HomeDraftItem[];
+  /** FomoUserDraft-compatible optional fields */
+  created_at?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  is_public?: boolean;
+  user_id?: string;
+  author_name?: string;
+  [key: string]: unknown;
 }
 
 export interface DraftMetadataUpdates {

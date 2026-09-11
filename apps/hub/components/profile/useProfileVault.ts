@@ -11,17 +11,25 @@ import {
   type MimVaultSchema,
   type EncryptedVaultEnvelope,
   type VaultData,
+  type VaultDraft,
 } from "../../lib/vault/vaultEngine";
 import { importVaultToSupabase, type VaultImportResult } from "../../lib/vault/vaultImporter";
 import { playFomoSound } from "../../lib/sounds";
+import type {
+  FomoFavoriteItem,
+  FomoFollowedAuthor,
+} from "../../types/fomo";
+import type { HomeDraft, HomeDraftItem } from "../../lib/drafts/draftContract";
+import type { HubUserProfile } from "../../types/profile";
+import type { FomoUserSession } from "../../types/fomo";
 
 interface UseProfileVaultParams {
-  session: any;
-  profile: any;
+  session: FomoUserSession | null;
+  profile: HubUserProfile | null;
   username: string;
-  userDrafts: any[];
-  userFavorites: any[];
-  userFollowedAuthors: any[];
+  userDrafts: HomeDraft[];
+  userFavorites: FomoFavoriteItem[];
+  userFollowedAuthors: FomoFollowedAuthor[];
 }
 
 export function useProfileVault({
@@ -53,43 +61,47 @@ export function useProfileVault({
     try {
       setIsExportingVault(true);
 
-      const formattedDrafts = (userDrafts || []).map((d: any) => ({
-        name: d.name || "Borrador sin título",
-        description: d.description || "",
-        minecraft_version: d.minecraft_version || "1.20.1",
-        loader: d.loader || "fabric",
-        visibility: d.visibility || "private",
-        cover_image: d.cover_image || undefined,
-        created_at: d.created_at,
-        items: (d.draft_items || d.items || []).map((it: any) => ({
-          project_id: it.project_id,
-          mod_name: it.mod_name || it.project_id,
-          source: it.source || "modrinth",
-          category: it.category || "mods",
-          content_type: it.content_type || "mods",
-          side: it.side || "both",
-          version_id: it.version_id || undefined,
-          dependencies: it.dependencies || [],
-        })),
-      }));
+      const formattedDrafts: VaultDraft[] = userDrafts.map((d: HomeDraft) => {
+        const rawItems = d.items ?? (d.draft_items as HomeDraftItem[] | undefined) ?? [];
+        const visibility = d.visibility === "public" || d.visibility === "unlisted" ? d.visibility : "private";
+        return {
+          name: d.name || "Borrador sin título",
+          description: d.description ?? "",
+          minecraft_version: d.minecraft_version || "1.20.1",
+          loader: d.loader || "fabric",
+          visibility,
+          cover_image: d.cover_image ?? undefined,
+          created_at: d.created_at,
+          items: rawItems.map((it) => ({
+            project_id: it.project_id,
+            mod_name: it.mod_name ?? it.title ?? it.project_id,
+            source: (typeof it.source === "string" ? it.source : undefined) ?? (typeof it.platform === "string" ? it.platform : undefined) ?? "modrinth",
+            category: it.category,
+            content_type: it.content_type,
+            side: it.side,
+            version_id: typeof it.version_id === "string" ? it.version_id : (typeof it.versionId === "string" ? it.versionId : undefined),
+            dependencies: it.dependencies,
+          })),
+        };
+      });
 
-      const formattedFavorites = (userFavorites || []).map((f: any) => ({
-        project_id: f.mod_id || f.project_id || f.id,
-        mod_name: f.mod_name || f.title || f.name,
-        platform: f.platform || f.source || "modrinth",
-        summary: f.summary,
-        author: f.author,
-        icon_url: f.icon_url,
+      const formattedFavorites = userFavorites.map((f) => ({
+        project_id: String(f.mod_id ?? f.project_id ?? f.id ?? f.projectId ?? ""),
+        mod_name: String(f.mod_name ?? f.title ?? f.name ?? "Proyecto"),
+        platform: String(f.platform ?? f.source ?? f._source ?? "modrinth"),
+        summary: typeof f.summary === "string" ? f.summary : undefined,
+        author: typeof f.author === "string" ? f.author : undefined,
+        icon_url: f.icon_url ?? f.iconUrl ?? undefined,
         pinned: !!f.pinned,
-        created_at: f.created_at,
+        created_at: typeof f.created_at === "string" ? f.created_at : undefined,
       }));
 
-      const formattedAuthors = (userFollowedAuthors || []).map((a: any) => ({
-        author_id: a.author_id,
-        author_name: a.author_name,
-        platform: a.platform || a.source || "modrinth",
-        avatar_url: a.avatar_url,
-        created_at: a.created_at,
+      const formattedAuthors = userFollowedAuthors.map((a) => ({
+        author_id: typeof a.author_id === "string" ? a.author_id : undefined,
+        author_name: String(a.author_name ?? a.name ?? "Autor"),
+        platform: String(a.platform ?? (typeof a.source === "string" ? a.source : undefined) ?? "modrinth"),
+        avatar_url: a.avatar_url ?? a.iconUrl ?? undefined,
+        created_at: typeof a.created_at === "string" ? a.created_at : undefined,
       }));
 
       const vaultData: VaultData = {
@@ -105,9 +117,9 @@ export function useProfileVault({
 
       const identity = {
         username: profile?.username || username || "Usuario",
-        avatar_url: profile?.avatar_url,
-        color: profile?.color,
-        banner_url: profile?.banner_url,
+        avatar_url: profile?.avatar_url ?? undefined,
+        color: profile?.color ?? undefined,
+        banner_url: profile?.banner_url ?? undefined,
         banner_meta: profile?.banner_meta,
       };
 
@@ -194,8 +206,9 @@ export function useProfileVault({
       setIsEncryptedVault(false);
       setImportValidation({ valid: true });
       playFomoSound("sparkle");
-    } catch (err: any) {
-      setImportPassError(err?.message || "Contraseña incorrecta o archivo dañado.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "Contraseña incorrecta o archivo dañado.");
+      setImportPassError(message);
     }
   };
 
@@ -208,14 +221,15 @@ export function useProfileVault({
       if (res.success) {
         playFomoSound("sparkle");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "Error al sincronizar con la base de datos.");
       setImportResult({
         success: false,
         draftsImported: 0,
         itemsImported: 0,
         favoritesImported: 0,
         authorsImported: 0,
-        error: err?.message || "Error al sincronizar con la base de datos.",
+        error: message,
       });
     } finally {
       setIsImporting(false);

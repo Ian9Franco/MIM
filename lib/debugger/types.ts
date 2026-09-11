@@ -31,8 +31,23 @@ export interface DebugIncident {
     status: string;
     timestamp: string;
     changedBy: string;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
   }>;
+}
+
+export interface TimelineOptions {
+  eventTypes?: EventName[];
+  sources?: string[];
+  startTime?: string;
+  endTime?: string;
+  limit?: number;
+}
+
+export interface TimelineItem {
+  timestamp: string;
+  type: "event" | "correlation" | "incident";
+  data: DebugEvent | DebugCorrelation | DebugIncident;
+  duration?: number;
 }
 
 export interface EventFlowTrace {

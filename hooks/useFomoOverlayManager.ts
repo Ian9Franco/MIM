@@ -1,34 +1,35 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/core/types";
+import type { FomoGalleryItem, FomoFollowedAuthor } from "@/types/fomo";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
 import { MIM_BOT_CHAT_MODE } from "@/lib/intelligence/modExplainer";
 
 const translationCache: Record<string, string> = {}; // Cache de traducciones: projectId -> interleavedHTML
 
-function normalizeGallery(rawGallery: any[] | undefined): any[] {
+function normalizeGallery(rawGallery: unknown[] | undefined): FomoGalleryItem[] {
   if (!rawGallery?.length) return [];
-  return rawGallery
-    .map((item) => {
-      if (!item) return null;
-      if (typeof item === "string") {
-        return { url: item, thumbnailUrl: item, title: "" };
-      }
-      if (typeof item === "object") {
-        const url = item.url || item.raw_url || item.image_url || item.imageUrl || item.value || "";
-        const thumbnailUrl =
-          item.thumbnailUrl || item.thumbnail_url || item.url || item.raw_url || item.image_url || item.imageUrl || item.value || "";
-        return {
+  const items: FomoGalleryItem[] = [];
+  for (const item of rawGallery) {
+    if (!item) continue;
+    if (typeof item === "string" && item.trim()) {
+      items.push({ url: item, thumbnailUrl: item, title: "" });
+    } else if (typeof item === "object") {
+      const obj = item as Record<string, unknown>;
+      const url = (obj.url || obj.raw_url || obj.image_url || obj.imageUrl || obj.value || "") as string;
+      if (url) {
+        const thumbnailUrl = (obj.thumbnailUrl || obj.thumbnail_url || url) as string;
+        items.push({
           url,
           thumbnailUrl,
-          title: item.title || item.description || item.caption || "",
-          description: item.description || item.caption || "",
-          featured: item.featured || false,
-        };
+          title: (obj.title || obj.description || obj.caption || "") as string,
+          description: (obj.description || obj.caption || "") as string,
+          featured: Boolean(obj.featured),
+        });
       }
-      return null;
-    })
-    .filter((g) => g && g.url);
+    }
+  }
+  return items;
 }
 
 export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hideVersions: boolean) {
@@ -39,8 +40,8 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [translatedBody, setTranslatedBody] = useState<string | null>(null);
   const [fullBody, setFullBody] = useState<string | null>(null);
   const [depSearchQuery, setDepSearchQuery] = useState("");
-  const [followedAuthors, setFollowedAuthors] = useState<any[]>([]);
-  const [followedMods, setFollowedMods] = useState<any[]>([]);
+  const [followedAuthors, setFollowedAuthors] = useState<FomoFollowedAuthor[]>([]);
+  const [followedMods, setFollowedMods] = useState<ModHit[]>([]);
 
   // Explainer Logic (Gemini Flash Multimodal + Grounded)
   const [explainedBody, setExplainedBody] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   const [isChatSending, setIsChatSending] = useState(false);
 
   // Gallery Logic
-  const [gallery, setGallery] = useState<any[]>(normalizeGallery(mod.gallery));
+  const [gallery, setGallery] = useState<FomoGalleryItem[]>(normalizeGallery(mod.gallery));
   const [loadingGallery, setLoadingGallery] = useState(false);
   const lastFetchedKey = useRef<string | null>(null);
 
@@ -149,13 +150,14 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           // Preloading can be re-enabled once root cause is identified.
           console.log(`[Gallery Hook] Preload disabled for debugging. First image: ${items[0].url}`);
         }
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
+      } catch (e: unknown) {
+        const err = e as { name?: string; message?: string };
+        if (err?.name === "AbortError") {
           console.log("[Gallery Hook] Fetch aborted");
           return;
         }
         if (retries > 0) {
-          console.warn(`[Gallery Hook] Fetch failed, retrying (${retries} left):`, e.message);
+          console.warn(`[Gallery Hook] Fetch failed, retrying (${retries} left):`, err?.message);
           await new Promise(res => setTimeout(res, delayMs));
           return doFetch(retries - 1, delayMs * 1.5);
         }
@@ -184,8 +186,9 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
         if (data.body) setFullBody(data.body);
-      } catch (e: any) {
-        if (e?.name === "AbortError") return;
+      } catch (e: unknown) {
+        const err = e as { name?: string };
+        if (err?.name === "AbortError") return;
         if (retries > 0) {
           await new Promise(res => setTimeout(res, delayMs));
           return doFetch(retries - 1, delayMs * 1.5);
@@ -206,7 +209,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
         const mods = await mimDB.getAllFollowedMods();
         
         setFollowedAuthors(authors);
-        setFollowedMods(mods.map((m: any) => m.data));
+        setFollowedMods(mods.map((m: { data: ModHit }) => m.data));
       } catch (err) {
         console.error("Error loading followed data in overlay", err);
       }
@@ -224,11 +227,11 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   }, []);
 
   const toggleFollowAuthor = useCallback(async (author: string) => {
-    const exists = followedAuthors.some((a: any) => a?.name === author);
+    const exists = followedAuthors.some((a: FomoFollowedAuthor) => a?.name === author);
     let next;
     if (exists) {
       await mimDB.deleteFollowedAuthor(author);
-      next = followedAuthors.filter((a: any) => a?.name !== author);
+      next = followedAuthors.filter((a: FomoFollowedAuthor) => a?.name !== author);
     } else {
       const newAuthor = { name: author, iconUrl: mod.iconUrl ?? undefined, dateFollowed: Date.now() };
       await mimDB.setFollowedAuthor(newAuthor);
@@ -382,8 +385,8 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     await migrateLegacyBrowserGeminiKey().catch(() => false);
 
     const galleryUrls = (gallery || [])
-      .map((g: any) => g?.thumbnailUrl || g?.url)
-      .filter((u: any): u is string => typeof u === "string" && u.length > 0)
+      .map((g: FomoGalleryItem) => g?.thumbnailUrl || g?.url)
+      .filter((u: unknown): u is string => typeof u === "string" && u.length > 0)
       .slice(0, 5);
 
     try {
@@ -433,9 +436,10 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
       } catch (e) {
         console.warn("[useFomoOverlayManager] Failed to write explanation cache:", e);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[Mod Explainer] Error:", err);
-      setExplainError(err?.message || "Error al conectar con Gemini API.");
+      const e = err as { message?: string };
+      setExplainError(e?.message || "Error al conectar con Gemini API.");
     } finally {
       setIsExplaining(false);
     }
@@ -489,7 +493,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
           { role: "model" as const, text: `⚠️ ${data.message || data.error}` },
         ]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[MimBotChat] Error:", err);
       setChatMessages([
         ...newMessages,

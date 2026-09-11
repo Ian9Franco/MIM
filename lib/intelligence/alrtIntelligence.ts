@@ -50,7 +50,7 @@ class AlrtIntelligence {
     };
     this.eventBuffer.push(event);
     this.cleanupBuffer();
-    this.analyzePatterns(event);
+    this.analyzePatterns();
     eventBus.emit("system:refresh", { trigger: "auto", scope: "module", timestamp: new Date().toISOString() });
   }
 
@@ -67,7 +67,7 @@ class AlrtIntelligence {
     if (this.eventBuffer.length > this.BUFFER_SIZE) this.eventBuffer = this.eventBuffer.slice(-this.BUFFER_SIZE);
   }
 
-  private analyzePatterns(_latestEvent?: OperationalEvent) {
+  private analyzePatterns() {
     this.behavioralPatterns.forEach(p => this.checkPattern(p.context as EventPattern));
   }
 
@@ -115,7 +115,7 @@ class AlrtIntelligence {
     this.createIncidentFromCorrelation(correlation);
     eventBus.emit("alrt:incident-created", {
       incidentId: `alrt-correlation-${id}`, title: `Correlación: ${pattern.name}`,
-      description: pattern.description, severity: pattern.severity as any,
+      description: pattern.description, severity: pattern.severity,
       status: "unseen", module: "SYSTEM", correlationId: id
     });
   }

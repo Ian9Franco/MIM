@@ -8,21 +8,50 @@ import { MiembrosSkeleton } from "../FomoSkeletons";
 import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
 import { CommunityRankings } from "../community/CommunityRankings";
-import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
+import { CommunityPublicProfile, type PublicProfileFavorite, type PublicProfileAuthor, type PublicProfileDraft, type PublicProfileShare } from "../community/CommunityPublicProfile";
 import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
+import type { Fn } from "../../types/fn";
 
-function normalizeCommunityProfile(profile: any) {
+export interface CommunityProfile {
+  id: string;
+  username?: string;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  color?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  banner_meta?: {
+    youtube_channels?: Array<{ name?: string; url?: string; visible?: boolean }>;
+    theme?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface CommunityShareItem {
+  id: string;
+  mod_id?: string;
+  platform?: string;
+  name?: string;
+  icon_url?: string | null;
+  summary?: string;
+  pinned?: boolean;
+  created_at?: string;
+  profile?: CommunityProfile | CommunityProfile[];
+}
+
+function normalizeCommunityProfile(profile: unknown): CommunityProfile | null {
   if (!profile) return null;
-  return Array.isArray(profile) ? profile[0] : profile;
+  return Array.isArray(profile) ? (profile[0] as CommunityProfile) : (profile as CommunityProfile);
 }
 
 interface ComunidadTabProps {
   rankings: ModHit[];
   loadingRankings: boolean;
   handleOpenModDetails: (mod: ModHit) => void;
-  session: any;
-  userFavorites: any[];
-  userFollowedAuthors: any[];
+  session: { user?: { id: string } } | null;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  userFollowedAuthors: Array<{ platform?: string; author_name?: string; name?: string }>;
   onToggleFavorite: (mod: ModHit) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
   showAlert?: (title: string, message: string) => void;
@@ -35,18 +64,19 @@ function updateKey(source: string | undefined, projectId: string) {
   return `${source || "modrinth"}:${projectId}`;
 }
 
-function isMissingPinnedColumnError(error: any) {
-  const message = String(error?.message || error?.details || "");
-  return error?.code === "42703" || error?.code === "PGRST204" || /\bpinned\b/i.test(message);
+function isMissingPinnedColumnError(error: unknown) {
+  const err = error as { message?: string; details?: string; code?: string } | null;
+  const message = String(err?.message ?? err?.details ?? "");
+  return err?.code === "42703" || err?.code === "PGRST204" || /\bpinned\b/i.test(message);
 }
 
-function isSharePinned(row: any) {
+function isSharePinned(row: CommunityShareItem) {
   if (row?.pinned === true) return true;
   if (row?.pinned === false) return false;
   return !!parseShareMeta(row?.summary).priority;
 }
 
-function sortSharesByPinned(rows: any[]) {
+function sortSharesByPinned(rows: CommunityShareItem[]) {
   return [...rows].sort((a, b) => {
     const priorityOrder = Number(isSharePinned(b)) - Number(isSharePinned(a));
     if (priorityOrder) return priorityOrder;
@@ -54,7 +84,7 @@ function sortSharesByPinned(rows: any[]) {
   });
 }
 
-async function loadCommunitySharesPage(page: number) {
+async function loadCommunitySharesPage(page: number): Promise<{ items: CommunityShareItem[]; hasNext: boolean }> {
   const from = page * SHARES_PAGE_SIZE;
   const to = from + SHARES_PAGE_SIZE;
   const query = supabase
@@ -67,7 +97,7 @@ async function loadCommunitySharesPage(page: number) {
 
   const { data, error } = await query;
   if (!error) {
-    const sorted = sortSharesByPinned(data || []);
+    const sorted = sortSharesByPinned((data || []) as CommunityShareItem[]);
     return { items: sorted.slice(0, SHARES_PAGE_SIZE), hasNext: sorted.length > SHARES_PAGE_SIZE };
   }
   if (!isMissingPinnedColumnError(error)) throw error;
@@ -79,11 +109,11 @@ async function loadCommunitySharesPage(page: number) {
     .range(0, 240);
 
   if (fallback.error) throw fallback.error;
-  const sorted = sortSharesByPinned((fallback.data || []).filter(isSharePinned));
+  const sorted = sortSharesByPinned(((fallback.data || []) as CommunityShareItem[]).filter(isSharePinned));
   return { items: sorted.slice(from, to), hasNext: sorted.length > to };
 }
 
-async function loadProfileShares(profileId: string) {
+async function loadProfileShares(profileId: string): Promise<CommunityShareItem[]> {
   const withPinned = await supabase
     .from("favorite_mods")
     .select("*")
@@ -91,7 +121,7 @@ async function loadProfileShares(profileId: string) {
     .order("pinned", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
-  if (!withPinned.error) return sortSharesByPinned(withPinned.data || []);
+  if (!withPinned.error) return sortSharesByPinned((withPinned.data || []) as CommunityShareItem[]);
   if (!isMissingPinnedColumnError(withPinned.error)) throw withPinned.error;
 
   const fallback = await supabase
@@ -101,7 +131,7 @@ async function loadProfileShares(profileId: string) {
     .order("created_at", { ascending: false });
 
   if (fallback.error) throw fallback.error;
-  return sortSharesByPinned(fallback.data || []);
+  return sortSharesByPinned((fallback.data || []) as CommunityShareItem[]);
 }
 
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {
@@ -118,16 +148,22 @@ async function fetchProjectUpdatedAt(source: string | undefined, projectId: stri
 export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, userFavorites, userFollowedAuthors, onToggleFavorite, onSearchAuthor, showAlert }: ComunidadTabProps) {
   const [section, setSection] = useState<CommunitySection>("compartidos");
   const [profileView, setProfileView] = useState<"list" | "profile">("list");
-  const [selectedProfile, setSelectedProfile] = useState<any>(null);
-  const [shares, setShares] = useState<any[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<CommunityProfile | null>(null);
+  const [shares, setShares] = useState<CommunityShareItem[]>([]);
   const [loadingShares, setLoadingShares] = useState(false);
   const [sharesPage, setSharesPage] = useState(0);
   const [hasNextSharesPage, setHasNextSharesPage] = useState(false);
-  const sharePageCache = useRef(new Map<number, { items: any[]; hasNext: boolean }>());
+  const sharePageCache = useRef(new Map<number, { items: CommunityShareItem[]; hasNext: boolean }>());
   const [recentUpdates, setRecentUpdates] = useState<Record<string, boolean>>({});
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<CommunityProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [publicData, setPublicData] = useState({ favorites: [] as any[], authors: [] as any[], drafts: [] as any[], channels: [] as string[], shares: [] as any[] });
+  const [publicData, setPublicData] = useState<{
+    favorites: PublicProfileFavorite[];
+    authors: PublicProfileAuthor[];
+    drafts: PublicProfileDraft[];
+    channels: string[];
+    shares: PublicProfileShare[];
+  }>({ favorites: [], authors: [], drafts: [], channels: [], shares: [] });
   const [loadingPublic, setLoadingPublic] = useState(false);
   const [communityMetrics, setCommunityMetrics] = useState({ members: 0, recommendations: 0, featured: 0 });
   const [creatorIds, setCreatorIds] = useState<Set<string>>(new Set());
@@ -189,13 +225,13 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       supabase.from("followed_mods").select("profile_id, mod_id, platform"),
       supabase.from("followed_authors").select("profile_id, author_name, platform"),
     ]).then(([draftRows, favoriteRows, authorRows]) => {
-      setCreatorIds(new Set((draftRows.data || []).map((row: any) => row.owner_id)));
+      setCreatorIds(new Set((draftRows.data || []).map((row: { owner_id: string }) => row.owner_id)));
       const next: Record<string, { favorites: number; creators: number }> = {};
-      (favoriteRows.data || []).forEach((row: any) => {
+      (favoriteRows.data || []).forEach((row: { profile_id: string; mod_id: string; platform?: string }) => {
         next[row.profile_id] ||= { favorites: 0, creators: 0 };
         if (myFavoriteKeys.has(`${row.platform || "modrinth"}:${row.mod_id}`)) next[row.profile_id].favorites++;
       });
-      (authorRows.data || []).forEach((row: any) => {
+      (authorRows.data || []).forEach((row: { profile_id: string; author_name: string; platform?: string }) => {
         next[row.profile_id] ||= { favorites: 0, creators: 0 };
         if (myAuthorKeys.has(`${row.platform || "modrinth"}:${row.author_name}`)) next[row.profile_id].creators++;
       });
@@ -206,7 +242,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   useEffect(() => {
     if (!session?.user?.id) return;
     supabase.from("followed_profiles").select("followed_id").eq("follower_id", session.user.id)
-      .then(({ data }) => setFollowedProfileIds(new Set((data || []).map((row: any) => row.followed_id))));
+      .then(({ data }) => { setFollowedProfileIds(new Set((data ?? []).map((row: { followed_id: string }) => row.followed_id))); });
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -219,7 +255,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
           return;
         }
         const next: Record<string, { count: number; mine: boolean }> = {};
-        (data || []).forEach((row: any) => {
+        (data || []).forEach((row: { share_id: string; profile_id: string }) => {
           next[row.share_id] ||= { count: 0, mine: false };
           next[row.share_id].count++;
           if (row.profile_id === session?.user?.id) next[row.share_id].mine = true;
@@ -286,7 +322,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     return () => { cancelled = true; };
   }, [shares]);
 
-  const openProfile = async (profile: any) => {
+  const openProfile = async (profile: unknown) => {
     const resolved = normalizeCommunityProfile(profile);
     if (!resolved?.id) {
       showAlert?.("Perfil no disponible", "No pudimos abrir este perfil.");
@@ -303,8 +339,17 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", resolved.id).eq("visibility", "public"),
       loadProfileShares(resolved.id),
     ]);
-    const channels = resolved.banner_meta?.youtube_channels?.filter((channel: any) => channel.visible !== false).map((channel: any) => channel.name || channel.url || channel).filter(Boolean) || [];
-    setPublicData({ favorites: favorites || [], authors: authors || [], drafts: drafts || [], channels, shares: sharesData || [] });
+    const channels = (resolved.banner_meta?.youtube_channels
+      ?.filter((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" || channel.visible !== false)
+      .map((channel: { name?: string; url?: string; visible?: boolean } | string) => typeof channel === "string" ? channel : channel.name ?? channel.url ?? "")
+      .filter(Boolean) ?? []) as string[];
+    setPublicData({
+      favorites: (favorites ?? []) as PublicProfileFavorite[],
+      authors: (authors ?? []) as PublicProfileAuthor[],
+      drafts: (drafts ?? []) as PublicProfileDraft[],
+      channels,
+      shares: (sharesData || []) as PublicProfileShare[],
+    });
     setLoadingPublic(false);
   };
 
@@ -318,16 +363,42 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     <motion.div key="comunidad" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="flex min-h-0 flex-1 flex-col">
       <CommunityHeader active={section} onChange={changeSection} metrics={communityMetrics} />
       <AnimatePresence mode="wait">
-        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={setSharesPage} onOpenProfile={openProfile} onOpenMod={handleOpenModDetails} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reactions={reactions} onToggleReaction={toggleReaction} />}
-        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={handleOpenModDetails} /></motion.div>}
-        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={openProfile} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={toggleProfileFollow} />}
-        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => setProfileView("list")} onOpenMod={handleOpenModDetails} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id)} onToggleFollow={() => toggleProfileFollow(selectedProfile?.id)} />}
+        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={(nextPage) => { setSharesPage(nextPage); }} onOpenProfile={(value) => { void openProfile(value); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} userFavorites={userFavorites} onToggleFavorite={(mod) => { onToggleFavorite(mod); }} reactions={reactions} onToggleReaction={(shareId) => { void toggleReaction(shareId); }} />}
+        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={(mod) => { handleOpenModDetails(mod); }} /></motion.div>}
+        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={(value) => { void openProfile(value); }} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={(profileId) => { void toggleProfileFollow(profileId); }} />}
+        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id ?? ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile?.id ?? ""); }} />}
       </AnimatePresence>
     </motion.div>
   );
 }
 
-interface FeedProps { shares: any[]; loading: boolean; recentUpdates: Record<string, boolean>; page: number; hasNext: boolean; onPageChange: (page: number) => void; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; userFavorites: any[]; onToggleFavorite: (mod: ModHit) => void; reactions: Record<string, { count: number; mine: boolean }>; onToggleReaction: (shareId: string) => void; }
+interface FeedProps {
+  shares: CommunityShareItem[];
+  loading: boolean;
+  recentUpdates: Record<string, boolean>;
+  page: number;
+  hasNext: boolean;
+  onPageChange: Fn<[number]>;
+  onOpenProfile: Fn<[unknown]>;
+  onOpenMod: Fn<[ModHit]>;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  onToggleFavorite: Fn<[ModHit]>;
+  reactions: Record<string, { count: number; mine: boolean }>;
+  onToggleReaction: Fn<[string]>;
+}
+
+interface ShareCardProps {
+  item: CommunityShareItem;
+  index: number;
+  updated: boolean;
+  featured?: boolean;
+  onOpenProfile: Fn<[unknown]>;
+  onOpenMod: Fn<[ModHit]>;
+  userFavorites: Array<{ platform?: string; source?: string; mod_id?: string; project_id?: string; projectId?: string; id?: string }>;
+  onToggleFavorite: Fn<[ModHit]>;
+  reaction?: { count: number; mine: boolean };
+  onToggleReaction: Fn<[string]>;
+}
 
 /** The feed keeps user context first, then presents the shared media as one clear action. */
 function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageChange, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reactions, onToggleReaction }: FeedProps) {
@@ -343,7 +414,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
           <span className="text-[8px] font-mono uppercase text-white/25">Deslizá →</span>
         </div>
         <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 pt-2 pr-10 scrollbar-none">
-          {featuredShares.map((item, index) => <ShareCard key={`featured-${item.id}`} item={item} index={index} featured updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
+          {featuredShares.map((item, index) => <ShareCard key={`featured-${item.id}`} item={item} index={index} featured updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
         </div>
       </section>
 
@@ -352,7 +423,7 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
           <div><p className="text-[9px] font-mono uppercase text-white/30">En tiempo real</p><h3 id="community-activity-title" className="mt-0.5 text-xs font-bold text-white/80">Actividad reciente</h3></div>
           <span className="text-[8px] font-mono uppercase text-white/25">Lo último</span>
         </div>
-        {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform || "modrinth", item.mod_id || item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
+        {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
       </section>
       <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
         <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
@@ -363,10 +434,10 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
   );
 }
 
-function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: { item: any; index: number; updated: boolean; featured?: boolean; onOpenProfile: (profile: any) => void; onOpenMod: (mod: ModHit) => void; userFavorites: any[]; onToggleFavorite: (mod: ModHit) => void; reaction?: { count: number; mine: boolean }; onToggleReaction: (shareId: string) => void }) {
+function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reaction, onToggleReaction }: ShareCardProps) {
   const meta = parseShareMeta(item.summary);
-  const projectId = item.mod_id || item.id;
-  const platform = item.platform || "modrinth";
+  const projectId = item.mod_id ?? item.id;
+  const platform = item.platform ?? "modrinth";
   const shareProfile = normalizeCommunityProfile(item.profile);
   const projectType = meta.projectType || "mod";
   const isYoutube = item.platform === "youtube" || projectType.startsWith("youtube-");
@@ -418,7 +489,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
 
       {isYoutube ? (
         <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025]">
-          {(meta.thumbnail || item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={meta.thumbnail || item.icon_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
+          {(meta.thumbnail ?? item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={(meta.thumbnail ?? item.icon_url) ?? undefined} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
           <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
         </div>
       ) : (
@@ -430,7 +501,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
       <div className="grid grid-cols-4 gap-1.5">
         <button type="button" onClick={(event) => { event.stopPropagation(); if (isYoutube) playVideo(); else onOpenMod(mod); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
         {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={(event) => { event.stopPropagation(); onToggleFavorite(mod); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
-        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine || false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count || 0}</button>
+        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine ?? false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count ?? 0}</button>
         <button type="button" onClick={(event) => { event.stopPropagation(); onOpenProfile(shareProfile); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
       </div>
 
@@ -438,13 +509,13 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
   );
 }
 
-function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: any[]; loading: boolean; onOpen: (profile: any) => void; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: (profileId: string) => void }) {
+function MembersList({ profiles, loading, onOpen, creatorIds, affinity, currentProfileId, followedProfileIds, onToggleFollow }: { profiles: CommunityProfile[]; loading: boolean; onOpen: Fn<[CommunityProfile]>; creatorIds: Set<string>; affinity: Record<string, { favorites: number; creators: number }>; currentProfileId?: string; followedProfileIds: Set<string>; onToggleFollow: Fn<[string]> }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"new" | "active" | "creators">("new");
   const visibleProfiles = useMemo(() => profiles
     .filter((profile) => profile.username?.toLowerCase().includes(query.trim().toLowerCase()))
     .filter((profile) => filter !== "creators" || creatorIds.has(profile.id))
-    .sort((a, b) => new Date(filter === "active" ? b.updated_at || b.created_at : b.created_at).getTime() - new Date(filter === "active" ? a.updated_at || a.created_at : a.created_at).getTime()), [creatorIds, filter, profiles, query]);
+    .sort((a, b) => new Date(filter === "active" ? b.updated_at ?? b.created_at ?? 0 : b.created_at ?? 0).getTime() - new Date(filter === "active" ? a.updated_at ?? a.created_at ?? 0 : a.created_at ?? 0).getTime()), [creatorIds, filter, profiles, query]);
 
   return <motion.div key="members-list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-3 overflow-y-auto pb-28 scrollbar-none">
     <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface/80 px-3"><Search className="h-4 w-4 text-white/35" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario..." className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/30" /></label>

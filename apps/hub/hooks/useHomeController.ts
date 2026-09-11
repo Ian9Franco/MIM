@@ -7,6 +7,16 @@ import { supabase } from "../lib/supabaseClient";
 import type { CollectionItem } from "../app/types";
 import { attachDependencyTypes, buildDependencyTypeMap } from "../lib/dependencies";
 import { fetchUserShares, isFavoritePlatformConstraintError, sortSharesByPriority } from "../lib/shareMeta";
+import type {
+  FomoModDetails,
+  FomoDependencyItem,
+  ModStackItem,
+  FomoFavoriteItem,
+  FomoCommunityShare,
+  FomoFollowedAuthor,
+} from "../types/fomo";
+import type { HubUserProfile } from "../types/profile";
+import type { FomoUserSession } from "../types/fomo";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
 
@@ -61,7 +71,7 @@ const FALLBACK_MODRINTH_COLLECTIONS: CollectionItem[] = [
     name: "Modrinth Featured",
     description: "Selección local de mods destacados para mantener Spotlight visible sin depender del cache de desarrollo.",
     projectCount: mockUpdatedMods.length,
-    iconUrl: mockUpdatedMods[0]?.iconUrl,
+    iconUrl: mockUpdatedMods[0]?.iconUrl ?? undefined,
     source: "modrinth",
     previewIcons: mockUpdatedMods.map((m) => m.iconUrl).filter(Boolean) as string[],
     mods: mockUpdatedMods,
@@ -74,72 +84,119 @@ const FALLBACK_CURSEFORGE_COLLECTIONS: CollectionItem[] = [
     name: "CurseForge Picks",
     description: "Picks editoriales de respaldo para el carrusel mobile.",
     projectCount: mockNewestMods.length,
-    iconUrl: mockNewestMods[0]?.iconUrl,
+    iconUrl: mockNewestMods[0]?.iconUrl ?? undefined,
     source: "curseforge",
     previewIcons: mockNewestMods.map((m) => m.iconUrl).filter(Boolean) as string[],
     mods: mockNewestMods.map((m) => ({ ...m, _source: "curseforge" })),
   },
 ];
 
-function normalizeFavorite(fav: any): ModHit {
-  let meta: any = {};
+function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
+  const r = fav as Record<string, unknown>;
+  const m = fav as ModHit;
+  let meta: Record<string, unknown> = {};
+  const summaryStr = typeof r.summary === "string" ? r.summary : "";
   try {
-    meta = fav.summary && fav.summary.trim().startsWith("{") ? JSON.parse(fav.summary) : {};
+    meta = summaryStr.trim().startsWith("{") ? JSON.parse(summaryStr) : {};
   } catch (e) {
     console.debug("[useHomeController] Could not parse favorite summary JSON:", e);
   }
-  const projectId = fav.project_id || fav.mod_id || fav.id;
-  const projectType = fav.project_type || meta.project_type || fav.content_type || "mod";
+  const projectId = String(r.project_id || m.projectId || r.mod_id || r.id || "");
+  const projectType = String(r.project_type || meta.project_type || r.content_type || "mod");
   
-  let title = fav.name || fav.mod_name || projectId;
-  let author = fav.author || "Comunidad";
-  if (fav.name && fav.name.includes(" ::: ")) {
-    const parts = fav.name.split(" ::: ");
-    title = parts[0];
-    author = parts[1];
+  const rawName = String(r.name || m.title || r.mod_name || projectId);
+  let title = rawName;
+  let author = String(r.author || m.author || "Comunidad");
+  if (rawName.includes(" ::: ")) {
+    const parts = rawName.split(" ::: ");
+    title = parts[0] ?? rawName;
+    author = parts[1] ?? author;
   }
 
   return {
     projectId,
     title,
-    description: fav.description || meta.description || fav.summary || "",
-    iconUrl: fav.icon_url,
+    description: String(
+      typeof r.description === "string" ? r.description
+        : typeof m.description === "string" ? m.description
+          : typeof meta.description === "string" ? meta.description
+            : summaryStr
+    ),
+    iconUrl: typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined,
     author,
     projectType,
-    categories: fav.categories || meta.categories || [],
-    url: fav.url || meta.url || `https://modrinth.com/${projectType}/${projectId}`,
-    _source: fav.platform || fav.source || "modrinth",
+    categories: Array.isArray(r.categories) ? (r.categories as string[]) : (Array.isArray(meta.categories) ? (meta.categories as string[]) : []),
+    url: typeof r.url === "string" ? r.url : typeof meta.url === "string" ? (meta.url as string) : `https://modrinth.com/${projectType}/${projectId}`,
+    _source: String(m._source ?? (typeof r.platform === "string" ? r.platform : typeof r.source === "string" ? r.source : "modrinth")),
+  };
+}
+
+function shareProjectKey(share: { mod_id?: string; project_id?: string; id?: string }) {
+  return share.mod_id ?? share.project_id ?? share.id;
+}
+
+function buildYoutubeSharePayload(post: Record<string, unknown>, currentChannel: string) {
+  const postId = (typeof post.postId === "string" ? post.postId : undefined)
+    ?? (typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined);
+  const mode = typeof post.mode === "string" ? post.mode : "video";
+  const embeddedVideoId = typeof post.embeddedVideoId === "string" ? post.embeddedVideoId : undefined;
+  const title = typeof post.title === "string" ? post.title
+    : (mode === "short" ? "Short de YouTube" : mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
+  const videoUrl = typeof post.videoUrl === "string" ? post.videoUrl
+    : (embeddedVideoId ? `https://www.youtube.com/watch?v=${embeddedVideoId}` : currentChannel);
+  const thumbnail = typeof post.thumbnail === "string" ? post.thumbnail
+    : (embeddedVideoId ? `https://i.ytimg.com/vi/${embeddedVideoId}/mqdefault.jpg` : null);
+  const contentKind = mode === "short" || mode === "video-short"
+    ? "youtube-short"
+    : mode === "post"
+      ? "youtube-post"
+      : "youtube-video";
+  return {
+    postId,
+    projectId: postId ? `youtube:${postId}` : "",
+    title,
+    thumbnail,
+    summary: JSON.stringify({
+      comment: typeof post.description === "string" ? post.description : "",
+      projectType: contentKind,
+      videoUrl,
+      thumbnail,
+      embeddedVideoId: embeddedVideoId ?? null,
+      mode,
+      publishedAt: typeof post.publishedAt === "string" ? post.publishedAt : "",
+      channelUrl: currentChannel,
+    }),
   };
 }
 
 export function useHomeController() {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedMod, setSelectedMod] = useState<ModHit | null>(null);
-  const [selectedModDetails, setSelectedModDetails] = useState<any>(null);
-  const [selectedModDeps, setSelectedModDeps] = useState<any[]>([]);
+  const [selectedModDetails, setSelectedModDetails] = useState<FomoModDetails | null>(null);
+  const [selectedModDeps, setSelectedModDeps] = useState<FomoDependencyItem[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [modalTab, setModalTab] = useState<"summary" | "gallery" | "desc" | "versions" | "deps">("summary");
-  const [modStack, setModStack] = useState<any[]>([]);
+  const [modStack, setModStack] = useState<ModStackItem[]>([]);
   const [activeStackIndex, setActiveStackIndex] = useState(-1);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const collectionsLastLoadedRef = useRef(0);
   const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<FomoUserSession | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<HubUserProfile | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [showcaseChannels, setShowcaseChannels] = useState<string[]>([]);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
-  const [userFavorites, setUserFavorites] = useState<any[]>([]);
-  const [userShares, setUserShares] = useState<any[]>([]);
-  const [userFollowedAuthors, setUserFollowedAuthors] = useState<any[]>([]);
+  const [userFavorites, setUserFavorites] = useState<FomoFavoriteItem[]>([]);
+  const [userShares, setUserShares] = useState<FomoCommunityShare[]>([]);
+  const [userFollowedAuthors, setUserFollowedAuthors] = useState<FomoFollowedAuthor[]>([]);
   const [loadingUserData, setLoadingUserData] = useState(false);
 
   const [updatedMods, setUpdatedMods] = useState<ModHit[]>(mockUpdatedMods);
@@ -157,11 +214,11 @@ export function useHomeController() {
 
   const [theme, setTheme] = useState<"official" | "vampire" | "modern">("official");
   const [customAlert, setCustomAlert] = useState<{ title: string; message: string } | null>(null);
-  const [youtubePosts, setYoutubePosts] = useState<any[]>([]);
+  const [youtubePosts, setYoutubePosts] = useState<Array<Record<string, unknown>>>([]);
   const [loadingYoutube, setLoadingYoutube] = useState(false);
   const [currentChannel, setCurrentChannel] = useState("https://www.youtube.com/@EnderVerseMC");
   const [youtubeFeedType, setYoutubeFeedType] = useState<"posts" | "videos" | "shorts">("posts");
-  const [followedChannels, setFollowedChannels] = useState<any[]>([
+  const [followedChannels, setFollowedChannels] = useState<Array<{ name: string; url: string; visible?: boolean }>>([
     { name: "Wero Lovernite", url: "https://www.youtube.com/@Wero_lovernite", visible: true },
     { name: "EnderVerseMC", url: "https://www.youtube.com/@EnderVerseMC", visible: true },
   ]);
@@ -197,7 +254,7 @@ export function useHomeController() {
     showAlert,
   });
 
-  const ensureMaxThreeVisible = useCallback((channels: any[]) => {
+  const ensureMaxThreeVisible = useCallback((channels: Array<{ name: string; url: string; visible?: boolean }>) => {
     if (!Array.isArray(channels)) return [];
     const hasVisible = channels.some(c => c.visible === true);
     if (!hasVisible && channels.length > 0) {
@@ -215,8 +272,8 @@ export function useHomeController() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("mim-theme") as any;
-    if (saved && ["official", "vampire", "modern"].includes(saved)) {
+    const saved = localStorage.getItem("mim-theme");
+    if (saved && (saved === "official" || saved === "vampire" || saved === "modern")) {
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
     }
@@ -278,8 +335,8 @@ export function useHomeController() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session as FomoUserSession | null); });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => { setSession(nextSession as FomoUserSession | null); });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -401,8 +458,9 @@ export function useHomeController() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-    } catch (err: any) {
-      showAlert("Error de autenticación", err.message || "Error en la autenticación");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error en la autenticación";
+      showAlert("Error de autenticación", message);
     } finally {
       setAuthLoading(false);
     }
@@ -411,7 +469,7 @@ export function useHomeController() {
   const syncFollowedChannels = async (channels: typeof followedChannels) => {
     if (session?.user?.id) {
       await supabase.from("profiles").update({ banner_meta: { ...profile?.banner_meta, youtube_channels: channels } }).eq("id", session.user.id);
-      setProfile((prev: any) => ({ ...prev, banner_meta: { ...prev?.banner_meta, youtube_channels: channels } }));
+      setProfile((prev) => prev ? ({ ...prev, banner_meta: { ...prev.banner_meta, youtube_channels: channels } }) : prev);
     } else {
       localStorage.setItem("mim_web_youtube_channels", JSON.stringify(channels));
     }
@@ -541,17 +599,17 @@ export function useHomeController() {
   }, []);
 
   const loadCollections = useCallback(async () => {
-    const applyCachedCollections = (payload: any) => {
-      if (Array.isArray(payload?.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured);
-      if (Array.isArray(payload?.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured);
-      if (Array.isArray(payload?.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections);
-      if (typeof payload?.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
-      if (Array.isArray(payload?.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods);
-      if (typeof payload?.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
+    const applyCachedCollections = (payload: Record<string, unknown>) => {
+      if (Array.isArray(payload.modrinthFeatured)) setModrinthFeatured(payload.modrinthFeatured as CollectionItem[]);
+      if (Array.isArray(payload.curseForgeFeatured)) setCurseForgeFeatured(payload.curseForgeFeatured as CollectionItem[]);
+      if (Array.isArray(payload.curseForgeCollections)) setCurseForgeCollections(payload.curseForgeCollections as CollectionItem[]);
+      if (typeof payload.latestCollectionName === "string") setLatestCollectionName(payload.latestCollectionName);
+      if (Array.isArray(payload.latestFeaturedMods)) setLatestFeaturedMods(payload.latestFeaturedMods as ModHit[]);
+      if (typeof payload.timestamp === "number") collectionsLastLoadedRef.current = payload.timestamp;
     };
 
     const cachedRaw = localStorage.getItem(COLLECTIONS_CACHE_KEY);
-    let cachedPayload: any = null;
+    let cachedPayload: Record<string, unknown> | null = null;
     if (cachedRaw) {
       try {
         cachedPayload = JSON.parse(cachedRaw);
@@ -580,7 +638,7 @@ export function useHomeController() {
       setModrinthFeatured(mrColls);
       setCurseForgeFeatured(cfPicks);
       setCurseForgeCollections(cfCollections);
-      let latestFeatured: any[] = [];
+      let latestFeatured: ModHit[] = [];
       if (mrColls[0]) {
         setLatestCollectionName(mrColls[0].name);
         if (Array.isArray(mrRes.latestFeaturedMods) && mrRes.latestFeaturedMods.length > 0) {
@@ -635,16 +693,16 @@ export function useHomeController() {
         fetch(`https://api.modrinth.com/v2/search?index=updated&limit=12&facets=${facets}`).then((r) => r.json()),
         fetch(`https://api.modrinth.com/v2/search?index=newest&limit=12&facets=${facets}`).then((r) => r.json()),
       ]);
-      const mapHits = (hits: any[], backup: ModHit[]) => hits?.length ? hits.map((m: any) => ({
-        projectId: m.project_id,
-        title: m.title,
-        description: m.description,
-        iconUrl: m.icon_url,
-        author: m.author,
-        projectType: m.project_type,
-        categories: m.categories,
-        url: `https://modrinth.com/${m.project_type}/${m.slug}`,
-        _source: "modrinth",
+      const mapHits = (hits: Array<Record<string, unknown>>, backup: ModHit[]) => hits.length ? hits.map((m) => ({
+        projectId: String(m.project_id || m.id || ""),
+        title: String(m.title || ""),
+        description: String(m.description || ""),
+        iconUrl: typeof m.icon_url === "string" ? m.icon_url : undefined,
+        author: String(m.author || "Comunidad"),
+        projectType: String(m.project_type || "mod"),
+        categories: Array.isArray(m.categories) ? (m.categories as string[]) : [],
+        url: `https://modrinth.com/${String(m.project_type || "mod")}/${String(m.slug || m.project_id || "")}`,
+        _source: "modrinth" as const,
       })) : backup;
       setUpdatedMods(mapHits(updatedRes.hits, mockUpdatedMods));
       setNewestMods(mapHits(newestRes.hits, mockNewestMods));
@@ -709,8 +767,8 @@ export function useHomeController() {
     setLoadingDetails(true);
     setModalTab("summary");
 
-    let details = null;
-    let depsData: any[] = [];
+    let details: FomoModDetails | null = null;
+    let depsData: FomoDependencyItem[] = [];
     let realAuthor: string | null = null;
 
     try {
@@ -719,11 +777,11 @@ export function useHomeController() {
         if (res.ok) {
           const data = await res.json();
           details = data.details;
-          depsData = data.dependencies || [];
+          depsData = data.dependencies ?? [];
           setSelectedModDetails(details);
           setSelectedModDeps(depsData);
-          if (details?.authors && details.authors.length > 0) {
-            realAuthor = details.authors[0].name;
+          if (details?.authors && Array.isArray(details.authors) && details.authors.length > 0) {
+            realAuthor = (details.authors[0] as { name?: string }).name ?? null;
           }
         }
       } else {
@@ -732,15 +790,15 @@ export function useHomeController() {
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/dependencies`),
           fetch(`https://api.modrinth.com/v2/project/${normalizedMod.projectId}/version`),
         ]);
-        let versionsData: any[] = [];
+        let versionsData: NonNullable<FomoModDetails["versions"]> = [];
         if (pRes.ok) {
           details = await pRes.json();
           if (details?.team) {
             try {
               const teamRes = await fetch(`https://api.modrinth.com/v2/team/${details.team}/members`);
               if (teamRes.ok) {
-                const members = await teamRes.json();
-                const owner = members.find((m: any) => m.role?.toLowerCase() === "owner" || m.is_owner) || members[0];
+                const members = await teamRes.json() as Array<{ role?: string; is_owner?: boolean; user?: { username?: string } }>;
+                const owner = members.find((m) => m.role?.toLowerCase() === "owner" || m.is_owner) ?? members[0];
                 if (owner?.user?.username) {
                   realAuthor = owner.user.username;
                 }
@@ -775,9 +833,9 @@ export function useHomeController() {
         normalizedMod.author = realAuthor;
         modChanged = true;
       }
-      const resolvedIcon = details?.icon_url || details?.iconUrl;
+      const resolvedIcon = (details as Record<string, unknown> | null)?.icon_url || details?.iconUrl;
       if (resolvedIcon && !normalizedMod.iconUrl) {
-        normalizedMod.iconUrl = resolvedIcon;
+        normalizedMod.iconUrl = typeof resolvedIcon === "string" ? resolvedIcon : undefined;
         modChanged = true;
       }
       if (modChanged) {
@@ -801,9 +859,9 @@ export function useHomeController() {
     const item = modStack[index];
     setActiveStackIndex(index);
     setSelectedMod(item.mod);
-    setSelectedModDetails(item.details);
-    setSelectedModDeps(item.deps);
-    setModalTab(item.tab);
+    setSelectedModDetails(item.details ?? null);
+    setSelectedModDeps(item.deps ?? []);
+    setModalTab((item as { tab?: "summary" | "gallery" | "desc" | "versions" | "deps" }).tab ?? "summary");
   };
 
   const onToggleFavorite = async (mod: ModHit) => {
@@ -849,9 +907,10 @@ export function useHomeController() {
       const { error } = await request;
       if (error) throw error;
       await loadUserData(userId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserFavorites(previousFavorites);
-      showAlert("Error", `Error al guardar favorito: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al guardar favorito: ${message}`);
     }
   };
 
@@ -878,8 +937,9 @@ export function useHomeController() {
       const { error } = await request;
       if (error) throw error;
       await loadUserData(session.user.id, true);
-    } catch (err: any) {
-      showAlert("Error", `Error al seguir autor: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al seguir autor: ${message}`);
     }
   };
 
@@ -904,8 +964,9 @@ export function useHomeController() {
         return isUuid ? itemId !== shareId : itemModId !== shareId;
       }));
       await loadUserData(session.user.id, true);
-    } catch (err: any) {
-      showAlert("Error", `Error al eliminar compartido: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `Error al eliminar compartido: ${message}`);
     }
   };
 
@@ -938,51 +999,32 @@ export function useHomeController() {
       }
       const { error } = await query.select("id,pinned").single();
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserShares(previousShares);
-      showAlert("Error", `No se pudo actualizar la prioridad: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `No se pudo actualizar la prioridad: ${message}`);
     }
   };
 
-  const shareYoutubePost = async (post: any) => {
+  const shareYoutubePost = async (post: Record<string, unknown>) => {
     if (!session?.user?.id) {
       showAlert("Iniciá sesión", "Necesitás iniciar sesión para compartir contenido con la comunidad.");
       return;
     }
-
-    const postId = post?.postId || post?.embeddedVideoId;
-    if (!postId) {
+    const payload = buildYoutubeSharePayload(post, currentChannel);
+    if (!payload.postId) {
       showAlert("Sin contenido", "No encontré un identificador válido para compartir este contenido.");
       return;
     }
-
+    const { projectId, title, thumbnail, summary } = payload;
     const userId = session.user.id;
-    const projectId = `youtube:${postId}`;
-    const title = post.title || (post.mode === "short" ? "Short de YouTube" : post.mode === "post" ? "Publicación de YouTube" : "Video de YouTube");
-    const videoUrl = post.videoUrl || (post.embeddedVideoId ? `https://www.youtube.com/watch?v=${post.embeddedVideoId}` : currentChannel);
-    const thumbnail = post.thumbnail || (post.embeddedVideoId ? `https://i.ytimg.com/vi/${post.embeddedVideoId}/mqdefault.jpg` : null);
-    const contentKind = post.mode === "short" || post.mode === "video-short"
-      ? "youtube-short"
-      : post.mode === "post"
-        ? "youtube-post"
-        : "youtube-video";
-    const existingShare = userShares.find((share) => (share.mod_id || share.project_id || share.id) === projectId);
-    const summary = JSON.stringify({
-      comment: post.description || "",
-      projectType: contentKind,
-      videoUrl,
-      thumbnail,
-      embeddedVideoId: post.embeddedVideoId || null,
-      mode: post.mode || "video",
-      publishedAt: post.publishedAt || "",
-      channelUrl: currentChannel,
-    });
+    const existingShare = userShares.find((share) => shareProjectKey(share) === projectId);
     const previousShares = userShares;
-    const alreadyShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === projectId);
+    const alreadyShared = userShares.some((share) => shareProjectKey(share) === projectId);
 
     setUserShares((prev) => [
       {
-        id: alreadyShared ? prev.find((share) => (share.mod_id || share.project_id || share.id) === projectId)?.id || `optimistic-${projectId}` : `optimistic-${projectId}`,
+        id: alreadyShared ? prev.find((share) => shareProjectKey(share) === projectId)?.id ?? `optimistic-${projectId}` : `optimistic-${projectId}`,
         profile_id: userId,
         mod_id: projectId,
         platform: "youtube",
@@ -992,25 +1034,14 @@ export function useHomeController() {
         pinned: existingShare?.pinned ?? false,
         created_at: new Date().toISOString(),
       },
-      ...prev.filter((share) => (share.mod_id || share.project_id || share.id) !== projectId),
+      ...prev.filter((share) => shareProjectKey(share) !== projectId),
     ]);
 
     const saveShare = (platform: "youtube" | "modrinth") => {
-      const payload = {
-        platform,
-        name: title,
-        icon_url: thumbnail,
-        summary,
-        pinned: existingShare?.pinned ?? false,
-      };
-
+      const row = { platform, name: title, icon_url: thumbnail, summary, pinned: existingShare?.pinned ?? false };
       return alreadyShared
-        ? supabase.from("favorite_mods").update(payload).eq("profile_id", userId).eq("mod_id", projectId)
-        : supabase.from("favorite_mods").insert({
-          profile_id: userId,
-          mod_id: projectId,
-          ...payload,
-        });
+        ? supabase.from("favorite_mods").update(row).eq("profile_id", userId).eq("mod_id", projectId)
+        : supabase.from("favorite_mods").insert({ profile_id: userId, mod_id: projectId, ...row });
     };
 
     try {
@@ -1021,9 +1052,10 @@ export function useHomeController() {
         if (fallbackError) throw fallbackError;
       }
       await loadUserData(userId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setUserShares(previousShares);
-      showAlert("Error", `No se pudo compartir: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showAlert("Error", `No se pudo compartir: ${message}`);
     }
   };
 

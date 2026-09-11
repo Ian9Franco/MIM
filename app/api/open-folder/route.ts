@@ -10,64 +10,54 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import os from "os";
+import { z } from "zod";
 import { getSettings } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const openFolderBodySchema = z.object({
+  folderPath: z.string().min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
+  { bodySchema: openFolderBodySchema },
+  async ({ body }) => {
+    try {
+      const { folderPath } = body;
 
-  try {
-    const { folderPath } = await req.json();
+      let resolvedPath = path.resolve(folderPath);
 
-    if (!folderPath) {
-      return NextResponse.json({ error: "Missing folderPath" }, { status: 400 });
-    }
-
-    let resolvedPath = path.resolve(folderPath);
-
-    if (folderPath === "downloads") {
-      resolvedPath = getSettings().downloadsPath || path.join(os.homedir(), "Downloads");
-    } else if (folderPath === "minecraft") {
-      resolvedPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
-    } else if (folderPath === "mods") {
-      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
-      resolvedPath = path.join(mcPath, "mods");
-    } else if (folderPath === "resourcepacks") {
-      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
-      resolvedPath = path.join(mcPath, "resourcepacks");
-    } else if (folderPath === "shaderpacks") {
-      const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
-      resolvedPath = path.join(mcPath, "shaderpacks");
-    }
-
-    if (!fs.existsSync(resolvedPath)) {
-      fs.mkdirSync(resolvedPath, { recursive: true });
-    }
-
-    // Open the folder in the native file explorer
-    let command = "";
-    if (os.platform() === "win32") {
-      // explorer.exe returns exit code 1 if it succeeds in opening an existing window, so we ignore errors
-      command = `explorer "${resolvedPath}"`;
-    } else if (os.platform() === "darwin") {
-      command = `open "${resolvedPath}"`;
-    } else {
-      command = `xdg-open "${resolvedPath}"`;
-    }
-
-    exec(command, (error) => {
-      // Ignore exit code 1 on Windows
-      if (error && !(os.platform() === "win32" && error.code === 1)) {
-        console.error("[/api/open-folder] Error opening folder:", error);
+      if (folderPath === "downloads") {
+        resolvedPath = getSettings().downloadsPath || path.join(os.homedir(), "Downloads");
+      } else if (folderPath === "minecraft") {
+        resolvedPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+      } else if (folderPath === "mods") {
+        const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+        resolvedPath = path.join(mcPath, "mods");
+      } else if (folderPath === "resourcepacks") {
+        const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+        resolvedPath = path.join(mcPath, "resourcepacks");
+      } else if (folderPath === "shaderpacks") {
+        const mcPath = getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft");
+        resolvedPath = path.join(mcPath, "shaderpacks");
       }
-    });
+
+      if (!fs.existsSync(resolvedPath)) {
+        fs.mkdirSync(resolvedPath, { recursive: true });
+      }
+
+      // Open the folder in the native file explorer safely without shell execution
+      if (os.platform() === "win32") {
+        spawn("explorer.exe", [resolvedPath], { detached: true, stdio: "ignore" }).unref();
+      } else if (os.platform() === "darwin") {
+        spawn("open", [resolvedPath], { detached: true, stdio: "ignore" }).unref();
+      } else {
+        spawn("xdg-open", [resolvedPath], { detached: true, stdio: "ignore" }).unref();
+      }
 
     return NextResponse.json({ success: true, path: resolvedPath });
   } catch (e: unknown) {

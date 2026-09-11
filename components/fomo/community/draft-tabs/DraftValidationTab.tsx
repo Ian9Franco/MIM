@@ -1,14 +1,14 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Server, Monitor, Layers, Activity, ShieldCheck, HelpCircle } from "lucide-react";
-import { supabase } from "@/lib/core/supabaseClient";
+import type { CommunityDraft, CommunityDraftItem } from "@/types/fomo";
 
 interface ValidationResult {
   id: string;
   type: "critical" | "warning" | "success";
   title: string;
   description: string;
-  affectedItems?: any[];
-  icon: any;
+  affectedItems?: CommunityDraftItem[];
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 export function DraftValidationTab({
@@ -19,8 +19,8 @@ export function DraftValidationTab({
 }: {
   draftId: string;
   isModern: boolean;
-  draft: any;
-  draftItems: any[];
+  draft: CommunityDraft | null;
+  draftItems: CommunityDraftItem[];
 }) {
   const [isScanning, setIsScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
@@ -41,7 +41,7 @@ export function DraftValidationTab({
       const newResults: ValidationResult[] = [];
 
       // 1. Check for duplicates (same project_id)
-      const projectCounts: Record<string, any[]> = {};
+      const projectCounts: Record<string, CommunityDraftItem[]> = {};
       draftItems.forEach(item => {
         if (!item.project_id) return;
         if (!projectCounts[item.project_id]) projectCounts[item.project_id] = [];
@@ -103,11 +103,11 @@ export function DraftValidationTab({
 
       // 3.5 Local Dependency Checks (Instant)
       const draftProjectIds = new Set(draftItems.map(i => String(i.project_id)));
-      const localMissingDeps = new Map<string, { missingProject: string, requiredBy: any[] }>();
+      const localMissingDeps = new Map<string, { missingProject: string; requiredBy: CommunityDraftItem[] }>();
 
       draftItems.forEach(item => {
         if (item.dependencies && Array.isArray(item.dependencies) && item.dependencies.length > 0) {
-          item.dependencies.forEach((dep: any) => {
+          item.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
             const depId = String(dep.project_id);
             if (dep.dependency_type === "required" && dep.project_id) {
               if (!draftProjectIds.has(depId)) {
@@ -128,7 +128,7 @@ export function DraftValidationTab({
                     type: "critical",
                     title: "Conflicto de Mods (Incompatibilidad Local)",
                     description: `El mod es explícitamente incompatible con [${depId}]. Debes eliminar uno.`,
-                    affectedItems: [item, incompatibleItem].filter(Boolean),
+                    affectedItems: [item, incompatibleItem].filter((x): x is CommunityDraftItem => Boolean(x)),
                     icon: XCircle
                   });
                 }
@@ -159,8 +159,12 @@ export function DraftValidationTab({
         );
         
         if (modrinthItems.length > 0) {
-          const fetchedVersions: any[] = [];
-          const missingDependencies = new Map<string, { missingProject: string, requiredBy: any[] }>();
+          const fetchedVersions: Array<{
+            id?: string;
+            project_id?: string;
+            dependencies?: Array<{ project_id?: string; dependency_type?: string }>;
+          }> = [];
+          const missingDependencies = new Map<string, { missingProject: string; requiredBy: CommunityDraftItem[] }>();
           const draftProjectIds = new Set(draftItems.map(i => String(i.project_id)));
 
           // 1. Fetch items WITH version_id in bulk
@@ -206,7 +210,7 @@ export function DraftValidationTab({
             const sourceItem = modrinthItems.find(i => i.version_id === v.id || i.project_id === v.project_id);
             if (!sourceItem) return;
 
-            v.dependencies.forEach((dep: any) => {
+            v.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
               const depId = String(dep.project_id);
               // Check for missing required dependencies
               if (dep.dependency_type === "required" && dep.project_id) {
@@ -231,7 +235,7 @@ export function DraftValidationTab({
                     type: "critical",
                     title: "Conflicto de Mods (Incompatibilidad)",
                     description: `El mod es explícitamente incompatible con [${depId}]. Debes eliminar uno de los dos.`,
-                    affectedItems: [sourceItem, incompatibleItem].filter(Boolean),
+                    affectedItems: [sourceItem, incompatibleItem].filter((x): x is CommunityDraftItem => Boolean(x)),
                     icon: XCircle
                   });
                 }

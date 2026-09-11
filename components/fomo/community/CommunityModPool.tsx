@@ -16,7 +16,7 @@ import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { communityTypeToBannerType } from "@/lib/fomo/fomoModBanner";
 import { CommunityReactionButton } from "./CommunityReactionButton";
 
-interface SharedFavorite {
+export interface SharedFavorite {
   id: string;
   profile_id: string;
   mod_id: string;

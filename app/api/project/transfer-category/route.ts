@@ -9,10 +9,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
+import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 
 function copyFolderRecursive(src: string, dest: string): number {
@@ -36,34 +37,38 @@ function copyFolderRecursive(src: string, dest: string): number {
   return count;
 }
 
+const transferCategoryBodySchema = z.object({
+  sourceProject: z.string().min(1),
+  targetProject: z.string().min(1),
+  version: z.string().min(1),
+  category: z.string().min(1),
+  loader: z.string().optional(),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
+  { bodySchema: transferCategoryBodySchema },
+  async ({ body }) => {
+    try {
+      const { sourceProject, targetProject, version, category, loader = "fabric" } = body;
 
-  try {
-    const { sourceProject, targetProject, version, category, loader } = await req.json();
+      const safeSource = sourceProject === "__global__" ? "__global__" : sourceProject.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeTarget = targetProject.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeVersion = version.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeLoader = loader.replace(/[<>:"/\\|?*]/g, "_").trim();
 
-    if (!sourceProject || !targetProject || !version || !category) {
-      return NextResponse.json(
-        { error: "Missing required fields: sourceProject, targetProject, version, category" },
-        { status: 400 }
-      );
-    }
+      if (safeSource === safeTarget) {
+        return NextResponse.json(
+          { error: "Source and target project cannot be the same" },
+          { status: 400 }
+        );
+      }
 
-    if (sourceProject === targetProject) {
-      return NextResponse.json(
-        { error: "Source and target project cannot be the same" },
-        { status: 400 }
-      );
-    }
+      // Determine source directory: either a project-specific mods folder or the global loader folder
+      const sourceBaseDir = safeSource === "__global__"
+        ? path.join(SOURCE_BASE, safeVersion, safeLoader)
+        : path.join(SOURCE_BASE, "_projects", safeSource, "mods");
 
-    // Determine source directory: either a project-specific mods folder or the global loader folder
-    const sourceBaseDir = sourceProject === "__global__"
-      ? path.join(SOURCE_BASE, version, loader)
-      : path.join(SOURCE_BASE, "_projects", sourceProject, "mods");
-
-    const targetBaseDir = path.join(SOURCE_BASE, "_projects", targetProject, "mods");
+      const targetBaseDir = path.join(SOURCE_BASE, "_projects", safeTarget, "mods");
 
     if (!fs.existsSync(sourceBaseDir)) {
       const errorMsg = sourceProject === "__global__"
@@ -89,7 +94,7 @@ export const POST = withApiGuard(
       }
     } else {
       // Transfer specific category (e.g. .local, .essential, .server)
-      if (!CATEGORIES.includes(category as any)) {
+      if (!(CATEGORIES as readonly string[]).includes(category)) {
         return NextResponse.json(
           { error: `Categoría inválida: ${category}` },
           { status: 400 }

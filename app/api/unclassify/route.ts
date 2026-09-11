@@ -13,26 +13,22 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const unclassifyBodySchema = z.object({
+  sourcePaths: z.array(z.string().min(1)).min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  try {
-    const { sourcePaths } = await req.json();
-
-    if (!sourcePaths || !Array.isArray(sourcePaths) || sourcePaths.length === 0) {
-      return NextResponse.json(
-        { error: "Missing or empty sourcePaths array" },
-        { status: 400 }
-      );
-    }
+  { bodySchema: unclassifyBodySchema },
+  async ({ body }) => {
+    try {
+      const { sourcePaths } = body;
 
     const downloadsDir = path.join(os.homedir(), "Downloads");
     if (!fs.existsSync(downloadsDir)) {

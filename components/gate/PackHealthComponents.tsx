@@ -5,7 +5,7 @@ import {
   XCircle, AlertTriangle, Info, ChevronDown,
   Search, FolderInput, Settings
 } from "lucide-react";
-import type { ValidationIssue, ValidationSeverity } from "@/lib/core/types";
+import type { Project, ValidationIssue, ValidationSeverity } from "@/lib/core/types";
 
 // ── Severity Config ───────────────────────────────────────────────────────────
 
@@ -19,11 +19,11 @@ export const SEVERITY_CONFIG: Record<ValidationSeverity, {
 
 // ── Issue Row ─────────────────────────────────────────────────────────────────
 
-export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: ValidationIssue; onFomoSearch: (q: string) => void, activeProject?: any }) {
+export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: ValidationIssue; onFomoSearch: (q: string) => void, activeProject?: Project }) {
   const cfg = SEVERITY_CONFIG[issue.severity];
   const [expanded, setExpanded] = useState(false);
 
-  const handleFix = async (action: string, payload?: any) => {
+  const handleFix = async (action: string, payload?: Record<string, unknown>) => {
     if (!activeProject) return;
     try {
       await fetch("/api/project/fix-issue", {
@@ -49,7 +49,13 @@ export function IssueRow({ issue, onFomoSearch, activeProject }: { issue: Valida
     if (!issue.fixAction) return null;
     
     const map: Record<string, { label: string; icon: React.ReactNode; fn: () => void }> = {
-      fomo_search:    { label: "Buscar en FOMO", icon: <Search      className="w-3 h-3" />, fn: () => onFomoSearch(issue.fixPayload?.query ?? issue.affectedMod ?? "") },
+      fomo_search:    {
+        label: "Buscar en FOMO",
+        icon: <Search className="w-3 h-3" />,
+        fn: () => onFomoSearch(
+          typeof issue.fixPayload?.query === "string" ? issue.fixPayload.query : (issue.affectedMod ?? ""),
+        ),
+      },
       move_to_local:  { label: "→ .local",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_local", issue.fixPayload) },
       move_to_server: { label: "→ .server",        icon: <FolderInput className="w-3 h-3" />, fn: () => handleFix("move_to_server", issue.fixPayload) },
       disable:        { label: "Deshabilitar",     icon: <Settings   className="w-3 h-3" />, fn: () => handleFix("disable") },
@@ -140,7 +146,7 @@ function IssueSectionRaw({
   onFomoSearch: (q: string) => void;
   dotColor: string;
   forceOpen?: boolean;
-  activeProject?: any;
+  activeProject?: Project;
 }, ref: React.ForwardedRef<HTMLDivElement>) {
   const [open, setOpen] = useState(defaultOpen);
 

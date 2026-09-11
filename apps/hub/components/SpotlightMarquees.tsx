@@ -5,6 +5,7 @@ import { DefaultModIcon } from "./DefaultModIcon";
 import React, { useEffect, useState } from "react";
 import { TvMinimalPlay, X, Puzzle } from "lucide-react";
 import { useSmoothMarquee } from "../hooks/useSmoothMarquee";
+import type { CollectionItem } from "../app/types";
 
 export interface ModHit {
   id?: string;
@@ -13,7 +14,7 @@ export interface ModHit {
   slug?: string;
   title: string;
   author: string;
-  iconUrl?: string;
+  iconUrl?: string | null;
   projectType: string;
   categories?: string[];
   description?: string;
@@ -91,7 +92,7 @@ export function VerticalTicker({ mods, onSelectMod, speed = 0.5, color = "text-o
       <div ref={innerRef} className="flex w-full flex-col gap-3.5 px-1 py-3 pb-4">
         {duplicatedMods.map((mod, i) => {
           const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
-          const loaderTag = mod.categories?.map((c: any) => {
+          const loaderTag = mod.categories?.map((c: string | { name?: string }) => {
             if (typeof c === "string") return c;
             if (c && typeof c === "object" && typeof c.name === "string") return c.name;
             return "";
@@ -207,10 +208,10 @@ export function HorizontalEditorialMarquee({
   reverse = false,
   paused = false,
 }: {
-  items: any[];
+  items: ModHit[] | CollectionItem[];
   type?: "mod" | "collection";
-  onSelectMod?: (mod: any) => void;
-  onSelectCollection?: (coll: any) => void;
+  onSelectMod?: (mod: ModHit) => void;
+  onSelectCollection?: (coll: CollectionItem) => void;
   speed?: number;
   reverse?: boolean;
   paused?: boolean;
@@ -227,18 +228,19 @@ export function HorizontalEditorialMarquee({
       <div ref={innerRef} className="flex w-max items-start gap-4 px-1">
         {duplicatedItems.map((item, i) => {
           if (type === "collection") {
+            const coll = item as CollectionItem;
             return (
-              <div key={`${item.id}-${i}`} className="mim-marquee-card-slot">
+              <div key={`${coll.id}-${i}`} className="mim-marquee-card-slot">
               <CollectibleSurface
-                label={`Abrir colección ${item.name}`}
-                onClick={() => onSelectCollection?.(item)}
+                label={`Abrir colección ${coll.name}`}
+                onClick={() => onSelectCollection?.(coll)}
                 className={`flex flex-col ${PICK_CARD_SIZE}`}
               >
                 <div className="mim-collectible-media relative flex h-24 shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.06] bg-white/5">
-                  {item.iconUrl ? (
+                  {coll.iconUrl ? (
                     <>
                       <img
-                        src={item.iconUrl}
+                        src={coll.iconUrl}
                         alt=""
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -248,36 +250,37 @@ export function HorizontalEditorialMarquee({
                         }}
                       />
                       <div className="hidden w-full h-full">
-                        <DefaultModIcon platform={item.source} />
+                        <DefaultModIcon platform={coll.source} />
                       </div>
                     </>
                   ) : (
-                    <DefaultModIcon platform={item.source} />
+                    <DefaultModIcon platform={coll.source} />
                   )}
                   <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70">
-                    {item.projectCount || item.mods?.length || 0} mods
+                    {coll.projectCount || coll.mods?.length || 0} mods
                   </span>
                 </div>
                 <div className="flex h-[132px] flex-col px-4 pb-3 pt-3">
-                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{item.name}</h4>
+                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{coll.name}</h4>
                   <p className="mt-1.5 h-[2.625rem] line-clamp-2 text-[9px] leading-[1.45] text-white/40">
-                    {item.description || "\u00A0"}
+                    {coll.description || "\u00A0"}
                   </p>
                 </div>
               </CollectibleSurface>
               </div>
             );
           } else {
+            const mod = item as ModHit;
             return (
-              <div key={`${item.projectId}-${i}`} className="mim-marquee-card-slot">
+              <div key={`${mod.projectId}-${i}`} className="mim-marquee-card-slot">
               <CollectibleSurface
-                label={`Ver detalles de ${item.title}`}
-                onClick={() => onSelectMod?.(item)}
+                label={`Ver detalles de ${mod.title}`}
+                onClick={() => onSelectMod?.(mod)}
                 className={`flex flex-col ${PICK_CARD_SIZE}`}
               >
                 <div className="mim-collectible-media relative flex h-24 shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.06] bg-white/5">
                   {(() => {
-                    const bannerImg = item.gallery?.find((g: any) => g.featured)?.url || item.gallery?.[0]?.url;
+                    const bannerImg = mod.gallery?.find((g) => g.featured)?.url ?? mod.gallery?.[0]?.url;
                     if (bannerImg) {
                       return (
                         <>
@@ -292,10 +295,10 @@ export function HorizontalEditorialMarquee({
                             }}
                           />
                           <div className="hidden w-full h-full">
-                            {item.iconUrl ? (
+                            {mod.iconUrl ? (
                               <>
                                 <img
-                                  src={item.iconUrl}
+                                  src={mod.iconUrl}
                                   alt=""
                                   className="w-full h-full object-cover scale-110 opacity-90"
                                   onError={(e) => {
@@ -305,20 +308,20 @@ export function HorizontalEditorialMarquee({
                                   }}
                                 />
                                 <div className="hidden w-full h-full">
-                                  <DefaultModIcon platform={item._source} />
+                                  <DefaultModIcon platform={mod._source} />
                                 </div>
                               </>
                             ) : (
-                              <DefaultModIcon platform={item._source} />
+                              <DefaultModIcon platform={mod._source} />
                             )}
                           </div>
                         </>
                       );
-                    } else if (item.iconUrl) {
+                    } else if (mod.iconUrl) {
                       return (
                         <>
                           <img
-                            src={item.iconUrl}
+                            src={mod.iconUrl}
                             alt=""
                             className="w-full h-full object-cover scale-110 opacity-90"
                             onError={(e) => {
@@ -328,26 +331,26 @@ export function HorizontalEditorialMarquee({
                             }}
                           />
                           <div className="hidden w-full h-full">
-                            <DefaultModIcon platform={item._source} />
+                            <DefaultModIcon platform={mod._source} />
                           </div>
                         </>
                       );
                     } else {
-                      return <DefaultModIcon platform={item._source} />;
+                      return <DefaultModIcon platform={mod._source} />;
                     }
                   })()}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                   <span className="absolute bottom-2 right-2 bg-black/60 border border-white/[0.05] rounded-md px-1.5 py-0.5 text-[8px] font-mono text-white/70 capitalize">
-                    {item.projectType || "mod"}
+                    {mod.projectType || "mod"}
                   </span>
                 </div>
                 <div className="flex h-[132px] flex-col px-4 pb-3 pt-3">
-                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{item.title}</h4>
+                  <h4 className="h-4 truncate text-xs font-bold leading-4 text-white">{mod.title}</h4>
                   <p className="mt-1.5 h-[2.625rem] line-clamp-2 text-[9px] leading-[1.45] text-white/40">
-                    {item.description || "\u00A0"}
+                    {mod.description || "\u00A0"}
                   </p>
                   <div className="mt-auto flex h-5 items-center justify-between border-t border-white/[0.04] pt-1.5">
-                    <span className="text-[9px] text-orange-400 capitalize">{item._source || "modrinth"}</span>
+                    <span className="text-[9px] text-orange-400 capitalize">{mod._source || "modrinth"}</span>
                     <span className="text-[9px] font-mono text-white/30">#{String((i % items.length) + 1).padStart(2, "0")}</span>
                   </div>
                 </div>
@@ -482,7 +485,16 @@ export function HorizontalShowcaseMarquee({
             );
             if (!res.ok) return;
             const data = await res.json();
-            const entries: ShowcaseVideo[] = (data.showcases || []).map((v: any) => ({
+            const entries: ShowcaseVideo[] = (data.showcases || []).map((v: {
+              videoId: string;
+              title?: string;
+              thumbnail?: string;
+              videoUrl?: string;
+              channelName?: string;
+              publishedAt?: string;
+              modSlugs?: string[];
+              description?: string;
+            }) => ({
               videoId: v.videoId,
               title: v.title,
               thumbnail: normalizeYouTubeThumbnail(v.videoId, v.thumbnail),

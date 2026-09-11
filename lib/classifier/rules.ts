@@ -12,7 +12,13 @@
  * Mapeo directo de los 'tags' o 'categories' que vienen de Modrinth/CurseForge.
  * Se asigna un peso alto (30-40) porque son etiquetas oficiales de plataforma.
  */
-export const EXPLICIT_TAG_MAPPING: Record<string, any> = {
+export interface TagMappingItem {
+  category: ".local" | ".essential" | ".server";
+  sub: string;
+  weight: number;
+}
+
+export const EXPLICIT_TAG_MAPPING: Record<string, TagMappingItem[]> = {
   "library": [{ category: ".essential", sub: "librerias", weight: 40 }],
   "api-and-library": [{ category: ".essential", sub: "librerias", weight: 40 }],
   "kubejs": [{ category: ".essential", sub: "librerias", weight: 40 }],
@@ -28,12 +34,14 @@ export const EXPLICIT_TAG_MAPPING: Record<string, any> = {
   "cosmetic": [{ category: ".local", sub: "qol", weight: 25 }]
 };
 
-/**
- * SEMANTIC_KEYWORDS
- * Heurísticas basadas en palabras clave encontradas en el nombre del archivo.
- * Se utiliza cuando el mod no tiene tags claros o es un archivo local desconocido.
- */
-export const SEMANTIC_KEYWORDS = [
+export interface SemanticKeywordRule {
+  sub: string;
+  category?: ".local" | ".essential" | ".server";
+  keywords: string[];
+  weight: number;
+}
+
+export const SEMANTIC_KEYWORDS: SemanticKeywordRule[] = [
   { sub: "sonidos", category: ".local", keywords: ["sound", "audio", "voice", "ambient", "music"], weight: 35 },
   { sub: "animaciones", category: ".local", keywords: ["animation", "anim", "emote", "motion"], weight: 35 },
   { sub: "hostiles", category: ".essential", keywords: ["hostile", "enemy", "monster", "zombie"], weight: 30 },
@@ -42,13 +50,14 @@ export const SEMANTIC_KEYWORDS = [
   { sub: "rendimiento", keywords: ["fps", "optimize", "render", "fast", "smooth"], weight: 30 }
 ];
 
-/**
- * ANCHOR_RULES
- * Reglas de Coincidencia Forzada (Anclajes).
- * Identifican mods críticos por nombre que no deben ser analizados por puntuación,
- * sino asignados inmediatamente a su categoría correcta.
- */
-export const ANCHOR_RULES = [
+export interface AnchorRule {
+  test: (n: string) => boolean;
+  category: ".local" | ".essential" | ".server";
+  sub: string;
+  name: string;
+}
+
+export const ANCHOR_RULES: AnchorRule[] = [
   { 
     test: (n: string) => /\b(sodium|rubidium|embeddium|lithium|modernfix|iris|oculus)\b/i.test(n), 
     category: ".local", sub: "rendimiento", name: "Anchor: Rendimiento" 

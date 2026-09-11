@@ -9,54 +9,47 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import os from "os";
+import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
 
+const projectOpenBodySchema = z.object({
+  version: z.string().min(1),
+  projectName: z.string().min(1),
+});
+
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
+  { bodySchema: projectOpenBodySchema },
+  async ({ body }) => {
+    try {
+      const { version: _version, projectName } = body;
 
-  try {
-    const { version, projectName } = await req.json();
-
-    if (!version || !projectName) {
-      return NextResponse.json({ error: "Missing version or projectName" }, { status: 400 });
-    }
-
-    const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
-    if (!safeName) {
-      return NextResponse.json({ error: "Invalid project name" }, { status: 400 });
-    }
-
-    const projectPath = path.join(SOURCE_BASE, "_projects", safeName);
-    
-    // Create necessary folders
-    fs.mkdirSync(path.join(projectPath, "resourcepacks"), { recursive: true });
-    fs.mkdirSync(path.join(projectPath, "shaderpacks"), { recursive: true });
-    fs.mkdirSync(path.join(projectPath, "datapacks"), { recursive: true });
-    fs.mkdirSync(path.join(projectPath, "config"), { recursive: true });
-
-    // Open the folder in the native file explorer
-    let command = "";
-    if (os.platform() === "win32") {
-      command = `explorer "${projectPath}"`;
-    } else if (os.platform() === "darwin") {
-      command = `open "${projectPath}"`;
-    } else {
-      command = `xdg-open "${projectPath}"`;
-    }
-
-    exec(command, (error) => {
-      if (error) {
-        console.error("[/api/project/open] Error opening folder:", error);
+      const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
+      if (!safeName) {
+        return NextResponse.json({ error: "Invalid project name" }, { status: 400 });
       }
-    });
+
+      const projectPath = path.join(SOURCE_BASE, "_projects", safeName);
+      
+      // Create necessary folders
+      fs.mkdirSync(path.join(projectPath, "resourcepacks"), { recursive: true });
+      fs.mkdirSync(path.join(projectPath, "shaderpacks"), { recursive: true });
+      fs.mkdirSync(path.join(projectPath, "datapacks"), { recursive: true });
+      fs.mkdirSync(path.join(projectPath, "config"), { recursive: true });
+
+      // Open the folder in the native file explorer safely without shell execution
+      if (os.platform() === "win32") {
+        spawn("explorer.exe", [projectPath], { detached: true, stdio: "ignore" }).unref();
+      } else if (os.platform() === "darwin") {
+        spawn("open", [projectPath], { detached: true, stdio: "ignore" }).unref();
+      } else {
+        spawn("xdg-open", [projectPath], { detached: true, stdio: "ignore" }).unref();
+      }
 
     return NextResponse.json({ success: true, path: projectPath });
   } catch (e: unknown) {

@@ -19,7 +19,7 @@ interface VersionCardProps {
   selectedProjectType?: string;
 }
 
-export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions, activeLoader, selectedProjectType }: VersionCardProps) {
+export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onToggle, onDownload, downloading, gameVersions: _gameVersions, activeLoader, selectedProjectType }: VersionCardProps) {
   const modLoaders = v.loaders || [v.loader];
   
   // Robust detection for non-mod projects
@@ -57,7 +57,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
           } else {
             translatedLine = cleanLine;
           }
-        } catch (e) {
+        } catch {
           translatedLine = cleanLine;
         }
 
@@ -95,7 +95,7 @@ export function VersionCard({ v, mod, isCompatible, isMainVersion, expanded, onT
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/5 text-white/40 text-[9px] font-bold">
                <Package className="w-3 h-3 text-primary" />
-               <span>{v.gameVersions?.join(', ') || v.gameVersion}</span>
+               <span>{v.gameVersions?.join(', ') || String(v.gameVersion || "")}</span>
              </div>
              {modLoaders.length > 0 && isMod && (
                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/5 text-white/40 text-[9px] font-bold">

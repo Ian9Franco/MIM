@@ -11,7 +11,13 @@ import { isVersionCompatible, isLoaderCompatible } from "@/lib/modding/version-u
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function usePendingFiles(pendingFiles: PendingFile[], activeProject: Project | null, onDeleteFile: any, detectedVersion?: string, modrinthStatus: any = {}) {
+export function usePendingFiles(
+  pendingFiles: PendingFile[],
+  activeProject: Project | null,
+  onDeleteFile?: ((file: PendingFile) => Promise<void> | void) | null,
+  detectedVersion?: string,
+  modrinthStatus: Record<string, { gameVersions?: string[]; loaders?: string[]; iconUrl?: string }> = {}
+) {
   const [deletingFiles, setDeletingFiles] = useState<Record<string, boolean>>({});
   const [filesToDelete, setFilesToDelete] = useState<PendingFile[]>([]);
 

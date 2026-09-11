@@ -1,12 +1,9 @@
-/**
- * MIM Event Bus - Official Taxonomy
- * Official event map and formal taxonomy of the MIM ecosystem.
- */
+import type { EventSource } from "./metadata";
 
 export type MimEventMap = {
   // FOMO EVENTS
   "fomo:search": { query: string; source: "modrinth" | "curseforge" | "local"; };
-  "fomo:search-initiated": { query: string; source: "modrinth" | "curseforge" | "local"; filters?: Record<string, any>; };
+  "fomo:search-initiated": { query: string; source: "modrinth" | "curseforge" | "local"; filters?: Record<string, unknown>; };
   "fomo:search-completed": { query: string; resultCount: number; duration: number; source: "modrinth" | "curseforge" | "local"; };
   "fomo:mod-selected": { projectId: string; projectTitle: string; source: "modrinth" | "curseforge"; metadata?: { downloads: number; categories: string[]; loaders: string[]; }; };
   "fomo:version-selected": { projectId: string; versionId: string; versionNumber: string; minecraftVersion: string; loader: string; };
@@ -33,20 +30,20 @@ export type MimEventMap = {
 
   // TWEAK EVENTS
   "tweak:config-loaded": { configType: "options" | "shader" | "mod-config"; filePath: string; entriesCount: number; };
-  "tweak:config-updated": { configType: "options" | "shader" | "mod-config"; filePath: string; changes: Record<string, { old: any; new: any }>; applied: boolean; };
+  "tweak:config-updated": { configType: "options" | "shader" | "mod-config"; filePath: string; changes: Record<string, { old: unknown; new: unknown }>; applied: boolean; };
   "tweak:mod-toggled": { modId: string; modFileName: string; enabled: boolean; reason: "manual" | "conflict" | "recovery"; };
   "tweak:keybind-updated": { keybind: string; action: string; oldKey?: string; newKey: string; modName: string; };
   "tweak:keybind-synced": { totalKeybinds: number; syncedKeybinds: number; conflicts: number; };
   "tweak:shader-changed": { shaderName: string; shaderType: "iris" | "sodium" | "optifine"; oldShader?: string; applied: boolean; compatibility?: { status: "compatible" | "warning" | "incompatible"; issues: string[]; }; };
-  "tweak:optimization-applied": { optimizationType: "jvm-args" | "memory" | "render" | "performance"; oldValue: any; newValue: any; source: "manual" | "automatic" | "suggested"; effectiveness?: number; };
+  "tweak:optimization-applied": { optimizationType: "jvm-args" | "memory" | "render" | "performance"; oldValue: unknown; newValue: unknown; source: "manual" | "automatic" | "suggested"; effectiveness?: number; };
 
   // ALRT EVENTS
-  "alrt:signal-received": { signalId: string; signalType: "operational" | "security" | "performance" | "error"; source: any; severity: "info" | "warning" | "error" | "critical"; message: string; metadata?: Record<string, any>; };
+  "alrt:signal-received": { signalId: string; signalType: "operational" | "security" | "performance" | "error"; source: EventSource | string; severity: "info" | "warning" | "error" | "critical"; message: string; metadata?: Record<string, unknown>; };
   "alrt:pattern-detected": { patternId: string; patternName: string; confidence: number; matchedEvents: string[]; timeWindow: number; severity: "info" | "warning" | "error" | "critical"; };
-  "alrt:correlation-created": { correlationId: string; incidentId: string; signalIds: string[]; patternId: string; context: { summary: string; affectedModules: any[]; riskScore: number; }; };
-  "alrt:incident-created": { incidentId: string; title: string; description: string; severity: "info" | "warning" | "danger"; status: "unseen" | "unread" | "acknowledged" | "resolved"; module: any; correlationId?: string; recommendations?: string[]; };
-  "alrt:incident-updated": { incidentId: string; changes: any; updatedBy: any; };
-  "alrt:incident-escalated": { incidentId: string; escalationLevel: number; reason: string; escalatedTo: any; autoEscalated: boolean; };
+  "alrt:correlation-created": { correlationId: string; incidentId: string; signalIds: string[]; patternId: string; context: { summary: string; affectedModules: Array<EventSource | string>; riskScore: number; }; };
+  "alrt:incident-created": { incidentId: string; title: string; description: string; severity: "info" | "warning" | "danger"; status: "unseen" | "unread" | "acknowledged" | "resolved"; module: EventSource | string; correlationId?: string; recommendations?: string[]; };
+  "alrt:incident-updated": { incidentId: string; changes: Record<string, unknown>; updatedBy: string; };
+  "alrt:incident-escalated": { incidentId: string; escalationLevel: number; reason: string; escalatedTo: string; autoEscalated: boolean; };
   "alrt:recommendation-generated": { recommendationId: string; incidentId: string; type: "action" | "configuration" | "dependency" | "security"; priority: number; description: string; automated: boolean; confidence: number; };
 
   // SECURITY EVENTS
@@ -55,7 +52,7 @@ export type MimEventMap = {
   "security:scan-completed": { scanId: string; filesScanned: number; threatsFound: number; duration: number; threats: string[]; };
   "security:quarantine-applied": { threatId: string; fileName: string; quarantinePath: string; action: "move" | "delete" | "disable"; timestamp: string; };
   "virustotal:scanning": { filePath: string; fileName: string; };
-  "virustotal:completed": { filePath: string; fileName: string; result: { virusTotal?: { maliciousCount: number; }; }; };
+  "virustotal:completed": { filePath: string; fileName: string; result: { virusTotal?: { maliciousCount: number; } | null; }; };
 
   // WATCHER EVENTS
   "watcher:file-changed": { filePath: string; changeType: "created" | "modified" | "deleted"; fileSize: number; fileType: "mod" | "config" | "resourcepack" | "shader" | "unknown"; timestamp: string; };
@@ -63,17 +60,17 @@ export type MimEventMap = {
   "watcher:sync-required": { reason: "external-changes" | "file-conflict" | "missing-files"; affectedPaths: string[]; urgency: "low" | "medium" | "high"; };
 
   // BUILDER EVENTS
-  "builder:build-initiated": { buildType: "modpack" | "server" | "client"; buildConfig: Record<string, any>; outputPath: string; };
+  "builder:build-initiated": { buildType: "modpack" | "server" | "client"; buildConfig: Record<string, unknown>; outputPath: string; };
   "builder:dependency-resolved": { buildId: string; dependencies: Array<{ modId: string; version: string; source: string; resolved: boolean; }>; };
   "builder:packaging-completed": { buildId: string; packageType: "zip" | "tar" | "custom"; outputPath: string; fileSize: number; includedMods: number; checksum: string; };
   "builder:validation-completed": { buildId: string; validationType: "manifest" | "dependencies" | "compatibility"; passed: boolean; issues: string[]; warnings: string[]; };
 
   // SYSTEM EVENTS
-  "system:startup": { version: string; environment: "development" | "production" | "test"; modules: any[]; startupTime: number; };
+  "system:startup": { version: string; environment: "development" | "production" | "test"; modules: string[]; startupTime: number; };
   "system:shutdown": { reason: "manual" | "error" | "update"; duration: number; graceful: boolean; };
   "system:project-changed": { projectId: string; projectName: string; minecraftVersion: string; loader: string; previousProject?: string; };
-  "system:settings-updated": { section: string; changes: Record<string, { old: any; new: any }>; requiresRestart: boolean; };
-  "system:error": { errorId: string; source: any; errorType: "validation" | "runtime" | "network" | "file-system" | "dependency"; severity: "low" | "medium" | "high" | "critical"; message: string; stackTrace?: string; context?: Record<string, any>; recoverable: boolean; };
-  "system:warning": { warningId: string; source: any; warningType: "performance" | "compatibility" | "configuration" | "resource"; message: string; impact: "low" | "medium" | "high"; suggestedAction?: string; };
+  "system:settings-updated": { section: string; changes: Record<string, { old: unknown; new: unknown }>; requiresRestart: boolean; };
+  "system:error": { errorId: string; source: EventSource | string; errorType: "validation" | "runtime" | "network" | "file-system" | "dependency"; severity: "low" | "medium" | "high" | "critical"; message: string; stackTrace?: string; context?: Record<string, unknown>; recoverable: boolean; };
+  "system:warning": { warningId: string; source: EventSource | string; warningType: "performance" | "compatibility" | "configuration" | "resource"; message: string; impact: "low" | "medium" | "high"; suggestedAction?: string; };
   "system:refresh": { trigger: "manual" | "auto" | "external"; scope: "full" | "project" | "module"; timestamp: string; };
 };

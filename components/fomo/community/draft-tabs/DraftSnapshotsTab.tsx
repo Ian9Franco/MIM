@@ -1,21 +1,22 @@
 import React, { useState } from "react";
-import { HardDrive, Trash2, Puzzle, Image, Glasses, Database, Download, ChevronDown, ChevronRight, Package, Calendar, Fingerprint, Archive, Search } from "lucide-react";
+import { Trash2, Puzzle, Image as ImageIcon, Glasses, Database, Download, ChevronDown, ChevronRight, Package, Calendar, Archive, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import type { CommunityDraft, CommunityDraftSnapshot, CommunityDraftItem } from "@/types/fomo";
 
 const TYPE_META: Record<string, { label: string; icon: typeof Puzzle; color: string }> = {
   mod:          { label: "Mods",      icon: Puzzle,   color: "text-primary" },
-  resourcepack: { label: "Texturas",  icon: Image,    color: "text-amber-400" },
+  resourcepack: { label: "Texturas",  icon: ImageIcon,    color: "text-amber-400" },
   shader:       { label: "Shaders",   icon: Glasses,  color: "text-purple-400" },
   datapack:     { label: "Datapacks", icon: Database, color: "text-emerald-400" },
 };
 
-function getManifestCounts(manifest: any) {
+function getManifestCounts(manifest?: { mods?: CommunityDraftItem[] }) {
   if (!manifest?.mods) return { total: 0, mods: 0, resourcepacks: 0, shaders: 0, datapacks: 0 };
-  const mods = manifest.mods.filter((m: any) => m.contentType === "mod" || !m.contentType).length;
-  const resourcepacks = manifest.mods.filter((m: any) => m.contentType === "resourcepack" || m.contentType === "textura").length;
-  const shaders = manifest.mods.filter((m: any) => m.contentType === "shader").length;
-  const datapacks = manifest.mods.filter((m: any) => m.contentType === "datapack").length;
+  const mods = manifest.mods.filter((m: CommunityDraftItem) => m.contentType === "mod" || !m.contentType).length;
+  const resourcepacks = manifest.mods.filter((m: CommunityDraftItem) => m.contentType === "resourcepack" || m.contentType === "textura").length;
+  const shaders = manifest.mods.filter((m: CommunityDraftItem) => m.contentType === "shader").length;
+  const datapacks = manifest.mods.filter((m: CommunityDraftItem) => m.contentType === "datapack").length;
   return { total: mods + resourcepacks + shaders + datapacks, mods, resourcepacks, shaders, datapacks };
 }
 
@@ -27,12 +28,12 @@ export function DraftSnapshotsTab({
   setSnapshotToDelete,
   handleInstallSnapshot,
 }: {
-  draft: any;
-  snapshots: any[];
-  user: any;
+  draft?: CommunityDraft | null;
+  snapshots: CommunityDraftSnapshot[];
+  user: { id?: string } | null;
   isModern: boolean;
   setSnapshotToDelete: (id: string) => void;
-  handleInstallSnapshot: (snap: any) => void;
+  handleInstallSnapshot: (snap: CommunityDraftSnapshot) => void;
 }) {
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
 
@@ -40,15 +41,15 @@ export function DraftSnapshotsTab({
   const txtSub = isModern ? "text-muted-foreground" : "text-white/50";
   const cardBg = isModern ? "bg-card border-border" : "bg-white/[0.03] border-white/[0.06]";
 
-  const handleOpenDetails = (item: any, e: React.MouseEvent) => {
+  const handleOpenDetails = (item: CommunityDraftItem, e: React.MouseEvent) => {
     e.stopPropagation();
     window.dispatchEvent(
       new CustomEvent("fomo-open-details", {
         detail: {
-          projectId: item.projectId,
+          projectId: item.projectId || item.project_id,
           platform: item.source === "curseforge" ? "curseforge" : "modrinth",
           contentType: item.contentType || "mod",
-          title: item.mod_name || item.projectId
+          title: item.mod_name || item.title || item.projectId || item.project_id
         },
       })
     );
@@ -147,7 +148,7 @@ export function DraftSnapshotsTab({
                     )}
                     {counts.resourcepacks > 0 && (
                       <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">
-                        <Image className="w-2.5 h-2.5" /> {counts.resourcepacks}
+                        <ImageIcon className="w-2.5 h-2.5" /> {counts.resourcepacks}
                       </span>
                     )}
                     {counts.shaders > 0 && (
@@ -206,7 +207,8 @@ export function DraftSnapshotsTab({
                         {(["mod", "resourcepack", "shader", "datapack"] as const).map((type) => {
                           const meta = TYPE_META[type];
                           const Icon = meta.icon;
-                          const typeItems = snap.manifest.mods.filter((m: any) =>
+                          const modsList = snap.manifest?.mods || [];
+                          const typeItems = modsList.filter((m: CommunityDraftItem) =>
                             type === "mod"
                               ? m.contentType === "mod" || !m.contentType
                               : m.contentType === type || (type === "resourcepack" && m.contentType === "textura")
@@ -224,7 +226,7 @@ export function DraftSnapshotsTab({
                                 <span className={`text-[9px] font-bold ${txtSub}`}>{typeItems.length}</span>
                               </div>
                               <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
-                                {typeItems.map((m: any, i: number) => (
+                                {typeItems.map((m: CommunityDraftItem, i: number) => (
                                   <div
                                     key={i}
                                     className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg ${

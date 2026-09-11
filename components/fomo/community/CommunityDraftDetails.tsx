@@ -1,23 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Box, CheckCircle, Clock, Eye, EyeOff, FileEdit, HardDrive, Info, Blend, ListPlus, Users, RefreshCw, FlaskConical, FlaskConicalOff, UserPlus, Puzzle, Image, Sun, Database, ImagePlus, SwitchCamera, Trash2 } from "lucide-react";
+import { ArrowLeft, Box, CheckCircle, Clock, Eye, EyeOff, Info, Blend, Users, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/core/supabaseClient";
 import { downloadBroker } from "@/lib/downloads/DraftDownloadBroker";
 import { DownloadIntent } from "@/lib/downloads/downloadTypes";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
-import { DraftActivityFeed } from "@/components/fomo/community/DraftActivityFeed";
 import { CommunityDraftInviteModal } from "@/components/fomo/community/CommunityDraftInviteModal";
 import { useAuth } from "@/components/security/AuthContext";
 import { ImageCropper } from "@/components/fomo/core/ImageCropper";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import type { CommunityDraft, CommunityDraftItem, CommunityDraftSnapshot, CommunityDraftMember } from "@/types/fomo";
 import { DraftOverviewTab } from "./draft-tabs/DraftOverviewTab";
-import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 import { DraftMembersTab } from "./draft-tabs/DraftMembersTab";
 import { DraftSnapshotsTab } from "./draft-tabs/DraftSnapshotsTab";
 import { DraftItemsTab } from "./draft-tabs/DraftItemsTab";
 import { DraftValidationTab } from "./draft-tabs/DraftValidationTab";
+import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
 
 export function CommunityDraftDetails({
   draftId,
@@ -28,10 +28,10 @@ export function CommunityDraftDetails({
   currentTheme: string;
   onBack: () => void;
 }) {
-  const [draft, setDraft] = useState<any>(null);
-  const [draftItems, setDraftItems] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [draft, setDraft] = useState<CommunityDraft | null>(null);
+  const [draftItems, setDraftItems] = useState<CommunityDraftItem[]>([]);
+  const [snapshots, setSnapshots] = useState<CommunityDraftSnapshot[]>([]);
+  const [members, setMembers] = useState<CommunityDraftMember[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [creatingSnapshot, setCreatingSnapshot] = useState(false);
@@ -107,6 +107,7 @@ export function CommunityDraftDetails({
   };
 
   const handleCreateSnapshot = async () => {
+    if (!draft || creatingSnapshot) return;
     if (!draftItems || draftItems.length === 0) {
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "No puedes crear un snapshot de un draft vacío.", type: "warning" }
@@ -148,7 +149,7 @@ export function CommunityDraftDetails({
       const nextVersion = snapshots && snapshots.length > 0 ? snapshots[0].version_number + 1 : 1;
 
       // Calculate fingerprint (simple implementation for now)
-      const fingerprintData = draft.loader + draft.minecraft_version + draftItems.map(i => i.project_id).sort().join(",");
+      const fingerprintData = String(draft.loader || "") + String(draft.minecraft_version || "") + draftItems.map(i => i.project_id).sort().join(",");
       const fingerprint = btoa(fingerprintData).substring(0, 32); // mock sha256
 
       const { error: insertErr } = await supabase
@@ -230,19 +231,19 @@ export function CommunityDraftDetails({
     }
   };
 
-  const handleInstallSnapshot = (snap: any) => {
+  const handleInstallSnapshot = (snap: CommunityDraftSnapshot) => {
     if (!snap.manifest || !snap.manifest.mods || snap.manifest.mods.length === 0) {
       alert("El snapshot está vacío. No hay mods para descargar.");
       return;
     }
 
-    const snapshotProjectIds = new Set(snap.manifest.mods.map((m: any) => String(m.projectId)));
+    const snapshotProjectIds = new Set(snap.manifest.mods.map((m: CommunityDraftItem) => String(m.projectId || m.project_id)));
     const missingDeps = new Map<string, string>();
 
     // Calculate missing dependencies from the snapshot manifest
-    snap.manifest.mods.forEach((m: any) => {
+    snap.manifest.mods.forEach((m: CommunityDraftItem) => {
       if (m.dependencies && Array.isArray(m.dependencies)) {
-        m.dependencies.forEach((dep: any) => {
+        m.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
           if (dep.dependency_type === "required" && dep.project_id) {
             const depId = String(dep.project_id);
             if (!snapshotProjectIds.has(depId)) {
@@ -267,12 +268,16 @@ export function CommunityDraftDetails({
       }
     }
 
-    const intents: DownloadIntent[] = snap.manifest.mods.map((m: any) => ({
+    const intents: DownloadIntent[] = snap.manifest.mods.map((m: CommunityDraftItem) => ({
       id: crypto.randomUUID(),
-      projectId: m.projectId,
-      versionId: m.versionId,
-      platform: m.source as "modrinth" | "curseforge",
-      projectType: m.contentType,
+      projectId: (m.projectId || m.project_id)!,
+      versionId: m.versionId || m.version_id,
+      platform: (m.source as "modrinth" | "curseforge") || "modrinth",
+      projectType: (m.contentType || m.content_type || "mod") as "mod" | "resourcepack" | "shader" | "datapack",
+      side: (m.side as "client" | "server" | "both") || "both",
+      required: m.required !== false,
+      title: m.mod_name || m.title || m.projectId || m.project_id,
+      iconUrl: m.icon_url || m.iconUrl || undefined
     }));
     
     const finalIntents = [...intents, ...additionalIntents];
@@ -314,18 +319,21 @@ export function CommunityDraftDetails({
     { id: "validation", label: "Validación", icon: <CheckCircle className="w-4 h-4" /> },
   ];
 
+  if (!draft) {
+    return <div className="p-8 text-center text-white/40">Draft no encontrado o cargando...</div>;
+  }
+
   return (
     <div className="flex flex-col gap-4 animate-fade-in w-full h-full min-h-0 max-w-[1400px] mx-auto pb-4">
       {/* Header */}
       <div className={`shrink-0 relative w-full min-h-[140px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
-        {draft.cover_image && (
+        {typeof draft.cover_image === "string" && draft.cover_image ? (
           <div className="absolute inset-0 z-0">
             <img src={draft.cover_image} alt="Cover" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40 mix-blend-overlay" />
             <div className="absolute inset-0 bg-black/20" />
           </div>
-        )}
-        {!draft.cover_image && (
+        ) : (
           <div className="absolute inset-0 z-0 bg-gradient-to-tr from-slate-900 to-slate-800" />
         )}
 
@@ -342,7 +350,7 @@ export function CommunityDraftDetails({
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary text-white rounded-md flex items-center gap-1 shadow-md">
-                  <Box className="w-3 h-3" /> {draft.loader} {draft.minecraft_version}
+                  <Box className="w-3 h-3" /> {String(draft.loader || "")} {String(draft.minecraft_version || "")}
                 </span>
                 <button 
                   onClick={toggleVisibility}
@@ -358,7 +366,7 @@ export function CommunityDraftDetails({
                 {draft.owner_id === user?.id && (
                   <button
                     onClick={() => {
-                      setCoverUrlInput(draft.cover_image || "");
+                      setCoverUrlInput(typeof draft.cover_image === "string" ? draft.cover_image : "");
                       setIsCoverModalOpen(true);
                     }}
                     className={`p-2 rounded-full backdrop-blur-md opacity-50 hover:opacity-100 transition-all cursor-pointer bg-black/40 text-white border border-white/10`}
@@ -382,12 +390,12 @@ export function CommunityDraftDetails({
                     setActiveDraft({
                       id: draft.id,
                       name: draft.name,
-                      loader: draft.loader,
-                      version: draft.minecraft_version,
+                      loader: draft.loader || "",
+                      version: String(draft.minecraft_version || ""),
                       items: draftItems.map(i => ({
-                        projectId: i.project_id,
-                        source: i.source,
-                        addedBy: i.added_by
+                        projectId: i.project_id || "",
+                        source: i.source || "modrinth",
+                        addedBy: i.added_by || ""
                       }))
                     });
                   }
@@ -457,7 +465,7 @@ export function CommunityDraftDetails({
                     : (isModern ? 'rgba(13,39,80,0.5)' : 'rgba(255,255,255,0.4)'),
                 }}
               >
-                {React.cloneElement(tab.icon as any, {
+                {React.cloneElement(tab.icon as React.ReactElement<{ className?: string }>, {
                   className: `w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`
                 })}
                 {tab.label}
@@ -498,7 +506,7 @@ export function CommunityDraftDetails({
             snapshots={snapshots}
             user={user}
             isModern={isModern}
-            setSnapshotToDelete={setSnapshotToDelete as any}
+            setSnapshotToDelete={(id) => setSnapshotToDelete(id)}
             handleInstallSnapshot={handleInstallSnapshot}
           />
         )}
@@ -593,7 +601,7 @@ export function CommunityDraftDetails({
                 onClick={async () => {
                   try {
                     await supabase.from("drafts").update({ cover_image: coverUrlInput }).eq("id", draft.id);
-                    setDraft((d: any) => d ? { ...d, cover_image: coverUrlInput } : d);
+                    setDraft((d) => d ? { ...d, cover_image: coverUrlInput } : d);
                     setIsCoverModalOpen(false);
                     window.dispatchEvent(new CustomEvent("fomo-show-status", {
                       detail: { text: "Banner actualizado exitosamente.", type: "success" }
@@ -644,6 +652,6 @@ export function CommunityDraftDetails({
   );
 }
 
-function Loader(props: any) {
+function Loader(props: React.ComponentProps<typeof RefreshCw>) {
   return <RefreshCw {...props} />;
 }

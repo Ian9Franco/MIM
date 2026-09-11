@@ -5,11 +5,12 @@ import { InventoryManager } from "./rescue/InventoryManager";
 import { RescueActions } from "./rescue/RescueActions";
 import { TagType, NBTTag } from "@/lib/modding/nbt";
 
-interface PlayerFile {
+export interface SagePlayerFile {
   fileName: string;
   filePath: string;
   isHost: boolean;
   worldName: string;
+  displayName?: string;
   isBackup?: boolean;
   coordinates?: [number, number, number];
   inventoryCount?: number;
@@ -17,10 +18,34 @@ interface PlayerFile {
   error?: string;
 }
 
+export interface SageParsedPlayerData {
+  filePath: string;
+  fileName: string;
+  worldName: string;
+  displayName?: string;
+  username?: string;
+  nbt: NBTTag;
+  playerData?: Record<string, unknown>;
+  backupFiles?: string[];
+  warnings?: string[];
+  [key: string]: unknown;
+}
+
+export interface SagePlayerRescueProps {
+  players: SagePlayerFile[];
+  loadingPlayers: boolean;
+  selectedPlayer: SagePlayerFile | null;
+  setSelectedPlayer: (player: SagePlayerFile | null) => void;
+  rescuingPlayer?: boolean;
+  rescueLogs?: string[];
+  rescueSuccess?: boolean;
+  onRescue?: (options: { clearInventory?: boolean; changeDimension?: boolean; [key: string]: unknown }) => Promise<unknown>;
+}
+
 export function SagePlayerRescue({ 
   players, loadingPlayers, selectedPlayer, setSelectedPlayer 
-}: any) {
-  const [parsedData, setParsedData] = useState<any>(null);
+}: SagePlayerRescueProps) {
+  const [parsedData, setParsedData] = useState<SageParsedPlayerData | null>(null);
   const [loadingParse, setLoadingParse] = useState(false);
   const [parsingError, setParsingError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"nbt" | "inventory" | "actions">("nbt");
@@ -32,10 +57,10 @@ export function SagePlayerRescue({
   const [profileLoading, setProfileLoading] = useState(false);
   const [selectedWorld, setSelectedWorld] = useState<string | null>(null);
 
-  const worlds = Array.from(new Set(players.map((p: PlayerFile) => p.worldName)));
+  const worlds = Array.from(new Set(players.map((p: SagePlayerFile) => p.worldName)));
 
   // Parse the selected player file
-  const handleParseFile = async (player: PlayerFile) => {
+  const handleParseFile = async (player: SagePlayerFile) => {
     if (!player.filePath) return;
     
     setLoadingParse(true);
@@ -55,8 +80,9 @@ export function SagePlayerRescue({
 
       const data = await response.json();
       setParsedData(data);
-    } catch (err: any) {
-      setParsingError(err.message);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setParsingError(e?.message || "Failed to parse file");
       setParsedData(null);
     } finally {
       setLoadingParse(false);
@@ -75,7 +101,7 @@ export function SagePlayerRescue({
 
     try {
       // In Tauri or Electron, the file object contains the real absolute path
-      const realPath = (file as any).path;
+      const realPath = "path" in file ? (file as unknown as { path: string }).path : undefined;
 
       if (realPath) {
         // Trigger parsing by setting selected player directly using the real path
@@ -112,8 +138,9 @@ export function SagePlayerRescue({
         worldName: "Archivos Externos"
       });
 
-    } catch (err: any) {
-      setParsingError(err.message);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setParsingError(e?.message || "Failed to upload file");
       setLoadingParse(false);
     } finally {
       // Reset input
@@ -148,8 +175,9 @@ export function SagePlayerRescue({
 
       const data = await response.json();
       setSaveLogs(data.logs || []);
-    } catch (err: any) {
-      setSaveLogs([`✗ Error: ${err.message}`]);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setSaveLogs([`✗ Error: ${e?.message || "Failed to save file"}`]);
     } finally {
       setSaving(false);
     }
@@ -180,8 +208,9 @@ export function SagePlayerRescue({
       if (selectedPlayer) {
         handleParseFile(selectedPlayer);
       }
-    } catch (err: any) {
-      setSaveLogs([`✗ Error: ${err.message}`]);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setSaveLogs([`✗ Error: ${e?.message || "Failed to purge backups"}`]);
     } finally {
       setPurging(false);
     }
@@ -282,7 +311,7 @@ export function SagePlayerRescue({
               </div>
             )}
             
-            {!loadingPlayers && !selectedWorld && worlds.map((world: any) => (
+            {!loadingPlayers && !selectedWorld && worlds.map((world: string) => (
               <button
                 key={world}
                 onClick={() => setSelectedWorld(world)}
@@ -292,7 +321,7 @@ export function SagePlayerRescue({
                   <div className="text-left">
                     <p className="text-[14px] font-bold">{world}</p>
                     <p className="text-[11px] opacity-40 mt-1">
-                      {players.filter((p: PlayerFile) => p.worldName === world).length} archivos
+                      {players.filter((p: SagePlayerFile) => p.worldName === world).length} archivos
                     </p>
                   </div>
                 </div>
@@ -309,7 +338,7 @@ export function SagePlayerRescue({
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Volver a Mundos
                 </button>
-                {players.filter((p: PlayerFile) => p.worldName === selectedWorld).map((p: any) => (
+                {players.filter((p: SagePlayerFile) => p.worldName === selectedWorld).map((p: SagePlayerFile) => (
                   <button
                     key={p.filePath}
                     onClick={() => setSelectedPlayer(p)}
@@ -451,8 +480,8 @@ export function SagePlayerRescue({
                   <RescueActions
                     filePath={parsedData.filePath}
                     worldName={parsedData.worldName}
-                    playerData={parsedData.playerData}
-                    backupFiles={parsedData.backupFiles}
+                    playerData={(parsedData.playerData as { position: number[]; dimension: string; spawn: { x: number; y: number; z: number } }) || { position: [0, 64, 0], dimension: "minecraft:overworld", spawn: { x: 0, y: 64, z: 0 } }}
+                    backupFiles={parsedData.backupFiles || []}
                     nbtRoot={parsedData.nbt}
                     onSave={handleSave}
                     onPurgeBackups={handlePurgeBackups}
@@ -463,9 +492,9 @@ export function SagePlayerRescue({
               </div>
 
               {/* Warnings */}
-              {parsedData.warnings?.length > 0 && (
+              {(parsedData.warnings?.length ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
-                  {parsedData.warnings.map((warn: string, i: number) => (
+                  {parsedData.warnings?.map((warn: string, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-amber-400 text-xs">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>{warn}</span>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { analyzeMinecraftLog, type SageAnalysisResult } from "@/utils/sageAnalyzer";
-import type { Project } from "@/lib/core/types";
+import type { Project, SecurityScanResult } from "@/lib/core/types";
+import type { SecurityScanFileItem, SecurityScanEntry } from "@/components/sage/SageSecurityScanner";
+import type { SagePlayerFile } from "@/components/sage/SagePlayerRescue";
 import { eventBus } from "@/lib/events/eventBus";
 
 export interface LocalLogFile {
@@ -14,13 +16,13 @@ export interface LocalLogFile {
 
 export type SageMode = "crash" | "latest-log" | "paste" | "security" | "player-rescue";
 
-export function useSageManager(activeProject: Project | null, isOpen: boolean, onClose: () => void) {
+export function useSageManager(activeProject: Project | null, isOpen: boolean, _onClose?: () => void) {
   const [mode, setMode] = useState<SageMode>("security");
   
   // ── Persistence for mode ──
   useEffect(() => {
     const saved = localStorage.getItem("sage_mode");
-    if (saved) setMode(saved as any);
+    if (saved) setMode(saved as SageMode);
   }, []);
 
   useEffect(() => {
@@ -35,9 +37,9 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
   }, [mode]);
 
   // ── Player Rescue logic ──
-  const [players, setPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<SagePlayerFile[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<SagePlayerFile | null>(null);
   const [rescuingPlayer, setRescuingPlayer] = useState(false);
   const [rescueLogs, setRescueLogs] = useState<string[]>([]);
   const [rescueSuccess, setRescueSuccess] = useState(false);
@@ -58,7 +60,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
     setLoadingPlayers(false);
   }, [activeProject]);
 
-  const handlePlayerRescue = async (options: any) => {
+  const handlePlayerRescue = async (options: { clearInventory?: boolean; changeDimension?: boolean; [key: string]: unknown }) => {
     if (!selectedPlayer) return;
     setRescuingPlayer(true);
     setRescueLogs([]);
@@ -86,13 +88,16 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
           setRescueLogs([`Error: ${data.error || "No se pudo rescatar al jugador"}`]);
         }
       }
-    } catch (e: any) { setRescueLogs([`Error: ${e.message}`]); }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      setRescueLogs([`Error: ${err?.message || "Error desconocido"}`]);
+    }
     setRescuingPlayer(false);
   };
 
   // ── Security Scanner logic ──
-  const [secScannable, setSecScannable] = useState<any[]>([]);
-  const [secResults, setSecResults] = useState<any[]>([]);
+  const [secScannable, setSecScannable] = useState<SecurityScanFileItem[]>([]);
+  const [secResults, setSecResults] = useState<SecurityScanEntry[]>([]);
   const [secScanning, setSecScanning] = useState(false);
   const [secLoading, setSecLoading] = useState(false);
   const [secError, setSecError] = useState<string | null>(null);
@@ -114,13 +119,13 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       const data = await res.json();
       if (data.success) setSecScannable(data.scannable || []);
       else setSecError(data.error || "Error listando archivos");
-    } catch (e) { setSecError("No se pudo contactar el servidor"); }
+    } catch { setSecError("No se pudo contactar el servidor"); }
     setSecLoading(false);
   }, [activeProject]);
 
   const runSecurityScan = useCallback(async (extraPaths?: string[]) => {
     const allPaths = [
-      ...secScannable.map((s: any) => s.filePath),
+      ...secScannable.map((s: SecurityScanFileItem) => s.filePath),
       ...(Array.isArray(extraPaths) ? extraPaths : [])
     ];
     
@@ -146,8 +151,8 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       const dataLocal = await resLocal.json();
       
       if (dataLocal.success && dataLocal.results) {
-        const merged = Object.entries(dataLocal.results as Record<string, any>).map(([filePath, result]) => {
-          const entry = secScannable.find((s: any) => s.filePath === filePath) || {
+        const merged = Object.entries(dataLocal.results as Record<string, SecurityScanResult>).map(([filePath, result]) => {
+          const entry = secScannable.find((s: SecurityScanFileItem) => s.filePath === filePath) || {
             filePath,
             fileName: filePath.split(/[\\/]/).pop() || filePath,
             assetType: filePath.endsWith(".jar") ? "mod" : "zip",
@@ -176,12 +181,12 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
             const dataVT = await resVT.json();
             
             if (dataVT.success && dataVT.result) {
-              const freshResult = dataVT.result;
+              const freshResult: SecurityScanResult = dataVT.result;
               eventBus.emit("virustotal:completed", { filePath: entry.filePath, fileName: entry.fileName, result: freshResult });
               const updatedEntry = { ...entry, result: { ...freshResult, riskScore: freshResult.riskScore ?? 0, riskLevel: freshResult.riskLevel ?? "clean" } };
               
               setSecResults(prev => {
-                const map = new Map(prev.map((r: any) => [r.filePath, r]));
+                const map = new Map(prev.map((r: SecurityScanEntry) => [r.filePath, r]));
                 map.set(entry.filePath, updatedEntry);
                 return Array.from(map.values());
               });
@@ -197,7 +202,7 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
       } else {
         setSecError(dataLocal.error || "Error en el escaneo local");
       }
-    } catch (e) { 
+    } catch { 
       setSecError("Error de conexión al ejecutar el scan"); 
     } finally {
       setSecScanning(false);
@@ -212,13 +217,13 @@ export function useSageManager(activeProject: Project | null, isOpen: boolean, o
 
   // ── Real-time scan: auto-scan new downloads ──
   useEffect(() => {
-    const handler = (payload: any) => {
+    const handler = (payload: { fileName?: string }) => {
       const fileName = payload?.fileName;
       if (!fileName) return;
       fetch(`/api/security/scan?project=${activeProject?.name || ""}&version=${activeProject?.version || ""}&loader=${activeProject?.loader || ""}`)
         .then(r => r.json())
         .then(data => {
-          const match = (data.scannable || []).find((s: any) =>
+          const match = (data.scannable || []).find((s: SecurityScanFileItem) =>
             s.fileName.includes(fileName) || fileName.includes(s.fileName.replace(" (Descargas)", ""))
           );
           if (match) runSecurityScan([match.filePath]);

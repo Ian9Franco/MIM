@@ -33,7 +33,8 @@ export class ModrinthProvider implements DownloadProvider {
     }
 
     // Try to prefer primary file, otherwise take the first
-    const primaryFile = targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
+    const files = targetVersion.files as Array<{ url: string; filename: string; primary?: boolean; hashes?: Record<string, string> }>;
+    const primaryFile = files.find((f) => f.primary) || files[0];
     
     // Try to resolve extra metadata asynchronously to keep version info accurate
     let gameVersion = "1.20.1";
@@ -47,8 +48,8 @@ export class ModrinthProvider implements DownloadProvider {
     if (targetVersion.loaders && targetVersion.loaders.length > 0) {
       loader = targetVersion.loaders[0];
     }
-    (task as any).gameVersion = gameVersion;
-    (task as any).loader = loader;
+    task.gameVersion = gameVersion;
+    task.loader = loader;
 
     try {
       const projectRes = await fetch(`https://api.modrinth.com/v2/project/${task.projectId}`);
@@ -56,8 +57,8 @@ export class ModrinthProvider implements DownloadProvider {
         const projectData = await projectRes.json();
         title = projectData.title || title;
         iconUrl = projectData.icon_url || iconUrl;
-        (task as any).title = title;
-        (task as any).iconUrl = iconUrl;
+        task.title = title;
+        task.iconUrl = iconUrl;
       }
     } catch (e) {
       console.warn("[ModrinthProvider] Failed to fetch project details:", e);
@@ -84,10 +85,10 @@ export class ModrinthProvider implements DownloadProvider {
         projectId: task.projectId,
         projectType: task.projectType,
         hashes,
-        iconUrl: (task as any).iconUrl,
-        loader: (task as any).loader,
-        gameVersion: (task as any).gameVersion,
-        title: (task as any).title || task.modName
+        iconUrl: task.iconUrl,
+        loader: task.loader,
+        gameVersion: task.gameVersion,
+        title: task.title || task.modName
       })
     });
 

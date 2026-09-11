@@ -21,10 +21,12 @@ export function useNavScrollCompress(threshold = 8) {
 
   useEffect(() => {
     const onScroll = (event: Event) => {
-      const top = getScrollTop(event.target);
+      const target = event.target;
+      if (!target) return;
+
+      const top = getScrollTop(target);
       if (top === null) return;
 
-      const target = event.target;
       const previous = positions.current.get(target) ?? top;
       positions.current.set(target, top);
 

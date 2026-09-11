@@ -9,7 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
 import { CommunityRankings } from "../community/CommunityRankings";
 import { CommunityPublicProfile } from "../community/CommunityPublicProfile";
-import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta, shareRowToModHit } from "../community/communityUtils";
+import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 
 function normalizeCommunityProfile(profile: any) {
   if (!profile) return null;
@@ -102,26 +102,6 @@ async function loadProfileShares(profileId: string) {
 
   if (fallback.error) throw fallback.error;
   return sortSharesByPinned(fallback.data || []);
-}
-
-async function loadUserLikedShares(profileId: string) {
-  const { data, error } = await supabase
-    .from("community_reactions")
-    .select(`
-      created_at,
-      share:favorite_mods (
-        id, mod_id, platform, name, icon_url, summary, pinned, created_at,
-        profile:profiles (id, username, avatar_url, color)
-      )
-    `)
-    .eq("profile_id", profileId)
-    .eq("reaction", "like")
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data || [])
-    .map((row: any) => row.share)
-    .filter(Boolean);
 }
 
 async function fetchProjectUpdatedAt(source: string | undefined, projectId: string) {

@@ -32,6 +32,17 @@ const HUB_VARIANTS = {
   exit: (direction: number) => ({ y: direction >= 0 ? "-100%" : "100%", opacity: 0 }),
 };
 
+function createHeaderAnim() {
+  return {
+    fomoDuration: `${(6.1 + Math.random() * 3.8).toFixed(2)}s`,
+    fomoDelay: `-${(Math.random() * 6).toFixed(2)}s`,
+    slimeDuration: `${(5.4 + Math.random() * 3.2).toFixed(2)}s`,
+    slimeDelay: `-${(Math.random() * 5).toFixed(2)}s`,
+  };
+}
+
+const HEADER_ANIM = createHeaderAnim();
+
 function formatSearchQuery(input: string): string {
   let text = input.trim();
   
@@ -133,16 +144,7 @@ export default function Home() {
   }
 
   const hubAnimationDirection = themeTransition.direction;
-
-  const headerAnim = React.useMemo(
-    () => ({
-      fomoDuration: `${(6.1 + Math.random() * 3.8).toFixed(2)}s`,
-      fomoDelay: `-${(Math.random() * 6).toFixed(2)}s`,
-      slimeDuration: `${(5.4 + Math.random() * 3.2).toFixed(2)}s`,
-      slimeDelay: `-${(Math.random() * 5).toFixed(2)}s`,
-    }),
-    []
-  );
+  const headerAnim = HEADER_ANIM;
 
   /**
    * Fetches the latest MIM release from GitHub and opens it.

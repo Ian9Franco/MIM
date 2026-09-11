@@ -9,13 +9,12 @@
 import type { ModHit } from "@/lib/core/types";
 
 export interface FomoGalleryItem {
-  url?: string;
+  url: string;
   raw_url?: string;
   thumbnailUrl?: string;
   title?: string;
   description?: string;
   featured?: boolean;
-  [key: string]: unknown;
 }
 
 export interface FomoVersionFile {
@@ -24,7 +23,6 @@ export interface FomoVersionFile {
   primary?: boolean;
   size?: number;
   hashes?: Record<string, string>;
-  [key: string]: unknown;
 }
 
 export interface FomoDependencyItem {
@@ -49,7 +47,6 @@ export interface FomoDependencyItem {
   file_name?: string | null;
   url?: string | null;
   _source?: string;
-  [key: string]: unknown;
 }
 
 export interface FomoVersion {
@@ -61,6 +58,7 @@ export interface FomoVersion {
   version_type?: string;
   gameVersions?: string[];
   game_versions?: string[];
+  gameVersion?: string;
   loaders?: string[];
   loader?: string;
   datePublished?: string | null;
@@ -72,7 +70,6 @@ export interface FomoVersion {
   changelog_url?: string | null;
   changelogUrl?: string | null;
   dependencies?: FomoDependencyItem[];
-  [key: string]: unknown;
 }
 
 export interface FomoModMember {
@@ -168,7 +165,7 @@ export interface FomoFollowedAuthor {
   iconUrl?: string;
   avatar_url?: string;
   platform?: string;
-  [key: string]: unknown;
+  dateFollowed?: number;
 }
 
 export type FomoFavoriteItem = ModHit | {
@@ -180,11 +177,10 @@ export type FomoFavoriteItem = ModHit | {
   title?: string;
   author?: string;
   iconUrl?: string | null;
-  [key: string]: unknown;
 };
 
 export interface FomoCommunityShare {
-  id: string;
+  id?: string;
   projectId?: string;
   project_id?: string;
   mod_id?: string;
@@ -192,11 +188,10 @@ export interface FomoCommunityShare {
   sharedBy?: string;
   user_id?: string;
   username?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   color?: string | null;
   comment?: string;
   created_at?: string;
-  [key: string]: unknown;
 }
 
 export interface CommunityDraftItem {

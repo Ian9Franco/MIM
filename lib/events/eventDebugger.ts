@@ -6,7 +6,10 @@ import { eventBus } from "@/lib/events/eventBus";
 import { 
   EventName, EventPayload, EventSource, Incident, createCorrelationId 
 } from "@/lib/events/eventContract";
-import { DebugEvent, DebugCorrelation, DebugIncident, EventFlowTrace } from "@/lib/debugger/types";
+import { 
+  DebugEvent, DebugCorrelation, DebugIncident, EventFlowTrace,
+  TimelineOptions, TimelineItem
+} from "@/lib/debugger/types";
 import { analyzeFlow } from "@/lib/debugger/AnalysisEngine";
 
 class EventDebugger {

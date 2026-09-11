@@ -18,7 +18,7 @@ export interface ModHeaderSharingInfo {
 }
 
 export interface ModHeaderProps {
-  mod: ModHit & { id?: string; sharingInfo?: ModHeaderSharingInfo; [key: string]: unknown };
+  mod: ModHit & { id?: string; sharingInfo?: ModHeaderSharingInfo };
   bannerUrl?: string;
   bannerProjectType?: string;
   onSearchAuthor?: (author: string, platform?: string) => void;

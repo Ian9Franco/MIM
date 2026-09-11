@@ -119,6 +119,8 @@ export interface ModMeta {
   clientSide?:  string;
   serverSide?:  string;
   environment?: "client" | "server" | "both" | "unknown";
+  confidence?:  "high" | "medium" | "low";
+  warnings?:    string[];
   mixinTargets?: string[];
 }
 

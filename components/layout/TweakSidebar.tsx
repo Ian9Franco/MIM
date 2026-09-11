@@ -339,7 +339,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
                           <p className="text-[11px] text-[var(--color-muted)] font-medium leading-relaxed mb-4 group-hover:text-[var(--color-foreground)] transition-colors uppercase tracking-tight">{rec.desc}</p>
                           {rec.settingKey && (
                             <button
-                              onClick={() => handleAction("save", { settings: { [rec.settingKey]: rec.recommendedValue } })}
+                              onClick={() => handleAction("save", { settings: { [rec.settingKey as string]: rec.recommendedValue } })}
                               className="w-full py-2 bg-[var(--color-primary)] text-white border border-transparent rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-[var(--color-accent)] transition-all active:scale-95 shadow-lg shadow-black/10"
                             >
                               Aplicar Ajuste

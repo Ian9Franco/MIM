@@ -12,7 +12,7 @@ const fixIssueBodySchema = z.object({
   loader: z.string().min(1),
   fileName: z.string().min(1),
   action: z.string().min(1),
-  payload: z.record(z.unknown()).optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const POST = withApiGuard(
@@ -60,8 +60,8 @@ export const POST = withApiGuard(
     }
 
     if (action.startsWith("move_to_")) {
-      const targetCategory = payload?.targetCategory;
-      const targetSub = payload?.targetSub || sourceSub;
+      const targetCategory = typeof payload?.targetCategory === "string" ? payload.targetCategory : "";
+      const targetSub = typeof payload?.targetSub === "string" ? payload.targetSub : sourceSub;
 
       if (!targetCategory || !targetSub) {
         return NextResponse.json({ error: "Missing targetCategory/targetSub" }, { status: 400 });
@@ -80,7 +80,9 @@ export const POST = withApiGuard(
     } 
     
     if (action === "override") {
-      updateModOverride(projectName, fileName, payload);
+      if (payload) {
+        updateModOverride(projectName, fileName, payload as Record<string, unknown>);
+      }
       return NextResponse.json({ success: true, message: `Applied overrides to ${fileName}` });
     }
 

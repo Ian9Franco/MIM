@@ -160,7 +160,7 @@ interface UpdateCardProps {
   s: UpdateCardStatusItem;
   type: "mod" | "collection" | "shader" | "resourcepack" | "showcase";
   library: LibraryFile[];
-  followedMods?: Array<{ project_id?: string; icon_url?: string }>;
+  followedMods?: Array<{ project_id?: string; icon_url?: string; projectId?: string; iconUrl?: string }>;
   downloadingMods: Record<string, boolean>;
   handleDownloadUpdate: (path: string, url: string, filename: string) => void;
   handleDismissUpdate: (path: string) => void;

@@ -339,12 +339,25 @@ function HeaderNavLink({
   );
 }
 
+interface SkinviewAnimationConstructor {
+  new (): { speed: number };
+}
+
+interface SkinviewModule {
+  SkinViewer: new (opts: { canvas: HTMLCanvasElement; width: number; height: number; skin: string }) => SkinViewerInstance;
+  WalkingAnimation: SkinviewAnimationConstructor;
+  RunningAnimation: SkinviewAnimationConstructor;
+  SneakingAnimation?: SkinviewAnimationConstructor;
+  FlyingAnimation?: SkinviewAnimationConstructor;
+  IdleAnimation: SkinviewAnimationConstructor;
+}
+
 interface SkinViewerInstance {
   controls?: { enableRotate: boolean; enableZoom: boolean; enablePan: boolean; isDragging?: boolean };
   camera?: { position: { z: number } };
   playerObject?: { rotation: { y: number } };
   onRender?: (() => void) | null;
-  animation?: { speed: number };
+  animation?: { speed: number } | null;
   dispose: () => void;
 }
 
@@ -354,7 +367,7 @@ function ProfileCanvas({ username }: { username: string }) {
   
   // Refs para controlar las instancias de skinview3d
   const viewerRef = React.useRef<SkinViewerInstance | null>(null);
-  const animsRef = React.useRef<Record<string, unknown> | null>(null);
+  const animsRef = React.useRef<SkinviewModule | null>(null);
   const rotateLoopRef = React.useRef<(() => void) | null>(null);
 
   // Refs para discriminar Click vs Drag
@@ -374,7 +387,7 @@ function ProfileCanvas({ username }: { username: string }) {
         skin: `https://minotar.net/skin/${username}`
       }) as unknown as SkinViewerInstance;
       viewerRef.current = viewer;
-      animsRef.current = skinview3d as unknown as Record<string, unknown>;
+      animsRef.current = skinview3d as unknown as SkinviewModule;
       
       if (viewer.controls) {
         viewer.controls.enableRotate = true;

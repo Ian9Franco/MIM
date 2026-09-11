@@ -15,7 +15,7 @@ import { TabButton, AlertSection, ActionButton, UpdateCard, EmptyState, Incident
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
 import type { LibraryFile } from "@/lib/core/types";
-import type { ModrinthStatusItem, AuthorModItem, ChannelVideoItem } from "@/hooks/useAlertManager";
+import type { ModrinthStatusItem, AuthorModItem, ChannelVideoItem, FollowedModRef } from "@/hooks/useAlertManager";
 
 interface BytecodeConflictItem {
   targetClass: string;
@@ -56,7 +56,7 @@ export function AlertSidebar({
   checkingUpdates, handleCheckUpdates
 }: AlertSidebarProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const [followedMods, setFollowedMods] = useState<AuthorModItem[]>([]);
+  const [followedMods, setFollowedMods] = useState<FollowedModRef[]>([]);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -90,7 +90,7 @@ export function AlertSidebar({
         const mods = await mimDB.getAllFollowedMods();
         const authors = await mimDB.getAllFollowedAuthors();
         
-        setFollowedMods(mods.map((m: { data: unknown }) => m.data as AuthorModItem));
+        setFollowedMods(mods.map((m: { data: unknown }) => m.data as FollowedModRef));
         setFollowedAuthors(authors.map((a: { name: string }) => a.name));
       } catch (err) {
         console.error("Error loading followed data in AlertSidebar", err);

@@ -108,6 +108,7 @@ export function CommunityDraftDetails({
   };
 
   const handleCreateSnapshot = async () => {
+    if (!draft || creatingSnapshot) return;
     if (!draftItems || draftItems.length === 0) {
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "No puedes crear un snapshot de un draft vacío.", type: "warning" }
@@ -149,7 +150,7 @@ export function CommunityDraftDetails({
       const nextVersion = snapshots && snapshots.length > 0 ? snapshots[0].version_number + 1 : 1;
 
       // Calculate fingerprint (simple implementation for now)
-      const fingerprintData = draft.loader + draft.minecraft_version + draftItems.map(i => i.project_id).sort().join(",");
+      const fingerprintData = String(draft.loader || "") + String(draft.minecraft_version || "") + draftItems.map(i => i.project_id).sort().join(",");
       const fingerprint = btoa(fingerprintData).substring(0, 32); // mock sha256
 
       const { error: insertErr } = await supabase
@@ -319,18 +320,21 @@ export function CommunityDraftDetails({
     { id: "validation", label: "Validación", icon: <CheckCircle className="w-4 h-4" /> },
   ];
 
+  if (!draft) {
+    return <div className="p-8 text-center text-white/40">Draft no encontrado o cargando...</div>;
+  }
+
   return (
     <div className="flex flex-col gap-4 animate-fade-in w-full h-full min-h-0 max-w-[1400px] mx-auto pb-4">
       {/* Header */}
       <div className={`shrink-0 relative w-full min-h-[140px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
-        {draft.cover_image && (
+        {typeof draft.cover_image === "string" && draft.cover_image ? (
           <div className="absolute inset-0 z-0">
             <img src={draft.cover_image} alt="Cover" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40 mix-blend-overlay" />
             <div className="absolute inset-0 bg-black/20" />
           </div>
-        )}
-        {!draft.cover_image && (
+        ) : (
           <div className="absolute inset-0 z-0 bg-gradient-to-tr from-slate-900 to-slate-800" />
         )}
 
@@ -347,7 +351,7 @@ export function CommunityDraftDetails({
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary text-white rounded-md flex items-center gap-1 shadow-md">
-                  <Box className="w-3 h-3" /> {draft.loader} {draft.minecraft_version}
+                  <Box className="w-3 h-3" /> {String(draft.loader || "")} {String(draft.minecraft_version || "")}
                 </span>
                 <button 
                   onClick={toggleVisibility}
@@ -363,7 +367,7 @@ export function CommunityDraftDetails({
                 {draft.owner_id === user?.id && (
                   <button
                     onClick={() => {
-                      setCoverUrlInput(draft.cover_image || "");
+                      setCoverUrlInput(typeof draft.cover_image === "string" ? draft.cover_image : "");
                       setIsCoverModalOpen(true);
                     }}
                     className={`p-2 rounded-full backdrop-blur-md opacity-50 hover:opacity-100 transition-all cursor-pointer bg-black/40 text-white border border-white/10`}
@@ -387,12 +391,12 @@ export function CommunityDraftDetails({
                     setActiveDraft({
                       id: draft.id,
                       name: draft.name,
-                      loader: draft.loader,
-                      version: draft.minecraft_version,
+                      loader: draft.loader || "",
+                      version: String(draft.minecraft_version || ""),
                       items: draftItems.map(i => ({
-                        projectId: i.project_id,
-                        source: i.source,
-                        addedBy: i.added_by
+                        projectId: i.project_id || "",
+                        source: i.source || "modrinth",
+                        addedBy: i.added_by || ""
                       }))
                     });
                   }

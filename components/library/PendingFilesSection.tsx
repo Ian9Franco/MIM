@@ -174,7 +174,7 @@ export function PendingFilesSection({
                   projectType={f.meta?.projectType}
                   isSelected={selectedFiles.some((p) => p.path === f.path)} 
                   onClick={() => setSelectedFiles((prev) => prev.find((p) => p.path === f.path) ? prev.filter((p) => p.path !== f.path) : [...prev, f])}
-                  activeVersion={activeProject?.version} activeLoader={activeProject?.loader} isPending={true}
+                  activeVersion={activeProject?.version || ""} activeLoader={activeProject?.loader || ""} isPending={true}
                   onDelete={() => setFilesToDelete([f])} isDeleting={deletingFiles[f.path]} conflict={conflicts[f.path]}
                   confidence={f.meta?.confidence} warnings={f.meta?.warnings}
                 />
@@ -182,8 +182,8 @@ export function PendingFilesSection({
             )}
             <PendingIncompatibleGroup 
               files={incompatibleFiles} activeProject={activeProject || undefined} modrinthStatus={modrinthStatus}
-              conflicts={conflicts} onDeleteRequest={(f) => setFilesToDelete([f])} deletingFiles={deletingFiles}
-              onSelect={(f) => setSelectedFiles((prev) => prev.find((p) => p.path === f.path) ? prev.filter((p) => p.path !== f.path) : [...prev, f])}
+              conflicts={conflicts} onDeleteRequest={(f: PendingFile) => setFilesToDelete([f])} deletingFiles={deletingFiles}
+              onSelect={(f: PendingFile) => setSelectedFiles((prev) => prev.find((p) => p.path === f.path) ? prev.filter((p) => p.path !== f.path) : [...prev, f])}
               selectedFiles={selectedFiles}
             />
           </>

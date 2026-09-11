@@ -9,27 +9,27 @@ const translationCache: Record<string, string> = {}; // Cache de traducciones: p
 
 function normalizeGallery(rawGallery: unknown[] | undefined): FomoGalleryItem[] {
   if (!rawGallery?.length) return [];
-  return rawGallery
-    .map((item) => {
-      if (!item) return null;
-      if (typeof item === "string") {
-        return { url: item, thumbnailUrl: item, title: "" };
-      }
-      if (typeof item === "object") {
-        const obj = item as Record<string, unknown>;
-        const url = (obj.url || obj.raw_url || obj.image_url || obj.imageUrl || obj.value || "") as string;
-        const thumbnailUrl = (obj.thumbnailUrl || obj.thumbnail_url || obj.url || obj.raw_url || obj.image_url || obj.imageUrl || obj.value || "") as string;
-        return {
+  const items: FomoGalleryItem[] = [];
+  for (const item of rawGallery) {
+    if (!item) continue;
+    if (typeof item === "string" && item.trim()) {
+      items.push({ url: item, thumbnailUrl: item, title: "" });
+    } else if (typeof item === "object") {
+      const obj = item as Record<string, unknown>;
+      const url = (obj.url || obj.raw_url || obj.image_url || obj.imageUrl || obj.value || "") as string;
+      if (url) {
+        const thumbnailUrl = (obj.thumbnailUrl || obj.thumbnail_url || url) as string;
+        items.push({
           url,
           thumbnailUrl,
           title: (obj.title || obj.description || obj.caption || "") as string,
           description: (obj.description || obj.caption || "") as string,
           featured: Boolean(obj.featured),
-        };
+        });
       }
-      return null;
-    })
-    .filter((g): g is FomoGalleryItem => Boolean(g && g.url));
+    }
+  }
+  return items;
 }
 
 export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hideVersions: boolean) {

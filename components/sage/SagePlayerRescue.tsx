@@ -36,6 +36,10 @@ export interface SagePlayerRescueProps {
   loadingPlayers: boolean;
   selectedPlayer: SagePlayerFile | null;
   setSelectedPlayer: (player: SagePlayerFile | null) => void;
+  rescuingPlayer?: boolean;
+  rescueLogs?: string[];
+  rescueSuccess?: boolean;
+  onRescue?: (options: any) => Promise<any>;
 }
 
 export function SagePlayerRescue({ 
@@ -476,8 +480,8 @@ export function SagePlayerRescue({
                   <RescueActions
                     filePath={parsedData.filePath}
                     worldName={parsedData.worldName}
-                    playerData={parsedData.playerData}
-                    backupFiles={parsedData.backupFiles}
+                    playerData={(parsedData.playerData as { position: number[]; dimension: string; spawn: { x: number; y: number; z: number } }) || { position: [0, 64, 0], dimension: "minecraft:overworld", spawn: { x: 0, y: 64, z: 0 } }}
+                    backupFiles={parsedData.backupFiles || []}
                     nbtRoot={parsedData.nbt}
                     onSave={handleSave}
                     onPurgeBackups={handlePurgeBackups}
@@ -488,9 +492,9 @@ export function SagePlayerRescue({
               </div>
 
               {/* Warnings */}
-              {parsedData.warnings?.length > 0 && (
+              {(parsedData.warnings?.length ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
-                  {parsedData.warnings.map((warn: string, i: number) => (
+                  {parsedData.warnings?.map((warn: string, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-amber-400 text-xs">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>{warn}</span>

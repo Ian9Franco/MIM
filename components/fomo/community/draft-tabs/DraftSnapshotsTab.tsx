@@ -207,7 +207,8 @@ export function DraftSnapshotsTab({
                         {(["mod", "resourcepack", "shader", "datapack"] as const).map((type) => {
                           const meta = TYPE_META[type];
                           const Icon = meta.icon;
-                          const typeItems = snap.manifest.mods.filter((m: CommunityDraftItem) =>
+                          const modsList = snap.manifest?.mods || [];
+                          const typeItems = modsList.filter((m: CommunityDraftItem) =>
                             type === "mod"
                               ? m.contentType === "mod" || !m.contentType
                               : m.contentType === type || (type === "resourcepack" && m.contentType === "textura")

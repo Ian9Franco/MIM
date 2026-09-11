@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { EventSource } from "@/lib/events/eventContract";
 import type { TimelineItem as ITimelineItem, DebugEvent, DebugCorrelation, DebugIncident } from "@/lib/debugger/types";
+import type { FilterState } from "@/hooks/useEventDebugger";
 
 export interface DebuggerStatsData {
   eventsCaptured: number;
@@ -16,12 +17,7 @@ export interface DebuggerStatsData {
   memoryUsage: { events: number };
 }
 
-export interface DebuggerFilterState {
-  searchQuery: string;
-  timeRange: { start: string; end: string };
-  showErrorsOnly: boolean;
-  showSlowEvents: boolean;
-}
+export type DebuggerFilterState = FilterState;
 
 export interface TimelineDisplayItem extends ITimelineItem {
   id: string;

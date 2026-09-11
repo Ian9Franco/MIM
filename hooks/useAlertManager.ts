@@ -219,7 +219,7 @@ export function useAlertManager(
       });
     };
 
-    const handleCompleted = (payload: { filePath: string; fileName: string; result?: { virusTotal?: { maliciousCount: number } } }) => {
+    const handleCompleted = (payload: { filePath: string; fileName: string; result?: { virusTotal?: { maliciousCount: number } | null } }) => {
       const id = `vt-scanning-${payload.filePath.replace(/[^a-zA-Z0-9]/g, "-")}`;
       incidentManager.resolveIncident(id);
       

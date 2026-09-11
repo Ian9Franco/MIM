@@ -124,12 +124,12 @@ export function FomoFollowedAuthors({
       const { data: modsData } = await supabase
         .from("favorite_mods")
         .select("id, profile_id, mod_id, platform, name, profiles ( username, avatar_url, color )");
-      if (modsData) setAllSharedMods(modsData);
+      if (modsData) setAllSharedMods(modsData as unknown as SharedModRow[]);
 
       const { data: videosRows } = await supabase
         .from("showcase_videos")
         .select("id, profile_id, youtube_video_id, title, profiles ( username, avatar_url, color )");
-      if (videosRows) setAllSharedVideos(videosRows);
+      if (videosRows) setAllSharedVideos(videosRows as unknown as SharedVideoRow[]);
     } catch (err) {
       console.error("Error loading community shared info:", err);
     }

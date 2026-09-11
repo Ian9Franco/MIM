@@ -190,7 +190,7 @@ export class DraftDownloadBroker {
         } else {
           // Unrecoverable error or max retries/budget reached
           task.status = "failed";
-          const errorMessage = report.errorMessage || String(e.message || "Download failed");
+          const errorMessage = report.errorMessage || (e instanceof Error ? e.message : "Download failed");
           task.error = errorMessage;
           this.updateTask(task);
           downloadEvents.emit("task:failed", { task, error: errorMessage, report });

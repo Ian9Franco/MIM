@@ -52,7 +52,7 @@ export type MimEventMap = {
   "security:scan-completed": { scanId: string; filesScanned: number; threatsFound: number; duration: number; threats: string[]; };
   "security:quarantine-applied": { threatId: string; fileName: string; quarantinePath: string; action: "move" | "delete" | "disable"; timestamp: string; };
   "virustotal:scanning": { filePath: string; fileName: string; };
-  "virustotal:completed": { filePath: string; fileName: string; result: { virusTotal?: { maliciousCount: number; }; }; };
+  "virustotal:completed": { filePath: string; fileName: string; result: { virusTotal?: { maliciousCount: number; } | null; }; };
 
   // WATCHER EVENTS
   "watcher:file-changed": { filePath: string; changeType: "created" | "modified" | "deleted"; fileSize: number; fileType: "mod" | "config" | "resourcepack" | "shader" | "unknown"; timestamp: string; };

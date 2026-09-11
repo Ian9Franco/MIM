@@ -6,6 +6,7 @@ import { useFomoSearch } from "./fomo/useFomoSearch";
 import { useFomoDownload } from "./fomo/useFomoDownload";
 import { useFomoSelection } from "./fomo/useFomoSelection";
 import { useFomoDetails } from "./fomo/useFomoDetails";
+import type { PendingDependency } from "./fomo/types";
 
 export function useFomoDiscover(
   defaultLoader: string,
@@ -54,7 +55,7 @@ export function useFomoDiscover(
       }
       // Agregar todas las deps requeridas de TODAS las versiones al targetVer si éste no las tiene
       if (targetVer && allFetchedVersions.length > 0) {
-        const allDepsMap = new Map<string, { projectId: string; dependencyType?: string; title?: string; iconUrl?: string; projectType?: string }>();
+        const allDepsMap = new Map<string, NonNullable<VersionEntry["dependencies"]>[number]>();
         allFetchedVersions.forEach(v => {
           (v.dependencies || []).forEach((d) => {
             if (!allDepsMap.has(d.projectId)) allDepsMap.set(d.projectId, d);
@@ -105,10 +106,18 @@ export function useFomoDiscover(
       // Verificar si hay dependencias requeridas en este o cualquier versión del proyecto
       const requiredDeps = targetVer?.dependencies?.filter(d => d.dependencyType === "required") || [];
       if (requiredDeps.length > 0) {
+        const pendingDeps: PendingDependency[] = requiredDeps.map((d) => ({
+          projectId: d.projectId,
+          title: d.title || d.projectId,
+          slug: d.slug,
+          iconUrl: d.iconUrl ?? null,
+          projectType: d.projectType || "mod",
+          url: d.url || d.externalUrl || undefined,
+        }));
         download.setDependencyPrompt({
           mod,
           version: targetVer!,
-          dependencies: requiredDeps,
+          dependencies: pendingDeps,
           downloadUrl: url,
           filename,
           hashes: targetVer?.primaryFile?.hashes
@@ -151,8 +160,16 @@ export function useFomoDiscover(
             if (firstVer?.primaryFile?.url) {
               const depMod: ModHit = {
                 projectId: dep.projectId,
+                slug: dep.slug || dep.projectId,
                 title: dep.title || dep.projectId,
+                description: "",
                 iconUrl: dep.iconUrl || null,
+                author: "",
+                downloads: 0,
+                follows: 0,
+                latestVersion: null,
+                url: dep.url || "",
+                dateCreated: "",
                 projectType: dep.projectType || "mod",
                 categories: [],
                 _source: mod._source

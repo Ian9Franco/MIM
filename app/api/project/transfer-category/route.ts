@@ -51,19 +51,24 @@ export const POST = withApiGuard(
     try {
       const { sourceProject, targetProject, version, category, loader = "fabric" } = body;
 
-    if (sourceProject === targetProject) {
-      return NextResponse.json(
-        { error: "Source and target project cannot be the same" },
-        { status: 400 }
-      );
-    }
+      const safeSource = sourceProject === "__global__" ? "__global__" : sourceProject.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeTarget = targetProject.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeVersion = version.replace(/[<>:"/\\|?*]/g, "_").trim();
+      const safeLoader = loader.replace(/[<>:"/\\|?*]/g, "_").trim();
 
-    // Determine source directory: either a project-specific mods folder or the global loader folder
-    const sourceBaseDir = sourceProject === "__global__"
-      ? path.join(SOURCE_BASE, version, loader)
-      : path.join(SOURCE_BASE, "_projects", sourceProject, "mods");
+      if (safeSource === safeTarget) {
+        return NextResponse.json(
+          { error: "Source and target project cannot be the same" },
+          { status: 400 }
+        );
+      }
 
-    const targetBaseDir = path.join(SOURCE_BASE, "_projects", targetProject, "mods");
+      // Determine source directory: either a project-specific mods folder or the global loader folder
+      const sourceBaseDir = safeSource === "__global__"
+        ? path.join(SOURCE_BASE, safeVersion, safeLoader)
+        : path.join(SOURCE_BASE, "_projects", safeSource, "mods");
+
+      const targetBaseDir = path.join(SOURCE_BASE, "_projects", safeTarget, "mods");
 
     if (!fs.existsSync(sourceBaseDir)) {
       const errorMsg = sourceProject === "__global__"

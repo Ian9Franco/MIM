@@ -52,9 +52,10 @@ export const GET = withApiGuard(
 
     try {
       // Extraer el handle del canal de la URL
-      const handle = channelUrl.includes("@")
-        ? "@" + channelUrl.split("@").pop()!.split("/")[0]
+      const rawHandle = channelUrl.includes("@")
+        ? "@" + (channelUrl.split("@").pop()?.split("/")[0] || "")
         : channelUrl.split("/").pop() || "";
+      const handle = encodeURIComponent(rawHandle.replace(/[^a-zA-Z0-9_.-@]/g, ""));
 
       const targetUrl = `https://www.youtube.com/${handle}/posts`;
 

@@ -311,9 +311,10 @@ export const GET = withApiGuard(
       return NextResponse.json(cached.data);
     }
 
-    const handle = channelUrl.includes("@")
-      ? "@" + channelUrl.split("@").pop()!.split("/")[0]
+    const rawHandle = channelUrl.includes("@")
+      ? "@" + (channelUrl.split("@").pop()?.split("/")[0] || "")
       : channelUrl.split("/").pop() || "";
+    const handle = encodeURIComponent(rawHandle.replace(/[^a-zA-Z0-9_.-@]/g, ""));
 
     let targetUrl = `https://www.youtube.com/${handle}/posts`;
     if (feedType === "videos") {

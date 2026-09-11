@@ -116,7 +116,12 @@ function normalizeFavorite(fav: Record<string, unknown> | ModHit): ModHit {
   return {
     projectId,
     title,
-    description: String(r.description ?? m.description ?? meta.description ?? summaryStr ?? ""),
+    description: String(
+      typeof r.description === "string" ? r.description
+        : typeof m.description === "string" ? m.description
+          : typeof meta.description === "string" ? meta.description
+            : summaryStr
+    ),
     iconUrl: typeof r.icon_url === "string" ? r.icon_url : typeof m.iconUrl === "string" ? m.iconUrl : undefined,
     author,
     projectType,

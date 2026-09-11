@@ -82,6 +82,11 @@ async function main() {
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-eval-metrics.test.ts"]
     },
     {
+      name: "SAGE Corpus Provenance & Splits (SAGE-01)",
+      cmd: "npx",
+      args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-eval-corpus.test.ts"]
+    },
+    {
       name: "SAGE 2.0 Core Taxonomy & Parser Unit Suite",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-unit.test.ts"]

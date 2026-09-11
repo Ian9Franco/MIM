@@ -26,6 +26,10 @@ function sample(
     minecraftVersion: "1.20.1",
     rawLog,
     expectedCulprit,
+    origin: "unknown",
+    license: "unspecified",
+    anonymized: false,
+    split: "train",
   };
 }
 

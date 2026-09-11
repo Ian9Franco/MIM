@@ -1,6 +1,14 @@
+import { createHash } from "crypto";
 import { z } from "zod";
 import type { CrashCategory } from "../../lib/intelligence/sage/types";
 import { SageCrashEngine } from "../../lib/intelligence/sage/engine";
+
+export const SAMPLE_ORIGINS = ["community", "public-issue", "synthetic", "unknown"] as const;
+export const SAMPLE_SPLITS = ["train", "holdout", "stress"] as const;
+export const NEAR_DUPLICATE_PREFIX_LENGTH = 180;
+
+export type SampleOrigin = (typeof SAMPLE_ORIGINS)[number];
+export type SampleSplit = (typeof SAMPLE_SPLITS)[number];
 
 export interface BenchmarkSample {
   id: string;
@@ -8,6 +16,12 @@ export interface BenchmarkSample {
   loader: string;
   minecraftVersion: string;
   expectedCulprit?: string;
+  origin: SampleOrigin;
+  license: string;
+  anonymized: boolean;
+  split: SampleSplit;
+  duplicateOf?: string;
+  notes?: string;
   rawLog: string;
 }
 
@@ -23,12 +37,18 @@ const crashCategorySchema = z.enum([
 ]);
 
 export const benchmarkSampleSchema = z.object({
-  id: z.string(),
+  id: z.string().min(1),
   category: crashCategorySchema,
-  loader: z.string(),
-  minecraftVersion: z.string(),
+  loader: z.string().min(1),
+  minecraftVersion: z.string().min(1),
   expectedCulprit: z.string().optional(),
-  rawLog: z.string(),
+  origin: z.enum(SAMPLE_ORIGINS),
+  license: z.string().min(1),
+  anonymized: z.boolean(),
+  split: z.enum(SAMPLE_SPLITS),
+  duplicateOf: z.string().min(1).optional(),
+  notes: z.string().optional(),
+  rawLog: z.string().min(1),
 });
 
 export const benchmarkCorpusSchema = z.array(benchmarkSampleSchema);
@@ -74,6 +94,12 @@ export interface CategoryStatRow {
   f1: number;
 }
 
+export interface LoaderStatRow {
+  loader: string;
+  samples: number;
+  categoryAccuracy: number;
+}
+
 export interface SageEvaluationResult {
   sampleCount: number;
   overallCategoryAccuracy: number;
@@ -85,6 +111,104 @@ export interface SageEvaluationResult {
   top3Attribution: RatioMetric;
   systemicCategoryCorrect: RatioMetric;
   categoryRows: CategoryStatRow[];
+  loaderRows: LoaderStatRow[];
+}
+
+export interface CorpusDuplicateGroup {
+  kind: "exact" | "near";
+  canonicalId: string;
+  duplicateIds: string[];
+  sampleCount: number;
+}
+
+export interface CorpusAudit {
+  totalSamples: number;
+  uniqueLogCount: number;
+  exactDuplicateExtraCount: number;
+  exactDuplicateGroups: CorpusDuplicateGroup[];
+  nearDuplicateGroups: CorpusDuplicateGroup[];
+  originCounts: Record<SampleOrigin, number>;
+  splitCounts: Record<SampleSplit, number>;
+  loaderCounts: Record<string, number>;
+  logLength: { min: number; p50: number; max: number; mean: number };
+}
+
+export function filterCorpusBySplit(samples: BenchmarkSample[], split: SampleSplit): BenchmarkSample[] {
+  return samples.filter((sample) => sample.split === split);
+}
+
+function countBy<K extends string>(values: K[], keys: readonly K[]): Record<K, number> {
+  const counts = Object.fromEntries(keys.map((key) => [key, 0])) as Record<K, number>;
+  for (const value of values) counts[value]++;
+  return counts;
+}
+
+function percentile50(sorted: number[]): number {
+  if (sorted.length === 0) return 0;
+  return sorted[Math.floor(sorted.length / 2)] ?? 0;
+}
+
+export function auditSageCorpus(samples: BenchmarkSample[]): CorpusAudit {
+  const hashToIds = new Map<string, string[]>();
+  const prefixToHashes = new Map<string, Set<string>>();
+  const prefixToIds = new Map<string, string[]>();
+  const lengths: number[] = [];
+  const loaderCounts: Record<string, number> = {};
+
+  for (const sample of samples) {
+    const hashed = createHash("sha256").update(sample.rawLog).digest("hex");
+    const hashIds = hashToIds.get(hashed) ?? [];
+    hashIds.push(sample.id);
+    hashToIds.set(hashed, hashIds);
+
+    const prefix = sample.rawLog.slice(0, NEAR_DUPLICATE_PREFIX_LENGTH);
+    const prefixIds = prefixToIds.get(prefix) ?? [];
+    prefixIds.push(sample.id);
+    prefixToIds.set(prefix, prefixIds);
+    const prefixHashes = prefixToHashes.get(prefix) ?? new Set<string>();
+    prefixHashes.add(hashed);
+    prefixToHashes.set(prefix, prefixHashes);
+
+    lengths.push(sample.rawLog.length);
+    loaderCounts[sample.loader] = (loaderCounts[sample.loader] ?? 0) + 1;
+  }
+
+  const exactDuplicateGroups: CorpusDuplicateGroup[] = [];
+  for (const ids of hashToIds.values()) {
+    if (ids.length < 2) continue;
+    const [canonicalId, ...duplicateIds] = ids;
+    if (!canonicalId) continue;
+    exactDuplicateGroups.push({ kind: "exact", canonicalId, duplicateIds, sampleCount: ids.length });
+  }
+
+  const nearDuplicateGroups: CorpusDuplicateGroup[] = [];
+  for (const [prefix, ids] of prefixToIds.entries()) {
+    const uniqueHashes = prefixToHashes.get(prefix)?.size ?? 0;
+    if (ids.length < 2 || uniqueHashes < 2) continue;
+    const [canonicalId, ...duplicateIds] = ids;
+    if (!canonicalId) continue;
+    nearDuplicateGroups.push({ kind: "near", canonicalId, duplicateIds, sampleCount: ids.length });
+  }
+
+  lengths.sort((left, right) => left - right);
+  const exactDuplicateExtraCount = exactDuplicateGroups.reduce((sum, group) => sum + group.duplicateIds.length, 0);
+
+  return {
+    totalSamples: samples.length,
+    uniqueLogCount: hashToIds.size,
+    exactDuplicateExtraCount,
+    exactDuplicateGroups,
+    nearDuplicateGroups,
+    originCounts: countBy(samples.map((sample) => sample.origin), SAMPLE_ORIGINS),
+    splitCounts: countBy(samples.map((sample) => sample.split), SAMPLE_SPLITS),
+    loaderCounts,
+    logLength: {
+      min: lengths[0] ?? 0,
+      p50: percentile50(lengths),
+      max: lengths[lengths.length - 1] ?? 0,
+      mean: lengths.length > 0 ? lengths.reduce((sum, value) => sum + value, 0) / lengths.length : 0,
+    },
+  };
 }
 
 type CategoryStat = { tp: number; fp: number; fn: number; totalExpected: number };
@@ -217,9 +341,31 @@ function computeMacroF1(categoryRows: CategoryStatRow[]): number {
   return total / categoryRows.length;
 }
 
+function recordLoaderOutcome(
+  loaderStats: Map<string, { total: number; correct: number }>,
+  loader: string,
+  correct: boolean,
+): void {
+  const row = loaderStats.get(loader) ?? { total: 0, correct: 0 };
+  row.total += 1;
+  if (correct) row.correct += 1;
+  loaderStats.set(loader, row);
+}
+
+function buildLoaderRows(loaderStats: Map<string, { total: number; correct: number }>): LoaderStatRow[] {
+  return [...loaderStats.entries()]
+    .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
+    .map(([loader, row]) => ({
+      loader,
+      samples: row.total,
+      categoryAccuracy: row.total > 0 ? (row.correct / row.total) * 100 : 0,
+    }));
+}
+
 export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationResult {
   const stats = createEmptyCategoryStats();
   const counters = createHistoricalCounters();
+  const loaderStats = new Map<string, { total: number; correct: number }>();
   let totalCorrectCategory = 0;
   let totalLatencyMs = 0;
 
@@ -229,6 +375,7 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
 
     const categoryMatch = report.category === sample.category;
     recordCategoryOutcome(stats, sample.category, report.category, categoryMatch);
+    recordLoaderOutcome(loaderStats, sample.loader, categoryMatch);
     if (categoryMatch) {
       totalCorrectCategory += 1;
     }
@@ -255,6 +402,7 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
     top3Attribution: ratio(counters.top3AttributionMatches, counters.attributionDenominator),
     systemicCategoryCorrect: ratio(counters.systemicCategoryMatches, counters.systemicDenominator),
     categoryRows,
+    loaderRows: buildLoaderRows(loaderStats),
   };
 }
 
@@ -305,60 +453,154 @@ export function formatRatioLine(label: string, metric: RatioMetric): string {
   return `- **${label}:** ${metric.percentage.toFixed(1)}% (${metric.numerator}/${metric.denominator})`;
 }
 
-export function buildSageEvaluationMarkdown(result: SageEvaluationResult, evaluationDate: string): string {
-  const markdownRows = result.categoryRows.map(
+export interface SageEvalReportInput {
+  evaluationDate: string;
+  regression: {
+    train: SageEvaluationResult;
+    audit: CorpusAudit;
+  };
+  real: {
+    audit: CorpusAudit;
+    holdout?: SageEvaluationResult;
+  };
+}
+
+function formatSplitResult(title: string, result: SageEvaluationResult | undefined, emptyNote: string): string {
+  if (!result || result.sampleCount === 0) {
+    return `## ${title}\n\n${emptyNote}\n`;
+  }
+  const loaderRows = result.loaderRows.map(
+    (row) => `| ${row.loader} | ${row.samples} | ${row.categoryAccuracy.toFixed(1)}% |`,
+  );
+  return `## ${title}
+
+| Metric | Value |
+|:---|---:|
+| Samples | ${result.sampleCount} |
+| Category accuracy | ${result.overallCategoryAccuracy.toFixed(1)}% |
+| Macro F1 | ${result.macroF1.toFixed(1)}% |
+| Top-3 histórico | ${result.top3Historical.percentage.toFixed(1)}% (${result.top3Historical.numerator}/${result.top3Historical.denominator}) |
+
+| Loader | Samples | Category accuracy |
+|:---|---:|---:|
+${loaderRows.join("\n")}
+`;
+}
+
+function formatAuditSection(title: string, audit: CorpusAudit): string {
+  const exactDupLines = audit.exactDuplicateGroups
+    .map((group) => `- exact ${group.canonicalId}: ${group.sampleCount} copies (${group.duplicateIds.length} extras)`)
+    .join("\n");
+  const nearDupLines = audit.nearDuplicateGroups
+    .map((group) => `- near ${group.canonicalId}: ${group.sampleCount} samples sharing a ${NEAR_DUPLICATE_PREFIX_LENGTH}-char prefix`)
+    .join("\n");
+
+  return `### ${title}
+
+- Samples: ${audit.totalSamples} (${audit.uniqueLogCount} unique logs; ${audit.exactDuplicateExtraCount} exact duplicate extras)
+- Log length: min ${audit.logLength.min}, p50 ${audit.logLength.p50}, mean ${audit.logLength.mean.toFixed(0)}, max ${audit.logLength.max} chars
+- Origin: unknown ${audit.originCounts.unknown}, synthetic ${audit.originCounts.synthetic}, community ${audit.originCounts.community}, public-issue ${audit.originCounts["public-issue"]}
+- Split: train ${audit.splitCounts.train}, stress ${audit.splitCounts.stress}, holdout ${audit.splitCounts.holdout}
+
+Exact groups:
+
+${exactDupLines || "- none"}
+
+Near-duplicate prefix groups:
+
+${nearDupLines || "- none"}
+`;
+}
+
+export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string {
+  const { regression, real, evaluationDate } = input;
+  const train = regression.train;
+  const regressionAudit = regression.audit;
+  const markdownRows = train.categoryRows.map(
     (row) =>
       `| \`${row.category}\` | ${row.samples} | ${row.precision.toFixed(1)}% | ${row.recall.toFixed(1)}% | ${row.f1.toFixed(1)}% |`,
+  );
+  const loaderRows = train.loaderRows.map(
+    (row) => `| ${row.loader} | ${row.samples} | ${row.categoryAccuracy.toFixed(1)}% |`,
   );
 
   return `# SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
 > **Evaluation Date:** ${evaluationDate}  
-> **Benchmark Dataset:** ${result.sampleCount} real-world & representative Minecraft crash logs  
-> **Target Loaders:** Fabric, Forge, NeoForge, Quilt, Vanilla  
+> **Regression gate (\`crash-corpus-regression.json\`):** ${train.sampleCount} templated cases — CI only, not real captured logs  
+> **Real corpus (\`crash-corpus.json\`):** ${real.audit.totalSamples} cases — add server/client logs here when available  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/\`latest.log\`; not mixed into this file yet  
 
 ---
 
-## 📊 Summary Performance Metrics
+## Limits (SAGE-01)
+
+This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
+
+- \`crash-corpus-regression.json\` holds templated snippets (\`origin: synthetic\`) for the SAGE-03 CI gate only.
+- \`crash-corpus.json\` is intentionally **empty** until you capture real logs (client crash or server \`latest.log\` excerpts) without contaminating regression.
+- 100% regression F1 does not prove generalization. Real holdout lives only in \`crash-corpus.json\`.
+
+${formatAuditSection("Regression fixture audit", regressionAudit)}
+
+${formatAuditSection("Real corpus audit", real.audit)}
+
+---
+
+## 📊 Summary Performance Metrics (regression / SAGE-03 gate)
 
 | Metric | Measured Value | Benchmark Target | Status |
 |:---|:---:|:---:|:---:|
-| **Benchmark Classification Accuracy** | **${result.overallCategoryAccuracy.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(result.overallCategoryAccuracy, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
-| **Macro F1-Score** | **${result.macroF1.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(result.macroF1, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
-| **Top-1 (histórico, mezclado)** | **${result.top1Historical.percentage.toFixed(1)}%** | informativo | ${result.top1Historical.numerator}/${result.top1Historical.denominator} |
-| **Top-3 (histórico, mezclado)** | **${result.top3Historical.percentage.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}.0% | ${formatPercentageStatus(result.top3Historical.percentage, SAGE_EVAL_THRESHOLDS.TOP3_MIN)} |
-| **Top-1 atribución (con culpable)** | **${result.top1Attribution.percentage.toFixed(1)}%** | informativo | ${result.top1Attribution.numerator}/${result.top1Attribution.denominator} |
-| **Top-3 atribución (con culpable)** | **${result.top3Attribution.percentage.toFixed(1)}%** | informativo | ${result.top3Attribution.numerator}/${result.top3Attribution.denominator} |
-| **Acierto sistémico sin culpable** | **${result.systemicCategoryCorrect.percentage.toFixed(1)}%** | informativo | ${result.systemicCategoryCorrect.numerator}/${result.systemicCategoryCorrect.denominator} |
-| **Mean Inference Latency** | **${result.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatLatencyStatus(result.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS)} |
+| **Benchmark Classification Accuracy** | **${train.overallCategoryAccuracy.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(train.overallCategoryAccuracy, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
+| **Macro F1-Score** | **${train.macroF1.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}.0% | ${formatPercentageStatus(train.macroF1, SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN)} |
+| **Top-1 (histórico, mezclado)** | **${train.top1Historical.percentage.toFixed(1)}%** | informativo | ${train.top1Historical.numerator}/${train.top1Historical.denominator} |
+| **Top-3 (histórico, mezclado)** | **${train.top3Historical.percentage.toFixed(1)}%** | > ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}.0% | ${formatPercentageStatus(train.top3Historical.percentage, SAGE_EVAL_THRESHOLDS.TOP3_MIN)} |
+| **Top-1 atribución (con culpable)** | **${train.top1Attribution.percentage.toFixed(1)}%** | informativo | ${train.top1Attribution.numerator}/${train.top1Attribution.denominator} |
+| **Top-3 atribución (con culpable)** | **${train.top3Attribution.percentage.toFixed(1)}%** | informativo | ${train.top3Attribution.numerator}/${train.top3Attribution.denominator} |
+| **Acierto sistémico sin culpable** | **${train.systemicCategoryCorrect.percentage.toFixed(1)}%** | informativo | ${train.systemicCategoryCorrect.numerator}/${train.systemicCategoryCorrect.denominator} |
+| **Mean Inference Latency** | **${train.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatLatencyStatus(train.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS)} |
 
 ### Métricas desglosadas (SAGE-02)
 
-${formatRatioLine("Top-1 (histórico, mezclado)", result.top1Historical)}
-${formatRatioLine("Top-3 (histórico, mezclado)", result.top3Historical)}
-${formatRatioLine("Top-1 atribución (solo casos con expectedCulprit)", result.top1Attribution)}
-${formatRatioLine("Top-3 atribución (solo casos con expectedCulprit)", result.top3Attribution)}
-${formatRatioLine("Categoría correcta sin culpable atribuible", result.systemicCategoryCorrect)}
+${formatRatioLine("Top-1 (histórico, mezclado)", train.top1Historical)}
+${formatRatioLine("Top-3 (histórico, mezclado)", train.top3Historical)}
+${formatRatioLine("Top-1 atribución (solo casos con expectedCulprit)", train.top1Attribution)}
+${formatRatioLine("Top-3 atribución (solo casos con expectedCulprit)", train.top3Attribution)}
+${formatRatioLine("Categoría correcta sin culpable atribuible", train.systemicCategoryCorrect)}
 
 ---
 
-## 🔬 Category Breakdown
+## 🔬 Category Breakdown (regression)
 
 | Crash Category | Sample Count | Precision | Recall | F1-Score |
 |:---|:---:|:---:|:---:|:---:|
 ${markdownRows.join("\n")}
 
+## Loader Breakdown (regression)
+
+| Loader | Samples | Category accuracy |
+|:---|---:|---:|
+${loaderRows.join("\n")}
+
+---
+
+${formatSplitResult(
+  "Real holdout (\`crash-corpus.json\`, not gated)",
+  real.holdout,
+  "`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.",
+)}
+
 ---
 
 ## 🚀 Reproducibility
 
-To re-run this evaluation benchmark on your local environment:
-
 \`\`\`bash
-npm run eval:sage
+npm run eval:sage              # regression gate + write this report
+npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --audit   # regression + real corpus audits
 \`\`\`
 
-CI gate thresholds (\`SAGE-03\`): Macro F1 ≥ ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}%, Top-3 histórico ≥ ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}%, latencia media ≤ ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS} ms.
+CI gate thresholds (\`SAGE-03\`) apply **only** to \`crash-corpus-regression.json\`: Macro F1 ≥ ${SAGE_EVAL_THRESHOLDS.MACRO_F1_MIN}%, Top-3 histórico ≥ ${SAGE_EVAL_THRESHOLDS.TOP3_MIN}%, latencia media ≤ ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS} ms.
 `;
 }
 

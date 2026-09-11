@@ -1,4 +1,14 @@
 ---
+# Codacy configuration for MIM.
+#
+# PR gate: zero *new* high-severity issues on the diff vs main (not the
+# complexity summary in PR comments). Local eslint.config.mjs is looser
+# (e.g. @typescript-eslint/no-explicit-any: off); Codacy ESLint is stricter.
+#
+# exclude_paths below are intentional. Revisit when:
+#   - fix-issue / transfer-category share a repo-wide safePaths helper, or
+#   - CollectionsTab is split per REC-03 (mega-line structure).
+#
 engines:
   eslint:
     enabled: true
@@ -8,6 +18,7 @@ engines:
       min_length: 50
 
 exclude_paths:
+  # Build artifacts, vendored deps, generated files — not product source.
   - scripts/__tests__/**
   - scripts/evaluation/**
   - scripts/scratch/**
@@ -23,12 +34,23 @@ exclude_paths:
   - "*.tsbuildinfo"
   - next-env.d.ts
   - public/**
-  # These two routes join SOURCE_BASE with validated request segments.
-  # Extracting helpers makes Opengrep treat the same path.join calls as
-  # new high-severity findings; excluding keeps the original handlers
-  # from failing the method-length gate (limit 50).
+
+  # --- REC-01 / Codacy gate exclusions (PR #88) ---
+  #
+  # app/api/project/fix-issue/route.ts
+  # app/api/project/transfer-category/route.ts
+  #   Analyzer conflict: inline POST handlers join SOURCE_BASE with validated
+  #   request segments via path.join. Refactoring into helpers triggers Opengrep
+  #   "dynamically constructs file or path information" (new high-severity
+  #   security findings on the diff). Keeping the original ~60–76 line handlers
+  #   avoids those false positives but fails Codacy method-length (>50 lines).
+  #   Paths are constrained to the project tree; not a waiver of real review.
   - app/api/project/fix-issue/route.ts
   - app/api/project/transfer-category/route.ts
-  # Mega-line Hub tab: Codacy maps stale unused-param / void-shorthand
-  # issues onto this file even after the signatures use Fn<>.
+
+  # apps/hub/components/tabs/CollectionsTab.tsx
+  #   Mega-line Hub tab (REC-03 backlog). After Fn<> / void-shorthand fixes,
+  #   Codacy still mapped stale ESLint highs (unused callback params) onto this
+  #   file. Exclude until the tab is modularized; typing work in PR #88 remains
+  #   in git history for when the file is split.
   - apps/hub/components/tabs/CollectionsTab.tsx

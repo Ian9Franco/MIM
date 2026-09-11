@@ -6,18 +6,25 @@ import fs from "fs";
 import path from "path";
 import {
   SAGE_EVAL_THRESHOLDS,
+  auditSageCorpus,
   buildSageEvaluationMarkdown,
   collectSageGateFailures,
   evaluateSageCorpus,
+  filterCorpusBySplit,
   parseBenchmarkCorpus,
+  type BenchmarkSample,
+  type CorpusAudit,
+  type SageEvaluationResult,
 } from "./sageEvalCore";
 
-const CORPUS_PATH = path.resolve(__dirname, "datasets", "crash-corpus.json");
-const REPORT_OUTPUT_PATH = path.resolve(__dirname, "..", "..", "docs", "engines", "sage-eval.md");
+const DATASETS_DIR = path.join(__dirname, "datasets");
+const REGRESSION_CORPUS_PATH = path.join(DATASETS_DIR, "crash-corpus-regression.json");
+const REAL_CORPUS_PATH = path.join(DATASETS_DIR, "crash-corpus.json");
+const REPORT_OUTPUT_PATH = path.join(__dirname, "..", "..", "docs", "engines", "sage-eval.md");
 
-function printConsoleSummary(result: ReturnType<typeof evaluateSageCorpus>): void {
+function printConsoleSummary(label: string, result: SageEvaluationResult): void {
   console.log(`\n===============================================================`);
-  console.log(`🔬 SAGE 2.0 EVALUATION ENGINE — Running on ${result.sampleCount} test cases`);
+  console.log(`🔬 SAGE 2.0 EVALUATION — ${label} (${result.sampleCount} cases)`);
   console.log(`===============================================================\n`);
 
   console.log(`| Category                | Samples | Precision | Recall  | F1-Score |`);
@@ -25,6 +32,14 @@ function printConsoleSummary(result: ReturnType<typeof evaluateSageCorpus>): voi
   for (const row of result.categoryRows) {
     console.log(
       `| ${row.category.padEnd(23)} | ${String(row.samples).padStart(7)} | ${row.precision.toFixed(1).padStart(8)}% | ${row.recall.toFixed(1).padStart(6)}% | ${row.f1.toFixed(1).padStart(7)}% |`,
+    );
+  }
+
+  console.log(`---------------------------------------------------------------`);
+  console.log(`| Loader                  | Samples | Category accuracy |`);
+  for (const row of result.loaderRows) {
+    console.log(
+      `| ${row.loader.padEnd(23)} | ${String(row.samples).padStart(7)} | ${row.categoryAccuracy.toFixed(1).padStart(16)}% |`,
     );
   }
 
@@ -40,7 +55,22 @@ function printConsoleSummary(result: ReturnType<typeof evaluateSageCorpus>): voi
   console.log(`===============================================================\n`);
 }
 
-function handleSelfTest(): number {
+function printAudit(label: string, audit: CorpusAudit): void {
+  console.log(`📋 ${label}`);
+  console.log(`   total=${audit.totalSamples} uniqueLogs=${audit.uniqueLogCount} exactExtraCopies=${audit.exactDuplicateExtraCount}`);
+  console.log(`   origin unknown=${audit.originCounts.unknown} synthetic=${audit.originCounts.synthetic} community=${audit.originCounts.community} public-issue=${audit.originCounts["public-issue"]}`);
+  console.log(`   split train=${audit.splitCounts.train} stress=${audit.splitCounts.stress} holdout=${audit.splitCounts.holdout}`);
+  if (audit.totalSamples === 0) {
+    console.log("   (empty — ready for real captured logs)");
+    return;
+  }
+  console.log(`   logLength min=${audit.logLength.min} p50=${audit.logLength.p50} mean=${audit.logLength.mean.toFixed(0)} max=${audit.logLength.max}`);
+  for (const [loader, count] of Object.entries(audit.loaderCounts).sort((left, right) => right[1] - left[1])) {
+    console.log(`   loader ${loader}=${count}`);
+  }
+}
+
+function runSelfTestFail(): number {
   const forced = evaluateSageCorpus([]);
   const failures = collectSageGateFailures(forced, {
     ...SAGE_EVAL_THRESHOLDS,
@@ -54,38 +84,95 @@ function handleSelfTest(): number {
   return 1;
 }
 
-function runEvaluation(): number {
-  if (process.argv.includes("--self-test-fail")) {
-    return handleSelfTest();
+function loadCorpusFile(filePath: string): BenchmarkSample[] {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Corpus not found at: ${filePath}`);
   }
+  const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  return parseBenchmarkCorpus(Array.isArray(raw) ? raw : []);
+}
 
-  if (!fs.existsSync(CORPUS_PATH)) {
-    console.error(`❌ Corpus not found at: ${CORPUS_PATH}`);
-    return 1;
-  }
+function loadRegressionCorpus(): BenchmarkSample[] {
+  return loadCorpusFile(REGRESSION_CORPUS_PATH);
+}
 
-  const rawCorpus = fs.readFileSync(CORPUS_PATH, "utf-8");
-  const samples = parseBenchmarkCorpus(JSON.parse(rawCorpus));
-  const result = evaluateSageCorpus(samples);
-  printConsoleSummary(result);
+function loadRealCorpus(): BenchmarkSample[] {
+  return loadCorpusFile(REAL_CORPUS_PATH);
+}
 
-  const evaluationDate = new Date().toISOString().split("T")[0];
-  const markdown = buildSageEvaluationMarkdown(result, evaluationDate);
-  fs.writeFileSync(REPORT_OUTPUT_PATH, markdown, "utf-8");
+function writeReport(
+  regressionTrain: SageEvaluationResult,
+  regressionAudit: CorpusAudit,
+  realAudit: CorpusAudit,
+  holdout: SageEvaluationResult,
+): void {
+  const evaluationDate = new Date().toISOString().split("T")[0] ?? "unknown-date";
+  fs.writeFileSync(
+    REPORT_OUTPUT_PATH,
+    buildSageEvaluationMarkdown({
+      evaluationDate,
+      regression: { train: regressionTrain, audit: regressionAudit },
+      real: { audit: realAudit, holdout: holdout.sampleCount > 0 ? holdout : undefined },
+    }),
+    "utf-8",
+  );
   console.log(`📄 Written complete evaluation report to: ${REPORT_OUTPUT_PATH}`);
+}
 
+function applyRegressionGate(result: SageEvaluationResult): number {
   const failures = collectSageGateFailures(result);
   if (failures.length > 0) {
-    console.error("❌ SAGE evaluation gate failed:");
+    console.error("❌ SAGE evaluation gate failed (regression corpus):");
     for (const failure of failures) {
       console.error(`   - ${failure.metric}: measured ${failure.measured.toFixed(2)}, required threshold ${failure.threshold}`);
     }
     return 1;
   }
-
-  console.log("✅ SAGE evaluation gate passed.");
+  console.log("✅ SAGE evaluation gate passed (regression corpus only).");
   return 0;
 }
 
-process.exit(runEvaluation());
+function runEvaluation(): number {
+  if (process.argv.includes("--self-test-fail")) {
+    return runSelfTestFail();
+  }
 
+  let regressionSamples: BenchmarkSample[];
+  let realSamples: BenchmarkSample[];
+  try {
+    regressionSamples = loadRegressionCorpus();
+    realSamples = loadRealCorpus();
+  } catch (error) {
+    console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+
+  const regressionAudit = auditSageCorpus(regressionSamples);
+  const realAudit = auditSageCorpus(realSamples);
+  const regressionTrainSamples = filterCorpusBySplit(regressionSamples, "train");
+  const holdoutSamples = filterCorpusBySplit(realSamples, "holdout");
+
+  if (process.argv.includes("--audit")) {
+    printAudit("Regression fixture (CI gate)", regressionAudit);
+    printAudit("Real corpus (crash-corpus.json)", realAudit);
+    return 0;
+  }
+
+  if (process.argv.includes("--holdout")) {
+    if (holdoutSamples.length === 0) {
+      console.log("Real holdout is empty. Add captured logs to scripts/evaluation/datasets/crash-corpus.json with split: holdout.");
+      return 0;
+    }
+    printConsoleSummary("real holdout (not gated)", evaluateSageCorpus(holdoutSamples));
+    return 0;
+  }
+
+  printAudit("Regression fixture (CI gate)", regressionAudit);
+  printAudit("Real corpus (crash-corpus.json)", realAudit);
+  const regressionTrain = evaluateSageCorpus(regressionTrainSamples);
+  printConsoleSummary("regression / SAGE-03 gate", regressionTrain);
+  writeReport(regressionTrain, regressionAudit, realAudit, evaluateSageCorpus(holdoutSamples));
+  return applyRegressionGate(regressionTrain);
+}
+
+process.exit(runEvaluation());

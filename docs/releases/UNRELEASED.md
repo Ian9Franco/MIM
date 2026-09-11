@@ -26,6 +26,11 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - Pantalla Desktop `/servers` (link en el header) que compara mods contra el último build AllHost.
   - Fixture local `npm run dev:server-fixture` y suite `npm run test:server`. Escritura remota, persistencia durable de snapshots y hosting externo siguen pendientes.
   - Build Desktop verificado post-merge: `ssh2` queda marcado como `serverExternalPackages`; MIM Systems Engineering CI #191 sobre `d098d7ad` pasó el build Desktop y el Hub. Esto cierra la regresión de empaquetado, no verifica por sí mismo la semántica funcional SFTP ni cierra #58.
+- **Server Manager SRV-4 (deploy UI en Desktop, no cierra #58)**:
+  - `POST /api/server/deploy` local a Desktop, mismo guard de origen/host que inspect, plan recalculado en servidor (auditoría parcial no autoriza mutación).
+  - Transporte SFTP escribible con la misma verificación de host y contención de rutas; payloads desde el build AllHost.
+  - `/servers` ofrece confirmación explícita, progreso `preflight` → `executing` → `completed` | `failed` | `recovery-required`, y bloqueo de nuevos deploys en recuperación.
+  - Persistencia durable de snapshots, SAGE remoto, admin/RCON y sync multiplayer siguen pendientes.
 - **MIMBOT-GW / Model Gateway & Context Builder**:
   - BOT-05, subalcance lifecycle/credenciales verificado post-merge en PR #68 / `d098d7ad`: cancelación y timeout se propagan a Gemini/OpenRouter, los retries respetan el mismo ciclo cancelable y MIM-Bot Chat (alcance proyecto) usa el proveedor seleccionado sin credenciales en URLs. BOT-05 global permanece abierto.
   - Abstracción de proveedores `AIProvider` (`GeminiProvider`, `OpenRouterProvider`) con selector `createAIProvider.ts`. Gemini permanece como default; GLM vía OpenRouter es opt-in (`MIMBOT_AI_PROVIDER=openrouter`).

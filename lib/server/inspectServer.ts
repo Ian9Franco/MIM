@@ -3,6 +3,7 @@ import { discoverRemoteServerState } from "@mim/server-engine/discovery";
 import { auditServerInstance } from "@mim/server-engine/audit";
 import { openBuildReadTransport } from "./transport/buildReadTransport";
 import { openSftpReadTransport, SftpAuditError } from "./transport/sftpReadTransport";
+import { acquireServerSession } from "./sessionLock";
 
 async function performInspection(input: InspectServerRequest, buildsBase: string, signal: AbortSignal) {
   let desired;
@@ -32,10 +33,8 @@ async function performInspection(input: InspectServerRequest, buildsBase: string
 }
 export type ServerInspectionResult = Awaited<ReturnType<typeof inspectServer>>;
 
-let activeAudit = false;
-/** Bound remote reads across concurrent requests in the Desktop backend. */
+/** Bound remote reads and deploys across concurrent requests in the Desktop backend. */
 export async function inspectServer(input: InspectServerRequest, buildsBase: string, signal: AbortSignal) {
-  if (activeAudit) throw new SftpAuditError("AUDIT_BUSY", "Ya hay una auditoría en curso. Esperá a que termine.");
-  activeAudit = true;
-  try { return await performInspection(input, buildsBase, signal); } finally { activeAudit = false; }
+  const release = acquireServerSession("Ya hay una operación de servidor en curso. Esperá a que termine.");
+  try { return await performInspection(input, buildsBase, signal); } finally { release(); }
 }

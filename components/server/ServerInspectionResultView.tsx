@@ -3,9 +3,18 @@ import { useState } from "react";
 import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import { ServerAuditSummaryCards, type DiffFilterTab } from "./ServerAuditSummaryCards";
 import { ServerDiffTable } from "./ServerDiffTable";
+import { ServerDeployPanel, type ServerDeployPanelProps } from "./ServerDeployPanel";
+import { countsFromDiff, isCompleteDeployableAudit } from "@/lib/server/deployEligibility";
 
-export function ServerInspectionResultView({ result }: { result: ServerInspectionResult }) {
+interface Props {
+  result: ServerInspectionResult;
+  deploy?: Omit<ServerDeployPanelProps, "counts">;
+}
+
+export function ServerInspectionResultView({ result, deploy }: Props) {
   const [filter, setFilter] = useState<DiffFilterTab>("all");
+  const deployable = isCompleteDeployableAudit(result);
+  const counts = result.report ? countsFromDiff(result.report.diff) : null;
   return <section aria-label="Resultado de auditoría" className="space-y-5 rounded-2xl border border-[var(--color-border)] p-5 md:p-6">
     <div>
       <h2 className="text-xl font-semibold">{result.isPartialAudit ? "Auditoría incompleta" : "Comparación de mods"}</h2>
@@ -21,5 +30,15 @@ export function ServerInspectionResultView({ result }: { result: ServerInspectio
         {result.report.validation.errors.map((issue, i) => <li key={i}>{issue.message}</li>)}
       </ul>}
     </div>}
+    {deploy && counts && (deployable || deploy.phase === "recovery-required" || deploy.phase === "completed" || deploy.phase === "failed") && (
+      <ServerDeployPanel {...deploy} counts={counts} />
+    )}
+    {result.report && !deployable && !result.isPartialAudit && deploy?.phase !== "recovery-required" && (
+      <p className="text-sm opacity-70">
+        {result.report.readyForPlanning
+          ? "El servidor ya coincide con el build. No hay cambios para aplicar."
+          : "Esta auditoría no autoriza un despliegue: hay duplicados, incompatibles o un runtime distinto."}
+      </p>
+    )}
   </section>;
 }

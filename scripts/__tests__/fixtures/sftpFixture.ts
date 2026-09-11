@@ -40,8 +40,10 @@ export async function startSftpFixture() {
   });
   function setup(sftp: SFTPWrapper, client: Connection) {
     sftp.on("error", () => {});
-    const handles = new Map<string, { path: string; listed: boolean }>();
-    const directory = (p: string) => ["/", "/server", "/server/mods"].includes(p);
+    const handles = new Map<string, { path: string; listed: boolean; writable?: boolean }>();
+    const dirs = new Set(["/", "/server", "/server/mods"]);
+    const parentOf = (p: string) => { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); };
+    const directory = (p: string) => dirs.has(p);
     const exists = (p: string) => directory(p) || files.has(p);
     const attrs = (p: string) => ({ mode: directory(p) ? 0o40755 : 0o100644, size: files.get(p)?.length || 0, uid: 0, gid: 0, atime: 0, mtime: 0 });
     sftp.on("REALPATH", (id: number, p: string) => {
@@ -62,13 +64,22 @@ export async function startSftpFixture() {
       operations.push("READDIR"); const state = handles.get(handle.toString());
       if (!state || state.listed) { sftp.status(id, 1); return; }
       state.listed = true;
-      const entries = [...files.keys()].filter((p) => p.startsWith(`${state.path}/`) && !p.slice(state.path.length + 1).includes("/"));
+      const prefix = `${state.path === "/" ? "" : state.path}/`;
+      const childFiles = [...files.keys()].filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes("/"));
+      const childDirs = [...dirs].filter((p) => p !== state.path && p.startsWith(prefix) && !p.slice(prefix.length).includes("/"));
+      const entries = [...childDirs, ...childFiles];
       if (!entries.length) { sftp.status(id, 1); return; }
-      sftp.name(id, entries.map((p) => ({ filename: p.slice(state.path.length + 1), longname: p, attrs: attrs(p) })));
+      sftp.name(id, entries.map((p) => ({ filename: p.slice(prefix.length), longname: p, attrs: attrs(p) })));
     });
     sftp.on("OPEN", (id: number, p: string, flags: number) => {
-      operations.push(flags === 1 ? "OPEN_READ" : "MUTATION");
-      if (flags !== 1) { sftp.status(id, 3); return; }
+      const writable = (flags & 2) !== 0;
+      operations.push(writable ? "MUTATION" : "OPEN_READ");
+      if (writable) {
+        if (!directory(parentOf(p))) { sftp.status(id, 2); return; }
+        if ((flags & 16) !== 0 || !files.has(p)) files.set(p, Buffer.alloc(0));
+        const handle = Buffer.from(String(++handleSequence)); handles.set(handle.toString(), { path: p, listed: false, writable: true }); sftp.handle(id, handle);
+        return;
+      }
       if (!files.has(p)) { sftp.status(id, 2); return; }
       const handle = Buffer.from(String(++handleSequence)); handles.set(handle.toString(), { path: p, listed: false }); sftp.handle(id, handle);
     });
@@ -83,10 +94,51 @@ export async function startSftpFixture() {
       const state = handles.get(handle.toString()); const bytes = state && files.get(state.path);
       if (!bytes || offset >= bytes.length) sftp.status(id, 1); else sftp.data(id, bytes.subarray(offset, offset + length));
     });
+    sftp.on("WRITE", (id: number, handle: Buffer, offset: number, data: Buffer) => {
+      operations.push("MUTATION");
+      const state = handles.get(handle.toString());
+      if (!state?.writable) { sftp.status(id, 4); return; }
+      const current = files.get(state.path) || Buffer.alloc(0);
+      const end = offset + data.length;
+      const next = Buffer.alloc(Math.max(current.length, end));
+      current.copy(next);
+      data.copy(next, offset);
+      files.set(state.path, next);
+      sftp.status(id, 0);
+    });
+    sftp.on("MKDIR", (id: number, p: string) => {
+      operations.push("MUTATION");
+      if (exists(p)) { sftp.status(id, 4); return; }
+      if (!directory(parentOf(p))) { sftp.status(id, 2); return; }
+      dirs.add(p);
+      sftp.status(id, 0);
+    });
+    sftp.on("REMOVE", (id: number, p: string) => {
+      operations.push("MUTATION");
+      if (!files.has(p)) { sftp.status(id, 2); return; }
+      files.delete(p);
+      sftp.status(id, 0);
+    });
+    sftp.on("RMDIR", (id: number, p: string) => {
+      operations.push("MUTATION");
+      if (!directory(p) || p === "/" || p === "/server") { sftp.status(id, 4); return; }
+      const prefix = `${p}/`;
+      if ([...files.keys()].some((file) => file.startsWith(prefix)) || [...dirs].some((dir) => dir !== p && dir.startsWith(prefix))) {
+        sftp.status(id, 4); return;
+      }
+      dirs.delete(p);
+      sftp.status(id, 0);
+    });
+    sftp.on("RENAME", (id: number, from: string, to: string) => {
+      operations.push("MUTATION");
+      if (!files.has(from) || !directory(parentOf(to))) { sftp.status(id, 2); return; }
+      files.set(to, files.get(from)!);
+      files.delete(from);
+      sftp.status(id, 0);
+    });
     sftp.on("CLOSE", (id: number, handle: Buffer) => { handles.delete(handle.toString()); sftp.status(id, 0); });
-    for (const event of ["WRITE", "REMOVE", "RMDIR", "MKDIR", "RENAME", "SETSTAT", "FSETSTAT", "SYMLINK"]) {
-      sftp.on(event, (id: number) => { operations.push("MUTATION"); sftp.status(id, 3); });
-    }
+    for (const event of ["SETSTAT", "FSETSTAT"]) sftp.on(event, (id: number) => { sftp.status(id, 0); });
+    sftp.on("SYMLINK", (id: number) => { operations.push("MUTATION"); sftp.status(id, 3); });
   }
   await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
   const address = server.address();

@@ -32,4 +32,10 @@ La fixture tiene una clave de host efímera y credenciales exclusivas de prueba;
 
 Se verificó el formulario contra esa fixture en navegador (Desktop y viewport móvil), incluyendo respuesta HTTP y limpieza de contraseña. No equivale a validar un hosting externo ni el ejecutable Electron empaquetado.
 
-Pendiente: integración de configs/mundos, persistencia durable, control del proceso remoto, escrituras y recuperación tras reinicio, pruebas con proveedores SFTP y packaging Windows. La existencia de los módulos SRV-3–SRV-7 no cierra esas entregas.
+Pendiente: integración de configs/mundos, persistencia durable, control del proceso remoto, recuperación tras reinicio del Desktop, pruebas con proveedores SFTP y packaging Windows. La existencia de los módulos SRV-3–SRV-7 no cierra esas entregas.
+
+## Aplicar el plan (SRV-4)
+
+Después de una auditoría **completa** (no parcial) con diferencias y sin bloqueos de revisión manual, `/servers` permite aplicar el plan. La API `POST /api/server/deploy` vuelve a descubrir el estado remoto, rechaza inventarios incompletos y ejecuta `executeServerDeployment` con transporte SFTP escribible.
+
+Reproducción con la fixture: mismos pasos de auditoría; en la UI usar **Revisar y aplicar…**, marcar la confirmación y aplicar. El resultado esperado es instalar `missing` y reemplazar `example`. Las credenciales siguen sin persistirse: se reutilizan solo en memoria para esa sesión.

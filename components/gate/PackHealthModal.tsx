@@ -11,7 +11,7 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { XCircle, ShieldCheck, CheckCircle } from "lucide-react";
-import type { PackHealthReport } from "@/lib/core/types";
+import type { PackHealthReport, Project } from "@/lib/core/types";
 import { IssueSection } from "./PackHealthComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 
@@ -24,7 +24,7 @@ interface PackHealthPanelProps {
   onForceBuild?: () => void;
   onFomoSearch: (query: string) => void;
   isBuilding:   boolean;
-  activeProject?: { name: string; version: string; loader: string } | null;
+  activeProject?: Project | null;
 }
 
 const GRADE_CONFIG = {
@@ -247,9 +247,9 @@ export function PackHealthPanel({
             </div>
           </div>
         )}
-        <IssueSection ref={errorsRef} title="Errores bloqueantes" count={report.errors.length} issues={report.errors} defaultOpen={true} onFomoSearch={onFomoSearch} dotColor="#ef4444" forceOpen={forceExpand.errors} activeProject={activeProject} />
-        <IssueSection ref={warningsRef} title="Advertencias" count={report.warnings.length} issues={report.warnings} defaultOpen={report.errors.length === 0} onFomoSearch={onFomoSearch} dotColor="#f59e0b" forceOpen={forceExpand.warnings} activeProject={activeProject} />
-        <IssueSection ref={suggestionsRef} title="Sugerencias" count={report.suggestions.length} issues={report.suggestions} defaultOpen={false} onFomoSearch={onFomoSearch} dotColor="#06b6d4" forceOpen={forceExpand.suggestions} activeProject={activeProject} />
+        <IssueSection ref={errorsRef} title="Errores bloqueantes" count={report.errors.length} issues={report.errors} defaultOpen={true} onFomoSearch={onFomoSearch} dotColor="#ef4444" forceOpen={forceExpand.errors} activeProject={activeProject ?? undefined} />
+        <IssueSection ref={warningsRef} title="Advertencias" count={report.warnings.length} issues={report.warnings} defaultOpen={report.errors.length === 0} onFomoSearch={onFomoSearch} dotColor="#f59e0b" forceOpen={forceExpand.warnings} activeProject={activeProject ?? undefined} />
+        <IssueSection ref={suggestionsRef} title="Sugerencias" count={report.suggestions.length} issues={report.suggestions} defaultOpen={false} onFomoSearch={onFomoSearch} dotColor="#06b6d4" forceOpen={forceExpand.suggestions} activeProject={activeProject ?? undefined} />
       </div>
 
       {/* Footer */}

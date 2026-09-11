@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { CrashCategory } from "../../lib/intelligence/sage/types";
 import { SageCrashEngine } from "../../lib/intelligence/sage/engine";
 
@@ -8,6 +9,32 @@ export interface BenchmarkSample {
   minecraftVersion: string;
   expectedCulprit?: string;
   rawLog: string;
+}
+
+const crashCategorySchema = z.enum([
+  "MISSING_DEPENDENCY",
+  "VERSION_CONFLICT",
+  "MIXIN_FAILURE",
+  "JAVA_INCOMPATIBILITY",
+  "MOD_CONFLICT",
+  "CORRUPTED_WORLD",
+  "OUT_OF_MEMORY",
+  "UNKNOWN_RUNTIME",
+]);
+
+export const benchmarkSampleSchema = z.object({
+  id: z.string(),
+  category: crashCategorySchema,
+  loader: z.string(),
+  minecraftVersion: z.string(),
+  expectedCulprit: z.string().optional(),
+  rawLog: z.string(),
+});
+
+export const benchmarkCorpusSchema = z.array(benchmarkSampleSchema);
+
+export function parseBenchmarkCorpus(raw: unknown): BenchmarkSample[] {
+  return benchmarkCorpusSchema.parse(raw);
 }
 
 export interface SageEvalThresholds {
@@ -60,6 +87,20 @@ export interface SageEvaluationResult {
   categoryRows: CategoryStatRow[];
 }
 
+type CategoryStat = { tp: number; fp: number; fn: number; totalExpected: number };
+type CategoryStats = Map<CrashCategory, CategoryStat>;
+
+interface HistoricalCounters {
+  top1HistoricalMatches: number;
+  top3HistoricalMatches: number;
+  top1AttributionMatches: number;
+  top3AttributionMatches: number;
+  systemicCategoryMatches: number;
+  historicalDenominator: number;
+  attributionDenominator: number;
+  systemicDenominator: number;
+}
+
 function ratio(numerator: number, denominator: number): RatioMetric {
   return {
     numerator,
@@ -68,72 +109,108 @@ function ratio(numerator: number, denominator: number): RatioMetric {
   };
 }
 
-export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationResult {
-  const stats: Record<
-    CrashCategory,
-    { tp: number; fp: number; fn: number; totalExpected: number }
-  > = Object.fromEntries(
+function createEmptyCategoryStats(): CategoryStats {
+  return new Map(
     SAGE_EVAL_CATEGORIES.map((category) => [category, { tp: 0, fp: 0, fn: 0, totalExpected: 0 }]),
-  ) as Record<CrashCategory, { tp: number; fp: number; fn: number; totalExpected: number }>;
+  );
+}
 
-  let totalCorrectCategory = 0;
-  let totalLatencyMs = 0;
+function isKnownCategory(value: string): value is CrashCategory {
+  return (SAGE_EVAL_CATEGORIES as readonly string[]).includes(value);
+}
 
-  let top1HistoricalMatches = 0;
-  let top3HistoricalMatches = 0;
-  let top1AttributionMatches = 0;
-  let top3AttributionMatches = 0;
-  let systemicCategoryMatches = 0;
+function recordCategoryOutcome(
+  stats: CategoryStats,
+  expected: CrashCategory,
+  predicted: string,
+  categoryMatch: boolean,
+): void {
+  const expectedStat = stats.get(expected);
+  if (!expectedStat) return;
 
-  let historicalDenominator = 0;
-  let attributionDenominator = 0;
-  let systemicDenominator = 0;
-
-  for (const sample of samples) {
-    stats[sample.category].totalExpected++;
-
-    const report = SageCrashEngine.diagnose(sample.rawLog);
-    totalLatencyMs += report.diagnosisDurationMs ?? report.inferenceDurationMs ?? 0;
-
-    const categoryMatch = report.category === sample.category;
-    if (categoryMatch) {
-      stats[sample.category].tp++;
-      totalCorrectCategory++;
-    } else {
-      stats[sample.category].fn++;
-      stats[report.category].fp++;
-    }
-
-    historicalDenominator++;
-
-    if (sample.expectedCulprit) {
-      attributionDenominator++;
-      const expected = sample.expectedCulprit.toLowerCase();
-      const top1Match = report.culpritMod?.toLowerCase() === expected;
-      const top3Match = report.suspectedMods.slice(0, 3).some((mod) => mod.toLowerCase() === expected);
-
-      if (top1Match) top1AttributionMatches++;
-      if (top3Match) top3AttributionMatches++;
-      if (top1Match) top1HistoricalMatches++;
-      if (top3Match) top3HistoricalMatches++;
-    } else {
-      systemicDenominator++;
-      if (categoryMatch) {
-        systemicCategoryMatches++;
-        top1HistoricalMatches++;
-        top3HistoricalMatches++;
-      }
-    }
+  expectedStat.totalExpected++;
+  if (categoryMatch) {
+    expectedStat.tp++;
+    return;
   }
 
-  const categoryRows: CategoryStatRow[] = SAGE_EVAL_CATEGORIES.map((category) => {
-    const row = stats[category];
+  expectedStat.fn++;
+  if (isKnownCategory(predicted)) {
+    const predictedStat = stats.get(predicted);
+    if (predictedStat) predictedStat.fp++;
+  }
+}
+
+function createHistoricalCounters(): HistoricalCounters {
+  return {
+    top1HistoricalMatches: 0,
+    top3HistoricalMatches: 0,
+    top1AttributionMatches: 0,
+    top3AttributionMatches: 0,
+    systemicCategoryMatches: 0,
+    historicalDenominator: 0,
+    attributionDenominator: 0,
+    systemicDenominator: 0,
+  };
+}
+
+function scoreAttributionCase(
+  counters: HistoricalCounters,
+  report: ReturnType<typeof SageCrashEngine.diagnose>,
+  expectedCulprit: string,
+): void {
+  counters.attributionDenominator++;
+  const expected = expectedCulprit.toLowerCase();
+  const top1Match = report.culpritMod?.toLowerCase() === expected;
+  const top3Match = report.suspectedMods.slice(0, 3).some((mod) => mod.toLowerCase() === expected);
+
+  if (top1Match) counters.top1AttributionMatches++;
+  if (top3Match) counters.top3AttributionMatches++;
+  if (top1Match) counters.top1HistoricalMatches++;
+  if (top3Match) counters.top3HistoricalMatches++;
+}
+
+function scoreSystemicCase(counters: HistoricalCounters, categoryMatch: boolean): void {
+  counters.systemicDenominator++;
+  if (!categoryMatch) return;
+  counters.systemicCategoryMatches++;
+  counters.top1HistoricalMatches++;
+  counters.top3HistoricalMatches++;
+}
+
+function buildCategoryRows(stats: CategoryStats): CategoryStatRow[] {
+  return SAGE_EVAL_CATEGORIES.map((category) => {
+    const row = stats.get(category) ?? { tp: 0, fp: 0, fn: 0, totalExpected: 0 };
     const precision = row.tp + row.fp > 0 ? (row.tp / (row.tp + row.fp)) * 100 : 100;
     const recall = row.tp + row.fn > 0 ? (row.tp / (row.tp + row.fn)) * 100 : 100;
     const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
     return { category, samples: row.totalExpected, precision, recall, f1 };
   });
+}
 
+export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationResult {
+  const stats = createEmptyCategoryStats();
+  const counters = createHistoricalCounters();
+  let totalCorrectCategory = 0;
+  let totalLatencyMs = 0;
+
+  for (const sample of samples) {
+    const report = SageCrashEngine.diagnose(sample.rawLog);
+    totalLatencyMs += report.diagnosisDurationMs ?? report.inferenceDurationMs ?? 0;
+
+    const categoryMatch = report.category === sample.category;
+    recordCategoryOutcome(stats, sample.category, report.category, categoryMatch);
+    if (categoryMatch) totalCorrectCategory++;
+
+    counters.historicalDenominator++;
+    if (sample.expectedCulprit) {
+      scoreAttributionCase(counters, report, sample.expectedCulprit);
+    } else {
+      scoreSystemicCase(counters, categoryMatch);
+    }
+  }
+
+  const categoryRows = buildCategoryRows(stats);
   const macroF1 = categoryRows.reduce((sum, row) => sum + row.f1, 0) / SAGE_EVAL_CATEGORIES.length;
 
   return {
@@ -141,11 +218,11 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
     overallCategoryAccuracy: samples.length > 0 ? (totalCorrectCategory / samples.length) * 100 : 0,
     macroF1,
     meanLatencyMs: samples.length > 0 ? totalLatencyMs / samples.length : 0,
-    top1Historical: ratio(top1HistoricalMatches, historicalDenominator),
-    top3Historical: ratio(top3HistoricalMatches, historicalDenominator),
-    top1Attribution: ratio(top1AttributionMatches, attributionDenominator),
-    top3Attribution: ratio(top3AttributionMatches, attributionDenominator),
-    systemicCategoryCorrect: ratio(systemicCategoryMatches, systemicDenominator),
+    top1Historical: ratio(counters.top1HistoricalMatches, counters.historicalDenominator),
+    top3Historical: ratio(counters.top3HistoricalMatches, counters.historicalDenominator),
+    top1Attribution: ratio(counters.top1AttributionMatches, counters.attributionDenominator),
+    top3Attribution: ratio(counters.top3AttributionMatches, counters.attributionDenominator),
+    systemicCategoryCorrect: ratio(counters.systemicCategoryMatches, counters.systemicDenominator),
     categoryRows,
   };
 }

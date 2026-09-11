@@ -9,7 +9,7 @@ import {
   buildSageEvaluationMarkdown,
   collectSageGateFailures,
   evaluateSageCorpus,
-  type BenchmarkSample,
+  parseBenchmarkCorpus,
 } from "./sageEvalCore";
 
 const CORPUS_PATH = path.join(__dirname, "datasets", "crash-corpus.json");
@@ -60,7 +60,7 @@ function runEvaluation(): number {
     return 1;
   }
 
-  const samples = JSON.parse(fs.readFileSync(CORPUS_PATH, "utf-8")) as BenchmarkSample[];
+  const samples = parseBenchmarkCorpus(JSON.parse(fs.readFileSync(CORPUS_PATH, "utf-8")));
   const result = evaluateSageCorpus(samples);
   printConsoleSummary(result);
 

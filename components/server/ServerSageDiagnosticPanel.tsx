@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Activity, AlertTriangle, FileText, Loader2, Stethoscope } from "lucide-react";
 import type { ServerSageIncidentReport } from "@mim/contracts-core/server";
-import type { DiagnoseServerRequest } from "@/lib/server/diagnoseSchema";
+import type { InspectServerRequest } from "@/lib/server/inspectSchema";
 import type { ServerDiagnosisResult } from "@/lib/server/diagnoseServer";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { serverPanelClass, serverPanelStyle } from "./serverUi";
@@ -22,7 +22,7 @@ const CATEGORY_LABELS: Record<ServerSageIncidentReport["category"], string> = {
 };
 
 interface Props {
-  inspectRequest: DiagnoseServerRequest | null;
+  inspectRequest: InspectServerRequest | null;
   deploymentId?: string | null;
   busy: boolean;
   onBusyChange: (busy: boolean) => void;

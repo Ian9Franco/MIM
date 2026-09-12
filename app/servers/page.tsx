@@ -5,6 +5,7 @@ import { ArrowLeft, Server, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { ServerConnectionForm } from "@/components/server/ServerConnectionForm";
 import { ServerInspectionResultView } from "@/components/server/ServerInspectionResultView";
+import { ServerSageDiagnosticPanel } from "@/components/server/ServerSageDiagnosticPanel";
 import { inspectServerSchema, type InspectServerRequest } from "@/lib/server/inspectSchema";
 import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import type { DesktopDeployPhase } from "@/components/server/ServerDeployPanel";
@@ -26,6 +27,7 @@ export default function ServersPage() {
   const [deployError, setDeployError] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null);
   const lastInspect = useRef<InspectServerRequest | null>(null);
+  const [activeInspect, setActiveInspect] = useState<InspectServerRequest | null>(null);
   const resultArea = useRef<HTMLDivElement>(null);
   useEffect(() => { if (result || error) resultArea.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [result, error]);
   useEffect(() => () => request.current?.abort(), []);
@@ -42,6 +44,7 @@ export default function ServersPage() {
     const controller = new AbortController();
     request.current = controller;
     lastInspect.current = input;
+    setActiveInspect(input);
     setBusy(true); setError(null); setResult(null);
     const blocked = typeof sessionStorage !== "undefined" && sessionStorage.getItem(recoveryKey(input)) === "1";
     resetDeploy(blocked ? "recovery-required" : "idle");
@@ -146,7 +149,7 @@ export default function ServersPage() {
           projects={projects}
           busy={busy}
           onInspect={inspect}
-          onChange={() => { setResult(null); setError(null); if (deployPhase !== "recovery-required") resetDeploy(); }}
+          onChange={() => { setResult(null); setError(null); setActiveInspect(null); if (deployPhase !== "recovery-required") resetDeploy(); }}
         />
         <div ref={resultArea} className="space-y-4 scroll-mt-28" aria-live="polite">
           {busy && !result && deployPhase !== "preflight" && deployPhase !== "executing" && (
@@ -160,27 +163,35 @@ export default function ServersPage() {
             </p>
           )}
           {result && (
-            <ServerInspectionResultView
-              result={result}
-              deploy={{
-                phase: deployPhase,
-                report: deployReport,
-                error: deployError,
-                busy,
-                onBeginConfirm: () => setDeployPhase("confirming"),
-                onCancelConfirm: () => setDeployPhase("idle"),
-                onApply: () => { void deploy(); },
-                onCancelApply: () => request.current?.abort(),
-                onReaudit: () => { if (lastInspect.current) void inspect(lastInspect.current); },
-                onAcknowledgeRecovery: () => {
-                  if (!lastInspect.current) return;
-                  try { sessionStorage.removeItem(recoveryKey(lastInspect.current)); } catch { /* ignore */ }
-                  setDeployPhase("idle");
-                  setDeployReport(null);
-                  setDeployError(null);
-                },
-              }}
-            />
+            <>
+              <ServerInspectionResultView
+                result={result}
+                deploy={{
+                  phase: deployPhase,
+                  report: deployReport,
+                  error: deployError,
+                  busy,
+                  onBeginConfirm: () => setDeployPhase("confirming"),
+                  onCancelConfirm: () => setDeployPhase("idle"),
+                  onApply: () => { void deploy(); },
+                  onCancelApply: () => request.current?.abort(),
+                  onReaudit: () => { if (lastInspect.current) void inspect(lastInspect.current); },
+                  onAcknowledgeRecovery: () => {
+                    if (!lastInspect.current) return;
+                    try { sessionStorage.removeItem(recoveryKey(lastInspect.current)); } catch { /* ignore */ }
+                    setDeployPhase("idle");
+                    setDeployReport(null);
+                    setDeployError(null);
+                  },
+                }}
+              />
+              <ServerSageDiagnosticPanel
+                inspectRequest={activeInspect}
+                deploymentId={deployReport?.deploymentId}
+                busy={busy}
+                onBusyChange={setBusy}
+              />
+            </>
           )}
           {!result && !busy && !error && (
             <div className={`${serverPanelClass} border-dashed`} style={serverPanelStyle}>

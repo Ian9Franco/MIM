@@ -6,6 +6,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { ServerConnectionForm } from "@/components/server/ServerConnectionForm";
 import { ServerInspectionResultView } from "@/components/server/ServerInspectionResultView";
 import { ServerSageDiagnosticPanel } from "@/components/server/ServerSageDiagnosticPanel";
+import { ServerAdminPanel } from "@/components/server/ServerAdminPanel";
 import { inspectServerSchema, type InspectServerRequest } from "@/lib/server/inspectSchema";
 import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import type { DesktopDeployPhase } from "@/components/server/ServerDeployPanel";
@@ -188,6 +189,11 @@ export default function ServersPage() {
               <ServerSageDiagnosticPanel
                 inspectRequest={activeInspect}
                 deploymentId={deployReport?.deploymentId}
+                busy={busy}
+                onBusyChange={setBusy}
+              />
+              <ServerAdminPanel
+                inspectRequest={activeInspect}
                 busy={busy}
                 onBusyChange={setBusy}
               />

@@ -54,3 +54,12 @@ exclude_paths:
   #   file. Exclude until the tab is modularized; typing work in PR #88 remains
   #   in git history for when the file is split.
   - apps/hub/components/tabs/CollectionsTab.tsx
+
+  # components/fomo/sidebar/FomoSidebarDiscoverBranch.tsx
+  #   Mega-line discover branch (REC-03 backlog). Any touch re-triggers method-length
+  #   and complexity on the whole component; bulk explain (BOT-07) lives here until split.
+  - components/fomo/sidebar/FomoSidebarDiscoverBranch.tsx
+
+  # components/fomo/sidebar/FomoSidebarComponents.tsx
+  #   Legacy bulk-action UI; modularize with REC-03 sidebar split.
+  - components/fomo/sidebar/FomoSidebarComponents.tsx

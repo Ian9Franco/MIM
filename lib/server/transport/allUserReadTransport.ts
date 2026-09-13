@@ -7,6 +7,31 @@ function normalizeVirtualPath(input: string): string {
   return input.replace(/^[/\\]+/, "").replace(/\\/g, "/");
 }
 
+function childNameUnderPrefix(filePath: string, prefix: string): { name: string; kind: "file" | "directory" } | null {
+  if (prefix && !filePath.startsWith(prefix)) return null;
+  const rest = prefix ? filePath.slice(prefix.length) : filePath;
+  if (!rest) return null;
+  const slash = rest.indexOf("/");
+  const name = slash === -1 ? rest : rest.slice(0, slash);
+  if (!name || name === "." || name === "..") return null;
+  return { name, kind: slash === -1 ? "file" : "directory" };
+}
+
+function listZipChildren(files: Map<string, Buffer>, input: string) {
+  const dir = normalizeVirtualPath(input);
+  const prefix = dir ? `${dir}/` : "";
+  const children = new Map<string, "file" | "directory">();
+  for (const filePath of files.keys()) {
+    const child = childNameUnderPrefix(filePath, prefix);
+    if (child) children.set(child.name, child.kind);
+  }
+  return [...children.entries()].map(([name, kind]) => ({
+    name,
+    path: path.posix.join(dir || ".", name),
+    kind,
+  }));
+}
+
 /** Reads the latest `[project]_alluser.zip` with the same virtual paths as SFTP/build transports. */
 export async function openAllUserReadTransport(buildsBase: string, projectName: string): Promise<ReadOnlyFileTransport> {
   const base = await fs.realpath(buildsBase);
@@ -22,23 +47,7 @@ export async function openAllUserReadTransport(buildsBase: string, projectName: 
   }
   return {
     async list(input) {
-      const dir = normalizeVirtualPath(input);
-      const prefix = dir ? `${dir}/` : "";
-      const children = new Map<string, "file" | "directory">();
-      for (const filePath of files.keys()) {
-        if (prefix && !filePath.startsWith(prefix)) continue;
-        const rest = prefix ? filePath.slice(prefix.length) : filePath;
-        if (!rest) continue;
-        const slash = rest.indexOf("/");
-        const name = slash === -1 ? rest : rest.slice(0, slash);
-        if (!name || name === "." || name === "..") continue;
-        children.set(name, slash === -1 ? "file" : "directory");
-      }
-      return [...children.entries()].map(([name, kind]) => ({
-        name,
-        path: path.posix.join(dir || ".", name),
-        kind,
-      }));
+      return listZipChildren(files, input);
     },
     async read(input) {
       const key = normalizeVirtualPath(input);

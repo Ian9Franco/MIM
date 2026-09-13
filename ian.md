@@ -111,9 +111,32 @@ npm run pre:push
 # Sin test:coverage ni builds de producción (~8 min)
 npm run pre:push:quick
 
-# Solo tipos + eslint + arquitectura (~2 min, iteración rápida)
+# Solo tipos + eslint + arquitectura + simulacro Codacy (~2–4 min)
 npm run pre:push:lint
+
+# Simulacro Codacy solo (ESLint estricto en el diff vs main)
+npm run codacy:diff
+
+# Incluye cambios sin commitear en el diff
+npm run codacy:diff:worktree
+
+# Paridad total con Codacy Cloud (Semgrep, duplicación; primera vez tarda)
+npm run codacy:cli
 ```
+
+**Simulacro Codacy (antes del PR):**
+
+| Comando | Qué hace |
+| :--- | :--- |
+| `npm run codacy:diff` | ESLint estricto (`eslint.codacy.mjs`) solo en archivos del diff vs `origin/main`, con `exclude_paths` de `.codacy.yml` |
+| `npm run codacy:diff:worktree` | Igual + archivos staged/unstaged |
+| `npm run codacy:cli` | CLI oficial `@codacy/analysis-cli --diff` (ESLint9 + Stylelint + Spectral en Windows) |
+| `npm run codacy:init` | Genera `.codacy/codacy.config.json` (una vez; ~3–10 min) |
+| `npm run codacy:init:remote` | Misma config que Codacy Cloud (requiere `CODACY_API_TOKEN`) |
+
+**Windows:** Opengrep/Semgrep no tiene binario `win32` — las reglas de seguridad del PR las corre Codacy Cloud (Linux). En Windows usá `codacy:diff` como gate principal; `codacy:cli` corre sin `--install` por defecto (rápido). Forzá descarga de analizadores: `npm run codacy:cli -- --install`.
+
+**Dependencias:** `@codacy/analysis-cli` y `yaml` están en `devDependencies`; corré `npm install` antes del primer `codacy:cli`.
 
 **Qué cubre `pre:push` (paridad con CI):**
 
@@ -124,15 +147,16 @@ npm run pre:push:lint
 | dast-security-audit | dast-scan.js |
 | build-production | `npm run build` + `build:hub` |
 
-**Qué NO reemplaza:** Codacy analiza el **diff del PR** con ESLint más estricto que el config local (ver `.codacy.yml`). Si CI pasa pero Codacy marca issues nuevos, corregilos en el diff.
+**Codacy:** `pre:push:lint` ya corre `codacy:diff`. Para reglas idénticas a la nube (security/duplicación), usá `codacy:init:remote` una vez y después `codacy:cli` antes del push.
 
-Si falla, el log queda en `logs/pre-push-gates/pre-push-failed-<rama>-<timestamp>.log`.
+Si falla, los logs quedan en `logs/pre-push-gates/` y `logs/codacy-diff-gates/`.
 
 **Flujo recomendado antes de abrir PR:**
 
 ```bash
-npm run pre:push:lint    # iteración mientras codeás
-npm run pre:push         # una vez listo para pushear
+npm run codacy:diff:worktree   # mientras codeás (diff + working tree)
+npm run pre:push:lint          # tsc + eslint + arquitectura + codacy:diff
+npm run pre:push               # una vez listo para pushear
 git push -u origin HEAD
 ```
 

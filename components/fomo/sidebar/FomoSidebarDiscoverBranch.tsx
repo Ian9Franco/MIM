@@ -24,7 +24,7 @@ import {
   fomoDetailsPanelLeft,
 } from "@/lib/fomo/fomoLayout";
 import type { FomoMode } from "@/components/fomo/sidebar/fomoSidebarTypes";
-import type { ModHit } from "@/lib/core/types";
+import { runFomoBulkExplain } from "@/lib/fomo/fomoBulkExplain";
 
 interface FomoSidebarDiscoverBranchProps {
   open: boolean;
@@ -95,57 +95,16 @@ function FomoSidebarDiscoverBranchInner({
   const [bulkExplaining, setBulkExplaining] = useState(false);
 
   async function handleBulkExplain() {
-    const selected = discover.selectedMods.slice(0, 12);
-    if (!selected.length || bulkExplaining) return;
+    if (!discover.selectedMods.length || bulkExplaining) return;
     setBulkExplaining(true);
-    showStatus(`MIM-Bot explicando ${selected.length} mods en lote…`, "info");
     try {
-      const response = await fetch("/api/fomo/explain-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projects: selected.map((mod) => ({
-            projectId: mod.projectId,
-            title: mod.title,
-            author: mod.author,
-            slug: mod.slug || mod.projectId,
-            description: mod.body || mod.description || "",
-            url: mod.url,
-            source: mod._source,
-            categories: mod.categories || [],
-            loaders: mod.loaders || [],
-          })),
-        }),
-      });
-      const data = await response.json() as { error?: string; succeeded?: number; failed?: number; total?: number };
-      if (response.status === 401 || data.error === "NO_API_KEY") {
-        showStatus("Configurá Gemini u OpenRouter en Ajustes para explicar en lote.", "error");
-        return;
-      }
-      if (!response.ok) {
-        showStatus(data.error || "No se pudo explicar el lote.", "error");
-        return;
-      }
-      showStatus(`Lote listo: ${data.succeeded ?? 0}/${data.total ?? selected.length} explicados.`, "success");
+      await runFomoBulkExplain(discover.selectedMods, showStatus);
     } catch {
       showStatus("Error de conexión al explicar el lote.", "error");
     } finally {
       setBulkExplaining(false);
     }
   }
-
- const handleSearchProject = (e: Event) => {
-    const detail = (e as CustomEvent).detail || {};
-    if (detail?.query) {
-      setMode("discover");
-      // Type cast discover here as well
-      runPendingDiscoverAction(
-        { type: "searchProject", ...detail },
-        discover as any,
-        setMode
-      );
-    }
-  };
 
   // --- RESTORED MEMOIZED CALLBACK ---
   const applyPendingAction = useCallback(() => {
@@ -293,11 +252,6 @@ function FomoSidebarDiscoverBranchInner({
       );
     }
   }, [discover.selectingVersionFor]);
-
-  const handleCloseAll = useCallback(() => {
-    discover.setSelectingVersionFor(null);
-    onClose();
-  }, [discover, onClose]);
 
   const detailsSharing = useMemo(() => {
     const dm = discover.selectingVersionFor;

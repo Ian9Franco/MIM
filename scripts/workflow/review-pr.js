@@ -18,16 +18,16 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const { execFileSync, execSync } = require("child_process");
-const path = require("path");
+const { execFileSync } = require("child_process");
 const {
   REPO_ROOT,
-  colors,
   log,
   runGates,
   saveGateFailureLog,
   PR_AUDIT_GATES,
 } = require("./ci-gates");
+const { handleAudit: runAudit } = require("./review-pr-audit");
+const { runReviewPrCli } = require("./review-pr-cli");
 
 function runGit(args) {
   try {
@@ -97,143 +97,18 @@ function getCurrentBranch() {
   return runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
 }
 
-/**
- * Auditoría segura de PR/rama:
- * - Descarga y cambia a la rama del PR.
- * - Compara contra origin/main (commits, archivos, commits atrasados).
- * - Ejecuta las 6 compuertas de calidad.
- * - Emite veredicto estructurado:
- *     REQUEST_CHANGES -> Si alguna compuerta falla (genera log y aborta).
- *     HOLD            -> Si aprueba las compuertas pero la rama está atrasada con main.
- *     READY           -> Si aprueba el 100% y está al día con main (habilita npm run pr:promote).
- * - NUNCA realiza merge ni push automático a main.
- */
+const auditCtx = {
+  runGit,
+  validateBranchName,
+  log,
+  checkCleanWorkingDirectory,
+  cleanTransientTestArtifacts,
+  runAllQualityGates,
+  saveFailureLog,
+};
+
 async function handleAudit(target) {
-  checkCleanWorkingDirectory();
-
-  const isPrNumber = /^[#]?\d+$/.test(target);
-  let branchToCheckout = target;
-
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
-  log(`🔍 MIM SAFE PR AUDITOR — Auditoría de Integridad: ${target}`, "bold");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
-
-  if (isPrNumber) {
-    const prNum = target.replace("#", "");
-    branchToCheckout = `pr-${prNum}`;
-    log(`• Descargando Pull Request #${prNum} desde origin...`, "cyan");
-    try {
-      runGit(["fetch", "origin", `pull/${prNum}/head:${branchToCheckout}`]);
-    } catch {
-      log(`No se pudo descargar 'pull/${prNum}/head'. Intentando checkout directo si la rama existe...`, "yellow");
-    }
-  } else {
-    validateBranchName(target);
-    log(`• Obteniendo cambios remotos de '${target}'...`, "cyan");
-    try {
-      runGit(["fetch", "origin", target]);
-    } catch {}
-  }
-
-  log(`• Haciendo checkout a '${branchToCheckout}'...`, "cyan");
-  runGit(["checkout", branchToCheckout]);
-
-  try {
-    runGit(["pull"]);
-  } catch {}
-
-  // Sincronizar referencia de origin/main para cálculo preciso de divergencia
-  try {
-    runGit(["fetch", "origin", "main"]);
-  } catch {}
-
-  let commits = "";
-  try {
-    commits = runGit(["log", "--oneline", "origin/main..HEAD", "-n", "10"]);
-  } catch {}
-
-  let diffStat = "";
-  try {
-    diffStat = runGit(["diff", "--stat", "origin/main..HEAD"]);
-  } catch {}
-
-  let behindCount = 0;
-  try {
-    const countStr = runGit(["rev-list", "--count", "HEAD..origin/main"]);
-    behindCount = parseInt(countStr, 10) || 0;
-  } catch {}
-
-  log(`\n📦 Commits introducidos (vs origin/main):`, "bold");
-  console.log(commits || "  (Sin diferencias de commits nuevos respecto a main)");
-
-  log(`\n📁 Archivos modificados:`, "bold");
-  console.log(diffStat || "  (Sin diferencias de archivos con origin/main)");
-
-  if (behindCount > 0) {
-    log(`\n⚠️  Estado de sincronización: Esta rama está ${behindCount} commit(s) por detrás de origin/main.`, "yellow");
-  } else {
-    log(`\n✓ Estado de sincronización: Al día con origin/main (0 commits behind).`, "green");
-  }
-
-  // Ejecutar compuertas completas
-  const gateResult = await runAllQualityGates("COMPUERTAS DE CALIDAD — AUDITORÍA DE PR");
-
-  if (!gateResult.ok) {
-    cleanTransientTestArtifacts();
-
-    const logPath = saveFailureLog(
-      target,
-      branchToCheckout,
-      gateResult.gateTitle,
-      gateResult.reason,
-      gateResult.output,
-      commits,
-      diffStat
-    );
-
-    log(`\n─────────────────────────────────────────────────────────────────────────────`, "red");
-    log(`🚨 VEREDICTO: [REQUEST_CHANGES] — CONTROL DE CALIDAD NO SUPERADO`, "red");
-    log(`─────────────────────────────────────────────────────────────────────────────`, "red");
-    log(`Compuerta fallida: ${gateResult.gateTitle}`, "red");
-    log(`Motivo:            ${gateResult.reason}`, "red");
-    log(`\n📄 Reporte detallado del fallo guardado en:`, "yellow");
-    log(`   ${logPath}`, "bold");
-    log(`\nAuditoría Segura: Ningún cambio fue mergeado a 'main' ni subido a origin.\n`, "yellow");
-    log(`Opciones siguientes:`);
-    log(`  👉 Para volver a main sin tocar nada:`, "yellow");
-    log(`     npm run pr:return\n`);
-    process.exit(1);
-  }
-
-  cleanTransientTestArtifacts();
-
-  if (behindCount > 0) {
-    log(`\n─────────────────────────────────────────────────────────────────────────────`, "yellow");
-    log(`⏸️  VEREDICTO: [HOLD] — COMPUERTAS APROBADAS PERO RAMA DESACTUALIZADA`, "yellow");
-    log(`─────────────────────────────────────────────────────────────────────────────`, "yellow");
-    log(`• La rama '${branchToCheckout}' superó el 100% de las compuertas de calidad.`);
-    log(`• Sin embargo, está ${behindCount} commit(s) por detrás de 'origin/main'.`, "yellow");
-    log(`\nAcción requerida antes de promover:`, "bold");
-    log(`  1. Traer los cambios más recientes de main para evitar regresiones o conflictos:`, "cyan");
-    log(`     git merge origin/main   (o git rebase origin/main)`);
-    log(`  2. Volver a auditar:`, "cyan");
-    log(`     npm run pr:audit ${target}\n`);
-    log(`  👉 Para volver a main sin mergear:`, "dim");
-    log(`     npm run pr:return\n`, "dim");
-    return;
-  }
-
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "green");
-  log(`✅ VEREDICTO: [READY] — LISTO PARA PROMOCIÓN MANUAL A MAIN`, "green");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "green");
-  log(`• La rama '${branchToCheckout}' superó el 100% de las compuertas de calidad.`);
-  log(`• Está completamente al día con 'origin/main' (0 commits behind).`);
-  log(`• Principio de Auditoría Segura: NO se realizó auto-merge ni auto-push destructivo.`);
-  log(`\nAcción recomendada:`, "bold");
-  log(`  👉 Para mergear y subir a main de forma manual y explícita:`, "cyan");
-  log(`     npm run pr:promote\n`);
-  log(`  👉 Para volver a main sin mergear:`, "yellow");
-  log(`     npm run pr:return\n`);
+  return runAudit(auditCtx, target);
 }
 
 async function handlePromote() {
@@ -312,155 +187,12 @@ function printFailureReport(reason) {
   process.exit(1);
 }
 
-function listAvailableTargets() {
-  log("\n📡 Consultando ramas y PRs en GitHub...", "cyan");
-  try {
-    runGit(["fetch", "origin"]);
-  } catch {}
-
-  const openPrs = [];
-  const closedPrs = [];
-
-  try {
-    const rawPrs = runGit(["ls-remote", "origin", "refs/pull/*/head"]);
-    const lines = rawPrs.split("\n").filter(Boolean);
-    for (const line of lines) {
-      const parts = line.split("\t");
-      if (parts.length >= 2) {
-        const hash = parts[0].trim();
-        const match = parts[1].match(/refs\/pull\/(\d+)\/head/);
-        if (match) {
-          let isMerged = false;
-          try {
-            execSync(`git merge-base --is-ancestor ${hash} main`, { cwd: REPO_ROOT, stdio: "ignore" });
-            isMerged = true;
-          } catch {
-            isMerged = false;
-          }
-          if (isMerged) {
-            closedPrs.push(match[1]);
-          } else {
-            openPrs.push(match[1]);
-          }
-        }
-      }
-    }
-  } catch {}
-
-  let openBranches = [];
-  try {
-    const rawBranches = runGit(["branch", "-r", "--no-merged", "main"]);
-    openBranches = rawBranches
-      .split("\n")
-      .map((b) => b.trim().replace(/^origin\//, ""))
-      .filter((b) => b && !b.startsWith("HEAD") && b !== "main" && b !== "master" && !b.startsWith("backup/"));
-  } catch {}
-
-  let mergedBranches = [];
-  try {
-    const rawMerged = runGit(["branch", "-r", "--merged", "main"]);
-    mergedBranches = rawMerged
-      .split("\n")
-      .map((b) => b.trim().replace(/^origin\//, ""))
-      .filter((b) => b && !b.startsWith("HEAD") && b !== "main" && b !== "master" && !b.startsWith("backup/"));
-  } catch {}
-
-  log("\n─────────────────────────────────────────────────────────────────────────────", "dim");
-  log("🟢 PENDIENTES / ABIERTAS (Esperando tu revisión o auditoría):", "green");
-  log("─────────────────────────────────────────────────────────────────────────────", "dim");
-
-  if (openPrs.length > 0 || openBranches.length > 0) {
-    if (openPrs.length > 0) {
-      log("  🔢 Pull Requests:", "bold");
-      for (const pr of openPrs) {
-        log(`     • PR #${pr}  ➔  npm run pr:audit ${pr}`, "green");
-      }
-    }
-    if (openBranches.length > 0) {
-      log("\n  🌿 Ramas:", "bold");
-      for (const br of openBranches) {
-        log(`     • ${br}  ➔  npm run pr:audit ${br}`, "green");
-      }
-    }
-  } else {
-    log("  (No hay PRs ni ramas pendientes. ¡Todo al día!)", "dim");
-  }
-
-  log("\n─────────────────────────────────────────────────────────────────────────────", "dim");
-  log("⚪ CERRADAS / RESUELTAS (Ya incorporadas en main):", "dim");
-  log("─────────────────────────────────────────────────────────────────────────────", "dim");
-
-  if (closedPrs.length > 0 || mergedBranches.length > 0) {
-    if (closedPrs.length > 0) {
-      log(`  🔢 PRs resueltos: ${closedPrs.map((p) => `#${p}`).join(", ")}`, "dim");
-    }
-    if (mergedBranches.length > 0) {
-      log(`  🌿 Ramas ya mergeadas: ${mergedBranches.join(", ")}`, "dim");
-    }
-  } else {
-    log("  (Sin historial reciente de merges)", "dim");
-  }
-  log("");
-}
-
 async function main() {
   const rawArgs = process.argv.slice(2).filter((arg) => arg !== "--");
-
-  if (
-    rawArgs.length === 0 ||
-    rawArgs.includes("--help") ||
-    rawArgs.includes("-h") ||
-    rawArgs.includes("--list") ||
-    rawArgs.includes("-l")
-  ) {
-    log("\n📖 Uso de MIM Safe PR Auditor & Workflow:", "bold");
-    log("  npm run pr:audit <pr | rama>        Auditoría segura: corre compuertas y emite veredicto (READY/HOLD/REQUEST_CHANGES).");
-    log("  npm run gatekeeper <pr | rama>      Alias idéntico a pr:audit.");
-    log("  npm run pr:review                   Lista todos los PRs y ramas disponibles para auditar.");
-    log("  npm run pr:review <pr | rama>       Audita e inspecciona un PR o rama.");
-    log("  npm run pr:promote                  Promoción manual: mergea la rama auditada a main tras verificar compuertas.");
-    log("  npm run pr:return                   Vuelve a main de forma segura sin mergear.\n");
-    log("Ejemplos:");
-    log("  npm run pr:audit 15");
-    log("  npm run pr:review 15");
-    log("  npm run pr:promote");
-
-    listAvailableTargets();
-    process.exit(0);
-  }
-
-  const firstArg = rawArgs[0];
-
-  if (
-    firstArg === "audit" ||
-    firstArg === "--audit" ||
-    firstArg === "gatekeeper" ||
-    firstArg === "--gatekeeper" ||
-    firstArg === "-g"
-  ) {
-    const target = rawArgs[1];
-    if (!target) {
-      log("\n❌ Falta especificar el PR o rama para auditar.", "red");
-      log("Uso: npm run pr:audit <numero_de_pr | nombre_de_rama>", "yellow");
-      log("Ejemplo: npm run pr:audit 15\n", "yellow");
-      listAvailableTargets();
-      process.exit(1);
-    }
-    await handleAudit(target);
-    return;
-  }
-
-  if (firstArg === "promote" || firstArg === "--promote" || firstArg === "-m" || firstArg === "--merge") {
-    await handlePromote();
-    return;
-  }
-
-  if (firstArg === "return" || firstArg === "--return" || firstArg === "-r" || firstArg === "--back" || firstArg === "--abort") {
-    handleReturn();
-    return;
-  }
-
-  await handleAudit(firstArg);
+  await runReviewPrCli(
+    { log, handleAudit, handlePromote, handleReturn, runGit, repoRoot: REPO_ROOT },
+    rawArgs
+  );
 }
 
 module.exports = {

@@ -4,6 +4,7 @@ const {
   CI_PUSH_LINT_GATES,
   CI_PUSH_QUICK_GATES,
   PR_AUDIT_GATES,
+  CODACY_DIFF_GATE,
 } = require("../workflow/ci-gates");
 
 function assertGateIds(gates, requiredIds) {
@@ -47,7 +48,9 @@ function run() {
 
   const lintIds = new Set(CI_PUSH_LINT_GATES.map((g) => g.id));
   assert.ok(lintIds.has("eslint-root") && lintIds.has("tsc-root"));
+  assert.ok(lintIds.has("codacy-diff"), "Lint mode includes Codacy diff simulator");
   assert.ok(!lintIds.has("test-coverage"), "Lint mode skips full test suite");
+  assert.equal(CODACY_DIFF_GATE.id, "codacy-diff");
 
   for (const gate of CI_PUSH_GATES) {
     assert.ok(gate.title && gate.cmd && gate.args?.length, `Invalid gate definition: ${gate.id}`);

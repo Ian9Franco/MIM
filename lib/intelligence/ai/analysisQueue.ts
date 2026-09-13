@@ -3,7 +3,7 @@
  * Serializes per provider, honors quota backoff, and supports cancellation.
  */
 
-import { AIProviderError, isAIProviderError } from "./errors";
+import { isAIProviderError } from "./errors";
 import { createAIRequestSignal, waitForRetry } from "./requestLifecycle";
 import { recordAiProviderRateLimit, recordAiProviderRequest } from "./quotaTracker";
 import type { AIProviderId } from "./types";

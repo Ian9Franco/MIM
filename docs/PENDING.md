@@ -2,7 +2,7 @@
 
 > **Propósito:** Este documento consolida punto por punto todo el trabajo pendiente en el proyecto, organizado por áreas de dominio, con enlaces directos a las especificaciones y planes detallados donde se profundiza cada tema.
 
-> **Snapshot 2026-09-12:** Issue #58 tiene UI Desktop para auditoría, deploy, SAGE, admin y sync (SRV-7 **sin mergear**). Validación en hosting real, Electron empaquetado y descarga automática de mods siguen abiertos. BOT-07 (cola + CI + lote de mods) y el gate `npm run pre:push` están en el working tree local, no en `origin/main`.
+> **Snapshot 2026-09-12:** Issue #58 tiene UI Desktop para auditoría, deploy, SAGE, admin y sync multiplayer (SRV-7 en `main`). BOT-07 (cola + explain-batch + lote) y gates locales `pre:push` / `codacy:diff` / `codacy:cli` en `main`. Pendiente: validación en hosting real, descarga automática de mods y empaquetado Electron.
 
 ---
 
@@ -26,7 +26,7 @@
 | **Executor & Rollback en UI:** Integrado en `/servers` (`POST /api/server/deploy`). Pendiente: validación contra hosting real. No cierra #58. | `SRV-4` (UI en main, #90 era admin; deploy ya en main) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 | **SAGE remoto en UI:** Panel Desktop mergeado (PR #89). Fixture local ahora incluye `logs/latest.log` y crash report. Pendiente: logs de un VPS real y corpus SAGE-01. | `SRV-5` (UI en main) | 📘 [server-manager.md](./architecture/server-manager.md)<br/>🩺 [sage.md](./engines/sage.md) |
 | **Administración en UI:** Panel properties/backups/RCON mergeado (PR #90). Fixture incluye `server.properties` y un zip de backup. RCON real y proceso offline **no** están en la fixture. | `SRV-6` (UI en main) | 📘 [server-manager.md](./architecture/server-manager.md) |
-| **Sync multiplayer:** Motor + tests en main. API `POST /api/server/sync`, panel `/servers` y alluser ZIP en fixture: **código local, sin PR**. Falta descarga automática de mods faltantes. | `SRV-7` (UI local, sin merge) | 📘 [server-manager.md](./architecture/server-manager.md) |
+| **Sync multiplayer:** Motor + tests + API `POST /api/server/sync` + panel `/servers` en `main`. Diagnóstico only. Falta descarga automática de mods faltantes y validación en VPS real. | `SRV-7` (UI en main) | 📘 [server-manager.md](./architecture/server-manager.md) |
 
 ---
 
@@ -71,7 +71,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Cola para análisis por lotes:** Motor `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch` y botón **MIM-Bot lote** en Descubrir (máx. 12). Código local, sin merge. Gate live CI (`SAGE-05b`) corre solo si hay secrets o `workflow_dispatch`. | `BOT-07` (parcial, working tree) | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Cola para análisis por lotes:** Motor `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch` y botón **MIM-Bot lote** en Descubrir (máx. 12) en `main`. Gate live CI (`SAGE-05b`) corre solo si hay secrets o `workflow_dispatch`. | `BOT-07` (✅ en main) | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 
 ---
 
@@ -112,7 +112,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **Modularizar Componentes > 600 Líneas:**<br/>• `DiscoverTab.tsx` (158L, extraído a `apps/hub/components/tabs/discover/`)<br/>• `DraftDetailView.tsx` (188L, extraído a `apps/hub/components/draft-detail/`)<br/>• `FomoVersionOverlay.tsx` (186L, extraído a `components/fomo/details/`)<br/>• `useHomeController.ts` (Phase 2 verificación final `NEEDS_USER` & Phase 3 Profile/Community). REC-03 global permanece abierto. | `REC-03` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-03)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Inventario Zod en rutas restantes:** Mutaciones core (`build`, `delete`, `staging`, `tweak`) ya usan `bodySchema`/`querySchema` del guard. Falta inventariar handlers secundarios y extraer contratos compartidos con clientes. | `API-02b` | 🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
 | **Tests E2E de UI:** Agregar 3–5 recorridos E2E reproducibles (Discover → Detalle → Descarga y manejo de reintentos de red). | `REC-04` | 🟢 [whosnext.md (REC-04)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
-| **Pre-push local (anti-sorpresa CI/Codacy):** `npm run pre:push` espeja GitHub Actions. En working tree; no sustituye el check de Codacy sobre el diff del PR. | `CI-LOCAL` | 📘 [ian.md §4](../ian.md) |
+| **Pre-push local (anti-sorpresa CI/Codacy):** `npm run pre:push` espeja GitHub Actions; `npm run codacy:diff` simula el gate ESLint de Codacy en el diff; `npm run codacy:cli` (ESLint9/Stylelint en Windows; Semgrep solo en Cloud). | `CI-LOCAL` (✅ en main) | 📘 [ian.md §4](../ian.md) |
 
 ---
 

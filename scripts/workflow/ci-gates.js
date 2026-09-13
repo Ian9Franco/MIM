@@ -3,9 +3,9 @@
  * Used by pre-push-gate.js and review-pr.js to avoid drift before push/merge.
  */
 
-const { spawn } = require("child_process");
 const path = require("path");
-const fs = require("fs");
+const { saveGateFailureLog: writeGateFailureLog } = require("./gate-failure-log");
+const { runSingleGate } = require("./run-single-gate");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
 
@@ -24,48 +24,12 @@ function log(msg, color = "reset") {
   console.log(`${colors[color]}${msg}${colors.reset}`);
 }
 
-function runAsyncCmd(title, cmd, args) {
-  return new Promise((resolve) => {
-    log(`\n  ⏳ ${title}...`, "cyan");
-    const start = Date.now();
-    let capturedOutput = "";
-
-    const proc = spawn(cmd, args, {
-      cwd: REPO_ROOT,
-      shell: true,
-      env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
-    });
-
-    if (proc.stdout) {
-      proc.stdout.on("data", (chunk) => {
-        process.stdout.write(chunk);
-        capturedOutput += chunk.toString();
-      });
-    }
-
-    if (proc.stderr) {
-      proc.stderr.on("data", (chunk) => {
-        process.stderr.write(chunk);
-        capturedOutput += chunk.toString();
-      });
-    }
-
-    proc.on("close", (code) => {
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      if (code === 0) {
-        log(`  ✓ ${title} completado exitosamente (${elapsed}s)`, "green");
-        resolve({ ok: true, elapsed, output: capturedOutput });
-      } else {
-        log(`  ✗ ${title} falló con código ${code} (${elapsed}s)`, "red");
-        resolve({ ok: false, elapsed, code, output: capturedOutput });
-      }
-    });
-
-    proc.on("error", (err) => {
-      log(`  ✗ Fallo al ejecutar ${title}: ${err.message}`, "red");
-      resolve({ ok: false, elapsed: 0, code: 1, output: err.message });
-    });
-  });
+async function runAsyncCmd(title, cmd, args) {
+  log(`\n  ⏳ ${title}...`, "cyan");
+  const res = await runSingleGate(REPO_ROOT, { cmd, args });
+  if (res.ok) log(`  ✓ ${title} completado exitosamente (${res.elapsed}s)`, "green");
+  else log(`  ✗ ${title} falló con código ${res.code} (${res.elapsed}s)`, "red");
+  return res;
 }
 
 /** Six gates used by npm run pr:audit (subset — no eslint/build). */
@@ -247,9 +211,21 @@ const CI_PUSH_GATES = [
 
 const CI_PUSH_QUICK_GATES = CI_PUSH_GATES.filter((gate) => !gate.slow);
 
-const CI_PUSH_LINT_GATES = CI_PUSH_GATES.filter((gate) =>
-  ["tsc-root", "tsc-hub", "eslint-root", "eslint-hub", "api-guard", "architecture-lint", "architecture-tests"].includes(gate.id)
-);
+const CODACY_DIFF_GATE = {
+  id: "codacy-diff",
+  title: "8. Codacy diff — ESLint estricto en archivos del PR",
+  cmd: "node",
+  args: ["scripts/workflow/codacy-diff-gate.js"],
+  reason: "ESLint (perfil Codacy) encontró issues de alta severidad en el diff vs main.",
+  ciJob: "codacy-pr-gate",
+};
+
+const CI_PUSH_LINT_GATES = [
+  ...CI_PUSH_GATES.filter((gate) =>
+    ["tsc-root", "tsc-hub", "eslint-root", "eslint-hub", "api-guard", "architecture-lint", "architecture-tests"].includes(gate.id)
+  ),
+  CODACY_DIFF_GATE,
+];
 
 async function runGates(gates, contextLabel = "COMPUERTAS DE CALIDAD") {
   log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
@@ -257,127 +233,28 @@ async function runGates(gates, contextLabel = "COMPUERTAS DE CALIDAD") {
   log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
 
   for (const gate of gates) {
-    const env = gate.env ? { ...process.env, ...gate.env } : process.env;
-    const res = await new Promise((resolve) => {
-      log(`\n  ⏳ ${gate.title}...`, "cyan");
-      const start = Date.now();
-      let capturedOutput = "";
-
-      const proc = spawn(gate.cmd, gate.args, {
-        cwd: REPO_ROOT,
-        shell: true,
-        env: { ...env, NODE_OPTIONS: "--max-old-space-size=4096" },
-      });
-
-      if (proc.stdout) {
-        proc.stdout.on("data", (chunk) => {
-          process.stdout.write(chunk);
-          capturedOutput += chunk.toString();
-        });
-      }
-      if (proc.stderr) {
-        proc.stderr.on("data", (chunk) => {
-          process.stderr.write(chunk);
-          capturedOutput += chunk.toString();
-        });
-      }
-      proc.on("close", (code) => {
-        const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-        if (code === 0) {
-          log(`  ✓ ${gate.title} (${elapsed}s)`, "green");
-          resolve({ ok: true, elapsed, output: capturedOutput });
-        } else {
-          log(`  ✗ ${gate.title} — exit ${code} (${elapsed}s)`, "red");
-          resolve({ ok: false, elapsed, code, output: capturedOutput });
-        }
-      });
-      proc.on("error", (err) => {
-        resolve({ ok: false, elapsed: 0, code: 1, output: err.message });
-      });
-    });
-
-    if (!res.ok) {
-      return {
-        ok: false,
-        gateId: gate.id,
-        gateTitle: gate.title,
-        ciJob: gate.ciJob,
-        reason: gate.reason,
-        output: res.output,
-      };
+    log(`\n  ⏳ ${gate.title}...`, "cyan");
+    const res = await runSingleGate(REPO_ROOT, gate);
+    if (res.ok) {
+      log(`  ✓ ${gate.title} (${res.elapsed}s)`, "green");
+      continue;
     }
+    log(`  ✗ ${gate.title} — exit ${res.code} (${res.elapsed}s)`, "red");
+    return {
+      ok: false,
+      gateId: gate.id,
+      gateTitle: gate.title,
+      ciJob: gate.ciJob,
+      reason: gate.reason,
+      output: res.output,
+    };
   }
 
   return { ok: true };
 }
 
 function saveGateFailureLog(options) {
-  const {
-    logSubdir = "gate-failures",
-    filePrefix = "gate-failed",
-    target = "local",
-    branchName = "unknown",
-    failedGate = "unknown",
-    failedGateId,
-    ciJob,
-    reason = "Unknown",
-    output = "",
-    extraSections = [],
-  } = options;
-
-  const logDir = path.join(REPO_ROOT, "logs", logSubdir);
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-  const humanTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-
-  const sanitizedTarget = String(target).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const fileName = `${filePrefix}-${sanitizedTarget}-${timestamp}.log`;
-  const filePath = path.join(logDir, fileName);
-
-  const sections = [
-    ["Fecha y Hora", humanTime],
-    ["Objetivo", target],
-    ["Rama", branchName],
-    ["Compuerta fallida", failedGate],
-    ...(failedGateId ? [["Gate ID", failedGateId]] : []),
-    ...(ciJob ? [["Job CI equivalente", ciJob]] : []),
-    ["Motivo", reason],
-  ];
-
-  let content = [
-    "================================================================================",
-    "MIM — INFORME DE FALLO DE COMPUERTA DE CALIDAD",
-    "================================================================================",
-    ...sections.flatMap(([label, value]) => [`${label}:`.padEnd(22) + value, ""]),
-  ].join("\n");
-
-  for (const section of extraSections) {
-    content += [
-      "",
-      "────────────────────────────────────────────────────────────────────────────────",
-      `${section.title}:`,
-      "────────────────────────────────────────────────────────────────────────────────",
-      section.content || "(vacío)",
-    ].join("\n");
-  }
-
-  content += [
-    "",
-    "────────────────────────────────────────────────────────────────────────────────",
-    "SALIDA DE LA COMPUERTA FALLIDA:",
-    "────────────────────────────────────────────────────────────────────────────────",
-    output || "(Sin salida capturada)",
-    "================================================================================",
-    "",
-  ].join("\n");
-
-  fs.writeFileSync(filePath, content, "utf-8");
-  return filePath;
+  return writeGateFailureLog(REPO_ROOT, options);
 }
 
 module.exports = {
@@ -391,4 +268,5 @@ module.exports = {
   CI_PUSH_GATES,
   CI_PUSH_QUICK_GATES,
   CI_PUSH_LINT_GATES,
+  CODACY_DIFF_GATE,
 };

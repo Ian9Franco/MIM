@@ -30,6 +30,7 @@
     "test:ai-provider": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-provider-runtime.test.ts",
     "test:ai-analysis-queue": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-analysis-queue.test.ts",
     "test:pre-push-gate": "node scripts/__tests__/pre-push-gate.test.js",
+    "test:codacy-diff-gate": "node scripts/__tests__/codacy-diff-gate.test.js",
     "test:model-gateway": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/model-gateway.test.ts",
     "test:dependency-explain": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/dependency-explain.test.ts",
     "test:quota-classifier": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/quota-classifier.test.ts",
@@ -56,6 +57,12 @@
     "pre:push:quick": "node scripts/workflow/pre-push-gate.js --quick",
     "pre:push:lint": "node scripts/workflow/pre-push-gate.js --lint-only",
     "ci:local": "node scripts/workflow/pre-push-gate.js",
+    "codacy:diff": "node scripts/workflow/codacy-diff-gate.js",
+    "codacy:diff:worktree": "node scripts/workflow/codacy-diff-gate.js --include-worktree",
+    "codacy:cli": "node scripts/workflow/codacy-cli-gate.js",
+    "codacy:init": "node node_modules/@codacy/analysis-cli/dist/index.js init --auto Critical,High,Security && node node_modules/@codacy/analysis-cli/dist/index.js update-config",
+    "codacy:init:remote": "node node_modules/@codacy/analysis-cli/dist/index.js init --remote gh Ian9Franco MIM && node node_modules/@codacy/analysis-cli/dist/index.js update-config",
+    "pre:codacy": "npm run codacy:diff",
     "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "demo": "node scripts/demo-tour.js",
@@ -88,6 +95,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@codacy/analysis-cli": "^0.23.1",
     "@tailwindcss/postcss": "^4",
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^20",
@@ -102,7 +110,8 @@
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "yaml": "^2.9.1"
   },
   "build": {
     "appId": "com.mim.app",

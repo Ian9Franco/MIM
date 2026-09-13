@@ -1,0 +1,1079 @@
+{
+  "version": 1,
+  "metadata": {
+    "source": "auto",
+    "provider": null,
+    "organization": null,
+    "autoFilters": "Critical,High,Security",
+    "repositoryId": null,
+    "repositoryName": null,
+    "createdAt": "2026-09-13T01:24:12.487Z",
+    "updatedAt": "2026-09-13T01:29:09.162Z",
+    "languages": [
+      "CSS",
+      "Dockerfile",
+      "JSON",
+      "Javascript",
+      "Markdown",
+      "Powershell",
+      "Python",
+      "SQL",
+      "TypeScript",
+      "YAML"
+    ]
+  },
+  "tools": [
+    {
+      "toolId": "Hadolint",
+      "patterns": [
+        {
+          "patternId": "Hadolint_DL3002"
+        }
+      ]
+    },
+    {
+      "toolId": "Ruff",
+      "patterns": [
+        {
+          "patternId": "Ruff_S101_assert"
+        },
+        {
+          "patternId": "Ruff_S102_exec-builtin"
+        },
+        {
+          "patternId": "Ruff_S103_bad-file-permissions"
+        },
+        {
+          "patternId": "Ruff_S104_hardcoded-bind-all-interfaces"
+        },
+        {
+          "patternId": "Ruff_S105_hardcoded-password-string"
+        },
+        {
+          "patternId": "Ruff_S106_hardcoded-password-func-arg"
+        },
+        {
+          "patternId": "Ruff_S107_hardcoded-password-default"
+        },
+        {
+          "patternId": "Ruff_S108_hardcoded-temp-file"
+        },
+        {
+          "patternId": "Ruff_S110_try-except-pass"
+        },
+        {
+          "patternId": "Ruff_S112_try-except-continue"
+        },
+        {
+          "patternId": "Ruff_S201_flask-debug-true"
+        },
+        {
+          "patternId": "Ruff_S202_tarfile-unsafe-members"
+        },
+        {
+          "patternId": "Ruff_S301_suspicious-pickle-usage"
+        },
+        {
+          "patternId": "Ruff_S302_suspicious-marshal-usage"
+        },
+        {
+          "patternId": "Ruff_S303_suspicious-insecure-hash-usage"
+        },
+        {
+          "patternId": "Ruff_S304_suspicious-insecure-cipher-usage"
+        },
+        {
+          "patternId": "Ruff_S305_suspicious-insecure-cipher-mode-usage"
+        },
+        {
+          "patternId": "Ruff_S306_suspicious-mktemp-usage"
+        },
+        {
+          "patternId": "Ruff_S307_suspicious-eval-usage"
+        },
+        {
+          "patternId": "Ruff_S308_suspicious-mark-safe-usage"
+        },
+        {
+          "patternId": "Ruff_S310_suspicious-url-open-usage"
+        },
+        {
+          "patternId": "Ruff_S311_suspicious-non-cryptographic-random-usage"
+        },
+        {
+          "patternId": "Ruff_S312_suspicious-telnet-usage"
+        },
+        {
+          "patternId": "Ruff_S313_suspicious-xmlc-element-tree-usage"
+        },
+        {
+          "patternId": "Ruff_S314_suspicious-xml-element-tree-usage"
+        },
+        {
+          "patternId": "Ruff_S315_suspicious-xml-expat-reader-usage"
+        },
+        {
+          "patternId": "Ruff_S316_suspicious-xml-expat-builder-usage"
+        },
+        {
+          "patternId": "Ruff_S317_suspicious-xml-sax-usage"
+        },
+        {
+          "patternId": "Ruff_S318_suspicious-xml-mini-dom-usage"
+        },
+        {
+          "patternId": "Ruff_S319_suspicious-xml-pull-dom-usage"
+        },
+        {
+          "patternId": "Ruff_S321_suspicious-ftp-lib-usage"
+        },
+        {
+          "patternId": "Ruff_S323_suspicious-unverified-context-usage"
+        },
+        {
+          "patternId": "Ruff_S324_hashlib-insecure-hash-function"
+        },
+        {
+          "patternId": "Ruff_S401_suspicious-telnetlib-import"
+        },
+        {
+          "patternId": "Ruff_S402_suspicious-ftplib-import"
+        },
+        {
+          "patternId": "Ruff_S403_suspicious-pickle-import"
+        },
+        {
+          "patternId": "Ruff_S404_suspicious-subprocess-import"
+        },
+        {
+          "patternId": "Ruff_S405_suspicious-xml-etree-import"
+        },
+        {
+          "patternId": "Ruff_S406_suspicious-xml-sax-import"
+        },
+        {
+          "patternId": "Ruff_S407_suspicious-xml-expat-import"
+        },
+        {
+          "patternId": "Ruff_S408_suspicious-xml-minidom-import"
+        },
+        {
+          "patternId": "Ruff_S409_suspicious-xml-pulldom-import"
+        },
+        {
+          "patternId": "Ruff_S411_suspicious-xmlrpc-import"
+        },
+        {
+          "patternId": "Ruff_S412_suspicious-httpoxy-import"
+        },
+        {
+          "patternId": "Ruff_S413_suspicious-pycrypto-import"
+        },
+        {
+          "patternId": "Ruff_S415_suspicious-pyghmi-import"
+        },
+        {
+          "patternId": "Ruff_S501_request-with-no-cert-validation"
+        },
+        {
+          "patternId": "Ruff_S502_ssl-insecure-version"
+        },
+        {
+          "patternId": "Ruff_S503_ssl-with-bad-defaults"
+        },
+        {
+          "patternId": "Ruff_S504_ssl-with-no-version"
+        },
+        {
+          "patternId": "Ruff_S505_weak-cryptographic-key"
+        },
+        {
+          "patternId": "Ruff_S506_unsafe-yaml-load"
+        },
+        {
+          "patternId": "Ruff_S507_ssh-no-host-key-verification"
+        },
+        {
+          "patternId": "Ruff_S508_snmp-insecure-version"
+        },
+        {
+          "patternId": "Ruff_S509_snmp-weak-cryptography"
+        },
+        {
+          "patternId": "Ruff_S601_paramiko-call"
+        },
+        {
+          "patternId": "Ruff_S602_subprocess-popen-with-shell-equals-true"
+        },
+        {
+          "patternId": "Ruff_S603_subprocess-without-shell-equals-true"
+        },
+        {
+          "patternId": "Ruff_S604_call-with-shell-equals-true"
+        },
+        {
+          "patternId": "Ruff_S605_start-process-with-a-shell"
+        },
+        {
+          "patternId": "Ruff_S606_start-process-with-no-shell"
+        },
+        {
+          "patternId": "Ruff_S607_start-process-with-partial-path"
+        },
+        {
+          "patternId": "Ruff_S608_hardcoded-sql-expression"
+        },
+        {
+          "patternId": "Ruff_S609_unix-command-wildcard-injection"
+        },
+        {
+          "patternId": "Ruff_S610_django-extra"
+        },
+        {
+          "patternId": "Ruff_S611_django-raw-sql"
+        },
+        {
+          "patternId": "Ruff_S612_logging-config-insecure-listen"
+        },
+        {
+          "patternId": "Ruff_S701_jinja2-autoescape-false"
+        },
+        {
+          "patternId": "Ruff_S702_mako-templates"
+        }
+      ]
+    },
+    {
+      "toolId": "Trivy",
+      "patterns": [
+        {
+          "patternId": "Trivy_malicious_packages"
+        },
+        {
+          "patternId": "Trivy_secret"
+        },
+        {
+          "patternId": "Trivy_vulnerability_critical"
+        },
+        {
+          "patternId": "Trivy_vulnerability_high"
+        }
+      ]
+    },
+    {
+      "toolId": "Semgrep",
+      "patterns": [
+        {
+          "patternId": "Semgrep_dockerfile.security.dockerd-socket-mount.dockerfile-dockerd-socket-mount"
+        },
+        {
+          "patternId": "Semgrep_dockerfile.security.last-user-is-root.last-user-is-root"
+        },
+        {
+          "patternId": "Semgrep_dockerfile.security.missing-user-entrypoint.missing-user-entrypoint"
+        },
+        {
+          "patternId": "Semgrep_dockerfile.security.missing-user.missing-user"
+        },
+        {
+          "patternId": "Semgrep_dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-onfido-live-api-token.detected-onfido-live-api-token"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-stripe-restricted-api-key.detected-stripe-restricted-api-key"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-username-and-password-in-uri.detected-username-and-password-in-uri"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.google-maps-apikeyleak.google-maps-apikeyleak"
+        },
+        {
+          "patternId": "Semgrep_javascript.argon2.security.unsafe-argon2-config.unsafe-argon2-config"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.open-redirect.js-open-redirect"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.raw-html-concat.raw-html-concat"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration"
+        },
+        {
+          "patternId": "Semgrep_javascript.chrome-remote-interface.security.audit.chrome-remote-interface-compilescript-injection.chrome-remote-interface-compilescript-injection"
+        },
+        {
+          "patternId": "Semgrep_javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run"
+        },
+        {
+          "patternId": "Semgrep_javascript.intercom.security.audit.intercom-settings-user-identifier-without-user-hash.intercom-settings-user-identifier-without-user-hash"
+        },
+        {
+          "patternId": "Semgrep_javascript.jose.security.jwt-hardcode.hardcoded-jwt-secret"
+        },
+        {
+          "patternId": "Semgrep_javascript.jose.security.jwt-none-alg.jwt-none-alg"
+        },
+        {
+          "patternId": "Semgrep_javascript.jsonwebtoken.security.jwt-hardcode.hardcoded-jwt-secret"
+        },
+        {
+          "patternId": "Semgrep_javascript.jsonwebtoken.security.jwt-none-alg.jwt-none-alg"
+        },
+        {
+          "patternId": "Semgrep_javascript.jwt-simple.security.jwt-simple-noverify.jwt-simple-noverify"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.audit.code-string-concat.code-string-concat"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.audit.sqli.node-knex-sqli.node-knex-sqli"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.detect-eval-with-expression.detect-eval-with-expression"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.aead-no-final.aead-no-final"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.create-de-cipher-no-iv.create-de-cipher-no-iv"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.gcm-no-tag-length.gcm-no-tag-length"
+        },
+        {
+          "patternId": "Semgrep_javascript.passport-jwt.security.passport-hardcode.hardcoded-passport-secret"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.public-s3-bucket.public-s3-bucket"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.public-s3-policy-statement.public-s3-policy-statement"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.wildcard-assume-role.wildcard-assume-role"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.bypass-tls-verification.bypass-tls-verification"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.disallow-old-tls-versions1.disallow-old-tls-versions1"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.disallow-old-tls-versions2.disallow-old-tls-versions2"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.ftp-request.ftp-request"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.http-request.http-request"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.rest-http-client-support.rest-http-client-support"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.telnet-request.telnet-request"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.empty-aes-key.empty-aes-key"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-cipher-algorithms-arc4.insecure-cipher-algorithm-arc4"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-cipher-algorithms-blowfish.insecure-cipher-algorithm-blowfish"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-cipher-algorithms.insecure-cipher-algorithm-idea"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-cipher-mode-ecb.insecure-cipher-mode-ecb"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insufficient-dsa-key-size.insufficient-dsa-key-size"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insufficient-ec-key-size.insufficient-ec-key-size"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.insufficient-rsa-key-size.insufficient-rsa-key-size"
+        },
+        {
+          "patternId": "Semgrep_python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication"
+        },
+        {
+          "patternId": "Semgrep_python_crypto_rule-HTTPConnectionPool"
+        },
+        {
+          "patternId": "Semgrep_python.distributed.security.require-encryption"
+        },
+        {
+          "patternId": "Semgrep_python_flask_rule-path-traversal-open"
+        },
+        {
+          "patternId": "Semgrep_python_jwt_rule-jwt-none-alg"
+        },
+        {
+          "patternId": "Semgrep_python.jwt.security.jwt-hardcode.jwt-python-hardcoded-secret"
+        },
+        {
+          "patternId": "Semgrep_python.jwt.security.jwt-none-alg.jwt-python-none-alg"
+        },
+        {
+          "patternId": "Semgrep_python.jwt.security.unverified-jwt-decode.unverified-jwt-decode"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-asyncio-exec-tainted-env-args.dangerous-asyncio-exec-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-asyncio-shell-tainted-env-args.dangerous-asyncio-shell-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-code-run-tainted-env-args.dangerous-interactive-code-run-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-os-exec-tainted-env-args.dangerous-os-exec-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-spawn-process-tainted-env-args.dangerous-spawn-process-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-subinterpreters-run-string-tainted-env-args.dangerous-subinterpreters-run-string-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-system-call-tainted-env-args.dangerous-system-call-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.dangerous-testcapi-run-in-subinterp-tainted-env-args.dangerous-testcapi-run-in-subinterp-tainted-env-args"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.insecure-file-permissions.insecure-file-permissions"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.insecure-transport.requests.request-session-http-in-with-context.request-session-http-in-with-context"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.insecure-transport.requests.request-session-with-http.request-session-with-http"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.insecure-transport.requests.request-with-http.request-with-http"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.md5-used-as-password.md5-used-as-password"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.network.bind.avoid-bind-to-all-interfaces"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.network.disabled-cert-validation.disabled-cert-validation"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.network.http-not-https-connection.http-not-https-connection"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.ssl-wrap-socket-is-deprecated.ssl-wrap-socket-is-deprecated"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.audit.weak-ssl-version.weak-ssl-version"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-code-run.dangerous-interactive-code-run"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-os-exec.dangerous-os-exec"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-spawn-process.dangerous-spawn-process"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-subinterpreters-run-string.dangerous-subinterpreters-run-string"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-subprocess-use.dangerous-subprocess-use"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-system-call.dangerous-system-call"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.dangerous-testcapi-run-in-subinterp.dangerous-testcapi-run-in-subinterp"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.deserialization.avoid-unsafe-ruamel.avoid-unsafe-ruamel"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.deserialization.pickle.avoid-shelve"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.insecure-hash-function.insecure-hash-function"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.insecure-uuid-version.insecure-uuid-version"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.unverified-ssl-context.unverified-ssl-context"
+        },
+        {
+          "patternId": "Semgrep_python.lang.security.use-defused-xml-parse.use-defused-xml-parse"
+        },
+        {
+          "patternId": "Semgrep_python_pyramid_rule-pyramid-csrf-origin-check"
+        },
+        {
+          "patternId": "Semgrep_rules_lgpl_javascript_electronjs_rule-electron-allow-http"
+        },
+        {
+          "patternId": "Semgrep_rules_lgpl_javascript_electronjs_rule-electron-blink-integration"
+        },
+        {
+          "patternId": "Semgrep_rules_lgpl_javascript_electronjs_rule-electron-context-isolation"
+        },
+        {
+          "patternId": "Semgrep_rules_lgpl_javascript_electronjs_rule-electron-disable-websecurity"
+        },
+        {
+          "patternId": "Semgrep_rules_lgpl_javascript_electronjs_rule-electron-nodejs-integration"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-href-var.react-href-var"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-jwt-decoded-property.react-jwt-decoded-property"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-jwt-in-localstorage.react-jwt-in-localstorage"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.react-insecure-request.react-insecure-request"
+        },
+        {
+          "patternId": "Semgrep_typescript.react.security.react-markdown-insecure-html.react-markdown-insecure-html"
+        },
+        {
+          "patternId": "Semgrep_yaml.argo.security.argo-workflow-parameter-command-injection.argo-workflow-parameter-command-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.docker-compose.security.privileged-service.privileged-service"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.audit.unsafe-add-mask-workflow-command.unsafe-add-mask-workflow-command"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.curl-eval.curl-eval"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.github-script-injection.github-script-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.pull-request-target-code-checkout.pull-request-target-code-checkout"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.run-shell-injection.run-shell-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout"
+        },
+        {
+          "patternId": "Semgrep_yaml.openapi.security.openai-consequential-action-false.openai-consequential-action-false"
+        },
+        {
+          "patternId": "Semgrep_yaml.openapi.security.use-of-basic-authentication.use-of-basic-authentication"
+        },
+        {
+          "patternId": "Semgrep_yaml_spring_rule-SpringActuatorFullyEnabled"
+        }
+      ]
+    },
+    {
+      "toolId": "Stylelint",
+      "patterns": [
+        {
+          "patternId": "Stylelint_function-url-scheme-allowed-list"
+        }
+      ]
+    },
+    {
+      "toolId": "spectral",
+      "patterns": [
+        {
+          "patternId": "spectral_asyncapi-3-operation-security"
+        },
+        {
+          "patternId": "spectral_asyncapi-operation-security"
+        },
+        {
+          "patternId": "spectral_asyncapi-server-security"
+        },
+        {
+          "patternId": "spectral_no-eval-in-markdown"
+        },
+        {
+          "patternId": "spectral_no-script-tags-in-markdown"
+        }
+      ]
+    },
+    {
+      "toolId": "ESLint9",
+      "localConfigurationFile": "eslint.config.mjs",
+      "useLocalConfigurationFile": true,
+      "patterns": []
+    },
+    {
+      "toolId": "Bandit",
+      "patterns": [
+        {
+          "patternId": "Bandit_B101"
+        },
+        {
+          "patternId": "Bandit_B103"
+        },
+        {
+          "patternId": "Bandit_B105"
+        },
+        {
+          "patternId": "Bandit_B106"
+        },
+        {
+          "patternId": "Bandit_B107"
+        },
+        {
+          "patternId": "Bandit_B112"
+        },
+        {
+          "patternId": "Bandit_B202"
+        },
+        {
+          "patternId": "Bandit_B304"
+        },
+        {
+          "patternId": "Bandit_B309"
+        },
+        {
+          "patternId": "Bandit_B312"
+        },
+        {
+          "patternId": "Bandit_B321"
+        },
+        {
+          "patternId": "Bandit_B322"
+        },
+        {
+          "patternId": "Bandit_B324"
+        },
+        {
+          "patternId": "Bandit_B325"
+        },
+        {
+          "patternId": "Bandit_B401"
+        },
+        {
+          "patternId": "Bandit_B402"
+        },
+        {
+          "patternId": "Bandit_B411"
+        },
+        {
+          "patternId": "Bandit_B412"
+        },
+        {
+          "patternId": "Bandit_B415"
+        },
+        {
+          "patternId": "Bandit_B502"
+        },
+        {
+          "patternId": "Bandit_B505"
+        },
+        {
+          "patternId": "Bandit_B602"
+        },
+        {
+          "patternId": "Bandit_B609"
+        },
+        {
+          "patternId": "Bandit_B613"
+        },
+        {
+          "patternId": "Bandit_B614"
+        },
+        {
+          "patternId": "Bandit_B704"
+        }
+      ]
+    },
+    {
+      "toolId": "PyLintPython3",
+      "patterns": [
+        {
+          "patternId": "PyLintPython3_W0122"
+        }
+      ]
+    },
+    {
+      "toolId": "Checkov",
+      "patterns": [
+        {
+          "patternId": "Checkov_CKV2_DOCKER_1"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_10"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_11"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_12"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_13"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_14"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_15"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_16"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_17"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_2"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_3"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_4"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_5"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_6"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_7"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_8"
+        },
+        {
+          "patternId": "Checkov_CKV2_DOCKER_9"
+        },
+        {
+          "patternId": "Checkov_CKV_BITBUCKET_1"
+        },
+        {
+          "patternId": "Checkov_CKV_DOCKER_1"
+        },
+        {
+          "patternId": "Checkov_CKV_DOCKER_3"
+        },
+        {
+          "patternId": "Checkov_CKV_DOCKER_8"
+        },
+        {
+          "patternId": "Checkov_CKV_DOCKER_9"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_1"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_2"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_3"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_4"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_5"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_6"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_7"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_1"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_10"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_11"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_12"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_13"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_14"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_15"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_16"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_17"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_18"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_19"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_2"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_20"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_21"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_22"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_23"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_26"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_27"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_28"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_3"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_4"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_5"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_6"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_7"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_9"
+        },
+        {
+          "patternId": "Checkov_CKV_GITLAB_1"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_1"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_10"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_11"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_12"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_13"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_14"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_15"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_18"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_19"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_20"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_21"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_3"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_4"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_5"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_6"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_7"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_8"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_9"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_1"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_11"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_12"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_13"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_14"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_15"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_16"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_17"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_18"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_19"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_2"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_3"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_4"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_5"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_6"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_7"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_8"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_9"
+        }
+      ]
+    },
+    {
+      "toolId": "Prospector",
+      "patterns": [
+        {
+          "patternId": "Prospector_dodgy"
+        }
+      ]
+    },
+    {
+      "toolId": "psscriptanalyzer",
+      "patterns": [
+        {
+          "patternId": "psscriptanalyzer_psavoidusingcomputernamehardcoded"
+        },
+        {
+          "patternId": "psscriptanalyzer_psavoidusingconverttosecurestringwithplaintext"
+        },
+        {
+          "patternId": "psscriptanalyzer_psavoidusinginvokeexpression"
+        },
+        {
+          "patternId": "psscriptanalyzer_psavoidusingplaintextforpassword"
+        }
+      ]
+    }
+  ],
+  "exclude": [
+    "scripts/__tests__/**",
+    "scripts/evaluation/**",
+    "scripts/scratch/**",
+    "standalone/**",
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "build/**",
+    "dist/**",
+    "standalone/node_modules/**",
+    "pnpm-lock.yaml",
+    "package-lock.json",
+    "*.tsbuildinfo",
+    "next-env.d.ts",
+    "public/**",
+    "app/api/project/fix-issue/route.ts",
+    "app/api/project/transfer-category/route.ts",
+    "apps/hub/components/tabs/CollectionsTab.tsx",
+    "components/fomo/sidebar/FomoSidebarDiscoverBranch.tsx",
+    "components/fomo/sidebar/FomoSidebarComponents.tsx"
+  ]
+}

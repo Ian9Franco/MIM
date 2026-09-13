@@ -6,11 +6,12 @@ Al ejecutar 'npm run release:auto', este contenido se trasladará automáticamen
 a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 -->
 
-### Working tree 2026-09-12 (sin merge a main)
+### Merge directo a main 2026-09-12 (SRV-7 + BOT-07 + CI local)
 
 - **SRV-7 UI:** `POST /api/server/sync`, panel Sync multiplayer en `/servers`, transporte alluser ZIP, test `server-sync-api.test.ts`. Diagnóstico only — no descarga mods.
 - **BOT-07:** cola `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch`, botón **MIM-Bot lote** en Descubrir (máx. 12).
 - **Pre-push gate:** `npm run pre:push` / `pre:push:quick` / `pre:push:lint` espejan CI local (excepto upload Codacy y eval live sin secrets).
+- **Codacy local:** `npm run codacy:diff` (ESLint estricto en diff), `codacy:cli` (`@codacy/analysis-cli` local; Windows omite Opengrep/Semgrep), `codacy:init` / `codacy:init:remote`, config en `.codacy/`.
 - **Fixture Server Manager:** SFTP de prueba ahora incluye `server.properties`, `logs/latest.log`, crash report y un zip en `backups/`. RCON real sigue ausente.
 - **CI:** `eval:mimbot` estructural en test-and-evaluate; job opcional `mimbot-live-eval` (SAGE-05b).
 

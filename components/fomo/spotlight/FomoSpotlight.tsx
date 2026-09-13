@@ -25,6 +25,7 @@ interface FomoSpotlightProps {
 }
 
 import { AnimatedHeadline } from "./AnimatedHeadline";
+import { MimSlimeMascot } from "@/components/ui/MimSlimeMascot";
 import { SpotlightSkeleton } from "./SpotlightSkeleton";
 import { VerticalTicker, HorizontalEditorialMarquee } from "./SpotlightMarquees";
 
@@ -252,10 +253,13 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-between h-full relative xl:max-w-md 2xl:max-w-lg">
         {/* Editorial Header */}
-        <div className="mt-0 xl:mt-0 shrink-0">
+        <div className="mt-0 xl:mt-0 shrink-0 relative">
           <p className="font-mono text-xs uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2">
             <Spotlight className="w-4 h-4" /> Editorial
           </p>
+          <div className="absolute right-0 -top-2 hidden xl:block pointer-events-none">
+            <MimSlimeMascot size={112} />
+          </div>
           <AnimatedHeadline />
         </div>
 

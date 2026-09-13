@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { SortOrder } from "../../constants/app";
 
 export function useFomoFilters(defaultLoader: string, defaultGameVersion: string) {
-  const [source, setSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("modrinth");
+  const [source, setSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("all");
   const [loader, setLoader] = useState(defaultLoader);
   const [gameVersions, setGameVersions] = useState<string[]>([defaultGameVersion]);
   const [projectType, setProjectType] = useState("mod");
@@ -18,10 +18,13 @@ export function useFomoFilters(defaultLoader: string, defaultGameVersion: string
   // Persistence
   useEffect(() => {
     const saved = localStorage.getItem("fomo_discover_state");
+    const migrated = localStorage.getItem("fomo_discover_source_default_v2") === "1";
+    localStorage.setItem("fomo_discover_source_default_v2", "1");
     if (saved) {
       try {
         const s = JSON.parse(saved);
-        if (s.source) setSource(s.source);
+        const nextSource = !migrated && s.source === "modrinth" ? "all" : s.source;
+        if (nextSource) setSource(nextSource);
         if (s.loader) setLoader(s.loader);
         if (s.gameVersions) setGameVersions(s.gameVersions);
         if (s.projectType) setProjectType(s.projectType);

@@ -51,13 +51,6 @@ function testNewestReleasePrecedesOlderHistoryWithCrLf() {
   assert(nextIndex < footerIndex, "new release must not be appended after the footer");
 }
 
-function run() {
-  testValidationClaimTracksExecutedGates();
-  testNewestReleasePrecedesOlderHistoryWithCrLf();
-  testWorkflowTagResolution();
-  console.log("✓ Release notes truthfulness and workflow tag contracts passed");
-}
-
 function testWorkflowTagResolution() {
   const workflow = fs.readFileSync(path.join(__dirname, "../../.github/workflows/release.yml"), "utf8");
   const script = workflow.match(/shell: node \{0\}[\s\S]*?run: \|\r?\n([\s\S]*?)\r?\n      - name: Checkout Repository/)[1]
@@ -83,6 +76,20 @@ function testWorkflowTagResolution() {
   assert.match(workflow, /RELEASE_TAG: \$\{\{ steps\.release\.outputs\.tag \}\}/);
   assert.match(workflow, /tag_name: \$\{\{ steps\.release\.outputs\.tag \}\}/);
   assert.doesNotMatch(workflow, /github\.ref_name \|\|/);
+}
+
+function testWorkspacePackageSyncIntegrity() {
+  const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../../package.json"), "utf8"));
+  const desktopPkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../../apps/desktop/package.json"), "utf8"));
+  assert.equal(desktopPkg.version, rootPkg.version, "apps/desktop version should match root package version");
+}
+
+function run() {
+  testValidationClaimTracksExecutedGates();
+  testNewestReleasePrecedesOlderHistoryWithCrLf();
+  testWorkflowTagResolution();
+  testWorkspacePackageSyncIntegrity();
+  console.log("✓ Release notes truthfulness, workflow tag and workspace sync contracts passed");
 }
 
 run();

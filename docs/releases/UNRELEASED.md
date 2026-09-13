@@ -6,13 +6,19 @@ Al ejecutar 'npm run release:auto', este contenido se trasladará automáticamen
 a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 -->
 
-### Merge directo a main 2026-09-12 (SRV-7 + BOT-07 + CI local)
+### UX-01 a UX-05 (2026-09-13)
+
+- Header de detalle compacto en viewport iPhone; bloque entorno con contraste en tema Modern.
+- Descubrir Desktop: clic abre detalle, doble clic selecciona; fuente por defecto **Ambos**.
+- Seguidos y Editorial con slime 3D (logo MIM) y cards con profundidad.
 
 - **SRV-7 UI:** `POST /api/server/sync`, panel Sync multiplayer en `/servers`, transporte alluser ZIP, test `server-sync-api.test.ts`. Diagnóstico only — no descarga mods.
 - **BOT-07:** cola `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch`, botón **MIM-Bot lote** en Descubrir (máx. 12).
 - **Pre-push gate:** `npm run pre:push` / `pre:push:quick` / `pre:push:lint` espejan CI local (excepto upload Codacy y eval live sin secrets).
 - **Codacy local:** `npm run codacy:diff` (ESLint estricto en diff), `codacy:cli` (`@codacy/analysis-cli` local; Windows omite Opengrep/Semgrep), `codacy:init` / `codacy:init:remote`, config en `.codacy/`.
 - **Fixture Server Manager:** SFTP de prueba ahora incluye `server.properties`, `logs/latest.log`, crash report y un zip en `backups/`. RCON real sigue ausente.
+- **ARCH-7 (CI Scoped):** Detector determinista de superficies afectadas `scripts/architecture/detect-affected-surfaces.js`, compuertas en GitHub Actions y suite `npm run test:scoped-ci`.
+- **ARCH-8 (Gobernanza de Versionado):** Documento formal de política SemVer `docs/architecture/versioning-policy.md` y sincronización transversal automática de todos los `package.json` de workspaces (`apps/*`, `packages/*`) en `scripts/release.js`.
 - **CI:** `eval:mimbot` estructural en test-and-evaluate; job opcional `mimbot-live-eval` (SAGE-05b).
 
 ### Planificación auditada y publicación manual por tag

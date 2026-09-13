@@ -14,6 +14,7 @@ export const DISCOVER_CACHE_KEYS = {
   category: "mim_discover_category",
   sort: "mim_discover_sort",
   sortDefaultMigration: "mim_discover_sort_default_v2",
+  sourceDefaultMigration: "mim_discover_source_default_v2",
   source: "mim_discover_source",
   page: "mim_discover_page",
   results: "mim_discover_results",
@@ -63,7 +64,7 @@ export const DEFAULT_DISCOVER_CACHE_STATE: DiscoverCacheState = {
   environment: "any",
   categories: [],
   sort: "newest",
-  source: "modrinth",
+  source: "all",
   page: 1,
   results: [],
   total: 0,
@@ -79,8 +80,8 @@ function parseJson(value: string | null): unknown {
 }
 
 export function parseDiscoverSource(value: string | null): DiscoverSource {
-  if (value === "curseforge" || value === "all" || value === "chunk") return value;
-  return "modrinth";
+  if (value === "curseforge" || value === "all" || value === "chunk" || value === "modrinth") return value;
+  return value == null ? "all" : "modrinth";
 }
 
 export function parseDiscoverSort(value: string | null): DiscoverSort | null {
@@ -151,6 +152,24 @@ function resolveCachedSort(storage: DiscoverStorage): DiscoverSort {
   return parsedSort;
 }
 
+function resolveCachedSource(storage: DiscoverStorage): DiscoverSource {
+  const rawSource = storage.getItem(DISCOVER_CACHE_KEYS.source);
+  const migrationApplied = storage.getItem(DISCOVER_CACHE_KEYS.sourceDefaultMigration) === "1";
+  storage.setItem(DISCOVER_CACHE_KEYS.sourceDefaultMigration, "1");
+
+  if (!rawSource) return "all";
+  if (
+    rawSource !== "modrinth" &&
+    rawSource !== "curseforge" &&
+    rawSource !== "all" &&
+    rawSource !== "chunk"
+  ) {
+    return "modrinth";
+  }
+  if (!migrationApplied && rawSource === "modrinth") return "all";
+  return rawSource;
+}
+
 export function readDiscoverCache(storage: DiscoverStorage): DiscoverCacheState {
   return {
     query: storage.getItem(DISCOVER_CACHE_KEYS.query) ?? "",
@@ -160,7 +179,7 @@ export function readDiscoverCache(storage: DiscoverStorage): DiscoverCacheState 
     environment: parseDiscoverEnvironment(storage.getItem(DISCOVER_CACHE_KEYS.environment)),
     categories: parseDiscoverStringArray(storage.getItem(DISCOVER_CACHE_KEYS.category)),
     sort: resolveCachedSort(storage),
-    source: parseDiscoverSource(storage.getItem(DISCOVER_CACHE_KEYS.source)),
+    source: resolveCachedSource(storage),
     page: parseDiscoverPage(storage.getItem(DISCOVER_CACHE_KEYS.page)),
     results: parseDiscoverResults(storage.getItem(DISCOVER_CACHE_KEYS.results)),
     total: parseDiscoverTotal(storage.getItem(DISCOVER_CACHE_KEYS.total)),

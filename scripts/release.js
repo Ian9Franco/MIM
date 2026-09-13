@@ -165,6 +165,26 @@ function updateVersion(newVersion, commitMessage = "", qualityGatesVerified = fa
   fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
   console.log(chalk.green(`  ✓ package.json actualizado a v${newVersion}`));
 
+  // Sincronizar package.json en workspaces (ARCH-8)
+  const workspacePkgPaths = [
+    path.join(process.cwd(), "apps", "desktop", "package.json"),
+    path.join(process.cwd(), "apps", "hub", "package.json"),
+    path.join(process.cwd(), "packages", "contracts-core", "package.json"),
+    path.join(process.cwd(), "packages", "network-resilience", "package.json"),
+    path.join(process.cwd(), "packages", "server-engine", "package.json"),
+  ];
+
+  for (const wPath of workspacePkgPaths) {
+    if (fs.existsSync(wPath)) {
+      try {
+        const wPkg = JSON.parse(fs.readFileSync(wPath, "utf-8"));
+        wPkg.version = newVersion;
+        fs.writeFileSync(wPath, JSON.stringify(wPkg, null, 2) + "\n");
+        console.log(chalk.green(`  ✓ ${path.relative(process.cwd(), wPath).replace(/\\/g, "/")} sincronizado a v${newVersion}`));
+      } catch {}
+    }
+  }
+
   const today = new Date().toISOString().slice(0, 10);
 
   // README.md

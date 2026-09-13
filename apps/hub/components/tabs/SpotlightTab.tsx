@@ -11,6 +11,7 @@ import {
 } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
 import { SpotlightSkeleton } from "../FomoSkeletons";
+import { MimSlimeMascot } from "../MimSlimeMascot";
 
 const PICKS_TRANSITION = { duration: 1.15, ease: [0.25, 1, 0.5, 1] as const };
 const PICKS_VARIANTS = {
@@ -68,18 +69,21 @@ export function SpotlightTab({
     >
       {/* Section header */}
       <div
-        className="border-l-2 rounded-r-lg p-3 mb-6 shrink-0"
+        className="border-l-2 rounded-r-lg p-3 mb-6 shrink-0 flex items-center gap-3"
         style={{
           background: "linear-gradient(to right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent)",
           borderColor: "var(--color-primary)"
         }}
       >
-        <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>
-          Showcases Spotlight
-        </p>
-        <h2 className="text-xs font-semibold text-white/95 mt-1">
-          Minecraft Mods e ideas editoriales en vivo.
-        </h2>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-mono uppercase tracking-wider font-bold" style={{ color: "var(--color-primary)" }}>
+            Showcases Spotlight
+          </p>
+          <h2 className="text-xs font-semibold text-white/95 mt-1">
+            Minecraft Mods e ideas editoriales en vivo.
+          </h2>
+        </div>
+        <MimSlimeMascot size={52} />
       </div>
 
       {/* Featured mods carousel */}

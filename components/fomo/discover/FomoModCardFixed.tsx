@@ -19,6 +19,7 @@ import { COLORS } from "@/theme/tokens";
 import { Chip } from "@/components/ui/primitives";
 import type { ModHit } from "@/lib/core/types";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
+import { activateDiscoverCard } from "@/lib/fomo/discoverCardActivation";
 
 interface FomoModCardFixedProps {
   mod:              ModHit;
@@ -28,11 +29,12 @@ interface FomoModCardFixedProps {
   onAddToCollection:(mod: ModHit) => void;
   isSelected?:      boolean;
   onToggleSelect?:  (mod: ModHit) => void;
+  detailsOpenForThisMod?: boolean;
 }
 
 export const FomoModCardFixed = memo(function FomoModCardFixed({
   mod, isDownloading, onDownload, onOpenVersions, onAddToCollection,
-  isSelected, onToggleSelect,
+  isSelected, onToggleSelect, detailsOpenForThisMod = false,
 }: FomoModCardFixedProps) {
   const { isProjectInDraft } = useActiveDraft();
   const isCurseForge = mod._source === "curseforge";
@@ -63,7 +65,13 @@ export const FomoModCardFixed = memo(function FomoModCardFixed({
 
   return (
     <article
-      onClick={() => onToggleSelect?.(mod)}
+      onClick={(event) => activateDiscoverCard({
+        clickDetail: event.detail,
+        detailsOpenForThisMod,
+        isSelected: !!isSelected,
+        openDetails: () => onOpenVersions(mod),
+        toggleSelect: onToggleSelect ? () => onToggleSelect(mod) : undefined,
+      })}
       className={`transition-all duration-200 relative group cursor-pointer hover-slime ${isSelected ? 'ring-2 ring-primary' : ''} ${
         isCurseForge 
           ? 'rounded-none border-2 border-orange-900/30' 

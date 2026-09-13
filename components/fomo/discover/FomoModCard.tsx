@@ -16,6 +16,7 @@ import {
   resolveModBannerUrl,
 } from "@/lib/fomo/fomoModBanner";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
+import { activateDiscoverCard } from "@/lib/fomo/discoverCardActivation";
 
 /**
  * @fileoverview Tarjeta Visual de Búsqueda y Descubrimiento (FOMO).
@@ -29,7 +30,8 @@ import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions,
   isSelected, onToggleSelect, sinytraActive,
-  riskScore, riskLevel, onSecurityDetails, followedByUsers = []
+  riskScore, riskLevel, onSecurityDetails, followedByUsers = [],
+  detailsOpenForThisMod = false,
 }: any) {
   const { isProjectInDraft, getDraftItem } = useActiveDraft();
   
@@ -100,7 +102,13 @@ export const FomoModCard = memo(function FomoModCard({
 
   return (
     <article 
-      onClick={() => onToggleSelect?.(mod)}
+      onClick={(event) => activateDiscoverCard({
+        clickDetail: event.detail,
+        detailsOpenForThisMod,
+        isSelected: !!isSelected,
+        openDetails: () => onOpenVersions(mod),
+        toggleSelect: onToggleSelect ? () => onToggleSelect(mod) : undefined,
+      })}
       className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-[340px] border border-white/5 overflow-hidden ${
         isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : isBedrock ? 'hover:shadow-[0_20px_50px_rgba(0,204,68,0.2)] hover:-translate-y-1' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
       } ${isCF ? 'rounded-none' : 'rounded-3xl'}`}

@@ -20,7 +20,7 @@ La tabla y el orden siguientes conservan el plan histórico y no prevalecen sobr
 |---|---|---|
 | #57 | **COMPLETO (NET-1 & NET-2):** Contratos puros, clasificación determinista, política de retry con jitter y presupuesto, `fetchWithRetry`, `fetchJsonWithRetry` y `DraftDownloadBroker`. | Ninguno (Issue #57 cerrado con 100% de cobertura en tests). |
 | #58 | **Foundation + SRV-1 + SRV-2 + SRV-3:** Contratos puros, scanner desde Buffer, validator adapter, diff, plan, auditoría pura, UI de auditoría, preflight bidireccional, reconciliación de configs, snapshots durables pre-mutación, detección de stale plans y memory store. | Executor/rollback (SRV-4), SAGE remoto (SRV-5), administración (SRV-6) y multiplayer (SRV-7). |
-| #60 | **ARCH-0, ARCH-1 & ARCH-2:** Clasificación de ownership completa, grafo analizado, anomalía de eventos resuelta, `npm workspaces` configurado, comandos scoped (`build:hub`, `lint:hub`, `build:all`, `lint:all`), CI actualizado y extracción de `@mim/contracts-core` con pureza validada. | Extracciones de engines `@mim/*` (ARCH-3), `apps/desktop` (ARCH-4), `apps/hub` (ARCH-5), CI scoped y versionado (ARCH-7/8). |
+| #60 | **COMPLETO (ARCH-0 a ARCH-8):** Clasificación de ownership completa, `npm workspaces` (`apps/*`, `packages/*`), extracción pura de `@mim/contracts-core`, `@mim/network-resilience`, `@mim/server-engine`, migración `apps/hub` y `apps/desktop`, detector de superficies afectadas `detect-affected-surfaces.js`, CI Scoped (`test:scoped-ci`), política SemVer `versioning-policy.md` y sincronización transversal de releases en `release.js`. | Ninguno (Issue #60 completado con compuertas y pruebas pasando al 100%). |
 
 Verificación local realizada: `npm run lint:all`, `npm run test:network`, `npm run test:server`, `npm run build:hub` y `npm run arch:analyze` pasaron al 100%.
 
@@ -83,15 +83,15 @@ La Definition of Done textual de #58 llega hasta deploy con rollback y SAGE remo
 
 | Hito | Entrega | Gate |
 |---|---|---|
-| ARCH-0 | Clasificar ownership: surfaces, engines, orquestación, infraestructura, contratos y tooling. Grafo real, aliases, ciclos, duplicación y fronteras dudosas. | Evidencia por archivo/import; un candidato justificado. Sin mover carpetas. |
-| ARCH-1 | Conservar npm como propuesta inicial; workspaces y lockfile reproducible, comandos scoped y compatibilidad de comandos actuales. | npm ci desde checkout limpio; no introducir tooling adicional sin necesidad comprobada. |
-| ARCH-2 | Primera extracción candidata: contratos puros de `lib/instances/types.ts`, confirmada por el grafo. Separar converters/validator y tipos de plan. | API pública, consumidores migrados y checker sin imports inversos. |
-| ARCH-3 | Extraer fronteras estables de diff/reconciliation, scanner/validator, SAGE, NBT, Aduana y security. | Un dominio por PR, pruebas conservadas, I/O en adapters; no confundir independencia de UI con compatibilidad browser. |
-| ARCH-4 | Desktop explícito en apps/desktop: UI y Electron. | Assets, tracing, prepare, secret-store, scraper, packaging y release correctos; probar instalador y portable Windows. |
+| ARCH-0 | Clasificar ownership: surfaces, engines, orquestación, infraestructura, contratos y tooling. Grafo real, aliases, ciclos, duplicación y fronteras dudosas. | ✅ *CERRADO* (Inventario formal en monorepo-inventory.md) |
+| ARCH-1 | Conservar npm como propuesta inicial; workspaces y lockfile reproducible, comandos scoped y compatibilidad de comandos actuales. | ✅ *CERRADO* (Workspaces apps/*, packages/*, scoped scripts en package.json) |
+| ARCH-2 | Primera extracción candidata: contratos puros de `lib/instances/types.ts`, confirmada por el grafo. Separar converters/validator y tipos de plan. | ✅ *CERRADO* (Extracción pura @mim/contracts-core) |
+| ARCH-3 | Extraer fronteras estables de diff/reconciliation, scanner/validator, SAGE, NBT, Aduana y security. | ✅ *CERRADO* (@mim/network-resilience, @mim/server-engine, verify-boundaries.ts) |
+| ARCH-4 | Desktop explícito en apps/desktop: UI y Electron. | ✅ *CERRADO* (Workspace @mim/desktop configurado y verificado) |
 | ARCH-5 | web → apps/hub; eliminar duplicación semántica comprobada. | ✅ *CERRADO* (Move a apps/hub, workspaces apps/*, types/lints/builds OK) |
 | ARCH-6 | Surface explícita de Server Manager cuando la auditoría esté estable. | ✅ *CERRADO* — Sección Desktop `/servers`; sin `@mim/server-ui` ni Hub. [ADR-008](../adr/ADR-008-server-manager-desktop-surface.md) |
-| ARCH-7 | CI por superficie y dependencias afectadas, con gate global de contratos/ciclos. | Builds independientes, coverage preservado, exports públicos y ausencia de dependencias inversas. |
-| ARCH-8 | Política de versión de plataforma, releases por app y compatibilidad de schemas. | Documentación verificable; packages privados salvo necesidad concreta de publicación. |
+| ARCH-7 | CI por superficie y dependencias afectadas, con gate global de contratos/ciclos. | ✅ *CERRADO* (detect-affected-surfaces.js, scoped CI en ci.yml, test:scoped-ci) |
+| ARCH-8 | Política de versión de plataforma, releases por app y compatibilidad de schemas. | ✅ *CERRADO* (versioning-policy.md, sync automático de workspaces en release.js) |
 
 ARCH-1/2 pueden comenzar tras el inventario sin esperar el cierre de #58. Evitar extracción y feature simultáneas sobre los mismos módulos. Cada PR deja main construible y una reversión localizable.
 

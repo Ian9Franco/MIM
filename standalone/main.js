@@ -3,6 +3,9 @@ const { fork } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+
+const SERVER_READY_ATTEMPTS = 80;
+const SERVER_READY_DELAY_MS = 250;
 const { runCurseForgeScraper } = require('./scraper');
 const { createSecretStore } = require('./secret-store');
 const { resolveTrustedPath } = require('./trusted-path');
@@ -126,26 +129,44 @@ function handleDeepLink(url) {
   }
 }
 
-// Start the Next.js standalone server as a background subprocess
+function resolveServerExecPath() {
+  if (!app.isPackaged) {
+    const fromNpm = process.env.npm_node_execpath;
+    if (fromNpm && fs.existsSync(fromNpm)) return { execPath: fromNpm, runAsNode: false };
+    return { execPath: 'node', runAsNode: false };
+  }
+  return { execPath: process.execPath, runAsNode: true };
+}
+
 function startNextServer(secretEnvironment = {}) {
   const serverPath = path.join(__dirname, '..', '.next', 'standalone', 'server.js');
   const serverDir = path.join(__dirname, '..', '.next', 'standalone');
-  
+
+  if (!fs.existsSync(serverPath)) {
+    console.error('[MIM] No existe .next/standalone/server.js.');
+    console.error('      Compilá Desktop primero: npm run build:standalone');
+    return false;
+  }
+
+  const { execPath, runAsNode } = resolveServerExecPath();
   console.log(`🚀 Spawning Next.js server from: ${serverPath}`);
   console.log(`Working directory (cwd): ${serverDir}`);
-  
+  console.log(`Runtime: ${execPath}${runAsNode ? ' (ELECTRON_RUN_AS_NODE)' : ''}`);
+
   serverProcess = fork(serverPath, [], {
     cwd: serverDir,
+    execPath,
     env: {
       ...process.env,
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       MIM_DESKTOP_RUNTIME: '1',
+      ...(runAsNode ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
       ...(resolvedPortableDir ? { MIM_PORTABLE_DIR: resolvedPortableDir } : {}),
       ...secretEnvironment
     },
-    silent: false // Lets us see server logs in the terminal
+    silent: false
   });
 
   // Escuchar peticiones del proceso Next.js (Scraping On-Demand)
@@ -180,19 +201,32 @@ function startNextServer(secretEnvironment = {}) {
   serverProcess.on('exit', (code) => {
     console.log(`Next.js standalone server exited with code ${code}`);
   });
+
+  return true;
 }
 
-// Check if Next.js server is fully booted and ready before loading the URL
-function waitForServer(callback) {
-  // We make a lightweight request to the offline root to confirm the server is responsive
-  const req = http.get(`http://127.0.0.1:${PORT}/`, (res) => {
-    // If we get any response, the server is ready!
+function waitForServer(callback, attempt = 0) {
+  if (serverProcess && (serverProcess.killed || serverProcess.exitCode != null)) {
+    console.error('[MIM] El servidor Next.js se cerró antes de quedar listo.');
+    app.quit();
+    return;
+  }
+
+  if (attempt >= SERVER_READY_ATTEMPTS) {
+    console.error(`[MIM] El servidor no respondió en http://127.0.0.1:${PORT} tras ${SERVER_READY_ATTEMPTS} intentos.`);
+    app.quit();
+    return;
+  }
+
+  const req = http.get(`http://127.0.0.1:${PORT}/`, () => {
     callback();
   });
 
   req.on('error', () => {
-    console.log('⏳ Waiting for local Next.js server to be ready...');
-    setTimeout(() => waitForServer(callback), 150);
+    if (attempt === 0 || attempt % 8 === 0) {
+      console.log(`⏳ Waiting for local Next.js server to be ready... (${attempt + 1}/${SERVER_READY_ATTEMPTS})`);
+    }
+    setTimeout(() => waitForServer(callback, attempt + 1), SERVER_READY_DELAY_MS);
   });
 }
 
@@ -269,8 +303,11 @@ app.whenReady().then(() => {
     console.error('Failed to initialize encrypted credential storage:', error);
   }
 
-  startNextServer(secretEnvironment);
-  
+  if (!startNextServer(secretEnvironment)) {
+    app.quit();
+    return;
+  }
+
   waitForServer(() => {
     console.log('✅ Server is ready! Launching window.');
     createWindow();

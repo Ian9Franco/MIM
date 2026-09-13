@@ -6,6 +6,7 @@ import { Archive, ArrowLeft, Bookmark, ChevronDown, ChevronRight, Compass, Folde
 import type { ModHit } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
 import { DefaultModIcon } from "../DefaultModIcon";
+import { MimSlimeMascot } from "../MimSlimeMascot";
 import { DraftDetailView, type DraftDetailModel } from "../DraftDetailView";
 import { CollectionsSkeleton } from "../FomoSkeletons";
 import type { HomeDraft } from "../../lib/drafts/draftContract";
@@ -108,8 +109,8 @@ export function CollectionsTab(p: Props) {
         </div>
         <AnimatePresence mode="wait">
           {view === "editorial" && <motion.section key="editorial" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-6">
-            {current ? <div><Title eyebrow="Selección actual" title="Lo nuevo de Modrinth" /><button type="button" onClick={() => { p.handleEnterCollection(current); }} className="mim-collection-hero mim-themed-card mt-2 w-full overflow-hidden rounded-2xl border border-border text-left">
-              <div className="relative aspect-[2.25/1] overflow-hidden bg-white/[.04]">{current.iconUrl ? <img src={current.iconUrl} alt="" className="h-full w-full object-cover" /> : <DefaultModIcon platform={current.source} />}<span className="absolute bottom-2 right-2 rounded-md border border-white/10 bg-black/65 px-2 py-1 text-[8px] font-mono text-white/80">{current.projectCount} proyectos</span></div>
+            {current ? <div><Title eyebrow="Selección actual" title="Lo nuevo de Modrinth" /><button type="button" onClick={() => { p.handleEnterCollection(current); }} className="mim-collection-hero mim-editorial-hero mim-themed-card mt-2 w-full overflow-hidden rounded-2xl border border-border text-left">
+              <div className="relative aspect-[2.25/1] overflow-hidden bg-white/[.04]">{current.iconUrl ? <img src={current.iconUrl} alt="" className="h-full w-full object-cover" /> : <DefaultModIcon platform={current.source} />}<span className="absolute bottom-2 right-2 rounded-md border border-white/10 bg-black/65 px-2 py-1 text-[8px] font-mono text-white/80">{current.projectCount} proyectos</span><div className="mim-editorial-hero-slime"><MimSlimeMascot size={72} /></div></div>
               <div className="flex items-center gap-3 p-4"><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-black text-white">{current.name}</h3><p className="mt-1 line-clamp-2 text-[9px] text-white/45">{current.description}</p></div><ChevronRight className="h-5 w-5 text-white/30" /></div>
             </button></div> : null}
             {!!recent.length && <div><Title eyebrow="Últimas semanas" title="Selecciones recientes" /><div className="mt-2 grid grid-cols-2 gap-2">{recent.map(c => <Tile key={c.id} c={c} open={(item) => { p.handleEnterCollection(item); }} />)}</div></div>}

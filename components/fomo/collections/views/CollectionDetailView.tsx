@@ -41,6 +41,7 @@ interface CollectionDetailViewProps {
   onOpenVersions: (mod: ModHit) => void;
   selectedMods: ModHit[];
   onToggleSelect?: (mod: ModHit) => void;
+  detailsProjectId?: string;
   sinytraActive?: boolean;
   libraryUpdates: Record<string, LibraryUpdateStatus>;
   handleRemoveModFromCollection: (collId: string, mod: ModHit) => void;
@@ -63,6 +64,7 @@ export function CollectionDetailView({
   onOpenVersions,
   selectedMods,
   onToggleSelect,
+  detailsProjectId,
   sinytraActive,
   libraryUpdates,
   handleRemoveModFromCollection,
@@ -295,6 +297,7 @@ export function CollectionDetailView({
                       onOpenVersions={onOpenVersions}
                       onAddToCollection={() => {}}
                       isSelected={selectedMods.some((m) => m.projectId === mod.projectId)}
+                      detailsOpenForThisMod={detailsProjectId === mod.projectId}
                       onToggleSelect={onToggleSelect}
                       sinytraActive={sinytraActive}
                       hasUpdateAvailable={Object.values(libraryUpdates).some(
@@ -336,6 +339,7 @@ export function CollectionDetailView({
                         onOpenVersions={onOpenVersions}
                         onAddToCollection={() => {}}
                         isSelected={selectedMods.some((m) => m.projectId === mod.projectId)}
+                        detailsOpenForThisMod={detailsProjectId === mod.projectId}
                         onToggleSelect={onToggleSelect}
                         sinytraActive={sinytraActive}
                         hasUpdateAvailable={Object.values(libraryUpdates).some(

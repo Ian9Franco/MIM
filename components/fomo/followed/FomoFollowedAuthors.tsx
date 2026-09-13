@@ -16,6 +16,7 @@ import { supabase } from "@/lib/core/supabaseClient";
 import { fetchJsonWithRetry } from "@/lib/core/fetchJsonWithRetry";
 import { FollowedProjectCard, FollowedAuthorCard } from "@/components/fomo/followed/FomoFollowedComponents";
 import { PillToggleGroup } from "@/components/ui/primitives";
+import { MimSlimeMascot } from "@/components/ui/MimSlimeMascot";
 import { FomoFollowedRankings } from "@/components/fomo/followed/FomoFollowedRankings";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
 import type { ModHit } from "@/lib/core/types";
@@ -364,7 +365,7 @@ export function FomoFollowedAuthors({
   }, [allSharedMods, currentUser?.id]);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in">
+    <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in mim-followed-shell">
       <style>{`
         @keyframes slideInFromRight {
           from { transform: translateX(30px); opacity: 0; }
@@ -384,7 +385,18 @@ export function FomoFollowedAuthors({
         }
       `}</style>
 
-      <div className="px-6 pt-5 pb-3 border-b flex items-center justify-between shrink-0" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
+      <div className="px-6 pt-5 pb-3 border-b shrink-0 space-y-3" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-primary/80">Seguidos</p>
+            <h2 className="text-lg font-headline font-black text-white truncate">Tu radar de proyectos</h2>
+            <p className="text-[11px] text-white/45 mt-0.5">
+              {followedMods.length} proyectos · {followedAuthors.length} autores
+            </p>
+          </div>
+          <MimSlimeMascot size={64} />
+        </div>
+        <div className="flex items-center justify-between">
         <PillToggleGroup 
           options={[
             { value: "projects", label: `Proyectos (${followedMods.length})`, icon: <CookingPot className="w-4 h-4" /> },
@@ -402,6 +414,7 @@ export function FomoFollowedAuthors({
         {subTab === "projects" && followedMods.length > 0 && (
           <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60 cursor-pointer"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
         )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">

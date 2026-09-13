@@ -33,20 +33,11 @@ const SOURCE_OPTIONS = [
   { value: "chunk", label: "Bedrock", icon: <BedrockIcon /> },
 ];
 
-function sourceOptionsFor(discover: FomoDiscoverApi) {
-  return SOURCE_OPTIONS.filter(
-    (s) =>
-      s.value !== "all" ||
-      (discover.query.length > 0 &&
-        (discover.source === "all" || discover.query.startsWith("author:")))
-  );
-}
-
 /** Barra de fuente dentro de Explorar (usa API discover directamente). */
 export function FomoDiscoverSourceBar({ discover }: { discover: FomoDiscoverApi }) {
   return (
     <PillToggleGroup
-      options={sourceOptionsFor(discover)}
+      options={SOURCE_OPTIONS}
       value={discover.source}
       onChange={(v: string) =>
         discover.setSource(v as "modrinth" | "curseforge" | "all" | "chunk")

@@ -103,7 +103,7 @@ export function ModDetailsHeader({
 
   return (
     <div
-      className="relative overflow-hidden border-b border-white/[0.06] shrink-0 select-none px-5 pt-3 pb-4"
+      className="mim-details-header relative overflow-hidden border-b border-white/[0.06] shrink-0 select-none px-5 pt-3 pb-4"
     >
       {/* Banner Image or Fallback */}
       <div
@@ -199,7 +199,7 @@ export function ModDetailsHeader({
       <CollectibleSurface key={`${selectedMod._source}:${selectedMod.projectId}`} detail className="relative z-10">
         {bannerUrl && (
           <div
-            className={`relative overflow-hidden rounded-xl mb-3 bg-surface ${
+            className={`mim-details-banner-copy relative overflow-hidden rounded-xl mb-3 bg-surface ${
               isReadingTab ? "h-20" : "h-24 sm:h-28"
             }`}
           >
@@ -252,7 +252,7 @@ export function ModDetailsHeader({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">
+          <span className="mim-details-kicker text-[9px] font-mono uppercase tracking-wider text-orange-400 font-semibold">
             Detalles del Proyecto
           </span>
           <h3
@@ -306,14 +306,14 @@ export function ModDetailsHeader({
       {/* Actions row: Share, Favorite, Follow and External Platform link */}
       <div
         onPointerDown={(e) => e.stopPropagation()}
-        className={`relative z-10 flex flex-col ${isReadingTab ? "gap-1 mt-2" : "gap-1.5 mt-4"}`}
+        className={`mim-details-actions relative z-10 flex flex-col ${isReadingTab ? "gap-1 mt-2" : "gap-1.5 mt-4"}`}
       >
         {session && (
           <div className="flex gap-2">
             {/* Share button */}
             <button
               onClick={handleShareClick}
-              className={`flex-1 flex items-center justify-center gap-1.5 ${
+              className={`mim-details-action-btn flex-1 flex items-center justify-center gap-1.5 ${
                 isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
               } font-black uppercase tracking-wider transition-all border ${
                 communitySharedByMe
@@ -328,13 +328,13 @@ export function ModDetailsHeader({
               ) : (
                 <CircleFadingPlus className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span>{communitySharedByMe ? "Dejar de compartir" : "Compartir"}</span>
+              <span className="mim-details-action-label">{communitySharedByMe ? "Dejar de compartir" : "Compartir"}</span>
             </button>
 
             {/* Favorite button */}
             <button
               onClick={() => onToggleFavorite(selectedMod)}
-              className={`flex-1 flex items-center justify-center gap-1.5 ${
+              className={`mim-details-action-btn flex-1 flex items-center justify-center gap-1.5 ${
                 isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
               } font-black uppercase tracking-wider transition-all border ${
                 isFavorited
@@ -344,7 +344,7 @@ export function ModDetailsHeader({
               type="button"
             >
               <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-red-400 text-red-400" : ""}`} />
-              <span>{isFavorited ? "Guardado" : "Favorito"}</span>
+              <span className="mim-details-action-label">{isFavorited ? "Guardado" : "Favorito"}</span>
             </button>
           </div>
         )}
@@ -355,12 +355,12 @@ export function ModDetailsHeader({
             href={projectPlatformUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex-1 flex items-center justify-center gap-1.5 ${
+            className={`mim-details-action-btn flex-1 flex items-center justify-center gap-1.5 ${
               isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
             } font-bold uppercase tracking-wider transition-all border bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20`}
           >
             <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-            <span>Ver en {selectedMod?._source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
+            <span className="mim-details-action-label">Ver en {selectedMod?._source === "curseforge" ? "CurseForge" : "Modrinth"}</span>
           </a>
 
           {onSearchMod && (
@@ -369,13 +369,13 @@ export function ModDetailsHeader({
                 onSearchMod(selectedMod.title);
                 closeWithSound();
               }}
-              className={`flex-1 flex items-center justify-center gap-1.5 ${
+              className={`mim-details-action-btn flex-1 flex items-center justify-center gap-1.5 ${
                 isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
               } font-bold uppercase tracking-wider transition-all border bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white`}
               type="button"
             >
               <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span>Comparar (Ambos)</span>
+              <span className="mim-details-action-label">Comparar (Ambos)</span>
             </button>
           )}
         </div>
@@ -391,7 +391,7 @@ export function ModDetailsHeader({
                 authorPlatform
               )
             }
-            className={`w-full flex items-center justify-center gap-1.5 ${
+            className={`mim-details-follow mim-details-action-btn w-full flex items-center justify-center gap-1.5 ${
               isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
             } font-bold uppercase tracking-wider transition-all border ${
               isFollowingAuthor
@@ -405,7 +405,7 @@ export function ModDetailsHeader({
             ) : (
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
             )}
-            <span>{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
+            <span className="mim-details-action-label">{isFollowingAuthor ? `Siguiendo a ${authorName}` : `Seguir a ${authorName}`}</span>
           </button>
         )}
 
@@ -424,7 +424,7 @@ export function ModDetailsHeader({
             return (
               <button
                 onClick={() => onToggleFollowAuthor(followedKey, orgUrl, orgIcon, authorPlatform)}
-                className={`w-full flex items-center justify-center gap-1.5 ${
+                className={`mim-details-follow mim-details-action-btn w-full flex items-center justify-center gap-1.5 ${
                   isReadingTab ? "h-7 px-2 text-[9px] rounded-lg" : "h-8 px-3 text-[10px] rounded-xl"
                 } font-bold uppercase tracking-wider transition-all border ${
                   isFollowingOrg
@@ -438,7 +438,7 @@ export function ModDetailsHeader({
                 ) : (
                   <UserPlus className="w-3.5 h-3.5 shrink-0" />
                 )}
-                <span>{isFollowingOrg ? `Siguiendo a ${orgName}` : `Seguir a ${orgName}`}</span>
+                <span className="mim-details-action-label">{isFollowingOrg ? `Siguiendo a ${orgName}` : `Seguir a ${orgName}`}</span>
               </button>
             );
           })()

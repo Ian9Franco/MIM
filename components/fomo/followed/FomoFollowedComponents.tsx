@@ -32,7 +32,7 @@ export function FollowedProjectCard({ mod, updateInfo, isRecent, isDownloading, 
   const projectType = inferPrimaryProjectType(mod);
 
   return (
-    <div onClick={() => onOpenVersions?.(mod)} className={`group relative rounded-2xl border overflow-hidden flex flex-col transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-foreground/5 border-foreground/10 hover:border-foreground/20 shadow-sm"}`}>
+    <div onClick={() => onOpenVersions?.(mod)} className={`mim-followed-card group relative rounded-2xl border overflow-hidden flex flex-col transition-all cursor-pointer ${updateInfo ? "border-emerald-500/30 bg-emerald-500/5 shadow-lg" : "bg-foreground/5 border-foreground/10 hover:border-foreground/20 shadow-sm"}`}>
       <FomoModBannerStrip
         bannerUrl={bannerUrl}
         projectId={mod.projectId}
@@ -162,7 +162,7 @@ export function FollowedAuthorCard({ author, icons = [], onSearch, onUnfollow, o
   }, [icons.length]);
 
   return (
-    <div className="group relative rounded-2xl border border-foreground/10 bg-foreground/5 p-4 flex items-center justify-between transition-all hover:bg-foreground/10 shadow-sm">
+    <div className="mim-followed-card group relative rounded-2xl border border-foreground/10 bg-foreground/5 p-4 flex items-center justify-between transition-all hover:bg-foreground/10 shadow-sm">
       <div className="flex items-center gap-4 relative z-10 min-w-0 pr-3">
         <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
           {icons.length > 0 ? (

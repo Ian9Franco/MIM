@@ -180,7 +180,7 @@ npm run package:win
 
 ### Opción B: Probar la Versión Standalone sin crear instalador
 ```bash
-# Paso 1: Preparar la build standalone
+# Paso 1: Preparar la build standalone (obligatorio; sin esto Electron entra en espera infinita)
 npm run build:standalone
 
 # Paso 2: Abrir Electron
@@ -304,14 +304,14 @@ npx ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/_
 - Credenciales y clave SSH son **solo locales**; no uses esos valores en producción.
 - La UI en `:3101` no es el `.exe` empaquetado; para Electron probá `npm run start:standalone` aparte.
 
-### Cómo vamos / qué falta (cheat sheet 12-sep-2026)
+### Cómo vamos / qué falta (cheat sheet 13-sep-2026)
 
-| Hecho (main) | Local sin merge | Falta para cerrar |
-| :--- | :--- | :--- |
-| SRV-1–6 UI (#89 SAGE, #90 Admin) | SRV-7 API+panel, BOT-07 lote, `pre:push` | PR de ese working tree |
-| Fixture auditoría/deploy | Fixture SAGE/Admin + alluser | Test manual tuyo + VPS real |
-| `eval:mimbot` estructura | Job live opcional | Secrets + umbrales SAGE-05b |
-| | | ARCH-7/8, REC-02–04, UX, RFCs |
+| Hecho (main / local) | Falta para cerrar |
+| :--- | :--- |
+| SRV-1–7 UI, BOT-07, `pre:push`, UX-01–05 | Validación VPS, descarga mods SRV-7, Electron pack |
+| Fixture Server Manager completa | Recorrido SFTP real |
+| `eval:mimbot` estructura | Secrets + umbrales SAGE-05b |
+| UX header/contraste/clics/filtro/seguidos | ARCH-7/8, REC-02–04, RFCs |
 
 Documentación maestra de pendientes: [docs/PENDING.md](docs/PENDING.md). Matriz Server Manager: [ROADMAP §9](docs/planning/ROADMAP.md).
 

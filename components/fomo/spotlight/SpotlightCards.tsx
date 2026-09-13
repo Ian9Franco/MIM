@@ -42,7 +42,7 @@ export function SpotlightCollectionCard({
 
   return (
     <div
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[320px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="mim-editorial-card-3d w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[320px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,
@@ -160,7 +160,7 @@ export function SpotlightEditorialCard({
 
   return (
     <div
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+      className="mim-editorial-card-3d w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
       style={{
         background: cardBg,
         border: cardBorder,

@@ -158,6 +158,11 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/architecture-boundaries.test.ts"]
     },
     {
+      name: "Scoped CI Detection & Surface Impact (ARCH-7)",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/scoped-ci-detection.test.ts"]
+    },
+    {
       name: "Secure Settings Migration & Secret Boundary",
       cmd: "npx",
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/secure-settings.test.ts"]

@@ -464,6 +464,9 @@ function FomoSidebarDiscoverBranchInner({
                           isSelected={discover.selectedMods.some(
                             (s) => s.projectId === mod.projectId
                           )}
+                          detailsOpenForThisMod={
+                            discover.selectingVersionFor?.projectId === mod.projectId
+                          }
                           onToggleSelect={discover.toggleModSelection}
                           sinytraActive={discover.sinytraActive}
                           onAddToCollection={() => {
@@ -511,6 +514,7 @@ function FomoSidebarDiscoverBranchInner({
           <div id="onboarding-fomo-collections" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "collections" ? "flex" : "none" }}>
             <FomoCollections
               {...discover}
+              detailsProjectId={discover.selectingVersionFor?.projectId}
               onStatus={showStatus}
               gameVersion={discover.gameVersions[0]}
               addingForMod={m.addingToCollectionFor}

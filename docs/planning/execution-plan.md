@@ -205,12 +205,13 @@ Independientes entre sí. Cada una es un PR pequeño. Orden sugerido por riesgo 
 
 ---
 
-## 5. Fase 4 — UX (PENDING §6). Sin dependencias. Un cambio por PR.
+## 5. Fase 4 — UX (PENDING §6). Cerrada 2026-09-13.
 
-- **T4.1** Header móvil en Safari al abrir detalle de mod (MIMhub). Archivo en `web/components/`; verificar con viewport 390×844.
-- **T4.2** Contraste bloque Cliente/Servidor en tema Modern (MIMhub).
-- **T4.3** Discover: 1 clic abre detalle, doble clic selecciona (Desktop, `components/fomo/`).
-- **T4.4** Filtro dual Modrinth+CurseForge por defecto (Desktop).
+- **T4.1 / UX-01** Header móvil compacto en detalle de mod (`ModDetailsHeader` + CSS ≤430px).
+- **T4.2 / UX-02** Contraste bloque Cliente/Servidor en tema Modern (`mim-env-tone-*` + `mim-env-sides`).
+- **T4.3 / UX-03** Discover: 1 clic abre detalle, doble clic selecciona (`activateDiscoverCard`).
+- **T4.4 / UX-04** Filtro dual Ambos por defecto (Desktop `useFomoFilters` + Hub cache).
+- **T4.5 / UX-05** Seguidos + Editorial con slime 3D (Desktop Spotlight/Followed, Hub Spotlight/Colecciones).
 
 ---
 

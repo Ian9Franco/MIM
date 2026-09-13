@@ -1,6 +1,6 @@
 # SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
-> **Evaluation Date:** 2026-09-11  
+> **Evaluation Date:** 2026-09-13  
 > **Regression gate (`crash-corpus-regression.json`):** 125 templated cases — CI only, not real captured logs  
 > **Real corpus (`crash-corpus.json`):** 0 cases — add server/client logs here when available  
 > **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; not mixed into this file yet  
@@ -64,7 +64,7 @@ Near-duplicate prefix groups:
 | **Top-1 atribución (con culpable)** | **71.4%** | informativo | 50/70 |
 | **Top-3 atribución (con culpable)** | **100.0%** | informativo | 70/70 |
 | **Acierto sistémico sin culpable** | **100.0%** | informativo | 55/55 |
-| **Mean Inference Latency** | **0.09 ms** | < 15.0 ms | ✅ Pass (0.09 ms) |
+| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ✅ Pass (0.05 ms) |
 
 ### Métricas desglosadas (SAGE-02)
 

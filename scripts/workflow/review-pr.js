@@ -22,6 +22,7 @@ const { execFileSync } = require("child_process");
 const {
   REPO_ROOT,
   log,
+  runAsyncCmd,
   runGates,
   saveGateFailureLog,
   PR_AUDIT_GATES,

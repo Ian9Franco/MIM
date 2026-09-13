@@ -666,6 +666,68 @@ html, body {
   border-color: rgba(249, 115, 22, .3);
   background: rgba(249, 115, 22, .16);
 }
+
+@media (max-width: 430px) {
+  .mim-details-header {
+    padding: 6px 16px 8px;
+  }
+  .mim-details-header .mim-details-banner-copy,
+  .mim-details-header .mim-details-kicker {
+    display: none;
+  }
+  .mim-details-header .mim-mod-icon-3d {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .mim-details-header .mim-details-actions {
+    margin-top: 8px;
+    gap: 6px;
+  }
+  .mim-details-header .mim-details-action-label {
+    display: none;
+  }
+  .mim-details-header .mim-details-action-btn {
+    height: 2rem;
+    min-height: 2rem;
+    padding-inline: 0.5rem;
+    flex: 1;
+  }
+  .mim-details-header .mim-details-follow {
+    display: none;
+  }
+}
+
+.mim-env-sides {
+  color: color-mix(in srgb, var(--color-foreground) 78%, transparent);
+}
+.mim-env-sides .mim-env-side-kicker {
+  color: color-mix(in srgb, var(--color-foreground) 48%, transparent);
+}
+
+.mim-slime-stage {
+  perspective: 640px;
+  flex-shrink: 0;
+}
+.mim-slime-orb {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: mim-slime-spin 8.5s ease-in-out infinite;
+  filter: drop-shadow(0 14px 18px color-mix(in srgb, var(--color-primary) 35%, transparent));
+}
+.mim-slime-face {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: bottom center;
+}
+@keyframes mim-slime-spin {
+  0%, 100% { transform: rotateY(-18deg) rotateX(8deg) translateZ(0); }
+  50% { transform: rotateY(18deg) rotateX(-6deg) translateZ(12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mim-slime-orb { animation: none; }
+}
 [data-theme="modern"] .mim-details-ambient {
   opacity: .48;
 }
@@ -726,29 +788,29 @@ html, body {
   border-color: #a78bfa;
 }
 [data-theme="modern"] .mim-env-tone-both {
-  border-color: #fdba74;
-  background: #fff7ed;
-  color: #7c2d12;
+  border-color: #c2410c !important;
+  background: #ffedd5 !important;
+  color: #7c2d12 !important;
 }
-[data-theme="modern"] .mim-env-tone-both .mim-env-kicker { color: #c2410c; }
-[data-theme="modern"] .mim-env-tone-both .mim-env-title { color: #9a3412; }
-[data-theme="modern"] .mim-env-tone-both .mim-env-desc { color: #7c2d12; opacity: 0.88; }
+[data-theme="modern"] .mim-env-tone-both .mim-env-kicker { color: #9a3412 !important; }
+[data-theme="modern"] .mim-env-tone-both .mim-env-title { color: #7c2d12 !important; }
+[data-theme="modern"] .mim-env-tone-both .mim-env-desc { color: #9a3412 !important; opacity: 1; }
 [data-theme="modern"] .mim-env-tone-client {
-  border-color: #7dd3fc;
-  background: #eff6ff;
-  color: #0c4a6e;
+  border-color: #0369a1 !important;
+  background: #e0f2fe !important;
+  color: #0c4a6e !important;
 }
-[data-theme="modern"] .mim-env-tone-client .mim-env-kicker { color: #0369a1; }
-[data-theme="modern"] .mim-env-tone-client .mim-env-title { color: #075985; }
-[data-theme="modern"] .mim-env-tone-client .mim-env-desc { color: #0c4a6e; opacity: 0.88; }
+[data-theme="modern"] .mim-env-tone-client .mim-env-kicker { color: #075985 !important; }
+[data-theme="modern"] .mim-env-tone-client .mim-env-title { color: #0c4a6e !important; }
+[data-theme="modern"] .mim-env-tone-client .mim-env-desc { color: #075985 !important; opacity: 1; }
 [data-theme="modern"] .mim-env-tone-server {
-  border-color: #6ee7b7;
-  background: #ecfdf5;
-  color: #064e3b;
+  border-color: #047857 !important;
+  background: #d1fae5 !important;
+  color: #064e3b !important;
 }
-[data-theme="modern"] .mim-env-tone-server .mim-env-kicker { color: #047857; }
-[data-theme="modern"] .mim-env-tone-server .mim-env-title { color: #065f46; }
-[data-theme="modern"] .mim-env-tone-server .mim-env-desc { color: #064e3b; opacity: 0.88; }
+[data-theme="modern"] .mim-env-tone-server .mim-env-kicker { color: #065f46 !important; }
+[data-theme="modern"] .mim-env-tone-server .mim-env-title { color: #064e3b !important; }
+[data-theme="modern"] .mim-env-tone-server .mim-env-desc { color: #065f46 !important; opacity: 1; }
 [data-theme="modern"] .mim-env-tone-optional {
   border-color: #d8b4fe;
   background: #faf5ff;
@@ -840,6 +902,18 @@ html, body {
   box-shadow: 0 16px 28px -18px color-mix(in srgb, var(--color-primary) 35%, rgba(0, 0, 0, .65)),
     0 7px 12px -9px rgba(0, 0, 0, .45);
   transform: translateZ(0);
+  transform-style: preserve-3d;
+}
+.mim-editorial-hero {
+  position: relative;
+  overflow: hidden;
+}
+.mim-editorial-hero-slime {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .mim-collection-card {

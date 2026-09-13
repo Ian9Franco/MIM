@@ -2,7 +2,7 @@
 
 > **Propósito:** Este documento consolida punto por punto todo el trabajo pendiente en el proyecto, organizado por áreas de dominio, con enlaces directos a las especificaciones y planes detallados donde se profundiza cada tema.
 
-> **Snapshot 2026-09-12:** Issue #58 tiene UI Desktop para auditoría, deploy, SAGE, admin y sync multiplayer (SRV-7 en `main`). BOT-07 (cola + explain-batch + lote) y gates locales `pre:push` / `codacy:diff` / `codacy:cli` en `main`. Pendiente: validación en hosting real, descarga automática de mods y empaquetado Electron.
+> **Snapshot 2026-09-13:** UX-01 a UX-05 cerrados en código (header móvil, contraste Modern, clics Descubrir, filtro Ambos, Seguidos/Editorial 3D). Issue #58 sigue abierto: validación VPS, descarga automática de mods y empaquetado Electron.
 
 ---
 
@@ -30,14 +30,19 @@
 
 ---
 
-## 2. 📦 Arquitectura de Monorepo & Workspaces (Issue #60)
+## 2. 📦 Arquitectura de Monorepo & Workspaces (Issue #60) — ✅ CERRADO
 
-| Ítem Pendiente | Estado | ¿Dónde se profundiza? |
+| Ítem | Estado | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
+| **Clasificación e Inventario de Grafo:** Inventario exhaustivo y taxonomía de ownership. | `ARCH-0` (✅ Cerrado) | 📦 [monorepo-inventory.md](./architecture/monorepo-inventory.md) |
+| **Workspaces y Comandos Scoped:** `npm workspaces` (`apps/*`, `packages/*`), comandos `build:hub`, `lint:hub`, `build:all`, `lint:all`. | `ARCH-1` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **Extracción de Contratos Puros:** Extracción de `@mim/contracts-core` con pureza validada. | `ARCH-2` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **Fronteras de Engines:** Extracción y barreras para `@mim/network-resilience`, `@mim/server-engine` y motores core. | `ARCH-3` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **Superficie Desktop Explícita:** Definición formal y empaquetado de `apps/desktop`. | `ARCH-4` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 | **Mover `web/` a `apps/hub`:** Trasladar la aplicación PWA/Web al workspace `apps/hub`, unificando aliases y eliminando dependencias duplicadas. | `ARCH-5` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md)<br/>📦 [monorepo-inventory.md](./architecture/monorepo-inventory.md) |
 | **Surface explícita de Server Manager:** Sección Desktop `/servers` (no Hub, no app separada). Ver [ADR-008](./adr/ADR-008-server-manager-desktop-surface.md). | `ARCH-6` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
-| **CI Scoped por Superficie:** Pipeline de GitHub Actions que solo ejecute builds/tests de los packages y apps afectados por cada commit. | `ARCH-7` | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
-| **Versionado Semántico Independiente:** Política de releases separadas por app/package sin forzar un bump global de versión. | `ARCH-8` | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **CI Scoped por Superficie:** Detector determinista `detect-affected-surfaces.js`, pipeline GitHub Actions por superficie y suite `test:scoped-ci`. | `ARCH-7` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **Versionado Semántico & Releases:** Política SemVer formalizada ([versioning-policy.md](./architecture/versioning-policy.md)) y sincronización transversal de releases en `release.js`. | `ARCH-8` (✅ Cerrado) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md)<br/>📘 [versioning-policy.md](./architecture/versioning-policy.md) |
 
 ---
 
@@ -130,13 +135,13 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 
 ## 6. 🎨 UI / UX & Experiencia de Usuario
 
-| Ítem Pendiente | Plataforma | ¿Dónde se profundiza? |
+| Ítem | Estado | Plataforma |
 | :--- | :--- | :--- |
-| **Ajuste de Header en Móvil:** Reducir la altura del encabezado en Safari/iOS al abrir detalles de mod para no tapar la descripción/versiones. | MIMhub Mobile | 🎨 [ux-feedback.md](./planning/ux-feedback.md) |
-| **Contraste en Tema Modern:** Mejorar legibilidad del bloque de entorno (Cliente/Servidor) sobre fondo claro. | MIMhub Web | 🎨 [ux-feedback.md](./planning/ux-feedback.md) |
-| **Selección y Navegación en Descubrir:** 1 clic para abrir detalles, doble clic para seleccionar mod. | MIM Desktop | 🎨 [ux-feedback.md](./planning/ux-feedback.md) |
-| **Filtro Dual por Defecto:** Activar búsqueda simultánea en Modrinth y CurseForge por defecto al buscar contenido. | MIM Desktop | 🎨 [ux-feedback.md](./planning/ux-feedback.md) |
-| **Rediseño de Seguidos & Editorial:** Nueva interfaz de proyectos seguidos y showcase 3D para sección editorial. | MIMhub / Desktop | 🎨 [ux-feedback.md](./planning/ux-feedback.md) |
+| **UX-01 Header móvil** en detalle de mod (Safari/iPhone). | ✅ Cerrado | MIMhub |
+| **UX-02 Contraste entorno** Cliente/Servidor en tema Modern. | ✅ Cerrado | MIMhub |
+| **UX-03 Clic/doble clic** en Descubrir. | ✅ Cerrado | MIM Desktop |
+| **UX-04 Filtro Ambos** Modrinth+CurseForge por defecto. | ✅ Cerrado | Desktop / Hub |
+| **UX-05 Seguidos + Editorial** con slime 3D. | ✅ Cerrado (primera pasada visual) | Desktop / Hub |
 
 ---
 

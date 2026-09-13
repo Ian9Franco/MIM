@@ -17,6 +17,7 @@ import {
   type DiscoverFilters,
 } from "../../apps/hub/lib/discover/discoverSearch";
 import { HOME_DISCOVER_PUBLIC_KEYS } from "../../apps/hub/hooks/useHomeDiscover";
+import { activateDiscoverCard } from "../../lib/fomo/discoverCardActivation";
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -123,6 +124,18 @@ function testCorruptCacheJson(): void {
 function testInvalidSource(): void {
   const cache = readDiscoverCache(new MemoryStorage({ [DISCOVER_CACHE_KEYS.source]: "evil" }));
   assertEqual(cache.source, "modrinth", "invalid source must fall back to Modrinth");
+}
+
+function testSourceDefaultIsBothProviders(): void {
+  const empty = readDiscoverCache(new MemoryStorage());
+  assertEqual(empty.source, "all", "missing source must default to Ambos");
+
+  const storage = new MemoryStorage({ [DISCOVER_CACHE_KEYS.source]: "modrinth" });
+  const firstRead = readDiscoverCache(storage);
+  assertEqual(firstRead.source, "all", "legacy Modrinth default must migrate to Ambos");
+  storage.setItem(DISCOVER_CACHE_KEYS.source, "modrinth");
+  const secondRead = readDiscoverCache(storage);
+  assertEqual(secondRead.source, "modrinth", "explicit Modrinth must survive after migration");
 }
 
 function testInvalidPage(): void {
@@ -262,6 +275,25 @@ function testInitialSearchCompatibility(): void {
   assert(!shouldRunInitialDiscoverSearch([mod("cached", "modrinth")]), "cached results must suppress the first automatic search");
 }
 
+function testDiscoverCardActivation(): void {
+  const runCase = (
+    label: string,
+    input: { clickDetail: number; detailsOpenForThisMod: boolean; isSelected: boolean },
+    expected: "open" | "select" | "none",
+  ) => {
+    let action: "open" | "select" | "none" = "none";
+    activateDiscoverCard({
+      ...input,
+      openDetails: () => { action = "open"; },
+      toggleSelect: () => { action = "select"; },
+    });
+    assertEqual(action, expected, label);
+  };
+  runCase("single click opens details", { clickDetail: 1, detailsOpenForThisMod: false, isSelected: false }, "open");
+  runCase("click while details open selects", { clickDetail: 1, detailsOpenForThisMod: true, isSelected: false }, "select");
+  runCase("double click selects", { clickDetail: 2, detailsOpenForThisMod: false, isSelected: false }, "select");
+}
+
 function testPublicContract(): void {
   const expected = [
     "discoverQuery", "setDiscoverQuery", "discoverType", "setDiscoverType",
@@ -280,6 +312,7 @@ async function run(): Promise<void> {
   testDeterministicInterleave();
   testCorruptCacheJson();
   testInvalidSource();
+  testSourceDefaultIsBothProviders();
   testInvalidPage();
   testInvalidTotal();
   testInvalidPersistedFilters();
@@ -295,8 +328,9 @@ async function run(): Promise<void> {
   testEndpointAllowlist();
   await testBedrockEndpoint();
   testInitialSearchCompatibility();
+  testDiscoverCardActivation();
   testPublicContract();
-  console.log("✓ Home Discover boundary tests passed (20 cases)");
+  console.log("✓ Home Discover boundary tests passed (22 cases)");
 }
 
 void run().catch((error: unknown) => {

@@ -72,7 +72,7 @@ function testAuditFlagReportsBothCorpora(): void {
   const run = spawnSync(
     "npx",
     ["ts-node", "--project", "tsconfig.scripts.json", script, "--audit"],
-    { encoding: "utf8" },
+    { encoding: "utf8", shell: true },
   );
   assert.equal(run.status, 0, run.stderr || run.stdout);
   assert.match(run.stdout, /Regression fixture/);
@@ -86,7 +86,7 @@ function testHoldoutFlagIsEmptyAndUngated(): void {
   const run = spawnSync(
     "npx",
     ["ts-node", "--project", "tsconfig.scripts.json", script, "--holdout"],
-    { encoding: "utf8" },
+    { encoding: "utf8", shell: true },
   );
   assert.equal(run.status, 0, run.stderr || run.stdout);
   assert.match(run.stdout, /Real holdout is empty/);

@@ -118,6 +118,7 @@
     "appId": "com.mim.app",
     "productName": "MIM",
     "asar": false,
+    "npmRebuild": false,
     "directories": {
       "output": "dist"
     },

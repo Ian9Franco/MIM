@@ -50,6 +50,20 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # ssh2 pulls optional native dep cpu-features, which fails to rebuild against
+      # Electron 42 headers on MSVC (__builtin_frame_address). The Next server is
+      # forked as plain Node (standalone/main.js), so Electron ABI rebuild is
+      # unnecessary; removing the optional addon makes ssh2 use its JS fallback.
+      - name: Drop optional cpu-features before Electron packaging
+        shell: pwsh
+        run: |
+          if (Test-Path node_modules/cpu-features) {
+            Remove-Item -Recurse -Force node_modules/cpu-features
+            Write-Host "Removed node_modules/cpu-features"
+          } else {
+            Write-Host "cpu-features not present; nothing to remove"
+          }
+
       - name: Package Windows Standalone
         run: npm run package:win
         env:

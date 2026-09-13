@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.4.7",
+  "version": "11.4.8",
   "private": true,
   "repository": {
     "type": "git",
@@ -149,7 +149,6 @@
       ]
     },
     "forceCodeSigning": false,
-
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

@@ -2,12 +2,20 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.7  
+> **Versión Actual:** v11.4.8  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
 > **Última actualización:** 2026-09-13
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [PROJECT_STATUS.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/PROJECT_STATUS.md).
+
+---
+
+## 🚀 Versión 11.4.8 — Infraestructura de release (2026-09-13)
+
+## Infraestructura de release
+
+- Pipeline de firma Authenticode Windows listo (secrets `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD`); sin secrets el build sigue unsigned. Guía: `docs/guides/windows-code-signing.md`.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "mim-fomo-web",
-  "version": "11.4.6",
+  "version": "11.4.8",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",

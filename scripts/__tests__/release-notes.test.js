@@ -72,7 +72,12 @@ function testWorkflowTagResolution() {
     assert.throws(() => resolve({ RELEASE_EVENT: "workflow_dispatch", RELEASE_INPUT_TAG: tag }), /explicit version tag/);
   }
   assert.throws(() => resolve({ RELEASE_EVENT: "push", RELEASE_REF_TYPE: "branch", RELEASE_REF_NAME: "main" }), /explicit version tag/);
-  assert.match(workflow, /ref: refs\/tags\/\$\{\{ steps\.release\.outputs\.tag \}\}/);
+  // Tag pushes must still build the tagged commit; manual dispatch may rebuild
+  // from main tip so packaging fixes can republish an existing release tag.
+  assert.match(
+    workflow,
+    /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| format\('refs\/tags\/\{0\}', steps\.release\.outputs\.tag\) \}\}/
+  );
   assert.match(workflow, /RELEASE_TAG: \$\{\{ steps\.release\.outputs\.tag \}\}/);
   assert.match(workflow, /tag_name: \$\{\{ steps\.release\.outputs\.tag \}\}/);
   assert.doesNotMatch(workflow, /github\.ref_name \|\|/);

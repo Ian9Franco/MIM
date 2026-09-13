@@ -39,7 +39,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ steps.release.outputs.tag }}
+          # Tag push builds the tagged commit. Manual dispatch builds main tip so
+          # packaging fixes can republish an existing tag without retagging.
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || format('refs/tags/{0}', steps.release.outputs.tag) }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

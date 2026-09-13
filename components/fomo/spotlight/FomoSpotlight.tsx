@@ -43,6 +43,13 @@ export function FomoSpotlight({
 }: FomoSpotlightProps) {
 
   const [activePlatform, setActivePlatform] = useState<"modrinth" | "curseforge">("modrinth");
+  const [marqueePaused, setMarqueePaused] = useState(false);
+
+  const togglePlatform = useCallback(() => {
+    setMarqueePaused(true);
+    setActivePlatform((p) => (p === "modrinth" ? "curseforge" : "modrinth"));
+    window.setTimeout(() => setMarqueePaused(false), 400);
+  }, []);
   const [cfPicks, setCfPicks] = useState<CollectionEntry[]>([]);
   const [cfPopular, setCfPopular] = useState<ModHit[]>([]);
   const [cfRecent, setCfRecent] = useState<ModHit[]>([]);
@@ -281,6 +288,7 @@ export function FomoSpotlight({
                   reverse={true}
                   globalLoader={loader}
                   theme={currentTheme}
+                  paused={marqueePaused}
                 />
               </div>
             </div>
@@ -299,6 +307,7 @@ export function FomoSpotlight({
                   speed={0.6} 
                   color="text-purple-400" 
                   theme={currentTheme}
+                  paused={marqueePaused}
                 />
               </div>
             </div>
@@ -348,7 +357,7 @@ export function FomoSpotlight({
             
             {/* Toggle Button */}
             <button
-              onClick={() => setActivePlatform(activePlatform === "modrinth" ? "curseforge" : "modrinth")}
+              onClick={togglePlatform}
               className="flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md hover:bg-white/10 transition-colors"
             >
               <span>{activePlatform === "modrinth" ? "Ver CurseForge" : "Ver Modrinth"}</span>
@@ -369,6 +378,7 @@ export function FomoSpotlight({
                 reverse={true} 
                 globalLoader={loader}
                 theme={currentTheme}
+                paused={marqueePaused}
               />
             ) : (
               <HorizontalEditorialMarquee 
@@ -378,6 +388,7 @@ export function FomoSpotlight({
                 speed={0.6}
                 reverse={true} 
                 accentColor={COLORS.primary}
+                paused={marqueePaused}
                 theme={currentTheme}
               />
             )}

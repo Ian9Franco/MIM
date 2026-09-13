@@ -94,39 +94,42 @@ export function CollectionListView({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4" role="list" aria-label="Tus colecciones">
-        <div key={activeTab} className={`space-y-3 ${animationClass}`}>
+        <div key={activeTab} className={`grid grid-cols-1 lg:grid-cols-2 gap-3 ${animationClass}`}>
           {activeTab === "mim" && (
-            <button onClick={() => setCreating(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 mb-2">
+            <button onClick={() => setCreating(true)} className="lg:col-span-2 w-full p-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-3">
               <Plus className="w-5 h-5" style={{ color: COLORS.primary }} />
               <span className="font-bold text-sm">Nueva Colección</span>
             </button>
           )}
           {displayedCollections.length === 0 ? (
-            <EmptyState icon={<Library className="w-12 h-12" />} title="Sin colecciones" subtitle={activeTab === "official" ? "No se encontraron colecciones oficiales" : "Crea una para empezar"} />
+            <div className="lg:col-span-2">
+              <EmptyState icon={<Library className="w-12 h-12" />} title="Sin colecciones" subtitle={activeTab === "official" ? "No se encontraron colecciones oficiales" : "Crea una para empezar"} />
+            </div>
           ) : (
             displayedCollections.map((coll) => (
-              <div key={coll.id} role="listitem" className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all group" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
-                <button onClick={() => openCollection(coll)} className="flex-1 flex items-center gap-3 text-left min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
-                    <CollectionIcon url={coll.iconUrl} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-headline text-sm truncate flex items-center gap-2" style={{ color: COLORS.foreground }}>
-                      {coll.name}
-                      {activeTab === "official" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(30,215,96,0.12)", color: "#1ED760", border: "1px solid rgba(30,215,96,0.3)" }}>✓ Oficial</span>}
-                    </p>
-                    <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos • ID: {coll.id}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
-                      {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
+              <div key={coll.id} role="listitem" className="mim-collection-card w-full flex flex-col p-4 rounded-2xl transition-all group hover:-translate-y-0.5 hover:shadow-lg" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${COLORS.border}` }}>
+                <button onClick={() => openCollection(coll)} className="flex flex-col gap-3 text-left min-w-0 w-full">
+                  <div className="flex items-start gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden shadow-md">
+                      <CollectionIcon url={coll.iconUrl} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-headline text-sm truncate flex items-center gap-2" style={{ color: COLORS.foreground }}>
+                        {coll.name}
+                        {activeTab === "official" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(30,215,96,0.12)", color: "#1ED760", border: "1px solid rgba(30,215,96,0.3)" }}>✓ Oficial</span>}
+                      </p>
+                      <p className="font-caption text-xs mt-0.5" style={{ color: COLORS.muted }}>{coll.projectCount} proyectos</p>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {coll.isLocal && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,208,102,0.1)", color: COLORS.gold }}>Local</span>}
+                        {coll.id === "followed-projects" && <span className="font-label text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(187,150,228,0.12)", color: COLORS.primary }}>Modrinth</span>}
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Miniaturas de mods (Overlap) */}
+
                   {coll.previewIcons && coll.previewIcons.length > 0 && (
-                    <div className="flex items-center -space-x-6 ml-auto mr-4 shrink-0">
+                    <div className="flex items-center -space-x-6 justify-end pt-1">
                       {coll.previewIcons.map((icon, idx) => (
-                        <div key={idx} className="w-12 h-12 rounded-lg bg-card border border-white/10 overflow-hidden shadow-lg transition-transform hover:translate-y-[-2px]" style={{ zIndex: (coll.previewIcons?.length || 0) - idx }}>
+                        <div key={idx} className="w-11 h-11 rounded-lg bg-card border border-white/10 overflow-hidden shadow-lg transition-transform hover:-translate-y-0.5" style={{ zIndex: (coll.previewIcons?.length || 0) - idx }}>
                           <img src={icon} alt="" className="w-full h-full object-cover" />
                         </div>
                       ))}
@@ -134,7 +137,6 @@ export function CollectionListView({
                   )}
                 </button>
 
-                {/* Delete Button / Confirmation */}
                 {activeTab === "mim" && coll.id !== "followed-projects" && (
                   confirmDelete === coll.id ? (
                     <div className="flex items-center gap-1.5 animate-fade-in">

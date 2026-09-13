@@ -1010,3 +1010,62 @@
     rgba(255, 255, 255, 0.95)
   ) !important;
 }
+
+/* Discover cards — 3D collectible surface */
+.mim-discover-card {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.mim-discover-card--curse {
+  border-radius: 0.75rem !important;
+}
+
+[data-theme="modern"] .mim-discover-card {
+  background: linear-gradient(145deg, #fff, #edf1f7) !important;
+  box-shadow:
+    0 5px 0 rgba(93, 74, 160, 0.16),
+    0 16px 24px -17px rgba(13, 39, 80, 0.44),
+    0 -7px 16px -14px rgba(255, 255, 255, 0.92) !important;
+}
+
+[data-theme="modern"] .mim-collection-card {
+  background: linear-gradient(145deg, #fff, #eef1f6) !important;
+  border-color: rgba(13, 39, 80, 0.12) !important;
+  box-shadow:
+    0 4px 0 rgba(93, 74, 160, 0.12),
+    0 12px 20px -14px rgba(13, 39, 80, 0.35) !important;
+}
+
+/* Seguidos — Modern theme contrast */
+[data-theme="modern"] .fomo-followed .text-white {
+  color: var(--color-foreground) !important;
+}
+[data-theme="modern"] .fomo-followed .text-white\/45,
+[data-theme="modern"] .fomo-followed .text-white\/40,
+[data-theme="modern"] .fomo-followed .text-white\/50,
+[data-theme="modern"] .fomo-followed .text-white\/60 {
+  color: color-mix(in srgb, var(--color-foreground) 55%, transparent) !important;
+}
+[data-theme="modern"] .fomo-followed .text-white\/85,
+[data-theme="modern"] .fomo-followed .text-white\/90 {
+  color: var(--color-foreground) !important;
+}
+[data-theme="modern"] .fomo-followed .bg-white\/5,
+[data-theme="modern"] .fomo-followed .bg-white\/\[0\.03\] {
+  background-color: rgba(124, 58, 237, 0.06) !important;
+}
+[data-theme="modern"] .fomo-followed .border-white\/10,
+[data-theme="modern"] .fomo-followed .border-white\/5 {
+  border-color: rgba(13, 39, 80, 0.12) !important;
+}
+[data-theme="modern"] .fomo-followed .mim-followed-card {
+  background: var(--color-card) !important;
+  border-color: rgba(13, 39, 80, 0.1) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+[data-theme="modern"] .fomo-followed .mim-followed-shell {
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 62%),
+    var(--color-background) !important;
+}

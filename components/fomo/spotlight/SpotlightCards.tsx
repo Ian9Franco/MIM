@@ -2,6 +2,7 @@ import React from "react";
 import { Download, Loader2, CirclePlay } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import type { ModHit, CollectionEntry } from "@/lib/core/types";
+import { CollectibleSurface } from "@/components/fomo/shared/CollectibleSurface";
 
 export function SpotlightCollectionCard({
   collection,
@@ -41,15 +42,19 @@ export function SpotlightCollectionCard({
   const dotColor = isModern ? "rgba(0,0,0,0.2)" : isVampire ? "rgba(187, 150, 228, 0.3)" : "rgba(255,255,255,0.15)";
 
   return (
-    <div
-      className="mim-editorial-card-3d w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[320px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
-      style={{
-        background: cardBg,
-        border: cardBorder,
-        boxShadow: cardShadow,
-      }}
+    <CollectibleSurface
       onClick={onClick}
+      label={collection.name}
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-80 shrink-0 rounded-3xl! relative group overflow-hidden flex flex-col"
     >
+      <div
+        className="flex flex-col h-full w-full"
+        style={{
+          background: cardBg,
+          border: cardBorder,
+          boxShadow: cardShadow,
+        }}
+      >
       {/* Top label row */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: sepColor }}>
         <span 
@@ -105,7 +110,8 @@ export function SpotlightCollectionCard({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </CollectibleSurface>
   );
 }
 
@@ -159,15 +165,19 @@ export function SpotlightEditorialCard({
   const dlBtnBg = isModern ? "rgba(0,0,0,0.7)" : isVampire ? "rgba(187, 150, 228, 0.2)" : "rgba(255,255,255,0.15)";
 
   return (
-    <div
-      className="mim-editorial-card-3d w-[min(210px,calc(100vw-4rem))] xl:w-[210px] h-[340px] shrink-0 rounded-[1.5rem] relative group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
-      style={{
-        background: cardBg,
-        border: cardBorder,
-        boxShadow: cardShadow,
-      }}
+    <CollectibleSurface
       onClick={() => onOpenVersions(mod)}
+      label={mod.title}
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-85 shrink-0 rounded-3xl! relative group overflow-hidden flex flex-col"
     >
+      <div
+        className="flex flex-col h-full w-full"
+        style={{
+          background: cardBg,
+          border: cardBorder,
+          boxShadow: cardShadow,
+        }}
+      >
       {/* Top label row */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5" style={{ borderBottom: sepColor }}>
         <span 
@@ -233,6 +243,7 @@ export function SpotlightEditorialCard({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </CollectibleSurface>
   );
 }

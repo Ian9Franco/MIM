@@ -17,6 +17,7 @@ import {
 } from "@/lib/fomo/fomoModBanner";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { activateDiscoverCard } from "@/lib/fomo/discoverCardActivation";
+import { CollectibleSurface } from "@/components/fomo/shared/CollectibleSurface";
 
 /**
  * @fileoverview Tarjeta Visual de Búsqueda y Descubrimiento (FOMO).
@@ -100,8 +101,17 @@ export const FomoModCard = memo(function FomoModCard({
   const primaryType = sortedTypes[0] || inferPrimaryProjectType(mod);
   const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(primaryType);
 
+  const platformBorderClass = isCF
+    ? "border-orange-500/20 hover:border-orange-500/45 mim-discover-card--curse"
+    : "border-emerald-500/20 hover:border-emerald-500/45";
+
   return (
-    <article 
+    <CollectibleSurface
+      className={`mim-discover-card flex flex-col h-85 overflow-hidden transition-all duration-500 relative group ${
+        isSelected ? "ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]" : ""
+      } ${isCF ? "rounded-none" : "rounded-3xl"} ${platformBorderClass}`}
+    >
+    <article
       onClick={(event) => activateDiscoverCard({
         clickDetail: event.detail,
         detailsOpenForThisMod,
@@ -109,14 +119,12 @@ export const FomoModCard = memo(function FomoModCard({
         openDetails: () => onOpenVersions(mod),
         toggleSelect: onToggleSelect ? () => onToggleSelect(mod) : undefined,
       })}
-      className={`flex flex-col transition-all duration-500 relative group cursor-pointer h-[340px] border border-white/5 overflow-hidden ${
-        isSelected ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]' : isBedrock ? 'hover:shadow-[0_20px_50px_rgba(0,204,68,0.2)] hover:-translate-y-1' : 'hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:-translate-y-1'
-      } ${isCF ? 'rounded-none' : 'rounded-3xl'}`}
-      style={{ 
-        background: isCF ? "var(--color-cf-bg)" : "rgba(255, 255, 255, 0.03)", 
+      className="flex flex-col h-full w-full cursor-pointer"
+      style={{
+        background: isCF ? "var(--color-cf-bg)" : "rgba(255, 255, 255, 0.03)",
         backdropFilter: "blur(24px)",
         boxShadow: "inset 0 1px 1px 0 rgba(255,255,255,0.05)",
-        borderColor: "rgba(255,255,255,0.08)"
+        borderColor: "rgba(255,255,255,0.08)",
       }}
     >
       {/* 1. Banner Image */}
@@ -131,7 +139,7 @@ export const FomoModCard = memo(function FomoModCard({
         )}
         
         {/* Overlay degradado para texto si se necesita, o simplemente sombra interior */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220,14%,10%)] via-transparent to-transparent z-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-t from-[hsl(220,14%,10%)] via-transparent to-transparent z-20 pointer-events-none" />
 
         {/* Badges Container (Top-Left) */}
         <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
@@ -206,7 +214,7 @@ export const FomoModCard = memo(function FomoModCard({
         )}
 
         {/* Botones de acción flotantes (Opción A del plan) */}
-        <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
+        <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-y-2.5 group-hover:translate-y-0">
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
             className={`fomo-action-btn w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
@@ -270,7 +278,7 @@ export const FomoModCard = memo(function FomoModCard({
         
         {/* Perfil (Icono + Título) superpuesto al banner */}
         <div className="flex gap-3 mb-2 -mt-10 relative shrink-0">
-          <div className="w-16 h-16 rounded-[1rem] overflow-hidden bg-[hsl(220,14%,10%)] border-4 border-[hsl(220,14%,10%)] shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500 relative z-10">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[hsl(220,14%,10%)] border-4 border-[hsl(220,14%,10%)] shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500 relative z-10">
             {mod.iconUrl ? (
               <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -304,7 +312,7 @@ export const FomoModCard = memo(function FomoModCard({
         {/* Draft Item Dedup Resolver remoted to top badge */}
 
         {/* Badges / Tags (Scrollable/Hidden if overflowing) */}
-        <div className="flex flex-wrap gap-1.5 mb-2 overflow-hidden h-[36px] content-start">
+        <div className="flex flex-wrap gap-1.5 mb-2 overflow-hidden h-9 content-start">
           {/* Badge especial para Bedrock */}
           {isBedrock && (
             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border shrink-0 bg-green-900/40 text-green-300 border-green-700/50">
@@ -384,5 +392,6 @@ export const FomoModCard = memo(function FomoModCard({
         </div>
       </div>
     </article>
+    </CollectibleSurface>
   );
 });

@@ -1,114 +1,11 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import type { ModHit } from "@/lib/core/types";
 import { SpotlightCollectionCard, SpotlightEditorialCard } from "./SpotlightCards";
+import { useSmoothMarquee } from "@/hooks/fomo/useSmoothMarquee";
 
-function useSmoothMarquee(speed: number, reverse: boolean, isVertical: boolean) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLDivElement>(null);
-  const offset = useRef(0);
-  const targetOffset = useRef(0);
-  const isDragging = useRef(false);
-  const startPos = useRef(0);
-  const startOffset = useRef(0);
-  const isHovered = useRef(false);
-  const resizeObserver = useRef<ResizeObserver | null>(null);
-
-  useEffect(() => {
-    let animationFrameId = 0;
-    const inner = innerRef.current;
-    if (!inner) return;
-
-    const getSize = () => (isVertical ? inner.scrollHeight : inner.scrollWidth);
-    const resetLoop = () => {
-      const size = getSize();
-      if (!size) return;
-      const half = size / 2;
-      if (reverse) {
-        if (offset.current <= 0 || offset.current >= half * 2) {
-          offset.current = half;
-          targetOffset.current = half;
-        }
-      } else if (offset.current < 0 || offset.current >= half) {
-        offset.current = 0;
-        targetOffset.current = 0;
-      }
-    };
-
-    const step = () => {
-      const size = getSize();
-      const half = size / 2;
-
-      if (!isDragging.current) {
-        if (!isHovered.current) {
-          targetOffset.current += reverse ? -speed : speed;
-        }
-        offset.current += (targetOffset.current - offset.current) * 0.08;
-      } else {
-        offset.current = targetOffset.current;
-      }
-
-      if (size > 0) {
-        if (reverse && offset.current <= 0) {
-          offset.current += half;
-          targetOffset.current += half;
-        } else if (!reverse && offset.current >= half) {
-          offset.current -= half;
-          targetOffset.current -= half;
-        }
-
-        inner.style.transform = isVertical
-          ? `translateY(-${offset.current}px)`
-          : `translateX(-${offset.current}px)`;
-      }
-
-      animationFrameId = requestAnimationFrame(step);
-    };
-
-    resetLoop();
-    animationFrameId = requestAnimationFrame(step);
-
-    if (typeof ResizeObserver !== "undefined") {
-      resizeObserver.current = new ResizeObserver(() => {
-        resetLoop();
-      });
-      resizeObserver.current.observe(inner);
-    }
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      resizeObserver.current?.disconnect();
-      resizeObserver.current = null;
-    };
-  }, [speed, reverse, isVertical]);
-
-  const handlers = {
-    onMouseEnter: () => { isHovered.current = true; },
-    onMouseLeave: () => { isDragging.current = false; isHovered.current = false; },
-    onMouseDown: (e: React.MouseEvent) => {
-      isDragging.current = true;
-      startPos.current = isVertical ? e.pageY : e.pageX;
-      startOffset.current = offset.current;
-    },
-    onMouseUp: () => { isDragging.current = false; },
-    onMouseMove: (e: React.MouseEvent) => {
-      if (!isDragging.current) return;
-      e.preventDefault();
-      const currentPos = isVertical ? e.pageY : e.pageX;
-      const walk = (currentPos - startPos.current) * 1.5;
-      targetOffset.current = startOffset.current - walk;
-    },
-    onWheel: (e: React.WheelEvent) => {
-      const delta = isVertical ? e.deltaY : (e.deltaX || e.deltaY);
-      targetOffset.current += delta;
-    }
-  };
-
-  return { containerRef, innerRef, handlers };
-}
-
-export function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = false, globalLoader, theme }: { mods: ModHit[], onOpenVersions: (m: ModHit) => void, speed?: number, color?: string, reverse?: boolean, globalLoader?: string, theme?: string }) {
+export function VerticalTicker({ mods, onOpenVersions, speed = 1, color, reverse = false, globalLoader, theme, paused = false }: { mods: ModHit[], onOpenVersions: (m: ModHit) => void, speed?: number, color?: string, reverse?: boolean, globalLoader?: string, theme?: string, paused?: boolean }) {
   const duplicatedMods = [...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods, ...mods];
-  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, true);
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, true, paused);
 
   return (
     <div 
@@ -193,13 +90,11 @@ export function HorizontalEditorialMarquee({
   reverse = false, 
   accentColor, 
   globalLoader,
-  theme
+  theme,
+  paused = false,
 }: any) {
-  // Para un loop infinito seamless: exactamente 2 copias.
-  // El hook resetea al llegar a halfSize (mitad del contenido = 1 copia).
-  // Como copia1 = copia2, el salte es invisible.
   const duplicatedItems = [...items, ...items];
-  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false);
+  const { containerRef, innerRef, handlers } = useSmoothMarquee(speed, reverse, false, paused);
 
   return (
     <div className="relative w-full h-full flex flex-col group/marquee">

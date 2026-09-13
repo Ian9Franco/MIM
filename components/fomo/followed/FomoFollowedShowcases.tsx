@@ -3,11 +3,13 @@
 import React from "react";
 import { 
   TvMinimalPlay, RefreshCw, Trash2, ChevronDown, 
-  MonitorCheck, MonitorUp, Sparkles, Pin, Newspaper, ExternalLink, Flame, Puzzle
+  MonitorCheck, MonitorUp, Pin, Newspaper, ExternalLink, Flame, Puzzle, LayoutGrid
 } from "lucide-react";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 import { ShowcaseVideoCard } from "@/components/fomo/showcase/ShowcaseVideoCard";
+import { ShowcaseOverviewFeed } from "@/components/fomo/showcase/ShowcaseOverviewFeed";
+import type { ShowcaseContentType } from "@/components/fomo/showcase/showcaseOverviewTypes";
 
 // No hardcoded POSTS_CHANNELS limit anymore
 
@@ -47,7 +49,8 @@ export function FomoFollowedShowcases({
   }, []);
   const isModern = currentTheme === "modern";
 
-  const [showcaseType, setShowcaseType] = React.useState<"videos" | "shorts" | "posts">("videos");
+  const [showcaseType, setShowcaseType] = React.useState<"overview" | "videos" | "shorts" | "posts">("overview");
+  const [loadingOverview, setLoadingOverview] = React.useState(false);
   const [loadingShowcases, setLoadingShowcases] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -238,8 +241,43 @@ export function FomoFollowedShowcases({
     lastFetchRef.current = "";
   }, [activeChannel]);
 
+  // Cargar los 3 feeds en paralelo para Resumen
+  React.useEffect(() => {
+    if (showcaseType !== "overview" || !activeChannel) return;
+
+    let ignore = false;
+    setLoadingOverview(true);
+
+    Promise.all([
+      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=8&cursor=1&type=videos`).then((r) => r.json()),
+      fetch(`/api/fomo/youtube-showcase?channel=${encodeURIComponent(activeChannel)}&limit=8&cursor=1&type=shorts`).then((r) => r.json()),
+      fetch(`/api/fomo/youtube-posts?channel=${encodeURIComponent(activeChannel)}`).then((r) => r.json()),
+    ])
+      .then(([videoData, shortData, postData]) => {
+        if (ignore) return;
+        const v = videoData.showcases || [];
+        const s = shortData.showcases || [];
+        const p = postData.showcases || [];
+        setVideos(v);
+        setShorts(s);
+        setPosts(p);
+        mimDB.setCache(`fomo_videos_${activeChannel}`, v, 12 * 60 * 60 * 1000).catch(console.error);
+        mimDB.setCache(`fomo_shorts_${activeChannel}`, s, 12 * 60 * 60 * 1000).catch(console.error);
+      })
+      .catch((e) => console.error("Error loading overview feeds", e))
+      .finally(() => {
+        if (!ignore) setLoadingOverview(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [showcaseType, activeChannel]);
+
   React.useEffect(() => {
     let ignore = false;
+
+    if (showcaseType === "overview" || showcaseType === "posts") return;
 
     const isVideos = showcaseType === "videos";
     const currentCursor = isVideos ? videoCursor : shortsCursor;
@@ -309,10 +347,20 @@ export function FomoFollowedShowcases({
       .finally(() => setLoadingPosts(false));
   }, [showcaseType, activeChannel]);
 
-  const showcasesList = showcaseType === "videos" ? videos : showcaseType === "shorts" ? shorts : posts;
+  const showcasesList = showcaseType === "videos" ? videos : showcaseType === "shorts" ? shorts : showcaseType === "posts" ? posts : [];
   const hasMore = showcaseType === "videos" ? hasMoreVideos : showcaseType === "shorts" ? hasMoreShorts : false;
   const cursor = showcaseType === "videos" ? videoCursor : shortsCursor;
   const loading = loadingShowcases && cursor === 1 && showcasesList.length === 0;
+
+  const handleNavigateToType = (type: ShowcaseContentType) => {
+    if (type === "post") setShowcaseType("posts");
+    else if (type === "short") setShowcaseType("shorts");
+    else setShowcaseType("videos");
+  };
+
+  const handlePlayVideo = (videoId: string) => {
+    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId } }));
+  };
 
   return (
     <div key="showcases" className={animationClass}>
@@ -519,7 +567,7 @@ export function FomoFollowedShowcases({
       {/* Top Loading Progress Bar */}
       <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-4">
         <div 
-          className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-red-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+          className="h-full bg-linear-to-r from-red-500 via-orange-500 to-red-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(239,68,68,0.8)]"
           style={{ 
             width: `${progress}%`,
             opacity: progress > 0 && progress < 100 ? 1 : 0,
@@ -528,9 +576,20 @@ export function FomoFollowedShowcases({
         />
       </div>
 
-      {/* Toggle Videos/Shorts/Posts */}
+      {/* Toggle Resumen / Videos / Shorts / Posts */}
       <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit border border-white/5">
+        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit border border-white/5 flex-wrap">
+          <button
+            onClick={() => setShowcaseType("overview")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              showcaseType === "overview"
+                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                : "opacity-40 text-white hover:opacity-100"
+            }`}
+          >
+            <LayoutGrid className="w-3 h-3" />
+            Resumen
+          </button>
           <button 
             onClick={() => setShowcaseType("videos")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
@@ -558,13 +617,27 @@ export function FomoFollowedShowcases({
           </button>
         </div>
         
-        {(loadingShowcases || loadingPosts) && showcasesList.length > 0 && (
+        {(loadingShowcases || loadingPosts || loadingOverview) && (showcasesList.length > 0 || showcaseType === "overview") && (
           <div className="flex items-center gap-1.5 opacity-55 text-[10px] font-mono select-none mr-2">
             <RefreshCw className="w-3 h-3 animate-spin text-primary" />
             <span>Actualizando...</span>
           </div>
         )}
       </div>
+      {/* === Modo Resumen === */}
+      {showcaseType === "overview" && (
+        <ShowcaseOverviewFeed
+          activeChannel={activeChannel}
+          videos={videos}
+          shorts={shorts}
+          posts={posts}
+          loading={loadingOverview}
+          isModern={isModern}
+          onNavigateToType={handleNavigateToType}
+          onPlayVideo={handlePlayVideo}
+        />
+      )}
+
       {/* === Modo Posts de Comunidad === */}
       {showcaseType === "posts" && (
         <div className="space-y-4">
@@ -596,7 +669,7 @@ export function FomoFollowedShowcases({
                     }`}>
                       {/* Header */}
                       <div className="flex items-center gap-3 p-4 pb-2">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center shrink-0 overflow-hidden text-orange-400 font-bold text-lg border border-orange-500/30 shadow-inner">
+                        <div className="w-10 h-10 rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center shrink-0 overflow-hidden text-orange-400 font-bold text-lg border border-orange-500/30 shadow-inner">
                           {channelName?.[0]?.toUpperCase()}
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -609,7 +682,7 @@ export function FomoFollowedShowcases({
                       </div>
 
                       {/* Text */}
-                      <div className={`px-4 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${isModern ? "text-slate-600" : "text-white/70"}`}>
+                      <div className={`px-4 py-2 text-[13px] leading-relaxed whitespace-pre-wrap wrap-break-word ${isModern ? "text-slate-600" : "text-white/70"}`}>
                         {post.description || post.title}
                       </div>
 
@@ -623,9 +696,9 @@ export function FomoFollowedShowcases({
                             }
                           }}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
+                          <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={post.thumbnail} alt="" className="w-full object-cover max-h-[350px] transform group-hover:scale-[1.02] transition-transform duration-500" loading="lazy" />
+                          <img src={post.thumbnail} alt="" className="w-full object-cover max-h-87.5 transform group-hover:scale-[1.02] transition-transform duration-500" loading="lazy" />
                           
                           {post.embeddedVideoId && (
                             <div className="absolute inset-0 flex items-center justify-center opacity-90 group-hover/video:opacity-100 transition-opacity duration-300 z-20">
@@ -693,7 +766,7 @@ export function FomoFollowedShowcases({
       )}
 
       {/* === Modo Videos / Shorts === */}
-      {showcaseType !== "posts" && (
+      {showcaseType !== "posts" && showcaseType !== "overview" && (
         <>
           {loading ? (
             <FomoSkeleton variant="list" message={`Cargando ${showcaseType}...`} count={5} />

@@ -14,7 +14,7 @@ import {
   Heart,
   Spotlight,
   TvMinimalPlay,
-  Cloudy,
+  Users,
 } from "lucide-react";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
 import { PillToggleGroup, StatusBanner } from "@/components/ui/primitives";
@@ -44,7 +44,7 @@ const TAB_OPTIONS = [
   { value: "discover", label: "Explorar", icon: <Search className="w-4 h-4" /> },
   { value: "collections", label: "Colecciones", icon: <Library className="w-4 h-4" /> },
   { value: "followed", label: "Seguidos", icon: <Heart className="w-4 h-4" /> },
-  { value: "community", label: "FOMO Cloud", icon: <Cloudy className="w-4 h-4" /> },
+  { value: "community", label: "Comunidad", icon: <Users className="w-4 h-4" /> },
 ];
 
 function FomoSidebarInner({
@@ -218,7 +218,7 @@ function FomoSidebarInner({
     {
       target: "#onboarding-community-profile",
       title: "Tu Perfil",
-      content: "Por último, no te olvides de personalizar tu perfil. Podés cambiar tu nombre, color, avatar y banner desde acá. ¡Bienvenido a FOMO Cloud!",
+      content: "Por último, no te olvides de personalizar tu perfil. Podés cambiar tu nombre, color, avatar y banner desde acá. ¡Bienvenido a Comunidad!",
     },
   ];
 
@@ -398,12 +398,12 @@ function FomoSidebarInner({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-500 ${open || detailsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-500 ${open || detailsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={handleCloseAll}
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-[70] flex flex-col shadow-2xl transition-all duration-500 ease-in-out border border-l-0 fomo-sidebar overflow-hidden ${
+        className={`fixed inset-y-0 left-0 z-70 flex flex-col shadow-2xl transition-all duration-500 ease-in-out border border-l-0 fomo-sidebar overflow-hidden ${
           open ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
         }`}
         style={{
@@ -422,7 +422,7 @@ function FomoSidebarInner({
         }}
       >
         <div
-          className="absolute top-0 inset-x-0 h-[2px] opacity-60 z-10 animate-led-flicker"
+          className="absolute top-0 inset-x-0 h-0.5 opacity-60 z-10 animate-led-flicker"
           style={{
             background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)`,
           }}

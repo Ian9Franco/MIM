@@ -84,7 +84,9 @@ export function FomoFollowedAuthors({
     getModUpdateInfo, 
     handleUnfollowAuthor, 
     handleUnfollowMod, 
-    isRecent 
+    isRecent,
+    syncing,
+    refreshFromCloud,
   } = useFomoFollowedManager();
   
   // Community sharing — favorite_mods for sub-tabs
@@ -365,7 +367,7 @@ export function FomoFollowedAuthors({
   }, [allSharedMods, currentUser?.id]);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col h-full animate-fade-in mim-followed-shell">
+    <div className="fomo-followed flex-1 overflow-hidden flex flex-col h-full animate-fade-in mim-followed-shell">
       <style>{`
         @keyframes slideInFromRight {
           from { transform: translateX(30px); opacity: 0; }
@@ -411,9 +413,21 @@ export function FomoFollowedAuthors({
           ariaLabel="Seleccionar sub-pestaña"
           className="p-1"
         />
-        {subTab === "projects" && followedMods.length > 0 && (
-          <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60 cursor-pointer"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refreshFromCloud()}
+            disabled={syncing}
+            className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border bg-white/5 border-white/10 text-white/60 hover:text-white cursor-pointer disabled:opacity-50"
+            title="Sincronizar con tu perfil en la nube"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Sync</span>
+          </button>
+          {subTab === "projects" && followedMods.length > 0 && (
+            <button onClick={() => setShowOnlyWithUpdates(!showOnlyWithUpdates)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${showOnlyWithUpdates ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 border-white/10 text-white/60 cursor-pointer"}`}><RefreshCw className={`w-3.5 h-3.5 ${showOnlyWithUpdates ? "animate-spin-slow" : ""}`} /><span>Actualizaciones</span></button>
+          )}
+        </div>
         </div>
       </div>
 
@@ -525,7 +539,7 @@ export function FomoFollowedAuthors({
 
       {/* Share Modal */}
       {shareModalItem && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShareModalItem(null)}>
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShareModalItem(null)}>
           <div className="bg-[hsl(220,14%,10%)] border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
               <h3 className="font-bold text-white text-sm flex items-center gap-2">

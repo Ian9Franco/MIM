@@ -15,6 +15,10 @@ import { CommunityDrafts } from "@/components/fomo/community/CommunityDrafts";
 import { CommunityUserProfile } from "@/components/fomo/community/CommunityUserProfile";
 import { CommunityAddToDraftModal } from "@/components/fomo/community/CommunityAddToDraftModal";
 import { DraftDownloadProgress } from "@/components/fomo/community/DraftDownloadProgress";
+import { CommunityHeader, type CommunitySection } from "@/components/fomo/community/CommunityShell";
+import { CommunityRankings } from "@/components/fomo/community/CommunityRankings";
+import { CommunityMembers } from "@/components/fomo/community/CommunityMembers";
+import type { ModHit } from "@/lib/core/types";
 
 function CommunityPanelInner({
   activeProject,
@@ -75,6 +79,15 @@ function CommunityPanelInner({
   const [tabIndex, setTabIndex] = useState(0);
   const tabOrder = ["modpacks", "drafts", "videos"] as const;
   const [insideDraft, setInsideDraft] = useState(false);
+  const [communitySection, setCommunitySection] = useState<CommunitySection>("compartidos");
+  const [memberCount, setMemberCount] = useState(0);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setMemberCount(count || 0));
+  }, [reloadTrigger]);
 
   useEffect(() => {
     const handler = (e: Event) => setInsideDraft(Boolean((e as CustomEvent<boolean>).detail));
@@ -307,7 +320,7 @@ function CommunityPanelInner({
       {!selectedUserProfile && !insideDraft && (
         <>
           {/* Immersive Profile Header */}
-          <div className="relative shrink-0 flex flex-col justify-end p-6 pb-6 overflow-hidden min-h-[160px] border-b border-white/5">
+          <div className="relative shrink-0 flex flex-col justify-end p-6 pb-6 overflow-hidden min-h-40 border-b border-white/5">
             {profile?.banner_url && (
               <div className="absolute inset-0 z-0 overflow-hidden">
                 <img
@@ -391,8 +404,18 @@ function CommunityPanelInner({
             </div>
           </div>
 
-          {/* Sub Tabs – Floating Liquid Glass Pill */}
-          <div id="onboarding-fomo-community-tabs" className={`px-4 py-4 shrink-0 z-20 ${isModern ? 'bg-card/40' : 'bg-black/20'}`}>
+          <CommunityHeader
+            active={communitySection}
+            onChange={setCommunitySection}
+            metrics={{
+              members: memberCount,
+              recommendations: cloudFavorites.length,
+              featured: Math.min(cloudFavorites.length, 12),
+            }}
+          />
+
+          {communitySection === "compartidos" && (
+          <div id="onboarding-fomo-community-tabs" className={`px-4 py-2 shrink-0 z-20 ${isModern ? 'bg-card/40' : 'bg-black/20'}`}>
         <div
           className="relative flex items-center h-12 p-1.5 rounded-2xl overflow-hidden shadow-sm"
           style={{
@@ -442,11 +465,34 @@ function CommunityPanelInner({
           })}
         </div>
       </div>
+          )}
+
       </>)}
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col relative z-10">
-        {activeSubTab !== 'profile' && (
+        {communitySection === "rankings" && !selectedUserProfile && (
+          <CommunityRankings
+            onOpen={(mod: ModHit) => {
+              window.dispatchEvent(
+                new CustomEvent("fomo-open-project-details", {
+                  detail: { id: mod.projectId, platform: mod._source },
+                })
+              );
+            }}
+          />
+        )}
+
+        {communitySection === "miembros" && !selectedUserProfile && (
+          <CommunityMembers
+            onOpenProfile={(username) => {
+              setSelectedUserProfile(username);
+              setActiveSubTab("profile");
+            }}
+          />
+        )}
+
+        {communitySection === "compartidos" && activeSubTab !== 'profile' && (
           <div className="p-6 pt-2 flex-1 animate-fade-in" id={activeSubTab === "modpacks" ? "onboarding-community-pool" : undefined}>
             {activeSubTab === "modpacks" && (
               <CommunityModPool

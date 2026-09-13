@@ -1,6 +1,6 @@
 {
   "name": "@mim/server-engine",
-  "version": "0.1.0",
+  "version": "11.4.6",
   "description": "Server synchronization, SFTP discovery, preflight, diffing, durable snapshotting, and reconciliation engine",
   "main": "./index.ts",
   "types": "./index.ts",

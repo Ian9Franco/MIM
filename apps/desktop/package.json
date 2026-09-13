@@ -1,6 +1,6 @@
 {
   "name": "@mim/desktop",
-  "version": "11.4.5",
+  "version": "11.4.6",
   "description": "Minecraft Instance Manager Desktop application runtime & Electron packaging",
   "private": true,
   "main": "../../standalone/main.js",

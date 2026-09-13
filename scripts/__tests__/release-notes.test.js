@@ -89,12 +89,40 @@ function testWorkspacePackageSyncIntegrity() {
   assert.equal(desktopPkg.version, rootPkg.version, "apps/desktop version should match root package version");
 }
 
+function testStandalonePackagingIncludesLocalRequires() {
+  const rootPkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../../package.json"), "utf8"));
+  const files = rootPkg.build?.files || [];
+  const coversStandaloneGlob = files.some(
+    (entry) => entry === "standalone/*.js" || entry === "standalone/**/*" || entry === "standalone/**/*.js"
+  );
+  const standaloneDir = path.join(__dirname, "../../standalone");
+  const standaloneFiles = fs.readdirSync(standaloneDir).filter((name) => name.endsWith(".js"));
+  const localRequires = new Set();
+  for (const name of standaloneFiles) {
+    const source = fs.readFileSync(path.join(standaloneDir, name), "utf8");
+    for (const match of source.matchAll(/require\(["'](\.\/[^"']+)["']\)/g)) {
+      const resolved = path.posix.normalize(`standalone/${match[1].replace(/^\.\//, "")}`);
+      localRequires.add(resolved.endsWith(".js") ? resolved : `${resolved}.js`);
+    }
+  }
+  assert.ok(localRequires.has("standalone/trusted-path.js"), "secret-store/main must keep requiring trusted-path");
+  if (!coversStandaloneGlob) {
+    for (const required of localRequires) {
+      assert.ok(
+        files.includes(required),
+        `electron-builder files must include local require ${required}`
+      );
+    }
+  }
+}
+
 function run() {
   testValidationClaimTracksExecutedGates();
   testNewestReleasePrecedesOlderHistoryWithCrLf();
   testWorkflowTagResolution();
   testWorkspacePackageSyncIntegrity();
-  console.log("✓ Release notes truthfulness, workflow tag and workspace sync contracts passed");
+  testStandalonePackagingIncludesLocalRequires();
+  console.log("✓ Release notes truthfulness, workflow tag, workspace sync and packaging contracts passed");
 }
 
 run();

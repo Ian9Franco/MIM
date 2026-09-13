@@ -119,6 +119,7 @@
     "productName": "MIM",
     "asar": false,
     "npmRebuild": false,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "dist"
     },

@@ -130,9 +130,11 @@
     ],
     "win": {
       "icon": "public/icon.png",
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
+      "signtoolOptions": {
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      },
       "target": [
         {
           "target": "nsis",

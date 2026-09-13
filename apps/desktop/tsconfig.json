@@ -1,12 +1,6 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "noEmit": true,
     "paths": {
       "@mim/contracts-core": ["../../packages/contracts-core/index.ts"],
       "@mim/contracts-core/*": ["../../packages/contracts-core/*"],
@@ -17,6 +11,13 @@
       "@/*": ["../../*"]
     }
   },
-  "include": ["../../**/*.ts", "../../**/*.tsx"],
+  "include": [
+    "../../next-env.d.ts",
+    "../../**/*.ts",
+    "../../**/*.tsx",
+    "../../.next/types/**/*.ts",
+    "../../.next/dev/types/**/*.ts",
+    "../../**/*.mts"
+  ],
   "exclude": ["../../node_modules", "../../apps/hub"]
 }

@@ -39,7 +39,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ steps.release.outputs.tag }}
+          # Tag push builds the tagged commit. Manual dispatch builds main tip so
+          # packaging fixes can republish an existing tag without retagging.
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || format('refs/tags/{0}', steps.release.outputs.tag) }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,10 +52,31 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # ssh2 pulls optional native dep cpu-features, which fails to rebuild against
+      # Electron 42 headers on MSVC (__builtin_frame_address). The Next server is
+      # forked as plain Node (standalone/main.js), so Electron ABI rebuild is
+      # unnecessary; removing the optional addon makes ssh2 use its JS fallback.
+      - name: Drop optional cpu-features before Electron packaging
+        shell: pwsh
+        run: |
+          if (Test-Path node_modules/cpu-features) {
+            Remove-Item -Recurse -Force node_modules/cpu-features
+            Write-Host "Removed node_modules/cpu-features"
+          } else {
+            Write-Host "cpu-features not present; nothing to remove"
+          }
+
+      # Authenticode signing is optional: when WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD
+      # are unset, electron-builder publishes an unsigned build (SmartScreen warning).
+      # When set, Windows artifacts are signed so the publisher is no longer "Unknown".
       - name: Package Windows Standalone
         run: npm run package:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # Prefer the explicit CI cert; do not scavenge random certs on the runner.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Resolve Release Notes
         id: notes

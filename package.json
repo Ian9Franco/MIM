@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.4.6",
+  "version": "11.4.7",
   "private": true,
   "repository": {
     "type": "git",
@@ -118,19 +118,21 @@
     "appId": "com.mim.app",
     "productName": "MIM",
     "asar": false,
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "dist"
     },
     "files": [
-      "standalone/main.js",
-      "standalone/secret-store.js",
-      "standalone/prepare.js",
-      "standalone/scraper.js",
+      "standalone/*.js",
       ".next/standalone/**/*",
       "package.json"
     ],
     "win": {
       "icon": "public/icon.png",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "target": [
         {
           "target": "nsis",
@@ -146,6 +148,8 @@
         }
       ]
     },
+    "forceCodeSigning": false,
+
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

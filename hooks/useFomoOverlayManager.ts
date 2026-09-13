@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ModHit, VersionEntry } from "@/lib/core/types";
 import type { FomoGalleryItem, FomoFollowedAuthor } from "@/types/fomo";
 import { mimDB } from "@/lib/storage/indexeddb";
+import { getCurrentUserId, pushFollowAuthorToCloud, pushFollowModToCloud } from "@/lib/fomo/followedSyncService";
 import { migrateLegacyBrowserGeminiKey } from "@/lib/core/migrateLegacyBrowserSecret";
 import { MIM_BOT_CHAT_MODE } from "@/lib/intelligence/modExplainer";
 
@@ -228,6 +229,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
 
   const toggleFollowAuthor = useCallback(async (author: string) => {
     const exists = followedAuthors.some((a: FomoFollowedAuthor) => a?.name === author);
+    const platform = mod._source === "curseforge" ? "curseforge" : "modrinth";
     let next;
     if (exists) {
       await mimDB.deleteFollowedAuthor(author);
@@ -239,7 +241,11 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
     setFollowedAuthors(next);
     window.dispatchEvent(new CustomEvent("mim-followed-authors-changed", { detail: next }));
-  }, [followedAuthors, mod.iconUrl]);
+    const userId = await getCurrentUserId();
+    if (userId) {
+      void pushFollowAuthorToCloud(userId, author, mod.url, mod.iconUrl, platform, !exists);
+    }
+  }, [followedAuthors, mod.iconUrl, mod._source, mod.url]);
 
   const toggleFollowMod = useCallback(async (m: ModHit) => {
     const exists = followedMods.some(x => x.projectId === m.projectId);
@@ -253,6 +259,10 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     }
     setFollowedMods(next);
     window.dispatchEvent(new CustomEvent("mim-followed-mods-changed", { detail: next }));
+    const userId = await getCurrentUserId();
+    if (userId) {
+      void pushFollowModToCloud(userId, m, !exists);
+    }
   }, [followedMods]);
 
   const allDependencies = useMemo(() => {

@@ -124,9 +124,9 @@ Los checkboxes de implementación debajo registran código existente; no certifi
 | Aplicar y recuperar (SRV-4) | Executor y rollback. | UI en `/servers` (`POST /api/server/deploy`). | Fixture local. Hosting real y recovery post-reinicio pendientes. |
 | SAGE remoto (SRV-5) | Motor + tests. | Panel mergeado (PR #89). | Fixture ahora tiene `latest.log` y crash report. Logs de VPS real pendientes. |
 | Administración (SRV-6) | Properties, RCON, backups. | Panel mergeado (PR #90). | Fixture tiene `server.properties` y un zip de backup. RCON live y proceso offline pendientes. |
-| Multiplayer (SRV-7) | Contratos + reconciliación + tests de motor. | API + panel **locales (sin PR)**. | Fixture alluser ZIP. Descarga automática de mods y recorrido real pendientes. |
+| Multiplayer (SRV-7) | Contratos + reconciliación + tests de motor + API + panel en main. | Diagnóstico only. | Fixture alluser ZIP. Descarga automática de mods y validación en VPS real pendientes. |
 
-Primera entrega integrada en main: **auditoría + deploy + SAGE + admin**. SRV-7 UI vive en el working tree. Configs/mundos completos, hosting externo y packaging Electron siguen abiertos. La versión y el loader remotos los informa el operador.
+Primera entrega integrada en main: **auditoría + deploy + SAGE + admin + sync multiplayer (diagnóstico)**. Configs/mundos completos, descarga automática de mods, hosting externo y packaging Electron siguen abiertos. La versión y el loader remotos los informa el operador.
 
 Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architecture/server-audit.md)).
 
@@ -176,7 +176,7 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Descubrimiento de backups y extracción segura de metadata de mundos (`level.dat`).
   - [x] Panel Desktop `ServerAdminPanel` (PR #90).
   - [x] Suite de tests `server-admin-rcon.test.ts` pasando al 100%.
-- [x] **Hito SRV-7: Sincronización multiplayer cliente-servidor (motor cerrado; UI Desktop en working tree):**
+- [x] **Hito SRV-7: Sincronización multiplayer cliente-servidor (motor + UI Desktop en main; diagnóstico only):**
   - [x] Generación de manifest distribuible (`generateDistributableManifest`) con exclusión de mods server-only y secretos.
   - [x] Reconciliación de cliente local (`reconcileClientWithServerManifest`) detectando missing mods y version mismatches.
   - [x] Preservación estricta de mods client-only (OptiFine, Sodium, Iris, Shaders).

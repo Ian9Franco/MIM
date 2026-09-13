@@ -32,7 +32,7 @@ La fixture tiene una clave de host efímera y credenciales exclusivas de prueba;
 
 Se verificó el formulario contra esa fixture en navegador (Desktop y viewport móvil), incluyendo respuesta HTTP y limpieza de contraseña. No equivale a validar un hosting externo ni el ejecutable Electron empaquetado.
 
-Pendiente: integración completa de configs/mundos, persistencia durable post-reinicio, control del proceso remoto, pruebas con proveedores SFTP reales y packaging Windows. SRV-5/6 UI están en main; SRV-7 UI está en working tree. La existencia de los módulos no cierra #58.
+Pendiente: integración completa de configs/mundos, persistencia durable post-reinicio, control del proceso remoto, pruebas con proveedores SFTP reales, descarga automática de mods (SRV-7) y packaging Windows. SRV-5/6/7 UI están en main. La existencia de los módulos no cierra #58.
 
 ## Aplicar el plan (SRV-4)
 

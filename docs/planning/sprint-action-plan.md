@@ -51,7 +51,7 @@ ARCH-0 (listo) → ARCH-1 (listo) → ARCH-2 (listo) → ARCH-3 (engines) → AR
 | SRV-5 | SAGE remoto: logs + manifest + cambios recientes. | SRV-2 para ingesta; SRV-4 para correlación | **UI en main (PR #89)** | Falta log de hosting real (SAGE-01). |
 | SRV-6a | server.properties, configs, backups y metadata de mundos. | SRV-4 | **UI properties/backups en main (PR #90)** | Falta mundo `level.dat` real y restore. |
 | SRV-6b | NBT remoto, ProcessControl y consola/RCON por capacidades. | SRV-6a | **RCON UI en main; NBT/proceso no** | Fixture no levanta Minecraft. |
-| SRV-7 | Manifest distribuible, preflight cliente, sync común, perfiles y telemetría opcional. | SRV-4 + contratos estables | **Motor en main; UI/API local sin PR** | Falta merge, descarga de mods y perfiles. |
+| SRV-7 | Manifest distribuible, preflight cliente, sync común, perfiles y telemetría opcional. | SRV-4 + contratos estables | **Motor + UI/API en main (diagnóstico)** | Falta descarga automática de mods, perfiles y validación VPS. |
 
 NET-2 y SRV-1 pueden alternarse según disponibilidad de fixtures. La primera entrega visible será poder analizar un servidor y entender los fallos de conectividad.
 

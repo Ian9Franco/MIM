@@ -24,7 +24,7 @@ No hay inversores que engañar ni equipo que impresionar. Esta honestidad es lo 
 
 ## MIM Server — primera entrega de lectura (2026-09-10)
 
-Existe una pantalla Desktop `/servers` que audita mods por SFTP, puede aplicar el plan (deploy), diagnosticar logs (SAGE, PR #89) y administrar properties/backups/RCON (PR #90). Sync multiplayer (SRV-7) tiene motor en main y UI/API **locales sin merge**. El estado es **en desarrollo**: no cierra #58. Hosting externo, Electron empaquetado, configs/mundos completos y descarga automática de mods del cliente siguen pendientes. Ver la [matriz de aceptación](ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso).
+Existe una pantalla Desktop `/servers` que audita mods por SFTP, puede aplicar el plan (deploy), diagnosticar logs (SAGE, PR #89), administrar properties/backups/RCON (PR #90) y sincronizar multiplayer en modo diagnóstico (SRV-7, merge directo 2026-09-12). El estado es **en desarrollo**: no cierra #58. Hosting externo, Electron empaquetado, configs/mundos completos y descarga automática de mods del cliente siguen pendientes. Ver la [matriz de aceptación](ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso).
 
 ## Lo que está sólido (con evidencia)
 

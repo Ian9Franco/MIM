@@ -124,7 +124,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **Métricas Top-1/Top-3 Rigurosas:** Separar formalmente en el reporte casos con culpable atribuible de aciertos sistémicos sin culpable. | `SAGE-02` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-02)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Gate Automatizado de CI:** Hacer que `npm run eval:sage` falle el pipeline si las métricas caen por debajo de los umbrales históricos (Macro F1 ≥ 85%, Top-3 ≥ 95%, latencia ≤ 15 ms). | `SAGE-03` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-03)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Guardrails de Chat en Recorrido Real:** Salida estructurada con referencias a evidencia, validación estricta de atribuciones y bloqueo de remedios inseguros con fallback local. | `SAGE-06` (✅ Cerrado, PR #82) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-06)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
-| **Scoring live MIMbot en CI:** Job `mimbot-live-eval` en `ci.yml` + cola BOT-07. Estructura (`npm run eval:mimbot`) ya corre en CI. El live **no falla el PR** si no hay secrets; falta confirmar métricas de latencia/costo y umbral estable. | `SAGE-05b` (parcial, working tree) | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md) |
+| **Scoring live MIMbot en CI:** Job `mimbot-live-eval` en `ci.yml` + cola BOT-07 en `main`. Estructura (`npm run eval:mimbot`) ya corre en CI. El live **no falla el PR** si no hay secrets; falta confirmar métricas de latencia/costo y umbral estable. | `SAGE-05b` (parcial, en main) | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md) |
 
 ---
 

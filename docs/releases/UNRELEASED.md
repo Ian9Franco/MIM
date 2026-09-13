@@ -41,7 +41,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - `POST /api/server/deploy` local a Desktop, mismo guard de origen/host que inspect, plan recalculado en servidor (auditoría parcial no autoriza mutación).
   - Transporte SFTP escribible con la misma verificación de host y contención de rutas; payloads desde el build AllHost.
   - `/servers` ofrece confirmación explícita, progreso `preflight` → `executing` → `completed` | `failed` | `recovery-required`, y bloqueo de nuevos deploys en recuperación.
-  - SAGE remoto (PR #89) y admin/RCON (PR #90) ya están en main. Sync multiplayer UI sigue en working tree (SRV-7). Hosting externo y packaging Electron pendientes.
+  - SAGE remoto (PR #89), admin/RCON (PR #90) y sync multiplayer UI (SRV-7, merge directo 2026-09-12) en main. Hosting externo, descarga automática de mods y packaging Electron pendientes.
 - **Server Manager SRV-3 persistencia en disco (T1.1, no cierra #58):**
   - `FileSnapshotStore` en `@mim/server-engine`: un JSON por snapshot, journal NDJSON por servidor, escritura atómica (tmp + rename) y reapertura desde la misma carpeta.
   - `MemorySnapshotStore` se conserva. Detección read-only de operaciones abiertas (`loadPendingServerOperations`, T1.2).

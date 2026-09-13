@@ -758,7 +758,7 @@ Contraste con el checkout local `ad7f939` (v11.4.5). Esta matriz prevalece sobre
 |---|---|
 | 1.1 Tool calling | Sin cierre verificado; el endpoint de chat revisado construye contexto y genera texto. Falta acreditar herramientas controladas de consulta. |
 | 1.2 Recuperación contextual local | Parcial: `retriever.ts`/`knowledgeBase.ts` y contexto SAGE; no acredita recuperación sobre todos los documentos, configs, manifests e historial enumerados. |
-| 1.3 Evaluación MimBot | Parcial: baseline `mimbot-fixtures.json` + `npm run eval:mimbot` en CI. Job live `mimbot-live-eval` + cola BOT-07 en working tree (SAGE-05b). Faltan umbrales de latencia/costo y confirmación con secrets. |
+| 1.3 Evaluación MimBot | Parcial: baseline `mimbot-fixtures.json` + `npm run eval:mimbot` en CI. Job live `mimbot-live-eval` + cola BOT-07 en main (SAGE-05b). Faltan umbrales de latencia/costo y confirmación con secrets. |
 | 1.4 Model routing | Parcial: cascada y memoria del último éxito en `app/api/sage/chat/route.ts`; falta routing según complejidad y bypass determinista del LLM. |
 | 1.5 Multimodal explainer | Cerrado en el alcance §1.5: `lib/intelligence/modExplainer.ts` y `/api/fomo/explain` procesan metadata, galería y grounding; PR #53 reemplazó la lógica reproducida por tests del motor real y PR #62 / merge `a729cba` ejecuta además el consumidor HTTP real, verificando metadata, imagen, grounding y fallback con proveedor controlado. No cierra evaluación general de MimBot, tool calling ni respuestas con evidencia. |
 | 1.6 Respuestas con evidencia | Parcial: reportes, retriever y guardrails existentes; falta distinción y validación de la salida real del chat. SAGE-05/06. |

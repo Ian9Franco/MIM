@@ -122,9 +122,24 @@ async function main() {
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/critical-api-integration.test.ts"]
     },
     {
+      name: "Pre-Push CI Gate Catalog (CI parity)",
+      cmd: "npm",
+      args: ["run", "test:pre-push-gate"]
+    },
+    {
       name: "AI Provider Request Lifecycle Contract",
       cmd: "npm",
       args: ["run", "test:ai-provider"]
+    },
+    {
+      name: "AI Analysis Queue (BOT-07)",
+      cmd: "npm",
+      args: ["run", "test:ai-analysis-queue"]
+    },
+    {
+      name: "MIMbot Eval Fixtures (SAGE-05 structure gate)",
+      cmd: "npm",
+      args: ["run", "eval:mimbot"]
     },
     {
       name: "MIM-Bot Personality & Heuristic Fallback Engine",
@@ -135,6 +150,11 @@ async function main() {
       name: "Multimodal Project Explainer Contract",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/mod-explainer.test.ts"]
+    },
+    {
+      name: "Multimodal Project Explainer Batch (BOT-07)",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/mod-explainer-batch.test.ts"]
     },
     {
       name: "Third-Party Modpack License Auditor",

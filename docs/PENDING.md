@@ -2,6 +2,8 @@
 
 > **Propósito:** Este documento consolida punto por punto todo el trabajo pendiente en el proyecto, organizado por áreas de dominio, con enlaces directos a las especificaciones y planes detallados donde se profundiza cada tema.
 
+> **Snapshot 2026-09-12:** Issue #58 tiene UI Desktop para auditoría, deploy, SAGE, admin y sync (SRV-7 **sin mergear**). Validación en hosting real, Electron empaquetado y descarga automática de mods siguen abiertos. BOT-07 (cola + CI + lote de mods) y el gate `npm run pre:push` están en el working tree local, no en `origin/main`.
+
 ---
 
 ## 🧭 Índice Rápido
@@ -20,11 +22,11 @@
 
 | Ítem Pendiente | Estado | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Persistencia durable de Snapshots (SRV-3 core):** `FileSnapshotStore` en disco, detección post-reinicio (`loadPendingServerOperations`), `pendingOperations` en inspect UI y store en deploy (PR #83, #84). Pendiente: validación en hosting real y recovery UI avanzada. | `SRV-3` (Core cerrado) | 📘 [server-manager.md](./architecture/server-manager.md)<br/>📌 [ROADMAP.md (Sección 9)](./planning/ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso) |
-| **Habilitar Executor & Rollback en UI:** Integrado en Desktop `/servers` con `POST /api/server/deploy`, confirmación explícita, estados `preflight`/`executing`/`completed`/`failed`/`recovery-required`. Pendiente: persistencia durable de snapshots (SRV-3) y validación contra hosting real. No cierra #58. | `SRV-4` (UI integrada) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md)<br/>📘 [server-manager.md](./architecture/server-manager.md) |
-| **SAGE Remoto integrado en UI:** Conectar el visualizador de diagnósticos remotos para `latest.log` y crash reports del servidor con correlación de deploys. | `SRV-5` | 📘 [server-manager.md](./architecture/server-manager.md)<br/>🩺 [sage.md](./engines/sage.md) |
-| **Módulo de Administración Integrado:** Conectar parser/serializador de `server.properties`, consola RCON sanitizada y backup explorer en la interfaz Desktop. | `SRV-6` | 📘 [server-manager.md](./architecture/server-manager.md) |
-| **Sincronización Multiplayer Cliente-Servidor:** Flujo integrado para que jugadores se sincronicen en 1 clic descargando los mods requeridos del servidor AllHost. | `SRV-7` | 📘 [server-manager.md](./architecture/server-manager.md) |
+| **Persistencia durable de Snapshots (SRV-3 core):** `FileSnapshotStore` en disco, `pendingOperations` en inspect y store en deploy (PR #83, #84). Pendiente: validación en hosting real y recovery UI avanzada post-reinicio. | `SRV-3` (Core cerrado) | 📘 [server-manager.md](./architecture/server-manager.md)<br/>📌 [ROADMAP.md (Sección 9)](./planning/ROADMAP.md#9-server-manager--sincronización-remota-issue-58--en-progreso) |
+| **Executor & Rollback en UI:** Integrado en `/servers` (`POST /api/server/deploy`). Pendiente: validación contra hosting real. No cierra #58. | `SRV-4` (UI en main, #90 era admin; deploy ya en main) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
+| **SAGE remoto en UI:** Panel Desktop mergeado (PR #89). Fixture local ahora incluye `logs/latest.log` y crash report. Pendiente: logs de un VPS real y corpus SAGE-01. | `SRV-5` (UI en main) | 📘 [server-manager.md](./architecture/server-manager.md)<br/>🩺 [sage.md](./engines/sage.md) |
+| **Administración en UI:** Panel properties/backups/RCON mergeado (PR #90). Fixture incluye `server.properties` y un zip de backup. RCON real y proceso offline **no** están en la fixture. | `SRV-6` (UI en main) | 📘 [server-manager.md](./architecture/server-manager.md) |
+| **Sync multiplayer:** Motor + tests en main. API `POST /api/server/sync`, panel `/servers` y alluser ZIP en fixture: **código local, sin PR**. Falta descarga automática de mods faltantes. | `SRV-7` (UI local, sin merge) | 📘 [server-manager.md](./architecture/server-manager.md) |
 
 ---
 
@@ -69,7 +71,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 
 | Ítem Pendiente | Tarea | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Cola para Análisis por Lotes (condicional):** Concurrencia acotada, cancelación y espera según cuota real — solo si se incorpora ese flujo. | `BOT-07` | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
+| **Cola para análisis por lotes:** Motor `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch` y botón **MIM-Bot lote** en Descubrir (máx. 12). Código local, sin merge. Gate live CI (`SAGE-05b`) corre solo si hay secrets o `workflow_dispatch`. | `BOT-07` (parcial, working tree) | 🟢 [whosnext.md (BOT-07)](./planning/whosnext.md#2-funcionamiento-y-ux-de-mimbot) |
 
 ---
 
@@ -110,6 +112,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **Modularizar Componentes > 600 Líneas:**<br/>• `DiscoverTab.tsx` (158L, extraído a `apps/hub/components/tabs/discover/`)<br/>• `DraftDetailView.tsx` (188L, extraído a `apps/hub/components/draft-detail/`)<br/>• `FomoVersionOverlay.tsx` (186L, extraído a `components/fomo/details/`)<br/>• `useHomeController.ts` (Phase 2 verificación final `NEEDS_USER` & Phase 3 Profile/Community). REC-03 global permanece abierto. | `REC-03` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-03)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Inventario Zod en rutas restantes:** Mutaciones core (`build`, `delete`, `staging`, `tweak`) ya usan `bodySchema`/`querySchema` del guard. Falta inventariar handlers secundarios y extraer contratos compartidos con clientes. | `API-02b` | 🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
 | **Tests E2E de UI:** Agregar 3–5 recorridos E2E reproducibles (Discover → Detalle → Descarga y manejo de reintentos de red). | `REC-04` | 🟢 [whosnext.md (REC-04)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
+| **Pre-push local (anti-sorpresa CI/Codacy):** `npm run pre:push` espeja GitHub Actions. En working tree; no sustituye el check de Codacy sobre el diff del PR. | `CI-LOCAL` | 📘 [ian.md §4](../ian.md) |
 
 ---
 
@@ -121,7 +124,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **Métricas Top-1/Top-3 Rigurosas:** Separar formalmente en el reporte casos con culpable atribuible de aciertos sistémicos sin culpable. | `SAGE-02` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-02)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Gate Automatizado de CI:** Hacer que `npm run eval:sage` falle el pipeline si las métricas caen por debajo de los umbrales históricos (Macro F1 ≥ 85%, Top-3 ≥ 95%, latencia ≤ 15 ms). | `SAGE-03` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-03)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Guardrails de Chat en Recorrido Real:** Salida estructurada con referencias a evidencia, validación estricta de atribuciones y bloqueo de remedios inseguros con fallback local. | `SAGE-06` (✅ Cerrado, PR #82) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-06)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
-| **Scoring live MIMbot en CI:** Ejecutar fixtures contra LLM real (`RUN_MIMBOT_LIVE=1`) y gate de regresión. | `SAGE-05b` | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md)<br/>Baseline en `scripts/evaluation/mimbot-fixtures.json` |
+| **Scoring live MIMbot en CI:** Job `mimbot-live-eval` en `ci.yml` + cola BOT-07. Estructura (`npm run eval:mimbot`) ya corre en CI. El live **no falla el PR** si no hay secrets; falta confirmar métricas de latencia/costo y umbral estable. | `SAGE-05b` (parcial, working tree) | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md) |
 
 ---
 

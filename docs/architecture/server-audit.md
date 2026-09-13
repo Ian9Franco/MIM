@@ -32,10 +32,19 @@ La fixture tiene una clave de host efímera y credenciales exclusivas de prueba;
 
 Se verificó el formulario contra esa fixture en navegador (Desktop y viewport móvil), incluyendo respuesta HTTP y limpieza de contraseña. No equivale a validar un hosting externo ni el ejecutable Electron empaquetado.
 
-Pendiente: integración de configs/mundos, persistencia durable, control del proceso remoto, recuperación tras reinicio del Desktop, pruebas con proveedores SFTP y packaging Windows. La existencia de los módulos SRV-3–SRV-7 no cierra esas entregas.
+Pendiente: integración completa de configs/mundos, persistencia durable post-reinicio, control del proceso remoto, pruebas con proveedores SFTP reales y packaging Windows. SRV-5/6 UI están en main; SRV-7 UI está en working tree. La existencia de los módulos no cierra #58.
 
 ## Aplicar el plan (SRV-4)
 
 Después de una auditoría **completa** (no parcial) con diferencias y sin bloqueos de revisión manual, `/servers` permite aplicar el plan. La API `POST /api/server/deploy` vuelve a descubrir el estado remoto, rechaza inventarios incompletos y ejecuta `executeServerDeployment` con transporte SFTP escribible.
 
 Reproducción con la fixture: mismos pasos de auditoría; en la UI usar **Revisar y aplicar…**, marcar la confirmación y aplicar. El resultado esperado es instalar `missing` y reemplazar `example`. Las credenciales siguen sin persistirse: se reutilizan solo en memoria para esa sesión.
+
+## SAGE, admin y sync (fixture 2026-09-12)
+
+La fixture SFTP ahora incluye `logs/latest.log`, un crash report, `server.properties` y `backups/world-2026-09-12.zip`. En `/servers`, tras auditar:
+
+- **SAGE remoto:** Diagnosticar `latest.log` o el crash report (dependencia `missing` simulada).
+- **Admin:** Cargar properties y ver el backup. RCON no hay proceso Minecraft real — el comando fallará.
+- **Sync multiplayer:** Requiere `Fixture_alluser.zip` (lo genera `dev:server-fixture`). Esperado: mismatch de `example` y Sodium como solo-cliente. No descarga mods.
+

@@ -113,20 +113,20 @@
 
 ## 9. Server Manager & Sincronización Remota (Issue #58 — En Progreso)
 
-### Estado de aceptación — 2026-09-09
+### Estado de aceptación — 2026-09-12
 
 Los checkboxes de implementación debajo registran código existente; no certifican una funcionalidad operativa completa. Esta matriz distingue implementación, integración Desktop y validación.
 
 | Entrega | Código | Integración Desktop | Validación |
 |---|---|---|---|
-| Conectar y auditar mods (SRV-1/2) | Transporte SSH/SFTP real de solo lectura, huella de host obligatoria, límites y auditoría parcial explícita. | Pantalla `/servers` desde el header; compara contra el último build AllHost. | Fixture local con protocolo SFTP real y recorrido HTTP/UI; hosting externo y paquete Electron pendientes. |
-| Preflight y snapshots (SRV-3) | Contratos, fingerprint y store en memoria. | Pendiente de integrar al recorrido de sincronización. | Regresiones de motor; persistencia en disco y drift antes de mutar pendientes. |
-| Aplicar y recuperar (SRV-4) | Executor y rollback con regresiones de fallos. | No habilitado en la interfaz. | Pendiente de reinicio, recuperación durable, hashes remotos y servidor real. |
-| SAGE remoto (SRV-5) | Motor y pruebas controladas. | Pendiente. | Recorrido integrado pendiente. |
-| Administración (SRV-6) | Módulos de propiedades, RCON y backups. | Pendiente. | Validación real y garantías de proceso offline pendientes. |
-| Multiplayer (SRV-7) | Contratos y reconciliación. | Pendiente. | Recorrido cliente-servidor real pendiente. |
+| Conectar y auditar mods (SRV-1/2) | Transporte SSH/SFTP real de solo lectura, huella de host obligatoria, límites y auditoría parcial explícita. | Pantalla `/servers`; compara contra el último build AllHost. | Fixture SFTP local + recorrido HTTP/UI. Hosting externo y `.exe` empaquetado pendientes. |
+| Preflight y snapshots (SRV-3) | Contratos, fingerprint, `FileSnapshotStore` en disco, `pendingOperations`. | Aviso en inspect/deploy. | Tests de motor. Recovery UI avanzada y VPS real pendientes. |
+| Aplicar y recuperar (SRV-4) | Executor y rollback. | UI en `/servers` (`POST /api/server/deploy`). | Fixture local. Hosting real y recovery post-reinicio pendientes. |
+| SAGE remoto (SRV-5) | Motor + tests. | Panel mergeado (PR #89). | Fixture ahora tiene `latest.log` y crash report. Logs de VPS real pendientes. |
+| Administración (SRV-6) | Properties, RCON, backups. | Panel mergeado (PR #90). | Fixture tiene `server.properties` y un zip de backup. RCON live y proceso offline pendientes. |
+| Multiplayer (SRV-7) | Contratos + reconciliación + tests de motor. | API + panel **locales (sin PR)**. | Fixture alluser ZIP. Descarga automática de mods y recorrido real pendientes. |
 
-Primera entrega integrada: **comparación de JARs de mods, solo lectura**. No cubre configs, mundos, escritura remota ni disponibilidad general de MIM Server. La versión y el loader remotos los informa el operador; no se infieren de rangos de dependencias.
+Primera entrega integrada en main: **auditoría + deploy + SAGE + admin**. SRV-7 UI vive en el working tree. Configs/mundos completos, hosting externo y packaging Electron siguen abiertos. La versión y el loader remotos los informa el operador.
 
 Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architecture/server-audit.md)).
 
@@ -167,18 +167,22 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Ingesta remota de `logs/latest.log` y crash reports vía `ReadOnlyFileTransport`.
   - [x] Clasificación determinista de crashes (dependencias faltantes, incompatibilidades, mixins, OOM, entidades).
   - [x] Correlación automática con cambios recientes (`ServerChangeRecord`) y despliegues (`correlatedDeploymentId`).
+  - [x] Panel Desktop `ServerSageDiagnosticPanel` (PR #89).
   - [x] Suite de tests `server-sage-remote.test.ts` pasando al 100%.
 - [x] **Hito SRV-6: Administración avanzada (configs, RCON y backups):**
   - [x] Parser bidireccional y serializador de `server.properties` preservando comentarios y claves no administradas.
   - [x] Validador de rangos y directivas de seguridad para propiedades de servidor.
   - [x] Ejecutor RCON con sanitización de comandos peligrosos (`/stop`) y stripping de códigos de formato Minecraft (§ / ANSI).
   - [x] Descubrimiento de backups y extracción segura de metadata de mundos (`level.dat`).
+  - [x] Panel Desktop `ServerAdminPanel` (PR #90).
   - [x] Suite de tests `server-admin-rcon.test.ts` pasando al 100%.
-- [x] **Hito SRV-7: Sincronización multiplayer cliente-servidor:**
+- [x] **Hito SRV-7: Sincronización multiplayer cliente-servidor (motor cerrado; UI Desktop en working tree):**
   - [x] Generación de manifest distribuible (`generateDistributableManifest`) con exclusión de mods server-only y secretos.
   - [x] Reconciliación de cliente local (`reconcileClientWithServerManifest`) detectando missing mods y version mismatches.
   - [x] Preservación estricta de mods client-only (OptiFine, Sodium, Iris, Shaders).
   - [x] Suite de tests `server-multiplayer-sync.test.ts` pasando al 100%.
+  - [ ] API `POST /api/server/sync` + `ServerMultiplayerSyncPanel` — implementado localmente, **sin merge**.
+  - [ ] Descarga/instalación automática de mods faltantes en el cliente.
 
 ---
 

@@ -75,23 +75,49 @@ async function main(): Promise<void> {
   if (process.env.RUN_MIMBOT_LIVE === "1") {
     const { runSageChat } = await import("../../lib/intelligence/sage/sageChatEngine");
     const { resolveGatewayKeys } = await import("../../lib/intelligence/ai/modelGateway");
+    const { runAnalysisQueue } = await import("../../lib/intelligence/ai/analysisQueue");
     const keys = resolveGatewayKeys();
     assert(keys.hasGeminiKey || keys.hasOpenRouterKey, "Live eval requires Gemini or OpenRouter key");
+    const provider = keys.hasOpenRouterKey ? ("openrouter" as const) : ("gemini" as const);
+
+    const queued = await runAnalysisQueue(
+      fixture.cases.map((testCase) => ({
+        id: testCase.id,
+        provider,
+        run: async (signal) =>
+          runSageChat({
+            question: testCase.question,
+            personality: "standard",
+            crashContext: testCase.crashContext,
+            gatewayKeys: {},
+            signal,
+          }),
+      })),
+      {
+        maxRetries: 2,
+        concurrency: { gemini: 1, openrouter: 1 },
+        onJobStart: (id) => console.log(`▶ LIVE queue ${id}`),
+        onQuotaWait: (p, waitMs, hint) =>
+          console.log(`⏳ Cuota ${p}: esperando ${Math.ceil(waitMs / 1000)}s — ${hint}`),
+      }
+    );
 
     let passed = 0;
-    for (const testCase of fixture.cases) {
-      const result = await runSageChat({
-        question: testCase.question,
-        personality: "standard",
-        crashContext: testCase.crashContext,
-        gatewayKeys: {},
-      });
-      const scored = scoreResponse(result.text, testCase);
+    for (const item of queued) {
+      if (item.cancelled) {
+        console.error(`✗ LIVE ${item.id} cancelled`);
+        continue;
+      }
+      if (!item.ok || !item.value) {
+        console.error(`✗ LIVE ${item.id}`, item.error ?? "unknown error");
+        continue;
+      }
+      const scored = scoreResponse(item.value.text, fixture.cases.find((c) => c.id === item.id)!);
       if (scored.passed) {
         passed += 1;
-        console.log(`✓ LIVE ${testCase.id}`);
+        console.log(`✓ LIVE ${item.id}`);
       } else {
-        console.error(`✗ LIVE ${testCase.id}`, scored);
+        console.error(`✗ LIVE ${item.id}`, scored);
       }
     }
     assert(passed >= Math.ceil(fixture.cases.length * 0.6), `Live pass rate ${passed}/${fixture.cases.length}`);

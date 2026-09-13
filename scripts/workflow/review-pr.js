@@ -18,26 +18,16 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const { execFileSync, execSync, spawn } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 const path = require("path");
-const fs = require("fs");
-
-const REPO_ROOT = path.join(__dirname, "..", "..");
-
-const colors = {
-  reset: "\x1b[0m",
-  green: "\x1b[32m",
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  cyan: "\x1b[36m",
-  magenta: "\x1b[35m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-};
-
-function log(msg, color = "reset") {
-  console.log(`${colors[color]}${msg}${colors.reset}`);
-}
+const {
+  REPO_ROOT,
+  colors,
+  log,
+  runGates,
+  saveGateFailureLog,
+  PR_AUDIT_GATES,
+} = require("./ci-gates");
 
 function runGit(args) {
   try {
@@ -57,95 +47,23 @@ function validateBranchName(branch) {
 }
 
 function saveFailureLog(target, branchName, failedGate, reason, output, commits, diffStat) {
-  const logDir = path.join(REPO_ROOT, "logs", "pr-audits");
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-  const humanTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-
-  const sanitizedTarget = String(target).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const fileName = `audit-failed-PR-${sanitizedTarget}-${timestamp}.log`;
-  const filePath = path.join(logDir, fileName);
-
-  const content = [
-    "================================================================================",
-    "MIM PR AUDITOR — INFORME DE FALLO DE CONTROL DE CALIDAD",
-    "================================================================================",
-    `Fecha y Hora:      ${humanTime}`,
-    `Objetivo auditado: ${target}`,
-    `Rama de trabajo:   ${branchName}`,
-    `Veredicto:         REQUEST_CHANGES`,
-    `Compuerta fallida: ${failedGate}`,
-    `Motivo:            ${reason}`,
-    "",
-    "────────────────────────────────────────────────────────────────────────────────",
-    "COMMITS DEL PR (vs origin/main):",
-    "────────────────────────────────────────────────────────────────────────────────",
-    commits || "(Sin commits detectados)",
-    "",
-    "────────────────────────────────────────────────────────────────────────────────",
-    "ARCHIVOS MODIFICADOS (diff --stat):",
-    "────────────────────────────────────────────────────────────────────────────────",
-    diffStat || "(Sin archivos modificados)",
-    "",
-    "────────────────────────────────────────────────────────────────────────────────",
-    "SALIDA DE LA COMPUERTA FALLIDA:",
-    "────────────────────────────────────────────────────────────────────────────────",
-    output || "(Sin salida capturada)",
-    "================================================================================",
-    ""
-  ].join("\n");
-
-  fs.writeFileSync(filePath, content, "utf-8");
-  return filePath;
+  return saveGateFailureLog({
+    logSubdir: "pr-audits",
+    filePrefix: "audit-failed-PR",
+    target,
+    branchName,
+    failedGate,
+    reason,
+    output,
+    extraSections: [
+      { title: "COMMITS DEL PR (vs origin/main)", content: commits || "(Sin commits detectados)" },
+      { title: "ARCHIVOS MODIFICADOS (diff --stat)", content: diffStat || "(Sin archivos modificados)" },
+    ],
+  });
 }
 
-function runAsyncCmd(title, cmd, args) {
-  return new Promise((resolve) => {
-    log(`\n  ⏳ ${title}...`, "cyan");
-    const start = Date.now();
-    let capturedOutput = "";
-
-    const proc = spawn(cmd, args, {
-      cwd: REPO_ROOT,
-      shell: true,
-      env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
-    });
-
-    if (proc.stdout) {
-      proc.stdout.on("data", (chunk) => {
-        process.stdout.write(chunk);
-        capturedOutput += chunk.toString();
-      });
-    }
-
-    if (proc.stderr) {
-      proc.stderr.on("data", (chunk) => {
-        process.stderr.write(chunk);
-        capturedOutput += chunk.toString();
-      });
-    }
-
-    proc.on("close", (code) => {
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      if (code === 0) {
-        log(`  ✓ ${title} completado exitosamente (${elapsed}s)`, "green");
-        resolve({ ok: true, elapsed, output: capturedOutput });
-      } else {
-        log(`  ✗ ${title} falló con código ${code} (${elapsed}s)`, "red");
-        resolve({ ok: false, elapsed, code, output: capturedOutput });
-      }
-    });
-
-    proc.on("error", (err) => {
-      log(`  ✗ Fallo al ejecutar ${title}: ${err.message}`, "red");
-      resolve({ ok: false, elapsed: 0, code: 1, output: err.message });
-    });
-  });
+async function runAllQualityGates(contextLabel = "COMPUERTAS DE CALIDAD") {
+  return runGates(PR_AUDIT_GATES, contextLabel);
 }
 
 function cleanTransientTestArtifacts() {
@@ -177,35 +95,6 @@ function checkCleanWorkingDirectory() {
 
 function getCurrentBranch() {
   return runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
-}
-
-async function runAllQualityGates(contextLabel = "COMPUERTAS DE CALIDAD") {
-  log(`\n─────────────────────────────────────────────────────────────────────────────`, "dim");
-  log(`🛡️  EJECUTANDO ${contextLabel}`, "bold");
-  log(`─────────────────────────────────────────────────────────────────────────────`, "dim");
-
-  const gates = [
-    { title: "1. Verificación Estructural de API Guard", cmd: "npm", args: ["run", "lint:api-guard"], reason: "Fallo en la auditoría estructural de API Guard (rutas desprotegidas)." },
-    { title: "2. Verificación de Fronteras de Arquitectura", cmd: "npm", args: ["run", "lint:architecture"], reason: "Fallo en las fronteras de arquitectura (dependencias cruzadas no permitidas)." },
-    { title: "3. Contratos de Fronteras Arquitectónicas", cmd: "npm", args: ["run", "test:architecture"], reason: "Fallo en la suite de pruebas de contratos arquitectónicos." },
-    { title: "4. Verificación de Tipos TypeScript (Raíz / Desktop)", cmd: "npx", args: ["tsc", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (Raíz)." },
-    { title: "5. Verificación de Tipos TypeScript (MIM Hub)", cmd: "npx", args: ["tsc", "--project", "apps/hub/tsconfig.json", "--noEmit"], reason: "Fallo en la comprobación estática de TypeScript (apps/hub/tsconfig.json)." },
-    { title: "6. Suite de Tests Unificados (npm test)", cmd: "node", args: ["scripts/test-runner.js"], reason: "Fallo en una o más suites del Test Runner unificado de MIM." },
-  ];
-
-  for (const g of gates) {
-    const res = await runAsyncCmd(g.title, g.cmd, g.args);
-    if (!res.ok) {
-      return {
-        ok: false,
-        gateTitle: g.title,
-        reason: g.reason,
-        output: res.output,
-      };
-    }
-  }
-
-  return { ok: true };
 }
 
 /**

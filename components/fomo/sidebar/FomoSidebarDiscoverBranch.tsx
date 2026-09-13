@@ -92,6 +92,47 @@ function FomoSidebarDiscoverBranchInner({
     setMode
   );
   const isModern = currentTheme === "modern";
+  const [bulkExplaining, setBulkExplaining] = useState(false);
+
+  async function handleBulkExplain() {
+    const selected = discover.selectedMods.slice(0, 12);
+    if (!selected.length || bulkExplaining) return;
+    setBulkExplaining(true);
+    showStatus(`MIM-Bot explicando ${selected.length} mods en lote…`, "info");
+    try {
+      const response = await fetch("/api/fomo/explain-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projects: selected.map((mod) => ({
+            projectId: mod.projectId,
+            title: mod.title,
+            author: mod.author,
+            slug: mod.slug || mod.projectId,
+            description: mod.body || mod.description || "",
+            url: mod.url,
+            source: mod._source,
+            categories: mod.categories || [],
+            loaders: mod.loaders || [],
+          })),
+        }),
+      });
+      const data = await response.json() as { error?: string; succeeded?: number; failed?: number; total?: number };
+      if (response.status === 401 || data.error === "NO_API_KEY") {
+        showStatus("Configurá Gemini u OpenRouter en Ajustes para explicar en lote.", "error");
+        return;
+      }
+      if (!response.ok) {
+        showStatus(data.error || "No se pudo explicar el lote.", "error");
+        return;
+      }
+      showStatus(`Lote listo: ${data.succeeded ?? 0}/${data.total ?? selected.length} explicados.`, "success");
+    } catch {
+      showStatus("Error de conexión al explicar el lote.", "error");
+    } finally {
+      setBulkExplaining(false);
+    }
+  }
 
  const handleSearchProject = (e: Event) => {
     const detail = (e as CustomEvent).detail || {};
@@ -492,6 +533,8 @@ function FomoSidebarDiscoverBranchInner({
                 <BulkActionsBar
                   mods={discover.selectedMods}
                   isModern={isModern}
+                  explaining={bulkExplaining}
+                  onExplain={() => { void handleBulkExplain(); }}
                   onCancel={discover.clearSelection}
                   onAdd={() => {
                     m.setBulkAdding(true);

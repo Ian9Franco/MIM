@@ -7,6 +7,7 @@ import { ServerConnectionForm } from "@/components/server/ServerConnectionForm";
 import { ServerInspectionResultView } from "@/components/server/ServerInspectionResultView";
 import { ServerSageDiagnosticPanel } from "@/components/server/ServerSageDiagnosticPanel";
 import { ServerAdminPanel } from "@/components/server/ServerAdminPanel";
+import { ServerMultiplayerSyncPanel } from "@/components/server/ServerMultiplayerSyncPanel";
 import { inspectServerSchema, type InspectServerRequest } from "@/lib/server/inspectSchema";
 import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import type { DesktopDeployPhase } from "@/components/server/ServerDeployPanel";
@@ -134,7 +135,7 @@ export default function ServersPage() {
           </p>
           <p className="flex items-start gap-2 text-sm text-[var(--color-muted)]">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-            Configs, mundos y sync multiplayer siguen pendientes. Las credenciales no se guardan.
+            Configs, mundos y descarga automática de mods siguen pendientes. Las credenciales no se guardan.
           </p>
         </div>
       </header>
@@ -193,6 +194,11 @@ export default function ServersPage() {
                 onBusyChange={setBusy}
               />
               <ServerAdminPanel
+                inspectRequest={activeInspect}
+                busy={busy}
+                onBusyChange={setBusy}
+              />
+              <ServerMultiplayerSyncPanel
                 inspectRequest={activeInspect}
                 busy={busy}
                 onBusyChange={setBusy}

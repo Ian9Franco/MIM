@@ -6,6 +6,14 @@ Al ejecutar 'npm run release:auto', este contenido se trasladará automáticamen
 a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 -->
 
+### Working tree 2026-09-12 (sin merge a main)
+
+- **SRV-7 UI:** `POST /api/server/sync`, panel Sync multiplayer en `/servers`, transporte alluser ZIP, test `server-sync-api.test.ts`. Diagnóstico only — no descarga mods.
+- **BOT-07:** cola `runAnalysisQueue`, eval live en cola, `POST /api/fomo/explain-batch`, botón **MIM-Bot lote** en Descubrir (máx. 12).
+- **Pre-push gate:** `npm run pre:push` / `pre:push:quick` / `pre:push:lint` espejan CI local (excepto upload Codacy y eval live sin secrets).
+- **Fixture Server Manager:** SFTP de prueba ahora incluye `server.properties`, `logs/latest.log`, crash report y un zip en `backups/`. RCON real sigue ausente.
+- **CI:** `eval:mimbot` estructural en test-and-evaluate; job opcional `mimbot-live-eval` (SAGE-05b).
+
 ### Planificación auditada y publicación manual por tag
 
 - SAGE-01: `crash-corpus.json` vacío para logs reales; fixture de regresión aislado en `crash-corpus-regression.json` (`origin: synthetic`). Sin casos stress mock. Logs de servidor/host van al corpus real cuando existan (distinto de SRV-5 ingesta remota).
@@ -32,7 +40,7 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
   - `POST /api/server/deploy` local a Desktop, mismo guard de origen/host que inspect, plan recalculado en servidor (auditoría parcial no autoriza mutación).
   - Transporte SFTP escribible con la misma verificación de host y contención de rutas; payloads desde el build AllHost.
   - `/servers` ofrece confirmación explícita, progreso `preflight` → `executing` → `completed` | `failed` | `recovery-required`, y bloqueo de nuevos deploys en recuperación.
-  - Persistencia durable de snapshots, SAGE remoto, admin/RCON y sync multiplayer siguen pendientes.
+  - SAGE remoto (PR #89) y admin/RCON (PR #90) ya están en main. Sync multiplayer UI sigue en working tree (SRV-7). Hosting externo y packaging Electron pendientes.
 - **Server Manager SRV-3 persistencia en disco (T1.1, no cierra #58):**
   - `FileSnapshotStore` en `@mim/server-engine`: un JSON por snapshot, journal NDJSON por servidor, escritura atómica (tmp + rename) y reapertura desde la misma carpeta.
   - `MemorySnapshotStore` se conserva. Detección read-only de operaciones abiertas (`loadPendingServerOperations`, T1.2).

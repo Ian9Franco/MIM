@@ -78,6 +78,9 @@ jobs:
       - name: Verify SAGE Real Chat Guardrails
         run: npm run test:sage-chat-guardrails
 
+      - name: Verify MIMbot Eval Fixture Structure (SAGE-05)
+        run: npm run eval:mimbot
+
       - name: Upload Coverage to Codacy
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
@@ -135,3 +138,31 @@ jobs:
         run: npm run build:hub
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+  mimbot-live-eval:
+    name: MIMbot Live Eval Gate (SAGE-05b / BOT-07)
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      secrets.GEMINI_API_KEY != '' ||
+      secrets.OPENROUTER_API_KEY != ''
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Live MIMbot Eval (quota-aware queue)
+        run: npm run eval:mimbot
+        env:
+          RUN_MIMBOT_LIVE: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

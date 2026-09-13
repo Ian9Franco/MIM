@@ -47,11 +47,11 @@ ARCH-0 (listo) → ARCH-1 (listo) → ARCH-2 (listo) → ARCH-3 (engines) → AR
 | SRV-1 | SFTP de lectura, configuración de conexión y descubrimiento remoto. | BASE + contrato NET-1 | **COMPLETO** | Fixture SFTP real: JAR/config/log, permisos, cancelación y timeout; cero mutaciones. |
 | SRV-2 | UI de auditoría: proyecto deseado → manifest remoto → validator/diff → reporte. | SRV-1 | **COMPLETO** | Duplicados, outdated respecto del proyecto, dependencias y client-only visibles; auditoría incompleta marcada como parcial. |
 | SRV-3 | Endurecer plan/preflight, desired state desde builder, snapshots e historial durables. | SRV-2 | **COMPLETO** | Validar ambos estados, hashes, configs y snapshot obligatorio; bloquear plan obsoleto por drift. |
-| SRV-4 | Executor con staging, apply, verificación, rollback y recuperación tras reinicio. | SRV-3 | *PENDIENTE* | Fallos inyectados en cada paso; restauración por hashes, idempotencia y exclusión de deploys simultáneos. |
-| SRV-5 | SAGE remoto: logs + manifest + cambios recientes. | SRV-2 para ingesta; SRV-4 para correlación | *PENDIENTE* | Mismo motor determinista; evidencia reproducible, sin duplicar clasificador. |
-| SRV-6a | server.properties, configs, backups y metadata de mundos. | SRV-4 | *PENDIENTE* | Validación, restauración y preservación de configuración no administrada. |
-| SRV-6b | NBT remoto, ProcessControl y consola/RCON por capacidades. | SRV-6a | *PENDIENTE* | NBT exige servidor confirmado offline, snapshot, validación y subida segura; UI refleja capacidades reales. |
-| SRV-7 | Manifest distribuible, preflight cliente, sync común, perfiles y telemetría opcional. | SRV-4 + contratos estables | *PENDIENTE* | ready/mismatch/missing/incompatible probados; preservar client-only/perfiles; funcionar sin agente ni telemetría. |
+| SRV-4 | Executor con staging, apply, verificación, rollback y recuperación tras reinicio. | SRV-3 | **UI en main** | Falta validación VPS/Electron y recovery post-reinicio. |
+| SRV-5 | SAGE remoto: logs + manifest + cambios recientes. | SRV-2 para ingesta; SRV-4 para correlación | **UI en main (PR #89)** | Falta log de hosting real (SAGE-01). |
+| SRV-6a | server.properties, configs, backups y metadata de mundos. | SRV-4 | **UI properties/backups en main (PR #90)** | Falta mundo `level.dat` real y restore. |
+| SRV-6b | NBT remoto, ProcessControl y consola/RCON por capacidades. | SRV-6a | **RCON UI en main; NBT/proceso no** | Fixture no levanta Minecraft. |
+| SRV-7 | Manifest distribuible, preflight cliente, sync común, perfiles y telemetría opcional. | SRV-4 + contratos estables | **Motor en main; UI/API local sin PR** | Falta merge, descarga de mods y perfiles. |
 
 NET-2 y SRV-1 pueden alternarse según disponibilidad de fixtures. La primera entrega visible será poder analizar un servidor y entender los fallos de conectividad.
 

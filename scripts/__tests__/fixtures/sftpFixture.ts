@@ -9,6 +9,42 @@ export function fixtureJar(id: string, version: string): Buffer {
   return zip.toBuffer();
 }
 
+export const FIXTURE_LATEST_LOG = `[01:15:30] [Server thread/INFO] [minecraft/MinecraftServer]: Starting minecraft server version 1.20.1
+[01:15:31] [Server thread/ERROR] [FabricLoader/]: Incompatible mod set!
+net.fabricmc.loader.impl.FormattedException: Some mods require 'missing' which is missing!
+\tat net.fabricmc.loader.impl.FabricLoaderImpl.load(FabricLoaderImpl.java:234)
+`;
+
+export const FIXTURE_CRASH_REPORT = `---- Minecraft Crash Report ----
+Time: 2026-09-12 21:00:00
+Description: Exception in server tick loop
+
+net.fabricmc.loader.impl.FormattedException: Some mods require 'missing' which is missing!
+`;
+
+export const FIXTURE_SERVER_PROPERTIES = `# Minecraft server properties
+motd=MIM Fixture SMP
+max-players=8
+difficulty=normal
+gamemode=survival
+online-mode=true
+pvp=true
+white-list=false
+view-distance=10
+simulation-distance=8
+server-port=25565
+spawn-protection=16
+enable-rcon=false
+rcon.port=25575
+level-name=world
+`;
+
+export function fixtureBackupZip(): Buffer {
+  const zip = new AdmZip();
+  zip.addFile("world/level.dat", Buffer.from("fixture-world"));
+  return zip.toBuffer();
+}
+
 /** Real SSH/SFTP protocol fixture; no filesystem writes or shell execution exposed. */
 export async function startSftpFixture() {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
@@ -18,7 +54,13 @@ export async function startSftpFixture() {
   const userKey = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } }).privateKey;
   const parsedUserKey = utils.parseKey(userKey);
   if (parsedUserKey instanceof Error || Array.isArray(parsedUserKey)) throw new Error("Invalid fixture user key");
-  const files = new Map<string, Buffer>([["/server/mods/example.jar", fixtureJar("example", "1.0.0")]]);
+  const files = new Map<string, Buffer>([
+    ["/server/mods/example.jar", fixtureJar("example", "1.0.0")],
+    ["/server/server.properties", Buffer.from(FIXTURE_SERVER_PROPERTIES)],
+    ["/server/logs/latest.log", Buffer.from(FIXTURE_LATEST_LOG)],
+    ["/server/crash-reports/crash-2026-09-12_fixture.txt", Buffer.from(FIXTURE_CRASH_REPORT)],
+    ["/server/backups/world-2026-09-12.zip", fixtureBackupZip()],
+  ]);
   const clients = new Set<Connection>();
   const operations: string[] = [];
   let readFault: "none" | "denied" | "disconnect" | "stall" = "none";
@@ -41,7 +83,7 @@ export async function startSftpFixture() {
   function setup(sftp: SFTPWrapper, client: Connection) {
     sftp.on("error", () => {});
     const handles = new Map<string, { path: string; listed: boolean; writable?: boolean }>();
-    const dirs = new Set(["/", "/server", "/server/mods"]);
+    const dirs = new Set(["/", "/server", "/server/mods", "/server/logs", "/server/crash-reports", "/server/backups"]);
     const parentOf = (p: string) => { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); };
     const directory = (p: string) => dirs.has(p);
     const exists = (p: string) => directory(p) || files.has(p);

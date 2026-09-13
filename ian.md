@@ -100,7 +100,47 @@ npm test
 
 ---
 
-## 💻 4. Crear el `.exe` Standalone en Local (En tu PC)
+## 🚦 4. Pre-Push Gate — espejo local de CI (anti-sorpresa PR / Codacy)
+
+Antes de `git push`, corré el mismo checklist que GitHub Actions. Así detectás fallos de tsc, eslint, tests, DAST y builds **en tu máquina**, no en el PR.
+
+```bash
+# Espejo completo de .github/workflows/ci.yml (~15–25 min)
+npm run pre:push
+
+# Sin test:coverage ni builds de producción (~8 min)
+npm run pre:push:quick
+
+# Solo tipos + eslint + arquitectura (~2 min, iteración rápida)
+npm run pre:push:lint
+```
+
+**Qué cubre `pre:push` (paridad con CI):**
+
+| Job CI | Compuerta local |
+| :--- | :--- |
+| lint-and-typecheck | tsc ×2, eslint ×2, api-guard, architecture |
+| test-and-evaluate | test:coverage, sage-errors/stream/guardrails, eval:mimbot |
+| dast-security-audit | dast-scan.js |
+| build-production | `npm run build` + `build:hub` |
+
+**Qué NO reemplaza:** Codacy analiza el **diff del PR** con ESLint más estricto que el config local (ver `.codacy.yml`). Si CI pasa pero Codacy marca issues nuevos, corregilos en el diff.
+
+Si falla, el log queda en `logs/pre-push-gates/pre-push-failed-<rama>-<timestamp>.log`.
+
+**Flujo recomendado antes de abrir PR:**
+
+```bash
+npm run pre:push:lint    # iteración mientras codeás
+npm run pre:push         # una vez listo para pushear
+git push -u origin HEAD
+```
+
+`npm run pr:audit <rama>` sigue siendo útil **después** del push (veredicto READY/HOLD + comparación con origin/main), pero no incluye eslint ni builds — por eso existe `pre:push`.
+
+---
+
+## 💻 5. Crear el `.exe` Standalone en Local (En tu PC)
 
 Si querés probar la aplicación de escritorio en tu máquina o generar el `.exe` sin esperar a GitHub Actions:
 
@@ -125,7 +165,7 @@ npm run start:standalone
 
 ---
 
-## 🛠️ 5. Resumen Comparativo de Comandos
+## 🛠️ 6. Resumen Comparativo de Comandos
 
 | Modo | Objetivo | Comando |
 | :--- | :--- | :--- |
@@ -135,6 +175,120 @@ npm run start:standalone
 | 🎛️ **Manual** | **Promover y mergear a main el PR auditado** | `npm run pr:promote` |
 | 🎛️ **Manual** | **Volver a main descartando la revisión** | `npm run pr:return` |
 | 🎛️ **Manual** | **Asistente interactivo de release (con menú y confirmaciones)** | `npm run release` |
+| 🚦 **Pre-push** | **Espejo local de CI antes de git push** | `npm run pre:push` |
+| 🚦 **Pre-push** | **CI local sin builds (más rápido)** | `npm run pre:push:quick` |
+| 🚦 **Pre-push** | **Solo tsc + eslint + arquitectura** | `npm run pre:push:lint` |
 | 🧪 **Tests** | **Correr la suite unificada de pruebas (15 suites)** | `npm test` |
 | 💻 **Desktop** | **Compilar instalador `.exe` en tu máquina local** | `npm run package:win` |
 | 💻 **Desktop** | **Abrir Electron standalone en desarrollo** | `npm run start:standalone` |
+| 🧪 **Server** | **Fixture SFTP local + UI `/servers` (manual)** | `npm run dev:server-fixture` |
+| 🧪 **Server** | **Suite automatizada Server Manager** | `npm run test:server` |
+
+---
+
+## 🖥️ 7. Server Manager — prueba manual con fixture local
+
+Entorno aislado para probar `/servers` sin contratar hosting ni tocar servidores reales. Levanta un SFTP real en loopback, prepara builds **AllHost** y **AllUser** temporales, y arranca Next en el puerto **3101**.
+
+### Prerrequisitos
+
+```bash
+npm ci
+```
+
+Node **22** (misma versión que CI). Desde la raíz del repo.
+
+### Paso 1 — Levantar la fixture
+
+```bash
+npm run dev:server-fixture
+```
+
+**Qué hace este comando:**
+
+1. Inicia un servidor SSH/SFTP de prueba en `127.0.0.1` (puerto dinámico).
+2. Crea un directorio temporal con:
+   - `Fixture_allhost/mods/` — build de servidor de referencia (`example` v2.0.0, `missing` v1.0.0).
+   - `Fixture_alluser.zip` — build de cliente (`example` v2.0.0, `missing` v1.0.0, `sodium` solo-cliente).
+3. El SFTP simulado incluye `mods/`, `server.properties`, `logs/latest.log`, un crash report y un zip en `backups/`.
+4. Escribe `.server-fixture.json` en la raíz con host, puerto, usuario, contraseña y huella SSH.
+5. Arranca Next dev en **http://127.0.0.1:3101** con `MIM_BUILDS_BASE` apuntando al temp dir.
+
+Dejá esa terminal abierta. Para cerrar todo: escribí `quit` y Enter (borra archivos temporales y `.server-fixture.json`).
+
+### Paso 2 — Abrir la UI
+
+1. Abrí **http://127.0.0.1:3101/servers**
+2. En la pantalla principal, creá el proyecto **Fixture** · Minecraft **1.20.1** · loader **fabric** (si no existe ya).
+
+> Los builds AllHost/AllUser de la fixture ya están en el temp dir; no hace falta generarlos desde MIM, pero el proyecto debe llamarse **Fixture** para que coincida.
+
+### Paso 3 — Completar el formulario SFTP
+
+Abrí `.server-fixture.json` y copiá los datos:
+
+| Campo | Valor típico |
+| :--- | :--- |
+| Host | `127.0.0.1` |
+| Puerto | el que aparece en el JSON (cambia en cada ejecución) |
+| Carpeta raíz | `/server` |
+| Versión MC / Loader | `1.20.1` / `fabric` |
+| Huella SSH | `connection.knownHostFingerprint` del JSON |
+| Usuario | `fixture` |
+| Contraseña | `local-fixture-only` |
+
+Pulsá **Conectar y auditar mods**.
+
+### Resultado esperado por flujo (checklist)
+
+| # | Flujo | Qué probar | Resultado esperado |
+| :--- | :--- | :--- | :--- |
+| SRV-1/2 | Auditoría | Tras conectar | 1 mod faltante (`missing`), 1 versión distinta (`example` remoto 1.0.0 vs build 2.0.0) |
+| SRV-4 | Deploy | Tras auditoría completa → **Revisar y aplicar…** | Instala `missing.jar` y reemplaza `example.jar` en el SFTP simulado |
+| SRV-5 | SAGE remoto | Panel **SAGE remoto** → Diagnosticar | Clasifica el log de fixture (dependencia `missing`). Crash report también funciona. |
+| SRV-6 | Admin | Panel **Administración** → cargar | Lee `server.properties` (motd Fixture SMP) y lista el zip de backup. **RCON falla** (no hay Minecraft real). |
+| SRV-7 | Sync multiplayer | Panel **Sync multiplayer** → Comparar | Estado **desalineado**: hash distinto en `example`; `sodium` aparece como solo-cliente preservado. No descarga mods. |
+
+### Comandos de la terminal de la fixture
+
+Escribí en la terminal donde corre `dev:server-fixture` (no en otra):
+
+| Comando | Efecto |
+| :--- | :--- |
+| `none` | Restaura lecturas SFTP normales |
+| `denied` | Simula permiso denegado en lectura |
+| `disconnect` | Simula desconexión |
+| `stall` | Simula lectura colgada |
+| `quit` | Cierra SFTP, Next y borra temporales |
+
+Después de `denied`/`disconnect`/`stall`, volvé a `none` y **reingresá la contraseña** al repetir la auditoría (MIM no la guarda).
+
+### Tests automatizados relacionados
+
+```bash
+# Suite completa Server Manager (SFTP real, deploy, SAGE, admin, sync…)
+npm run test:server
+
+# Solo motor SRV-7 (unitario, sin red)
+npx ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-multiplayer-sync.test.ts
+```
+
+### Limitaciones de la fixture (importante)
+
+- El remoto simulado tiene `example.jar` v1.0.0 más properties, logs, crash report y un backup zip.
+- **No** hay proceso Minecraft ni RCON real.
+- Credenciales y clave SSH son **solo locales**; no uses esos valores en producción.
+- La UI en `:3101` no es el `.exe` empaquetado; para Electron probá `npm run start:standalone` aparte.
+
+### Cómo vamos / qué falta (cheat sheet 12-sep-2026)
+
+| Hecho (main) | Local sin merge | Falta para cerrar |
+| :--- | :--- | :--- |
+| SRV-1–6 UI (#89 SAGE, #90 Admin) | SRV-7 API+panel, BOT-07 lote, `pre:push` | PR de ese working tree |
+| Fixture auditoría/deploy | Fixture SAGE/Admin + alluser | Test manual tuyo + VPS real |
+| `eval:mimbot` estructura | Job live opcional | Secrets + umbrales SAGE-05b |
+| | | ARCH-7/8, REC-02–04, UX, RFCs |
+
+Documentación maestra de pendientes: [docs/PENDING.md](docs/PENDING.md). Matriz Server Manager: [ROADMAP §9](docs/planning/ROADMAP.md).
+
+Documentación técnica adicional: [docs/architecture/server-audit.md](docs/architecture/server-audit.md).

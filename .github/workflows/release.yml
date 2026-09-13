@@ -66,10 +66,17 @@ jobs:
             Write-Host "cpu-features not present; nothing to remove"
           }
 
+      # Authenticode signing is optional: when WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD
+      # are unset, electron-builder publishes an unsigned build (SmartScreen warning).
+      # When set, Windows artifacts are signed so the publisher is no longer "Unknown".
       - name: Package Windows Standalone
         run: npm run package:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # Prefer the explicit CI cert; do not scavenge random certs on the runner.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Resolve Release Notes
         id: notes

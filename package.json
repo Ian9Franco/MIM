@@ -130,6 +130,9 @@
     ],
     "win": {
       "icon": "public/icon.png",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "target": [
         {
           "target": "nsis",
@@ -145,6 +148,8 @@
         }
       ]
     },
+    "forceCodeSigning": false,
+
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

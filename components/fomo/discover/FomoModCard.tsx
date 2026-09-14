@@ -109,7 +109,7 @@ export const FomoModCard = memo(function FomoModCard({
     <CollectibleSurface
       className={`mim-discover-card flex flex-col h-85 overflow-hidden transition-all duration-500 relative group ${
         isSelected ? "ring-2 ring-primary shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)]" : ""
-      } ${isCF ? "rounded-none" : "rounded-3xl"} ${platformBorderClass}`}
+      } ${isCF ? "rounded-xl" : "rounded-3xl"} ${platformBorderClass}`}
     >
     <article
       onClick={(event) => activateDiscoverCard({
@@ -119,7 +119,7 @@ export const FomoModCard = memo(function FomoModCard({
         openDetails: () => onOpenVersions(mod),
         toggleSelect: onToggleSelect ? () => onToggleSelect(mod) : undefined,
       })}
-      className="flex flex-col h-full w-full cursor-pointer"
+      className="flex flex-col h-full w-full cursor-pointer rounded-[inherit] overflow-hidden"
       style={{
         background: isCF ? "var(--color-cf-bg)" : "rgba(255, 255, 255, 0.03)",
         backdropFilter: "blur(24px)",

@@ -9,6 +9,7 @@ import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 interface CommunityRankingsProps {
   rankings?: ModHit[];
   loading?: boolean;
+  isModern?: boolean;
   onOpen: (mod: ModHit) => void;
 }
 
@@ -18,11 +19,18 @@ const PODIUM = [
   { ring: "border-orange-400/35", text: "text-orange-300", glow: "" },
 ];
 
-export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
+export function CommunityRankings({ onOpen, isModern = false }: CommunityRankingsProps) {
   const [period, setPeriod] = useState<"7d" | "30d" | "all">("30d");
   const [metric, setMetric] = useState<"shares" | "saves">("shares");
   const [visibleRankings, setVisibleRankings] = useState<ModHit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const borderCls = isModern ? "border-border" : "border-[var(--fomo-border)]";
+  const panelBg = isModern ? "bg-surface/70" : "bg-[var(--fomo-secondary-bg)]";
+  const rowBg = isModern ? "bg-surface/78" : "bg-white/3";
+  const podiumBg = isModern ? "bg-surface/85" : "bg-white/3";
+  const iconBorder = isModern ? "border-border" : "border-white/8";
+  const statBorder = isModern ? "border-border" : "border-white/8";
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +53,7 @@ export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
 
   const controls = (
     <div className="mb-4 space-y-2">
-      <div className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-surface/70 p-1">
+      <div className={`grid grid-cols-3 gap-1 rounded-xl border ${borderCls} ${panelBg} p-1`}>
         {(["7d", "30d", "all"] as const).map((value) => (
           <button
             key={value}
@@ -58,7 +66,7 @@ export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-surface/70 p-1">
+      <div className={`grid grid-cols-2 gap-1 rounded-xl border ${borderCls} ${panelBg} p-1`}>
         <button type="button" aria-pressed={metric === "shares"} onClick={() => setMetric("shares")} className={`flex h-8 items-center justify-center gap-1 rounded-lg text-[9px] font-bold ${metric === "shares" ? "mim-control-3d-active bg-orange-500/15 text-orange-400" : "text-white/40"}`}>
           <Share2 className="h-3 w-3" />Más compartidos
         </button>
@@ -113,12 +121,12 @@ export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
               type="button"
               onClick={() => onOpen(mod)}
               whileTap={{ scale: 0.98 }}
-              className={`mim-ranking-podium min-w-0 rounded-2xl border bg-surface/85 p-2.5 text-center ${podium.ring} ${index === 0 ? "-translate-y-2" : ""}`}
+              className={`mim-ranking-podium min-w-0 rounded-2xl border ${podiumBg} p-2.5 text-center ${podium.ring} ${index === 0 ? "-translate-y-2" : ""}`}
             >
               <span className={`mx-auto mb-2 flex h-6 w-6 items-center justify-center rounded-lg font-mono text-[10px] font-black ${podium.text}`}>
                 {index === 0 ? <Crown className="h-3.5 w-3.5" /> : index + 1}
               </span>
-              <div className="mx-auto h-11 w-11 overflow-hidden rounded-xl border border-border bg-white/4">
+              <div className={`mx-auto h-11 w-11 overflow-hidden rounded-xl border ${iconBorder} bg-white/4`}>
                 {mod.iconUrl && <img src={mod.iconUrl} alt="" className="h-full w-full object-cover" />}
               </div>
               <p className="mt-2 truncate text-[9px] font-bold text-white">{mod.title}</p>
@@ -140,12 +148,12 @@ export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
             transition={{ delay: Math.min(index * 0.035, 0.25) }}
             whileHover={{ x: 3 }}
             whileTap={{ scale: 0.985 }}
-            className="group flex w-full items-center gap-3 rounded-2xl border border-white/[0.07] bg-surface/78 p-3 text-left transition-colors hover:bg-white/4.5"
+            className={`group flex w-full items-center gap-3 rounded-2xl border ${borderCls} ${rowBg} p-3 text-left transition-colors hover:bg-white/4.5`}
           >
             <div className="flex w-7 shrink-0 flex-col items-center font-mono text-[11px] font-black text-white/25">
               {String(index + 1).padStart(2, "0")}
             </div>
-            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-white/8 bg-white/4 shadow-md">
+            <div className={`h-11 w-11 shrink-0 overflow-hidden rounded-xl border ${iconBorder} bg-white/4 shadow-md`}>
               {mod.iconUrl ? (
                 <img src={mod.iconUrl} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -158,7 +166,7 @@ export function CommunityRankings({ onOpen }: CommunityRankingsProps) {
               <p className="truncate text-xs font-bold text-white transition-colors group-hover:text-white/90">{mod.title}</p>
               <p className="mt-1 text-[8px] font-mono uppercase text-white/30">{mod._source || "Comunidad"}</p>
             </div>
-            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1 text-right">
+            <div className={`rounded-lg border ${statBorder} bg-black/20 px-2 py-1 text-right`}>
               <p className="text-[11px] font-black text-white/75">{mod.downloads || 0}</p>
               <p className="text-[7px] font-mono uppercase text-white/25">{metric === "shares" ? "shares" : "guardados"}</p>
             </div>

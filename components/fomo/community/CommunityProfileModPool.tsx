@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Puzzle, Search, Blocks, FlaskConical, FlaskConicalOff } from "lucide-react";
+import { Puzzle, Search, FlaskConical, FlaskConicalOff } from "lucide-react";
 import { parseShareMeta, stripShareMeta, type CommunityProjectType } from "@/lib/fomo/communityShareMeta";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
@@ -91,12 +91,8 @@ export function CommunityProfileModPool({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <Blocks className="w-4 h-4 text-primary" />
-        <h4 className="text-xs font-bold text-white">Pool ({filteredMods.length})</h4>
-      </div>
-      <div className="flex flex-wrap gap-2 items-center mb-3">
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {TYPE_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -105,7 +101,7 @@ export function CommunityProfileModPool({
             className={`px-3 py-1.5 rounded-xl text-[10px] font-headline font-bold uppercase tracking-wider transition-all cursor-pointer backdrop-blur-md border ${
               typeFilter === tab.id
                 ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_12px_rgba(240,90,40,0.3)]"
-                : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
+                : "bg-white/5 border-(--fomo-border) text-(--fomo-text-secondary) hover:bg-white/10 hover:text-(--fomo-text-primary)"
             }`}
           >
             {tab.label}
@@ -142,7 +138,7 @@ export function CommunityProfileModPool({
           </select>
         )}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[min(50vh,420px)] overflow-y-auto pr-1 scrollbar-thin">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filteredMods.map((fav) => {
           const meta = parseShareMeta(fav.summary);
           const summaryText = stripShareMeta(fav.summary);

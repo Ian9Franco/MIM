@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { FomoEye } from "@/components/fomo/core/FomoEye";
 import { 
   Settings, RefreshCw, ChevronRight, Activity, Settings2, Bell, Package, Loader2, BookAlert, PackageOpen, BellRing, Puzzle, Layers, Glasses, Database, BookOpen, Server 
 } from "lucide-react";
@@ -92,7 +93,7 @@ export function LayoutHeader({
   }, []);
 
   return (
-    <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl transition-all duration-700 relative">
+    <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl transition-all duration-700">
       {/* Auto Classify Glow */}
       <div 
         className={`absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000 ${isAutoClassify ? 'opacity-100' : 'opacity-0'}`}
@@ -125,7 +126,7 @@ export function LayoutHeader({
                     <div className="absolute w-1 h-1 bg-accent/40 rounded-full animate-ender-particle" style={{ ["--tw-translate-x" as string]: "15px", ["--tw-translate-y" as string]: "-10px", animationDelay: "0.5s" } as React.CSSProperties} />
                   </>
                 )}
-                <Image src="/fomoico.png" alt="" width={28} height={28} className={`w-7 h-7 object-contain transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : 'animate-fomo-blink'}`} />
+                <FomoEye className={`w-7 h-7 transition-all duration-700 ${fomoOpen ? 'scale-110 brightness-110 rotate-12' : ''}`} />
                 <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-500 ${fomoOpen ? 'opacity-100' : 'opacity-0'}`} />
               </div>
               <div className="flex flex-col items-start leading-tight">
@@ -470,13 +471,13 @@ function ProfileCanvas({ username }: { username: string }) {
   };
 
   return (
-    <div className="w-[120px] h-9 flex items-center justify-center relative overflow-visible">
+    <div className="w-30 h-9 flex items-center justify-center relative overflow-visible">
       <canvas 
         ref={canvasRef} 
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        className="absolute top-1/2 -translate-y-1/2 h-[130px] w-auto cursor-grab active:cursor-grabbing transition-transform hover:scale-105 drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] z-20" 
+        className="absolute top-1/2 -translate-y-1/2 h-32.5 w-auto cursor-grab active:cursor-grabbing transition-transform hover:scale-105 drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] z-20" 
         title="¡Arrastrá para rotar o clickeá para cambiar de animación!"
       />
     </div>

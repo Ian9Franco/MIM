@@ -45,13 +45,12 @@ export function SpotlightCollectionCard({
     <CollectibleSurface
       onClick={onClick}
       label={collection.name}
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-80 shrink-0 rounded-3xl! relative group overflow-hidden flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-80 shrink-0 rounded-3xl! relative group flex flex-col"
     >
       <div
-        className="flex flex-col h-full w-full"
+        className="flex flex-col h-full w-full rounded-[inherit] overflow-hidden"
         style={{
           background: cardBg,
-          border: cardBorder,
           boxShadow: cardShadow,
         }}
       >
@@ -168,13 +167,12 @@ export function SpotlightEditorialCard({
     <CollectibleSurface
       onClick={() => onOpenVersions(mod)}
       label={mod.title}
-      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-85 shrink-0 rounded-3xl! relative group overflow-hidden flex flex-col"
+      className="w-[min(210px,calc(100vw-4rem))] xl:w-52.5 h-85 shrink-0 rounded-3xl! relative group flex flex-col"
     >
       <div
-        className="flex flex-col h-full w-full"
+        className="flex flex-col h-full w-full rounded-[inherit] overflow-hidden"
         style={{
           background: cardBg,
-          border: cardBorder,
           boxShadow: cardShadow,
         }}
       >

@@ -211,7 +211,7 @@ export function CommunityUserProfile({
   return (
     <div className={`flex flex-col h-full overflow-hidden animate-fade-in relative ${isModern ? 'bg-background text-foreground' : ''}`}>
       {/* Profile Header Banner */}
-      <div className={`relative pt-12 pb-6 px-6 shrink-0 border-b overflow-hidden ${isModern ? 'border-border' : 'border-white/5'}`}>
+      <div className={`relative pt-10 pb-5 px-6 shrink-0 border-b overflow-hidden ${isModern ? 'border-border' : 'border-(--fomo-border)'}`}>
         {profileData?.banner_url && (
           <div className="absolute inset-0 z-0 overflow-hidden">
             <img
@@ -319,7 +319,7 @@ export function CommunityUserProfile({
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
         {activeTab === "pool" && (
           <CommunityProfileModPool
             favorites={favorites}

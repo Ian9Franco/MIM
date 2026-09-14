@@ -5,8 +5,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import Image from "next/image";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   X,
   Search,
@@ -36,7 +35,16 @@ import {
   type ShareRow,
 } from "@/lib/fomo/communitySharingAlerts";
 import type { FomoMode } from "@/components/fomo/sidebar/fomoSidebarTypes";
+import { MimSlimeMascot } from "@/components/ui/MimSlimeMascot";
+import { FomoEye } from "@/components/fomo/core/FomoEye";
 import "@/components/fomo/core/fomo.css";
+
+function createHeaderAnim() {
+  return {
+    slimeDuration: `${(5.4 + Math.random() * 3.2).toFixed(2)}s`,
+    slimeDelay: `-${(Math.random() * 5).toFixed(2)}s`,
+  };
+}
 
 const TAB_OPTIONS = [
   { value: "spotlight", label: "Spotlight", icon: <Spotlight className="w-4 h-4" /> },
@@ -71,6 +79,7 @@ function FomoSidebarInner({
   const { user: currentUser, profile: currentUserProfile } = useAuth();
   const currentUserColor = currentUserProfile?.color ?? null;
   const [currentTheme, setCurrentTheme] = useState("official");
+  const headerAnim = useMemo(() => createHeaderAnim(), []);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [allSharedMods, setAllSharedMods] = useState<unknown[]>([]);
   const [allSharedVideos, setAllSharedVideos] = useState<unknown[]>([]);
@@ -437,16 +446,12 @@ function FomoSidebarInner({
         >
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Image
-                src="/fomoico.png"
-                alt=""
-                width={28}
-                height={28}
-                className="w-7 h-7 animate-fomo-blink"
-              />
+              <div className="relative h-8 w-8 shrink-0" aria-hidden>
+                <FomoEye />
+              </div>
               <div>
-                <h2 className="font-headline text-base text-white">FOMO</h2>
-                <p suppressHydrationWarning className="text-[8px] opacity-40 uppercase">{mode}</p>
+                <h2 className="font-headline text-base" style={{ color: "var(--fomo-text-primary)" }}>FOMO</h2>
+                <p suppressHydrationWarning className="text-[8px] uppercase" style={{ color: "var(--fomo-text-secondary)" }}>{mode}</p>
               </div>
             </div>
             <div
@@ -462,11 +467,21 @@ function FomoSidebarInner({
               />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <FomoActiveDraftSelector isModern={currentTheme === "modern"} />
+            <div
+              className="fomo-sidebar-header-slime hidden sm:block"
+              style={{
+                ["--slime-duration" as string]: headerAnim.slimeDuration,
+                ["--slime-delay" as string]: headerAnim.slimeDelay,
+              }}
+            >
+              <MimSlimeMascot size={32} />
+            </div>
             <button
               onClick={handleCloseAll}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400"
+              className="p-2 rounded-xl hover:bg-red-500/10 hover:text-red-400"
+              style={{ color: "var(--fomo-text-secondary)" }}
             >
               <X className="w-5 h-5" />
             </button>

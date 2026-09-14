@@ -671,7 +671,6 @@ html, body {
   .mim-details-header {
     padding: 6px 16px 8px;
   }
-  .mim-details-header .mim-details-banner-copy,
   .mim-details-header .mim-details-kicker {
     display: none;
   }
@@ -908,14 +907,6 @@ html, body {
   position: relative;
   overflow: hidden;
 }
-.mim-editorial-hero-slime {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
-  pointer-events: none;
-}
-
 .mim-collection-card {
   box-shadow: 0 9px 16px -13px rgba(0, 0, 0, .58), inset 0 1px rgba(255, 255, 255, .035);
   transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
@@ -1307,26 +1298,13 @@ select:focus { border-color: var(--color-primary) !important; }
 .mim-theme-spark-d { --spark-x: -6px; --spark-y: 5px; }
 
 @keyframes fomo-eye-gaze {
-  0%, 74%, 100% { transform: translateX(0) rotate(0deg); filter: brightness(1) drop-shadow(0 0 0 transparent); }
-  4% { transform: translateX(-19%) rotate(-1deg); filter: brightness(1.1) drop-shadow(0 0 5px rgba(187, 150, 228, 0.4)); }
-  8% { transform: translateX(-24%) rotate(-1.2deg); filter: brightness(1.12) drop-shadow(0 0 6px rgba(187, 150, 228, 0.45)); }
-  13% { transform: translateX(17%) rotate(1deg); filter: brightness(1.08) drop-shadow(0 0 5px rgba(187, 150, 228, 0.38)); }
-  18% { transform: translateX(22%) rotate(1.3deg); filter: brightness(1.12) drop-shadow(0 0 6px rgba(187, 150, 228, 0.45)); }
-  23% { transform: translateX(-10%) rotate(-0.6deg); filter: brightness(1.05); }
-  28% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
-  36% { transform: translateX(12%) rotate(0.8deg); filter: brightness(1.06); }
-  41% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
-  49%, 57% { transform: translateX(0) rotate(0deg); filter: brightness(0.72); }
-}
-
-@keyframes fomo-eye-lid-left {
-  0%, 40%, 64%, 100% { transform: translateX(-108%); opacity: 0; }
-  46%, 54% { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes fomo-eye-lid-right {
-  0%, 40%, 64%, 100% { transform: translateX(108%); opacity: 0; }
-  46%, 54% { transform: translateX(0); opacity: 1; }
+  0%, 72%, 100% { transform: translateX(0) rotate(0deg); }
+  8% { transform: translateX(-24%) rotate(-1.2deg); }
+  18% { transform: translateX(22%) rotate(1.2deg); }
+  28% { transform: translateX(-12%) rotate(-0.6deg); }
+  38% { transform: translateX(0) rotate(0deg); }
+  52% { transform: translateX(18%) rotate(0.9deg); }
+  62% { transform: translateX(-20%) rotate(-1deg); }
 }
 
 .mim-fomo-eye {
@@ -1340,53 +1318,16 @@ select:focus { border-color: var(--color-primary) !important; }
   animation: fomo-eye-gaze var(--fomo-eye-duration, 6.8s) cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
   animation-delay: var(--fomo-eye-delay, 0s);
   transform-origin: center center;
-  will-change: transform, filter;
-}
-
-.mim-fomo-eye-lid {
-  position: absolute;
-  top: -1px;
-  bottom: -1px;
-  width: 52%;
-  z-index: 2;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--color-background) 90%, rgba(255, 255, 255, 0.05));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-.mim-fomo-eye-lid-left {
-  left: -1px;
-  border-radius: 10px 0 0 10px;
-  animation: fomo-eye-lid-left var(--fomo-eye-duration, 6.8s) cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
-  animation-delay: var(--fomo-eye-delay, 0s);
-}
-
-.mim-fomo-eye-lid-right {
-  right: -1px;
-  border-radius: 0 10px 10px 0;
-  animation: fomo-eye-lid-right var(--fomo-eye-duration, 6.8s) cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
-  animation-delay: var(--fomo-eye-delay, 0s);
-}
-
-[data-theme="modern"] .mim-fomo-eye-lid {
-  background: color-mix(in srgb, #eef1f6 92%, #dfe5ee);
-  box-shadow: inset 0 0 0 1px rgba(13, 39, 80, 0.08);
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mim-fomo-eye-gaze,
-  .mim-fomo-eye-lid-left,
-  .mim-fomo-eye-lid-right,
   .mim-theme-option[data-active="true"] .mim-theme-icon,
   .mim-theme-steam,
   .mim-theme-spark {
     animation: none !important;
   }
-}
-
-@keyframes fomo-eye-blink {
-  0%, 45%, 55%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.1); }
 }
 
 @keyframes fadeUp {
@@ -1478,7 +1419,6 @@ select:focus { border-color: var(--color-primary) !important; }
   animation-delay: var(--slime-delay, 0s), calc(var(--slime-delay, 0s) + 0.4s);
   transform-origin: bottom center;
 }
-.animate-fomo-blink  { animation: fomo-eye-blink 4s ease-in-out infinite; transform-origin: center; }
 
 /* Stagger helpers */
 .stagger-1 { animation-delay: 0.06s; }

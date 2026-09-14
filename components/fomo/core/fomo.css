@@ -1021,6 +1021,23 @@
   border-radius: 0.75rem !important;
 }
 
+.mim-collection-card {
+  overflow: hidden;
+}
+
+.mim-collection-hero {
+  box-shadow:
+    0 16px 28px -18px color-mix(in srgb, var(--color-primary) 35%, rgba(0, 0, 0, 0.65)),
+    0 7px 12px -9px rgba(0, 0, 0, 0.45);
+  transform: translateZ(0);
+  transform-style: preserve-3d;
+}
+
+.mim-editorial-hero {
+  position: relative;
+  overflow: hidden;
+}
+
 [data-theme="modern"] .mim-discover-card {
   background: linear-gradient(145deg, #fff, #edf1f7) !important;
   box-shadow:
@@ -1068,4 +1085,39 @@
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 62%),
     var(--color-background) !important;
+}
+
+.fomo-sidebar-header-slime .animate-slime {
+  animation-duration: var(--slime-duration, 5.8s);
+  animation-delay: var(--slime-delay, 0s);
+}
+
+@keyframes fomo-eye-gaze {
+  0%, 72%, 100% { transform: translateX(0) rotate(0deg); }
+  8% { transform: translateX(-24%) rotate(-1.2deg); }
+  18% { transform: translateX(22%) rotate(1.2deg); }
+  28% { transform: translateX(-12%) rotate(-0.6deg); }
+  38% { transform: translateX(0) rotate(0deg); }
+  52% { transform: translateX(18%) rotate(0.9deg); }
+  62% { transform: translateX(-20%) rotate(-1deg); }
+}
+
+.mim-fomo-eye {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mim-fomo-eye-gaze {
+  animation: fomo-eye-gaze var(--fomo-eye-duration, 6.8s) cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
+  animation-delay: var(--fomo-eye-delay, 0s);
+  transform-origin: center center;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mim-fomo-eye-gaze {
+    animation: none !important;
+  }
 }

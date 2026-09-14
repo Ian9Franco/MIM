@@ -72,7 +72,7 @@ export function CollectibleSurface({
       }}
       onBlur={reset}
     >
-      {children}
+      <div className={styles.surfaceClip}>{children}</div>
     </div>
   );
 }

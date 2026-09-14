@@ -335,7 +335,7 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
 
         // Construir el bloque HTML intercalado manteniendo imágenes
         interleavedHTML += `
-          <div class="mb-5 bg-white/[0.02] p-3 rounded-lg border border-white/5">
+          <div class="mb-5 bg-white/2 p-3 rounded-lg border border-white/5">
             ${textToTrans ? `<p class="text-white/60 text-xs leading-relaxed">${textToTrans}</p>` : ""}
             ${translatedPara ? `
               <div class="mt-2 pt-2 border-t border-white/5">

@@ -137,22 +137,19 @@ export function CommunityDrafts() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in w-full max-w-[1400px] mx-auto pb-12">
+    <div className="flex flex-col gap-6 animate-fade-in w-full max-w-350 mx-auto pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className={`text-3xl font-black tracking-tight ${isModern ? "text-foreground" : "text-white"}`}>
             FOMO Drafts
           </h2>
-          <p className={`mt-1 text-sm font-medium ${isModern ? "text-muted-foreground" : "text-white/60"}`}>
-            Create Together. Play Together.
-          </p>
         </div>
         
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="group relative inline-flex items-center justify-center gap-2 px-6 py-3 font-bold text-white transition-all duration-300 bg-primary rounded-xl overflow-hidden shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0"
         >
-          <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-black/20 via-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 w-full h-full bg-linear-to-tr from-black/20 via-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           <Plus className="w-5 h-5 relative z-10" />
           <span className="relative z-10">Crear nuevo Draft</span>
         </button>
@@ -192,7 +189,7 @@ export function CommunityDrafts() {
               className={`p-1 rounded-3xl border transition-all cursor-pointer overflow-hidden group shadow-lg ${
                 isModern
                   ? "bg-card border-primary/30 hover:border-primary/60"
-                  : "bg-gradient-to-r from-primary/[0.12] via-white/[0.03] to-transparent border-primary/30 hover:border-primary/50"
+                  : "bg-linear-to-r from-primary/12 via-white/3 to-transparent border-primary/30 hover:border-primary/50"
               }`}
             >
               <div className="flex flex-col md:flex-row items-stretch gap-5 p-4 sm:p-5">
@@ -208,7 +205,7 @@ export function CommunityDrafts() {
                       <Library className="w-12 h-12 text-primary/40" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/10">
                     <Box className="w-3 h-3 text-primary" />
                     <span className="capitalize">{drafts[0].loader || "Vanilla"}</span> {drafts[0].minecraft_version}
@@ -289,7 +286,7 @@ export function CommunityDrafts() {
                 </div>
                 <div className="p-4 flex flex-col gap-2">
                   <h3 className={`font-bold text-lg leading-tight line-clamp-1 ${isModern ? "text-foreground" : "text-white"}`}>{draft.name}</h3>
-                  <p className={`text-xs line-clamp-2 min-h-[2rem] ${isModern ? "text-muted-foreground" : "text-white/60"}`}>
+                  <p className={`text-xs line-clamp-2 min-h-8 ${isModern ? "text-muted-foreground" : "text-white/60"}`}>
                     {draft.description || "Sin descripción"}
                   </p>
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dashed border-primary/20">

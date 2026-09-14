@@ -578,13 +578,13 @@ export function FomoFollowedShowcases({
 
       {/* Toggle Resumen / Videos / Shorts / Posts */}
       <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit border border-white/5 flex-wrap">
+        <div className={`flex gap-1 p-1 rounded-xl w-fit border flex-wrap ${isModern ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/5"}`}>
           <button
             onClick={() => setShowcaseType("overview")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               showcaseType === "overview"
                 ? "bg-primary text-white shadow-lg shadow-primary/20"
-                : "opacity-40 text-white hover:opacity-100"
+                : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"
             }`}
           >
             <LayoutGrid className="w-3 h-3" />
@@ -592,14 +592,14 @@ export function FomoFollowedShowcases({
           </button>
           <button 
             onClick={() => setShowcaseType("videos")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"}`}
           >
             <TvMinimalPlay className="w-3 h-3" />
             Videos
           </button>
           <button 
             onClick={() => setShowcaseType("shorts")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "shorts" ? "bg-primary text-white" : "opacity-40 text-white hover:opacity-100"}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "shorts" ? "bg-primary text-white" : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"}`}
           >
             Shorts
           </button>
@@ -608,7 +608,7 @@ export function FomoFollowedShowcases({
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               showcaseType === "posts" 
                 ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30" 
-                : "opacity-40 text-white hover:opacity-100"
+                : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"
             }`}
             title="Posts de Comunidad"
           >

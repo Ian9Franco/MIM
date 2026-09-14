@@ -7,6 +7,12 @@ import { supabase } from "@/lib/core/supabaseClient";
 
 type Theme = "official" | "vampire" | "modern";
 
+const THEMES: { id: Theme; icon: typeof Coffee; label: string }[] = [
+  { id: "official", icon: Coffee, label: "Oficial" },
+  { id: "vampire", icon: Ghost, label: "Vampire" },
+  { id: "modern", icon: Sun, label: "Modern" },
+];
+
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("official");
   const [mounted, setMounted] = useState(false);
@@ -21,7 +27,7 @@ export function ThemeToggle() {
   }, []);
 
   useEffect(() => {
-    const bannerMeta = profile?.banner_meta as any;
+    const bannerMeta = profile?.banner_meta as { theme?: string } | null | undefined;
     if (bannerMeta?.theme && ["official", "vampire", "modern"].includes(bannerMeta.theme)) {
       const cloudTheme = bannerMeta.theme as Theme;
       setTheme(cloudTheme);
@@ -45,14 +51,14 @@ export function ThemeToggle() {
 
         const updatedBannerMeta = {
           ...(currentProfile?.banner_meta || {}),
-          theme: newTheme
+          theme: newTheme,
         };
 
         await supabase
           .from("profiles")
           .update({
             banner_meta: updatedBannerMeta,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq("id", user.id);
       } catch (err) {
@@ -61,50 +67,64 @@ export function ThemeToggle() {
     }
   };
 
-  if (!mounted) return <div className="w-[104px] h-8 rounded-xl" />;
+  if (!mounted) return <div className="w-26 h-8 rounded-xl" />;
 
-  const options: { id: Theme; icon: React.ReactNode; label: string }[] = [
-    { id: "official", icon: <Coffee className="w-3.5 h-3.5" />, label: "Oficial" },
-    { id: "vampire", icon: <Ghost className="w-3.5 h-3.5" />, label: "Vampire" },
-    { id: "modern", icon: <Sun className="w-3.5 h-3.5" />, label: "Modern" },
-  ];
-
-  const activeIndex = options.findIndex(o => o.id === theme);
+  const activeIndex = THEMES.findIndex((opt) => opt.id === theme);
 
   return (
     <div
-      className="relative flex items-center h-9 w-[106px] p-1 rounded-xl transition-all"
+      className="mim-theme-toggle relative flex items-center h-9 w-26.5 p-1 rounded-xl transition-all border"
       style={{
         background: "rgba(255,255,255,0.03)",
-        border: "1px solid var(--color-border)",
+        borderColor: "var(--color-border)",
       }}
     >
-      {/* Liquid Sliding Pill */}
-      <div 
+      <div
         className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-lg pointer-events-none inset-y-1"
         style={{
           width: "32px",
           transform: `translateX(${activeIndex * 32}px)`,
           background: "color-mix(in srgb, var(--color-primary) 20%, transparent)",
           border: "1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)",
-          boxShadow: "0 0 20px color-mix(in srgb, var(--color-primary) 10%, transparent)",
+          boxShadow: "0 0 15px color-mix(in srgb, var(--color-primary) 15%, transparent)",
           left: "4px",
         }}
       />
-
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          onClick={() => setThemeValue(opt.id)}
-          title={opt.label}
-          className={`relative z-10 w-8 h-full flex items-center justify-center rounded-lg transition-all duration-300 ${theme === opt.id ? "" : "opacity-40 hover:opacity-100"}`}
-          style={{
-            color: theme === opt.id ? "var(--color-primary)" : "var(--color-foreground)",
-          }}
-        >
-          {opt.icon}
-        </button>
-      ))}
+      {THEMES.map((opt) => {
+        const Icon = opt.icon;
+        const active = theme === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => setThemeValue(opt.id)}
+            data-active={active}
+            data-theme-icon={opt.id}
+            className={`mim-theme-option relative z-10 flex h-full w-8 items-center justify-center rounded-lg transition-all duration-300 ${active ? "" : "opacity-40 hover:opacity-100"}`}
+            style={{ color: active ? "var(--color-primary)" : "var(--color-foreground)" }}
+            title={opt.label}
+          >
+            <span className="mim-theme-icon-wrap relative flex items-center justify-center">
+              <Icon className="mim-theme-icon h-3.5 w-3.5" />
+              {active && opt.id === "official" && (
+                <>
+                  <span className="mim-theme-steam mim-theme-steam-a" aria-hidden />
+                  <span className="mim-theme-steam mim-theme-steam-b" aria-hidden />
+                  <span className="mim-theme-steam mim-theme-steam-c" aria-hidden />
+                </>
+              )}
+              {active && opt.id === "modern" && (
+                <>
+                  <span className="mim-theme-spark mim-theme-spark-a" aria-hidden />
+                  <span className="mim-theme-spark mim-theme-spark-b" aria-hidden />
+                  <span className="mim-theme-spark mim-theme-spark-c" aria-hidden />
+                  <span className="mim-theme-spark mim-theme-spark-d" aria-hidden />
+                </>
+              )}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

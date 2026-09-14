@@ -90,7 +90,6 @@ async function loadCommunitySharesPage(page: number): Promise<{ items: Community
   const query = supabase
     .from("favorite_mods")
     .select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles(id, username, avatar_url, color)`)
-    .eq("pinned", true)
     .order("pinned", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(from, to);
@@ -106,11 +105,11 @@ async function loadCommunitySharesPage(page: number): Promise<{ items: Community
     .from("favorite_mods")
     .select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles(id, username, avatar_url, color)`)
     .order("created_at", { ascending: false })
-    .range(0, 240);
+    .range(from, to);
 
   if (fallback.error) throw fallback.error;
-  const sorted = sortSharesByPinned(((fallback.data || []) as CommunityShareItem[]).filter(isSharePinned));
-  return { items: sorted.slice(from, to), hasNext: sorted.length > to };
+  const sorted = sortSharesByPinned((fallback.data || []) as CommunityShareItem[]);
+  return { items: sorted.slice(0, SHARES_PAGE_SIZE), hasNext: sorted.length > SHARES_PAGE_SIZE };
 }
 
 async function loadProfileShares(profileId: string): Promise<CommunityShareItem[]> {
@@ -170,6 +169,16 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   const [affinity, setAffinity] = useState<Record<string, { favorites: number; creators: number }>>({});
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, { count: number; mine: boolean }>>({});
+  const [sharesReloadToken, setSharesReloadToken] = useState(0);
+
+  useEffect(() => {
+    const refreshShares = () => {
+      sharePageCache.current.clear();
+      setSharesReloadToken((token) => token + 1);
+    };
+    window.addEventListener("fomo-refresh-sharing", refreshShares);
+    return () => window.removeEventListener("fomo-refresh-sharing", refreshShares);
+  }, []);
 
   useEffect(() => {
     if (section !== "compartidos") return;
@@ -180,7 +189,6 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       return;
     }
     setLoadingShares(true);
-    // Requesting one extra row tells us if a next page exists without a full-table count.
     loadCommunitySharesPage(sharesPage)
       .then((pageData) => {
         sharePageCache.current.set(sharesPage, pageData);
@@ -195,7 +203,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       .finally(() => {
         setLoadingShares(false);
       });
-  }, [section, sharesPage]);
+  }, [section, sharesPage, sharesReloadToken]);
 
   useEffect(() => {
     if (section !== "miembros" || profiles.length) return;
@@ -403,7 +411,7 @@ interface ShareCardProps {
 /** The feed keeps user context first, then presents the shared media as one clear action. */
 function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageChange, onOpenProfile, onOpenMod, userFavorites, onToggleFavorite, reactions, onToggleReaction }: FeedProps) {
   if (loading) return <CommunityFeedSkeleton />;
-  if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada fijado todavía" text="Las recomendaciones marcadas con pin aparecerán acá." />;
+  if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada compartido todavía" text="Cuando alguien comparta un proyecto en la comunidad, aparecerá acá." />;
   const featuredShares = shares.slice(0, 6);
 
   return (
@@ -426,9 +434,9 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
         {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
       </section>
       <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-        <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
+        <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
         <span className="font-mono text-[8px] uppercase text-white/30">Página {page + 1}</span>
-        <button type="button" disabled={!hasNext} onClick={() => onPageChange(page + 1)} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white disabled:pointer-events-none disabled:opacity-20">Anteriores<ChevronRight className="h-3.5 w-3.5" /></button>
+        <button type="button" disabled={!hasNext} onClick={() => onPageChange(page + 1)} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-20">Anteriores<ChevronRight className="h-3.5 w-3.5" /></button>
       </div>
     </motion.div>
   );
@@ -461,12 +469,12 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.025, 0.18) }}
-      className={`mim-community-share-card group relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border bg-surface/78 p-3 transition-all hover:-translate-y-0.5 ${featured ? "w-[78vw] max-w-[286px] shrink-0 snap-start" : "w-full"} ${
+      className={`mim-community-share-card group relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border bg-surface/78 p-3 transition-all hover:-translate-y-0.5 ${featured ? "w-[78vw] max-w-71.5 shrink-0 snap-start" : "w-full"} ${
         isPinned
           ? "border-amber-400/60 shadow-[0_0_22px_rgba(251,191,36,0.18)] hover:border-amber-400/80"
           : updated && !isYoutube
             ? "border-amber-300/70 shadow-[0_0_20px_rgba(251,191,36,0.22)] hover:border-white/15"
-            : "border-white/[0.08] hover:border-white/15"
+            : "border-white/8 hover:border-white/15"
       }`}
     >
       {isPinned && (
@@ -474,7 +482,7 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
           <Pin className="h-2.5 w-2.5 fill-current" /> Fijada
         </span>
       )}
-      <span className={`absolute inset-y-4 left-0 w-px transition-colors ${isPinned ? "bg-amber-400/50" : "bg-white/10 group-hover:bg-[var(--color-primary)]"}`} />
+      <span className={`absolute inset-y-4 left-0 w-px transition-colors ${isPinned ? "bg-amber-400/50" : "bg-white/10 group-hover:bg-primary"}`} />
       <button type="button" onClick={() => onOpenProfile(shareProfile)} className="flex w-fit items-center gap-2.5 text-left">
         <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-surface text-xs font-bold uppercase shadow-md transition-transform group-hover:scale-105" style={{ borderColor: userColor }}>{shareProfile?.avatar_url ? <img src={shareProfile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span style={{ color: userColor }}>{shareProfile?.username?.slice(0, 2) || "U"}</span>}</div>
         <div>
@@ -485,24 +493,24 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
         </div>
       </button>
 
-      {meta.comment && <div className="flex gap-2 rounded-xl border border-white/[0.045] bg-black/15 px-2.5 py-2 text-[10px] text-white/70"><MessageSquare className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "var(--color-primary)" }} /><p className={`${featured ? "line-clamp-2" : "line-clamp-3"} whitespace-pre-wrap leading-relaxed`}>{meta.comment}</p></div>}
+      {meta.comment && <div className="flex gap-2 rounded-xl border border-white/4.5 bg-black/15 px-2.5 py-2 text-[10px] text-white/70"><MessageSquare className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "var(--color-primary)" }} /><p className={`${featured ? "line-clamp-2" : "line-clamp-3"} whitespace-pre-wrap leading-relaxed`}>{meta.comment}</p></div>}
 
       {isYoutube ? (
-        <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025]">
+        <div className="overflow-hidden rounded-xl border border-white/6 bg-white/2.5">
           {(meta.thumbnail ?? item.icon_url) && <button type="button" onClick={playVideo} className="group/video relative block aspect-video w-full overflow-hidden bg-black/40"><img src={(meta.thumbnail ?? item.icon_url) ?? undefined} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/video:scale-[1.025]" referrerPolicy="no-referrer" />{meta.embeddedVideoId && <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-orange-600/90 text-white shadow-xl transition-transform group-hover/video:scale-110"><Play className="h-4 w-4 fill-current" /></span></span>}</button>}
-          <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
+          <div className="p-3"><h4 className="text-xs font-bold leading-snug text-white">{item.name}</h4><div className="mt-2 flex gap-2">{meta.embeddedVideoId && <button type="button" onClick={playVideo} className="flex items-center gap-1 rounded-lg border border-orange-500/25 bg-orange-600/15 px-2.5 py-1.5 text-[9px] font-bold text-orange-300"><Play className="h-3 w-3 fill-current" />Reproducir</button>}{videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-[9px] font-bold text-white/60"><ExternalLink className="h-3 w-3" />YouTube</a>}</div></div>
         </div>
       ) : (
-        <div className="mim-community-project flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.035] p-2.5 text-left">
-          <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-surface">{item.icon_url ? <img src={item.icon_url} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] font-bold uppercase text-white/35">{item.name?.slice(0, 2)}</span>}</div><div className="min-w-0"><h4 className="truncate text-xs font-bold text-white">{item.name}</h4><div className="mt-1 flex items-center gap-1.5"><span className={`rounded border px-1.5 py-0.5 text-[7px] font-black uppercase ${item.platform === "curseforge" ? "border-orange-500/20 bg-orange-600/15 text-orange-400" : "border-emerald-500/20 bg-emerald-600/15 text-emerald-400"}`}>{item.platform === "curseforge" ? "CurseForge" : "Modrinth"}</span>{meta.modloader && <span className="text-[8px] font-mono uppercase text-white/35">{meta.modloader}</span>}{meta.gameVersion && <span className="text-[8px] font-mono text-white/35">{meta.gameVersion}</span>}</div></div></div><ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+        <div className="mim-community-project flex w-full items-center justify-between rounded-xl border border-white/6 bg-white/[0.035] p-2.5 text-left">
+          <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/8 bg-surface">{item.icon_url ? <img src={item.icon_url} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] font-bold uppercase text-white/35">{item.name?.slice(0, 2)}</span>}</div><div className="min-w-0"><h4 className="truncate text-xs font-bold text-white">{item.name}</h4><div className="mt-1 flex items-center gap-1.5"><span className={`rounded border px-1.5 py-0.5 text-[7px] font-black uppercase ${item.platform === "curseforge" ? "border-orange-500/20 bg-orange-600/15 text-orange-400" : "border-emerald-500/20 bg-emerald-600/15 text-emerald-400"}`}>{item.platform === "curseforge" ? "CurseForge" : "Modrinth"}</span>{meta.modloader && <span className="text-[8px] font-mono uppercase text-white/35">{meta.modloader}</span>}{meta.gameVersion && <span className="text-[8px] font-mono text-white/35">{meta.gameVersion}</span>}</div></div></div><ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
         </div>
       )}
 
       <div className="grid grid-cols-4 gap-1.5">
-        <button type="button" onClick={(event) => { event.stopPropagation(); if (isYoutube) playVideo(); else onOpenMod(mod); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
-        {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={(event) => { event.stopPropagation(); onToggleFavorite(mod); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
-        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine ?? false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/[0.08] bg-white/[0.04] text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count ?? 0}</button>
-        <button type="button" onClick={(event) => { event.stopPropagation(); onOpenProfile(shareProfile); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); if (isYoutube) playVideo(); else onOpenMod(mod); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/8 bg-white/4 text-[8px] font-bold text-white/70"><ExternalLink className="h-3 w-3" />{isYoutube ? "Reproducir" : "Ver"}</button>
+        {!isYoutube ? <button type="button" aria-label={isFavorited ? "Quitar de favoritos" : "Agregar a favoritos"} aria-pressed={isFavorited} onClick={(event) => { event.stopPropagation(); onToggleFavorite(mod); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${isFavorited ? "mim-control-3d-active border-rose-500/25 bg-rose-500/12 text-rose-400" : "mim-control-3d border-white/8 bg-white/4 text-white/70"}`}><Heart className={`h-3 w-3 ${isFavorited ? "fill-current" : ""}`} /><span className="sr-only">Favorito</span></button> : <span />}
+        <button type="button" aria-label="Me gusta" aria-pressed={reaction?.mine ?? false} onClick={(event) => { event.stopPropagation(); onToggleReaction(item.id); }} className={`flex h-8 items-center justify-center gap-1 rounded-lg border text-[8px] font-bold ${reaction?.mine ? "mim-control-3d-active border-blue-500/25 bg-blue-500/12 text-blue-400" : "mim-control-3d border-white/8 bg-white/4 text-white/70"}`}><ThumbsUp className={`h-3 w-3 ${reaction?.mine ? "fill-current" : ""}`} />{reaction?.count ?? 0}</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); onOpenProfile(shareProfile); }} className="mim-control-3d flex h-8 items-center justify-center gap-1 rounded-lg border border-white/8 bg-white/4 text-[8px] font-bold text-white/70"><UserRound className="h-3 w-3" />Perfil</button>
       </div>
 
     </motion.article>

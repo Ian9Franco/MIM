@@ -103,12 +103,12 @@ function SpotlightVideoCard({
     <a
       href={video.videoUrl}
       onClick={handlePlay}
-      className="w-[190px] xl:w-[210px] h-[305px] shrink-0 rounded-[1.5rem] relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+      className="w-47.5 xl:w-52.5 h-76.25 shrink-0 rounded-3xl relative group overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
       style={{ border: cardBorder, background: cardBg }}
       title={video.title}
     >
       {/* Thumbnail */}
-      <div className="relative h-[190px] overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40 shrink-0">
+      <div className="relative h-47.5 overflow-hidden rounded-t-[calc(1.5rem-1.5px)] bg-black/40 shrink-0">
         {!imgError && imgSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -225,7 +225,7 @@ function ChannelPickerModal({
   const totalVideos = draft.length * videosPerChannel;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-200 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className="relative z-10 w-full max-w-md mx-4 rounded-3xl border border-white/10 bg-[#111] shadow-2xl overflow-hidden flex flex-col"
@@ -257,7 +257,7 @@ function ChannelPickerModal({
                   className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all text-left ${
                     active
                       ? "border-primary/40 bg-primary/10 text-white"
-                      : "border-white/5 bg-white/[0.02] text-white/50 hover:text-white hover:border-white/10"
+                      : "border-white/5 bg-white/2 text-white/50 hover:text-white hover:border-white/10"
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${active ? "bg-primary border-primary" : "border-white/20"}`}>
@@ -284,7 +284,7 @@ function ChannelPickerModal({
                     className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all text-left ${
                       active
                         ? "border-amber-500/40 bg-amber-500/10 text-white"
-                        : "border-white/5 bg-white/[0.02] text-white/50 hover:text-white hover:border-white/10"
+                        : "border-white/5 bg-white/2 text-white/50 hover:text-white hover:border-white/10"
                     }`}
                   >
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${active ? "bg-amber-500 border-amber-500" : "border-white/20"}`}>
@@ -374,7 +374,7 @@ function SpotlightShowcaseMarquee({ videos, theme }: { videos: VideoEntry[], the
 
   if (videos.length === 0) {
     return (
-      <div className="px-8 h-[60px] flex items-center text-[11px] text-white/20">
+      <div className="px-8 h-15 flex items-center text-[11px] text-white/20">
         Sin videos disponibles.
       </div>
     );
@@ -545,11 +545,11 @@ export function SpotlightShowcaseRow({ theme }: SpotlightShowcaseRowProps) {
 
       {/* Marquee row */}
       {status === "loading" ? (
-        <div className="flex gap-5 px-4 pb-2 overflow-hidden">
+        <div className="flex gap-5 px-4 py-4 overflow-x-hidden overflow-y-visible">
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="w-[210px] h-[240px] shrink-0 rounded-[1.5rem] animate-pulse"
+              className="w-52.5 h-60 shrink-0 rounded-3xl animate-pulse"
               style={{ background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(255,255,255,0.06)" }}
             />
           ))}

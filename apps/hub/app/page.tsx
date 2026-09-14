@@ -180,7 +180,7 @@ export default function Home() {
       <header className="flex justify-between items-center mb-6 px-1 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="mim-web-logo mim-web-logo-fomo w-8 h-8 rounded-xl overflow-hidden bg-white/5 border border-white/[0.08] shrink-0"
+            className="mim-web-logo mim-web-logo-fomo w-8 h-8 rounded-xl overflow-hidden shrink-0"
             style={
               {
                 "--fomo-eye-duration": headerAnim.fomoDuration,
@@ -189,9 +189,7 @@ export default function Home() {
             }
           >
             <div className="mim-fomo-eye" aria-hidden>
-              <img src="/fomoico.png" alt="" className="mim-fomo-eye-gaze h-full w-full object-contain" />
-              <span className="mim-fomo-eye-lid mim-fomo-eye-lid-left" />
-              <span className="mim-fomo-eye-lid mim-fomo-eye-lid-right" />
+              <img src="/fomoico.png" alt="" className="mim-fomo-eye-gaze h-full w-full object-contain" draggable={false} />
             </div>
           </div>
           <div className="min-w-0">
@@ -220,7 +218,7 @@ export default function Home() {
 
         <div className="flex items-center gap-2">
           <div
-            className="mim-theme-toggle relative flex items-center h-9 w-[106px] p-1 rounded-xl transition-all border"
+            className="mim-theme-toggle relative flex items-center h-9 w-26.5 p-1 rounded-xl transition-all border"
             style={{
               background: "rgba(255,255,255,0.03)",
               borderColor: "var(--color-border)",
@@ -276,7 +274,7 @@ export default function Home() {
           <button
             type="button"
             onClick={handleOpenLatestRelease}
-            className="w-9 h-9 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/50 active:scale-95 transition-all"
+            className="w-9 h-9 rounded-full bg-white/5 border border-white/8 flex items-center justify-center text-white/50 active:scale-95 transition-all"
             title="Descargar MIM — Último Release"
           >
             <Share2 className="w-4 h-4" />
@@ -532,9 +530,9 @@ export default function Home() {
       />
 
       {c.customAlert && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-500 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => c.setCustomAlert(null)} />
-          <div className="relative z-10 w-full max-w-xs rounded-3xl border border-white/[0.08] bg-surface p-5 shadow-2xl">
+          <div className="relative z-10 w-full max-w-xs rounded-3xl border border-white/8 bg-surface p-5 shadow-2xl">
             <button className="absolute right-3 top-3 rounded-full p-1 text-white/40 hover:text-white" onClick={() => c.setCustomAlert(null)}>
               <X className="w-4 h-4" />
             </button>
@@ -552,7 +550,7 @@ export default function Home() {
       {selectionRect && selectionQuery && (
         <button
           onClick={handleSelectionSearch}
-          className="fixed z-[9999] bg-orange-600 hover:bg-orange-500 text-white text-[10.5px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xl border border-orange-400/20 active:scale-95 transition-all flex items-center gap-1.5 animate-fadeIn select-none"
+          className="fixed z-9999 bg-orange-600 hover:bg-orange-500 text-white text-[10.5px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xl border border-orange-400/20 active:scale-95 transition-all flex items-center gap-1.5 animate-fadeIn select-none"
           style={{
             top: `${Math.max(10, selectionRect.top - 38)}px`,
             left: `${Math.max(10, Math.min(window.innerWidth - 120, selectionRect.left + selectionRect.width / 2 - 50))}px`,

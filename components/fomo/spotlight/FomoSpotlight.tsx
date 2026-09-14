@@ -25,7 +25,6 @@ interface FomoSpotlightProps {
 }
 
 import { AnimatedHeadline } from "./AnimatedHeadline";
-import { MimSlimeMascot } from "@/components/ui/MimSlimeMascot";
 import { SpotlightSkeleton } from "./SpotlightSkeleton";
 import { VerticalTicker, HorizontalEditorialMarquee } from "./SpotlightMarquees";
 
@@ -264,14 +263,11 @@ export function FomoSpotlight({
           <p className="font-mono text-xs uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2">
             <Spotlight className="w-4 h-4" /> Editorial
           </p>
-          <div className="absolute right-0 -top-2 hidden xl:block pointer-events-none">
-            <MimSlimeMascot size={112} />
-          </div>
           <AnimatedHeadline />
         </div>
 
         {/* Bottom Area: Vertical Tickers side-by-side */}
-        <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-[360px] gap-4 pb-2">
+        <div className="mt-8 xl:mt-auto flex h-[40vh] xl:h-90 gap-4 pb-2">
           
           {/* Recently Updated Ticker (Y) */}
           {cfRecent.length > 0 && (
@@ -320,7 +316,7 @@ export function FomoSpotlight({
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div 
         id="onboarding-spotlight-carousel"
-        className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-hidden flex flex-col py-6 gap-6" 
+        className="flex-1 h-[70vh] xl:h-full relative rounded-[2.5rem] overflow-x-hidden overflow-y-visible flex flex-col py-6 gap-6" 
         style={{ 
           background: paneBg,
           border: paneBorder,
@@ -346,7 +342,7 @@ export function FomoSpotlight({
         />
         
         {/* Row 1 & 2 Toggled: Modrinth / CurseForge */}
-        <div className="flex-1 w-full min-h-0 flex flex-col gap-3 relative z-10 overflow-hidden">
+        <div className="flex-1 w-full min-h-0 flex flex-col gap-3 relative z-10 overflow-x-hidden overflow-y-visible">
           {/* Header with Toggle */}
           <div className="px-8 shrink-0 flex items-center justify-between">
             <span className="px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase bg-white/5 text-white/80 border border-white/10 shadow-sm backdrop-blur-md">
@@ -365,8 +361,8 @@ export function FomoSpotlight({
             </button>
           </div>
 
-          {/* Marquee Content — takes remaining space, cards NOT clipped */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Marquee Content — vertical padding accommodates hover lift */}
+          <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-visible py-2">
             {activePlatform === "modrinth" ? (
               <HorizontalEditorialMarquee 
                 items={modrinthMods} 

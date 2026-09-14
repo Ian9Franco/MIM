@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
+import { withHubGatewayKeys } from "@/lib/intelligence/hubGatewayKeys";
 import {
   explainModWithGemini,
   isMimBotChatRequest,
@@ -8,6 +9,7 @@ import {
   type ModExplainerInput,
   type BotPersonality,
 } from "@/lib/intelligence/modExplainer";
+import { resolveGatewayKeys } from "@mim-intelligence/ai";
 
 const bodySchema = z.object({
   projectId: z.string().trim().min(1, "Faltan parámetros requeridos (projectId)"),
@@ -57,24 +59,35 @@ export const POST = withApiGuard(
       messages,
     } = body;
 
-    const headerKey = request.headers.get("x-gemini-key") || "";
-    const resolvedApiKey =
-      (clientApiKey && clientApiKey.trim()) ||
-      (headerKey && headerKey.trim()) ||
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      "";
+    const headerGeminiKey = request.headers.get("x-gemini-key") || "";
+    const headerOpenRouterKey = request.headers.get("x-openrouter-key") || "";
 
-    if (!resolvedApiKey) {
+    const gatewayKeys = withHubGatewayKeys({
+      clientGeminiKey: clientApiKey,
+      headerGeminiKey,
+      openrouterKey: headerOpenRouterKey,
+    });
+    const { hasGeminiKey, hasOpenRouterKey, geminiKey, openrouterKey } =
+      resolveGatewayKeys(gatewayKeys);
+
+    if (!hasGeminiKey && !hasOpenRouterKey) {
       return NextResponse.json(
         {
           error: "NO_API_KEY",
           message:
-            "No se ha configurado una clave de Google Gemini API. Ingresa tu clave gratuita para activar explicaciones con búsqueda en Google.",
+            "No se ha configurado una clave de API. Ingresa tu clave gratuita para activar explicaciones con búsqueda en Google.",
         },
         { status: 401 }
       );
     }
+
+    const resolvedApiKey =
+      geminiKey ||
+      openrouterKey ||
+      (clientApiKey && clientApiKey.trim()) ||
+      (headerGeminiKey && headerGeminiKey.trim()) ||
+      (headerOpenRouterKey && headerOpenRouterKey.trim()) ||
+      "provider-managed";
 
     const headerPersonality = request.headers.get("x-bot-personality");
     const requestedPersonality: BotPersonality =
@@ -82,11 +95,10 @@ export const POST = withApiGuard(
       (headerPersonality === "standard" || headerPersonality === "bully" ? headerPersonality : undefined) ||
       (process.env.NEXT_PUBLIC_BOT_PERSONALITY === "standard" ? "standard" : "bully");
 
-    // MIM-Bot Chat (project scope): follow-up question about the open mod
     if (isMimBotChatRequest(question, mode)) {
       const chatRes = await mimBotChat(
         {
-          projectContext: (projectContext as any) || {
+          projectContext: {
             projectId,
             title,
             author,
@@ -96,13 +108,17 @@ export const POST = withApiGuard(
             loaders,
             descriptionSnippet: description,
             initialSummary,
+            ...(projectContext && typeof projectContext === "object" ? projectContext : {}),
           },
-          messages: Array.isArray(messages) ? (messages as any[]) : [],
+          messages: Array.isArray(messages) ? (messages as Array<{ role: "user" | "model"; text: string }>) : [],
           question: question || "",
           model,
           personality: requestedPersonality,
         },
-        resolvedApiKey
+        resolvedApiKey,
+        undefined,
+        request.signal,
+        gatewayKeys
       );
       return NextResponse.json(chatRes);
     }
@@ -122,7 +138,13 @@ export const POST = withApiGuard(
       personality: requestedPersonality,
     };
 
-    const result = await explainModWithGemini(input, resolvedApiKey);
+    const result = await explainModWithGemini(
+      input,
+      resolvedApiKey,
+      undefined,
+      request.signal,
+      gatewayKeys
+    );
     return NextResponse.json(result);
   }
 );

@@ -5,6 +5,12 @@
  * gallery screenshot visual analysis.
  */
 
+import {
+  classifyModExplainIntent,
+  generateWithModelGateway,
+  type GatewayKeyOptions,
+} from "@mim-intelligence/ai";
+
 export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 
 export const GEMINI_MODEL_CASCADE = [
@@ -267,9 +273,12 @@ ${imagesCount > 0 ? `- **📸 En capturas:** Hay ${imagesCount} captura(s) ofici
 
 export async function explainModWithGemini(
   input: ModExplainerInput,
-  resolvedApiKey: string
+  resolvedApiKey: string,
+  _provider?: unknown,
+  signal?: AbortSignal,
+  gatewayKeys?: GatewayKeyOptions
 ): Promise<ModExplanationResult> {
-  if (!resolvedApiKey) {
+  if (!resolvedApiKey && !gatewayKeys) {
     throw new Error("NO_API_KEY");
   }
 
@@ -278,6 +287,48 @@ export async function explainModWithGemini(
   const inlineImages = await fetchImagesAsInlineData(input.galleryUrls, 3, 2000);
   const imagesCount = inlineImages.length;
   const promptText = buildMultimodalPrompt(input, imagesCount);
+  const hasRichDescription = Boolean(input.description && input.description.trim().length > 25);
+
+  try {
+    const intent = classifyModExplainIntent({
+      imageCount: imagesCount,
+      wantsSearchGrounding: !hasRichDescription,
+    });
+    const gatewayResult = await generateWithModelGateway({
+      intent,
+      messages: [
+        {
+          role: "user",
+          parts: [
+            { type: "text", text: promptText },
+            ...inlineImages.map((img) => ({
+              type: "image" as const,
+              mimeType: img.mimeType,
+              data: img.data,
+            })),
+          ],
+        },
+      ],
+      temperature: 0.65,
+      maxOutputTokens: 800,
+      signal,
+      preferredGeminiModel: baseModel,
+      wantsSearchGrounding: !hasRichDescription,
+      ...gatewayKeys,
+    });
+    if (gatewayResult.text?.trim()) {
+      return {
+        projectId: input.projectId,
+        summaryMarkdown: gatewayResult.text.trim(),
+        groundedSources: gatewayResult.groundedSources,
+        searchUsed: gatewayResult.searchUsed,
+        imagesAnalyzed: imagesCount,
+        model: gatewayResult.model,
+      };
+    }
+  } catch (gatewayErr) {
+    console.warn("[ModExplainer] Model gateway failed, falling back to direct Gemini:", gatewayErr);
+  }
 
   const contentParts: any[] = [{ text: promptText }];
   for (const img of inlineImages) {
@@ -422,9 +473,12 @@ export interface MimBotChatResult {
 
 export async function mimBotChat(
   input: MimBotChatInput,
-  resolvedApiKey: string
+  resolvedApiKey: string,
+  _provider?: unknown,
+  signal?: AbortSignal,
+  gatewayKeys?: GatewayKeyOptions
 ): Promise<MimBotChatResult> {
-  if (!resolvedApiKey) {
+  if (!resolvedApiKey && !gatewayKeys) {
     throw new Error("NO_API_KEY");
   }
 
@@ -496,6 +550,30 @@ PAUTAS DE BULLY:
     role: "user",
     parts: [{ text: input.question.trim() }],
   });
+
+  const gatewayPrompt = formattedContents
+    .map((entry) => entry.parts.map((part) => part.text).join("\n"))
+    .join("\n\n");
+
+  try {
+    const gatewayResult = await generateWithModelGateway({
+      intent: "mim-bot-chat",
+      messages: [{ role: "user", parts: [{ type: "text", text: gatewayPrompt }] }],
+      temperature: personality === "standard" ? 0.3 : 0.7,
+      maxOutputTokens: 320,
+      signal,
+      preferredGeminiModel: baseModel,
+      ...gatewayKeys,
+    });
+    if (gatewayResult.text?.trim()) {
+      return {
+        reply: gatewayResult.text.trim(),
+        modelUsed: gatewayResult.model,
+      };
+    }
+  } catch (gatewayErr) {
+    console.warn("[MimBotChat] Model gateway failed, falling back to direct Gemini:", gatewayErr);
+  }
 
   const requestPayload = {
     contents: formattedContents,

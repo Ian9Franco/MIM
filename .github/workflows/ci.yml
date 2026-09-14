@@ -173,5 +173,8 @@ jobs:
           RUN_MIMBOT_LIVE: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MIMBOT_EVAL_MIN_PASS_RATE: "0.6"
+          MIMBOT_EVAL_MAX_P95_MS: "45000"
+          MIMBOT_EVAL_MAX_TOTAL_MS: "360000"
         # Soft-skip inside the script when secrets are empty; keep the step so
         # fixture structure is still validated on every main push.

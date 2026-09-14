@@ -65,6 +65,7 @@ export function ModShareModal({
       const { error } = await request;
       if (error) throw error;
       if (refreshUserData) refreshUserData();
+      window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
       setShowShareModal(false);
       setShareComment("");
     } catch (err: unknown) {
@@ -79,7 +80,7 @@ export function ModShareModal({
     <AnimatePresence>
       {showShareModal && (
         <motion.div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[700] p-4"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-700 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

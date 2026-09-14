@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@mim-intelligence/*": [
+        "../../lib/intelligence/*"
       ]
     }
   },

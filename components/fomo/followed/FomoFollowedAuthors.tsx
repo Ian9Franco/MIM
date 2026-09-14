@@ -16,7 +16,6 @@ import { supabase } from "@/lib/core/supabaseClient";
 import { fetchJsonWithRetry } from "@/lib/core/fetchJsonWithRetry";
 import { FollowedProjectCard, FollowedAuthorCard } from "@/components/fomo/followed/FomoFollowedComponents";
 import { PillToggleGroup } from "@/components/ui/primitives";
-import { MimSlimeMascot } from "@/components/ui/MimSlimeMascot";
 import { FomoFollowedRankings } from "@/components/fomo/followed/FomoFollowedRankings";
 import { buildShareMetaFromMod } from "@/lib/fomo/communityShareMeta";
 import type { ModHit } from "@/lib/core/types";
@@ -396,7 +395,6 @@ export function FomoFollowedAuthors({
               {followedMods.length} proyectos · {followedAuthors.length} autores
             </p>
           </div>
-          <MimSlimeMascot size={64} />
         </div>
         <div className="flex items-center justify-between">
         <PillToggleGroup 

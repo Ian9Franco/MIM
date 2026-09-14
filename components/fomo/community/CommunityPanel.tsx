@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { LogOut, TvMinimalPlay, RefreshCw, Blocks, Club, FlaskConical } from "lucide-react";
+import { TvMinimalPlay, RefreshCw, Blocks, FlaskConical } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "@/components/fomo/core/LoginPortal";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -18,6 +18,7 @@ import { DraftDownloadProgress } from "@/components/fomo/community/DraftDownload
 import { CommunityHeader, type CommunitySection } from "@/components/fomo/community/CommunityShell";
 import { CommunityRankings } from "@/components/fomo/community/CommunityRankings";
 import { CommunityMembers } from "@/components/fomo/community/CommunityMembers";
+import { CommunityProfileTab } from "@/components/fomo/community/CommunityProfileTab";
 import type { ModHit } from "@/lib/core/types";
 
 function CommunityPanelInner({
@@ -289,6 +290,19 @@ function CommunityPanelInner({
     }
   }, [user?.id, activeSubTab, fetchVideos, fetchFavorites]);
 
+  useEffect(() => {
+    const refreshShares = () => {
+      if (!user) return;
+      loadedTabs.current.delete("modpacks");
+      if (activeSubTab === "modpacks" || communitySection === "compartidos") {
+        loadedTabs.current.add("modpacks");
+        fetchFavorites();
+      }
+    };
+    window.addEventListener("fomo-refresh-sharing", refreshShares);
+    return () => window.removeEventListener("fomo-refresh-sharing", refreshShares);
+  }, [user, activeSubTab, communitySection, fetchFavorites]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-white/50 animate-fade-in">
@@ -307,8 +321,8 @@ function CommunityPanelInner({
   }
 
   const isModern = currentTheme === "modern";
-  const profileBannerMeta = profile?.banner_meta ?? { zoom: 1, x: 0, y: 0, blur: 0 };
-  
+  const ownShares = cloudFavorites.filter((f) => f.profile_id === user.id);
+
   const switchTab = (tab: "modpacks" | "drafts" | "videos" | "profile") => {
     const idx = tabOrder.indexOf(tab as (typeof tabOrder)[number]);
     if (idx !== -1) setTabIndex(idx);
@@ -319,94 +333,10 @@ function CommunityPanelInner({
     <div className={`fomo-community flex-1 flex flex-col overflow-hidden animate-fade-in ${isModern ? 'bg-background text-foreground' : 'bg-[#09090b] text-white/90'}`}>
       {!selectedUserProfile && !insideDraft && (
         <>
-          {/* Immersive Profile Header */}
-          <div className="relative shrink-0 flex flex-col justify-end p-6 pb-6 overflow-hidden min-h-40 border-b border-white/5">
-            {profile?.banner_url && (
-              <div className="absolute inset-0 z-0 overflow-hidden">
-                <img
-                  src={profile.banner_url}
-                  alt="Banner"
-                  className="w-full h-full object-cover"
-                  style={{
-                    objectPosition: `calc(50% + ${profileBannerMeta.x}px) calc(50% + ${profileBannerMeta.y}px)`,
-                    transform: `scale(${profileBannerMeta.zoom})`,
-                    filter: `blur(${profileBannerMeta.blur}px)`,
-                    transformOrigin: "center center",
-                  }}
-                />
-              </div>
-            )}
-            {/* Animated Background */}
-            <div 
-              className="absolute inset-0 z-0 opacity-50 mix-blend-screen"
-              style={{
-                background: `radial-gradient(circle at top right, ${profile?.color || 'var(--color-primary)'}50, transparent 70%),
-                             radial-gradient(circle at bottom left, ${profile?.color || 'var(--color-primary)'}30, transparent 50%)`
-              }}
-            />
-            {isModern && (
-               <div className="absolute inset-0 bg-white/20 z-0" />
-            )}
-            {!isModern && (
-               <div className="absolute inset-0 bg-black/35 z-0" />
-            )}
-
-            {/* Decorative Grid or Elements */}
-            <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] bg-repeat opacity-[0.03]" />
-
-            <div className="relative z-10 flex flex-row justify-between items-end gap-4 mt-auto">
-              <div id="onboarding-community-profile" className="flex flex-row items-center gap-4">
-                {/* Avatar with Glow */}
-                <div className="relative group cursor-pointer" onClick={handleOpenEditProfile}>
-                  <div 
-                    className="absolute inset-0 rounded-2xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ backgroundColor: profile?.color || 'var(--color-primary)' }}
-                  />
-                  <div 
-                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center text-background font-black text-2xl shadow-2xl overflow-hidden border-2 transition-transform duration-300 group-hover:scale-105"
-                    style={{ 
-                      backgroundColor: profile?.color || 'var(--color-primary)',
-                      borderColor: isModern ? 'white' : 'rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      profile?.username ? profile.username[0].toUpperCase() : "U"
-                    )}
-                  </div>
-                </div>
-
-                {/* User Info */}
-                <div className="flex flex-col">
-                  <h4 className={`text-xl font-black tracking-tight text-white drop-shadow-md`}>
-                    {profile?.username || "Conectado"}
-                  </h4>
-                  <p className={`text-xs font-medium text-white/80 drop-shadow-sm`}>
-                    {user.email}
-                  </p>
-                  <button 
-                    onClick={handleOpenEditProfile} 
-                    className="mt-1.5 text-[10px] font-black text-purple-400 hover:text-purple-300 drop-shadow-sm hover:underline uppercase cursor-pointer bg-transparent border-none text-left w-fit tracking-wider"
-                  >
-                    Editar Perfil
-                  </button>
-                </div>
-              </div>
-
-              <button 
-                onClick={signOut} 
-                className={`p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md shadow-sm border ${isModern ? 'bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20' : 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20'}`}
-                title="Cerrar Sesión"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
           <CommunityHeader
             active={communitySection}
             onChange={setCommunitySection}
+            isModern={isModern}
             metrics={{
               members: memberCount,
               recommendations: cloudFavorites.length,
@@ -473,6 +403,7 @@ function CommunityPanelInner({
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col relative z-10">
         {communitySection === "rankings" && !selectedUserProfile && (
           <CommunityRankings
+            isModern={isModern}
             onOpen={(mod: ModHit) => {
               window.dispatchEvent(
                 new CustomEvent("fomo-open-project-details", {
@@ -488,6 +419,27 @@ function CommunityPanelInner({
             onOpenProfile={(username) => {
               setSelectedUserProfile(username);
               setActiveSubTab("profile");
+            }}
+          />
+        )}
+
+        {communitySection === "perfil" && !selectedUserProfile && (
+          <CommunityProfileTab
+            userId={user.id}
+            profile={profile}
+            email={user.email}
+            isModern={isModern}
+            ownShares={ownShares}
+            onEditProfile={handleOpenEditProfile}
+            onSignOut={signOut}
+            onOpenProjectDetails={onOpenProjectDetails}
+            onGoToDrafts={() => {
+              setCommunitySection("compartidos");
+              switchTab("drafts");
+            }}
+            onGoToPool={() => {
+              setCommunitySection("compartidos");
+              switchTab("modpacks");
             }}
           />
         )}

@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "SRV5-FIXTURE-001",
+    "category": "MISSING_DEPENDENCY",
+    "loader": "fabric",
+    "minecraftVersion": "1.20.1",
+    "expectedCulprit": "missing",
+    "origin": "unknown",
+    "license": "internal-fixture",
+    "anonymized": true,
+    "split": "holdout",
+    "notes": "Seeded from scripts/__tests__/fixtures/sftpFixture.ts FIXTURE_LATEST_LOG (SRV-5 local fixture). Not a VPS capture. Add host logs with npm run sage:ingest-log.",
+    "rawLog": "[01:15:30] [Server thread/INFO] [minecraft/MinecraftServer]: Starting minecraft server version 1.20.1\n[01:15:31] [Server thread/ERROR] [FabricLoader/]: Incompatible mod set!\nnet.fabricmc.loader.impl.FormattedException: Some mods require 'missing' which is missing!\n\tat net.fabricmc.loader.impl.FabricLoaderImpl.load(FabricLoaderImpl.java:234)"
+  }
+]

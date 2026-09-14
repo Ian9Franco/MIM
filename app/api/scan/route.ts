@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { scanModEnhanced } from "@/lib/modding/enhanced-mod-scanner";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { filePathQuerySchema } from "@/lib/api/contracts";
 
 /**
  * /api/scan — GET
@@ -11,16 +12,9 @@ import { withApiGuard } from "@/lib/apiGuard";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export const GET = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  const { searchParams } = new URL(req.url);
-  const filePath = searchParams.get("path");
-
-  if (!filePath) {
-    return NextResponse.json({ error: "Missing required query param: path" }, { status: 400 });
-  }
+  { querySchema: filePathQuerySchema },
+  async ({ query }) => {
+  const filePath = query.path;
 
   if (!fs.existsSync(filePath)) {
     return NextResponse.json({ error: `File not found: ${filePath}` }, { status: 404 });

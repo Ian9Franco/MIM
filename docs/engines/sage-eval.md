@@ -1,9 +1,11 @@
 # SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
-> **Evaluation Date:** 2026-09-13  
+> **Canonical eval source (SAGE-07):** this file. MimBot structure/live eval is `npm run eval:mimbot` + `scripts/evaluation/mimbot-fixtures.json`. Do not copy numeric claims elsewhere.
+
+> **Evaluation Date:** 2026-09-14  
 > **Regression gate (`crash-corpus-regression.json`):** 125 templated cases — CI only, not real captured logs  
-> **Real corpus (`crash-corpus.json`):** 0 cases — add server/client logs here when available  
-> **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; not mixed into this file yet  
+> **Real corpus (`crash-corpus.json`):** 1 cases — holdout for generalization (SAGE-01)  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; ingest excerpts here with `npm run sage:ingest-log`  
 
 ---
 
@@ -12,7 +14,7 @@
 This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
 
 - `crash-corpus-regression.json` holds templated snippets (`origin: synthetic`) for the SAGE-03 CI gate only.
-- `crash-corpus.json` is intentionally **empty** until you capture real logs (client crash or server `latest.log` excerpts) without contaminating regression.
+- `crash-corpus.json` is the **only** place for captured logs (client crash, server `latest.log`, or the SRV-5 local fixture seed). Regression stays synthetic.
 - 100% regression F1 does not prove generalization. Real holdout lives only in `crash-corpus.json`.
 
 ### Regression fixture audit
@@ -37,10 +39,10 @@ Near-duplicate prefix groups:
 
 ### Real corpus audit
 
-- Samples: 0 (0 unique logs; 0 exact duplicate extras)
-- Log length: min 0, p50 0, mean 0, max 0 chars
-- Origin: unknown 0, synthetic 0, community 0, public-issue 0
-- Split: train 0, stress 0, holdout 0
+- Samples: 1 (1 unique logs; 0 exact duplicate extras)
+- Log length: min 342, p50 342, mean 342, max 342 chars
+- Origin: unknown 1, synthetic 0, community 0, public-issue 0
+- Split: train 0, stress 0, holdout 1
 
 Exact groups:
 
@@ -64,7 +66,18 @@ Near-duplicate prefix groups:
 | **Top-1 atribución (con culpable)** | **71.4%** | informativo | 50/70 |
 | **Top-3 atribución (con culpable)** | **100.0%** | informativo | 70/70 |
 | **Acierto sistémico sin culpable** | **100.0%** | informativo | 55/55 |
-| **Mean Inference Latency** | **0.05 ms** | < 15.0 ms | ✅ Pass (0.05 ms) |
+| **Mean Inference Latency (local)** | **0.02 ms** | < 15.0 ms | ✅ Pass (0.02 ms) |
+| **p50 latency (local)** | **0.01 ms** | informativo | warmup 1, repeats 3 |
+| **p95 latency (local)** | **0.05 ms** | informativo | max 0.17 ms |
+
+### SAGE-04 — Latencia reproducible (diagnóstico local)
+
+Esta medición es **solo el clasificador determinista** (`SageCrashEngine.diagnose`). No es latencia ni costo de MimBot/LLM.
+
+- Entorno: Node v24.15.0, win32/x64
+- Calentamiento: 1 pasada(s); cronometraje: 3 repetición(es)
+- mean 0.021 ms · p50 0.014 ms · p95 0.049 ms · max 0.171 ms
+- Override: `SAGE_EVAL_WARMUP`, `SAGE_EVAL_REPEATS`
 
 ### Métricas desglosadas (SAGE-02)
 
@@ -102,7 +115,16 @@ Near-duplicate prefix groups:
 
 ## Real holdout (`crash-corpus.json`, not gated)
 
-`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.
+| Metric | Value |
+|:---|---:|
+| Samples | 1 |
+| Category accuracy | 0.0% |
+| Macro F1 | 75.0% |
+| Top-3 histórico | 0.0% (0/1) |
+
+| Loader | Samples | Category accuracy |
+|:---|---:|---:|
+| fabric | 1 | 0.0% |
 
 
 ---
@@ -111,7 +133,7 @@ Near-duplicate prefix groups:
 
 ```bash
 npm run eval:sage              # regression gate + write this report
-npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --holdout # real holdout only (fixture seed + any ingested logs)
 npm run eval:sage -- --audit   # regression + real corpus audits
 ```
 

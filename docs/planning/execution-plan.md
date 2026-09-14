@@ -201,7 +201,7 @@ Independientes entre sí. Cada una es un PR pequeño. Orden sugerido por riesgo 
 
 - **Archivos:** `scripts/evaluation/mimbot-fixtures.json`, `scripts/evaluation/mimbot-eval.ts`.
 - **Verificación:** `npm run eval:mimbot`. Live scoring: `RUN_MIMBOT_LIVE=1 npm run eval:mimbot` (requiere claves).
-- **Pendiente:** gate CI (SAGE-05b).
+- **Pendiente:** secrets de CI para correr live de forma rutinaria (el job ya tiene umbrales SAGE-05b).
 
 ---
 

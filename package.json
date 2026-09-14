@@ -46,6 +46,8 @@
     "test": "node scripts/test-runner.js",
     "test:quick": "node scripts/test-runner.js",
     "lint:api-guard": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/security/verify-api-guard.ts",
+    "lint:api-schemas": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/security/inventory-api-schemas.ts",
+    "sage:ingest-log": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/evaluation/ingest-crash-log.ts",
     "lint:architecture": "ts-node --project tsconfig.scripts.json scripts/architecture/verify-boundaries.ts",
     "arch:analyze": "ts-node --project tsconfig.scripts.json scripts/architecture/analyze-graph.ts",
     "pr:audit": "node scripts/workflow/review-pr.js audit",

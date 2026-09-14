@@ -5,7 +5,7 @@ Two files, on purpose:
 | File | Role |
 |---|---|
 | `crash-corpus-regression.json` | Templated snippets (`origin: synthetic`) for the **SAGE-03 CI gate** only. Not real captured logs. |
-| `crash-corpus.json` | **Empty by default.** Add real logs here when you capture them from a client crash or a server (`latest.log`, crash-reports). |
+| `crash-corpus.json` | Captured logs + SRV-5 fixture seed. **Never** `origin: synthetic`. Ingest with `npm run sage:ingest-log`. |
 
 ## Not the same as MIM Server (SRV-5)
 
@@ -31,3 +31,7 @@ Two files, on purpose:
 ```
 
 Use `split: holdout` for logs never used to tune SAGE rules. Run `npm run eval:sage -- --holdout` to score them without affecting CI.
+
+```bash
+npm run sage:ingest-log -- --file path/to/latest.log --id HOST-001 --category MISSING_DEPENDENCY --loader fabric --version 1.20.1 --culprit fabric-api --origin community
+```

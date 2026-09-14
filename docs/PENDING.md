@@ -70,7 +70,7 @@
 | **Costos OpenRouter en UI** | `BOT-06b` | PR #79 — `openRouterAccount.ts`, campo `openRouter` en `GET /api/settings/ai-quota` |
 | **Suite eval MIMbot (fixtures baseline)** | `SAGE-05` | PR #79 — `mimbot-fixtures.json` (18 casos), `npm run eval:mimbot` |
 
-Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): gate CI live MIMbot (`SAGE-05b`), migración de rutas legacy en `web/`, flags de modelo en UI.
+Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): confirmación rutinaria del live MimBot con secrets de CI, migración de rutas legacy en `web/`, flags de modelo en UI.
 
 ### Pendiente — producto MIMbot / UX
 
@@ -115,7 +115,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
     - [components/fomo/collections/views/CollectionDetailView.tsx](file:///d:/Dev/CodeProjects/MIM/components/fomo/collections/views/CollectionDetailView.tsx): Tipado de filtrado por versión/loader y estados de actualización. | `REC-01` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-01)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Reducción de Warnings ESLint:** Reducción progresiva de deuda. Techo Desktop bajó de 471 a 400 (medido en CI #221: 395); Techo Hub bajó de 100 a 75 (medido: 69). | `REC-02` | 🟢 [whosnext.md (REC-02)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Modularizar Componentes > 600 Líneas:**<br/>• `DiscoverTab.tsx` (158L, extraído a `apps/hub/components/tabs/discover/`)<br/>• `DraftDetailView.tsx` (188L, extraído a `apps/hub/components/draft-detail/`)<br/>• `FomoVersionOverlay.tsx` (186L, extraído a `components/fomo/details/`)<br/>• `useHomeController.ts` (Phase 2 verificación final `NEEDS_USER` & Phase 3 Profile/Community). REC-03 global permanece abierto. | `REC-03` | 🧹 [refactoring-backlog.md](./planning/refactoring-backlog.md)<br/>🟢 [whosnext.md (REC-03)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
-| **Inventario Zod en rutas restantes:** Mutaciones core (`build`, `delete`, `staging`, `tweak`) ya usan `bodySchema`/`querySchema` del guard. Falta inventariar handlers secundarios y extraer contratos compartidos con clientes. | `API-02b` | 🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
+| **Inventario Zod en rutas restantes:** Contratos en `lib/api/contracts.ts`; inventario `npm run lint:api-schemas`; schemas en classify/scan/validate/move-files/crosscheck-batch/auto-categorize. El inventario lista mutaciones aún sin schema (no gate de CI). | `API-02b` (✅ inventario + contratos) | 📘 [api-zod-inventory.md](./architecture/api-zod-inventory.md)<br/>🟢 [whosnext.md (API-02)](./planning/whosnext.md#1-proceso-y-contratos-api) |
 | **Tests E2E de UI:** Agregar 3–5 recorridos E2E reproducibles (Discover → Detalle → Descarga y manejo de reintentos de red). | `REC-04` | 🟢 [whosnext.md (REC-04)](./planning/whosnext.md#3-calidad-y-arquitectura--revisión-recruiter) |
 | **Pre-push local (anti-sorpresa CI/Codacy):** `npm run pre:push` espeja GitHub Actions; `npm run codacy:diff` simula el gate ESLint de Codacy en el diff; `npm run codacy:cli` (ESLint9/Stylelint en Windows; Semgrep solo en Cloud). | `CI-LOCAL` (✅ en main) | 📘 [ian.md §4](../ian.md) |
 
@@ -125,11 +125,13 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
  
 | Ítem | Tarea / Estado | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
-| **Generalización del Dataset SAGE:** Infra lista (`crash-corpus.json` vacío + regression aislado). Sigue `NEEDS_USER`: capturar logs reales (cliente o servidor) tras probar host/VPS; no mezclar con el fixture de regresión. Distinto de SRV-5 (ingesta remota). | `SAGE-01` | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-01)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
+| **Generalización del Dataset SAGE:** Semilla holdout `SRV5-FIXTURE-001` en `crash-corpus.json` + `npm run sage:ingest-log`. Regression aislada. Logs de VPS real siguen `NEEDS_USER`. | `SAGE-01` (infra + semilla) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>📗 [EVAL.md](./engines/EVAL.md) |
 | **Métricas Top-1/Top-3 Rigurosas:** Separar formalmente en el reporte casos con culpable atribuible de aciertos sistémicos sin culpable. | `SAGE-02` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-02)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
 | **Gate Automatizado de CI:** Hacer que `npm run eval:sage` falle el pipeline si las métricas caen por debajo de los umbrales históricos (Macro F1 ≥ 85%, Top-3 ≥ 95%, latencia ≤ 15 ms). | `SAGE-03` (✅ Cerrado, PR #85) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-03)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
+| **Latencia reproducible:** p50/p95/max + entorno + warmup/repeats en eval local. No extrapolar a MimBot. | `SAGE-04` (✅) | 📊 [sage-eval.md](./engines/sage-eval.md) |
 | **Guardrails de Chat en Recorrido Real:** Salida estructurada con referencias a evidencia, validación estricta de atribuciones y bloqueo de remedios inseguros con fallback local. | `SAGE-06` (✅ Cerrado, PR #82) | 📊 [sage-eval.md](./engines/sage-eval.md)<br/>🟢 [whosnext.md (SAGE-06)](./planning/whosnext.md#4-evaluación-sage-y-mimbot) |
-| **Scoring live MIMbot en CI:** Job `mimbot-live-eval` en `ci.yml` + cola BOT-07 en `main`. Estructura (`npm run eval:mimbot`) ya corre en CI. El live **no falla el PR** si no hay secrets; falta confirmar métricas de latencia/costo y umbral estable. | `SAGE-05b` (parcial, en main) | 🦄 [unicorn.md (§1.3)](./planning/unicorn.md) |
+| **Scoring live MIMbot en CI:** Job `mimbot-live-eval` + umbrales pass rate / p95 / wall. Soft-skip sin secrets. | `SAGE-05b` (✅ código) | 📗 [EVAL.md](./engines/EVAL.md) |
+| **Fuente canónica de eval:** índice único; no duplicar números SAGE/MimBot en READMEs. | `SAGE-07` (✅) | 📗 [EVAL.md](./engines/EVAL.md) |
 
 ---
 

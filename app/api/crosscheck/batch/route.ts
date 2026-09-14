@@ -9,10 +9,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getRawEnv } from "@/lib/core/env";
 import { getApiKey } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
+import { crosscheckBatchBodySchema } from "@/lib/api/contracts";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const MODRINTH_API = "https://api.modrinth.com/v2";
@@ -20,25 +21,11 @@ const MODRINTH_API = "https://api.modrinth.com/v2";
 const modrinthCompatibilityCache = new Map<string, { exists: boolean, client_side?: string, server_side?: string, timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
 
-interface BatchRequest {
-  mods: Array<{
-    title: string;
-    slug?: string;
-    source: string;
-  }>;
-}
-
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: crosscheckBatchBodySchema },
+  async ({ body }) => {
   try {
-    const { mods } = (await req.json()) as BatchRequest;
-    
-    if (!mods || !Array.isArray(mods) || mods.length === 0) {
-      return NextResponse.json({ error: "Missing or empty mods array" }, { status: 400 });
-    }
+    const { mods } = body;
 
     const results: Record<string, { exists: boolean; client_side?: string; server_side?: string }> = {};
 

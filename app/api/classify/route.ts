@@ -20,7 +20,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { SOURCE_BASE, isValidCategory } from "@/lib/core/constants";
 import { MimClassifier } from "@/lib/classifier";
 import { getProjectSubcategories } from "@/lib/modding/projectSubcategories";
@@ -30,15 +30,14 @@ import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
 import { withApiGuard } from "@/lib/apiGuard";
+import { classifyBodySchema } from "@/lib/api/contracts";
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: classifyBodySchema },
+  async ({ body }) => {
   try {
     const { sourcePath, sourcePaths, targetCategory, version, modloader, projectName, projectType, isCopy, forceParentCategory, environment, toGame, worldName } =
-      await req.json();
+      body;
 
     // Support both single-path (legacy) and batch array
     const pathsToProcess: string[] =

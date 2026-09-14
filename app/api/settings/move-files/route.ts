@@ -14,6 +14,7 @@ import { mimMsg } from "@/lib/core/voice";
 import fs from "fs";
 import path from "path";
 import { withApiGuard } from "@/lib/apiGuard";
+import { moveFilesBodySchema } from "@/lib/api/contracts";
 
 /**
  * Mueve recursivamente el contenido de `src` a `dest`.
@@ -48,12 +49,10 @@ function moveDirectorySync(src: string, dest: string): void {
 }
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as Request;
-
+  { bodySchema: moveFilesBodySchema },
+  async ({ body }) => {
   try {
-    const { sourcePath, targetPath } = await req.json();
+    const { sourcePath, targetPath } = body;
 
     if (sourcePath === targetPath) {
       return NextResponse.json({ success: true, message: mimMsg.settingsSamePath() });

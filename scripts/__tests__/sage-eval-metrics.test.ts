@@ -49,6 +49,10 @@ function testMetricSplitOnMiniCorpus(): void {
   ];
 
   const result = evaluateSageCorpus(corpus);
+  assert.equal(result.latencyKind, "local-diagnostic");
+  assert.ok(result.p50LatencyMs >= 0);
+  assert.ok(result.p95LatencyMs >= result.p50LatencyMs);
+  assert.equal(result.environment.kind, "local-diagnostic");
   assert.equal(result.top1Attribution.denominator, 2);
   assert.equal(result.top3Attribution.denominator, 2);
   assert.equal(result.systemicCategoryCorrect.denominator, 2);
@@ -67,6 +71,8 @@ function testGatePassesOnHealthyResult(): void {
   healthy.macroF1 = 100;
   healthy.top3Historical.percentage = 100;
   healthy.meanLatencyMs = 1;
+  healthy.p50LatencyMs = 1;
+  healthy.p95LatencyMs = 1;
   assert.equal(collectSageGateFailures(healthy).length, 0);
   console.log("✔ SAGE-03 gate passes when thresholds are met");
 }

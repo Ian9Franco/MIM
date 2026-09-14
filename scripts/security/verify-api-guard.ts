@@ -39,10 +39,18 @@ export interface HandlerViolation {
   reason: string;
 }
 
+export interface HandlerSchemaCoverage {
+  method: string;
+  hasBodySchema: boolean;
+  hasQuerySchema: boolean;
+  hasParamsSchema: boolean;
+}
+
 export interface RouteAnalysis {
   handlers: string[];
   guardedHandlers: string[];
   violations: HandlerViolation[];
+  schemaCoverage: HandlerSchemaCoverage[];
 }
 
 function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
@@ -150,6 +158,49 @@ function isGuardedExpression(
   return false;
 }
 
+function objectHasProperty(expression: ts.Expression | undefined, name: string): boolean {
+  if (!expression) return false;
+  const current = unwrapExpression(expression);
+  if (!ts.isObjectLiteralExpression(current)) return false;
+  return current.properties.some((property) => {
+    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) return false;
+    return ts.isIdentifier(property.name) && property.name.text === name;
+  });
+}
+
+function resolveGuardCall(
+  expression: ts.Expression | undefined,
+  importedGuardNames: Set<string>,
+  localBindings: Map<string, LocalBinding>,
+  visited = new Set<string>()
+): ts.CallExpression | null {
+  if (!expression) return null;
+  const current = unwrapExpression(expression);
+  if (ts.isCallExpression(current)) {
+    const callee = unwrapExpression(current.expression);
+    if (ts.isIdentifier(callee) && importedGuardNames.has(callee.text)) return current;
+    return null;
+  }
+  if (ts.isIdentifier(current)) {
+    if (visited.has(current.text)) return null;
+    visited.add(current.text);
+    const binding = localBindings.get(current.text);
+    if (!binding?.immutable) return null;
+    return resolveGuardCall(binding.initializer, importedGuardNames, localBindings, visited);
+  }
+  return null;
+}
+
+function schemaCoverageFromGuardCall(call: ts.CallExpression | null, method: string): HandlerSchemaCoverage {
+  const config = call?.arguments[0];
+  return {
+    method,
+    hasBodySchema: objectHasProperty(config, "bodySchema"),
+    hasQuerySchema: objectHasProperty(config, "querySchema"),
+    hasParamsSchema: objectHasProperty(config, "paramsSchema"),
+  };
+}
+
 function recordHandler(
   analysis: RouteAnalysis,
   method: string,
@@ -178,6 +229,7 @@ export function analyzeRouteSource(sourceText: string, fileName = "route.ts"): R
     handlers: [],
     guardedHandlers: [],
     violations: [],
+    schemaCoverage: [],
   };
 
   for (const statement of sourceFile.statements) {
@@ -200,6 +252,12 @@ export function analyzeRouteSource(sourceText: string, fileName = "route.ts"): R
           declarationIsConst
             ? "exported handler is not structurally wrapped by withApiGuard"
             : "exported handler must be an immutable const wrapped by withApiGuard"
+        );
+        analysis.schemaCoverage.push(
+          schemaCoverageFromGuardCall(
+            resolveGuardCall(declaration.initializer, importedGuardNames, localBindings),
+            method
+          )
         );
       }
       continue;
@@ -256,6 +314,12 @@ export function analyzeRouteSource(sourceText: string, fileName = "route.ts"): R
           exportedName,
           guarded,
           "exported handler alias cannot be traced to withApiGuard"
+        );
+        analysis.schemaCoverage.push(
+          schemaCoverageFromGuardCall(
+            resolveGuardCall(binding?.initializer, importedGuardNames, localBindings),
+            exportedName
+          )
         );
       }
     }

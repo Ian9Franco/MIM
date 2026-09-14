@@ -51,7 +51,9 @@ function printConsoleSummary(label: string, result: SageEvaluationResult): void 
   console.log(`🎯 Top-1 atribución:          ${result.top1Attribution.percentage.toFixed(1)}% (${result.top1Attribution.numerator}/${result.top1Attribution.denominator})`);
   console.log(`🎯 Top-3 atribución:          ${result.top3Attribution.percentage.toFixed(1)}% (${result.top3Attribution.numerator}/${result.top3Attribution.denominator})`);
   console.log(`🧩 Sistémico sin culpable:    ${result.systemicCategoryCorrect.percentage.toFixed(1)}% (${result.systemicCategoryCorrect.numerator}/${result.systemicCategoryCorrect.denominator})`);
-  console.log(`⚡ Mean Inference Latency:    ${result.meanLatencyMs.toFixed(2)} ms/log`);
+  console.log(`⚡ Mean inference latency:    ${result.meanLatencyMs.toFixed(2)} ms/log (local diagnostic)`);
+  console.log(`⚡ p50 / p95 / max:           ${result.p50LatencyMs.toFixed(2)} / ${result.p95LatencyMs.toFixed(2)} / ${result.maxLatencyMs.toFixed(2)} ms`);
+  console.log(`🖥️  Env: ${result.environment.node} ${result.environment.platform}/${result.environment.arch} warmup=${result.environment.warmupPasses} repeats=${result.environment.timedPasses}`);
   console.log(`===============================================================\n`);
 }
 

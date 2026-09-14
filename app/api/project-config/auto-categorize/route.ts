@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
 import { scanMod } from "@/lib/scanner";
 import { withApiGuard } from "@/lib/apiGuard";
+import { projectNameBodySchema } from "@/lib/api/contracts";
 
 /**
  * Intelligent Auto-Categorization API
@@ -14,17 +15,10 @@ import { withApiGuard } from "@/lib/apiGuard";
  */
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: projectNameBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const { project } = body;
-    
-    if (!project) {
-      return NextResponse.json({ error: "Falta parámetro 'project'" }, { status: 400 });
-    }
     
     const projectDir = path.join(SOURCE_BASE, "_projects", project);
     const modsDir = path.join(projectDir, "mods");

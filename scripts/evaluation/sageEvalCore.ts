@@ -25,7 +25,7 @@ export interface BenchmarkSample {
   rawLog: string;
 }
 
-const crashCategorySchema = z.enum([
+export const crashCategorySchema = z.enum([
   "MISSING_DEPENDENCY",
   "VERSION_CONFLICT",
   "MIXIN_FAILURE",
@@ -100,11 +100,44 @@ export interface LoaderStatRow {
   categoryAccuracy: number;
 }
 
+export interface SageEvalEnvironment {
+  node: string;
+  platform: string;
+  arch: string;
+  warmupPasses: number;
+  timedPasses: number;
+  kind: "local-diagnostic";
+}
+
+export function captureSageEvalEnvironment(): SageEvalEnvironment {
+  const warmupPasses = Math.max(0, Number(process.env.SAGE_EVAL_WARMUP ?? 1) || 0);
+  const timedPasses = Math.max(1, Number(process.env.SAGE_EVAL_REPEATS ?? 3) || 1);
+  return {
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    warmupPasses,
+    timedPasses,
+    kind: "local-diagnostic",
+  };
+}
+
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const index = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  return sorted[Math.max(0, index)] ?? 0;
+}
+
 export interface SageEvaluationResult {
   sampleCount: number;
   overallCategoryAccuracy: number;
   macroF1: number;
   meanLatencyMs: number;
+  p50LatencyMs: number;
+  p95LatencyMs: number;
+  maxLatencyMs: number;
+  latencyKind: "local-diagnostic";
+  environment: SageEvalEnvironment;
   top1Historical: RatioMetric;
   top3Historical: RatioMetric;
   top1Attribution: RatioMetric;
@@ -367,35 +400,55 @@ export function evaluateSageCorpus(samples: BenchmarkSample[]): SageEvaluationRe
   const counters = createHistoricalCounters();
   const loaderStats = new Map<string, { total: number; correct: number }>();
   let totalCorrectCategory = 0;
-  let totalLatencyMs = 0;
+  const environment = captureSageEvalEnvironment();
+  const latenciesMs: number[] = [];
 
-  for (const sample of samples) {
-    const report = SageCrashEngine.diagnose(sample.rawLog);
-    totalLatencyMs += report.diagnosisDurationMs ?? report.inferenceDurationMs ?? 0;
-
-    const categoryMatch = report.category === sample.category;
-    recordCategoryOutcome(stats, sample.category, report.category, categoryMatch);
-    recordLoaderOutcome(loaderStats, sample.loader, categoryMatch);
-    if (categoryMatch) {
-      totalCorrectCategory += 1;
+  for (let pass = 0; pass < environment.warmupPasses; pass += 1) {
+    for (const sample of samples) {
+      SageCrashEngine.diagnose(sample.rawLog);
     }
+  }
 
-    counters.historicalDenominator += 1;
-    if (sample.expectedCulprit) {
-      scoreAttributionCase(counters, report, sample.expectedCulprit);
-    } else {
-      scoreSystemicCase(counters, categoryMatch);
+  for (let pass = 0; pass < environment.timedPasses; pass += 1) {
+    for (const sample of samples) {
+      const started = performance.now();
+      const report = SageCrashEngine.diagnose(sample.rawLog);
+      latenciesMs.push(performance.now() - started);
+      if (pass !== 0) continue;
+
+      const categoryMatch = report.category === sample.category;
+      recordCategoryOutcome(stats, sample.category, report.category, categoryMatch);
+      recordLoaderOutcome(loaderStats, sample.loader, categoryMatch);
+      if (categoryMatch) {
+        totalCorrectCategory += 1;
+      }
+
+      counters.historicalDenominator += 1;
+      if (sample.expectedCulprit) {
+        scoreAttributionCase(counters, report, sample.expectedCulprit);
+      } else {
+        scoreSystemicCase(counters, categoryMatch);
+      }
     }
   }
 
   const categoryRows = buildCategoryRows(stats);
   const sampleCount = samples.length;
+  const sorted = [...latenciesMs].sort((a, b) => a - b);
+  const meanLatencyMs = latenciesMs.length > 0
+    ? latenciesMs.reduce((sum, value) => sum + value, 0) / latenciesMs.length
+    : 0;
 
   return {
     sampleCount,
     overallCategoryAccuracy: sampleCount > 0 ? (totalCorrectCategory / sampleCount) * 100 : 0,
     macroF1: computeMacroF1(categoryRows),
-    meanLatencyMs: sampleCount > 0 ? totalLatencyMs / sampleCount : 0,
+    meanLatencyMs,
+    p50LatencyMs: percentile(sorted, 50),
+    p95LatencyMs: percentile(sorted, 95),
+    maxLatencyMs: sorted[sorted.length - 1] ?? 0,
+    latencyKind: "local-diagnostic",
+    environment,
     top1Historical: ratio(counters.top1HistoricalMatches, counters.historicalDenominator),
     top3Historical: ratio(counters.top3HistoricalMatches, counters.historicalDenominator),
     top1Attribution: ratio(counters.top1AttributionMatches, counters.attributionDenominator),
@@ -526,10 +579,12 @@ export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string 
 
   return `# SAGE 2.0 Crash Intelligence Engine — Quantitative Evaluation
 
+> **Canonical eval source (SAGE-07):** this file. MimBot structure/live eval is \`npm run eval:mimbot\` + \`scripts/evaluation/mimbot-fixtures.json\`. Do not copy numeric claims elsewhere.
+
 > **Evaluation Date:** ${evaluationDate}  
 > **Regression gate (\`crash-corpus-regression.json\`):** ${train.sampleCount} templated cases — CI only, not real captured logs  
-> **Real corpus (\`crash-corpus.json\`):** ${real.audit.totalSamples} cases — add server/client logs here when available  
-> **MIM Server remote logs (SRV-5):** separate path via SFTP/\`latest.log\`; not mixed into this file yet  
+> **Real corpus (\`crash-corpus.json\`):** ${real.audit.totalSamples} cases — holdout for generalization (SAGE-01)  
+> **MIM Server remote logs (SRV-5):** separate path via SFTP/\`latest.log\`; ingest excerpts here with \`npm run sage:ingest-log\`  
 
 ---
 
@@ -538,7 +593,7 @@ export function buildSageEvaluationMarkdown(input: SageEvalReportInput): string 
 This eval measures the **local SAGE crash engine**, not MIM Server remote ingestion.
 
 - \`crash-corpus-regression.json\` holds templated snippets (\`origin: synthetic\`) for the SAGE-03 CI gate only.
-- \`crash-corpus.json\` is intentionally **empty** until you capture real logs (client crash or server \`latest.log\` excerpts) without contaminating regression.
+- \`crash-corpus.json\` is the **only** place for captured logs (client crash, server \`latest.log\`, or the SRV-5 local fixture seed). Regression stays synthetic.
 - 100% regression F1 does not prove generalization. Real holdout lives only in \`crash-corpus.json\`.
 
 ${formatAuditSection("Regression fixture audit", regressionAudit)}
@@ -558,7 +613,18 @@ ${formatAuditSection("Real corpus audit", real.audit)}
 | **Top-1 atribución (con culpable)** | **${train.top1Attribution.percentage.toFixed(1)}%** | informativo | ${train.top1Attribution.numerator}/${train.top1Attribution.denominator} |
 | **Top-3 atribución (con culpable)** | **${train.top3Attribution.percentage.toFixed(1)}%** | informativo | ${train.top3Attribution.numerator}/${train.top3Attribution.denominator} |
 | **Acierto sistémico sin culpable** | **${train.systemicCategoryCorrect.percentage.toFixed(1)}%** | informativo | ${train.systemicCategoryCorrect.numerator}/${train.systemicCategoryCorrect.denominator} |
-| **Mean Inference Latency** | **${train.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatLatencyStatus(train.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS)} |
+| **Mean Inference Latency (local)** | **${train.meanLatencyMs.toFixed(2)} ms** | < ${SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS}.0 ms | ${formatLatencyStatus(train.meanLatencyMs, SAGE_EVAL_THRESHOLDS.LATENCY_MAX_MS)} |
+| **p50 latency (local)** | **${train.p50LatencyMs.toFixed(2)} ms** | informativo | warmup ${train.environment.warmupPasses}, repeats ${train.environment.timedPasses} |
+| **p95 latency (local)** | **${train.p95LatencyMs.toFixed(2)} ms** | informativo | max ${train.maxLatencyMs.toFixed(2)} ms |
+
+### SAGE-04 — Latencia reproducible (diagnóstico local)
+
+Esta medición es **solo el clasificador determinista** (\`SageCrashEngine.diagnose\`). No es latencia ni costo de MimBot/LLM.
+
+- Entorno: Node ${train.environment.node}, ${train.environment.platform}/${train.environment.arch}
+- Calentamiento: ${train.environment.warmupPasses} pasada(s); cronometraje: ${train.environment.timedPasses} repetición(es)
+- mean ${train.meanLatencyMs.toFixed(3)} ms · p50 ${train.p50LatencyMs.toFixed(3)} ms · p95 ${train.p95LatencyMs.toFixed(3)} ms · max ${train.maxLatencyMs.toFixed(3)} ms
+- Override: \`SAGE_EVAL_WARMUP\`, \`SAGE_EVAL_REPEATS\`
 
 ### Métricas desglosadas (SAGE-02)
 
@@ -587,7 +653,7 @@ ${loaderRows.join("\n")}
 ${formatSplitResult(
   "Real holdout (\`crash-corpus.json\`, not gated)",
   real.holdout,
-  "`crash-corpus.json` is empty. Add captured logs with `split: holdout` after testing a local or hosted server.",
+  "`crash-corpus.json` has no holdout samples yet. Ingest a VPS/client log with `npm run sage:ingest-log`.",
 )}
 
 ---
@@ -596,7 +662,7 @@ ${formatSplitResult(
 
 \`\`\`bash
 npm run eval:sage              # regression gate + write this report
-npm run eval:sage -- --holdout # real holdout only (empty until you add logs)
+npm run eval:sage -- --holdout # real holdout only (fixture seed + any ingested logs)
 npm run eval:sage -- --audit   # regression + real corpus audits
 \`\`\`
 

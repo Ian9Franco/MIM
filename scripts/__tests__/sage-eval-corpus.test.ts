@@ -40,10 +40,15 @@ function testSchemaRejectsMissingProvenance(): void {
   console.log("✔ corpus schema requires provenance fields");
 }
 
-function testRealCorpusIsEmpty(): void {
+function testRealCorpusHoldoutSeed(): void {
   const corpus = loadRealCorpus();
-  assert.equal(corpus.length, 0);
-  console.log("✔ crash-corpus.json is empty and ready for real captured logs");
+  assert.equal(corpus.length, 1);
+  const [seed] = corpus;
+  assert.equal(seed.id, "SRV5-FIXTURE-001");
+  assert.equal(seed.split, "holdout");
+  assert.notEqual(seed.origin, "synthetic");
+  assert.ok(!corpus.some((sample) => sample.origin === "synthetic"));
+  console.log("✔ crash-corpus.json has SRV-5 fixture holdout seed (not synthetic)");
 }
 
 function testRegressionFixtureIsSyntheticTrainOnly(): void {
@@ -77,11 +82,11 @@ function testAuditFlagReportsBothCorpora(): void {
   assert.equal(run.status, 0, run.stderr || run.stdout);
   assert.match(run.stdout, /Regression fixture/);
   assert.match(run.stdout, /Real corpus/);
-  assert.match(run.stdout, /ready for real captured logs/);
-  console.log("✔ sage-eval --audit reports regression and empty real corpus");
+  assert.match(run.stdout, /SRV5-FIXTURE-001|holdout=1/);
+  console.log("✔ sage-eval --audit reports regression and real holdout seed");
 }
 
-function testHoldoutFlagIsEmptyAndUngated(): void {
+function testHoldoutFlagScoresSeedWithoutGate(): void {
   const script = path.join(process.cwd(), "scripts/evaluation/sage-eval.ts");
   const run = spawnSync(
     "npx",
@@ -89,18 +94,19 @@ function testHoldoutFlagIsEmptyAndUngated(): void {
     { encoding: "utf8", shell: true },
   );
   assert.equal(run.status, 0, run.stderr || run.stdout);
-  assert.match(run.stdout, /Real holdout is empty/);
-  console.log("✔ sage-eval --holdout is empty and does not apply the regression gate");
+  assert.match(run.stdout, /real holdout \(not gated\)/);
+  assert.doesNotMatch(run.stdout, /SAGE evaluation gate failed/);
+  console.log("✔ sage-eval --holdout scores the seed and does not apply the regression gate");
 }
 
 function run(): void {
   console.log("Starting SAGE-01 corpus provenance suite...");
   testSchemaRejectsMissingProvenance();
-  testRealCorpusIsEmpty();
+  testRealCorpusHoldoutSeed();
   testRegressionFixtureIsSyntheticTrainOnly();
   testExactDuplicatesAreMarkedInRegression();
   testAuditFlagReportsBothCorpora();
-  testHoldoutFlagIsEmptyAndUngated();
+  testHoldoutFlagScoresSeedWithoutGate();
   console.log("\nAll SAGE-01 corpus provenance tests passed successfully!");
 }
 

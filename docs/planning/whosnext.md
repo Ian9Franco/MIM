@@ -4,7 +4,8 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 
 ## 1. Proceso y contratos API
 
-- [x] **API-02 — Generalizar schemas Zod compartidos (cerrado en mutaciones core).** `build`, `delete`, `staging` y `tweak` usan `bodySchema`/`querySchema` del guard; `/api/settings/validate-keys` expone `useStoredGemini` para validación server-side. Pendiente: inventario del resto de handlers y contratos compartidos con clientes.
+- [x] **API-02 — Generalizar schemas Zod compartidos (cerrado en mutaciones core).** `build`, `delete`, `staging` y `tweak` usan `bodySchema`/`querySchema` del guard; `/api/settings/validate-keys` expone `useStoredGemini` para validación server-side.
+- [x] **API-02b — Inventario Zod + contratos compartidos.** `lib/api/contracts.ts`, `npm run lint:api-schemas`, y schemas en classify/scan/validate/move-files/crosscheck-batch/auto-categorize. Mutaciones restantes se listan por el inventario (no fallan CI).
 
 ## 2. Funcionamiento y UX de MimBot
 
@@ -20,7 +21,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 - [x] **BOT-06 — Clasificación de cuotas IA (cerrado).** `classifyProviderQuotaError()` distingue RPM/TPM/daily/concurrency; tracker local + `GET /api/settings/ai-quota` + panel en Settings.
 - [x] **BOT-06b — Costos OpenRouter en UI (cerrado).** `fetchOpenRouterAccountSnapshot()` consulta `GET /api/v1/auth/key`; el panel de cuotas muestra uso acumulado, límite y enlace a actividad del proveedor.
 - [x] **Desktop — Persistencia de credenciales tras upgrade (cerrado).** Electron recupera settings/secrets legacy, importa plaintext a `safeStorage`, fija `MIM_PORTABLE_DIR` y evita auto-switch a `D:` en runtime empaquetado. Ver [desktop-credentials.md](../guides/desktop-credentials.md).
-- [x] **BOT-07 — Cola para análisis por lotes (en main, 2026-09-12).** `runAnalysisQueue` (concurrencia por proveedor, retry de cuota, cancelación). Eval live `eval:mimbot` usa la cola. `POST /api/fomo/explain-batch` + botón **MIM-Bot lote** en Descubrir (máx. 12). Falta gate live con secrets confirmados (SAGE-05b).
+- [x] **BOT-07 — Cola para análisis por lotes (en main, 2026-09-12).** `runAnalysisQueue` (concurrencia por proveedor, retry de cuota, cancelación). Eval live `eval:mimbot` usa la cola. `POST /api/fomo/explain-batch` + botón **MIM-Bot lote** en Descubrir (máx. 12). Gate live SAGE-05b con umbrales en CI.
 - [x] **BOT-08 — Caché de las cuatro quick questions durante 24 horas (cerrado).** `quickQuestionCache.ts`: clave `hash(crashSignature + question + mode)`, TTL 24 h, lectura/escritura en `SageMimbotCopilot` para chips canónicos.
 - [x] **BOT-09 — Transparencia BYOK (cerrado).** `mimbotByokTransparency.ts` + panel en Settings y modal de configuración; enlaces a términos Google/OpenRouter; sin prometer privacidad absoluta por BYOK.
 
@@ -62,14 +63,14 @@ Fuente: [recruiter-review.md](../guides/recruiter-review.md), señales amarillas
 
 Fuente: [sage-eval.md](../engines/sage-eval.md) y su generador `scripts/evaluation/sage-eval.ts`. El documento reporta resultados y límites; las tareas siguientes surgen de contrastarlos con el evaluador. Su benchmark determinista no cierra Unicorn §1.3/Fase 3 para MimBot.
 
-- [ ] **SAGE-01 — Procedencia y generalización del corpus (infra lista; no cerrado).** `crash-corpus.json` vacío para logs reales; `crash-corpus-regression.json` aísla 125 snippets sintéticos del gate CI. No es MIM Server (SRV-5): logs remotos van al corpus real cuando existan. Cierre: capturar logs de servidor/host en `crash-corpus.json` con `split: holdout` tras el primer test real.
+- [x] **SAGE-01 — Procedencia del corpus (infra + semilla holdout).** `crash-corpus.json` ya no está vacío: semilla SRV-5 fixture (`SRV5-FIXTURE-001`, `split: holdout`). Ingest: `npm run sage:ingest-log`. Logs de VPS real siguen siendo `NEEDS_USER` para generalización.
 - [x] **SAGE-02 — Métricas Top-1/Top-3 correctamente denominadas (cerrado).** `sageEvalCore.ts` separa Top-1/Top-3 histórico, atribución con culpable y acierto sistémico sin culpable con numerador/denominador explícitos. Reporte regenerado en `docs/engines/sage-eval.md` (Top-1 atribución medido: 71.4% sobre 70 casos).
 - [x] **SAGE-03 — Reporte y umbrales verificables (cerrado).** Gate real en `npm run eval:sage` (Macro F1 ≥ 85%, Top-3 histórico ≥ 95%, latencia ≤ 15 ms) con `--self-test-fail` y suite `sage-eval-metrics.test.ts`.
-- [ ] **SAGE-04 — Latencia reproducible.** Informar entorno, versión, calentamiento, repeticiones y p50/p95 además de media; distinguir diagnóstico local de latencia/costo de la llamada LLM. No extrapolar 0.06 ms al chat.
+- [x] **SAGE-04 — Latencia reproducible (cerrado, diagnóstico local).** p50/p95/max + entorno Node/OS + warmup/repeats (`SAGE_EVAL_WARMUP`, `SAGE_EVAL_REPEATS`). Distinto de latencia LLM (MimBot live).
 - [x] **SAGE-05 — Fixtures baseline MIMbot (cerrado, estructura).** `mimbot-fixtures.json` con 18 casos, validador `npm run eval:mimbot`.
-- [ ] **SAGE-05b — Scoring live MIMbot en CI (parcial).** Job `mimbot-live-eval` en `ci.yml` + cola BOT-07. `npm run eval:mimbot` (estructura) ya está en CI. Live opt-in con `RUN_MIMBOT_LIVE=1` y secrets; no bloquea PRs sin claves. Faltan umbrales de latencia/costo.
+- [x] **SAGE-05b — Scoring live MIMbot en CI (cerrado en código).** Job `mimbot-live-eval` + cola BOT-07. Live opt-in `RUN_MIMBOT_LIVE=1`. Umbrales: pass rate 0.6, p95 45s, wall 6 min. Soft-skip sin secrets.
 - [x] **SAGE-06 — Verificar guardrails en el recorrido real (cerrado).** PR #82: `chatGuardrails.ts` valida respuestas contra el `SageCrashContext`, bloquea atribuciones no soportadas, remedios peligrosos (desactivar antivirus) y prompt injection (`<untrusted-user-content>`), exigiendo referencias a evidencia y emitiendo `X-MIM-SAGE-Guardrail: blocked` con fallback seguro. Suite dedicada en `sage-chat-guardrails.test.ts`.
-- [ ] **SAGE-07 — Una fuente de evaluación.** Duplicación resuelta: la fuente canónica es `docs/engines/sage-eval.md`.
+- [x] **SAGE-07 — Una fuente de evaluación (cerrado).** Índice canónico: [EVAL.md](../engines/EVAL.md). Números SAGE solo en [sage-eval.md](../engines/sage-eval.md).
 
 ## 5. Seguimiento de Unicorn
 

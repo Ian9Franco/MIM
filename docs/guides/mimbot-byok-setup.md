@@ -137,9 +137,9 @@ Enlaces oficiales:
 
 ## 8. Roadmap (qué NO está gratis centralizado aún)
 
-- **Backend MIM gestionado** con cuota compartida → requiere presupuesto y decisión de producto (BOT-02 backend gratuito **pospuesto**).
-- **Costos acumulados OpenRouter en UI** (BOT-06b) → pendiente.
-- **Migración legacy `web/`** a gateway completo → pendiente.
+- **Backend MIM gestionado** con cuota compartida → requiere presupuesto y decisión de producto (BOT-02 backend gratuito **pospuesto**; hay preview estático pre-BYOK).
+- **Costos OpenRouter en UI** (BOT-06b) → en Settings (`GET /api/settings/ai-quota`).
+- **Hub (`apps/hub`)** usa gateway de servidor con `GEMINI_API_KEY` / OpenRouter en Vercel; Desktop usa `safeStorage`.
 
 ---
 

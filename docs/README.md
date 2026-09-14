@@ -6,7 +6,7 @@
 
 </div>
 
-> **Catálogo de Ingeniería MIM:** Índice estructurado de especificaciones, benchmarks, modelos de amenazas, planes y arquitectura (v11.4.5).  
+> **Catálogo de Ingeniería MIM:** Índice estructurado de especificaciones, benchmarks, modelos de amenazas, planes y arquitectura (v11.4.8).  
 > *(Para la presentación general del software a usuarios, consultar el [README.es.md](../README.es.md) en la raíz).*
 
 > [!TIP]
@@ -34,7 +34,7 @@ docs/
     ├── security/                  # Bytecode scanner, threat model, safeStorage y web
     ├── cloud/                     # Base de datos Supabase, políticas RLS y esquemas SQL
     ├── guides/                    # Onboarding, reproducibilidad, demo tour y recruiter review
-    ├── adr/                       # Architecture Decision Records inmutables (ADR-001 a ADR-007)
+    ├── adr/                       # Architecture Decision Records inmutables (ADR-001 a ADR-008)
     └── automatizaciones/          # Bitácoras de automatizaciones y scripts
 ```
 
@@ -45,7 +45,7 @@ docs/
 | :--- | :--- |
 | **[unicorn.md](./planning/unicorn.md)** 🦄 | **El Unicornio:** Plan maestro de ingeniería. Visión de profundidad técnica y decisiones de diseño. |
 | **[whosnext.md](./planning/whosnext.md)** 🟢 | **Who's Next:** Tablero táctico de tareas inmediatas con criterios de aceptación claros para el sprint. |
-| **[ROADMAP.md](./planning/ROADMAP.md)** 📌 | **El Mapa de Ruta:** Evolución estratégica oficial por versiones (v11.4.5) y estado de hitos. |
+| **[ROADMAP.md](./planning/ROADMAP.md)** 📌 | **El Mapa de Ruta:** Evolución estratégica oficial por versiones (v11.4.8) y estado de hitos. |
 | **[project-status.md](./planning/project-status.md)** ⚖️ | **La Foto Real:** Auditoría honesta de madurez; separa lo 100% sólido de la deuda técnica real. |
 | **[sprint-action-plan.md](./planning/sprint-action-plan.md)** ⚡ | **Plan de Acción:** Guía de ejecución para Issues #57 (Red), #58 (Server Manager) y #60 (Monorepo). |
 | **[refactoring-backlog.md](./planning/refactoring-backlog.md)** 🧹 | **Limpieza & Deuda:** Inventario de modularizaciones y simplificación de componentes monolíticos. |
@@ -65,6 +65,8 @@ docs/
 | **[server-audit.md](./architecture/server-audit.md)** 🔍 | **Auditoría de Servidores:** Guía paso a paso del protocolo de escaneo SFTP de solo lectura. |
 | **[systems-summary.md](./architecture/systems-summary.md)** 📊 | **Ficha Ejecutiva:** Latencias, consumo de memoria y métricas de rendimiento por subsistema. |
 | **[monorepo-inventory.md](./architecture/monorepo-inventory.md)** 📦 | **Inventario del Monorepo:** Análisis de grafo de dependencias y desacoplamiento de packages. |
+| **[versioning-policy.md](./architecture/versioning-policy.md)** 🏷️ | **SemVer (ARCH-8):** Política de versionado y sincronización de workspaces. |
+| **[api-zod-inventory.md](./architecture/api-zod-inventory.md)** 🧾 | **Inventario Zod:** Contratos compartidos y rutas de mutación aún sin schema. |
 
 ---
 
@@ -99,6 +101,7 @@ Ubicadas en [docs/adr/](./adr/README.md):
 - **[ADR-005](./adr/ADR-005-static-bytecode-inspection-vs-execution.md)**: Inspección Estática de Bytecode vs. Ejecución
 - **[ADR-006](./adr/ADR-006-typed-event-bus.md)**: Bus Reactivo de Eventos Tipado
 - **[ADR-007](./adr/ADR-007-mimbot-model-gateway.md)**: MIMbot Model Gateway agnóstico y GLM
+- **[ADR-008](./adr/ADR-008-server-manager-desktop-surface.md)**: Server Manager como superficie Desktop (ARCH-6)
 
 ---
 
@@ -115,6 +118,9 @@ Ubicadas en [docs/adr/](./adr/README.md):
 | Documento | Propósito |
 | :--- | :--- |
 | **[onboarding.md](./guides/onboarding.md)** 🛠️ | Guía de configuración y arranque para desarrolladores. |
+| **[desktop-credentials.md](./guides/desktop-credentials.md)** 🔐 | Persistencia de claves Desktop (`safeStorage`) vs Vercel. |
+| **[windows-code-signing.md](./guides/windows-code-signing.md)** 🔏 | Firma Authenticode del instalable Windows. |
+| **[mimbot-byok-setup.md](./guides/mimbot-byok-setup.md)** 🤖 | BYOK Gemini / OpenRouter para MIM-Bot. |
 | **[reproducibility.md](./guides/reproducibility.md)** 🔁 | Instrucciones para reproducir builds, benchmarks y tests. |
 | **[demo.md](./guides/demo.md)** 🎮 | Guía interactiva del tour de demostración (`npm run demo`). |
 | **[recruiter-review.md](./guides/recruiter-review.md)** 👔 | Auditoría técnica externa y evaluación de portfolio. |
@@ -140,11 +146,11 @@ Ubicadas en [docs/adr/](./adr/README.md):
 Physical folder layout:
 
 - `docs/planning/`: Master strategic roadmap, tactical backlog (`whosnext.md`), master engineering plan (`unicorn.md`), project status, action plans, and refactoring inventory.
-- `docs/architecture/`: System topologies, master manual (`mim-core.md`), architecture boundaries, and HTTP API catalog.
+- `docs/architecture/`: System topologies, master manual (`mim-core.md`), boundaries, API catalog, SemVer policy, Zod inventory.
 - `docs/engines/`: Specialized domain engine specifications and quantitative benchmarks (SAGE, Aduana, NBT Rescue, FOMO).
 - `docs/security/`: Static bytecode scanner specifications, STRIDE threat models, secrets (safeStorage), and web hardening.
 - `docs/cloud/`: Supabase database schemas, RLS policies, and cloud integration.
-- `docs/guides/`: Developer onboarding, reproducibility recipes, demo tour, and technical portfolio review.
-- `docs/adr/`: Architecture Decision Records (ADR-001 to ADR-007).
+- `docs/guides/`: Developer onboarding, desktop credentials, code signing, BYOK, reproducibility, demo tour, and technical portfolio review.
+- `docs/adr/`: Architecture Decision Records (ADR-001 to ADR-008).
 - `docs/proposals/`: Architectural RFC proposals and future design documents.
 - `docs/releases/`: Changelog, unreleased queue, release notes, and automated PR audit logs (`hogwarts.md`).

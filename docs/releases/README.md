@@ -15,4 +15,4 @@
 | **[release-audit.md](./release-audit.md)** 🔍 | **Auditoría de Releases:** Verificación de veracidad documental entre el código real del checkout y las afirmaciones de las notas. |
 | **[roadmap-v10-historic.md](./roadmap-v10-historic.md)** 🏛️ | **Roadmap Histórico v10:** Archivo congelado de los hitos completados en las series v9 y v10. |
 | **[backlog-v10-historic.md](./backlog-v10-historic.md)** 📦 | **Backlog Histórico v10:** Archivo del backlog MoSCoW completado de la versión 10. |
-| **`release-notes-v*.md`** 🏷️ | **Notas de Publicación:** Comunicados editoriales exactos publicados para cada release (`v10.5.0`, `v10.5.1`, `v11.4.4`, `v11.4.5`). |
+| **`release-notes-v*.md`** 🏷️ | **Notas de Publicación:** Comunicados por tag (`v10.5.x`, `v11.4.4` … `v11.4.8`). |

@@ -2,7 +2,7 @@
 
 **Perspectiva:** Recruiter dev técnico evaluando portfolio + codebase  
 **Candidato:** Ian Franco Collada Pontorno  
-**Repositorio:** [Ian9Franco/MIM](https://github.com/Ian9Franco/MIM) · v11.4.5  
+**Repositorio:** [Ian9Franco/MIM](https://github.com/Ian9Franco/MIM) · v11.4.8  
 **Fecha de evaluación:** Septiembre 2026
 
 ---
@@ -13,7 +13,7 @@
 
 MIM no es un CRUD de tutorial. Es una plataforma híbrida Desktop (Electron) + Web (PWA) con ~85k LOC, 7 motores de dominio, 94 endpoints API, CI multi-stage y documentación de nivel ingeniería. Lo más valorable no es el dominio Minecraft en sí, sino que demuestra capacidad para diseñar sistemas reales: diagnóstico determinista, sincronización offline-first, análisis estático de bytecode, recuperación binaria con invariantes de zero data loss, y gobernanza arquitectónica automatizada.
 
-El candidato también muestra madurez poco común en portfolios solo-dev: documenta deuda técnica abiertamente (`PROJECT_STATUS.md`), corrige claims exagerados en commits recientes, y tiene ADRs formales. Eso genera confianza.
+El candidato también muestra madurez poco común en portfolios solo-dev: documenta deuda técnica abiertamente (`docs/planning/project-status.md`), corrige claims exagerados en commits recientes, y tiene ADRs formales. Eso genera confianza.
 
 **Riesgo principal:** proyecto de una sola persona con alta complejidad acumulada. Hay que validar en entrevista qué construyó él vs. qué automatizó (commits de "Hermione"/"Notorious" sugieren uso intensivo de agentes IA).
 
@@ -28,9 +28,9 @@ El candidato también muestra madurez poco común en portfolios solo-dev: docume
 | Commits totales | 333 |
 | API routes | 94 |
 | Motores de dominio | 7 |
-| ADRs documentados | 6 |
-| Suites de test automatizadas | 21 |
-| Versión actual | v11.4.5 |
+| ADRs documentados | 8 |
+| Suites de test automatizadas | ~36 (`scripts/test-suites.js`) |
+| Versión actual | v11.4.8 |
 | Desarrolladores activos | 1 (Ian Franco) |
 
 ---
@@ -45,7 +45,7 @@ El candidato también muestra madurez poco común en portfolios solo-dev: docume
 | **Seguridad** | Static bytecode scanner, IOC hashes (Fracturiser), DAST en CI, rate limiting | Mid |
 | **DevOps / calidad** | CI con 4 jobs, boundary linter AST, coverage auditada | Mid+ |
 | **Producto / UX** | PWA mobile, FOMO Cloud, comunidad, onboarding | Mid |
-| **Comunicación técnica** | README bilingüe, 6 ADRs, whitepapers, roadmap honesto | Senior (escritura) |
+| **Comunicación técnica** | README bilingüe, 8 ADRs, whitepapers, roadmap honesto | Senior (escritura) |
 
 **Stack dominante:** TypeScript, Next.js App Router, Electron, Supabase/PostgreSQL, IndexedDB, Zod, Tailwind v4.
 
@@ -55,7 +55,7 @@ El candidato también muestra madurez poco común en portfolios solo-dev: docume
 
 ### 1. Arquitectura con intención, no accidental
 
-El proyecto articula 7 motores de dominio comunicados por un event bus tipado (`MimEventMap`). Las fronteras no son solo documentadas: están **verificadas en CI** con un linter AST que impide, por ejemplo, que `lib/` importe componentes UI o que `web/` dependa del runtime Electron.
+El proyecto articula 7 motores de dominio comunicados por un event bus tipado (`MimEventMap`). Las fronteras no son solo documentadas: están **verificadas en CI** con un linter AST que impide, por ejemplo, que `lib/` importe componentes UI o que `apps/hub/` dependa del runtime Electron.
 
 ```typescript
 // scripts/__tests__/architecture-boundaries.test.ts
@@ -70,7 +70,7 @@ Para un solo desarrollador, esto es señal de pensamiento sistémico, no de "ir 
 
 ### 2. Decisiones documentadas con ADRs
 
-Hay 6 ADRs que cubren decisiones no triviales:
+Hay 8 ADRs que cubren decisiones no triviales:
 
 - ADR-001: Diagnóstico determinista vs. LLM
 - ADR-002: Content-addressed caching
@@ -78,6 +78,8 @@ Hay 6 ADRs que cubren decisiones no triviales:
 - ADR-004: Atomic writes en NBT recovery
 - ADR-005: Inspección estática vs. ejecución
 - ADR-006: Typed event bus
+- ADR-007: MIMbot Model Gateway
+- ADR-008: Server Manager como superficie Desktop
 
 Un recruiter técnico valora esto porque indica que el candidato puede **articular trade-offs**, no solo implementar.
 
@@ -114,13 +116,13 @@ Benchmarks reproducibles: 125 casos, 100% Macro F1, 0.06 ms/log. Separación cla
 
 ### 4. Honestidad sobre el estado real
 
-`PROJECT_STATUS.md` y `CONTRIBUTING.md` dicen explícitamente: *"beta activa, no producción enterprise"*. Documentan deuda (~935 `any`, componentes monolíticos de 800+ líneas, Zod parcial). Esto es **más creíble** que un README que dice "100% production ready" sin matices.
+`docs/planning/project-status.md` y `CONTRIBUTING.md` dicen explícitamente: *"beta activa, no producción enterprise"*. Documentan deuda (~487 `any`, modularización REC-03 en curso, Zod parcial). Esto es **más creíble** que un README que dice "100% production ready" sin matices.
 
 ### 5. Pipeline CI serio
 
 El pipeline incluye 4 jobs:
 
-1. **Lint & Static Type Check** — `tsc` en root + web, ESLint, API guard AST, architecture boundaries
+1. **Lint & Static Type Check** — `tsc` en root + `apps/hub`, ESLint, API guard AST, architecture boundaries
 2. **Systems Test Suite & Benchmark Evaluation** — suites unificadas + coverage auditada (Codacy)
 3. **DAST Security Audit** — escaneo de seguridad dinámico
 4. **Next.js Production Build Verification** — build de producción
@@ -138,7 +140,7 @@ No es CI de badge decorativo. Incluye verificación de fronteras arquitectónica
 ### 7. Producto desplegado y vivo
 
 - Web Hub en [mim-hub.vercel.app](https://mim-hub.vercel.app/)
-- 333 commits, PRs mergeados (#44, #45, #46, #48), releases versionadas (v11.4.5)
+- 333 commits, PRs mergeados (#44, #45, #46, #48), releases versionadas (v11.4.8)
 - Demo interactiva (`npm run demo`), benchmarks reproducibles
 
 ---
@@ -167,15 +169,15 @@ No es intrínsecamente malo — pero hay que separar:
 
 ### 3. Deuda TypeScript significativa
 
-~935 usos de `any` (según roadmap). Aunque se erradicó en zonas críticas (`lib/security/`, `lib/intelligence/sage/`), hooks como `useHomeController.ts` (57 `any`) y componentes FOMO siguen siendo puntos débiles.
+~487 usos de `any` (REC-01). Se erradicó en zonas críticas (`lib/security/`, `lib/intelligence/sage/`); `components/`, `hooks/` y `apps/hub/` siguen siendo el foco.
 
 ### 4. ESLint con presupuesto alto de warnings
 
 ```json
-"lint": "eslint app components lib --max-warnings=471"
+"lint": "eslint app components lib --max-warnings=400"
 ```
 
-471 warnings permitidos indica deuda de linting acumulada. El CI lo acota (commit reciente "acoto el presupuesto"), pero sigue siendo una señal de "ship first, polish later".
+400 warnings permitidos (medido ~395 en CI) indica deuda de linting acotada, no ignorada. Hub usa `--max-warnings=75`.
 
 ### 5. Componentes monolíticos
 
@@ -183,16 +185,15 @@ Varios archivos >800 líneas sin modularizar completamente:
 
 | Archivo | Líneas |
 |---------|--------|
-| `web/components/tabs/DiscoverTab.tsx` | 862 |
-| `web/components/DraftDetailView.tsx` | 819 |
-| `components/fomo/core/FomoVersionOverlay.tsx` | 869 |
-| `web/hooks/useHomeController.ts` | monolítico (refactor en curso) |
+| `apps/hub/components/tabs/DiscoverTab.tsx` | 158 (extraído a `discover/`) |
+| `apps/hub/components/DraftDetailView.tsx` | 188 (extraído a `draft-detail/`) |
+| `apps/hub/hooks/useHomeController.ts` | orquestador; Phase 2 verificación usuario |
 
 Para senior, se esperaría más progreso en extracción de responsabilidades.
 
 ### 6. Testing: bueno en motores, limitado en UI
 
-21 suites de test custom (ts-node, no Jest/Vitest). Cobertura auditada al ~91% pero **acotada a SAGE + NBT**. No hay evidencia de tests E2E (Playwright/Cypress) ni tests de componentes React.
+~36 suites de test custom (ts-node, no Jest/Vitest). Cobertura auditada al ~91% pero **acotada a SAGE + NBT**. No hay E2E de UI (REC-04).
 
 ### 7. Dominio nicho
 
@@ -302,7 +303,7 @@ Frases históricas como "100% completo" / "Production Ready" contrastan con la r
 | Documento | Descripción |
 |-----------|-------------|
 | [README.md](../README.md) | Overview técnico y benchmarks |
-| [PROJECT_STATUS.md](../planning/project-status.md) | Estado real y deuda documentada |
+| [project-status.md](../planning/project-status.md) | Estado real y deuda documentada |
 | [ROADMAP.md](../planning/ROADMAP.md) | Plan de evolución activo |
 | CONTRIBUTING.md | Guía para contribuidores |
 | [docs/adr/](../adr/) | Architecture Decision Records |

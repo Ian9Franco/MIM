@@ -12,16 +12,16 @@ MIM opera como una plataforma híbrida compuesta por dos clientes y un backend p
 graph TD
     subgraph ClientLayer["Superficie de Clientes"]
         Desktop["MIM Desktop (Electron + Next.js App)"]
-        Web["MIMweb (Next.js 14 / Edge en Vercel)"]
+        Web["MIM Hub (Next.js 16 / Edge en Vercel)"]
     end
 
-    subgraph DefensePerimeter["Perímetro Defensivo (MIMweb)"]
-        EdgeMW["Edge Middleware (web/middleware.ts)<br/>HSTS, CSP, Nosniff, Method Guard"]
-        ApiGuard["API Guard Universal (web/lib/apiGuard.ts)<br/>Sliding-Window IP Rate Limiter & Zod Validation"]
+    subgraph DefensePerimeter["Perímetro Defensivo (Hub)"]
+        EdgeMW["Edge Middleware (apps/hub/middleware.ts)<br/>HSTS, CSP, Nosniff, Method Guard"]
+        ApiGuard["API Guard Universal (apps/hub/lib/apiGuard.ts)<br/>Sliding-Window IP Rate Limiter & Zod Validation"]
     end
 
     subgraph CoreEngines["Motores Core del Dominio"]
-        Aduana["Aduana Storage Engine (lib/storage)<br/>SHA-256 Deduplication, Hardlinks & Atomic Staging"]
+        Aduana["Aduana Storage Engine (lib/fomo/aduana.ts)<br/>SHA-512 / SHA-1 Deduplication & Atomic Staging"]
         SAGE["SAGE 2.0 Diagnostic Engine (lib/intelligence/sage)<br/>ANSI Stripping, Fingerprinting, Scoring, RAG"]
         Security["Security Scanner (lib/security)<br/>Static Bytecode Analysis & Threat Signatures"]
         LicenseAudit["License Auditor (lib/modding/licenseAuditor.ts)<br/>Redistribution & Copyright Classification"]
@@ -53,14 +53,14 @@ graph TD
 
 ## 2. Arquitectura Defensiva de API (Defense-in-Depth)
 
-Todas las rutas públicas de MIMweb (`web/app/api/*`) implementan un modelo de seguridad por capas en profundidad:
+Todas las rutas públicas de MIM Hub (`apps/hub/app/api/*`) implementan un modelo de seguridad por capas en profundidad:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client as Cliente / Navegador
-    participant MW as Edge Middleware (web/middleware.ts)
-    participant Guard as withApiGuard (web/lib/apiGuard.ts)
+    participant MW as Edge Middleware (apps/hub/middleware.ts)
+    participant Guard as withApiGuard (apps/hub/lib/apiGuard.ts)
     participant Limiter as In-Memory Sliding Limiter
     participant Zod as Esquema Zod (Query/Body)
     participant Route as Route Handler Interno
@@ -87,8 +87,8 @@ sequenceDiagram
 ```
 
 ### Componentes Clave:
-- **`web/middleware.ts`**: Aplica filtrado de métodos HTTP autorizados (`GET`, `POST`, `OPTIONS`, `HEAD`), preflight de CORS y encabezados de protección universal (`Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
-- **`web/lib/apiGuard.ts`**: Higher-Order Function `withApiGuard` que encapsula:
+- **`apps/hub/middleware.ts`**: Aplica filtrado de métodos HTTP autorizados (`GET`, `POST`, `OPTIONS`, `HEAD`), preflight de CORS y encabezados de protección universal (`Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
+- **`apps/hub/lib/apiGuard.ts`**: Higher-Order Function `withApiGuard` que encapsula:
   - Extracción robusta de IP considerando proxies (`x-forwarded-for`, `x-real-ip`, `cf-connecting-ip`).
   - Rate limiting en memoria con ventana deslizante (default: 60 req/min para búsquedas, 20 req/min para IA y traducción).
   - Validación y coercitividad tipada con esquemas Zod tanto para Query (`querySchema`) como para Body (`bodySchema`).
@@ -119,7 +119,7 @@ Aduana gestiona el almacenamiento masivo de mods, modpacks, shaders y resourcepa
 
 ```mermaid
 flowchart TD
-    FileIn["Archivo Descargado (JAR / ZIP)"] --> Hash["Cálculo SHA-256 en Stream"]
+    FileIn["Archivo Descargado (JAR / ZIP)"] --> Hash["Cálculo SHA-512 / SHA-1 en Stream"]
     Hash --> DedupeCheck{"¿Existe Hash en Vault?"}
     DedupeCheck -- Sí --> Hardlink["Genera Hardlink / Symlink<br/>(0 bytes de espacio adicional)"]
     DedupeCheck -- No --> StoreVault["Mueve a Storage Vault Central<br/>(/lib/.mim-index/vault)"]
@@ -143,7 +143,7 @@ El pipeline de análisis de seguridad de archivos JAR de terceros opera en 4 fas
 
 ## 6. Convenciones de Código y Estándares del Proyecto
 
-- **Sin Carpeta `src`**: Todo el código principal vive en la raíz (`app/`, `web/`, `lib/`, `components/`, `hooks/`, `services/`).
+- **Sin Carpeta `src`**: El código vive en `app/`, `apps/` (desktop + hub), `packages/`, `lib/`, `components/`, `hooks/`, `services/`.
 - **Límite de Modularidad**: Ningún componente debe superar **600 líneas de código funcional** (sin contar comentarios ni interfaces de documentación).
-- **Testing Headless**: La verificación se realiza mediante `npm test` ejecutando las 10 suites especializadas de `scripts/test-runner.js`.
+- **Testing Headless**: `npm test` ejecuta el catálogo en `scripts/test-suites.js` (~36 suites).
 - **Verificación Visual**: Reservada exclusivamente para el desarrollador humano (sin subagentes de navegador ni capturas de pantalla invasivas).

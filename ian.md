@@ -21,8 +21,8 @@ npm run pr:audit <numero_de_pr | nombre_rama>
    - `lint:architecture` (aislamiento estricto core vs UI/Desktop)
    - `test:architecture` (tests de contrato de fronteras)
    - `tsc --noEmit` (tipado estricto Raíz/Desktop)
-   - `tsc web` (tipado estricto MIMweb)
-   - `npm test` (16 suites unificadas del sistema, 144+ escenarios)
+   - `tsc --project apps/hub/tsconfig.json --noEmit` (Hub)
+   - `npm test` (catálogo unificado en `scripts/test-suites.js`, ~36 suites)
 4. **Emite un Veredicto Estructurado Formal (Sin auto-push destructivo):**
    - **`READY`:** Todas las compuertas pasaron en verde y la rama está al día con `origin/main`. Listo para ser promovido de forma explícita con `npm run pr:promote`.
    - **`HOLD`:** Las compuertas pasaron pero la rama está atrasada con respecto a `origin/main`. Solicita actualizar con `git merge origin/main` y re-auditar antes de mergear.
@@ -50,7 +50,7 @@ npm run release:auto
 1. **Ejecuta todos los testeos primero:** No toca ninguna versión ni sube nada si falla alguna compuerta.
 2. **Calcula la versión semántica:** Detecta cambios y calcula el bump (`patch`/`minor`/`major`).
 3. **Crea backup local:** Guarda rama de seguridad `backup/YYYY-MM-DDTHH-mm-ss`.
-4. **Sincroniza la versión global:** Actualiza automáticamente `package.json`, `README.md`, `docs/architecture/MIM.md`, `docs/releases/CHANGELOG.md`, `docs/planning/PROJECT_STATUS.md` y `docs/planning/ROADMAP.md`.
+4. **Sincroniza la versión global:** Actualiza `package.json`, workspaces, `README.md`, `docs/architecture/mim-core.md`, `docs/releases/CHANGELOG.md`, `docs/planning/project-status.md` y `docs/planning/ROADMAP.md`.
 5. **Commit y Tag:** Genera `chore(release): vX.Y.Z` y crea el tag `vX.Y.Z`.
 6. **Push a GitHub:** Sube `main` y el tag `vX.Y.Z` a `origin`, disparando la GitHub Action [.github/workflows/release.yml](.github/workflows/release.yml) para compilar el ejecutable `.exe` de Windows y publicar la Release oficial.
 7. **Cero pausas:** No pide confirmaciones `y/n`, hace todo el ciclo de principio a fin.
@@ -94,7 +94,7 @@ npm run lint:api-guard
 npm run lint:architecture
 npm run test:architecture
 
-# 3. Correr la suite de pruebas unificada (15 suites del sistema)
+# 3. Correr la suite de pruebas unificada (~36 suites)
 npm test
 ```
 

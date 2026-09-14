@@ -1,7 +1,7 @@
 # MIM — Roadmap Oficial & Estado de Evolución (v11.4.8)
 
 > Roadmap unificado de evolución técnica de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.8 | **Última actualización:** 2026-09-13  
+> **Versión Actual:** v11.4.8 | **Última actualización:** 2026-09-14  
 > *(Historial de hitos de versiones anteriores preservado en [docs/releases/roadmap-v10-historic.md](../releases/roadmap-v10-historic.md)).*
 
 ---
@@ -9,7 +9,7 @@
 ## 1. Proceso & Seguridad de API (Completado en v11.3.0)
 
 - [x] **Hacer withApiGuard obligatorio, no opcional:**
-  - [x] Barrido de 100% de rutas en `web/app/api/` y `app/api/` (116 handlers protegidos).
+  - [x] Barrido de 100% de rutas en `apps/hub/app/api/` y `app/api/` (handlers protegidos).
   - [x] Regla de CI que falla estructuralmente con AST si un `route.ts` no usa `withApiGuard` (`npm run lint:api-guard`).
   - [x] Soporte para allowlist formalizada y documentada de excepciones.
   - [x] Suite de tests exhaustiva del wrapper con casos negativos, validación Zod y rate limits reales.
@@ -26,21 +26,21 @@
 - [x] *Context Builder & Evidence Layer:* Ensamblado determinista de prompts con etiquetas de origen (`[EVIDENCE: MANIFEST]`, `[EVIDENCE: LOCAL]`, `[EVIDENCE: SAGE]`, `[EVIDENCE: FOMO_GRAPH]`, `[EVIDENCE: GALLERY]`) e invariantes de grounding que impiden al LLM sobreescribir hechos o diagnósticos.
 - [x] *Migración de rutas y nuevo endpoint de dependencias:* `lib/intelligence/modExplainer.ts`, `sageMimbotEngine.ts`, `app/api/fomo/explain`, `app/api/sage/chat` y `POST /api/fomo/explain-deps`.
 - [x] *Soporte BYOK OpenRouter:* Configuración en `lib/core/settings.ts` y `.env.local` con almacenamiento seguro de secretos.
-- [ ] *No guardar la API key de Gemini/OpenRouter en texto plano:* Cifrar en disco o usar `safeStorage` del SO en Electron.
+- [x] *No guardar la API key de Gemini/OpenRouter en texto plano:* Electron `safeStorage` + migración legacy (PR #79). Ver [desktop-credentials.md](../guides/desktop-credentials.md).
 - [x] *Recortar el contexto de conversación antes de enviarlo:* Truncado automático a los últimos 6 turnos en `api/sage/chat`.
 - [x] *Streaming de respuesta:* Gemini transmite por SSE; MIM adapta el flujo a eventos NDJSON tipados, preserva los errores HTTP previos al stream y renderiza cada delta en el chat.
 - [x] *Manejo de rate-limit/cuota de la propia API de Gemini:* Diferenciación explícita de código 429 (`RATE_LIMITED`) con mensaje claro en el chat sin desconfigurar la key.
-- [ ] *Persistir el historial del chat:* Guardar historial localmente (opt-in) para no perderlo al cambiar de crash o recargar.
+- [x] *Persistir el historial del chat:* Historial local opt-in por crash (BOT-01, PR #78).
 
 ---
 
 ## 3. UX/UI de MimBot (En curso)
 
-- [ ] *Mejorar primera experiencia (onboarding sin key):* Ofrecer modo de prueba inicial o preview estático de ejemplos de respuesta antes de exigir la API key.
+- [x] *Mejorar primera experiencia (onboarding sin key):* Preview estático pre-BYOK (`MimbotDemoPreview`, BOT-02, PR #78).
 - [x] *Explicación de modo Bully vs. Estándar:* Tooltips descriptivos y etiquetas claras.
 - [x] *Copia de mensajes y código:* Botón de copiar respuesta con feedback visual inmediato.
 - [x] *Confirmación de reinicio:* Mecanismo de deshacer (Undo) de 4.5 segundos al resetear la conversación.
-- [ ] *Preguntas de seguimiento sugeridas:* Chips contextuales dinámicos ligados a la última respuesta del modelo.
+- [x] *Preguntas de seguimiento sugeridas:* Chips contextuales tras el primer intercambio (BOT-03, PR #77).
 - [x] *Desacoplar error 429 del error 401:* Los límites de cuota se muestran inline sin desloguear la clave.
 - [x] *Accesibilidad:* Atributos `aria-label` descriptivos en todos los botones del copiloto.
 - [x] *Validación preventiva de API Key:* Ping liviano al guardar la clave antes de marcar "Gemini Conectado" (`/api/settings/validate-keys`).
@@ -50,17 +50,18 @@
 ## 4. Deuda de fondo & Arquitectura
 
 - [x] Verificación estricta de fronteras de arquitectura (`npm run lint:architecture`, AST dependency boundary verifier en CI).
-- [ ] Bajar el uso de `any` (935 casos) — priorizar `lib/security/`, `lib/intelligence/sage/` y hooks orquestadores (`useHomeController.ts`).
-- [ ] Generalizar esquemas Zod a más rutas (actualmente 17/93).
+- [ ] Bajar el uso de `any` (~487 restantes; REC-01 superó la meta 500–600) — priorizar `components/`, `hooks/` y `apps/hub/`.
+- [ ] Generalizar esquemas Zod a más mutaciones (`npm run lint:api-schemas`; inventario en [api-zod-inventory.md](../architecture/api-zod-inventory.md)).
 - [ ] Seguir sumando tests — meta: mantener 100% pass en todas las suites de `npm test`.
-- [ ] Revisar el `eval("require")` en `sage/cacheEngine.ts` — reemplazar por imports estáticos si es posible.
+- [x] Revisar el `eval("require")` en `sage/cacheEngine.ts` — reemplazado por adaptadores de runtime (ARCH-01).
 - [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
-  - [ ] `web/components/tabs/DiscoverTab.tsx` (862 líneas) y `web/components/DraftDetailView.tsx` (819 líneas).
-  - [ ] `components/fomo/core/FomoVersionOverlay.tsx` (869 líneas).
-  - [ ] `web/hooks/useHomeController.ts` — continuar modularización por fases; el controller sigue siendo monolítico aunque Discover y Drafts ya no sean responsabilidades propias.
+  - [x] `apps/hub/components/tabs/DiscoverTab.tsx` (158L, extraído a `discover/`).
+  - [x] `apps/hub/components/DraftDetailView.tsx` (188L, extraído a `draft-detail/`).
+  - [x] `components/fomo/core/FomoVersionOverlay.tsx` (extraído a `components/fomo/details/`).
+  - [ ] `apps/hub/hooks/useHomeController.ts` — continuar modularización por fases; Discover y Drafts ya no son responsabilidades propias.
     - [x] Phase 1 — Discover extraído y verificado en PR #43, con caché, decodificación de payloads y búsqueda separadas detrás del mismo contrato público.
-    - [ ] Phase 2 — Drafts mergeado en PR #63 con `useHomeDrafts`, contrato/adaptador y regresiones dedicadas; verificación final `BLOCKED` hasta reproducir create/edit/delete/refresh con sesión browser/Supabase.
-    - [ ] Phase 3 — Profile/Community no está desbloqueada hasta cerrar la verificación de Phase 2 y la reevaluación de Dumbledore.
+    - [ ] Phase 2 — Drafts mergeado en PR #63 con `useHomeDrafts`; verificación final `NEEDS_USER` hasta reproducir create/edit/delete/refresh con sesión browser/Supabase.
+    - [ ] Phase 3 — Profile/Community bloqueada hasta cerrar la verificación de Phase 2.
 - [x] Ampliación de formatos en auditoría de licencias: soporte para manifiestos Quilt (`quilt.mod.json`).
 
 ---
@@ -72,11 +73,11 @@
 - [x] *Presupuestos de tokens diferenciados:* Modo Bully (~250 tokens) vs. Modo Estándar (~700 tokens estructurados).
 - [x] *Ajuste de temperatura en modo Bully:* Reducida a 0.5 para conservar estilo satírico sin alucinar dependencias.
 - [x] *Ventana de contexto acotada:* Últimos 6 turnos para no inflar consumo de tokens.
-- [ ] *Model Router Dinámico:* Ruteo inteligente por costo/latencia según la intención del usuario (GLM primario para texto/explicación, Gemini como especialista multimodal/búsqueda).
-- [ ] *Structured JSON Output:* Validación de schemas Zod estrictos sobre la salida generada por el LLM en respuestas estructuradas.
+- [x] *Model Router Dinámico:* Ruteo por intención (texto → OpenRouter/GLM, multimodal/búsqueda → Gemini). BOT-GW, PR #73. Desactivable con `MIMBOT_INTENT_ROUTING=false`.
+- [x] *Structured JSON Output:* Zod + fallback determinista en `dependencyExplain.ts` (BOT-JSON, PR #74).
 - [ ] *Caché semántico / Hashing de contexto:* Cacheo por hash de payload de evidencia para evitar re-inferencias en consultas idénticas.
-- [ ] *Desacoplamiento de Search Grounding:* Motor de búsqueda web externo independiente del vendor del LLM para enriquecimiento de evidencia previa.
-- [ ] *Observabilidad y límites de OpenRouter:* Métricas de costo, latencia, rate limits y monitoreo de cuota en UI.
+- [ ] *Desacoplamiento de Search Grounding:* Motor de búsqueda web externo independiente del vendor del LLM (RFC en [mod-explainer.md](../proposals/mod-explainer.md)).
+- [x] *Observabilidad y límites de OpenRouter:* Clasificador de cuotas + panel Settings + costos (BOT-06 / BOT-06b).
 
 ---
 
@@ -85,13 +86,13 @@
 - [x] *Diferenciación de error 429 en UI:* Desacoplar cuota/frecuencia de falta de clave.
 - [ ] *Diferenciación contextual de límites:* Distinguir en el mensaje si se alcanzó el límite por minuto (RPM ~15 / TPM ~250k) o el límite diario (RPD ~1.500).
 - [ ] *Encolamiento de peticiones concurrentes:* Procesar en cola secuencial para no superar el límite de 15 RPM.
-- [ ] *Caché persistente local para quick questions:* Guardar respuestas de preguntas frecuentes por 24 horas.
+- [x] *Caché persistente local para quick questions:* 24 h (`quickQuestionCache.ts`, BOT-08, PR #77).
 
 ---
 
 ## 7. Privacidad y Transparencia en BYOK
 
-- [ ] *Aviso de privacidad del Free Tier de Google / OpenRouter:* Notificar con claridad las políticas de retención o entrenamiento de capas gratuitas en BYOK.
+- [x] *Aviso de privacidad del Free Tier de Google / OpenRouter:* Panel Settings + modal (`mimbotByokTransparency.ts`, BOT-09, PR #78).
 - [x] *Ping preventivo de clave:* Validar conectividad antes de confirmar el estado de conexión (endpoint seguro sin key en URL).
 
 ---
@@ -181,22 +182,22 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Reconciliación de cliente local (`reconcileClientWithServerManifest`) detectando missing mods y version mismatches.
   - [x] Preservación estricta de mods client-only (OptiFine, Sodium, Iris, Shaders).
   - [x] Suite de tests `server-multiplayer-sync.test.ts` pasando al 100%.
-  - [ ] API `POST /api/server/sync` + `ServerMultiplayerSyncPanel` — implementado localmente, **sin merge**.
+  - [x] API `POST /api/server/sync` + `ServerMultiplayerSyncPanel` en `main` (diagnóstico only).
   - [ ] Descarga/instalación automática de mods faltantes en el cliente.
 
 ---
 
-## 10. Arquitectura de Monorepo & Desacoplamiento (Issue #60 — En Progreso)
+## 10. Arquitectura de Monorepo & Desacoplamiento (Issue #60 — CERRADO)
 
 - [x] **Hito ARCH-0: Inventario y análisis de dependencias:**
   - [x] Herramienta automatizada de grafo `scripts/architecture/analyze-graph.ts` (606 archivos, 1242 imports).
   - [x] Detección de ciclos, matriz de acoplamiento e inventario de duplicación en `MONOREPO_INVENTORY_ARCH_0.md`.
   - [x] Resolución de la anomalía de dependencias en el bus de eventos de servidor.
 - [x] **Hito ARCH-1: Workspaces Foundation y comandos scoped:**
-  - [x] Configuración de `npm workspaces: ["apps/*", "packages/*", "web"]` en `package.json` raíz.
+  - [x] Configuración de `npm workspaces: ["apps/*", "packages/*"]` en `package.json` raíz.
   - [x] Comandos agregados: `build:hub`, `lint:hub`, `build:all`, `lint:all`.
   - [x] Integración de linting y build de producción para el Hub web en `.github/workflows/ci.yml`.
-  - [x] Saneamiento de ESLint en `web/app/page.tsx` (cero errores en toda la superficie web).
+  - [x] Saneamiento de ESLint en `apps/hub/app/page.tsx` (cero errores en toda la superficie Hub).
 - [x] **Hito ARCH-2: Primera extracción de contratos puros (`@mim/contracts-core`):**
   - [x] Creación del package modular `@mim/contracts-core` en `packages/contracts-core/`.
   - [x] Módulos de contratos tipados puros: `instances.ts`, `network.ts`, `server.ts` e `index.ts`.
@@ -221,5 +222,6 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
 - [x] **Hito ARCH-6: Surface explícita de Server Manager (Desktop `/servers`):**
   - [x] Decisión registrada en [ADR-008](../adr/ADR-008-server-manager-desktop-surface.md): sección Desktop, no Hub ni app separada.
   - [x] Ownership: `app/servers/`, `components/server/`, `app/api/server/*` → Desktop; motor en `@mim/server-engine`.
-  - [ ] `@mim/server-ui` diferido hasta segundo consumidor o gate ARCH-7.
-- [ ] **Hitos ARCH-7 y ARCH-8: CI scoped y versionado semántico (Pendiente).**
+  - [ ] `@mim/server-ui` diferido hasta un segundo consumidor (no bloquea ARCH-7).
+- [x] **Hito ARCH-7: CI scoped por superficie:** `detect-affected-surfaces.js`, pipeline GitHub Actions y `npm run test:scoped-ci`.
+- [x] **Hito ARCH-8: Versionado SemVer:** [versioning-policy.md](../architecture/versioning-policy.md) y sync de workspaces en `scripts/release.js`.

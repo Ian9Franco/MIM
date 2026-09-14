@@ -70,7 +70,7 @@
 | **Costos OpenRouter en UI** | `BOT-06b` | PR #79 — `openRouterAccount.ts`, campo `openRouter` en `GET /api/settings/ai-quota` |
 | **Suite eval MIMbot (fixtures baseline)** | `SAGE-05` | PR #79 — `mimbot-fixtures.json` (18 casos), `npm run eval:mimbot` |
 
-Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): confirmación rutinaria del live MimBot con secrets de CI, migración de rutas legacy en `web/`, flags de modelo en UI.
+Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backlog): confirmación rutinaria del live MimBot con secrets de CI, unificación semántica hub ↔ root, flags de modelo en UI.
 
 ### Pendiente — producto MIMbot / UX
 

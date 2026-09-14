@@ -1,3 +1,11 @@
+# Test suites (`scripts/__tests__/`)
+
+The unified runner is `npm test` (`scripts/test-runner.js` + catalog in `scripts/test-suites.js`, ~36 suites: SAGE, NBT, Aduana, security, Server Manager, Hub contracts, architecture gates).
+
+The rest of this file is the original NBT / player-rescue walkthrough. Prefer `npx ts-node --project tsconfig.scripts.json` with `tsconfig-paths` as in `package.json` scripts, not bare `npx ts-node __tests__/...`.
+
+---
+
 # SAGE Rescue Feature Tests
 
 This directory contains comprehensive test suites for the SAGE Rescue enhancement feature, covering:

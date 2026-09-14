@@ -298,32 +298,29 @@ npm run build
 
 ```
 manager/
-├── app/                          # Next.js App Router (API Routes, Server Components)
-├── components/                   # Modular UI Components (Framer Motion)
+├── app/                          # Next.js App Router (Desktop API + pages)
+├── apps/
+│   ├── desktop/                  # Electron packaging workspace
+│   └── hub/                      # MIM Hub PWA (Next.js 16, Vercel)
+├── packages/                     # @mim/contracts-core, network-resilience, server-engine
+├── components/                   # Desktop UI (Framer Motion)
 │   ├── fomo/                     # Community, Showcases, Discover, Collections
 │   ├── sage/                     # Crash Intelligence, Player Rescue, NBT Viewer
-│   └── ui/                       # Design System primitives (Glassmorphism)
-├── docs/                         # Engineering Lifecycle & Systems Specifications
-│   ├── README.md                 # Master documentation index
-│   ├── PENDING.md                # Consolidated master pending tasks checklist
-│   ├── architecture/             # System architecture, boundaries, server manager
-│   ├── engines/                  # SAGE, NBT, Aduana & FOMO specifications
-│   ├── security/                 # Static bytecode scanner & STRIDE threat model
-│   ├── planning/                 # Master roadmap, project status & whosnext backlog
-│   ├── guides/                   # Developer onboarding, reproducibility & demo
-│   └── adr/                      # Architectural Decision Records (ADR-001 to ADR-007)
-├── lib/                          # Domain Core Engines
-│   ├── core/                     # Base contracts, structured logger, settings
-│   ├── events/                   # Typed Event Bus (MimEventMap)
-│   ├── fomo/                     # Aduana deduplication, Supabase connectors
-│   ├── intelligence/             # SAGE 2.0/3.0, ContextBuilder & AIProvider Gateway
-│   ├── modding/                  # NBT binary parser/writer, pack builder
-│   ├── security/                 # Static bytecode threat scanner
-│   └── storage/                  # IndexedDB async SmartCache & migrations
-└── scripts/                      # Tooling, Benchmarks, and Evaluation Suites
-    ├── benchmarks/               # Aduana empirical stress tests (1k to 25k)
-    ├── evaluation/               # SAGE 125-case benchmark runner & RAG tests
-    └── demo-tour.js              # Interactive live demonstration tour
+│   └── ui/                       # Design System primitives
+├── docs/                         # Engineering lifecycle (index: docs/README.md)
+│   ├── planning/                 # ROADMAP, project-status, whosnext
+│   ├── architecture/             # Topology, boundaries, server manager, SemVer
+│   ├── engines/                  # SAGE, sage-eval, Aduana, NBT, FOMO
+│   ├── security/                 # Bytecode scanner, STRIDE, secrets
+│   ├── cloud/                    # Supabase RLS
+│   ├── guides/                   # Onboarding, reproducibility, demo
+│   ├── adr/                      # ADR-001 … ADR-008
+│   ├── proposals/                # RFCs
+│   ├── releases/                 # CHANGELOG, UNRELEASED, notes
+│   └── PENDING.md                # Master open-work checklist
+├── lib/                          # Domain engines
+├── standalone/                   # Electron shell
+└── scripts/                      # Tests, benchmarks, evaluation, release
 ```
 
 ---

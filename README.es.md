@@ -298,35 +298,29 @@ npm run build
 
 ```
 manager/
-├── app/                          # Next.js App Router (API Routes, Server Components)
-├── components/                   # Componentes UI Modulares (Framer Motion)
+├── app/                          # Next.js App Router (API y páginas Desktop)
+├── apps/
+│   ├── desktop/                  # Workspace de empaquetado Electron
+│   └── hub/                      # MIM Hub PWA (Next.js 16, Vercel)
+├── packages/                     # @mim/contracts-core, network-resilience, server-engine
+├── components/                   # UI Desktop (Framer Motion)
 │   ├── fomo/                     # Comunidad, Showcases, Descubrimiento, Colecciones
 │   ├── sage/                     # Inteligencia de Crashes, Rescate de Jugador, Visor NBT
-│   └── ui/                       # Primitivas del Design System (Glassmorphism)
-├── docs/                         # Especificaciones de Sistemas, Ciclo de Vida y Roadmap
-│   ├── planning/                 # unicorn (norte), whosnext (próximas tareas), status, roadmap
-│   ├── architecture/             # Arquitectura modular, contratos, auditoría y monorepo
-│   ├── engines/                  # sage, sage-eval, aduana (CAS), nbt-rescue, fomo
-│   ├── security/                 # Bytecode scanner, threat model STRIDE, secrets, hardening
-│   ├── cloud/                    # Esquemas Supabase, RLS y contratos de persistencia
-│   ├── guides/                   # Onboarding, reproducibilidad y demo en vivo
-│   ├── adr/                      # Architecture Decision Records (ADR-001 a ADR-007)
-│   ├── proposals/                # Propuestas técnicas (MIMbot SAGE Graph, Mod Explainer)
-│   ├── releases/                 # CHANGELOG, UNRELEASED, hogwarts (registro de PRs)
-│   ├── PENDING.md                # Índice maestro de pendientes y roadmap detallado
-│   └── README.md                 # Índice general de navegación técnica
-├── lib/                          # Motores de Dominio Centrales
-│   ├── core/                     # Contratos base, logger estructurado, settings
-│   ├── events/                   # Bus de eventos tipado (MimEventMap)
-│   ├── fomo/                     # Deduplicación Aduana, conectores Supabase
-│   ├── intelligence/             # SAGE 2.0 (Parser, Clasificador, RAG, Guardrails)
-│   ├── modding/                  # Parser/writer binario NBT, constructor de packs
-│   ├── security/                 # Escáner estático de amenazas en bytecode
-│   └── storage/                  # Caché asíncrona IDB SmartCache y migraciones
-└── scripts/                      # Tooling, Benchmarks y Suites de Evaluación
-    ├── benchmarks/               # Pruebas de estrés empíricas de Aduana (1k a 25k)
-    ├── evaluation/               # Runner de evaluación de 125 casos SAGE y tests RAG
-    └── demo-tour.js              # Tour de demostración de sistemas en vivo
+│   └── ui/                       # Primitivas del Design System
+├── docs/                         # Índice: docs/README.md
+│   ├── planning/                 # unicorn, whosnext, status, roadmap
+│   ├── architecture/             # Topología, contratos, server manager, SemVer
+│   ├── engines/                  # sage, sage-eval, aduana, nbt-rescue, fomo
+│   ├── security/                 # Bytecode scanner, STRIDE, secrets, hardening
+│   ├── cloud/                    # Supabase RLS
+│   ├── guides/                   # Onboarding, reproducibilidad, demo
+│   ├── adr/                      # ADR-001 a ADR-008
+│   ├── proposals/                # RFCs
+│   ├── releases/                 # CHANGELOG, UNRELEASED, hogwarts
+│   └── PENDING.md                # Checklist maestro de pendientes
+├── lib/                          # Motores de dominio
+├── standalone/                   # Electron shell
+└── scripts/                      # Tests, benchmarks, evaluación, release
 ```
 
 ---

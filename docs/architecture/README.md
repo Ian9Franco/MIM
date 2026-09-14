@@ -18,3 +18,5 @@
 | **[server-audit.md](./server-audit.md)** 🔍 | **Auditoría de Servidores:** Guía paso a paso del protocolo de escaneo SFTP de solo lectura. |
 | **[systems-summary.md](./systems-summary.md)** 📊 | **Ficha Ejecutiva:** Latencias, consumo de memoria y métricas de rendimiento por subsistema. |
 | **[monorepo-inventory.md](./monorepo-inventory.md)** 📦 | **Inventario del Monorepo:** Análisis de grafo de dependencias y desacoplamiento de packages. |
+| **[versioning-policy.md](./versioning-policy.md)** 🏷️ | **SemVer (ARCH-8):** Gobernanza de versiones por workspace. |
+| **[api-zod-inventory.md](./api-zod-inventory.md)** 🧾 | **Inventario Zod:** Contratos en `lib/api/contracts.ts` y mutaciones pendientes. |

@@ -10,4 +10,4 @@ a 'docs/releases/release-notes-vX.X.X.md' y a 'docs/releases/CHANGELOG.md'.
 - **SAGE-01:** semilla holdout `SRV5-FIXTURE-001` + `npm run sage:ingest-log` (sin `origin=synthetic`). Logs de VPS real siguen pendientes.
 - **SAGE-04:** latencia p50/p95/max + entorno + warmup/repeats en `eval:sage`.
 - **SAGE-05b:** umbrales live MimBot en CI (pass rate / p95 / wall); soft-skip sin secrets.
-- **SAGE-07:** índice canónico `docs/engines/EVAL.md`.
+- **Docs:** onboarding/CONTRIBUTING/overview alineados a `apps/hub` y v11.4.8; índices ADR-008; `release.js` actualiza `mim-core.md` y `project-status.md`.

@@ -197,26 +197,31 @@ function updateVersion(newVersion, commitMessage = "", qualityGatesVerified = fa
     console.log(chalk.green("  ✓ README.md actualizado con la nueva versión."));
   }
 
-  // docs/architecture/MIM.md
-  const mimDocPath = fs.existsSync(path.join(process.cwd(), "docs", "architecture", "MIM.md"))
-    ? path.join(process.cwd(), "docs", "architecture", "MIM.md")
-    : path.join(process.cwd(), "docs", "MIM.md");
-  if (fs.existsSync(mimDocPath)) {
+  // docs/architecture/mim-core.md (legacy filename MIM.md)
+  const mimDocPath = [
+    path.join(process.cwd(), "docs", "architecture", "mim-core.md"),
+    path.join(process.cwd(), "docs", "architecture", "MIM.md"),
+    path.join(process.cwd(), "docs", "MIM.md"),
+  ].find((candidate) => fs.existsSync(candidate));
+  if (mimDocPath) {
     let mimDoc = fs.readFileSync(mimDocPath, "utf-8");
     mimDoc = mimDoc.replace(/\*\*Versión:\*\* \d+\.\d+\.\d+/g, `**Versión:** ${newVersion}`);
     mimDoc = mimDoc.replace(/versión \d+\.\d+\.\d+/g, `versión ${newVersion}`);
     mimDoc = mimDoc.replace(/\*\*Última actualización:\*\* \d{4}-\d{2}-\d{2}/g, `**Última actualización:** ${today}`);
     fs.writeFileSync(mimDocPath, mimDoc);
-    console.log(chalk.green("  ✓ docs/architecture/MIM.md actualizado con la nueva versión y fecha."));
+    console.log(chalk.green("  ✓ docs/architecture/mim-core.md actualizado con la nueva versión y fecha."));
   }
 
-  // docs/planning/PROJECT_STATUS.md
-  const statusPath = path.join(process.cwd(), "docs", "planning", "PROJECT_STATUS.md");
-  if (fs.existsSync(statusPath)) {
+  // docs/planning/project-status.md (Windows may resolve PROJECT_STATUS.md)
+  const statusPath = [
+    path.join(process.cwd(), "docs", "planning", "project-status.md"),
+    path.join(process.cwd(), "docs", "planning", "PROJECT_STATUS.md"),
+  ].find((candidate) => fs.existsSync(candidate));
+  if (statusPath) {
     let statusDoc = fs.readFileSync(statusPath, "utf-8");
     statusDoc = statusDoc.replace(/\*\*Versión:\*\* v?\d+\.\d+\.\d+/g, `**Versión:** v${newVersion}`);
     fs.writeFileSync(statusPath, statusDoc);
-    console.log(chalk.green("  ✓ docs/planning/PROJECT_STATUS.md actualizado"));
+    console.log(chalk.green("  ✓ docs/planning/project-status.md actualizado"));
   }
 
   // docs/planning/ROADMAP.md

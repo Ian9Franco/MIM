@@ -2,8 +2,8 @@
 
 > Este documento existe por una razón concreta: la documentación técnica de MIM es ambiciosa y detallada, pero algunos commits y secciones usan frases como "100% completo" o "producción" que no reflejan con precisión el estado real. Este documento lo corrige — no para restar mérito al trabajo hecho, sino porque la credibilidad a largo plazo vale más que el marketing a corto plazo.
 
-**Última actualización:** Septiembre 2026  
-**Versión:** v11.4.5 (Desarrollo Activo)  
+**Última actualización:** 2026-09-14  
+**Versión:** v11.4.8 (Desarrollo Activo)  
 **Autor:** Ian Franco (único desarrollador)  
 *(Nota: Este documento es una auditoría de madurez y transparencia técnica. Para el plan de tareas y evolución activa, consultar [ROADMAP.md](./ROADMAP.md)).*
 
@@ -73,7 +73,7 @@ Existe una pantalla Desktop `/servers` que audita mods por SFTP, puede aplicar e
 
 ### 69 catch{} vacíos (Resuelto — Sep 2026)
 
-**Estado:** ✅ 100% auditados y erradicados en toda la base de código (`lib/`, `app/api/`, `services/`, `hooks/`, `components/` y `web/`).  
+**Estado:** ✅ 100% auditados y erradicados en toda la base de código (`lib/`, `app/api/`, `services/`, `hooks/`, `components/` y `apps/hub/`).  
 **Resultado:** En escaneo de seguridad y I/O, los fallos ya no asumen éxito ciego; se registran advertencias contextuales y se marcan como `UNVERIFIED` o anomalías. En UI, los fallos de parseo de localStorage se advierten explícitamente en consola en lugar de silenciarse.
 
 ### Validación de input API routes (En progreso — Zod aplicado a rutas críticas)
@@ -83,7 +83,7 @@ Existe una pantalla Desktop `/servers` que audita mods por SFTP, puede aplicar e
 
 ### Rate limiting & Blindaje de Proxies
 
-**Estado:** ✅ Implementado en `web/app/api/fomo/translate` mediante `web/lib/rateLimiter.ts` (máx 20 req/min por IP, cabeceras `Retry-After`, HTTP 429).  
+**Estado:** ✅ Implementado en `apps/hub/app/api/fomo/translate` mediante `apps/hub/lib/rateLimiter.ts` (máx 20 req/min por IP, cabeceras `Retry-After`, HTTP 429).  
 **Eliminación de DoS:** Se erradicó el `Promise.all` por línea que bombardeaba Google Translate; ahora procesa chunks semánticos y cuenta con soporte para proveedores oficiales (DeepL Free, Google Cloud Translation v2, LibreTranslate) con degradación elegante.
 
 ### KNOWN_MALWARE_HASHES — base real de firmas
@@ -94,7 +94,7 @@ El escáner (`lib/security/security-scanner.ts`) evalúa dualmente SHA-1/SHA-256
 
 ### Erradicación de `any` en zonas críticas (Resuelto — Sep 2026)
 
-**Estado:** ✅ Erradicado en `lib/security/`, `lib/intelligence/sage/` y API routes de entrada de red (`app/api/` y `web/app/api/`). Se reemplazó por tipos e interfaces fuertemente tipadas y type guards seguros.
+**Estado:** ✅ Erradicado en `lib/security/`, `lib/intelligence/sage/` y API routes de entrada de red (`app/api/` y `apps/hub/app/api/`). Se reemplazó por tipos e interfaces fuertemente tipadas y type guards seguros.
 
 ---
 
@@ -134,12 +134,12 @@ Ese contexto operativo es lo que diferencia MIM de un proyecto técnico sin raí
 |---|---|---|
 | Seguridad Electron | Configuración correcta (sandbox, contextIsolation) | — |
 | Datos en Supabase | RLS real con auth.uid() | — |
-| SAGE Diagnosis | Evaluado contra corpus real | Pocos tests unitarios automatizados |
+| SAGE Diagnosis | Evaluado contra corpus real | Generalización a logs de VPS real (SAGE-01) |
 | Aduana | Benchmarks medidos y reproducibles | — |
 | NBT Recovery | 12/12 tests, zero-loss invariant | — |
-| API Routes | 78 endpoints funcionales | 1 con Zod + RateLimit (`fomo/translate`); 77 pendientes |
+| API Routes | Guard universal + inventario Zod (`lint:api-schemas`) | Mutaciones restantes sin schema (API-02b) |
 | Error handling | Auditado y loggeado | 0 catch{} ciegos |
-| TypeScript | Arquitectura tipada event-driven | ~1023 any |
+| TypeScript | Arquitectura tipada event-driven | ~487 `any` (REC-01; zona crítica de engines limpia) |
 | Security feature | Bytecode scanner + 19 firmas de IOCs | — |
 | Documentación | Técnica, detallada, bilingüe | Este documento |
 
@@ -151,9 +151,9 @@ Ese contexto operativo es lo que diferencia MIM de un proyecto técnico sin raí
 2. [x] ~~**Catch{} vacíos** — Auditados y eliminados los 69 bloques en toda la solución.~~ *(Resuelto — Sep 2026)*
 3. [x] ~~**KNOWN_MALWARE_HASHES** — Base real de 19 firmas con soporte dual SHA-1 / SHA-256.~~ *(Resuelto — Sep 2026)*
 4. [x] ~~**Rate limiting** — `/api/fomo/translate` blindado por IP y sliding window.~~ *(Resuelto — Sep 2026)*
-5. **Zod en API routes** — Extender esquemas al resto de mutaciones (`build`, `delete`, `staging`, `tweak`, etc.).
-6. **Reducción de `any`** — Enfocado en `lib/security/` y `lib/intelligence/sage/`.
-7. **Tests de integración adicionales** — Nuevas API routes.
+5. **Zod en API routes** — Extender esquemas al resto de mutaciones listadas por `npm run lint:api-schemas`.
+6. **Reducción de `any`** — Enfocado en `components/`, `hooks/` y `apps/hub/` (~487 restantes; engines críticos ya limpios).
+7. **Tests de integración adicionales** — E2E de UI (REC-04); Server Manager contra VPS real (#58).
 
 ---
 

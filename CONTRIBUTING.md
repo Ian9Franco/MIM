@@ -64,7 +64,7 @@ MIM ataca estos cuatro problemas con motores especializados.
 ```
 d:\.mine\manager\
 ├── app/                    → Next.js App Router (páginas y API routes)
-│   ├── api/                → 78 endpoints (Electron + Vercel)
+│   ├── api/                → API Desktop (Electron + Next); Hub en apps/hub/app/api
 │   │   ├── fomo/           → Endpoints de FOMO Cloud (algunos públicos vía Vercel)
 │   │   ├── sage/           → API de diagnóstico de crashes y player rescue
 │   │   ├── security/       → API del escáner de bytecode y VirusTotal
@@ -133,12 +133,12 @@ d:\.mine\manager\
 │   ├── audit-licenses.ts   → CLI de auditoría de licencias de mods
 │   └── test-runner.js      → Orquestador de testing unificado headless
 │
-└── docs/                   → Documentación técnica completa del ciclo de vida
-    ├── adr/                → Architecture Decision Records (ADRs)
-    ├── PROJECT_STATUS.md   → Estado real del proyecto y contexto solo-dev
-    ├── SAGE_EVALUATION.md  → Reporte de evaluación cuantitativa (125 casos)
-    ├── THREAT_MODEL.md     → Modelo de amenazas STRIDE y auditoría DAST
-    └── ADUANA_BENCHMARKS.md→ Benchmarks formales de throughput y caché
+└── docs/                   → Documentación técnica (índice: docs/README.md)
+    ├── adr/                → Architecture Decision Records (ADR-001 … ADR-008)
+    ├── planning/           → project-status.md, ROADMAP.md, whosnext.md
+    ├── engines/            → sage-eval.md, aduana.md, EVAL.md
+    ├── security/           → threat-model.md, bytecode-scanner.md
+    └── PENDING.md          → Checklist maestro de trabajo abierto
 ```
 
 ### El Event Bus — cómo se comunican los motores
@@ -233,19 +233,19 @@ npm run demo
 # Tests
 npm run test
 
-# Build del ejecutable Electron
-npm run build && npm run electron:build
+# Build del ejecutable Electron (Windows)
+npm run package:win
 ```
 
-### Para MIMweb (subproyecto)
+### Para MIM Hub (`apps/hub`)
+
+Tras `npm install` en la raíz (workspaces):
 
 ```bash
-cd web
-npm install
-npm run dev
+npm --prefix apps/hub run dev
 ```
 
-MIMweb es un Next.js separado que se deploya en Vercel independientemente.
+Hub es un Next.js 16 independiente (puerto 3001) que se deploya en Vercel. La carpeta `web/` ya no existe.
 
 ---
 
@@ -342,9 +342,9 @@ Ningún componente debería superar 600 líneas de código funcional (sin contar
 
 ## Estado de Deuda Técnica & Endurecimiento (Septiembre 2026)
 
-- [x] **Testing Automatizado**: 8 suites de pruebas unitarias y de integración (`npm test` — 144 escenarios pasando al 100%, 0 fallos).
+- [x] **Testing Automatizado**: runner unificado `npm test` (`scripts/test-suites.js`, ~36 suites; corpus SAGE 125 casos + 12 NBT).
 - [x] **Catch Silenciados**: 69 bloques `catch {}` auditados y reemplazados por manejo de errores contextual en Web y Desktop.
-- [x] **Rate Limiting**: Implementado en `/api/fomo/translate` con sliding window por IP y degradación elegante.
+- [x] **Rate Limiting**: `withApiGuard` + sliding window en Desktop y Hub (`apps/hub/lib/rateLimiter.ts` para translate).
 - [x] **Firmas de Malware Reales**: Integradas 19 firmas SHA-1/SHA-256 del incidente Fracturiser y troyanos en `lib/security/security-data.ts`.
 - [x] **Validación Zod**: Schemas de validación en rutas públicas y locales de mutación.
 - [x] **Toggle de Personalidad MIM-Bot**: Modos `bully` y `standard` integrados en frontend y backend.

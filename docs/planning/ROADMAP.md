@@ -75,8 +75,8 @@
 - [x] *Ventana de contexto acotada:* Últimos 6 turnos para no inflar consumo de tokens.
 - [x] *Model Router Dinámico:* Ruteo por intención (texto → OpenRouter/GLM, multimodal/búsqueda → Gemini). BOT-GW, PR #73. Desactivable con `MIMBOT_INTENT_ROUTING=false`.
 - [x] *Structured JSON Output:* Zod + fallback determinista en `dependencyExplain.ts` (BOT-JSON, PR #74).
-- [ ] *Caché semántico / Hashing de contexto:* Cacheo por hash de payload de evidencia para evitar re-inferencias en consultas idénticas.
-- [ ] *Desacoplamiento de Search Grounding:* Motor de búsqueda web externo independiente del vendor del LLM (RFC en [mod-explainer.md](../proposals/mod-explainer.md)).
+- [x] *Caché semántico / Hashing de contexto:* Cacheo por hash de payload de evidencia para evitar re-inferencias en consultas idénticas (`lib/intelligence/semanticCache.ts`).
+- [x] *Desacoplamiento de Search Grounding:* Motor de búsqueda web externo independiente del vendor del LLM (`lib/intelligence/search/webSearchProvider.ts`, RFC en [mod-explainer.md](../proposals/mod-explainer.md)).
 - [x] *Observabilidad y límites de OpenRouter:* Clasificador de cuotas + panel Settings + costos (BOT-06 / BOT-06b).
 
 ---
@@ -84,7 +84,7 @@
 ## 6. Gestión de Cuota y Resiliencia en Free Tier
 
 - [x] *Diferenciación de error 429 en UI:* Desacoplar cuota/frecuencia de falta de clave.
-- [ ] *Diferenciación contextual de límites:* Distinguir en el mensaje si se alcanzó el límite por minuto (RPM ~15 / TPM ~250k) o el límite diario (RPD ~1.500).
+- [x] *Diferenciación contextual de límites:* Distinguir en el mensaje si se alcanzó el límite por minuto (RPM / TPM) o el límite diario (RPD).
 - [ ] *Encolamiento de peticiones concurrentes:* Procesar en cola secuencial para no superar el límite de 15 RPM.
 - [x] *Caché persistente local para quick questions:* 24 h (`quickQuestionCache.ts`, BOT-08, PR #77).
 

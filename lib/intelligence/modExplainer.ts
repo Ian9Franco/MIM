@@ -20,6 +20,12 @@ import { createAIRequestSignal } from "./ai/requestLifecycle";
 import { OpenRouterProvider } from "./ai/openRouterProvider";
 import { classifyModExplainIntent } from "./ai/intents";
 import { buildProjectExplainContext } from "./contextBuilder";
+import { searchDecoupledWeb } from "./search/webSearchProvider";
+import {
+  computeContextHash,
+  getCachedSemanticResponse,
+  saveSemanticResponse,
+} from "./semanticCache";
 
 export { DEFAULT_GEMINI_MODEL, GEMINI_MODEL_CASCADE };
 
@@ -277,16 +283,48 @@ export async function explainModWithGemini(
     throw new Error("NO_API_KEY");
   }
 
-  const inlineImages = await fetchImagesAsInlineData(
-    input.galleryUrls,
-    3,
-    2000,
-    signal
+  const personality = resolveBotPersonality(input.personality);
+  const contextHash = computeContextHash(
+    "mod-explain",
+    "project",
+    {
+      projectId: input.projectId,
+      title: input.title,
+      description: input.description,
+      loaders: input.loaders,
+      categories: input.categories,
+      galleryUrls: input.galleryUrls,
+    },
+    "",
+    personality,
+    input.model || ""
   );
+
+  const cached = getCachedSemanticResponse(contextHash);
+  if (cached) {
+    return {
+      projectId: input.projectId,
+      summaryMarkdown: cached.text,
+      groundedSources: [],
+      searchUsed: true,
+      imagesAnalyzed: (input.galleryUrls || []).slice(0, 3).length,
+      model: `${cached.model} (cache)`,
+    };
+  }
+
+  const hasRichDescription = Boolean(input.description && input.description.trim().length > 25);
+
+  const [inlineImages, searchResults] = await Promise.all([
+    fetchImagesAsInlineData(input.galleryUrls, 3, 2000, signal),
+    !hasRichDescription
+      ? searchDecoupledWeb(input.title || input.slug || input.projectId, { signal, maxResults: 2 })
+      : Promise.resolve([]),
+  ]);
+
   const imagesCount = inlineImages.length;
 
-  // Build evidence-tagged context via the Context Builder
-  const ctx = buildProjectExplainContext(input, inlineImages);
+  // Build evidence-tagged context via the Context Builder including decoupled web search
+  const ctx = buildProjectExplainContext(input, inlineImages, personality, searchResults);
 
   const contentParts: AIContentPart[] = [
     { type: "text", text: `${ctx.systemPrompt}\n\n${ctx.userPrompt}` },
@@ -297,7 +335,6 @@ export async function explainModWithGemini(
     })),
   ];
 
-  const hasRichDescription = Boolean(input.description && input.description.trim().length > 25);
   const intent = classifyModExplainIntent({
     imageCount: imagesCount,
     wantsSearchGrounding: !hasRichDescription,
@@ -318,11 +355,24 @@ export async function explainModWithGemini(
       env: gatewayKeys?.env,
     });
 
+    const combinedSources: GroundedSource[] = [
+      ...result.groundedSources,
+      ...searchResults.map((s) => ({ title: s.title, url: s.url })),
+    ];
+
+    void saveSemanticResponse({
+      hash: contextHash,
+      text: result.text,
+      model: result.model,
+      provider: result.provider,
+      intent: "mod-explain",
+    });
+
     return {
       projectId: input.projectId,
       summaryMarkdown: result.text,
-      groundedSources: result.groundedSources,
-      searchUsed: result.searchUsed,
+      groundedSources: combinedSources,
+      searchUsed: result.searchUsed || searchResults.length > 0,
       imagesAnalyzed: imagesCount,
       model: result.model,
     };

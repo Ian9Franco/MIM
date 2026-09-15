@@ -34,7 +34,7 @@ export const classifyBodySchema = z.object({
   projectName: z.string().optional(),
   projectType: z.string().optional(),
   isCopy: z.boolean().optional(),
-  forceParentCategory: z.boolean().optional(),
+  forceParentCategory: z.union([z.string(), z.boolean()]).optional(),
   environment: z.string().optional(),
   toGame: z.boolean().optional(),
   worldName: z.string().optional(),

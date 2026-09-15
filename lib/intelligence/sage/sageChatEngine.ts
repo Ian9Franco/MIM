@@ -16,6 +16,11 @@ import {
   validateSageChatCompletion,
   type SageChatGuardrailResult,
 } from "./chatGuardrails";
+import {
+  computeContextHash,
+  getCachedSemanticResponse,
+  saveSemanticResponse,
+} from "../semanticCache";
 
 export type SageCrashContext = {
   category?: string;
@@ -168,6 +173,28 @@ export function buildSageChatAiMessages(input: SageChatInput) {
 
 export async function runSageChat(input: SageChatInput): Promise<SageChatResult> {
   const isBully = input.personality === "bully";
+  const contextHash = computeContextHash(
+    "sage-chat",
+    "crash",
+    input.crashContext ?? {},
+    input.question,
+    input.personality
+  );
+
+  const cached = getCachedSemanticResponse(contextHash);
+  if (cached) {
+    return {
+      text: cached.text,
+      model: `${cached.model} (cache)`,
+      provider: cached.provider,
+      routeReason: "semantic-cache-hit",
+      guardrails: {
+        status: "passed",
+        violations: [],
+      },
+    };
+  }
+
   const aiMessages = buildSageChatAiMessages(input);
 
   const result = await generateWithModelGateway({
@@ -179,6 +206,16 @@ export async function runSageChat(input: SageChatInput): Promise<SageChatResult>
     ...input.gatewayKeys,
   });
   const guardrails = validateSageChatCompletion(result.text, input.crashContext);
+
+  if (guardrails.status === "passed") {
+    void saveSemanticResponse({
+      hash: contextHash,
+      text: guardrails.text,
+      model: result.model,
+      provider: result.provider,
+      intent: "sage-chat",
+    });
+  }
 
   return {
     text: guardrails.text,

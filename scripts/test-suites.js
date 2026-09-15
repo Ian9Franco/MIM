@@ -166,4 +166,19 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
       name: "Secure Settings Migration & Secret Boundary",
       cmd: "npx",
       args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/secure-settings.test.ts"]
+    },
+    {
+      name: "AI Quota Classifier & Tracker Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/quota-classifier.test.ts"]
+    },
+    {
+      name: "Semantic Context Cache Engine Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/semantic-context-cache.test.ts"]
+    },
+    {
+      name: "Decoupled Search Grounding Engine Contract",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/decoupled-search-grounding.test.ts"]
     }];

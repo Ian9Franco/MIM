@@ -246,7 +246,7 @@ export const POST = withApiGuard(
                 serverSide: meta.serverSide,
                 environment: (environment as any)
               });
-              finalCategory = forceParentCategory || clRes.category;
+              finalCategory = (typeof forceParentCategory === "string" && forceParentCategory) ? forceParentCategory : clRes.category;
               finalSub = clRes.sub;
               confidence = clRes.confidence;
               matchedRules = clRes.matchedRules;
@@ -261,7 +261,7 @@ export const POST = withApiGuard(
       } catch (e) {
         console.warn(`[/api/classify] Scan failed, falling back to default/explicit path: ${p}`, e);
         if (isAuto) {
-          finalCategory = forceParentCategory || ".essential";
+          finalCategory = (typeof forceParentCategory === "string" && forceParentCategory) ? forceParentCategory : ".essential";
           finalSub = "vanilla + & qol";
         }
         finalTargetDir = projectName

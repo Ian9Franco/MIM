@@ -136,7 +136,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 ---
 
 ## 6. 🎨 UI / UX & Experiencia de Usuario
-
+ 
 | Ítem | Estado | Plataforma |
 | :--- | :--- | :--- |
 | **UX-01 Header móvil** en detalle de mod (Safari/iPhone). | ✅ Cerrado | MIMhub |
@@ -144,6 +144,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | **UX-03 Clic/doble clic** en Descubrir. | ✅ Cerrado | MIM Desktop |
 | **UX-04 Filtro Ambos** Modrinth+CurseForge por defecto. | ✅ Cerrado | Desktop / Hub |
 | **UX-05 Seguidos + Editorial** con slime 3D. | ✅ Cerrado (primera pasada visual) | Desktop / Hub |
+| **UX-06 Deduplicación Spotlight & Rediseño MIM-Bot Chat:** Eliminación de icono redundante en banner de Spotlight y rediseño de interfaz de chat/explicación en MIM-Bot con estética glassmorphic y chips contextuales. | ✅ Cerrado | Desktop / Hub |
 
 ---
 
@@ -152,5 +153,7 @@ Fuera del alcance inicial de ADR-007 (siguen abiertos en otras secciones o backl
 | Propuesta | Concepto | ¿Dónde se profundiza? |
 | :--- | :--- | :--- |
 | **Vault Criptográfico Local:** Bóveda cifrada para backups de credenciales, partidas y mundos garantizando soberanía total sin cloud obligatoria. | RFC | 🛡️ [vault-data-sovereignty.md](./proposals/vault-data-sovereignty.md) |
-| **Search Grounding Desacoplado:** Motor de búsqueda web externo e independiente para enriquecer resúmenes de mods antes de llamar al LLM. | RFC | 🔍 [mod-explainer.md](./proposals/mod-explainer.md) |
+| **Search Grounding Desacoplado:** Motor de búsqueda web externo e independiente para enriquecer resúmenes de mods antes de llamar al LLM. | ✅ Cerrado (`lib/intelligence/search/webSearchProvider.ts`) | 🔍 [mod-explainer.md](./proposals/mod-explainer.md) |
+| **Caché Semántica & Hashing Contextual:** Motor de hashing SHA-256 persistente para evitar inferencias duplicadas ante consultas idénticas. | ✅ Cerrado (`lib/intelligence/semanticCache.ts`) | ⚡ [sprint-action-plan.md](./planning/sprint-action-plan.md) |
 | **MIMbot Proactivo:** Notificaciones de perfil para actualizaciones de mods seguidos y resúmenes automáticos de changelogs en el feed. | RFC | 🤖 [mimbot-sage-graph.md](./proposals/mimbot-sage-graph.md) |
+

@@ -11,6 +11,11 @@ import {
   dependencyExplainModelSchema,
   type DependencyExplainModel,
 } from "./schemas/dependencyExplainResponse";
+import {
+  computeContextHash,
+  getCachedSemanticResponse,
+  saveSemanticResponse,
+} from "./semanticCache";
 
 export type DependencyExplainResult = {
   modId: string;
@@ -105,30 +110,30 @@ export function buildDeterministicDependencyExplain(
 
   const actions: DependencyExplainModel["actions"] = [];
 
-  for (const dep of missing) {
+  for (const m of missing) {
     actions.push({
       type: "install",
-      modId: dep.modId,
-      modName: dep.name,
-      label: `Instalar ${dep.name}${dep.requiredVersion ? ` (${dep.requiredVersion})` : ""}`,
+      modId: m.modId,
+      modName: m.name,
+      label: `Instalar ${m.name}${m.requiredVersion ? ` (${m.requiredVersion})` : ""}`,
     });
   }
 
-  for (const dep of outdated) {
+  for (const o of outdated) {
     actions.push({
       type: "update",
-      modId: dep.modId,
-      modName: dep.name,
-      label: `Actualizar ${dep.name} de ${dep.currentVersion || "?"} a ${dep.requiredVersion || "la versión requerida"}`,
+      modId: o.modId,
+      modName: o.name,
+      label: `Actualizar ${o.name} a ${o.requiredVersion || "versión requerida"}`,
     });
   }
 
-  for (const dep of incompatible) {
+  for (const i of incompatible) {
     actions.push({
-      type: "review",
-      modId: dep.modId,
-      modName: dep.name,
-      label: `Revisar conflicto con ${dep.name}${dep.requiredBy ? ` (requerido por ${dep.requiredBy})` : ""}`,
+      type: "remove",
+      modId: i.modId,
+      modName: i.name,
+      label: `Resolver incompatibilidad de ${i.name}`,
     });
   }
 
@@ -137,16 +142,16 @@ export function buildDeterministicDependencyExplain(
       type: "review",
       modId,
       modName,
-      label: `Revisar el árbol de dependencias de ${modName}`,
+      label: "Todas las dependencias analizadas están presentes y son compatibles",
     });
   }
 
   const severity: DependencyExplainModel["severity"] =
-    incompatible.length > 0 || missing.length > 0
+    missing.length > 0 || incompatible.length > 0
       ? "critical"
       : outdated.length > 0
-        ? "warning"
-        : "info";
+      ? "warning"
+      : "info";
 
   const summary =
     personality === "bully"
@@ -166,6 +171,30 @@ export async function explainModDependencies(options: {
   gatewayKeys: GatewayKeyOptions;
   signal?: AbortSignal;
 }): Promise<DependencyExplainResult> {
+  const contextHash = computeContextHash(
+    "dependency-explain",
+    "dependencies",
+    options.dependencies,
+    options.modId,
+    options.personality,
+    options.loader || ""
+  );
+
+  const cached = getCachedSemanticResponse(contextHash);
+  if (cached) {
+    const structured = parseDependencyExplainResponse(cached.text);
+    if (structured) {
+      return {
+        modId: options.modId,
+        explanation: renderDependencyExplainMarkdown(structured, options.modName),
+        structured,
+        fallback: false,
+        model: `${cached.model} (cache)`,
+        provider: cached.provider,
+      };
+    }
+  }
+
   const ctx = buildDependencyExplainContext(
     options.modId,
     options.modName,
@@ -198,6 +227,14 @@ export async function explainModDependencies(options: {
 
     const structured = parseDependencyExplainResponse(result.text);
     if (structured) {
+      void saveSemanticResponse({
+        hash: contextHash,
+        text: result.text,
+        model: result.model,
+        provider: result.provider,
+        intent: "dependency-explain",
+      });
+
       return {
         modId: options.modId,
         explanation: renderDependencyExplainMarkdown(structured, options.modName),

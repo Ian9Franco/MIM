@@ -26,7 +26,8 @@ export type EvidenceSource =
   | "MANIFEST"
   | "FOMO_GRAPH"
   | "GALLERY"
-  | "KNOWLEDGE_BASE";
+  | "KNOWLEDGE_BASE"
+  | "WEB_SEARCH";
 
 export interface EvidenceEntry {
   source: EvidenceSource;
@@ -70,12 +71,13 @@ const GROUNDING_PREAMBLE = `CRITICAL INVARIANTS:
 
 /**
  * Assembles evidence for the "Explain Project" flow.
- * Sources: mod metadata (MANIFEST), gallery images (GALLERY), description (LOCAL).
+ * Sources: mod metadata (MANIFEST), gallery images (GALLERY), description (LOCAL), web search (WEB_SEARCH).
  */
 export function buildProjectExplainContext(
   input: ModExplainerInput,
   images: InlineImageData[],
-  personalityOverride?: BotPersonality
+  personalityOverride?: BotPersonality,
+  webSearchResults?: Array<{ title: string; url: string; snippet: string }>
 ): ContextPackage {
   const personality = resolveBotPersonality(personalityOverride || input.personality);
   const evidence: EvidenceEntry[] = [];
@@ -106,6 +108,18 @@ export function buildProjectExplainContext(
     content: descSnippet,
     weight: hasRichDescription ? 70 : 20,
   });
+
+  // Decoupled Web Search Grounding Evidence
+  if (webSearchResults && webSearchResults.length > 0) {
+    evidence.push({
+      source: "WEB_SEARCH",
+      label: "Web & Platform Search Grounding",
+      content: webSearchResults
+        .map((r) => `[${r.title}] (${r.url}): ${r.snippet}`)
+        .join("\n\n"),
+      weight: 85,
+    });
+  }
 
   // Gallery evidence
   if (images.length > 0) {

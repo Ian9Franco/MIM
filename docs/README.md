@@ -117,6 +117,7 @@ Ubicadas en [docs/adr/](./adr/README.md):
 ### 7. 🚀 Guías de Operación & Onboarding ([`docs/guides/`](./guides/README.md))
 | Documento | Propósito |
 | :--- | :--- |
+| **[nomenclatura.md](./guides/nomenclatura.md)** 🏷️ | Siglas y nombres de secciones: SAGE, FOMO, TWEAK, GATE, ALRT. |
 | **[onboarding.md](./guides/onboarding.md)** 🛠️ | Guía de configuración y arranque para desarrolladores. |
 | **[desktop-credentials.md](./guides/desktop-credentials.md)** 🔐 | Persistencia de claves Desktop (`safeStorage`) vs Vercel. |
 | **[windows-code-signing.md](./guides/windows-code-signing.md)** 🔏 | Firma Authenticode del instalable Windows. |

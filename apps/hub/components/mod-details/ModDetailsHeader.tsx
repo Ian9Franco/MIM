@@ -14,7 +14,6 @@ import {
   VolumeX,
   UserPlus,
   UserCheck,
-  Share2,
 } from "lucide-react";
 import { CollectibleSurface } from "../CollectibleSurface";
 import { DefaultModIcon } from "../DefaultModIcon";
@@ -46,6 +45,8 @@ interface ModDetailsHeaderProps {
   communitySharedByMe: boolean;
   handleShareClick: () => void;
   isFavorited: boolean;
+  inDraft?: boolean;
+  followerNames?: string[];
   onToggleFavorite: (mod: ModHit) => void;
   projectPlatformUrl: string;
   onSearchAuthor?: (name: string, platform: string) => void;
@@ -74,6 +75,8 @@ export function ModDetailsHeader({
   communitySharedByMe,
   handleShareClick,
   isFavorited,
+  inDraft = false,
+  followerNames = [],
   onToggleFavorite,
   projectPlatformUrl,
   onSearchAuthor,
@@ -88,10 +91,6 @@ export function ModDetailsHeader({
       ((a as Record<string, unknown>).author_name === authorName || a.name === authorName) &&
       a.platform === authorPlatform
   );
-  const viewerName = profile?.username
-    || session?.user?.user_metadata?.user_name
-    || session?.user?.email?.split("@")[0]
-    || "vos";
   const canonicalProjectType = (() => {
     const type = String(selectedMod.projectType || "mod").toLowerCase().replace(/[ _-]/g, "");
     if (["texture", "textura", "texturepack", "resourcepack"].includes(type)) return "resourcepack";
@@ -100,6 +99,15 @@ export function ModDetailsHeader({
     if (["modpack", "modpacks"].includes(type)) return "modpack";
     return type || "mod";
   })();
+  const visibleFollowers = followerNames.slice(0, 4);
+  const extraFollowers = followerNames.length - visibleFollowers.length;
+  const relationBadges = [
+    `${(selectedMod._source || "modrinth").toLowerCase()}-${canonicalProjectType}`,
+    ...visibleFollowers.map((name) => `@${name.replace(/^@/, "")}`),
+    ...(extraFollowers > 0 ? [`+${extraFollowers}`] : []),
+    ...(inDraft ? ["en-draft"] : []),
+    ...(communitySharedByMe ? ["compartido"] : []),
+  ];
 
   return (
     <div
@@ -212,17 +220,22 @@ export function ModDetailsHeader({
                 e.currentTarget.style.display = "none";
               }}
             />
-            <div className="absolute left-2 top-2 z-10 flex flex-col items-start gap-1">
-              {isFavorited && session && (
-                <span className="mim-project-badge flex items-center gap-1"><Heart className="h-2.5 w-2.5 fill-current" /> @{viewerName}</span>
-              )}
-              {communitySharedByMe && session && (
-                <span className="mim-project-badge flex items-center gap-1"><Share2 className="h-2.5 w-2.5" /> @{viewerName}</span>
-              )}
+            <div className="absolute bottom-2 right-2 z-10 flex max-w-[70%] flex-wrap justify-end gap-1">
+              {relationBadges.map((label) => (
+                <span key={label} className="mim-project-badge">
+                  {label}
+                </span>
+              ))}
             </div>
-            <span className="mim-project-badge absolute bottom-2 right-2 z-10">
-              {(selectedMod._source || "modrinth").toLowerCase()}-{canonicalProjectType}
-            </span>
+          </div>
+        )}
+        {!bannerUrl && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {relationBadges.map((label) => (
+              <span key={label} className="mim-project-badge relative">
+                {label}
+              </span>
+            ))}
           </div>
         )}
         <div className={`flex ${isReadingTab ? "gap-3" : "gap-4"}`}>

@@ -10,12 +10,14 @@ export interface DraftRepositoryResult<T> {
 }
 
 export interface DraftRepository {
-  listDrafts(userId: string): Promise<DraftRepositoryResult<unknown[]>>;
+  listDrafts(userId?: string): Promise<DraftRepositoryResult<unknown[]>>;
   createDraft(input: {
     ownerId: string;
     name: string;
     minecraftVersion: string;
     loader: string;
+    visibility?: "public" | "private";
+    description?: string;
   }): Promise<DraftRepositoryResult<unknown>>;
   updateDraftMetadata(
     draftId: string,
@@ -43,6 +45,7 @@ interface QueryBuilder {
   update(values: unknown): QueryBuilder;
   delete(): QueryBuilder;
   eq(column: string, value: string): QueryBuilder;
+  or(filter: string): QueryBuilder;
   maybeSingle(): Promise<QueryResult>;
   single(): Promise<QueryResult>;
   then(onfulfilled?: (value: QueryResult) => unknown): Promise<unknown>;
@@ -64,21 +67,26 @@ function fail<T>(data: T, error: DraftRepositoryError): DraftRepositoryResult<T>
 export function createDraftRepository(client: DraftRepositoryClient): DraftRepository {
   return {
     async listDrafts(userId) {
-      const { data, error } = await client
-        .from("drafts")
-        .select("*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)")
-        .eq("owner_id", userId);
-      if (error) return fail([], error);
-      return ok(Array.isArray(data) ? data : []);
+      const withItems = "*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)";
+      const run = async (columns: string) => {
+        const query = client.from("drafts").select(columns);
+        return userId ? query : query.eq("visibility", "public");
+      };
+      const first = await run(withItems);
+      if (!first.error) return ok(Array.isArray(first.data) ? first.data : []);
+      const fallback = await run("*");
+      if (fallback.error) return fail([], fallback.error);
+      return ok(Array.isArray(fallback.data) ? fallback.data : []);
     },
 
-    async createDraft({ ownerId, name, minecraftVersion, loader }) {
+    async createDraft({ ownerId, name, minecraftVersion, loader, visibility = "private", description }) {
       const { data, error } = await client.from("drafts").insert({
         owner_id: ownerId,
         name,
         minecraft_version: minecraftVersion,
         loader,
-        visibility: "private",
+        visibility: visibility === "public" ? "public" : "private",
+        description: description?.trim() ? description.trim().slice(0, 100) : null,
       }).select("*").single();
       if (error) return fail(null, error);
       return ok(data);

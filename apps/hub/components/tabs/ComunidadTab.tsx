@@ -7,7 +7,11 @@ import type { ModHit } from "../SpotlightMarquees";
 import { MiembrosSkeleton } from "../FomoSkeletons";
 import { supabase } from "../../lib/supabaseClient";
 import { CommunityHeader, type CommunitySection } from "../community/CommunityShell";
+import { CommunityDraftsSection } from "../community/CommunityDraftsSection";
 import { CommunityRankings } from "../community/CommunityRankings";
+import { DraftDetailView, type DraftDetailModel } from "../DraftDetailView";
+import type { HomeDraft } from "../../lib/drafts/draftContract";
+import type { CollectionItem } from "../../app/types";
 import { CommunityPublicProfile, type PublicProfileFavorite, type PublicProfileAuthor, type PublicProfileDraft, type PublicProfileShare } from "../community/CommunityPublicProfile";
 import { CommunityFeedSkeleton, formatTimeAgo, parseShareMeta } from "../community/communityUtils";
 import type { Fn } from "../../types/fn";
@@ -55,6 +59,21 @@ interface ComunidadTabProps {
   onToggleFavorite: (mod: ModHit) => void;
   onSearchAuthor?: (name: string, platform: string) => void;
   showAlert?: (title: string, message: string) => void;
+  communitySection?: CommunitySection;
+  onCommunitySectionChange?: (section: CommunitySection) => void;
+  userDrafts?: HomeDraft[];
+  activeDraft?: DraftDetailModel | null;
+  activeCollection?: CollectionItem | null;
+  activeCollectionMods?: ModHit[];
+  loadingActiveMods?: boolean;
+  handleEnterDraftCollection?: (draft: HomeDraft) => void;
+  handleExitDraft?: () => void;
+  onCreateDraft?: () => void;
+  onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
+  onRefreshDrafts?: () => void;
+  onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
+  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
+  onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -89,7 +108,7 @@ async function loadCommunitySharesPage(page: number): Promise<{ items: Community
   const to = from + SHARES_PAGE_SIZE;
   const query = supabase
     .from("favorite_mods")
-    .select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles(id, username, avatar_url, color)`)
+    .select(`id, mod_id, platform, name, icon_url, summary, pinned, created_at, profile:profiles!favorite_mods_profile_id_fkey(id, username, avatar_url, color)`)
     .order("pinned", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(from, to);
@@ -103,7 +122,7 @@ async function loadCommunitySharesPage(page: number): Promise<{ items: Community
 
   const fallback = await supabase
     .from("favorite_mods")
-    .select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles(id, username, avatar_url, color)`)
+    .select(`id, mod_id, platform, name, icon_url, summary, created_at, profile:profiles!favorite_mods_profile_id_fkey(id, username, avatar_url, color)`)
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -144,8 +163,34 @@ async function fetchProjectUpdatedAt(source: string | undefined, projectId: stri
 }
 
 /** Comunidad orchestrates data and delegates each visual surface to a focused component. */
-export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, session, userFavorites, userFollowedAuthors, onToggleFavorite, onSearchAuthor, showAlert }: ComunidadTabProps) {
-  const [section, setSection] = useState<CommunitySection>("compartidos");
+export function ComunidadTab({
+  rankings,
+  loadingRankings,
+  handleOpenModDetails,
+  session,
+  userFavorites,
+  userFollowedAuthors,
+  onToggleFavorite,
+  onSearchAuthor,
+  showAlert,
+  communitySection,
+  onCommunitySectionChange,
+  userDrafts = [],
+  activeDraft,
+  activeCollection,
+  activeCollectionMods = [],
+  loadingActiveMods = false,
+  handleEnterDraftCollection,
+  handleExitDraft,
+  onCreateDraft,
+  onRemoveModFromDraft,
+  onRefreshDrafts,
+  onUpdateDraftMetadata,
+  onRecategorizeDraftItem,
+  onUpdateDraftItemSide,
+}: ComunidadTabProps) {
+  const [internalSection, setInternalSection] = useState<CommunitySection>("compartidos");
+  const section = communitySection ?? internalSection;
   const [profileView, setProfileView] = useState<"list" | "profile">("list");
   const [selectedProfile, setSelectedProfile] = useState<CommunityProfile | null>(null);
   const [shares, setShares] = useState<CommunityShareItem[]>([]);
@@ -197,7 +242,6 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
       })
       .catch((error) => {
         console.error("Error loading shares feed:", error);
-        setShares([]);
         setHasNextSharesPage(false);
       })
       .finally(() => {
@@ -330,13 +374,22 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     return () => { cancelled = true; };
   }, [shares]);
 
-  const openProfile = async (profile: unknown) => {
-    const resolved = normalizeCommunityProfile(profile);
+  const openProfile = async (profile: unknown, options?: { stayInSection?: boolean }) => {
+    let resolved = normalizeCommunityProfile(profile);
     if (!resolved?.id) {
       showAlert?.("Perfil no disponible", "No pudimos abrir este perfil.");
       return;
     }
-    setSection("miembros");
+    const { data: fullProfile } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url, banner_url, color, created_at, updated_at, banner_meta")
+      .eq("id", resolved.id)
+      .maybeSingle();
+    if (fullProfile) resolved = { ...resolved, ...(fullProfile as CommunityProfile) };
+    if (!options?.stayInSection) {
+      if (onCommunitySectionChange) onCommunitySectionChange("miembros");
+      else setInternalSection("miembros");
+    }
     setSelectedProfile(resolved);
     setProfileView("profile");
     setLoadingPublic(true);
@@ -344,7 +397,7 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
     const [{ data: favorites }, { data: authors }, { data: drafts }, sharesData] = await Promise.all([
       supabase.from("followed_mods").select("*").eq("profile_id", resolved.id),
       supabase.from("followed_authors").select("*").eq("profile_id", resolved.id),
-      supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image").eq("owner_id", resolved.id).eq("visibility", "public"),
+      supabase.from("drafts").select("id, name, minecraft_version, loader, visibility, cover_image, description, owner_id").eq("owner_id", resolved.id),
       loadProfileShares(resolved.id),
     ]);
     const channels = (resolved.banner_meta?.youtube_channels
@@ -362,20 +415,97 @@ export function ComunidadTab({ rankings, loadingRankings, handleOpenModDetails, 
   };
 
   const changeSection = (next: CommunitySection) => {
-    setSection(next);
+    if (onCommunitySectionChange) onCommunitySectionChange(next);
+    else setInternalSection(next);
     setProfileView("list");
     setSelectedProfile(null);
   };
 
+  const showingDraft = Boolean(activeDraft && activeCollection?.source === "draft");
+  const publicProfileNode = selectedProfile ? (
+    <CommunityPublicProfile
+      key={`profile-${selectedProfile.id}`}
+      profile={selectedProfile}
+      {...publicData}
+      loading={loadingPublic}
+      onBack={() => {
+        setSelectedProfile(null);
+        if (!showingDraft) setProfileView("list");
+      }}
+      onBackLabel={showingDraft ? "Volver al draft" : "Volver a miembros"}
+      onOpenMod={(mod) => {
+        handleOpenModDetails(mod);
+      }}
+      onSearchAuthor={onSearchAuthor}
+      affinity={affinity[selectedProfile.id ?? ""]}
+      isCurrentUser={selectedProfile.id === session?.user?.id}
+      isFollowing={followedProfileIds.has(selectedProfile.id ?? "")}
+      onToggleFollow={() => {
+        void toggleProfileFollow(selectedProfile.id ?? "");
+      }}
+      onOpenDraft={(draft) => {
+        setSelectedProfile(null);
+        handleEnterDraftCollection?.({
+          id: draft.id,
+          name: draft.name,
+          minecraft_version: draft.minecraft_version || "",
+          loader: draft.loader || "",
+          visibility: draft.visibility === "public" ? "public" : "private",
+          cover_image: draft.cover_image,
+          description: draft.description || undefined,
+          owner_id: draft.owner_id,
+        });
+      }}
+    />
+  ) : null;
+
   return (
     <motion.div key="comunidad" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="flex min-h-0 flex-1 flex-col">
-      <CommunityHeader active={section} onChange={changeSection} metrics={communityMetrics} />
-      <AnimatePresence mode="wait">
-        {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={(nextPage) => { setSharesPage(nextPage); }} onOpenProfile={(value) => { void openProfile(value); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} userFavorites={userFavorites} onToggleFavorite={(mod) => { onToggleFavorite(mod); }} reactions={reactions} onToggleReaction={(shareId) => { void toggleReaction(shareId); }} />}
-        {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={(mod) => { handleOpenModDetails(mod); }} /></motion.div>}
-        {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={(value) => { void openProfile(value); }} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={(profileId) => { void toggleProfileFollow(profileId); }} />}
-        {section === "miembros" && profileView === "profile" && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile?.id ?? ""]} isCurrentUser={selectedProfile?.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile?.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile?.id ?? ""); }} />}
-      </AnimatePresence>
+      {publicProfileNode ? publicProfileNode : showingDraft && activeDraft ? (
+        <DraftDetailView
+          key={`draft-${activeDraft.id}`}
+          draft={activeDraft}
+          activeCollectionMods={activeCollectionMods}
+          loadingActiveMods={loadingActiveMods}
+          session={session}
+          onBack={() => {
+            handleExitDraft?.();
+          }}
+          handleOpenModDetails={(mod) => {
+            handleOpenModDetails(mod);
+          }}
+          onRemoveModFromDraft={onRemoveModFromDraft}
+          onRefreshDrafts={onRefreshDrafts}
+          onUpdateDraftMetadata={onUpdateDraftMetadata}
+          onRecategorizeDraftItem={onRecategorizeDraftItem}
+          onUpdateDraftItemSide={onUpdateDraftItemSide}
+          onOpenProfile={(value) => {
+            void openProfile(value, { stayInSection: true });
+          }}
+        />
+      ) : (
+        <>
+          <CommunityHeader active={section} onChange={changeSection} metrics={communityMetrics} />
+          <AnimatePresence mode="wait">
+            {section === "compartidos" && <CommunityFeed key={`feed-${sharesPage}`} shares={shares} loading={loadingShares} recentUpdates={recentUpdates} page={sharesPage} hasNext={hasNextSharesPage} onPageChange={(nextPage) => { setSharesPage(nextPage); }} onOpenProfile={(value) => { void openProfile(value); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} userFavorites={userFavorites} onToggleFavorite={(mod) => { onToggleFavorite(mod); }} reactions={reactions} onToggleReaction={(shareId) => { void toggleReaction(shareId); }} />}
+            {section === "drafts" && (
+              <CommunityDraftsSection
+                key="drafts"
+                session={session}
+                userDrafts={userDrafts}
+                onOpenDraft={(draft) => {
+                  handleEnterDraftCollection?.(draft);
+                }}
+                onCreateDraft={onCreateDraft}
+                onUpdateDraftMetadata={onUpdateDraftMetadata}
+              />
+            )}
+            {section === "rankings" && <motion.div key="rankings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="flex min-h-0 flex-1"><CommunityRankings rankings={rankings} loading={loadingRankings} onOpen={(mod) => { handleOpenModDetails(mod); }} /></motion.div>}
+            {section === "miembros" && profileView === "list" && <MembersList key="members" profiles={profiles} loading={loadingProfiles} onOpen={(value) => { void openProfile(value); }} creatorIds={creatorIds} affinity={affinity} currentProfileId={session?.user?.id} followedProfileIds={followedProfileIds} onToggleFollow={(profileId) => { void toggleProfileFollow(profileId); }} />}
+            {section === "miembros" && profileView === "profile" && selectedProfile && <CommunityPublicProfile key="profile" profile={selectedProfile} {...publicData} loading={loadingPublic} onBack={() => { setProfileView("list"); }} onOpenMod={(mod) => { handleOpenModDetails(mod); }} onSearchAuthor={onSearchAuthor} affinity={affinity[selectedProfile.id ?? ""]} isCurrentUser={selectedProfile.id === session?.user?.id} isFollowing={followedProfileIds.has(selectedProfile.id ?? "")} onToggleFollow={() => { void toggleProfileFollow(selectedProfile.id ?? ""); }} onOpenDraft={(draft) => { setSelectedProfile(null); handleEnterDraftCollection?.({ id: draft.id, name: draft.name, minecraft_version: draft.minecraft_version || "", loader: draft.loader || "", visibility: draft.visibility === "public" ? "public" : "private", cover_image: draft.cover_image, description: draft.description || undefined, owner_id: draft.owner_id }); }} />}
+          </AnimatePresence>
+        </>
+      )}
     </motion.div>
   );
 }

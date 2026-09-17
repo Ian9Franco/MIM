@@ -19,6 +19,7 @@ import type { HubUserProfile } from "../types/profile";
 import type { FomoUserSession } from "../types/fomo";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
+import type { CommunitySection } from "../components/community/CommunityShell";
 
 export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -228,6 +229,7 @@ export function useHomeController() {
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [showDraftPicker, setShowDraftPicker] = useState(false);
   const [pendingMod, setPendingMod] = useState<ModHit | null>(null);
+  const [communitySection, setCommunitySection] = useState<CommunitySection>("compartidos");
 
   const closeProjectDetails = useCallback(() => {
     setSelectedMod(null);
@@ -248,6 +250,7 @@ export function useHomeController() {
   const drafts = useHomeDrafts({
     userId: session?.user?.id,
     setActiveTab,
+    setCommunitySection,
     setActiveCollection,
     setActiveCollectionMods,
     setLoadingActiveMods,
@@ -293,13 +296,23 @@ export function useHomeController() {
     }
 
     // ── Cache Loading ──
+    const cachedSection = localStorage.getItem("mim_community_section");
+    if (cachedSection === "compartidos" || cachedSection === "drafts" || cachedSection === "rankings" || cachedSection === "miembros") {
+      setCommunitySection(cachedSection);
+    }
+
     const cachedTab = localStorage.getItem("mim_active_tab");
     if (cachedTab) setActiveTab(cachedTab);
 
     const cachedCollection = localStorage.getItem("mim_active_collection");
     if (cachedCollection !== null) {
       try { 
-        setActiveCollection(JSON.parse(cachedCollection)); 
+        const parsed = JSON.parse(cachedCollection);
+        setActiveCollection(parsed);
+        if (parsed?.source === "draft") {
+          setActiveTab("rankings");
+          setCommunitySection("drafts");
+        }
       } catch (e) {
         console.warn("[useHomeController] Corrupted mim_active_collection in localStorage:", e);
       }
@@ -345,6 +358,7 @@ export function useHomeController() {
     if (!isLoaded) return;
 
     localStorage.setItem("mim_active_tab", activeTab);
+    localStorage.setItem("mim_community_section", communitySection);
 
     if (activeCollection) {
       localStorage.setItem("mim_active_collection", JSON.stringify(activeCollection));
@@ -357,6 +371,7 @@ export function useHomeController() {
   }, [
     isLoaded,
     activeTab,
+    communitySection,
     activeCollection,
     activeCollectionMods
   ]);
@@ -1072,7 +1087,7 @@ export function useHomeController() {
     rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,
     handleRemoveChannel, handleEnterCollection, handleExitCollection: () => { setActiveCollection(null); setActiveCollectionMods([]); },
-    handleEnterDraftCollection: drafts.handleEnterDraftCollection, handleOpenModDetails, handleSwitchStackIndex,
+    handleEnterDraftCollection: drafts.handleEnterDraftCollection, handleExitDraft: drafts.handleExitDraft, handleOpenModDetails, handleSwitchStackIndex,
     handleGoBackInStack: () => activeStackIndex > 0 && handleSwitchStackIndex(activeStackIndex - 1),
     handleCloseModDetails: closeProjectDetails,
     createDraft: drafts.createDraft, addModToDraft: drafts.addModToDraft,
@@ -1087,5 +1102,6 @@ export function useHomeController() {
       void Promise.all([loadUserData(session.user.id), drafts.refreshDrafts()]);
     },
     activeDraft: drafts.activeDraft, setActiveDraft: drafts.setActiveDraft,
+    communitySection, setCommunitySection,
   };
 }

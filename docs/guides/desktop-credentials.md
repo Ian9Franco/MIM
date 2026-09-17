@@ -64,7 +64,15 @@ Si tras actualizar no ves la clave, revisá manualmente si existe `%USERPROFILE%
 Comandos de desarrollo:
 
 ```bash
+npm run build:standalone
+npm run start:standalone
+```
+
+En **standalone local** (Electron sin empaquetar), MIM lee automáticamente `.env` y `.env.local` de la raíz del repo y las inyecta en el servidor Next embebido (`GEMINI_API_KEY`, `CURSEFORGE_API_KEY`, `MODRINTH_API_KEY`, `OPENROUTER_API_KEY`, `VIRUSTOTAL_API_KEY`, más `NEXT_PUBLIC_*`). Si ya guardaste claves en Settings (`safeStorage`), esas tienen prioridad sobre `.env.local`. Los builds empaquetados **no** cargan `.env.local`.
+
+```bash
 npx ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/secure-settings.test.ts
+node scripts/__tests__/load-dev-env.test.js
 npm run test:openrouter-account
 npm run eval:mimbot
 ```

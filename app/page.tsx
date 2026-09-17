@@ -30,6 +30,7 @@ import { isVersionCompatible, isLoaderCompatible } from "@/lib/modding/version-u
 import type { PendingFile, LibraryFile } from "@/lib/core/types";
 import { LOADER_COLORS } from "../constants/app";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 function Divider() {
   return <div className="h-px w-full" style={{ background: "var(--color-border)" }} aria-hidden="true" />;
@@ -61,26 +62,8 @@ export default function Page() {
   
   const [selectedFiles,    setSelectedFiles]    = useState<PendingFile[]>([]);
   const [appMode,          setAppMode]          = useState<"MIM" | "MIMU">("MIMU");
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const seen = localStorage.getItem(appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    const shouldShow = !seen || guidesEnabled;
-    const timer = setTimeout(() => {
-      setShowOnboarding(shouldShow);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [appMode]);
-
-  useEffect(() => {
-    const handleShowOnboarding = (e: Event) => {
-      const custom = e as CustomEvent<boolean>;
-      setShowOnboarding(custom.detail);
-    };
-    window.addEventListener("show-onboarding", handleShowOnboarding);
-    return () => window.removeEventListener("show-onboarding", handleShowOnboarding);
-  }, []);
+  const onboardingSeenKey = appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main";
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility(onboardingSeenKey, true);
 
   const onboardingSteps = [
     {
@@ -495,9 +478,8 @@ export default function Page() {
         <OnboardingTour 
           steps={appMode === "MIMU" ? mimuOnboardingSteps : onboardingSteps} 
           onComplete={() => {
-            setShowOnboarding(false);
-            localStorage.setItem(appMode === "MIMU" ? "onboarding_mimu" : "onboarding_main", "true");
-            window.dispatchEvent(new CustomEvent("show-onboarding", { detail: false }));
+            dismissOnboarding();
+            localStorage.setItem(onboardingSeenKey, "true");
           }} 
         />
       )}

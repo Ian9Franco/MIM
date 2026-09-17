@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## 3. Pipeline de Diagnóstico SAGE 2.0
 
-SAGE (Systemic Automated Guidance & Evaluation) procesa logs de errores y crash dumps de Minecraft:
+SAGE (**S**ystemic **A**utomated **G**uidance & **E**valuation) procesa logs de errores y crash dumps de Minecraft. Glosario de nombres: [nomenclatura.md](../guides/nomenclatura.md).
 
 ```mermaid
 flowchart LR

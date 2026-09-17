@@ -40,6 +40,7 @@ import { ModDetailsFooter } from "./mod-details/ModDetailsFooter";
 import { useModExplainer } from "./mod-details/useModExplainer";
 import { useModVersions } from "./mod-details/useModVersions";
 import { useSheetSounds } from "./mod-details/useSheetSounds";
+import { supabase } from "../lib/supabaseClient";
 
 export interface ModDetailsSheetProps {
   selectedMod: ModHit | null;
@@ -104,6 +105,7 @@ export function ModDetailsSheet({
   onToggleFollowAuthor,
   onSearchAuthor,
   onSearchMod,
+  userDrafts = [],
 }: ModDetailsSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -179,6 +181,80 @@ export function ModDetailsSheet({
   const communitySharedByMe = (userShares || []).some(
     (f) => (f.mod_id || f.projectId || (f as Record<string, unknown>).project_id || f.id) === selectedMod?.projectId
   );
+  const inDraft = (userDrafts || []).some((draft) =>
+    (draft.items || []).some((item) => {
+      const projectId = String(
+        item.projectId ||
+          (item as Record<string, unknown>).project_id ||
+          (item as Record<string, unknown>).mod_id ||
+          "",
+      );
+      const itemName = String(
+        item.title ||
+          (item as Record<string, unknown>).name ||
+          (item as Record<string, unknown>).mod_name ||
+          "",
+      ).trim().toLowerCase();
+      const selectedId = String(selectedMod?.projectId || "");
+      const selectedTitle = String(selectedMod?.title || "").trim().toLowerCase();
+      return (selectedId && projectId === selectedId) || (selectedTitle && itemName === selectedTitle);
+    }),
+  );
+  const [followerNames, setFollowerNames] = useState<string[]>([]);
+  const myUsername = String(
+    profile?.username ||
+      session?.user?.user_metadata?.user_name ||
+      session?.user?.email?.split("@")[0] ||
+      "",
+  ).replace(/^@/, "").trim();
+
+  useEffect(() => {
+    if (!selectedMod?.projectId) {
+      setFollowerNames([]);
+      return;
+    }
+    let cancelled = false;
+    const projectId = String(selectedMod.projectId);
+    const title = String(selectedMod.title || "").trim();
+    void (async () => {
+      const { data: byId, error } = await supabase
+        .from("followed_mods")
+        .select("profile_id, mod_id, name")
+        .eq("mod_id", projectId);
+      if (error) {
+        console.error("Error loading project followers:", error);
+      }
+      let rows = byId || [];
+      if (!rows.length && title) {
+        const { data: byName } = await supabase
+          .from("followed_mods")
+          .select("profile_id, mod_id, name")
+          .eq("name", title);
+        rows = byName || [];
+      }
+      const ids = [...new Set(rows.map((row) => String(row.profile_id || "")).filter(Boolean))];
+      if (!ids.length) {
+        if (!cancelled) setFollowerNames(isFavorited && myUsername ? [myUsername] : []);
+        return;
+      }
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", ids);
+      const names = [...new Set(
+        (profiles || [])
+          .map((row) => String((row as { username?: string }).username || "").replace(/^@/, "").trim())
+          .filter(Boolean),
+      )];
+      if (isFavorited && myUsername && !names.some((name) => name.toLowerCase() === myUsername.toLowerCase())) {
+        names.unshift(myUsername);
+      }
+      if (!cancelled) setFollowerNames(names);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMod?.projectId, selectedMod?.title, isFavorited, myUsername]);
 
   const handleShareClick = useCallback(async () => {
     if (!session?.user?.id) {
@@ -324,6 +400,8 @@ export function ModDetailsSheet({
               communitySharedByMe={communitySharedByMe}
               handleShareClick={handleShareClick}
               isFavorited={isFavorited}
+              inDraft={inDraft}
+              followerNames={followerNames}
               onToggleFavorite={onToggleFavorite}
               projectPlatformUrl={projectPlatformUrl}
               onSearchAuthor={onSearchAuthor}

@@ -20,6 +20,7 @@ import { PillToggleGroup, StatusBanner } from "@/components/ui/primitives";
 import { supabase } from "@/lib/core/supabaseClient";
 import { useAuth } from "@/components/security/AuthContext";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 import { FomoSidebarDiscoverBranch } from "@/components/fomo/sidebar/FomoSidebarDiscoverBranch";
 import { FomoSidebarCommunityBranch } from "@/components/fomo/sidebar/FomoSidebarCommunityBranch";
 import { FomoActiveDraftSelector } from "@/components/fomo/community/FomoActiveDraftSelector";
@@ -80,7 +81,7 @@ function FomoSidebarInner({
   const currentUserColor = currentUserProfile?.color ?? null;
   const [currentTheme, setCurrentTheme] = useState("official");
   const headerAnim = useMemo(() => createHeaderAnim(), []);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_fomo", open);
   const [allSharedMods, setAllSharedMods] = useState<unknown[]>([]);
   const [allSharedVideos, setAllSharedVideos] = useState<unknown[]>([]);
   const [isForcedHidden, setIsForcedHidden] = useState(false);
@@ -169,16 +170,6 @@ function FomoSidebarInner({
     }
     void fetchSharedMods();
   }, [open, fetchSharedMods]);
-
-  useEffect(() => {
-    const seen = localStorage.getItem("onboarding_fomo");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (open && (!seen || guidesEnabled)) {
-      setShowOnboarding(true);
-    } else if (!open) {
-      setShowOnboarding(false);
-    }
-  }, [open]);
 
   const onboardingSteps = [
     {
@@ -533,7 +524,7 @@ function FomoSidebarInner({
           <OnboardingTour
             steps={onboardingSteps}
             onComplete={() => {
-              setShowOnboarding(false);
+              dismissOnboarding();
               localStorage.setItem("onboarding_fomo", "true");
             }}
             onStepChange={(step) => {

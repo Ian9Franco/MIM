@@ -40,7 +40,7 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 function testDraftDecoding(): void {
   const raw = [{
-    id: "draft-1", name: "Pack", minecraft_version: "1.21.1", loader: "fabric", visibility: "private",
+    id: "draft-1", name: "Pack", minecraft_version: "1.21.1", loader: "fabric", visibility: "private", owner_id: "owner-1",
     draft_items: [
       { id: "item-1", project_id: "sodium", mod_name: "Sodium", content_type: "mod", side: "client" },
       { id: "invalid" },
@@ -48,6 +48,7 @@ function testDraftDecoding(): void {
   }];
   const drafts = decodeHomeDrafts(raw, { sodium: "https://cdn.example/sodium.png" });
   assertEqual(drafts.length, 1, "valid drafts must survive decoding");
+  assertEqual(drafts[0].owner_id, "owner-1", "owner_id must survive decoding so settings stay editable");
   assertEqual(drafts[0].items?.length, 1, "invalid draft items must be discarded");
   assertEqual(drafts[0].items?.[0].icon_url, "https://cdn.example/sodium.png", "icon hydration must remain intact");
   assertEqual(drafts[0].items?.[0].game_versions?.[0], "1.21.1", "draft version must hydrate items");
@@ -129,7 +130,7 @@ async function testProjectResolution(): Promise<void> {
 function testPublicContract(): void {
   const expected = [
     "userDrafts", "activeDraft", "setActiveDraft", "handleEnterDraftCollection",
-    "createDraft", "addModToDraft", "removeModFromDraft", "recategorizeDraftItem",
+    "handleExitDraft", "createDraft", "addModToDraft", "removeModFromDraft", "recategorizeDraftItem",
     "updateDraftItemSide", "updateDraftCover", "deleteDraft", "updateDraftMetadata",
   ];
   assertEqual(HOME_DRAFTS_PUBLIC_KEYS.join(","), expected.join(","), "Draft public contract keys must remain stable");
@@ -142,7 +143,7 @@ async function run(): Promise<void> {
   await testRemoteDecoding();
   await testProjectResolution();
   testPublicContract();
-  console.log("Home Drafts contract: 19 assertions passed");
+  console.log("Home Drafts contract: 20 assertions passed");
 }
 
 run().catch((error: unknown) => {

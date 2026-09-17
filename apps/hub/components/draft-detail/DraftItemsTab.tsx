@@ -15,6 +15,8 @@ interface DraftItemsTabProps {
   handleOpenModDetails: (mod: ModHit) => void;
   onOpenEditItem: (mod: ModHit) => void;
   onRemoveItem?: (mod: ModHit) => void;
+  canEditItems?: boolean;
+  isPublic?: boolean;
 }
 
 export function DraftItemsTab({
@@ -25,6 +27,8 @@ export function DraftItemsTab({
   handleOpenModDetails,
   onOpenEditItem,
   onRemoveItem,
+  canEditItems = false,
+  isPublic = false,
 }: DraftItemsTabProps) {
   return (
     <motion.div
@@ -72,7 +76,14 @@ export function DraftItemsTab({
         <CollectionsSkeleton />
       ) : visibleMods.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center text-xs text-white/40">
-          {typeFilter === "all" ? "Este draft no tiene ítems." : "No hay items de este tipo."}
+          <p>{typeFilter === "all" ? "Este draft no tiene ítems." : "No hay items de este tipo."}</p>
+          <p className="mt-2 px-4 text-[9px] text-white/30">
+            {canEditItems
+              ? isPublic
+                ? "Este draft es público: cualquiera con sesión puede agregar o quitar ítems."
+                : "Podés agregar mods desde Explorar."
+              : "Draft privado: solo se puede ver."}
+          </p>
         </div>
       ) : (
         visibleMods.map((mod: ModHit) => {
@@ -116,17 +127,19 @@ export function DraftItemsTab({
               </div>
 
               {/* Edit item action */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenEditItem(mod);
-                }}
-                className="p-1.5 rounded-lg text-white/30 hover:text-orange-400 hover:bg-orange-500/10 transition-all active:scale-90"
-                title="Modificar tipo o lado del ítem"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
+              {canEditItems && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenEditItem(mod);
+                  }}
+                  className="p-1.5 rounded-lg text-white/30 hover:text-orange-400 hover:bg-orange-500/10 transition-all active:scale-90"
+                  title="Modificar tipo o lado del ítem"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
 
               {onRemoveItem ? (
                 <button

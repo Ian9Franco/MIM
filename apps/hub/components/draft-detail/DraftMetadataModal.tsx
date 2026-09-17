@@ -17,6 +17,8 @@ interface DraftMetadataModalProps {
   setEditCoverImage: (v: string) => void;
   editVisibility: string;
   setEditVisibility: (v: string) => void;
+  editDescription: string;
+  setEditDescription: (v: string) => void;
   savingMetadata: boolean;
   onSave: () => void;
   isOwner: boolean;
@@ -35,6 +37,8 @@ export function DraftMetadataModal({
   setEditCoverImage,
   editVisibility,
   setEditVisibility,
+  editDescription,
+  setEditDescription,
   savingMetadata,
   onSave,
   isOwner,
@@ -71,6 +75,8 @@ export function DraftMetadataModal({
             </div>
 
             <div className="space-y-3.5">
+              {isOwner && (
+              <>
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
                   Nombre del Draft
@@ -154,16 +160,16 @@ export function DraftMetadataModal({
                   <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
                     Visibilidad
                   </label>
-                  <div className="grid grid-cols-2 gap-2 mt-1.5">
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         setEditVisibility("private");
                       }}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all border text-center ${
+                      className={`rounded-xl border px-3 py-2 text-center text-xs font-semibold transition-all ${
                         editVisibility === "private"
-                          ? "bg-white/10 text-white border-white/20"
-                          : "bg-transparent text-white/45 border-white/5 hover:border-white/10"
+                          ? "border-white/20 bg-white/10 text-white"
+                          : "border-white/5 bg-transparent text-white/45 hover:border-white/10"
                       }`}
                     >
                       Privado
@@ -173,17 +179,39 @@ export function DraftMetadataModal({
                       onClick={() => {
                         setEditVisibility("public");
                       }}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all border text-center ${
+                      className={`rounded-xl border px-3 py-2 text-center text-xs font-semibold transition-all ${
                         editVisibility === "public"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          : "bg-transparent text-white/45 border-white/5 hover:border-white/10"
+                          ? "border-emerald-500/30 bg-emerald-500/20 text-emerald-300"
+                          : "border-white/5 bg-transparent text-white/45 hover:border-white/10"
                       }`}
                     >
                       Público
                     </button>
                   </div>
+                  <p className="mt-2 text-[9px] leading-relaxed text-white/35">
+                    Público: cualquiera con sesión puede agregar o quitar ítems. Privado: solo se puede ver.
+                  </p>
                 </div>
               )}
+              </>
+              )}
+
+              <div>
+                <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
+                  Descripción
+                </label>
+                <textarea
+                  value={editDescription}
+                  maxLength={100}
+                  rows={2}
+                  onChange={(e) => {
+                    setEditDescription(e.target.value.slice(0, 100));
+                  }}
+                  className="w-full mt-1 resize-none bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-orange-500/50 transition-all"
+                  placeholder="Una línea corta sobre este draft"
+                />
+                <p className="mt-1 text-right font-mono text-[9px] text-white/30">{editDescription.length}/100</p>
+              </div>
             </div>
 
             <div className="flex gap-2 justify-end pt-3 border-t border-white/[0.06]">
@@ -197,7 +225,7 @@ export function DraftMetadataModal({
               <button
                 type="button"
                 onClick={onSave}
-                disabled={savingMetadata || !editName.trim()}
+                disabled={savingMetadata || (isOwner && !editName.trim())}
                 className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:hover:bg-orange-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
               >
                 {savingMetadata ? (

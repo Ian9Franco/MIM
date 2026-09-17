@@ -15,6 +15,7 @@ import {
   TweakTabNav, KeybindItem, HardwareStats, JvmArgBox, DetectedInstallations 
 } from "./TweakSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 import { FolderOpen } from "lucide-react";
 import type { Project } from "@/lib/core/types";
 import { ConfigExplorer } from "../tweak/parts/ConfigExplorer";
@@ -36,20 +37,10 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
   } = useTweakManager(isOpen, activeProject);
   const [selectedSnapshot, setSelectedSnapshot] = React.useState<string>("");
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_tweak", isOpen);
   const packManagerRef = useRef<PackHierarchyManagerRef>(null);
 
   const uiPacks = data?.resourcePacks?.active ? [...data.resourcePacks.active].reverse() : [];
-
-  useEffect(() => {
-    const seen = localStorage.getItem("onboarding_tweak");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (isOpen && (!seen || guidesEnabled)) {
-      setShowOnboarding(true);
-    } else if (!isOpen) {
-      setShowOnboarding(false);
-    }
-  }, [isOpen]);
 
   const onboardingSteps = [
     {
@@ -547,7 +538,7 @@ export function TweakSidebar({ isOpen, onClose, activeProject }: TweakSidebarPro
               <OnboardingTour 
                 steps={onboardingSteps} 
                 onComplete={() => {
-                  setShowOnboarding(false);
+                  dismissOnboarding();
                   localStorage.setItem("onboarding_tweak", "true");
                 }} 
                 onStepChange={(step) => {

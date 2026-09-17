@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { CollectionItem } from "../app/types";
+import type { CommunitySection } from "../components/community/CommunityShell";
 import type { ModHit } from "../components/SpotlightMarquees";
 import {
   DRAFT_ITEMS_CHANGED_EVENT,
@@ -33,6 +34,7 @@ const draftRepository = createDraftRepository(supabase as unknown as DraftReposi
 interface UseHomeDraftsOptions {
   userId?: string;
   setActiveTab: Dispatch<SetStateAction<string>>;
+  setCommunitySection: Dispatch<SetStateAction<CommunitySection>>;
   setActiveCollection: Dispatch<SetStateAction<CollectionItem | null>>;
   setActiveCollectionMods: Dispatch<SetStateAction<ModHit[]>>;
   setLoadingActiveMods: Dispatch<SetStateAction<boolean>>;
@@ -44,6 +46,7 @@ export const HOME_DRAFTS_PUBLIC_KEYS = [
   "activeDraft",
   "setActiveDraft",
   "handleEnterDraftCollection",
+  "handleExitDraft",
   "createDraft",
   "addModToDraft",
   "removeModFromDraft",
@@ -107,6 +110,7 @@ function draftItemToModHit(
 export function useHomeDrafts({
   userId,
   setActiveTab,
+  setCommunitySection,
   setActiveCollection,
   setActiveCollectionMods,
   setLoadingActiveMods,
@@ -127,11 +131,6 @@ export function useHomeDrafts({
   }, [activeDraft, activeDraftHydrated]);
 
   const refreshDrafts = useCallback(async (silent = false): Promise<void> => {
-    if (!userId) {
-      setUserDrafts([]);
-      return;
-    }
-
     try {
       if (!silent) setLoadingDrafts(true);
       const { data, error } = await draftRepository.listDrafts(userId);
@@ -168,24 +167,10 @@ export function useHomeDrafts({
     setLoadingActiveMods(true);
 
     try {
-      let items = draft.items;
-      if (!items) {
-        const { data, error } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
-        if (error) throw error;
-        const icons = await fetchDraftIcons(collectDraftProjectIds([{ draft_items: data }]));
-        items = decodeHomeDraft({ ...draft, draft_items: data }, icons)?.items ?? [];
-      } else {
-        const missingIds = items
-          .filter((item) => item.project_id && !item.icon_url && !item.iconUrl)
-          .map((item) => item.project_id);
-        if (missingIds.length > 0) {
-          const icons = await fetchDraftIcons(missingIds);
-          items = items.map((item) => ({
-            ...item,
-            icon_url: item.icon_url || item.iconUrl || icons[item.project_id],
-          }));
-        }
-      }
+      const { data, error } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
+      if (error) throw error;
+      const icons = await fetchDraftIcons(collectDraftProjectIds([{ draft_items: data }]));
+      let items = decodeHomeDraft({ ...draft, draft_items: data }, icons)?.items ?? draft.items ?? [];
 
       const versionIds = items.flatMap((item) => item.version_id ? [item.version_id] : []);
       const versions = await fetchDraftVersions(versionIds);
@@ -195,13 +180,24 @@ export function useHomeDrafts({
     } finally {
       setLoadingActiveMods(false);
     }
-    setActiveTab("collections");
-  }, [setActiveCollection, setActiveCollectionMods, setActiveTab, setLoadingActiveMods]);
+    setActiveTab("rankings");
+    setCommunitySection("drafts");
+  }, [setActiveCollection, setActiveCollectionMods, setActiveTab, setCommunitySection, setLoadingActiveMods]);
+
+  const handleExitDraft = useCallback(() => {
+    setActiveDraft(null);
+    setActiveCollection(null);
+    setActiveCollectionMods([]);
+    setActiveTab("rankings");
+    setCommunitySection("drafts");
+  }, [setActiveCollection, setActiveCollectionMods, setActiveTab, setCommunitySection]);
 
   const createDraft = useCallback(async (
     name: string,
     version: string,
     loader: string,
+    visibility: "public" | "private" = "private",
+    description = "",
   ): Promise<HomeDraft | null> => {
     if (!userId) return null;
     try {
@@ -210,6 +206,8 @@ export function useHomeDrafts({
         name,
         minecraftVersion: version,
         loader,
+        visibility,
+        description: description.trim().slice(0, 100),
       });
       if (error) throw error;
       notifyDraftsChanged();
@@ -393,10 +391,14 @@ export function useHomeDrafts({
     updates: DraftMetadataUpdates,
   ): Promise<boolean> => {
     if (!userId) return false;
-    const { error } = await draftRepository.updateDraftMetadata(draftId, {
+    const nextUpdates = {
       ...updates,
+      ...(typeof updates.description === "string"
+        ? { description: updates.description.trim().slice(0, 100) }
+        : {}),
       updated_at: new Date().toISOString(),
-    });
+    };
+    const { error } = await draftRepository.updateDraftMetadata(draftId, nextUpdates);
     if (error) {
       showAlert("Error", `No se pudo guardar la configuración: ${error.message}`);
       return false;
@@ -412,6 +414,7 @@ export function useHomeDrafts({
       payload: { ...updates },
     });
     await refreshDrafts();
+    setActiveDraft((current) => current?.id === draftId ? { ...current, ...updates } : current);
     return true;
   }, [refreshDrafts, showAlert, userId]);
 
@@ -420,6 +423,7 @@ export function useHomeDrafts({
     activeDraft,
     setActiveDraft,
     handleEnterDraftCollection,
+    handleExitDraft,
     createDraft,
     addModToDraft,
     removeModFromDraft,

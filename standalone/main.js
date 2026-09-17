@@ -9,6 +9,7 @@ const SERVER_READY_DELAY_MS = 250;
 const { runCurseForgeScraper } = require('./scraper');
 const { createSecretStore } = require('./secret-store');
 const { resolveTrustedPath } = require('./trusted-path');
+const { setupAppUpdater } = require('./app-updater');
 
 let mainWindow = null;
 let serverProcess = null;
@@ -105,7 +106,30 @@ function initializeSecretStore() {
   secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
 
   console.log('[MIM] Portable data directory:', portableDir);
-  return secretStore.toEnvironment();
+
+  const storedSecrets = secretStore.toEnvironment();
+  if (app.isPackaged) {
+    return { secretEnvironment: storedSecrets, devEnv: {} };
+  }
+
+  const {
+    loadDevEnvFiles,
+    mergeSecretEnvironment,
+    listLoadedDevSecretFields,
+  } = require('./load-dev-env');
+
+  const projectRoot = path.join(__dirname, '..');
+  const devEnv = loadDevEnvFiles(projectRoot);
+  const secretEnvironment = mergeSecretEnvironment(storedSecrets, devEnv);
+  const loadedFields = listLoadedDevSecretFields(devEnv);
+
+  if (loadedFields.length > 0) {
+    console.log('[MIM] Dev standalone: API keys from .env.local →', loadedFields.join(', '));
+  } else if (fs.existsSync(path.join(projectRoot, '.env.local'))) {
+    console.log('[MIM] Dev standalone: .env.local found but no supported API keys detected.');
+  }
+
+  return { secretEnvironment, devEnv };
 }
 
 function handleDeepLink(url) {
@@ -138,7 +162,7 @@ function resolveServerExecPath() {
   return { execPath: process.execPath, runAsNode: true };
 }
 
-function startNextServer(secretEnvironment = {}) {
+function startNextServer({ secretEnvironment = {}, devEnv = {} } = {}) {
   const serverPath = path.join(__dirname, '..', '.next', 'standalone', 'server.js');
   const serverDir = path.join(__dirname, '..', '.next', 'standalone');
 
@@ -158,13 +182,14 @@ function startNextServer(secretEnvironment = {}) {
     execPath,
     env: {
       ...process.env,
+      ...devEnv,
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       MIM_DESKTOP_RUNTIME: '1',
       ...(runAsNode ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
       ...(resolvedPortableDir ? { MIM_PORTABLE_DIR: resolvedPortableDir } : {}),
-      ...secretEnvironment
+      ...secretEnvironment,
     },
     silent: false
   });
@@ -240,6 +265,7 @@ function createWindow() {
     backgroundColor: '#141416',
     icon: path.join(__dirname, '..', 'app', 'favicon.ico'),
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true
@@ -296,17 +322,19 @@ app.whenReady().then(() => {
     pendingProtocolUrl = initialProtocolUrl;
   }
 
-  let secretEnvironment = {};
+  let serverBootstrap = { secretEnvironment: {}, devEnv: {} };
   try {
-    secretEnvironment = initializeSecretStore();
+    serverBootstrap = initializeSecretStore();
   } catch (error) {
     console.error('Failed to initialize encrypted credential storage:', error);
   }
 
-  if (!startNextServer(secretEnvironment)) {
+  if (!startNextServer(serverBootstrap)) {
     app.quit();
     return;
   }
+
+  setupAppUpdater({ getMainWindow: () => mainWindow });
 
   waitForServer(() => {
     console.log('✅ Server is ready! Launching window.');

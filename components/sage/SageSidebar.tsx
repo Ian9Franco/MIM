@@ -15,6 +15,7 @@ import { SageManualPaste } from "./SageManualPaste";
 import { SageDeleteModal } from "./SageDeleteModal";
 import type { Project } from "@/lib/core/types";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 export interface SageSidebarProps {
   open: boolean;
@@ -25,17 +26,7 @@ export interface SageSidebarProps {
 export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) {
   const sage = useSageManager(activeProject, open, onClose);
   const [fileToDelete, setFileToDelete] = useState<LocalLogFile | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const seen = localStorage.getItem("onboarding_sage");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (open && (!seen || guidesEnabled)) {
-      setShowOnboarding(true);
-    } else if (!open) {
-      setShowOnboarding(false);
-    }
-  }, [open]);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_sage", open);
 
   const onboardingSteps = [
     {
@@ -166,7 +157,7 @@ export function SageSidebar({ open, onClose, activeProject }: SageSidebarProps) 
           <OnboardingTour 
             steps={onboardingSteps} 
             onComplete={() => {
-              setShowOnboarding(false);
+              dismissOnboarding();
               localStorage.setItem("onboarding_sage", "true");
             }} 
             onStepChange={(step) => {

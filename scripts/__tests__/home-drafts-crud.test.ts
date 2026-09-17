@@ -42,6 +42,10 @@ class MemoryDraftClient {
         filters.push({ column, value });
         return builder;
       },
+      or(value: string) {
+        filters.push({ column: "or", value });
+        return builder;
+      },
       async maybeSingle() {
         const rows = await builder.then();
         return { data: Array.isArray(rows.data) ? rows.data[0] ?? null : rows.data, error: rows.error };
@@ -73,13 +77,23 @@ class MemoryDraftClient {
       return { data: [row], error: null };
     }
     if (operation === "select") {
+      const orFilter = filters.find((filter) => filter.column === "or");
       const ownerFilter = filters.find((filter) => filter.column === "owner_id");
-      const rows = ownerFilter
-        ? this.drafts.filter((row) => row.owner_id === ownerFilter.value).map((row) => ({
-            ...row,
-            draft_items: this.draftItems.filter((item) => item.draft_id === row.id),
-          }))
-        : this.drafts;
+      const visibilityFilter = filters.find((filter) => filter.column === "visibility");
+      const ownerFromOr = orFilter?.value.match(/owner_id\.eq\.([^,]+)/)?.[1];
+      const includePublic = Boolean(orFilter?.value.includes("visibility.eq.public") || visibilityFilter?.value === "public");
+      const ownerId = ownerFilter?.value ?? ownerFromOr;
+      const rows = this.drafts
+        .filter((row) => {
+          if (!ownerId && !includePublic) return true;
+          if (ownerId && row.owner_id === ownerId) return true;
+          if (includePublic && row.visibility === "public") return true;
+          return false;
+        })
+        .map((row) => ({
+          ...row,
+          draft_items: this.draftItems.filter((item) => item.draft_id === row.id),
+        }));
       return { data: rows, error: null };
     }
     if (operation === "update") {
@@ -144,12 +158,29 @@ async function testCreateRefreshEditDeleteFlow(): Promise<void> {
     name: "Survival Pack",
     minecraftVersion: "1.21.1",
     loader: "fabric",
+    visibility: "public",
   });
   assert.equal(created.error, null);
   assert.ok(created.data);
+  assert.equal((created.data as Row).visibility, "public");
+
+  const otherUserSeesAll = await repo.listDrafts("user-2");
+  assert.equal(otherUserSeesAll.data.length, 1);
+  assert.equal((otherUserSeesAll.data[0] as Row).name, "Survival Pack");
+
+  const secret = await repo.createDraft({
+    ownerId: userId,
+    name: "Secret Pack",
+    minecraftVersion: "1.21.1",
+    loader: "fabric",
+    visibility: "private",
+  });
+  assert.equal(secret.error, null);
+  const otherUserSeesPrivateToo = await repo.listDrafts("user-2");
+  assert.equal(otherUserSeesPrivateToo.data.length, 2);
 
   const refreshed = await repo.listDrafts(userId);
-  assert.equal(refreshed.data.length, 1);
+  assert.equal(refreshed.data.length, 2);
   assert.equal((refreshed.data[0] as Row).name, "Survival Pack");
 
   const updated = await repo.updateDraftMetadata(String((refreshed.data[0] as Row).id), {
@@ -183,7 +214,8 @@ async function testCreateRefreshEditDeleteFlow(): Promise<void> {
   const deleted = await repo.deleteDraft(String((refreshed.data[0] as Row).id));
   assert.equal(deleted.error, null);
   const afterDelete = await repo.listDrafts(userId);
-  assert.equal(afterDelete.data.length, 0);
+  assert.equal(afterDelete.data.length, 1);
+  assert.equal((afterDelete.data[0] as Row).name, "Secret Pack");
 
   console.log("✔ draft repository create → refresh → edit → delete item → delete draft flow passed");
 }

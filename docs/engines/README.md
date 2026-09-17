@@ -3,6 +3,8 @@
 > **¿Qué es esta carpeta?**  
 > Contiene las especificaciones técnicas y benchmarks de los **motores especializados de MIM**. Cada motor resuelve un problema complejo de modding con algoritmos deterministas y garantías formales.
 
+> **Siglas:** SAGE y FOMO tienen expansión canónica en [nomenclatura.md](../guides/nomenclatura.md).
+
 ---
 
 ## ⚙️ Catálogo de Motores

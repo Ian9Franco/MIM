@@ -14,6 +14,7 @@ import { XCircle, ShieldCheck, CheckCircle } from "lucide-react";
 import type { PackHealthReport, Project } from "@/lib/core/types";
 import { IssueSection } from "./PackHealthComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -92,17 +93,7 @@ export function PackHealthPanel({
 
   const [forceExpand, setForceExpand] = useState<{ errors?: boolean, warnings?: boolean, suggestions?: boolean }>({});
   const [visible, setVisible] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const seen = localStorage.getItem("onboarding_gate");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (isOpen && (!seen || guidesEnabled)) {
-      setShowOnboarding(true);
-    } else if (!isOpen) {
-      setShowOnboarding(false);
-    }
-  }, [isOpen]);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_gate", isOpen);
 
   const onboardingSteps = [
     {
@@ -267,7 +258,7 @@ export function PackHealthPanel({
         <OnboardingTour 
           steps={onboardingSteps} 
           onComplete={() => {
-            setShowOnboarding(false);
+            dismissOnboarding();
             localStorage.setItem("onboarding_gate", "true");
           }} 
         />

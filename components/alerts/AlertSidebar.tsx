@@ -13,6 +13,7 @@ import { useAlertManager } from "@/hooks/useAlertManager";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { TabButton, AlertSection, ActionButton, UpdateCard, EmptyState, IncidentCard } from "./AlertSidebarComponents";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 import type { LibraryFile } from "@/lib/core/types";
 import type { ModrinthStatusItem, AuthorModItem, ChannelVideoItem, FollowedModRef } from "@/hooks/useAlertManager";
@@ -58,17 +59,7 @@ export function AlertSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [followedMods, setFollowedMods] = useState<FollowedModRef[]>([]);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const seen = localStorage.getItem("onboarding_alrt");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (sidebarOpen && (!seen || guidesEnabled)) {
-      setShowOnboarding(true);
-    } else if (!sidebarOpen) {
-      setShowOnboarding(false);
-    }
-  }, [sidebarOpen]);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_alrt", sidebarOpen);
 
   const onboardingSteps = [
     {
@@ -347,7 +338,7 @@ export function AlertSidebar({
         <OnboardingTour 
           steps={onboardingSteps} 
           onComplete={() => {
-            setShowOnboarding(false);
+            dismissOnboarding();
             localStorage.setItem("onboarding_alrt", "true");
           }} 
         />

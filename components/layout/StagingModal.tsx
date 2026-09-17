@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Check, Trash2, ExternalLink, Package, MoveRight, AlertCircle, Loader2, PackageOpen, ArrowBigRight, ArrowBigRightDash } from "lucide-react";
 import { useStaging, StagingFile } from "@/hooks/useStaging";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 interface StagingModalProps {
   onClose: () => void;
@@ -15,15 +16,7 @@ export function StagingModal({ onClose }: StagingModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [keepOpen, setKeepOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  React.useEffect(() => {
-    const seen = localStorage.getItem("onboarding_staging");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (!seen || guidesEnabled) {
-      setShowOnboarding(true);
-    }
-  }, []);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_staging", true);
 
   const onboardingSteps = [
     {
@@ -197,7 +190,7 @@ export function StagingModal({ onClose }: StagingModalProps) {
         <OnboardingTour 
           steps={onboardingSteps} 
           onComplete={() => {
-            setShowOnboarding(false);
+            dismissOnboarding();
             localStorage.setItem("onboarding_staging", "true");
           }} 
         />

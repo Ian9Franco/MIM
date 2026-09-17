@@ -354,24 +354,9 @@ export default function Home() {
               curseForgeFeatured={c.curseForgeCollections}
               activeCollectionMods={c.activeCollectionMods}
               loadingActiveMods={c.loadingActiveMods}
-              session={c.session}
-              userDrafts={c.userDrafts}
-              activeDraft={c.activeDraft}
               handleEnterCollection={c.handleEnterCollection}
               handleExitCollection={c.handleExitCollection}
               handleOpenModDetails={c.handleOpenModDetails}
-              handleEnterDraftCollection={c.handleEnterDraftCollection}
-              onRemoveModFromDraft={c.removeModFromDraft}
-              onRefreshDrafts={() => c.refreshUserData()}
-              onEditDraft={handleOpenDraftEditor}
-              onCreateDraft={() => {
-                setEditingDraftId(null);
-                c.setPendingMod(null);
-                c.setShowDraftPicker(true);
-              }}
-              onUpdateDraftMetadata={c.updateDraftMetadata}
-              onRecategorizeDraftItem={c.recategorizeDraftItem}
-              onUpdateDraftItemSide={c.updateDraftItemSide}
               userFavorites={c.userFavorites}
               userFollowedAuthors={c.userFollowedAuthors}
               onSearchAuthor={c.handleSearchAuthor}
@@ -417,6 +402,25 @@ export default function Home() {
               onToggleFavorite={c.onToggleFavorite}
               onSearchAuthor={c.handleSearchAuthor}
               showAlert={c.showAlert}
+              communitySection={c.communitySection}
+              onCommunitySectionChange={c.setCommunitySection}
+              userDrafts={c.userDrafts}
+              activeDraft={c.activeDraft}
+              activeCollection={c.activeCollection}
+              activeCollectionMods={c.activeCollectionMods}
+              loadingActiveMods={c.loadingActiveMods}
+              handleEnterDraftCollection={c.handleEnterDraftCollection}
+              handleExitDraft={c.handleExitDraft}
+              onCreateDraft={() => {
+                setEditingDraftId(null);
+                c.setPendingMod(null);
+                c.setShowDraftPicker(true);
+              }}
+              onRemoveModFromDraft={c.removeModFromDraft}
+              onRefreshDrafts={() => c.refreshUserData()}
+              onUpdateDraftMetadata={c.updateDraftMetadata}
+              onRecategorizeDraftItem={c.recategorizeDraftItem}
+              onUpdateDraftItemSide={c.updateDraftItemSide}
             />
           )}
 
@@ -503,6 +507,7 @@ export default function Home() {
           c.setShowDraftPicker(false);
         }}
         onCreateDraft={c.createDraft}
+        currentUserId={c.session?.user?.id}
         onAddModToDraft={c.addModToDraft}
         onRemoveModFromDraft={c.removeModFromDraft}
         onRecategorize={c.recategorizeDraftItem}

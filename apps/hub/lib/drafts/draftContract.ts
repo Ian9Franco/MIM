@@ -42,6 +42,7 @@ export interface HomeDraft {
   created_at?: string;
   updated_at?: string;
   updatedAt?: string;
+  owner_id?: string;
   is_public?: boolean;
   user_id?: string;
   author_name?: string;
@@ -53,7 +54,11 @@ export interface DraftMetadataUpdates {
   minecraft_version?: string;
   loader?: string;
   visibility?: string;
+  description?: string;
+  cover_image?: string | null;
 }
+
+export const DRAFT_DESCRIPTION_MAX = 100;
 
 export interface DraftAddResult {
   ok: boolean;
@@ -145,6 +150,9 @@ export function decodeHomeDraft(
     visibility: optionalString(value.visibility) ?? "private",
     cover_image: optionalString(value.cover_image) ?? null,
     description: optionalString(value.description),
+    owner_id: optionalString(value.owner_id) ?? optionalString(value.user_id),
+    created_at: optionalString(value.created_at),
+    updated_at: optionalString(value.updated_at) ?? optionalString(value.updatedAt),
     items,
   };
 }
@@ -190,6 +198,7 @@ export function changedDraftMetadata(updates: DraftMetadataUpdates): string[] {
   if (updates.minecraft_version) changed.push("versión");
   if (updates.loader) changed.push("loader");
   if (updates.visibility) changed.push("visibilidad");
+  if (typeof updates.description === "string") changed.push("descripción");
   return changed;
 }
 

@@ -85,6 +85,7 @@
     "cheerio": "^1.2.0",
     "chokidar": "^4.0.3",
     "date-fns": "^4.3.0",
+    "electron-updater": "^6.8.9",
     "framer-motion": "^11.0.0",
     "idb": "^8.0.3",
     "inquirer": "^8.2.7",
@@ -96,6 +97,7 @@
     "react-window-infinite-loader": "^2.0.1",
     "skinview3d": "^3.4.2",
     "ssh2": "^1.17.0",
+    "electron-updater": "^6.8.3",
     "yt-dlp-wrap": "^2.3.12",
     "zod": "^4.5.4"
   },
@@ -161,6 +163,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MIM"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Ian9Franco",
+      "repo": "MIM"
     }
   }
 }

@@ -5,8 +5,10 @@ import { Settings, X, Lock, Unlock, AlertTriangle, FolderOpen, Package, FolderSe
 import { useSettingsManager } from "@/hooks/useSettingsManager";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import { 
-  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, MimbotPrivacySettingsPanel, OverlayDialog, SettingsFooter, YtDlpUpdaterCard, SovereignVaultSettingsCard 
+  SettingsTabNav, PathInputGroup, ApiKeyInputGroup, AiQuotaStatusPanel, MimbotPrivacySettingsPanel, OverlayDialog, SettingsFooter, DesktopAppUpdaterCard, YtDlpUpdaterCard, SovereignVaultSettingsCard
 } from "./SettingsComponents";
+import { GuidesSettingsCard } from "@/components/layout/GuidesSettingsCard";
+import { useOnboardingVisibility } from "@/hooks/useOnboardingVisibility";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const {
@@ -24,15 +26,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
   } = useSettingsManager(onClose);
 
-  const [showOnboarding, setShowOnboarding] = React.useState(false);
-
-  React.useEffect(() => {
-    const seen = localStorage.getItem("onboarding_settings");
-    const guidesEnabled = localStorage.getItem("guides_enabled") === "true";
-    if (!seen || guidesEnabled) {
-      setShowOnboarding(true);
-    }
-  }, []);
+  const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_settings", true);
 
   const onboardingSteps = [
     {
@@ -166,6 +160,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 )}
                 {activeTab === "tools" && (
                   <div id="onboarding-settings-tools" className="space-y-5">
+                    <GuidesSettingsCard />
+                    <DesktopAppUpdaterCard />
                     <YtDlpUpdaterCard />
                   </div>
                 )}
@@ -212,7 +208,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <OnboardingTour 
           steps={onboardingSteps} 
           onComplete={() => {
-            setShowOnboarding(false);
+            dismissOnboarding();
             localStorage.setItem("onboarding_settings", "true");
           }} 
           onStepChange={(step) => {

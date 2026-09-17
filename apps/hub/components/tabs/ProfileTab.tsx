@@ -65,12 +65,17 @@ export function ProfileTab({
   const [favoriteFilter, setFavoriteFilter] = React.useState<"all" | "updated">("all");
   const [expandedSections, setExpandedSections] = React.useState({ favorites: false, shares: false, creators: false });
 
+  const mineDrafts = React.useMemo(
+    () => userDrafts.filter((draft) => !draft.owner_id || draft.owner_id === session?.user?.id),
+    [session?.user?.id, userDrafts],
+  );
+
   // Vault state & handlers
   const vault = useProfileVault({
     session,
     profile,
     username,
-    userDrafts,
+    userDrafts: mineDrafts,
     userFavorites,
     userFollowedAuthors,
   });
@@ -98,12 +103,12 @@ export function ProfileTab({
   );
 
   const latestDraft = React.useMemo(
-    () => userDrafts.reduce<HomeDraft | null>((latest, draft) => {
+    () => mineDrafts.reduce<HomeDraft | null>((latest, draft) => {
       const draftTime = new Date((draft.updated_at ?? draft.updatedAt ?? draft.created_at ?? 0) as string | number).getTime();
       const latestTime = latest ? new Date((latest.updated_at ?? latest.updatedAt ?? latest.created_at ?? 0) as string | number).getTime() : -1;
       return draftTime >= latestTime ? draft : latest;
     }, null),
-    [userDrafts]
+    [mineDrafts]
   );
 
   const jumpToSection = React.useCallback((section: "drafts" | "favorites" | "shares" | "creators") => {
@@ -275,7 +280,7 @@ export function ProfileTab({
           />
 
           <ProfileOverview
-            drafts={userDrafts.length}
+            drafts={mineDrafts.length}
             favorites={userFavorites.length}
             shares={userShares.length}
             creators={userFollowedAuthors.length}
@@ -287,7 +292,7 @@ export function ProfileTab({
           {/* Drafts Section */}
           <div id="profile-drafts" className="scroll-mt-3">
           <ProfileDraftsSection
-            userDrafts={userDrafts}
+            userDrafts={mineDrafts}
             loadingUserData={loadingUserData}
             onCreateDraft={onCreateDraft}
             handleEnterDraftCollection={handleEnterDraftCollection}
@@ -351,7 +356,7 @@ export function ProfileTab({
             vaultPassphrase={vault.vaultPassphrase}
             setVaultPassphrase={vault.setVaultPassphrase}
             handleExportVault={vault.handleExportVault}
-            userDraftsCount={userDrafts?.length || 0}
+            userDraftsCount={mineDrafts.length}
             userFavoritesCount={userFavorites?.length || 0}
             userFollowedAuthorsCount={userFollowedAuthors?.length || 0}
             showImportModal={vault.showImportModal}

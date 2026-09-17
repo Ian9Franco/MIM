@@ -13,17 +13,22 @@ interface DraftSummaryTabProps {
     description?: string;
   } | null;
   activeCollectionMods: ModHit[];
+  creatorUsername?: string | null;
+  loadingActiveMods?: boolean;
 }
 
 export function DraftSummaryTab({
   draft,
   activeCollectionMods,
+  creatorUsername,
+  loadingActiveMods,
 }: DraftSummaryTabProps) {
   const stats = [
-    { label: "Versión", value: draft?.minecraft_version },
-    { label: "Loader", value: draft?.loader },
+    { label: "Creador", value: creatorUsername ? `@${creatorUsername}` : "—" },
+    { label: "Versión", value: draft?.minecraft_version || "—" },
+    { label: "Loader", value: draft?.loader || "—" },
     { label: "Visibilidad", value: draft?.visibility === "public" ? "Público" : "Privado" },
-    { label: "Total ítems", value: activeCollectionMods.length },
+    { label: "Total ítems", value: loadingActiveMods ? "…" : activeCollectionMods.length },
   ];
 
   return (
@@ -44,6 +49,12 @@ export function DraftSummaryTab({
           </div>
         ))}
       </div>
+
+      {!loadingActiveMods && activeCollectionMods.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-white/[0.06] p-4 text-center">
+          <p className="text-xs text-white/40">Este draft todavía no tiene ítems.</p>
+        </div>
+      )}
 
       {/* Breakdown by type */}
       {activeCollectionMods.length > 0 && (
@@ -77,12 +88,10 @@ export function DraftSummaryTab({
       )}
 
       {/* Description */}
-      {draft?.description && (
-        <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-          <p className="text-[9px] font-mono uppercase tracking-wider text-white/30 mb-2">Descripción</p>
-          <p className="text-xs text-white/65 leading-relaxed">{draft.description}</p>
-        </div>
-      )}
+      <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+        <p className="text-[9px] font-mono uppercase tracking-wider text-white/30 mb-2">Descripción</p>
+        <p className="text-xs text-white/65 leading-relaxed">{draft?.description || "Sin descripción."}</p>
+      </div>
     </motion.div>
   );
 }

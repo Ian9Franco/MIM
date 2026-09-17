@@ -38,6 +38,10 @@ export interface PublicProfileDraft {
   name: string;
   minecraft_version?: string;
   loader?: string;
+  visibility?: string;
+  cover_image?: string | null;
+  description?: string | null;
+  owner_id?: string;
   [key: string]: unknown;
 }
 
@@ -69,15 +73,17 @@ interface CommunityPublicProfileProps {
   isCurrentUser?: boolean;
   isFollowing?: boolean;
   onToggleFollow?: () => void;
+  onBackLabel?: string;
+  onOpenDraft?: (draft: PublicProfileDraft) => void;
 }
 
 /** Full public profile is isolated so ComunidadTab remains an orchestration component. */
-export function CommunityPublicProfile({ profile, favorites, authors, drafts, channels, shares = [], loading, onBack, onOpenMod, onSearchAuthor, affinity, isCurrentUser, isFollowing, onToggleFollow }: CommunityPublicProfileProps) {
+export function CommunityPublicProfile({ profile, favorites, authors, drafts, channels, shares = [], loading, onBack, onOpenMod, onSearchAuthor, affinity, isCurrentUser, isFollowing, onToggleFollow, onBackLabel = "Volver a miembros", onOpenDraft }: CommunityPublicProfileProps) {
   const accent = profile?.color || "var(--color-primary)";
   return (
     <motion.div key="profile-detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 overflow-y-auto pb-28 scrollbar-none">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-white/45 transition-colors hover:text-white">
-        <ArrowLeft className="h-3.5 w-3.5" /> Volver a miembros
+        <ArrowLeft className="h-3.5 w-3.5" /> {onBackLabel}
       </button>
 
       <div className="mb-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-surface/80 shadow-[0_16px_38px_rgba(0,0,0,0.22)]">
@@ -135,8 +141,46 @@ export function CommunityPublicProfile({ profile, favorites, authors, drafts, ch
             );
           })()}
 
-          <ProfileSection icon={<Layers className="h-3.5 w-3.5" />} title="Modpacks públicos" count={drafts.length} color="text-emerald-400" empty="No tiene drafts públicos.">
-            {drafts.map((draft) => <InfoRow key={draft.id} icon={<Layers className="h-4 w-4 text-emerald-400" />} title={draft.name} meta={`${draft.minecraft_version} · ${draft.loader}`} />)}
+          <ProfileSection icon={<Layers className="h-3.5 w-3.5" />} title="Drafts" count={drafts.length} color="text-emerald-400" empty="No tiene drafts todavía.">
+            {drafts.map((draft) => {
+              const isPublic = draft.visibility === "public";
+              return (
+                <button
+                  key={draft.id}
+                  type="button"
+                  onClick={() => onOpenDraft?.(draft)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 text-left transition-all hover:border-white/15 hover:bg-white/[0.045]"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-emerald-500/20 bg-emerald-500/10">
+                    {draft.cover_image ? (
+                      <img src={draft.cover_image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Layers className="h-4 w-4 text-emerald-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-xs font-semibold text-white">{draft.name}</p>
+                      <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[7px] font-bold uppercase ${
+                        isPublic
+                          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                          : "border-white/10 text-white/40"
+                      }`}>
+                        {isPublic ? "Público" : "Privado"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[9px] text-white/35">
+                      {draft.minecraft_version || "Sin versión"} · {draft.loader || "Sin loader"}
+                      {isPublic ? " · se puede editar" : " · solo lectura"}
+                    </p>
+                    {draft.description && (
+                      <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-white/50">{draft.description}</p>
+                    )}
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/20" />
+                </button>
+              );
+            })}
           </ProfileSection>
 
           <ProfileSection icon={<Heart className="h-3.5 w-3.5" />} title="Proyectos favoritos" count={favorites.length} color="text-red-400" empty="No tiene proyectos favoritos públicos." layout="horizontal">
@@ -315,10 +359,6 @@ function ProfileSection({
       )}
     </section>
   );
-}
-
-function InfoRow({ icon, title, meta }: { icon: React.ReactNode; title: string; meta: string }) {
-  return <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">{icon}</div><div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{title}</p><p className="mt-0.5 text-[9px] text-white/35">{meta}</p></div></div>;
 }
 
 function SquareAvatar({ src, fallback, round = false }: { src?: string; fallback?: string; round?: boolean }) {

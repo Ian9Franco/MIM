@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ModHit } from "./SpotlightMarquees";
 import { supabase } from "../lib/supabaseClient";
@@ -10,6 +10,7 @@ import {
   DraftSummaryTab,
   DraftItemsTab,
   DraftMembersTab,
+  DraftInviteModal,
   DraftActivityTab,
   DraftMetadataModal,
   DraftItemEditModal,
@@ -28,6 +29,7 @@ export interface DraftDetailModel {
 }
 
 export interface DraftMemberProfile {
+  id?: string;
   username?: string | null;
   avatar_url?: string | null;
   color?: string | null;
@@ -36,10 +38,35 @@ export interface DraftMemberProfile {
 export interface DraftMemberRecord {
   id: string;
   draft_id: string;
-  profile_id: string;
+  user_id?: string;
+  profile_id?: string;
   role: "owner" | "editor" | "viewer" | string;
   profiles?: DraftMemberProfile | null;
   [key: string]: unknown;
+}
+
+function sameUserId(left?: string | null, right?: string | null) {
+  return String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
+}
+
+type ProfileMap = Record<string, DraftMemberProfile & { id?: string }>;
+
+async function fetchProfilesByIds(ids: string[]): Promise<ProfileMap> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (!unique.length) return {};
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url, color")
+    .in("id", unique);
+  if (error) {
+    console.error("Error loading profiles:", error);
+    return {};
+  }
+  const next: ProfileMap = {};
+  for (const row of data || []) {
+    next[String((row as { id: string }).id)] = row as DraftMemberProfile & { id?: string };
+  }
+  return next;
 }
 
 export interface DraftActivityRecord {
@@ -64,6 +91,7 @@ export interface DraftDetailViewProps {
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
+  onOpenProfile?: (profile: { id: string; username?: string | null; avatar_url?: string | null; color?: string | null }) => void;
 }
 
 /**
@@ -81,6 +109,7 @@ export function DraftDetailView({
   onUpdateDraftMetadata,
   onRecategorizeDraftItem,
   onUpdateDraftItemSide,
+  onOpenProfile,
 }: DraftDetailViewProps) {
   const [draft, setDraft] = useState<DraftDetailModel>(initialDraft);
   const [tab, setTab] = useState<DraftTab>("items");
@@ -93,7 +122,6 @@ export function DraftDetailView({
   const [loadingActivity, setLoadingActivity] = useState(false);
 
   const ownerMember = members.find((m) => m.role === "owner");
-  const creatorUsername = ownerMember?.profiles?.username || null;
 
   // Metadata modal state
   const [showMetadataModal, setShowMetadataModal] = useState(false);
@@ -102,6 +130,7 @@ export function DraftDetailView({
   const [editLoader, setEditLoader] = useState("");
   const [editCoverImage, setEditCoverImage] = useState("");
   const [editVisibility, setEditVisibility] = useState("private");
+  const [editDescription, setEditDescription] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
 
   // Item edit modal state
@@ -109,6 +138,25 @@ export function DraftDetailView({
   const [itemType, setItemType] = useState("");
   const [itemSide, setItemSide] = useState("");
   const [savingItem, setSavingItem] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
+  const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
+  const ownerId = String(draft?.owner_id || ownerMember?.user_id || "");
+  const isOwner = sameUserId(ownerId, session?.user?.id);
+  const isPublic = draft?.visibility === "public";
+  const canEditItems = Boolean(session?.user?.id) && (isOwner || isPublic);
+  const canEditSettings = Boolean(onUpdateDraftMetadata) && (isOwner || isPublic);
+  const creatorUsername = ownerMember?.profiles?.username || ownerUsername;
+
+  const openSettings = () => {
+    setEditName(draft?.name || "");
+    setEditVersion(draft?.minecraft_version || "");
+    setEditLoader(draft?.loader || "");
+    setEditCoverImage(draft?.cover_image || "");
+    setEditVisibility(draft?.visibility || "private");
+    setEditDescription(String(draft?.description || "").slice(0, 100));
+    setShowMetadataModal(true);
+  };
 
   // Sync draft prop
   useEffect(() => {
@@ -118,6 +166,7 @@ export function DraftDetailView({
     setEditLoader(initialDraft?.loader || "");
     setEditCoverImage(initialDraft?.cover_image || "");
     setEditVisibility(initialDraft?.visibility || "private");
+    setEditDescription(String(initialDraft?.description || "").slice(0, 100));
   }, [initialDraft]);
 
   // Reset state on draft change
@@ -127,47 +176,85 @@ export function DraftDetailView({
     setRemovedIds(new Set());
     setMembers([]);
     setActivity([]);
+    setOwnerUsername(null);
+    setMembersError(null);
   }, [draft?.id]);
 
-  const loadMembers = () => {
+  const loadMembers = useCallback(async () => {
     if (!draft?.id) return;
     setLoadingMembers(true);
-    supabase
+    const { data, error } = await supabase
       .from("draft_members")
-      .select("*, profiles(username, avatar_url, color)")
-      .eq("draft_id", draft.id)
-      .then(({ data }) => {
-        setMembers(data || []);
-        setLoadingMembers(false);
+      .select("*")
+      .eq("draft_id", draft.id);
+    if (error) {
+      console.error("Error loading draft members:", error);
+      setMembersError(error.message);
+    } else {
+      setMembersError(null);
+    }
+    const rows = ((data || []) as DraftMemberRecord[]).map((row) => ({
+      ...row,
+      user_id: String(row.user_id || row.profile_id || ""),
+    }));
+    const ownerKey = String(draft.owner_id || "");
+    const profiles = await fetchProfilesByIds([
+      ...rows.map((row) => String(row.user_id || "")),
+      ownerKey,
+    ]);
+    if (ownerKey && !rows.some((row) => sameUserId(row.user_id, ownerKey))) {
+      rows.unshift({
+        id: `owner-${ownerKey}`,
+        draft_id: draft.id,
+        user_id: ownerKey,
+        role: "owner",
       });
-  };
+    }
+    setMembers(
+      rows.map((row) => ({
+        ...row,
+        profiles: profiles[String(row.user_id || "")] || row.profiles || null,
+      })),
+    );
+    setOwnerUsername(profiles[ownerKey]?.username || null);
+    setLoadingMembers(false);
+  }, [draft?.id, draft?.owner_id]);
 
-  const loadActivity = () => {
+  const loadActivity = useCallback(async () => {
     if (!draft?.id) return;
     setLoadingActivity(true);
-    supabase
+    const { data, error } = await supabase
       .from("draft_activity")
-      .select("*, profiles(username, avatar_url, color)")
+      .select("*")
       .eq("draft_id", draft.id)
       .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setActivity(data || []);
-        setLoadingActivity(false);
-      });
-  };
-
-  useEffect(() => {
-    if (draft?.id) {
-      loadMembers();
+      .limit(50);
+    if (error) {
+      console.error("Error loading draft activity:", error);
+      setActivity([]);
+      setLoadingActivity(false);
+      return;
     }
+    const rows = (data || []) as DraftActivityRecord[];
+    const profiles = await fetchProfilesByIds(
+      rows.map((row) => String(row.profile_id || row.user_id || "")),
+    );
+    setActivity(
+      rows.map((row) => ({
+        ...row,
+        profiles: profiles[String(row.profile_id || row.user_id || "")] || null,
+      })),
+    );
+    setLoadingActivity(false);
   }, [draft?.id]);
 
   useEffect(() => {
-    if (tab === "activity" && activity.length === 0) {
-      loadActivity();
-    }
-  }, [tab, draft?.id]);
+    void loadMembers();
+  }, [loadMembers]);
+
+  useEffect(() => {
+    void loadActivity();
+  }, [loadActivity]);
 
   const visibleMods = activeCollectionMods.filter((mod: ModHit) => {
     const key = mod.itemId || mod.projectId;
@@ -179,27 +266,53 @@ export function DraftDetailView({
   const handleSaveMetadata = async () => {
     if (!draft?.id || !onUpdateDraftMetadata) return;
     setSavingMetadata(true);
-    const ok = await onUpdateDraftMetadata(draft.id, {
+    const description = editDescription.trim().slice(0, 100);
+    const ok = await onUpdateDraftMetadata(draft.id, isOwner ? {
       name: editName,
       minecraft_version: editVersion,
       loader: editLoader,
       cover_image: editCoverImage || null,
       visibility: editVisibility,
-    });
+      description,
+    } : { description });
     if (ok) {
       setDraft((prev) => ({
         ...prev,
-        name: editName,
-        minecraft_version: editVersion,
-        loader: editLoader,
-        cover_image: editCoverImage || null,
-        visibility: editVisibility,
+        ...(isOwner ? {
+          name: editName,
+          minecraft_version: editVersion,
+          loader: editLoader,
+          cover_image: editCoverImage || null,
+          visibility: editVisibility,
+        } : {}),
+        description,
       }));
       setShowMetadataModal(false);
       onRefreshDrafts?.();
       loadActivity();
     }
     setSavingMetadata(false);
+  };
+
+  const handleToggleVisibility = async () => {
+    if (!draft?.id || !onUpdateDraftMetadata || !isOwner) return;
+    const nextVisibility = draft.visibility === "public" ? "private" : "public";
+    const ok = await onUpdateDraftMetadata(draft.id, { visibility: nextVisibility });
+    if (ok) {
+      setDraft((prev) => ({ ...prev, visibility: nextVisibility }));
+      onRefreshDrafts?.();
+    }
+  };
+
+  const handleRemoveMember = async (member: { id: string; role: string }) => {
+    if (!isOwner || member.role === "owner") return;
+    const { error } = await supabase.from("draft_members").delete().eq("id", member.id);
+    if (error) {
+      setMembersError(error.message);
+      return;
+    }
+    setMembersError(null);
+    loadMembers();
   };
 
   const handleSaveItemEdit = async () => {
@@ -251,13 +364,9 @@ export function DraftDetailView({
         activeItemsCount={activeCollectionMods.length}
         creatorUsername={creatorUsername}
         onBack={onBack}
-        onOpenEditMetadata={onUpdateDraftMetadata ? () => {
-          setEditName(draft?.name || "");
-          setEditVersion(draft?.minecraft_version || "");
-          setEditLoader(draft?.loader || "");
-          setEditCoverImage(draft?.cover_image || "");
-          setShowMetadataModal(true);
-        } : undefined}
+        isOwner={isOwner}
+        onToggleVisibility={isOwner ? () => { void handleToggleVisibility(); } : undefined}
+        onOpenEditMetadata={canEditSettings ? openSettings : undefined}
       />
 
       {/* Tabs */}
@@ -271,6 +380,8 @@ export function DraftDetailView({
               key="summary"
               draft={draft}
               activeCollectionMods={activeCollectionMods}
+              creatorUsername={creatorUsername}
+              loadingActiveMods={loadingActiveMods}
             />
           )}
 
@@ -281,13 +392,15 @@ export function DraftDetailView({
               setTypeFilter={setTypeFilter}
               loadingActiveMods={loadingActiveMods}
               visibleMods={visibleMods}
+              canEditItems={canEditItems}
+              isPublic={isPublic}
               handleOpenModDetails={handleOpenModDetails}
               onOpenEditItem={(mod) => {
                 setEditingItem(mod);
                 setItemType(mod.projectType || "mod");
                 setItemSide(mod.side || "both");
               }}
-              onRemoveItem={onRemoveModFromDraft ? handleRemoveMod : undefined}
+              onRemoveItem={canEditItems && onRemoveModFromDraft ? handleRemoveMod : undefined}
             />
           )}
 
@@ -296,6 +409,16 @@ export function DraftDetailView({
               key="members"
               loadingMembers={loadingMembers}
               members={members}
+              isOwner={isOwner}
+              currentUserId={session?.user?.id}
+              error={membersError}
+              onInvite={() => {
+                setShowInviteModal(true);
+              }}
+              onRemoveMember={(member) => {
+                void handleRemoveMember(member);
+              }}
+              onOpenProfile={onOpenProfile}
             />
           )}
 
@@ -325,9 +448,23 @@ export function DraftDetailView({
         setEditCoverImage={setEditCoverImage}
         editVisibility={editVisibility}
         setEditVisibility={setEditVisibility}
+        editDescription={editDescription}
+        setEditDescription={setEditDescription}
         savingMetadata={savingMetadata}
         onSave={handleSaveMetadata}
-        isOwner={draft?.owner_id === session?.user?.id}
+        isOwner={isOwner}
+      />
+
+      <DraftInviteModal
+        isOpen={showInviteModal}
+        draftId={draft.id}
+        currentUserId={session?.user?.id}
+        onClose={() => {
+          setShowInviteModal(false);
+        }}
+        onInvited={() => {
+          loadMembers();
+        }}
       />
 
       <DraftItemEditModal

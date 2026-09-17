@@ -4,6 +4,7 @@ export * from "./DraftDetailTabs";
 export * from "./DraftSummaryTab";
 export * from "./DraftItemsTab";
 export * from "./DraftMembersTab";
+export * from "./DraftInviteModal";
 export * from "./DraftActivityTab";
 export * from "./DraftMetadataModal";
 export * from "./DraftItemEditModal";

@@ -6,6 +6,8 @@
 
 ## ¿Qué es FOMO Cloud?
 
+**FOMO** = **F**ound **O**ther **M**ods **O**bviously. Glosario completo: [nomenclatura.md](../guides/nomenclatura.md).
+
 FOMO Cloud es la plataforma social y de descubrimiento integrada en MIM. Conecta el flujo local de gestión de mods con una capa pública en Supabase para permitir descubrimiento social, showcases de creadores y compartición de contenido.
 
 **El diferenciador real de FOMO no es el reproductor de video — es el ecosistema integrado:**

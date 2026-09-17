@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 
 import type { Project } from "@/lib/core/types";
+import { DesktopUpdateBanner } from "@/components/layout/DesktopUpdateBanner";
+import { GuidesToggle } from "@/components/layout/GuidesToggle";
 
 interface LayoutHeaderProps {
   fomoOpen: boolean;
@@ -43,14 +45,10 @@ export function LayoutHeader({
   const pathname = usePathname();
   const serverActive = pathname === "/servers" || pathname.startsWith("/servers/");
   const [appMode, setAppMode] = React.useState<string>("MIMU");
-  const [guidesActive, setGuidesActive] = React.useState(false);
   const [profile, setProfile] = React.useState<{ username: string } | null>(null);
   const [isAutoClassify, setIsAutoClassify] = React.useState(false);
 
   React.useEffect(() => {
-    setGuidesActive(localStorage.getItem("guides_enabled") === "true");
-    
-    // Fetch profile for global header
     fetch("/api/sage/profile")
       .then(res => res.json())
       .then(data => {
@@ -94,6 +92,7 @@ export function LayoutHeader({
 
   return (
     <header className="sticky top-0 z-150 border-b border-primary/20 bg-background/80 backdrop-blur-xl transition-all duration-700">
+      <DesktopUpdateBanner onOpenSettings={onOpenSettings} />
       {/* Auto Classify Glow */}
       <div 
         className={`absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000 ${isAutoClassify ? 'opacity-100' : 'opacity-0'}`}
@@ -167,22 +166,7 @@ export function LayoutHeader({
                 })()}
                 {watcherStatus || "Watcher"}
               </span>
-              <button
-                onClick={() => {
-                  const newState = !guidesActive;
-                  localStorage.setItem("guides_enabled", newState ? "true" : "false");
-                  setGuidesActive(newState);
-                  window.dispatchEvent(new CustomEvent("show-onboarding", { detail: newState }));
-                }}
-                className={`p-1.5 rounded-lg border transition-all ${
-                  guidesActive
-                    ? "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_rgba(187,150,228,0.2)]"
-                    : "bg-white/5 border-white/10 text-white/50 hover:text-white"
-                }`}
-                title="Activar/Desactivar Guías"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zodiac-gemini"><path d="M16 4.525v14.948"/><path d="M20 3A17 17 0 0 1 4 3"/><path d="M4 21a17 17 0 0 1 16 0"/><path d="M8 4.525v14.948"/></svg>
-              </button>
+              <GuidesToggle />
             </div>
           </div>
         </div>

@@ -2,12 +2,13 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Radio, Share2, Trophy, Users } from "lucide-react";
+import { Layers, Radio, Share2, Trophy, Users } from "lucide-react";
 
-export type CommunitySection = "compartidos" | "rankings" | "miembros";
+export type CommunitySection = "compartidos" | "drafts" | "rankings" | "miembros";
 
 const SECTIONS = [
   { id: "compartidos" as const, label: "Compartidos", icon: Share2 },
+  { id: "drafts" as const, label: "Drafts", icon: Layers },
   { id: "rankings" as const, label: "Rankings", icon: Trophy },
   { id: "miembros" as const, label: "Miembros", icon: Users },
 ];
@@ -18,7 +19,7 @@ interface CommunityHeaderProps {
   metrics?: { members: number; recommendations: number; featured: number };
 }
 
-/** Compact masthead and shared animated selector for the three community views. */
+/** Compact masthead and shared animated selector for the community views. */
 export function CommunityHeader({ active, onChange, metrics }: CommunityHeaderProps) {
   return (
     <div className="mb-4 shrink-0">
@@ -51,7 +52,7 @@ export function CommunityHeader({ active, onChange, metrics }: CommunityHeaderPr
         </div>
       </div>
 
-      <div className="relative mt-3 grid grid-cols-3 rounded-xl border border-white/[0.07] bg-black/20 p-1 shadow-inner">
+      <div className="relative mt-3 grid grid-cols-4 rounded-xl border border-white/[0.07] bg-black/20 p-1 shadow-inner">
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const selected = active === id;
           return (

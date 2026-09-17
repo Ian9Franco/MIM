@@ -7,6 +7,7 @@ import {
   setChatHistoryEnabled,
 } from "@/lib/intelligence/sage/chatHistoryStore";
 import { MimbotByokTransparencyPanel } from "@/components/sage/parts/mimbot/MimbotByokTransparencyPanel";
+import { useDesktopAppUpdater } from "@/hooks/useDesktopAppUpdater";
 
 export const MIMBOT_HISTORY_SETTINGS_EVENT = "mim-bot-history-settings-changed";
 
@@ -341,6 +342,134 @@ export function SettingsFooter({
         >
           <Check className="w-4 h-4" /> Guardar y Recargar
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── DesktopAppUpdaterCard ────────────────────────────────────────────────────
+
+export function DesktopAppUpdaterCard() {
+  const {
+    isDesktop,
+    status,
+    versionInfo,
+    downloadPercent,
+    errorMsg,
+    unsupportedMessage,
+    checkUpdate,
+    downloadUpdate,
+    installUpdate,
+  } = useDesktopAppUpdater();
+
+  if (!isDesktop) return null;
+
+  return (
+    <div className="group">
+      <div className="flex items-center justify-between mb-2">
+        <label className="font-label text-muted text-[0.65rem] tracking-wider uppercase">
+          Actualizaciones de MIM Desktop
+        </label>
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-subhead border bg-emerald-500/10 border-emerald-500/20 text-emerald-300">
+          Auto-Update
+        </span>
+      </div>
+
+      <div className="w-full rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-subhead text-foreground">MIM Desktop</h4>
+            <p className="text-[11px] text-muted mt-0.5">
+              Verifica GitHub Releases y aplica updates del instalador NSIS.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {status === "checking" && (
+              <span className="text-[10px] text-muted flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" /> Verificando...
+              </span>
+            )}
+            {status === "up-to-date" && (
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Actualizado
+              </span>
+            )}
+            {status === "downloading" && (
+              <span className="text-[10px] text-primary flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" /> {downloadPercent}%
+              </span>
+            )}
+            {status === "downloaded" && (
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Lista para instalar
+              </span>
+            )}
+            {status === "error" && (
+              <span className="text-[10px] text-red-400 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Error
+              </span>
+            )}
+
+            {status !== "unsupported" && (
+              <button
+                onClick={() => void checkUpdate()}
+                disabled={status === "checking" || status === "downloading"}
+                className="p-2 rounded-lg border border-white/5 hover:bg-white/10 text-muted hover:text-foreground transition-all disabled:opacity-50"
+                title="Volver a comprobar"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${status === "checking" ? "animate-spin" : ""}`} />
+              </button>
+            )}
+
+            {status === "update-available" && (
+              <button
+                onClick={() => void downloadUpdate()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 border border-primary/30 text-primary text-[11px] font-bold hover:bg-primary/30 transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Descargar
+              </button>
+            )}
+
+            {status === "downloaded" && (
+              <button
+                onClick={() => void installUpdate()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold hover:bg-emerald-500/30 transition-all"
+              >
+                <Package className="w-3.5 h-3.5" />
+                Reiniciar e instalar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {(versionInfo || errorMsg || status === "unsupported") && (
+          <div className="mt-1 pt-3 border-t border-white/5 flex flex-col gap-1.5">
+            {versionInfo && (
+              <div className="flex items-center gap-4 text-[11px] font-mono flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted">Versión local:</span>
+                  <span className="text-foreground">{versionInfo.current}</span>
+                </div>
+                {versionInfo.latest && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted">Última versión:</span>
+                    <span className="text-emerald-400">{versionInfo.latest}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {status === "unsupported" && (
+              <p className="text-[10px] text-amber-300/90">{unsupportedMessage}</p>
+            )}
+            {errorMsg && (
+              <p className="text-[10px] text-red-400 font-mono mt-1 flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3" /> {errorMsg}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -31,6 +31,7 @@ interface Draft {
   loader: string;
   visibility: string;
   cover_image?: string | null;
+  owner_id?: string;
   items?: DraftItem[];
 }
 
@@ -71,7 +72,7 @@ interface DraftPickerModalProps {
   pendingMod: ModHit | null;
   drafts: Draft[];
   onClose: () => void;
-  onCreateDraft: (name: string, version: string, loader: string) => Promise<Draft | null>;
+  onCreateDraft: (name: string, version: string, loader: string, visibility?: "public" | "private", description?: string) => Promise<Draft | null>;
   onAddModToDraft: (draftId: string, mod: ModHit, category: string) => Promise<DraftAddResult>;
   onRemoveModFromDraft: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRecategorize: (draftId: string, projectId: string, newCat: string) => Promise<void>;
@@ -79,6 +80,7 @@ interface DraftPickerModalProps {
   onUpdateDraftCover: (draftId: string, coverImage: string | null) => Promise<void>;
   onDeleteDraft: (draftId: string) => Promise<void>;
   onRefreshDrafts: () => void;
+  currentUserId?: string;
 }
 
 const MC_VERSIONS = ["1.21.1", "1.20.4", "1.20.1", "1.19.4", "1.19.2", "1.18.2", "1.16.5", "1.12.2"];
@@ -92,12 +94,15 @@ export function DraftPickerModal({
   open, initialEditDraftId, pendingMod, drafts, onClose,
   onCreateDraft, onAddModToDraft, onRemoveModFromDraft,
   onRecategorize, onUpdateSide, onUpdateDraftCover, onDeleteDraft, onRefreshDrafts,
+  currentUserId,
 }: DraftPickerModalProps) {
   const [view, setView] = useState<"pick" | "create" | "edit">("pick");
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
   const [newName, setNewName] = useState("");
   const [newVersion, setNewVersion] = useState("1.20.1");
   const [newLoader, setNewLoader] = useState("fabric");
+  const [newVisibility, setNewVisibility] = useState<"public" | "private">("private");
+  const [newDescription, setNewDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
   const [feedbackStatus, setFeedbackStatus] = useState<DraftAddResult["status"]>("compatible");
@@ -125,7 +130,7 @@ export function DraftPickerModal({
     setView("pick");
     setEditingDraft(null);
     setEditTypeFilter("all");
-    setNewName(""); setFeedback("");
+    setNewName(""); setNewVisibility("private"); setNewDescription(""); setFeedback("");
     onClose();
   };
 
@@ -143,7 +148,7 @@ export function DraftPickerModal({
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setLoading(true);
-    const created = await onCreateDraft(newName.trim(), newVersion, newLoader);
+    const created = await onCreateDraft(newName.trim(), newVersion, newLoader, newVisibility, newDescription.trim().slice(0, 100));
     setLoading(false);
     if (created && pendingMod) {
       await handleAddToDraft(created);
@@ -205,16 +210,19 @@ export function DraftPickerModal({
                     {drafts.length === 0 ? (
                       <p className="text-xs text-white/40 text-center py-4">No tenés drafts. Creá uno primero.</p>
                     ) : (
-                      drafts.map(draft => (
+                      drafts.map(draft => {
+                        const mine = !currentUserId || !draft.owner_id || draft.owner_id === currentUserId;
+                        return (
                         <div key={draft.id} className="flex items-center gap-2 p-3 rounded-2xl border transition-all" style={{ borderColor: "var(--color-border)", background: "color-mix(in srgb, var(--color-card) 80%, transparent)" }}>
                           <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] shrink-0 flex items-center justify-center">
                             {draft.cover_image ? <img src={draft.cover_image} alt="" className="w-full h-full object-cover" /> : <Layers className="w-4 h-4 text-white/30" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-white truncate">{draft.name}</p>
-                            <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>{draft.minecraft_version} · {draft.loader}</p>
+                            <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>{draft.minecraft_version} · {draft.loader}{!mine ? " · comunidad" : ""}</p>
                           </div>
                           <div className="flex gap-1 shrink-0">
+                            {mine && (
                             <button
                               onClick={() => { setEditingDraft(draft); setEditTypeFilter("all"); setView("edit"); }}
                               className="p-1.5 rounded-lg hover:bg-white/10 transition-all" style={{ color: "var(--color-muted)" }}
@@ -222,7 +230,8 @@ export function DraftPickerModal({
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            {pendingMod && (
+                            )}
+                            {pendingMod && (mine || draft.visibility === "public") && (
                               <button
                                 onClick={() => handleAddToDraft(draft)}
                                 disabled={loading}
@@ -234,7 +243,8 @@ export function DraftPickerModal({
                             )}
                           </div>
                         </div>
-                      ))
+                        );
+                      })
                     )}
 
                     {feedback && (
@@ -290,6 +300,51 @@ export function DraftPickerModal({
                         </select>
                       </div>
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>Visibilidad</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewVisibility("private")}
+                          className="rounded-xl border px-3 py-2 text-[10px] font-bold uppercase"
+                          style={{
+                            borderColor: newVisibility === "private" ? "var(--color-border)" : "transparent",
+                            background: newVisibility === "private" ? "color-mix(in srgb, var(--color-card) 90%, transparent)" : "transparent",
+                            color: newVisibility === "private" ? "var(--color-foreground)" : "var(--color-muted)",
+                          }}
+                        >
+                          Privado
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewVisibility("public")}
+                          className="rounded-xl border px-3 py-2 text-[10px] font-bold uppercase"
+                          style={{
+                            borderColor: newVisibility === "public" ? "#34d39955" : "transparent",
+                            background: newVisibility === "public" ? "color-mix(in srgb, #34d399 16%, transparent)" : "transparent",
+                            color: newVisibility === "public" ? "#6ee7b7" : "var(--color-muted)",
+                          }}
+                        >
+                          Público
+                        </button>
+                      </div>
+                      <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>
+                        Público: cualquiera con sesión puede verlo y editar ítems. Privado: solo vos.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase font-mono tracking-widest" style={{ color: "var(--color-muted)" }}>Descripción</label>
+                      <textarea
+                        value={newDescription}
+                        maxLength={100}
+                        rows={2}
+                        placeholder="Una línea corta sobre este draft"
+                        onChange={(e) => setNewDescription(e.target.value.slice(0, 100))}
+                        className="w-full resize-none rounded-xl py-2.5 px-3 text-xs outline-none"
+                        style={{ background: "color-mix(in srgb, var(--color-card) 80%, transparent)", border: "1px solid var(--color-border)", color: "var(--color-foreground)" }}
+                      />
+                      <p className="text-right font-mono text-[9px]" style={{ color: "var(--color-muted)" }}>{newDescription.length}/100</p>
+                    </div>
                     <div className="flex gap-2 mt-1">
                       <button onClick={() => setView("pick")} className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all" style={{ background: "var(--color-card)", color: "var(--color-muted)" }}>
                         Cancelar
@@ -308,12 +363,14 @@ export function DraftPickerModal({
                       <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>
                         {editingDraft.minecraft_version} · {editingDraft.loader}
                       </p>
+                      {(!currentUserId || !editingDraft.owner_id || editingDraft.owner_id === currentUserId) && (
                       <button
                         onClick={async () => { if (confirm(`Eliminar draft "${editingDraft.name}"?`)) { await onDeleteDraft(editingDraft.id); onRefreshDrafts(); resetAndClose(); } }}
                         className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Eliminar draft
                       </button>
+                      )}
                     </div>
 
                     <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-border)", background: "color-mix(in srgb, var(--color-card) 80%, transparent)" }}>

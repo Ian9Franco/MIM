@@ -2,13 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, ArrowLeft, Bookmark, ChevronDown, ChevronRight, Compass, FolderKanban, Layers, Plus, Search, UserCheck } from "lucide-react";
+import { Archive, ArrowLeft, Bookmark, ChevronDown, ChevronRight, Compass, Plus, Search, UserCheck } from "lucide-react";
 import type { ModHit } from "../SpotlightMarquees";
 import type { CollectionItem } from "../../app/types";
 import { DefaultModIcon } from "../DefaultModIcon";
-import { DraftDetailView, type DraftDetailModel } from "../DraftDetailView";
 import { CollectionsSkeleton } from "../FomoSkeletons";
-import type { HomeDraft } from "../../lib/drafts/draftContract";
 import type { FomoFavoriteItem, FomoFollowedAuthor } from "../../types/fomo";
 import type { Fn } from "../../types/fn";
 
@@ -18,28 +16,17 @@ interface Props {
   curseForgeFeatured: CollectionItem[];
   activeCollectionMods: ModHit[];
   loadingActiveMods: boolean;
-  session: { user?: { id: string } } | null;
-  userDrafts: HomeDraft[];
-  activeDraft?: DraftDetailModel | null;
   handleEnterCollection: Fn<[CollectionItem]>;
   handleExitCollection: Fn<[]>;
   handleOpenModDetails: Fn<[ModHit]>;
-  handleEnterDraftCollection: Fn<[HomeDraft]>;
-  onRemoveModFromDraft?: Fn<[string, string, string?], Promise<void>>;
-  onRefreshDrafts?: Fn<[]>;
-  onEditDraft?: Fn<[HomeDraft]>;
-  onCreateDraft?: Fn<[]>;
-  onUpdateDraftMetadata?: Fn<[string, Record<string, unknown>], Promise<boolean>>;
-  onRecategorizeDraftItem?: Fn<[string, string, string], Promise<void>>;
-  onUpdateDraftItemSide?: Fn<[string, string, string, string?], Promise<void>>;
   userFavorites?: FomoFavoriteItem[];
   userFollowedAuthors?: FomoFollowedAuthor[];
   onSearchAuthor?: Fn<[string, string]>;
   onAddToDraft?: Fn<[ModHit]>;
 }
 
-type View = "editorial" | "mine" | "saved";
-const VIEWS: Array<[View, string]> = [["editorial", "Editoriales"], ["mine", "Mis colecciones"], ["saved", "Guardados"]];
+type View = "editorial" | "saved";
+const VIEWS: Array<[View, string]> = [["editorial", "Editoriales"], ["saved", "Guardados"]];
 const yearOf = (c: CollectionItem) => `${c.name} ${c.description || ""}`.match(/\b(20\d{2})\b/)?.[1] || "Otros";
 
 function toMod(f: Record<string, unknown>): ModHit {
@@ -77,7 +64,6 @@ export function CollectionsTab(p: Props) {
   const current = p.modrinthFeatured[0], recent = p.modrinthFeatured.slice(1, 5), archive = p.modrinthFeatured.slice(5);
   const years = useMemo(() => Array.from(new Set(archive.map(yearOf))), [archive]);
   const visibleArchive = useMemo(() => archive.filter(c => `${c.name} ${c.description || ""}`.toLowerCase().includes(archiveQuery.toLowerCase()) && (archiveYear === "Todos" || yearOf(c) === archiveYear)), [archive, archiveQuery, archiveYear]);
-  const drafts = useMemo(() => [...p.userDrafts].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [p.userDrafts]);
   const savedMods = useMemo(() => favorites.map(toMod).filter(m => `${m.title} ${m.author}`.toLowerCase().includes(savedQuery.toLowerCase())), [favorites, savedQuery]);
   const detailMeta = useMemo(() => {
     const rows = p.activeCollectionMods as Array<ModHit & { versions?: string[]; game_versions?: string[]; loaders?: string[]; loader?: string }>;
@@ -93,17 +79,17 @@ export function CollectionsTab(p: Props) {
   }), [p.activeCollectionMods, detailLoader, detailQuery, detailType, detailVersion]);
 
   useEffect(() => { setDetailQuery(""); setDetailType("all"); setDetailVersion("all"); setDetailLoader("all"); }, [p.activeCollection?.id]);
-  const isDraft = p.activeCollection?.source === "draft";
+  const showingHome = !p.activeCollection || p.activeCollection.source === "draft";
 
   return <motion.div key="collections" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="relative flex min-h-0 flex-1 flex-col">
     <AnimatePresence mode="wait">
-      {!p.activeCollection ? <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-28 scrollbar-none">
+      {showingHome ? <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-28 scrollbar-none">
         <div className="mb-4 border-l-2 p-3" style={{ background: "linear-gradient(to right,color-mix(in srgb,var(--color-primary) 10%,transparent),transparent)", borderColor: "var(--color-primary)" }}>
           <p className="text-[9px] font-mono font-bold uppercase" style={{ color: "var(--color-primary)" }}>Colecciones</p>
           <h2 className="mt-1 text-sm font-black text-white">Descubrí, organizá y construí.</h2>
-          <p className="mt-0.5 text-[9px] text-white/40">Editoriales, drafts y guardados en un solo espacio.</p>
+          <p className="mt-0.5 text-[9px] text-white/40">Editoriales y guardados en un solo espacio.</p>
         </div>
-        <div className="sticky top-0 z-20 mb-5 grid grid-cols-3 gap-1 rounded-xl border border-border bg-surface/90 p-1 shadow-sm backdrop-blur-xl">
+        <div className="sticky top-0 z-20 mb-5 grid grid-cols-2 gap-1 rounded-xl border border-border bg-surface/90 p-1 shadow-sm backdrop-blur-xl">
           {VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} onClick={() => { setView(id); }} className={`h-9 rounded-lg px-1 text-[8px] font-bold ${view === id ? "mim-control-3d-active text-primary" : "text-white/40"}`}>{label}</button>)}
         </div>
         <AnimatePresence mode="wait">
@@ -120,22 +106,14 @@ export function CollectionsTab(p: Props) {
             </div>}
           </motion.section>}
 
-          {view === "mine" && <motion.section key="mine" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-5">
-            <div className="flex items-end justify-between"><Title eyebrow="Tu espacio" title="Mis colecciones" /><button type="button" onClick={() => { p.onCreateDraft?.(); }} className="mim-control-3d flex h-8 items-center gap-1 rounded-lg border border-border px-2.5 text-[8px] font-bold text-white/65"><Plus className="h-3.5 w-3.5" />Nueva</button></div>
-            {!p.session ? <Empty icon={<FolderKanban className="h-9 w-9" />} title="Iniciá sesión para crear" text="Tus drafts aparecerán acá." /> : !drafts.length ? <Empty icon={<FolderKanban className="h-9 w-9" />} title="Creá tu primera colección" text="Combiná mods, texturas y shaders en un draft compatible." action="Nueva colección" onAction={() => { p.onCreateDraft?.(); }} /> : <>
-              <button type="button" onClick={() => { p.handleEnterDraftCollection(drafts[0]); }} className="mim-collection-hero mim-themed-card w-full overflow-hidden rounded-2xl border border-border text-left"><div className="relative h-28 overflow-hidden bg-white/[.035]">{drafts[0].cover_image ? <img src={drafts[0].cover_image} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><Layers className="h-9 w-9 text-white/15" /></div>}<span className="absolute left-3 top-3 rounded-md border border-white/10 bg-black/60 px-2 py-1 text-[7px] font-black uppercase text-white/75">Continuar trabajando</span></div><div className="flex items-center gap-3 p-4"><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-black text-white">{drafts[0].name}</h3><p className="mt-1 text-[9px] text-white/45">{drafts[0].minecraft_version ?? "Versión libre"} · {drafts[0].loader ?? "Cualquier loader"} · {drafts[0].items?.length ?? 0} ítems</p></div><ChevronRight className="h-5 w-5 text-white/30" /></div></button>
-              <div><Title eyebrow={`${drafts.length} en total`} title="Todos los drafts" /><div className="mt-2 space-y-2">{drafts.map(d => <button key={d.id} type="button" onClick={() => { p.handleEnterDraftCollection(d); }} className="mim-collection-card flex w-full items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={d.cover_image} fallback={<Layers className="h-4 w-4 text-white/25" />} /><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">{d.name}</p><p className="mt-1 text-[8px] text-white/40">{d.minecraft_version ?? "Sin versión"} · {d.loader ?? "Sin loader"} · {d.items?.length ?? 0} ítems</p></div><span className="rounded-md border border-border px-1.5 py-0.5 text-[7px] uppercase text-white/40">{d.visibility ?? "private"}</span><ChevronRight className="h-4 w-4 text-white/25" /></button>)}</div></div>
-            </>}
-          </motion.section>}
-
           {view === "saved" && <motion.section key="saved" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
             <div><Title eyebrow="Tu biblioteca" title="Guardados para construir" /><div className="mt-2 grid grid-cols-2 gap-2"><Summary active={savedView === "favorites"} icon={<Bookmark className="h-4 w-4" />} count={favorites.length} label="Proyectos" click={() => { setSavedView("favorites"); }} /><Summary active={savedView === "authors"} icon={<UserCheck className="h-4 w-4" />} count={authors.length} label="Autores" click={() => { setSavedView("authors"); }} /></div></div>
             {savedView === "favorites" ? <><SearchBox value={savedQuery} setValue={setSavedQuery} placeholder="Buscar proyecto o autor..." /><div className="space-y-2">{savedMods.map(m => <div key={`${m._source}:${m.projectId}`} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/75 p-3"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] capitalize text-white/40">{m.author} · {m._source}</p></div><button type="button" onClick={() => { p.handleOpenModDetails(m); }} className="mim-control-3d h-8 rounded-lg border border-border px-2 text-[8px] font-bold text-white/60">Ver</button>{p.onAddToDraft && <button type="button" onClick={() => { p.onAddToDraft?.(m); }} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}</div>)}{!savedMods.length && <Empty icon={<Bookmark className="h-9 w-9" />} title="Sin resultados" text="Guardá proyectos desde Explorar o Detalles." />}</div></> : <div className="grid grid-cols-2 gap-2">{authors.map((a, idx) => <button key={String(a.id ?? `${a.platform ?? "modrinth"}:${a.author_name ?? a.name ?? idx}`)} type="button" onClick={() => { p.onSearchAuthor?.(String(a.author_name ?? a.name ?? ""), String(a.platform ?? "modrinth")); }} className="mim-collection-card flex min-w-0 items-center gap-2.5 rounded-2xl border border-border bg-surface/75 p-3 text-left"><Thumb src={(a.icon_url ?? a.iconUrl ?? a.avatar_url) as string | null | undefined} fallback={<span className="text-[9px] font-black uppercase text-white/40">{String(a.author_name ?? a.name ?? "AU").slice(0, 2)}</span>} small /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-white">{String(a.author_name ?? a.name ?? "Autor")}</p><p className="mt-1 text-[7px] uppercase text-white/35">{String(a.platform ?? "modrinth")}</p></div></button>)}{!authors.length && <div className="col-span-2"><Empty icon={<UserCheck className="h-9 w-9" />} title="Todavía no seguís autores" text="Podés seguirlos desde los detalles." /></div>}</div>}
           </motion.section>}
         </AnimatePresence>
-      </motion.div> : isDraft && p.activeDraft ? <DraftDetailView key={`draft-${p.activeCollection.id}`} draft={p.activeDraft} activeCollectionMods={p.activeCollectionMods} loadingActiveMods={p.loadingActiveMods} session={p.session} onBack={() => { p.handleExitCollection(); }} onEditDraft={p.onEditDraft ? (d) => { p.onEditDraft?.(d as unknown as HomeDraft); } : undefined} handleOpenModDetails={(mod) => { p.handleOpenModDetails(mod); }} onRemoveModFromDraft={p.onRemoveModFromDraft} onRefreshDrafts={p.onRefreshDrafts} onUpdateDraftMetadata={p.onUpdateDraftMetadata} onRecategorizeDraftItem={p.onRecategorizeDraftItem} onUpdateDraftItemSide={p.onUpdateDraftItemSide} /> : <motion.div key="detail" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="flex min-h-0 flex-1 flex-col">
-        <div className="mb-3 flex items-center gap-3"><button type="button" onClick={p.handleExitCollection} aria-label="Volver a colecciones" className="mim-control-3d flex h-9 w-9 items-center justify-center rounded-xl border border-border text-white/65"><ArrowLeft className="h-4 w-4" /></button><div className="min-w-0 flex-1"><span className="text-[8px] font-mono font-bold uppercase text-emerald-400">Colección abierta</span><h2 className="truncate text-sm font-black text-white">{p.activeCollection.name}</h2></div><span className="rounded-lg border border-border px-2 py-1 font-mono text-[8px] text-white/45">{visibleMods.length}/{p.activeCollectionMods.length}</span></div>
-        {p.loadingActiveMods ? <CollectionsSkeleton /> : <div className="flex min-h-0 flex-1 flex-col"><div className="mb-3 space-y-2"><SearchBox value={detailQuery} setValue={setDetailQuery} placeholder="Buscar dentro de la colección..." /><div className="mim-chip-scroll">{[["all","Todo"],["mod","Mods"],["resourcepack","Texturas"],["shader","Shaders"],["datapack","Datapacks"]].map(([id,label]) => <Chip key={id} active={detailType === id} click={() => { setDetailType(id); }}>{label}</Chip>)}</div><div className="grid grid-cols-2 gap-2"><Select label="Versión" value={detailVersion} options={detailMeta.versions} set={setDetailVersion} /><Select label="Loader" value={detailLoader} options={detailMeta.loaders} set={setDetailLoader} /></div></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-28 pr-1 scrollbar-none">{p.activeCollection.description && <p className="px-1 pb-1 text-[9px] text-white/40">{p.activeCollection.description}</p>}{visibleMods.map((m) => <div key={m.itemId ?? m.id ?? m.projectId} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/78 p-3"><button type="button" onClick={() => { p.handleOpenModDetails(m); }} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] text-white/40">{(m.loaders ?? []).slice(0,2).join(" · ")} {(m.versions ?? m.game_versions ?? []).slice(0,1).join("")}</p></div></button>{p.onAddToDraft && <button type="button" onClick={() => { p.onAddToDraft?.(m); }} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}<ChevronRight className="h-4 w-4 text-white/25" /></div>)}{!visibleMods.length && <Empty icon={<Compass className="h-9 w-9" />} title="Sin coincidencias" text="Probá otra búsqueda, versión o loader." />}</div></div>}
+      </motion.div> : <motion.div key="detail" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-3 flex items-center gap-3"><button type="button" onClick={p.handleExitCollection} aria-label="Volver a colecciones" className="mim-control-3d flex h-9 w-9 items-center justify-center rounded-xl border border-border text-white/65"><ArrowLeft className="h-4 w-4" /></button><div className="min-w-0 flex-1"><span className="text-[8px] font-mono font-bold uppercase text-emerald-400">Colección abierta</span><h2 className="truncate text-sm font-black text-white">{p.activeCollection?.name}</h2></div><span className="rounded-lg border border-border px-2 py-1 font-mono text-[8px] text-white/45">{visibleMods.length}/{p.activeCollectionMods.length}</span></div>
+        {p.loadingActiveMods ? <CollectionsSkeleton /> : <div className="flex min-h-0 flex-1 flex-col"><div className="mb-3 space-y-2"><SearchBox value={detailQuery} setValue={setDetailQuery} placeholder="Buscar dentro de la colección..." /><div className="mim-chip-scroll">{[["all","Todo"],["mod","Mods"],["resourcepack","Texturas"],["shader","Shaders"],["datapack","Datapacks"]].map(([id,label]) => <Chip key={id} active={detailType === id} click={() => { setDetailType(id); }}>{label}</Chip>)}</div><div className="grid grid-cols-2 gap-2"><Select label="Versión" value={detailVersion} options={detailMeta.versions} set={setDetailVersion} /><Select label="Loader" value={detailLoader} options={detailMeta.loaders} set={setDetailLoader} /></div></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-28 pr-1 scrollbar-none">{p.activeCollection?.description && <p className="px-1 pb-1 text-[9px] text-white/40">{p.activeCollection.description}</p>}{visibleMods.map((m) => <div key={m.itemId ?? m.id ?? m.projectId} className="mim-collection-card flex items-center gap-3 rounded-2xl border border-border bg-surface/78 p-3"><button type="button" onClick={() => { p.handleOpenModDetails(m); }} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Thumb src={m.iconUrl} fallback={<DefaultModIcon platform={m._source} />} /><div className="min-w-0"><p className="truncate text-[11px] font-bold text-white">{m.title}</p><p className="mt-1 truncate text-[8px] text-white/40">{(m.loaders ?? []).slice(0,2).join(" · ")} {(m.versions ?? m.game_versions ?? []).slice(0,1).join("")}</p></div></button>{p.onAddToDraft && <button type="button" onClick={() => { p.onAddToDraft?.(m); }} aria-label={`Añadir ${m.title} a un draft`} className="mim-control-3d flex h-8 w-8 items-center justify-center rounded-lg border border-border text-white/60"><Plus className="h-3.5 w-3.5" /></button>}<ChevronRight className="h-4 w-4 text-white/25" /></div>)}{!visibleMods.length && <Empty icon={<Compass className="h-9 w-9" />} title="Sin coincidencias" text="Probá otra búsqueda, versión o loader." />}</div></div>}
       </motion.div>}
     </AnimatePresence>
   </motion.div>;

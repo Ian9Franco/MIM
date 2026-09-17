@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface FomoEyeProps {
   className?: string;
@@ -8,22 +8,21 @@ interface FomoEyeProps {
 
 /** FOMO eye — static PNG with CSS side-to-side gaze (no blink). */
 export function FomoEye({ className = "h-full w-full" }: FomoEyeProps) {
-  const anim = useMemo(
-    () => ({
-      fomoDuration: `${(6.1 + Math.random() * 3.8).toFixed(2)}s`,
-      fomoDelay: `-${(Math.random() * 6).toFixed(2)}s`,
-    }),
-    []
-  );
+  const eyeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const eye = eyeRef.current;
+    if (!eye) return;
+
+    eye.style.setProperty("--fomo-eye-duration", `${(6.1 + Math.random() * 3.8).toFixed(2)}s`);
+    eye.style.setProperty("--fomo-eye-delay", `-${(Math.random() * 6).toFixed(2)}s`);
+  }, []);
 
   return (
     <div
+      ref={eyeRef}
       className="mim-fomo-eye"
       aria-hidden
-      style={{
-        ["--fomo-eye-duration" as string]: anim.fomoDuration,
-        ["--fomo-eye-delay" as string]: anim.fomoDelay,
-      }}
     >
       <img
         src="/fomoico.png"

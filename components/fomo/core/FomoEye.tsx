@@ -14,8 +14,11 @@ export function FomoEye({ className = "h-full w-full" }: FomoEyeProps) {
     const eye = eyeRef.current;
     if (!eye) return;
 
-    eye.style.setProperty("--fomo-eye-duration", `${(6.1 + Math.random() * 3.8).toFixed(2)}s`);
-    eye.style.setProperty("--fomo-eye-delay", `-${(Math.random() * 6).toFixed(2)}s`);
+    const randomValues = crypto.getRandomValues(new Uint32Array(2));
+    const duration = 6.1 + (randomValues[0] / 2 ** 32) * 3.8;
+    const delay = (randomValues[1] / 2 ** 32) * 6;
+    eye.style.setProperty("--fomo-eye-duration", `${duration.toFixed(2)}s`);
+    eye.style.setProperty("--fomo-eye-delay", `-${delay.toFixed(2)}s`);
   }, []);
 
   return (

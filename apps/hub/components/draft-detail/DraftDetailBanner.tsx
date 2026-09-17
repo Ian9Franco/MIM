@@ -10,7 +10,7 @@ interface DraftDetailBannerProps {
     cover_image?: string | null;
     minecraft_version?: string;
     loader?: string;
-    visibility: string;
+    visibility?: string;
     description?: string;
   };
   activeItemsCount: number;

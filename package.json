@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.4.8",
+  "version": "11.5.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -86,7 +86,7 @@
     "cheerio": "^1.2.0",
     "chokidar": "^4.0.3",
     "date-fns": "^4.3.0",
-    "electron-updater": "^6.8.9",
+    "electron-updater": "^6.8.3",
     "framer-motion": "^11.0.0",
     "idb": "^8.0.3",
     "inquirer": "^8.2.7",
@@ -98,7 +98,6 @@
     "react-window-infinite-loader": "^2.0.1",
     "skinview3d": "^3.4.2",
     "ssh2": "^1.17.0",
-    "electron-updater": "^6.8.3",
     "yt-dlp-wrap": "^2.3.12",
     "zod": "^4.5.4"
   },

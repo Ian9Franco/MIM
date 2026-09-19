@@ -2,12 +2,21 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.4.8  
+> **Versión Actual:** v11.5.0  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
-> **Última actualización:** 2026-09-13
+> **Última actualización:** 2026-09-19
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 11.5.0 — Release v11.5.0 — Sistemas y Criterio Técnico MIM (2026-09-19)
+
+- **SRV-3 / SRV-7 / SRV-6b:** recovery UI + rollback API (deploy bloqueado con snapshots pendientes); apply de mods cliente desde SFTP/Modrinth; probe de proceso vía `session.lock`.
+- **API-02b:** contratos Zod de mutaciones restantes y ajustes de typecheck (`z.record`, `BuildTarget`, audit manifests).
+- **BOT-RPM:** cola secuencial Gemini con ventana de 15 req/min.
+- **Desktop updater:** el banner aparece si `getVersion` ya conoce una latest distinta (no se pierde al hidratar).
 
 ---
 

@@ -5,7 +5,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 ## 1. Proceso y contratos API
 
 - [x] **API-02 — Generalizar schemas Zod compartidos (cerrado en mutaciones core).** `build`, `delete`, `staging` y `tweak` usan `bodySchema`/`querySchema` del guard; `/api/settings/validate-keys` expone `useStoredGemini` para validación server-side.
-- [x] **API-02b — Inventario Zod + contratos compartidos.** `lib/api/contracts.ts`, `npm run lint:api-schemas`, y schemas en classify/scan/validate/move-files/crosscheck-batch/auto-categorize. Mutaciones restantes se listan por el inventario (no fallan CI).
+- [x] **API-02b — Inventario Zod + contratos compartidos (mutaciones cerradas).** `lib/api/contracts.ts`, `npm run lint:api-schemas`, y `bodySchema`/`querySchema` en las mutaciones Desktop restantes. GETs con searchParams siguen listados por el inventario (no fallan CI).
 
 ## 2. Funcionamiento y UX de MimBot
 
@@ -22,6 +22,7 @@ Roadmap pendiente revisado el 2026-09-10 contra `main` post PR #68/#70/#73–#75
 - [x] **BOT-06b — Costos OpenRouter en UI (cerrado).** `fetchOpenRouterAccountSnapshot()` consulta `GET /api/v1/auth/key`; el panel de cuotas muestra uso acumulado, límite y enlace a actividad del proveedor.
 - [x] **Desktop — Persistencia de credenciales tras upgrade (cerrado).** Electron recupera settings/secrets legacy, importa plaintext a `safeStorage`, fija `MIM_PORTABLE_DIR` y evita auto-switch a `D:` en runtime empaquetado. Ver [desktop-credentials.md](../guides/desktop-credentials.md).
 - [x] **BOT-07 — Cola para análisis por lotes (en main, 2026-09-12).** `runAnalysisQueue` (concurrencia por proveedor, retry de cuota, cancelación). Eval live `eval:mimbot` usa la cola. `POST /api/fomo/explain-batch` + botón **MIM-Bot lote** en Descubrir (máx. 12). Gate live SAGE-05b con umbrales en CI.
+- [x] **BOT-RPM — Cola Gemini 15 RPM (cerrado).** `withProviderRpmLimit()` serializa llamadas y respeta una ventana deslizante de 15 req/min en `GeminiProvider`.
 - [x] **BOT-08 — Caché de las cuatro quick questions durante 24 horas (cerrado).** `quickQuestionCache.ts`: clave `hash(crashSignature + question + mode)`, TTL 24 h, lectura/escritura en `SageMimbotCopilot` para chips canónicos.
 - [x] **BOT-09 — Transparencia BYOK (cerrado).** `mimbotByokTransparency.ts` + panel en Settings y modal de configuración; enlaces a términos Google/OpenRouter; sin prometer privacidad absoluta por BYOK.
 

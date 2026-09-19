@@ -16,26 +16,21 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE, isValidLoader, SUBCATEGORIES, type Loader } from "@/lib/core/constants";
+import { SOURCE_BASE, SUBCATEGORIES, type Loader } from "@/lib/core/constants";
 import { getSettings } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/modding/packValidator";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
 import { withApiGuard } from "@/lib/apiGuard";
-
-const BUILD_TARGETS = ["alluser", "allhost", "both"] as const;
-type BuildTarget = (typeof BUILD_TARGETS)[number];
+import { validatePackBodySchema } from "@/lib/api/contracts";
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: validatePackBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const {
       version,
       loader,
@@ -43,30 +38,6 @@ export const POST = withApiGuard(
       buildTarget,
       sinytraActive = false,
     } = body;
-
-    console.log(`[/api/validate] Request received for project: "${projectName}" (Target: ${buildTarget})`);
-
-    // ── Validation of request params ─────────────────────────────────────────
-    if (!version || !loader || !projectName || !buildTarget) {
-      return NextResponse.json(
-        { error: "Missing required fields: version, loader, projectName, buildTarget" },
-        { status: 400 }
-      );
-    }
-
-    if (!isValidLoader(loader)) {
-      return NextResponse.json(
-        { error: `Invalid loader "${loader}"` },
-        { status: 400 }
-      );
-    }
-
-    if (!(BUILD_TARGETS as readonly string[]).includes(buildTarget)) {
-      return NextResponse.json(
-        { error: `buildTarget must be "alluser", "allhost", or "both"` },
-        { status: 400 }
-      );
-    }
 
     const validatorMods: ValidatorMod[] = [];
     
@@ -179,7 +150,7 @@ export const POST = withApiGuard(
       mods: validatorMods,
       version,
       loader: loader as Loader,
-      buildTarget: buildTarget as BuildTarget,
+      buildTarget,
       sinytraActive: sinytraActive || isSinytraInstalled,
     });
 

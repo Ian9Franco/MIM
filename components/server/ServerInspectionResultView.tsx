@@ -4,7 +4,9 @@ import type { ServerInspectionResult } from "@/lib/server/inspectServer";
 import { ServerAuditSummaryCards, type DiffFilterTab } from "./ServerAuditSummaryCards";
 import { ServerDiffTable } from "./ServerDiffTable";
 import { ServerDeployPanel, type ServerDeployPanelProps } from "./ServerDeployPanel";
-import { countsFromDiff, isCompleteDeployableAudit } from "@/lib/server/deployEligibility";
+import { ServerRecoveryPanel } from "./ServerRecoveryPanel";
+import { countsFromDiff, hasBlockingPendingOperations, isCompleteDeployableAudit } from "@/lib/server/deployEligibility";
+import type { InspectServerRequest } from "@/lib/server/inspectSchema";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { BarChart3 } from "lucide-react";
 import { serverPanelClass, serverPanelStyle } from "./serverUi";
@@ -12,11 +14,15 @@ import { serverPanelClass, serverPanelStyle } from "./serverUi";
 interface Props {
   result: ServerInspectionResult;
   deploy?: Omit<ServerDeployPanelProps, "counts">;
+  inspectRequest?: InspectServerRequest | null;
+  onRecoveryChanged?: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
-export function ServerInspectionResultView({ result, deploy }: Props) {
+export function ServerInspectionResultView({ result, deploy, inspectRequest, onRecoveryChanged, onBusyChange }: Props) {
   const [filter, setFilter] = useState<DiffFilterTab>("all");
   const deployable = isCompleteDeployableAudit(result);
+  const pendingBlocked = hasBlockingPendingOperations(result.pendingOperations);
   const counts = result.report ? countsFromDiff(result.report.diff) : null;
   return (
     <section aria-label="Resultado de auditoría" className={`${serverPanelClass} space-y-5`} style={serverPanelStyle}>
@@ -26,11 +32,14 @@ export function ServerInspectionResultView({ result, deploy }: Props) {
         sub={`${result.scannedMods} de ${result.totalJarFiles} archivos JAR detectados analizados.`}
         accentColor="#10b981"
       />
-      {result.pendingOperations > 0 && (
-        <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-          Hay {result.pendingOperations === 1 ? "una operación" : `${result.pendingOperations} operaciones`} de servidor sin cerrar
-          desde un reinicio o cierre anterior. Revisá el estado del servidor antes de volver a desplegar.
-        </div>
+      {result.pending && result.pending.pendingOperationCount > 0 && (
+        <ServerRecoveryPanel
+          pending={result.pending}
+          inspectRequest={inspectRequest ?? null}
+          busy={Boolean(deploy?.busy)}
+          onBusyChange={onBusyChange ?? (() => {})}
+          onRecoveryChanged={onRecoveryChanged}
+        />
       )}
       {result.warnings.length > 0 && (
         <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-400">
@@ -55,9 +64,13 @@ export function ServerInspectionResultView({ result, deploy }: Props) {
     )}
     {result.report && !deployable && !result.isPartialAudit && deploy?.phase !== "recovery-required" && (
       <p className="text-sm text-[var(--color-muted)]">
-        {result.report.readyForPlanning
-          ? "El servidor ya coincide con el build. No hay cambios para aplicar."
-          : "Esta auditoría no autoriza un despliegue: hay duplicados, incompatibles o un runtime distinto."}
+        {result.process?.status === "online"
+          ? "El mundo está abierto (session.lock). Detené Minecraft desde el panel de hosting antes de desplegar."
+          : pendingBlocked
+          ? "Hay operaciones pendientes sin cerrar. Resolvé la recuperación antes de desplegar."
+          : result.report.readyForPlanning
+            ? "El servidor ya coincide con el build. No hay cambios para aplicar."
+            : "Esta auditoría no autoriza un despliegue: hay duplicados, incompatibles o un runtime distinto."}
       </p>
     )}
   </section>

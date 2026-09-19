@@ -17,6 +17,10 @@ import path from "path";
 import os from "os";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import { withApiGuard } from "@/lib/apiGuard";
+import {
+  localCollectionsDeleteBodySchema,
+  localCollectionsPostBodySchema,
+} from "@/lib/api/contracts";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -95,12 +99,9 @@ export const GET = withApiGuard(
 // ── POST — Acciones sobre colecciones ─────────────────────────────────────────
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as Request;
-
+  { bodySchema: localCollectionsPostBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const collections = getLocalCollections();
 
     // ── Crear nueva colección ────────────────────────────────────────────────
@@ -218,16 +219,10 @@ export const POST = withApiGuard(
 // ── DELETE — Eliminar colección completa ──────────────────────────────────────
 
 export const DELETE = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as Request;
-
+  { bodySchema: localCollectionsDeleteBodySchema },
+  async ({ body }) => {
   try {
-    const { collectionId } = await req.json();
-
-    if (!collectionId) {
-      return NextResponse.json({ error: "Falta collectionId" }, { status: 400 });
-    }
+    const { collectionId } = body;
 
     const collections = getLocalCollections();
     const idx = collections.findIndex((c) => c.id === collectionId);

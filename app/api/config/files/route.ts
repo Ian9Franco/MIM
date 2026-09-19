@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { getSettings } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
+import { configFilesPostBodySchema } from "@/lib/api/contracts";
 import {
   assertPathSegment,
   resolveWithin,
@@ -120,12 +121,9 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: configFilesPostBodySchema },
+  async ({ body }) => {
     try {
-      const body = await req.json();
       const { project, file, content } = body;
 
       if (!project || !file || content === undefined) {

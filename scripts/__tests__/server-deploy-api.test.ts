@@ -65,6 +65,22 @@ async function run() {
     fixture.setReadFault("none");
     console.log("✓ Partial audit cannot authorize deploy");
 
+    const lockSession = await openSftpWritableTransport(input.connection, signal());
+    try {
+      await lockSession.transport.mkdir?.("world");
+      await lockSession.transport.write("world/session.lock", new Uint8Array([1, 2, 3, 4]));
+    } finally {
+      lockSession.close();
+    }
+    await assert.rejects(deployServer({ ...input, confirm: true }, base, signal()), /session\.lock|mundo está abierto/);
+    const unlock = await openSftpWritableTransport(input.connection, signal());
+    try {
+      await unlock.transport.remove("world/session.lock");
+    } finally {
+      unlock.close();
+    }
+    console.log("✓ Deploy is blocked while session.lock is present");
+
     const writable = await openSftpWritableTransport(input.connection, signal());
     try {
       await assert.rejects(writable.transport.write("../outside.jar", new Uint8Array([1])), /excede/);

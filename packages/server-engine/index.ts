@@ -22,5 +22,7 @@ export * from "./sageRemote";
 export * from "./configAdmin";
 export * from "./rcon";
 export * from "./backups";
+export * from "./processProbe";
 export * from "./multiplayerSync";
+export * from "./clientSyncPlan";
 

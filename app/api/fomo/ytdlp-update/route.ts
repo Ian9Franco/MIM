@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { checkYtdlpUpdate, updateYtdlp } from "@/lib/ytdlp/updater";
 import { withApiGuard } from "@/lib/apiGuard";
+import { emptyMutationQuerySchema } from "@/lib/api/contracts";
 
 export const GET = withApiGuard(
   {},
@@ -29,7 +30,7 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
+  { querySchema: emptyMutationQuerySchema },
   async () => {
 
   try {

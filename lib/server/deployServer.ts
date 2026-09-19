@@ -11,6 +11,9 @@ import { SftpAuditError } from "./transport/sftpReadTransport";
 import { acquireServerSession } from "./sessionLock";
 import { isCompleteDeployableAudit, summarizeReconciliationPlan, type DeployPlanCounts } from "./deployEligibility";
 import { createServerSnapshotStore } from "./snapshotStoreFactory";
+import { loadPendingServerOperations } from "@mim/server-engine/pendingOperations";
+import { probeServerProcess, processControlFromProbe } from "@mim/server-engine/processProbe";
+import { REMOTE_SERVER_INSTANCE_ID } from "./serverIdentity";
 
 export interface ServerDeploymentResult {
   deployment: DeploymentReport;
@@ -50,7 +53,15 @@ async function performDeployment(input: DeployServerRequest, buildsBase: string,
     const observed = await discoverRemoteServerState(session.transport, { ...input.runtime, scanServerProperties: false, signal });
     const runtimeMismatch = input.runtime.loader !== input.project.loader || input.runtime.minecraftVersion !== input.project.version;
     const report = observed.isPartialAudit ? null : auditServerInstance(desired.manifest, observed.manifest);
-    const inspection = { report, isPartialAudit: Boolean(observed.isPartialAudit), runtimeMismatch };
+    const pending = await loadPendingServerOperations(createServerSnapshotStore(), REMOTE_SERVER_INSTANCE_ID);
+    const process = await probeServerProcess(session.transport);
+    const inspection = {
+      report,
+      isPartialAudit: Boolean(observed.isPartialAudit),
+      runtimeMismatch,
+      pendingOperations: pending.pendingOperationCount,
+      process,
+    };
     if (!isCompleteDeployableAudit(inspection) || !report) {
       throw new SftpAuditError(
         "DEPLOY_NOT_READY",
@@ -58,6 +69,10 @@ async function performDeployment(input: DeployServerRequest, buildsBase: string,
           ? "No se puede aplicar un inventario incompleto. Corregí las lecturas fallidas y repetí la auditoría."
           : runtimeMismatch
             ? "La versión o el loader del servidor no coincide con el proyecto. No se aplica el plan."
+            : pending.pendingOperationCount > 0
+              ? "Hay una operación de servidor sin cerrar. Completá la recuperación antes de desplegar."
+              : process.status === "online"
+                ? "El mundo está abierto (session.lock). Detené el servidor desde el panel de hosting antes de desplegar."
             : report && !report.readyForPlanning
               ? "El plan requiere revisión manual (duplicados o incompatibles). No se modifica el servidor."
               : "No hay cambios de mods para aplicar."
@@ -68,7 +83,7 @@ async function performDeployment(input: DeployServerRequest, buildsBase: string,
     if (plan.blocked) {
       throw new SftpAuditError("PLAN_BLOCKED", "El plan requiere revisión manual. No se modifica el servidor.");
     }
-    const safety = await assertSafeToMutate(plan);
+    const safety = await assertSafeToMutate(plan, process.status === "online" ? processControlFromProbe(process) : undefined);
     if (!safety.safe) {
       throw new SftpAuditError("UNSAFE", "No es seguro aplicar el plan en este momento.");
     }

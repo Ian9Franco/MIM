@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { SOURCE_BASE } from "@/lib/core/constants";
 import { withApiGuard } from "@/lib/apiGuard";
+import { fomoDownloadHistoryBodySchema } from "@/lib/api/contracts";
 
 const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
 
@@ -72,12 +73,9 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as Request;
-
+  { bodySchema: fomoDownloadHistoryBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const history = getDownloadHistory();
 
     const historyEntry = {

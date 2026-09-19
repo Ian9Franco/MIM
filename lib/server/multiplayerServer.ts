@@ -64,7 +64,8 @@ async function loadServerManifest(input: SyncClientServerRequest, signal: AbortS
   }
 }
 
-async function performMultiplayerSync(
+/** Compares local alluser vs remote without acquiring the global server session lock. */
+export async function performMultiplayerSync(
   input: SyncClientServerRequest,
   buildsBase: string,
   signal: AbortSignal

@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ServerMultiplayerSyncPanel({ inspectRequest, busy, onBusyChange }: Props) {
-  const { error, result, sync } = useMultiplayerSync(inspectRequest, onBusyChange);
+  const { error, applyError, result, applyResult, applying, sync, apply } = useMultiplayerSync(inspectRequest, onBusyChange);
 
   return (
     <section aria-label="Sync multiplayer cliente-servidor" className={`${serverPanelClass} space-y-4`} style={serverPanelStyle}>
@@ -34,7 +34,16 @@ export function ServerMultiplayerSyncPanel({ inspectRequest, busy, onBusyChange 
         Comparar cliente vs servidor
       </button>
       {error && <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</p>}
-      {result && <ServerMultiplayerSyncResultView result={result} />}
+      {applyError && <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{applyError}</p>}
+      {result && (
+        <ServerMultiplayerSyncResultView
+          result={result}
+          applyResult={applyResult}
+          canApply={result.diff.status === "mismatched"}
+          applying={applying}
+          onApply={() => { void apply(); }}
+        />
+      )}
     </section>
   );
 }

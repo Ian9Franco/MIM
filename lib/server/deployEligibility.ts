@@ -36,12 +36,20 @@ export function countsFromDiff(diff: InstanceManifestDiff): DeployPlanCounts {
   };
 }
 
+export function hasBlockingPendingOperations(pendingOperations: number): boolean {
+  return pendingOperations > 0;
+}
+
 export function isCompleteDeployableAudit(result: {
   isPartialAudit: boolean;
   runtimeMismatch?: boolean;
+  pendingOperations?: number;
+  process?: { status?: string };
   report: { readyForPlanning: boolean; diff: InstanceManifestDiff } | null;
 }): boolean {
   if (result.isPartialAudit || !result.report || result.runtimeMismatch) return false;
+  if (hasBlockingPendingOperations(result.pendingOperations ?? 0)) return false;
+  if (result.process?.status === "online") return false;
   if (!result.report.readyForPlanning) return false;
   return mutatingActionCount(countsFromDiff(result.report.diff)) > 0;
 }

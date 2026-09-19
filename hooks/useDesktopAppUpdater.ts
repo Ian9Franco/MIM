@@ -113,7 +113,19 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
         setVersionInfo({ current: info.current, latest: info.latest || null });
         return;
       }
-      setVersionInfo({ current: info.current, latest: info.latest || null });
+      const latest = info.latest || null;
+      setVersionInfo({ current: info.current, latest });
+      if (latest && latest !== info.current) {
+        setStatus("update-available");
+        setBannerDismissed(readDismissed(latest));
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: {
+            text: `Nueva versión de MIM disponible: v${latest}`,
+            type: "info",
+          },
+        }));
+        return;
+      }
       setStatus("idle");
     }).catch((err: unknown) => {
       setStatus("error");

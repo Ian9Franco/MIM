@@ -172,8 +172,22 @@ export function ServerAdminPanel({ inspectRequest, busy, onBusyChange }: Props) 
         ))}
       </div>
 
-      {!inspectRequest && (
-        <p className="text-sm text-[var(--color-muted)]">Completá una auditoría para habilitar la administración remota.</p>
+      {snapshot && (
+        <div
+          role="status"
+          className={`rounded-xl border px-3 py-2 text-sm ${
+            snapshot.process?.status === "online"
+              ? "border-rose-500/30 bg-rose-500/10 text-rose-100"
+              : snapshot.process?.status === "offline"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
+                : "border-amber-500/20 bg-amber-500/10 text-amber-100"
+          }`}
+        >
+          <p className="font-medium">
+            Proceso: {snapshot.process?.status === "online" ? "mundo abierto" : snapshot.process?.status === "offline" ? "sin session.lock" : "desconocido"}
+          </p>
+          <p className="mt-1 text-xs opacity-80">{snapshot.process?.evidence} Start/stop no está disponible por SFTP.</p>
+        </div>
       )}
       {error && (
         <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>

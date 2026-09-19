@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { withApiGuard } from "@/lib/apiGuard";
+import { serverAuditBodySchema } from "@/lib/api/contracts";
 import { auditServerInstance, type ServerAuditReport } from "@/lib/server";
 import type { InstanceManifest } from "@/lib/instances/types";
 
@@ -12,20 +13,10 @@ import type { InstanceManifest } from "@/lib/instances/types";
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: serverAuditBodySchema },
+  async ({ body }) => {
     try {
-      const body = await req.json();
       const { desiredManifest, actualManifest, isPartialAudit = false } = body;
-
-      if (!desiredManifest || !actualManifest) {
-        return NextResponse.json(
-          { error: "Both desiredManifest and actualManifest are required" },
-          { status: 400 }
-        );
-      }
 
       if (desiredManifest.side !== "server" || actualManifest.side !== "server") {
         return NextResponse.json(
@@ -35,8 +26,8 @@ export const POST = withApiGuard(
       }
 
       const report: ServerAuditReport = auditServerInstance(
-        desiredManifest as InstanceManifest,
-        actualManifest as InstanceManifest
+        desiredManifest as unknown as InstanceManifest,
+        actualManifest as unknown as InstanceManifest
       );
 
       return NextResponse.json({

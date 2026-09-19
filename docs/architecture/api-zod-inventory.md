@@ -8,4 +8,4 @@ Inventory (non-failing):
 npm run lint:api-schemas
 ```
 
-Mutations that still lack a guard schema are listed by that command. Core mutators (`build`, `delete`, `staging`, `tweak`) plus secondary handlers (`classify`, `scan`, `settings/validate`, `settings/move-files`, `crosscheck/batch`, `project-config/auto-categorize`) now declare Zod on the guard.
+Mutation handlers declare a Zod schema on the guard (JSON `bodySchema`, or `querySchema` for empty/multipart POSTs). GET handlers that still read `searchParams` without `querySchema` are listed by the inventory and are not a CI gate.

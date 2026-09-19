@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { purgeBackupsQuerySchema } from "@/lib/api/contracts";
 
 /**
  * DELETE /api/sage/player-rescue/purge-backups
@@ -21,20 +22,10 @@ import { withApiGuard } from "@/lib/apiGuard";
  */
 
 export const DELETE = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { querySchema: purgeBackupsQuerySchema },
+  async ({ query }) => {
   try {
-    const { searchParams } = new URL(req.url);
-    const filePath = searchParams.get("filePath");
-
-    if (!filePath) {
-      return NextResponse.json(
-        { error: "filePath query parameter is required" },
-        { status: 400 }
-      );
-    }
+    const filePath = query.filePath;
 
     if (!fs.existsSync(filePath)) {
       return NextResponse.json(

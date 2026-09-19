@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import { loadUsercacheEntries } from "@/lib/minecraft/usercache";
 import { withApiGuard } from "@/lib/apiGuard";
+import { playerRescuePostBodySchema } from "@/lib/api/contracts";
 
 // Extract player compound tag from NBT tag depending on whether it's level.dat or UUID.dat
 function getPlayerCompound(rootTag: NBTTag): { compound: Record<string, NBTTag> | null, isLevelDat: boolean } {
@@ -227,12 +228,10 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: playerRescuePostBodySchema },
+  async ({ body }) => {
   try {
-    const { filePath, resetCoords, clearInventory, newCoords, changeDimension, newDimension } = await req.json();
+    const { filePath, resetCoords, clearInventory, newCoords, changeDimension, newDimension } = body;
 
     if (!filePath || !fs.existsSync(filePath)) {
       return NextResponse.json({ error: "File not found or not selected" }, { status: 400 });

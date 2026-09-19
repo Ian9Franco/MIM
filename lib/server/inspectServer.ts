@@ -7,6 +7,7 @@ import { openSftpReadTransport, SftpAuditError } from "./transport/sftpReadTrans
 import { acquireServerSession } from "./sessionLock";
 import { REMOTE_SERVER_INSTANCE_ID } from "./serverIdentity";
 import { createServerSnapshotStore } from "./snapshotStoreFactory";
+import { probeServerProcess } from "@mim/server-engine/processProbe";
 
 async function performInspection(input: InspectServerRequest, buildsBase: string, signal: AbortSignal) {
   let desired;
@@ -31,6 +32,8 @@ async function performInspection(input: InspectServerRequest, buildsBase: string
     // Missing rows in a partial inventory cannot authorize installation/removal.
     if (report && runtimeMismatch) report.readyForPlanning = false;
     const pending = await loadPendingServerOperations(createServerSnapshotStore(), REMOTE_SERVER_INSTANCE_ID);
+    const process = await probeServerProcess(session.transport);
+    if (process.status === "online") warnings.push(process.evidence);
     return {
       report,
       warnings,
@@ -40,6 +43,8 @@ async function performInspection(input: InspectServerRequest, buildsBase: string
       scannedMods: observed.manifest.mods.length,
       totalJarFiles: observed.totalJarFiles,
       pendingOperations: pending.pendingOperationCount,
+      pending,
+      process,
     };
   } finally { session.close(); }
 }

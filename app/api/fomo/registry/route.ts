@@ -3,6 +3,7 @@ import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { fomoRegistryBodySchema } from "@/lib/api/contracts";
 
 function getRegistryPath(projectName?: string) {
   const settings = getSettings();
@@ -90,17 +91,10 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: fomoRegistryBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const { projectId, versionId, projectName } = body;
-
-    if (!projectId || !versionId) {
-      return NextResponse.json({ error: "Missing projectId or versionId" }, { status: 400 });
-    }
 
     const regPath = getRegistryPath(projectName);
     const dir = path.dirname(regPath);

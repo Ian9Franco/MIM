@@ -23,6 +23,7 @@ import {
   getProjectSubcategories,
 } from "@/lib/modding/projectSubcategories";
 import { withApiGuard } from "@/lib/apiGuard";
+import { projectConfigPostBodySchema } from "@/lib/api/contracts";
 
 export const GET = withApiGuard(
   {},
@@ -47,20 +48,10 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: projectConfigPostBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const { project, action, category, subcategory } = body;
-    
-    if (!project || !action) {
-      return NextResponse.json(
-        { error: "Faltan parámetros requeridos: project, action" },
-        { status: 400 }
-      );
-    }
     
     switch (action) {
       case "add_subcategory": {

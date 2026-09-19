@@ -57,6 +57,9 @@ export function ServersPageResults({
         <>
           <ServerInspectionResultView
             result={result}
+            inspectRequest={activeInspect}
+            onRecoveryChanged={onReaudit}
+            onBusyChange={setBusy}
             deploy={{
               phase: deployPhase,
               report: deployReport,

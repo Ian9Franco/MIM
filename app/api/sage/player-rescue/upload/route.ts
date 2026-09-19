@@ -4,9 +4,10 @@ import fs from "fs";
 import os from "os";
 import crypto from "crypto";
 import { withApiGuard } from "@/lib/apiGuard";
+import { emptyMutationQuerySchema } from "@/lib/api/contracts";
 
 export const POST = withApiGuard(
-  {},
+  { querySchema: emptyMutationQuerySchema },
   async ({ request }) => {
     const req = request as NextRequest;
 

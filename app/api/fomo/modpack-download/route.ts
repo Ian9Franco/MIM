@@ -3,13 +3,14 @@
  * Resuelve URLs reales (Modrinth/CurseForge) y guarda cada mod en Downloads.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSettings, getApiKey } from "@/lib/core/settings";
 import { enrichUpdatesCache } from "@/lib/storage/cache-enricher";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { withApiGuard } from "@/lib/apiGuard";
+import { fomoModpackDownloadBodySchema } from "@/lib/api/contracts";
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
 
@@ -256,18 +257,10 @@ async function writeToDownloads(
 }
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: fomoModpackDownloadBodySchema },
+  async ({ body }) => {
   try {
-    const { mods, loader, gameVersion } = await req.json();
-    if (!Array.isArray(mods) || mods.length === 0) {
-      return NextResponse.json({ error: "No mods in manifest" }, { status: 400 });
-    }
-    if (!loader || !gameVersion) {
-      return NextResponse.json({ error: "Missing loader or gameVersion" }, { status: 400 });
-    }
+    const { mods, loader, gameVersion } = body;
 
     const settings = getSettings();
     const results: { name: string; ok: boolean; error?: string }[] = [];

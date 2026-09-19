@@ -137,7 +137,7 @@ Ese contexto operativo es lo que diferencia MIM de un proyecto técnico sin raí
 | SAGE Diagnosis | Evaluado contra corpus real | Generalización a logs de VPS real (SAGE-01) |
 | Aduana | Benchmarks medidos y reproducibles | — |
 | NBT Recovery | 12/12 tests, zero-loss invariant | — |
-| API Routes | Guard universal + inventario Zod (`lint:api-schemas`) | Mutaciones restantes sin schema (API-02b) |
+| API Routes | Guard universal + Zod en mutaciones (`lint:api-schemas`) | GETs con searchParams aún sin querySchema |
 | Error handling | Auditado y loggeado | 0 catch{} ciegos |
 | TypeScript | Arquitectura tipada event-driven | ~487 `any` (REC-01; zona crítica de engines limpia) |
 | Security feature | Bytecode scanner + 19 firmas de IOCs | — |
@@ -151,7 +151,7 @@ Ese contexto operativo es lo que diferencia MIM de un proyecto técnico sin raí
 2. [x] ~~**Catch{} vacíos** — Auditados y eliminados los 69 bloques en toda la solución.~~ *(Resuelto — Sep 2026)*
 3. [x] ~~**KNOWN_MALWARE_HASHES** — Base real de 19 firmas con soporte dual SHA-1 / SHA-256.~~ *(Resuelto — Sep 2026)*
 4. [x] ~~**Rate limiting** — `/api/fomo/translate` blindado por IP y sliding window.~~ *(Resuelto — Sep 2026)*
-5. **Zod en API routes** — Extender esquemas al resto de mutaciones listadas por `npm run lint:api-schemas`.
+5. [x] ~~**Zod en API routes** — Mutaciones Desktop cubiertas con `bodySchema`/`querySchema`.~~ *(Inventario GET sigue abierto)*
 6. **Reducción de `any`** — Enfocado en `components/`, `hooks/` y `apps/hub/` (~487 restantes; engines críticos ya limpios).
 7. **Tests de integración adicionales** — E2E de UI (REC-04); Server Manager contra VPS real (#58).
 

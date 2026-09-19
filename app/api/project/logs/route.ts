@@ -12,6 +12,7 @@ import path from "path";
 import fs from "fs";
 import { getSettings } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
+import { projectLogsDeleteQuerySchema } from "@/lib/api/contracts";
 
 // Se eliminó getGlobalMcPath ya que ahora usamos globalSettings.minecraftPath
 
@@ -253,21 +254,11 @@ export const GET = withApiGuard(
 );
 
 export const DELETE = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
-  const { searchParams } = new URL(req.url);
-  const project = searchParams.get("project") || "";
-  const version = searchParams.get("version") || "";
-  const fileToDelete = searchParams.get("file");
-
-  if (!fileToDelete) {
-    return NextResponse.json(
-      { error: "Falta parámetro obligatorio: 'file'" },
-      { status: 400 }
-    );
-  }
+  { querySchema: projectLogsDeleteQuerySchema },
+  async ({ query }) => {
+  const project = query.project || "";
+  const version = query.version || "";
+  const fileToDelete = query.file;
 
   const isGlobal = fileToDelete.startsWith("global:");
   if (!isGlobal && (!project || !version)) {

@@ -8,6 +8,7 @@ import type {
   AIResponse,
 } from "./types";
 import { createAIRequestSignal, waitForRetry } from "./requestLifecycle";
+import { withProviderRpmLimit } from "./providerRpmQueue";
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -41,6 +42,19 @@ export class GeminiProvider implements AIProvider {
 
     const endpoint = `${GEMINI_ENDPOINT}/${encodeURIComponent(request.model)}:generateContent`;
     const signal = createAIRequestSignal(request.signal, request.timeoutMs);
+    return withProviderRpmLimit(
+      this.id,
+      () => this.generateUncapped(request, signal, payload, endpoint),
+      { signal: request.signal }
+    );
+  }
+
+  private async generateUncapped(
+    request: AIRequest,
+    signal: AbortSignal,
+    payload: unknown,
+    endpoint: string
+  ): Promise<AIResponse> {
     let response = await postGemini(endpoint, this.apiKey, payload, signal);
 
     if (response.status === 429) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loadProjectConfig, updateModOverride } from "@/lib/modding/projectConfig";
 import { withApiGuard } from "@/lib/apiGuard";
+import { projectConfigMetadataBodySchema } from "@/lib/api/contracts";
 
 /**
  * Project Mod Metadata API
@@ -45,20 +46,10 @@ export const GET = withApiGuard(
 );
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: projectConfigMetadataBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
     const { project, modId, override } = body;
-    
-    if (!project || !modId || !override) {
-      return NextResponse.json(
-        { error: "Faltan parámetros requeridos: project, modId, override" },
-        { status: 400 }
-      );
-    }
     
     updateModOverride(project, modId, override);
     

@@ -29,6 +29,7 @@ import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { securityScanBodySchema } from "@/lib/api/contracts";
 
 // ── Allowed extensions ───────────────────────────────────────────────────────
 
@@ -37,26 +38,6 @@ const SCANNABLE_EXTENSIONS = [".jar", ".zip"];
 function isScannableFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
   return SCANNABLE_EXTENSIONS.includes(ext);
-}
-
-// ── Request Validation ──────────────────────────────────────────────────────────
-
-interface SingleScanRequest {
-  filePath: string;
-  localOnly?: boolean;
-}
-
-interface BatchScanRequest {
-  filePaths: string[];
-  localOnly?: boolean;
-}
-
-function isValidRequest(body: unknown): body is SingleScanRequest | BatchScanRequest {
-  if (typeof body !== "object" || body === null) return false;
-  const b = body as Record<string, unknown>;
-  if (typeof b.filePath === "string") return true;
-  if (Array.isArray(b.filePaths) && b.filePaths.every(p => typeof p === "string")) return true;
-  return false;
 }
 
 // ── Path Security ───────────────────────────────────────────────────────────────
@@ -308,22 +289,12 @@ export const GET = withApiGuard(
 // ── POST Handler ─────────────────────────────────────────────────────────────────
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { bodySchema: securityScanBodySchema },
+  async ({ body }) => {
   try {
-    const body = await req.json();
-
-    if (!isValidRequest(body)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid request. Provide 'filePath' or 'filePaths'" },
-        { status: 400 }
-      );
-    }
 
     // Handle batch scan
-    if ("filePaths" in body) {
+    if (body.filePaths?.length) {
       const invalidPaths = body.filePaths.filter(p => !isAllowedPath(p));
       if (invalidPaths.length > 0) {
         return NextResponse.json(
@@ -353,7 +324,13 @@ export const POST = withApiGuard(
     }
 
     // Handle single file scan
-    const filePath = (body as SingleScanRequest).filePath;
+    const filePath = body.filePath;
+    if (!filePath) {
+      return NextResponse.json(
+        { success: false, error: "Invalid request. Provide 'filePath' or 'filePaths'" },
+        { status: 400 }
+      );
+    }
 
     if (!isAllowedPath(filePath)) {
       return NextResponse.json(

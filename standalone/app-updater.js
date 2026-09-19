@@ -16,14 +16,14 @@ function isUpdaterSupported() {
   return app.isPackaged && !isPortableRuntime();
 }
 
-function getMainWindow(getMainWindow) {
-  const win = typeof getMainWindow === 'function' ? getMainWindow() : null;
+function resolveMainWindow(getMainWindowFn) {
+  const win = typeof getMainWindowFn === 'function' ? getMainWindowFn() : null;
   if (!win || win.isDestroyed()) return null;
   return win;
 }
 
-function sendStatus(getMainWindow, payload) {
-  const win = getMainWindow(getMainWindow);
+function sendStatus(getMainWindowFn, payload) {
+  const win = resolveMainWindow(getMainWindowFn);
   if (!win) return;
   win.webContents.send('mim:updater:status', payload);
 }
@@ -57,7 +57,7 @@ function registerUnsupportedHandlers() {
   }));
 }
 
-function registerUpdaterHandlers(getMainWindow) {
+function registerUpdaterHandlers(getMainWindowFn) {
   ipcMain.handle('mim:updater:get-version', async () => ({
     current: app.getVersion(),
     supported: true,
@@ -76,7 +76,7 @@ function registerUpdaterHandlers(getMainWindow) {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      sendStatus(getMainWindow, { status: 'error', message });
+      sendStatus(getMainWindowFn, { status: 'error', message });
       throw error;
     }
   });
@@ -87,7 +87,7 @@ function registerUpdaterHandlers(getMainWindow) {
       return { ok: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      sendStatus(getMainWindow, { status: 'error', message });
+      sendStatus(getMainWindowFn, { status: 'error', message });
       throw error;
     }
   });
@@ -98,11 +98,11 @@ function registerUpdaterHandlers(getMainWindow) {
   });
 }
 
-function bindUpdaterEvents(getMainWindow) {
+function bindUpdaterEvents(getMainWindowFn) {
   const autoUpdater = getAutoUpdater();
 
   autoUpdater.on('checking-for-update', () => {
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'checking',
       current: app.getVersion(),
     });
@@ -110,7 +110,7 @@ function bindUpdaterEvents(getMainWindow) {
 
   autoUpdater.on('update-available', (info) => {
     pendingUpdateInfo = info;
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'update-available',
       current: app.getVersion(),
       latest: info.version,
@@ -119,7 +119,7 @@ function bindUpdaterEvents(getMainWindow) {
 
   autoUpdater.on('update-not-available', (info) => {
     pendingUpdateInfo = null;
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'update-not-available',
       current: app.getVersion(),
       latest: info?.version || app.getVersion(),
@@ -127,7 +127,7 @@ function bindUpdaterEvents(getMainWindow) {
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'downloading',
       current: app.getVersion(),
       latest: pendingUpdateInfo?.version || null,
@@ -137,7 +137,7 @@ function bindUpdaterEvents(getMainWindow) {
 
   autoUpdater.on('update-downloaded', (info) => {
     pendingUpdateInfo = info;
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'downloaded',
       current: app.getVersion(),
       latest: info.version,
@@ -147,7 +147,7 @@ function bindUpdaterEvents(getMainWindow) {
   autoUpdater.on('error', (error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[MIM] Auto-update error:', message);
-    sendStatus(getMainWindow, {
+    sendStatus(getMainWindowFn, {
       status: 'error',
       current: app.getVersion(),
       latest: pendingUpdateInfo?.version || null,

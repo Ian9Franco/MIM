@@ -73,6 +73,11 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
       args: ["run", "test:ai-analysis-queue"]
     },
     {
+      name: "Gemini Provider RPM Queue",
+      cmd: "npm",
+      args: ["run", "test:provider-rpm-queue"]
+    },
+    {
       name: "MIMbot Eval Fixtures (SAGE-05 structure gate)",
       cmd: "npm",
       args: ["run", "eval:mimbot"]

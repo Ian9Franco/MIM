@@ -391,6 +391,38 @@ export interface DistributableModRequirement {
   required: boolean;
   downloadUrl?: string;
   side: "client" | "both";
+  /** Remote SFTP path when the requirement was observed on the server. */
+  remotePath?: string;
+  provider?: "modrinth" | "curseforge" | string;
+  projectId?: string;
+  versionId?: string;
+}
+
+export type ClientSyncActionKind = "install" | "replace";
+
+export type ClientSyncResolution = "server-sftp" | "modrinth" | "unresolved";
+
+export interface ClientSyncAction {
+  kind: ClientSyncActionKind;
+  requirement: DistributableModRequirement;
+  /** Local filename to remove before replace. */
+  removeFilename?: string;
+  resolution: ClientSyncResolution;
+}
+
+export interface ClientSyncApplyItemResult {
+  identity: string;
+  filename: string;
+  success: boolean;
+  resolution: ClientSyncResolution;
+  message?: string;
+}
+
+export interface ClientSyncApplyResult {
+  actions: ClientSyncAction[];
+  results: ClientSyncApplyItemResult[];
+  rebuild?: { success: boolean; message: string; modsCount?: number };
+  diffAfter?: ClientSyncDiffResult;
 }
 
 export interface DistributableServerManifest {

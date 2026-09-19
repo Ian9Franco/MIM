@@ -35,6 +35,10 @@ export function generateDistributableManifest(
       sha256: artifact.hashes?.sha256,
       required: true,
       side: artifact.environment?.server === "unsupported" ? "client" : "both",
+      remotePath: artifact.source?.path,
+      provider: artifact.source?.provider,
+      projectId: artifact.source?.projectId,
+      versionId: artifact.source?.versionId,
     };
 
     requiredMods.push(requirement);

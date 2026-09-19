@@ -20,6 +20,7 @@ import { openSftpReadTransport, SftpAuditError } from "./transport/sftpReadTrans
 import { openSftpWritableTransport } from "./transport/sftpWritableTransport";
 import { openRconChannel } from "./transport/rconChannel";
 import { acquireServerSession } from "./sessionLock";
+import { probeServerProcess } from "@mim/server-engine/processProbe";
 
 const PROPERTIES_PATH = "server.properties";
 const REDACTED = "";
@@ -69,6 +70,7 @@ async function performAdminInspect(input: InspectServerAdminRequest, signal: Abo
     const backups: ServerBackupInfo[] = await listServerBackups(session.transport);
     const levelName = config?.properties["level-name"]?.trim() || "world";
     const world = await readWorldMetadata((path) => session.transport.read(path), levelName);
+    const process = await probeServerProcess(session.transport, levelName);
     const validation = config ? validateServerProperties(config.properties) : null;
     return {
       properties: config ? publicProperties(config) : null,
@@ -80,6 +82,7 @@ async function performAdminInspect(input: InspectServerAdminRequest, signal: Abo
       },
       backups,
       world,
+      process,
     };
   } finally {
     session.close();

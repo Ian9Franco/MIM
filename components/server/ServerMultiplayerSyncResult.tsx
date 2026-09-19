@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, XCircle } from "lucide-react";
-import type { ClientSyncDiffResult } from "@mim/contracts-core/server";
+import { CheckCircle2, Download, Loader2, XCircle } from "lucide-react";
+import type { ClientSyncApplyResult, ClientSyncDiffResult } from "@mim/contracts-core/server";
 import type { ServerMultiplayerSyncResult } from "@/lib/server/multiplayerServer";
 
 const STATUS_LABELS: Record<ClientSyncDiffResult["status"], string> = {
@@ -18,9 +18,13 @@ function statusClassName(status: ClientSyncDiffResult["status"]): string {
 
 interface Props {
   result: ServerMultiplayerSyncResult;
+  canApply?: boolean;
+  applying?: boolean;
+  onApply?: () => void;
+  applyResult?: ClientSyncApplyResult | null;
 }
 
-export function ServerMultiplayerSyncResultView({ result }: Props) {
+export function ServerMultiplayerSyncResultView({ result, canApply, applying, onApply, applyResult }: Props) {
   const diff = result.diff;
   const statusClass = statusClassName(diff.status);
 
@@ -85,6 +89,30 @@ export function ServerMultiplayerSyncResultView({ result }: Props) {
 
       {diff.status === "ready" && diff.missingMods.length === 0 && diff.versionMismatches.length === 0 && (
         <p className="text-sm text-emerald-200">Tu build alluser coincide con lo que el servidor exige para jugar en multiplayer.</p>
+      )}
+
+      {canApply && onApply && (
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={applying}
+          className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/20 disabled:opacity-50"
+        >
+          {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Descargar faltantes y actualizar alluser
+        </button>
+      )}
+
+      {applyResult?.rebuild && (
+        <p role="status" className="text-sm text-emerald-200">
+          {applyResult.rebuild.success
+            ? `Build alluser actualizado (${applyResult.rebuild.modsCount ?? "?"} mods).`
+            : applyResult.rebuild.message}
+        </p>
+      )}
+
+      {applyResult?.diffAfter?.status === "ready" && (
+        <p className="text-sm text-emerald-200">Cliente alineado con el servidor. Ya podés jugar en multiplayer.</p>
       )}
     </div>
   );

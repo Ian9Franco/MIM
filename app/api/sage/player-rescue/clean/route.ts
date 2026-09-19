@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { emptyMutationQuerySchema } from "@/lib/api/contracts";
 
 const BACKUP_REGEX = /-[0-9]{10,}\.dat$/;
 
 export const POST = withApiGuard(
-  {},
-  async ({ request }) => {
-    const req = request as NextRequest;
-
+  { querySchema: emptyMutationQuerySchema },
+  async () => {
   try {
     const { minecraftPath } = getSettings();
     const logs: string[] = [];

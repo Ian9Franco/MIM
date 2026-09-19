@@ -51,7 +51,7 @@
 
 - [x] Verificación estricta de fronteras de arquitectura (`npm run lint:architecture`, AST dependency boundary verifier en CI).
 - [ ] Bajar el uso de `any` (~487 restantes; REC-01 superó la meta 500–600) — priorizar `components/`, `hooks/` y `apps/hub/`.
-- [ ] Generalizar esquemas Zod a más mutaciones (`npm run lint:api-schemas`; inventario en [api-zod-inventory.md](../architecture/api-zod-inventory.md)).
+- [x] Generalizar esquemas Zod a mutaciones restantes (`npm run lint:api-schemas`; contratos en [api-zod-inventory.md](../architecture/api-zod-inventory.md)).
 - [ ] Seguir sumando tests — meta: mantener 100% pass en todas las suites de `npm test`.
 - [x] Revisar el `eval("require")` en `sage/cacheEngine.ts` — reemplazado por adaptadores de runtime (ARCH-01).
 - [ ] Modularización progresiva de componentes monolíticos (> 500 líneas):
@@ -85,7 +85,7 @@
 
 - [x] *Diferenciación de error 429 en UI:* Desacoplar cuota/frecuencia de falta de clave.
 - [x] *Diferenciación contextual de límites:* Distinguir en el mensaje si se alcanzó el límite por minuto (RPM / TPM) o el límite diario (RPD).
-- [ ] *Encolamiento de peticiones concurrentes:* Procesar en cola secuencial para no superar el límite de 15 RPM.
+- [x] *Encolamiento de peticiones concurrentes:* Cola secuencial + ventana deslizante de 15 RPM en `GeminiProvider` (`providerRpmQueue.ts`).
 - [x] *Caché persistente local para quick questions:* 24 h (`quickQuestionCache.ts`, BOT-08, PR #77).
 
 ---
@@ -121,11 +121,11 @@ Los checkboxes de implementación debajo registran código existente; no certifi
 | Entrega | Código | Integración Desktop | Validación |
 |---|---|---|---|
 | Conectar y auditar mods (SRV-1/2) | Transporte SSH/SFTP real de solo lectura, huella de host obligatoria, límites y auditoría parcial explícita. | Pantalla `/servers`; compara contra el último build AllHost. | Fixture SFTP local + recorrido HTTP/UI. Hosting externo y `.exe` empaquetado pendientes. |
-| Preflight y snapshots (SRV-3) | Contratos, fingerprint, `FileSnapshotStore` en disco, `pendingOperations`. | Aviso en inspect/deploy. | Tests de motor. Recovery UI avanzada y VPS real pendientes. |
+| Preflight y snapshots (SRV-3) | Contratos, fingerprint, `FileSnapshotStore` en disco, `pendingOperations`, recovery UI + rollback API, deploy bloqueado con snapshots pendientes. | Panel recovery en `/servers`. | Tests de motor/API. VPS real pendiente. |
 | Aplicar y recuperar (SRV-4) | Executor y rollback. | UI en `/servers` (`POST /api/server/deploy`). | Fixture local. Hosting real y recovery post-reinicio pendientes. |
 | SAGE remoto (SRV-5) | Motor + tests. | Panel mergeado (PR #89). | Fixture ahora tiene `latest.log` y crash report. Logs de VPS real pendientes. |
-| Administración (SRV-6) | Properties, RCON, backups. | Panel mergeado (PR #90). | Fixture tiene `server.properties` y un zip de backup. RCON live y proceso offline pendientes. |
-| Multiplayer (SRV-7) | Contratos + reconciliación + tests de motor + API + panel en main. | Diagnóstico only. | Fixture alluser ZIP. Descarga automática de mods y validación en VPS real pendientes. |
+| Administración (SRV-6) | Properties, RCON, backups. Process probe vía `session.lock`. | Panel mergeado (PR #90). | Fixture tiene `server.properties` y un zip de backup. RCON live y proceso Minecraft real pendientes. |
+| Multiplayer (SRV-7) | Contratos + reconciliación + plan de apply + descarga SFTP/Modrinth. | Diagnóstico + apply en `/servers`. | Tests de motor/API. Validación en VPS real pendiente. |
 
 Primera entrega integrada en main: **auditoría + deploy + SAGE + admin + sync multiplayer (diagnóstico)**. Configs/mundos completos, descarga automática de mods, hosting externo y packaging Electron siguen abiertos. La versión y el loader remotos los informa el operador.
 
@@ -182,8 +182,8 @@ Reproducción sin hosting: `npm run dev:server-fixture` (ver [guía](../architec
   - [x] Reconciliación de cliente local (`reconcileClientWithServerManifest`) detectando missing mods y version mismatches.
   - [x] Preservación estricta de mods client-only (OptiFine, Sodium, Iris, Shaders).
   - [x] Suite de tests `server-multiplayer-sync.test.ts` pasando al 100%.
-  - [x] API `POST /api/server/sync` + `ServerMultiplayerSyncPanel` en `main` (diagnóstico only).
-  - [ ] Descarga/instalación automática de mods faltantes en el cliente.
+  - [x] API `POST /api/server/sync` + apply `POST /api/server/sync/apply` + `ServerMultiplayerSyncPanel` (diagnóstico + descarga/instalación de mods faltantes desde SFTP/Modrinth).
+  - [x] Descarga/instalación automática de mods faltantes en el cliente (SRV-7 apply; validación VPS real pendiente).
 
 ---
 

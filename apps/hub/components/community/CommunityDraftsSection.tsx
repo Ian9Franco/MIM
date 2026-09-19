@@ -161,7 +161,7 @@ export function CommunityDraftsSection({
           <div className="mt-6">
             <p className="text-[8px] font-mono font-bold uppercase text-white/30">{communityDrafts.length} visibles</p>
             <h3 className="mt-0.5 text-xs font-black text-white/80">Drafts de la comunidad</h3>
-            <p className="mt-1 text-[9px] text-white/35">Podés verlos todos. Solo los públicos se pueden editar juntos.</p>
+            <p className="mt-1 text-[9px] text-white/35">Los públicos se ven. Editarlos pide invitación del dueño.</p>
             <div className="mt-2 space-y-2">
               {communityDrafts.map((draft) => (
                 <DraftRow

@@ -11,6 +11,7 @@ class MemoryDraftClient {
   drafts: Row[] = [];
   draftItems: Row[] = [];
   draftActivity: Row[] = [];
+  draftMembers: Row[] = [];
   failNextInsert = false;
 
   from(table: string) {
@@ -42,6 +43,10 @@ class MemoryDraftClient {
         filters.push({ column, value });
         return builder;
       },
+      in(column: string, values: string[]) {
+        filters.push({ column: `in:${column}`, value: values.join(",") });
+        return builder;
+      },
       or(value: string) {
         filters.push({ column: "or", value });
         return builder;
@@ -59,6 +64,7 @@ class MemoryDraftClient {
         if (table === "drafts") return self.handleDrafts(operation, payload, filters);
         if (table === "draft_items") return self.handleDraftItems(operation, payload, filters);
         if (table === "draft_activity") return self.handleDraftActivity(operation, payload);
+        if (table === "draft_members") return self.handleDraftMembers(operation, filters);
         return { data: null, error: { message: `Unknown table ${table}` } };
       },
     };
@@ -80,11 +86,14 @@ class MemoryDraftClient {
       const orFilter = filters.find((filter) => filter.column === "or");
       const ownerFilter = filters.find((filter) => filter.column === "owner_id");
       const visibilityFilter = filters.find((filter) => filter.column === "visibility");
+      const inIdFilter = filters.find((filter) => filter.column === "in:id");
       const ownerFromOr = orFilter?.value.match(/owner_id\.eq\.([^,]+)/)?.[1];
       const includePublic = Boolean(orFilter?.value.includes("visibility.eq.public") || visibilityFilter?.value === "public");
       const ownerId = ownerFilter?.value ?? ownerFromOr;
+      const inIds = inIdFilter?.value ? inIdFilter.value.split(",").filter(Boolean) : [];
       const rows = this.drafts
         .filter((row) => {
+          if (inIds.length) return inIds.includes(String(row.id));
           if (!ownerId && !includePublic) return true;
           if (ownerId && row.owner_id === ownerId) return true;
           if (includePublic && row.visibility === "public") return true;
@@ -93,6 +102,7 @@ class MemoryDraftClient {
         .map((row) => ({
           ...row,
           draft_items: this.draftItems.filter((item) => item.draft_id === row.id),
+          draft_members: this.draftMembers.filter((member) => member.draft_id === row.id),
         }));
       return { data: rows, error: null };
     }
@@ -135,6 +145,12 @@ class MemoryDraftClient {
     return { data: null, error: { message: "unsupported draft_items operation" } };
   }
 
+  private handleDraftMembers(_operation: string, filters: Array<{ column: string; value: string }>) {
+    const userFilter = filters.find((filter) => filter.column === "user_id");
+    const rows = this.draftMembers.filter((row) => !userFilter || row.user_id === userFilter.value);
+    return { data: rows, error: null };
+  }
+
   private handleDraftActivity(operation: string, payload: unknown) {
     if (operation === "insert") {
       this.draftActivity.push(payload as Row);
@@ -164,9 +180,9 @@ async function testCreateRefreshEditDeleteFlow(): Promise<void> {
   assert.ok(created.data);
   assert.equal((created.data as Row).visibility, "public");
 
-  const otherUserSeesAll = await repo.listDrafts("user-2");
-  assert.equal(otherUserSeesAll.data.length, 1);
-  assert.equal((otherUserSeesAll.data[0] as Row).name, "Survival Pack");
+  const otherUserSeesPublic = await repo.listDrafts("user-2");
+  assert.equal(otherUserSeesPublic.data.length, 1);
+  assert.equal((otherUserSeesPublic.data[0] as Row).name, "Survival Pack");
 
   const secret = await repo.createDraft({
     ownerId: userId,
@@ -176,8 +192,16 @@ async function testCreateRefreshEditDeleteFlow(): Promise<void> {
     visibility: "private",
   });
   assert.equal(secret.error, null);
-  const otherUserSeesPrivateToo = await repo.listDrafts("user-2");
-  assert.equal(otherUserSeesPrivateToo.data.length, 2);
+  const otherUserHidesPrivate = await repo.listDrafts("user-2");
+  assert.equal(otherUserHidesPrivate.data.length, 1);
+
+  client.draftMembers.push({
+    draft_id: String((secret.data as Row).id),
+    user_id: "user-2",
+    role: "editor",
+  });
+  const inviteeSeesPrivate = await repo.listDrafts("user-2");
+  assert.equal(inviteeSeesPrivate.data.length, 2);
 
   const refreshed = await repo.listDrafts(userId);
   assert.equal(refreshed.data.length, 2);

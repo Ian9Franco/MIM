@@ -45,6 +45,7 @@ interface QueryBuilder {
   update(values: unknown): QueryBuilder;
   delete(): QueryBuilder;
   eq(column: string, value: string): QueryBuilder;
+  in(column: string, values: string[]): QueryBuilder;
   or(filter: string): QueryBuilder;
   maybeSingle(): Promise<QueryResult>;
   single(): Promise<QueryResult>;
@@ -64,19 +65,44 @@ function fail<T>(data: T, error: DraftRepositoryError): DraftRepositoryResult<T>
   return { data, error };
 }
 
+function asRows(data: unknown): unknown[] {
+  return Array.isArray(data) ? data : [];
+}
+
+function draftIdOf(row: unknown): string {
+  if (!row || typeof row !== "object" || !("id" in row)) return "";
+  return String((row as { id?: unknown }).id || "");
+}
+
 export function createDraftRepository(client: DraftRepositoryClient): DraftRepository {
   return {
     async listDrafts(userId) {
-      const withItems = "*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies)";
-      const run = async (columns: string) => {
+      const withItems =
+        "*, draft_items (id, project_id, mod_name, source, category, content_type, side, version_id, dependencies), draft_members (user_id, role)";
+      const scopeVisible = (columns: string) => {
         const query = client.from("drafts").select(columns);
-        return userId ? query : query.eq("visibility", "public");
+        return userId ? query.or(`owner_id.eq.${userId},visibility.eq.public`) : query.eq("visibility", "public");
       };
-      const first = await run(withItems);
-      if (!first.error) return ok(Array.isArray(first.data) ? first.data : []);
-      const fallback = await run("*");
-      if (fallback.error) return fail([], fallback.error);
-      return ok(Array.isArray(fallback.data) ? fallback.data : []);
+      const first = await scopeVisible(withItems);
+      const visible = first.error ? await scopeVisible("*") : first;
+      if (visible.error) return fail([], visible.error);
+      const rows = asRows(visible.data);
+      if (!userId) return ok(rows);
+
+      const memberResult = await client.from("draft_members").select("draft_id").eq("user_id", userId);
+      const memberIds = asRows(memberResult.data).flatMap((row) => {
+        if (!row || typeof row !== "object" || !("draft_id" in row)) return [];
+        const id = String((row as { draft_id?: unknown }).draft_id || "");
+        return id ? [id] : [];
+      });
+      const known = new Set(rows.map(draftIdOf).filter(Boolean));
+      const missing = [...new Set(memberIds)].filter((id) => !known.has(id));
+      if (!missing.length) return ok(rows);
+
+      const extraSelect = first.error ? "*" : withItems;
+      const extra = await client.from("drafts").select(extraSelect).in("id", missing);
+      if (extra.error) return ok(rows);
+      return ok([...rows, ...asRows(extra.data)]);
     },
 
     async createDraft({ ownerId, name, minecraftVersion, loader, visibility = "private", description }) {

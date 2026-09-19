@@ -138,6 +138,11 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/home-drafts-crud.test.ts"]
     },
     {
+      name: "Draft Invite-only Edit Permissions",
+      cmd: "npx",
+      args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/draft-permissions.test.ts"]
+    },
+    {
       name: "Server Manager Manifest & Reconciliation Foundation",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/server-manager-foundation.test.ts"]

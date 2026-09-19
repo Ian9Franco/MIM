@@ -43,6 +43,7 @@ export interface HomeDraft {
   updated_at?: string;
   updatedAt?: string;
   owner_id?: string;
+  members?: { user_id: string; role: string }[];
   is_public?: boolean;
   user_id?: string;
   author_name?: string;
@@ -128,6 +129,17 @@ export function decodeHomeDraft(
 
   const minecraftVersion = optionalString(value.minecraft_version) ?? "";
   const loader = optionalString(value.loader) ?? "";
+  const rawMembers = Array.isArray(value.draft_members)
+    ? value.draft_members
+    : Array.isArray(value.members)
+      ? value.members
+      : [];
+  const members = rawMembers.flatMap((row) => {
+    if (!isRecord(row)) return [];
+    const userId = requiredString(row.user_id) ?? requiredString(row.profile_id);
+    if (!userId) return [];
+    return [{ user_id: userId, role: optionalString(row.role) ?? "editor" }];
+  });
   const rawItems = Array.isArray(value.draft_items)
     ? value.draft_items
     : Array.isArray(value.items)
@@ -151,6 +163,7 @@ export function decodeHomeDraft(
     cover_image: optionalString(value.cover_image) ?? null,
     description: optionalString(value.description),
     owner_id: optionalString(value.owner_id) ?? optionalString(value.user_id),
+    members,
     created_at: optionalString(value.created_at),
     updated_at: optionalString(value.updated_at) ?? optionalString(value.updatedAt),
     items,

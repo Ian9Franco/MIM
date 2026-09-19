@@ -16,6 +16,7 @@ import {
   DraftItemEditModal,
   type DraftTab,
 } from "./draft-detail";
+import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
 
 export interface DraftDetailModel {
   id: string;
@@ -142,10 +143,14 @@ export function DraftDetailView({
   const [membersError, setMembersError] = useState<string | null>(null);
   const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
   const ownerId = String(draft?.owner_id || ownerMember?.user_id || "");
-  const isOwner = sameUserId(ownerId, session?.user?.id);
+  const isOwner = isDraftOwner(session?.user?.id, ownerId);
   const isPublic = draft?.visibility === "public";
-  const canEditItems = Boolean(session?.user?.id) && (isOwner || isPublic);
-  const canEditSettings = Boolean(onUpdateDraftMetadata) && (isOwner || isPublic);
+  const canEditItems = canEditDraft({
+    userId: session?.user?.id,
+    ownerId,
+    members,
+  });
+  const canEditSettings = Boolean(onUpdateDraftMetadata) && canEditItems;
   const creatorUsername = ownerMember?.profiles?.username || ownerUsername;
 
   const openSettings = () => {

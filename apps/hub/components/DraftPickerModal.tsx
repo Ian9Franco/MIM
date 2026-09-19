@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Layers, Trash2, Pencil, Check, Loader2, ImagePlus } from "lucide-react";
 import type { ModHit } from "./SpotlightMarquees";
 import type { DraftAddResult } from "../lib/drafts/draftContract";
+import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
 import { ImageCropper } from "./ImageCropper";
 
 /* ─── Types ─── */
@@ -32,6 +33,7 @@ interface Draft {
   visibility: string;
   cover_image?: string | null;
   owner_id?: string;
+  members?: { user_id: string; role: string }[];
   items?: DraftItem[];
 }
 
@@ -211,7 +213,12 @@ export function DraftPickerModal({
                       <p className="text-xs text-white/40 text-center py-4">No tenés drafts. Creá uno primero.</p>
                     ) : (
                       drafts.map(draft => {
-                        const mine = !currentUserId || !draft.owner_id || draft.owner_id === currentUserId;
+                        const mine = isDraftOwner(currentUserId, draft.owner_id);
+                        const canAdd = canEditDraft({
+                          userId: currentUserId,
+                          ownerId: draft.owner_id,
+                          members: draft.members,
+                        });
                         return (
                         <div key={draft.id} className="flex items-center gap-2 p-3 rounded-2xl border transition-all" style={{ borderColor: "var(--color-border)", background: "color-mix(in srgb, var(--color-card) 80%, transparent)" }}>
                           <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/[0.06] shrink-0 flex items-center justify-center">
@@ -222,7 +229,7 @@ export function DraftPickerModal({
                             <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>{draft.minecraft_version} · {draft.loader}{!mine ? " · comunidad" : ""}</p>
                           </div>
                           <div className="flex gap-1 shrink-0">
-                            {mine && (
+                            {canAdd && (
                             <button
                               onClick={() => { setEditingDraft(draft); setEditTypeFilter("all"); setView("edit"); }}
                               className="p-1.5 rounded-lg hover:bg-white/10 transition-all" style={{ color: "var(--color-muted)" }}
@@ -231,7 +238,7 @@ export function DraftPickerModal({
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             )}
-                            {pendingMod && (mine || draft.visibility === "public") && (
+                            {pendingMod && canAdd && (
                               <button
                                 onClick={() => handleAddToDraft(draft)}
                                 disabled={loading}
@@ -363,7 +370,7 @@ export function DraftPickerModal({
                       <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>
                         {editingDraft.minecraft_version} · {editingDraft.loader}
                       </p>
-                      {(!currentUserId || !editingDraft.owner_id || editingDraft.owner_id === currentUserId) && (
+                      {isDraftOwner(currentUserId, editingDraft.owner_id) && (
                       <button
                         onClick={async () => { if (confirm(`Eliminar draft "${editingDraft.name}"?`)) { await onDeleteDraft(editingDraft.id); onRefreshDrafts(); resetAndClose(); } }}
                         className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors"
@@ -380,6 +387,7 @@ export function DraftPickerModal({
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[10px] uppercase font-mono tracking-wider" style={{ color: "var(--color-muted)" }}>Sin banner</div>
                         )}
+                        {isDraftOwner(currentUserId, editingDraft.owner_id) && (
                         <label className="absolute inset-0 bg-black/45 opacity-0 hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-2 text-xs font-bold text-white cursor-pointer">
                           <ImagePlus className="w-4 h-4" /> Cambiar banner
                           <input
@@ -395,8 +403,9 @@ export function DraftPickerModal({
                             }}
                           />
                         </label>
+                        )}
                       </div>
-                      {editingDraft.cover_image && (
+                      {isDraftOwner(currentUserId, editingDraft.owner_id) && editingDraft.cover_image && (
                         <button
                           type="button"
                           onClick={async () => {

@@ -45,10 +45,13 @@ function testDraftDecoding(): void {
       { id: "item-1", project_id: "sodium", mod_name: "Sodium", content_type: "mod", side: "client" },
       { id: "invalid" },
     ],
+    draft_members: [{ user_id: "editor-1", role: "editor" }],
   }];
   const drafts = decodeHomeDrafts(raw, { sodium: "https://cdn.example/sodium.png" });
   assertEqual(drafts.length, 1, "valid drafts must survive decoding");
   assertEqual(drafts[0].owner_id, "owner-1", "owner_id must survive decoding so settings stay editable");
+  assertEqual(drafts[0].members?.length, 1, "draft members must survive decoding for invite-only edits");
+  assertEqual(drafts[0].members?.[0].role, "editor", "member roles must survive decoding");
   assertEqual(drafts[0].items?.length, 1, "invalid draft items must be discarded");
   assertEqual(drafts[0].items?.[0].icon_url, "https://cdn.example/sodium.png", "icon hydration must remain intact");
   assertEqual(drafts[0].items?.[0].game_versions?.[0], "1.21.1", "draft version must hydrate items");

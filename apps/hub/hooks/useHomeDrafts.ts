@@ -27,6 +27,7 @@ import {
 } from "../lib/drafts/draftRemote";
 import { inferSide, normalizeContentType } from "../lib/projectTypes";
 import { createDraftRepository, type DraftRepositoryClient } from "../lib/drafts/draftRepository";
+import { canEditDraft } from "../lib/drafts/draftPermissions";
 import { supabase } from "../lib/supabaseClient";
 
 const draftRepository = createDraftRepository(supabase as unknown as DraftRepositoryClient);
@@ -226,6 +227,9 @@ export function useHomeDrafts({
   ): Promise<DraftAddResult> => {
     if (!userId) return { ok: false, status: "error", message: "Necesitás iniciar sesión para editar Drafts." };
     const draft = userDrafts.find((candidate) => candidate.id === draftId);
+    if (draft && !canEditDraft({ userId, ownerId: draft.owner_id, members: draft.members })) {
+      return { ok: false, status: "error", message: "Solo el dueño o un invitado puede editar este draft." };
+    }
     const draftVersion = draft?.minecraft_version || "1.20.1";
     const draftLoader = draft?.loader || "fabric";
     const contentType = normalizeContentType({ ...mod, projectType: category || mod.projectType });

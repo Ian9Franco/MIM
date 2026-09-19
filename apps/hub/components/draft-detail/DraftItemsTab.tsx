@@ -79,10 +79,10 @@ export function DraftItemsTab({
           <p>{typeFilter === "all" ? "Este draft no tiene ítems." : "No hay items de este tipo."}</p>
           <p className="mt-2 px-4 text-[9px] text-white/30">
             {canEditItems
-              ? isPublic
-                ? "Este draft es público: cualquiera con sesión puede agregar o quitar ítems."
-                : "Podés agregar mods desde Explorar."
-              : "Draft privado: solo se puede ver."}
+              ? "Podés agregar mods desde Explorar. Solo el dueño y los invitados editan."
+              : isPublic
+                ? "Este draft es público: se puede ver. Para editar necesitás una invitación."
+                : "Draft privado: solo se puede ver."}
           </p>
         </div>
       ) : (

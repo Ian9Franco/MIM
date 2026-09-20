@@ -8,7 +8,7 @@ import { fomoRegistryBodySchema } from "@/lib/api/contracts";
 function getRegistryPath(projectName?: string) {
   const settings = getSettings();
   if (projectName) {
-    const projectPath = path.join(settings.sourceBase, ".projects", projectName);
+    const projectPath = path.join(settings.sourceBase, "_projects", projectName);
     return path.join(projectPath, ".fomo-registry.json");
   } else {
     // MIMU (Contenido Instalado) -> .minecraft

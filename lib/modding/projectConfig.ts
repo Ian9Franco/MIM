@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 
 /**
  * MIM – Project Configuration Manager
@@ -43,7 +43,7 @@ export interface ProjectConfig {
 
 export function getProjectConfigPath(projectName: string): string {
   const safeName = projectName.replace(/[<>:"/\\|?*]/g, "_").trim();
-  return path.join(SOURCE_BASE, "_projects", safeName, "mim-project.json");
+  return path.join(getSourceBase(), "_projects", safeName, "mim-project.json");
 }
 
 export function loadProjectConfig(projectName: string): ProjectConfig {

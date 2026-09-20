@@ -1,5 +1,5 @@
 import { withApiGuard } from "@/lib/apiGuard";
-import { BUILDS_BASE } from "@/lib/core/constants";
+import { getBuildsBase } from "@/lib/core/settings";
 import { deployServerSchema } from "@/lib/server/deploySchema";
 import { deployServer } from "@/lib/server/deployServer";
 import { SftpAuditError } from "@/lib/server/transport/sftpReadTransport";
@@ -14,7 +14,7 @@ export const POST = withApiGuard(
     const timeout = AbortSignal.timeout(180000);
     const signal = AbortSignal.any([request.signal, timeout]);
     try {
-      const result = await deployServer(body, BUILDS_BASE, signal);
+      const result = await deployServer(body, getBuildsBase(), signal);
       return Response.json(result, { headers: { "Cache-Control": "no-store" } });
     } catch (error: unknown) {
       // Never return/log transport exceptions, credentials or server.properties.

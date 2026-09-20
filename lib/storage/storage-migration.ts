@@ -10,7 +10,8 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { SOURCE_BASE } from '@/lib/core/constants';
+import { getSourceBase } from '@/lib/core/settings';
+import { currentMimIndexLayout } from '@/lib/core/mimIndex';
 import { mimDB, type ModDescription, type CacheEntry } from "@/lib/storage/indexeddb";
 
 interface LegacyDescriptionData {
@@ -33,9 +34,9 @@ interface LegacyCacheData {
 }
 
 export class StorageMigration {
-  private readonly LEGACY_DESCRIPTIONS_PATH = path.join(SOURCE_BASE, '.mim-index', 'mod-descriptions.json');
-  private readonly LEGACY_CACHE_PATH = path.join(SOURCE_BASE, '.mim-index', 'cache', 'remote-cache.json');
-  private readonly MIGRATION_MARKER_PATH = path.join(SOURCE_BASE, '.mim-index', '.indexeddb-migration-complete');
+  private readonly LEGACY_DESCRIPTIONS_PATH = path.join(getSourceBase(), '.mim-index', 'mod-descriptions.json');
+  private readonly LEGACY_CACHE_PATH = currentMimIndexLayout().remoteCache;
+  private readonly MIGRATION_MARKER_PATH = path.join(currentMimIndexLayout().root, '.indexeddb-migration-complete');
 
   async needsMigration(): Promise<boolean> {
     try {

@@ -122,7 +122,7 @@ flowchart TD
     FileIn["Archivo Descargado (JAR / ZIP)"] --> Hash["Cálculo SHA-512 / SHA-1 en Stream"]
     Hash --> DedupeCheck{"¿Existe Hash en Vault?"}
     DedupeCheck -- Sí --> Hardlink["Genera Hardlink / Symlink<br/>(0 bytes de espacio adicional)"]
-    DedupeCheck -- No --> StoreVault["Mueve a Storage Vault Central<br/>(/lib/.mim-index/vault)"]
+    DedupeCheck -- No --> StoreVault["Registra en librería sourceBase/_projects<br/>(sin vault en lib/.mim-index)"]
     StoreVault --> RegisterIndex["Registra Metadata en SQLite/Index"]
     Hardlink --> AtomicStaging["Atomic Staging en Perfil de Juego"]
     RegisterIndex --> AtomicStaging
@@ -135,7 +135,7 @@ flowchart TD
 El pipeline de análisis de seguridad de archivos JAR de terceros opera en 4 fases:
 
 1. **Chequeo de Hash Inmediato**: Comparación contra la base de datos de 19 firmas de amenazas conocidas de alto impacto (Fracturiser, Necro RAT, etc.).
-2. **Caché y Consulta VirusTotal**: Conexión con VT API v3 con caché local persistente en `lib/.mim-index/cache/vt-cache.json` para minimizar consumo de cuotas.
+2. **Caché y Consulta VirusTotal**: Conexión con VT API v3 con caché local persistente en `mimIndexPath/cache/vt-cache.json` (ver [mim-index.md](./mim-index.md)).
 3. **Análisis Estático de Bytecode**: Inspección profunda de archivos `.class` dentro del archivo ZIP/JAR buscando invocaciones reflectivas sospechosas (`Runtime.getRuntime().exec`, `ProcessBuilder`, sockets de red ocultos, payloads ofuscados).
 4. **Auditoría de Licencias y Redistribución**: Clasificación automática del archivo (`PERMISSIVE`, `COPYLEFT`, `RESTRICTED`, `UNKNOWN`) advirtiendo sobre cláusulas restrictivas o "All Rights Reserved" antes de empaquetar modpacks.
 

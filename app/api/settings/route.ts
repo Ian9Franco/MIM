@@ -19,6 +19,7 @@ const settingsUpdateSchema = z.object({
   buildsBase: z.string().max(4096).optional(),
   downloadsPath: z.string().max(4096).optional(),
   minecraftPath: z.string().max(4096).optional(),
+  mimIndexPath: z.string().max(4096).optional(),
   stagingPath: z.string().max(4096).optional(),
   validated: z.boolean().optional(),
   modrinthApiKey: z.string().max(4096).optional(),

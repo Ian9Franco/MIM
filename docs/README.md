@@ -58,6 +58,7 @@ docs/
 | :--- | :--- |
 | **[overview.md](./architecture/overview.md)** 🗺️ | **Topología y Motores:** Vista panorámica de los 7 dominios en `lib/` y el bus reactivo (`MimEventMap`). |
 | **[mim-core.md](./architecture/mim-core.md)** 📘 | **Manual Maestro de MIM:** Especificación integral de ciclo de vida, carpetas, frontend, backend y standalone. |
+| **[mim-index.md](./architecture/mim-index.md)** 📂 | **Índice local único:** layout de `.mim-index`, detector de carpetas zombie y migración `sinceramiento_01` (v11.7.0). |
 | **[boundaries.md](./architecture/boundaries.md)** 🛡️ | **Fronteras de Código:** Reglas de importación unidireccional forzadas por CI (`lint:architecture`). |
 | **[api-catalog.md](./architecture/api-catalog.md)** 🔌 | **Catálogo de Endpoints:** Referencia de rutas REST en `app/api/` con métodos, parámetros y respuestas. |
 | **[distributed-sync.md](./architecture/distributed-sync.md)** 🔄 | **Sistemas Distribuidos:** Modelo Offline-First, sincronización Last-Write-Wins (LWW) y Supabase. |
@@ -147,7 +148,7 @@ Ubicadas en [docs/adr/](./adr/README.md):
 Physical folder layout:
 
 - `docs/planning/`: Master strategic roadmap, tactical backlog (`whosnext.md`), master engineering plan (`unicorn.md`), project status, action plans, and refactoring inventory.
-- `docs/architecture/`: System topologies, master manual (`mim-core.md`), boundaries, API catalog, SemVer policy, Zod inventory.
+- `docs/architecture/`: System topologies, master manual (`mim-core.md`), local MIM Index (`mim-index.md`), boundaries, API catalog, SemVer policy, Zod inventory.
 - `docs/engines/`: Specialized domain engine specifications and quantitative benchmarks (SAGE, Aduana, NBT Rescue, FOMO).
 - `docs/security/`: Static bytecode scanner specifications, STRIDE threat models, secrets (safeStorage), and web hardening.
 - `docs/cloud/`: Supabase database schemas, RLS policies, and cloud integration.

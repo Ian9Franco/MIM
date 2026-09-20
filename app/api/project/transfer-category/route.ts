@@ -10,7 +10,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { SOURCE_BASE, CATEGORIES } from "@/lib/core/constants";
+import { CATEGORIES } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
@@ -65,10 +66,10 @@ export const POST = withApiGuard(
 
       // Determine source directory: either a project-specific mods folder or the global loader folder
       const sourceBaseDir = safeSource === "__global__"
-        ? path.join(SOURCE_BASE, safeVersion, safeLoader)
-        : path.join(SOURCE_BASE, "_projects", safeSource, "mods");
+        ? path.join(getSourceBase(), safeVersion, safeLoader)
+        : path.join(getSourceBase(), "_projects", safeSource, "mods");
 
-      const targetBaseDir = path.join(SOURCE_BASE, "_projects", safeTarget, "mods");
+      const targetBaseDir = path.join(getSourceBase(), "_projects", safeTarget, "mods");
 
     if (!fs.existsSync(sourceBaseDir)) {
       const errorMsg = sourceProject === "__global__"

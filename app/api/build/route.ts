@@ -15,7 +15,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildAllUser, buildAllHost, autoPromoteDependencies } from "@/lib/modding/builder";
-import { SOURCE_BASE, BUILDS_BASE, isValidLoader } from "@/lib/core/constants";
+import { isValidLoader } from "@/lib/core/constants";
+import { getBuildsBase, getSourceBase } from "@/lib/core/settings";
 import { mimMsg } from "@/lib/core/voice";
 import type { Loader } from "@/lib/core/constants";
 import path from "path";
@@ -52,13 +53,13 @@ export const POST = withApiGuard(
       );
     }
 
-    const buildPath = path.join(BUILDS_BASE, safeName);
+    const buildPath = path.join(getBuildsBase(), safeName);
 
     // ── Pre-Build: Auto-Promote Dependencies ──────────────────────────────────
-    const projectModsPath = path.join(SOURCE_BASE, "_projects", safeName, "mods");
+    const projectModsPath = path.join(getSourceBase(), "_projects", safeName, "mods");
     const loaderPath = fs.existsSync(projectModsPath)
       ? projectModsPath
-      : path.join(SOURCE_BASE, version, loader);
+      : path.join(getSourceBase(), version, loader);
     
     // Auto-promote libraries required by .essential from .local/.server to .essential
     autoPromoteDependencies(loaderPath);
@@ -66,8 +67,8 @@ export const POST = withApiGuard(
     // ── Dispatch to the appropriate builder ────────────────────────────────────
     const result =
       (buildType as BuildType) === "allhost"
-        ? buildAllHost(SOURCE_BASE, buildPath, version, loader as Loader)
-        : buildAllUser(SOURCE_BASE, buildPath, version, loader as Loader);
+        ? buildAllHost(getSourceBase(), buildPath, version, loader as Loader)
+        : buildAllUser(getSourceBase(), buildPath, version, loader as Loader);
 
     return NextResponse.json(result);
   } catch (e: unknown) {

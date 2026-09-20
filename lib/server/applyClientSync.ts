@@ -6,7 +6,7 @@ import { discoverRemoteServerState } from "@mim/server-engine/discovery";
 import { buildAllUser } from "@/lib/modding/builder";
 import type { ClientSyncApplyItemResult, ClientSyncApplyResult } from "@mim/contracts-core/server";
 import type { Loader } from "@/lib/core/constants";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import type { SyncClientServerRequest } from "./multiplayerSchema";
 import { openSftpReadTransport, SftpAuditError } from "./transport/sftpReadTransport";
 import { performMultiplayerSync, type ServerMultiplayerSyncResult } from "./multiplayerServer";
@@ -174,7 +174,7 @@ export async function applyClientSyncFromRemote(
   input: SyncClientServerRequest,
   buildsBase: string,
   signal: AbortSignal,
-  sourceBase: string = SOURCE_BASE
+  sourceBase: string = getSourceBase()
 ): Promise<ClientSyncApplyResult & { syncBefore: ServerMultiplayerSyncResult }> {
   const release = acquireServerSession("Ya hay una operación de servidor en curso. Esperá a que termine.");
   try {

@@ -14,6 +14,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const {
     sourceBase, setSourceBase, buildsBase, setBuildsBase, downloadsPath, setDownloadsPath, 
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
+    mimIndexPath, setMimIndexPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
     geminiApiKey, setGeminiApiKey,
     openrouterApiKey, setOpenrouterApiKey,
@@ -142,9 +143,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <div id="onboarding-settings-paths" className="space-y-5">
                     <PathInputGroup label="Carpeta Descargas" value={downloadsPath} onChange={setDownloadsPath} onPick={() => handlePickFolder(setDownloadsPath, false, downloadsPath)} canEdit={canEdit} isValid={pathValidation[downloadsPath]} saving={saving} placeholder="C:\Users\...\Downloads" />
                     <PathInputGroup label="Carpeta del Juego (.minecraft)" value={minecraftPath} onChange={setMinecraftPath} onPick={() => handlePickFolder(setMinecraftPath, true, minecraftPath)} canEdit={canEdit} isValid={pathValidation[minecraftPath]} saving={saving} placeholder="C:\Users\...\AppData\Roaming\.minecraft" />
-                    <PathInputGroup label="Carpeta Staging" value={stagingPath} onChange={setStagingPath} onPick={() => handlePickFolder(setStagingPath, false, stagingPath)} canEdit={canEdit} isValid={pathValidation[stagingPath]} saving={saving} placeholder="D:\.mine\source\.mim-index\staging" desc="Depósito temporal para archivos cuando Minecraft no está disponible." />
-                    <PathInputGroup label="Carpeta Source (Proyectos)" value={sourceBase} onChange={setSourceBase} onPick={() => handlePickFolder(setSourceBase, false, sourceBase)} canEdit={canEdit} isValid={pathValidation[sourceBase]} saving={saving} placeholder="d:\.mine\source" />
-                    <PathInputGroup label="Carpeta Builds (Compilados)" value={buildsBase} onChange={setBuildsBase} onPick={() => handlePickFolder(setBuildsBase, false, buildsBase)} canEdit={canEdit} isValid={pathValidation[buildsBase]} saving={saving} placeholder="d:\.mine\builds" />
+                    <PathInputGroup label="Carpeta índice MIM" value={mimIndexPath} onChange={setMimIndexPath} onPick={() => handlePickFolder(setMimIndexPath, false, mimIndexPath)} canEdit={canEdit} isValid={pathValidation[mimIndexPath]} saving={saving} placeholder="C:\Users\...\.mim-index" desc="Único almacén de settings, caches, tweak e historial. Configurable; se muda con el resto de rutas." />
+                    <PathInputGroup label="Carpeta Staging" value={stagingPath} onChange={setStagingPath} onPick={() => handlePickFolder(setStagingPath, false, stagingPath)} canEdit={canEdit} isValid={pathValidation[stagingPath]} saving={saving} placeholder="C:\Users\...\.mim-index\staging" desc="Depósito temporal para archivos cuando Minecraft no está disponible. Se crea al usarse." />
+                    <PathInputGroup label="Carpeta Source (Proyectos)" value={sourceBase} onChange={setSourceBase} onPick={() => handlePickFolder(setSourceBase, false, sourceBase)} canEdit={canEdit} isValid={pathValidation[sourceBase]} saving={saving} placeholder="D:\.MIM\source" />
+                    <PathInputGroup label="Carpeta Builds (Compilados)" value={buildsBase} onChange={setBuildsBase} onPick={() => handlePickFolder(setBuildsBase, false, buildsBase)} canEdit={canEdit} isValid={pathValidation[buildsBase]} saving={saving} placeholder="D:\.MIM\builds" />
                   </div>
                 )}
                 {activeTab === "apiKeys" && (
@@ -174,6 +176,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                         stagingPath,
                         sourceBase,
                         buildsBase,
+                        mimIndexPath,
                         curseforgeApiKey,
                         modrinthApiKey,
                         virusTotalApiKey,
@@ -185,6 +188,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                         if (newSettings.stagingPath) setStagingPath(newSettings.stagingPath);
                         if (newSettings.sourceBase) setSourceBase(newSettings.sourceBase);
                         if (newSettings.buildsBase) setBuildsBase(newSettings.buildsBase);
+                        if (newSettings.mimIndexPath) setMimIndexPath(newSettings.mimIndexPath);
                         if (newSettings.curseforgeApiKey) setCurseforgeApiKey(newSettings.curseforgeApiKey);
                         if (newSettings.modrinthApiKey) setModrinthApiKey(newSettings.modrinthApiKey);
                         if (newSettings.virusTotalApiKey) setVirusTotalApiKey(newSettings.virusTotalApiKey);

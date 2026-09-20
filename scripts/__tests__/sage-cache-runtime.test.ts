@@ -55,7 +55,7 @@ async function testBrowserAdapter(): Promise<void> {
 async function testNodeAdapter(): Promise<void> {
   const root = fs.mkdtempSync(path.join(tmpdir(), "mim-sage-runtime-"));
   const adapter = createNodeCacheAdapter({ fs, path, crypto, cwd: () => root });
-  const cacheFile = path.join(root, ".mim-index", "cache", "sage-cache.json");
+  const cacheFile = path.join(root, "cache", "sage-cache.json");
 
   try {
     await adapter.save({ [entry.signature]: entry });

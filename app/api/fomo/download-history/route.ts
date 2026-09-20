@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { currentMimIndexLayout, ensureDirForWrite } from "@/lib/core/mimIndex";
 import { withApiGuard } from "@/lib/apiGuard";
 import { fomoDownloadHistoryBodySchema } from "@/lib/api/contracts";
 
-const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
+function historyFile(): string {
+  return currentMimIndexLayout().downloadHistory;
+}
 
 function getDownloadHistory(): any[] {
-  if (!fs.existsSync(HISTORY_FILE)) return [];
+  const file = historyFile();
+  if (!fs.existsSync(file)) return [];
   try {
-    return JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+    return JSON.parse(fs.readFileSync(file, "utf-8"));
   } catch {
     return [];
   }
 }
 
 function saveDownloadHistory(data: any[]): void {
-  fs.mkdirSync(path.dirname(HISTORY_FILE), { recursive: true });
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(data, null, 2), "utf-8");
+  const file = historyFile();
+  ensureDirForWrite(file);
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
 }
 
 export const GET = withApiGuard(

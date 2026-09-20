@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
-import { SOURCE_BASE, SUBCATEGORIES } from "@/lib/core/constants";
+import { SUBCATEGORIES } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import { updateModOverride } from "@/lib/modding/projectConfig";
 import { withApiGuard } from "@/lib/apiGuard";
 
@@ -21,10 +22,10 @@ export const POST = withApiGuard(
     try {
       const { projectName, version, loader, fileName, action, payload } = body;
 
-    const projectModsPath = path.join(SOURCE_BASE, "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
+    const projectModsPath = path.join(getSourceBase(), "_projects", projectName.replace(/[<>:"/\\|?*]/g, "_"), "mods");
     const loaderPath = fs.existsSync(projectModsPath)
       ? projectModsPath
-      : path.join(SOURCE_BASE, version, loader);
+      : path.join(getSourceBase(), version, loader);
 
     if (!fs.existsSync(loaderPath)) {
       return NextResponse.json({ error: "Project mods directory not found" }, { status: 404 });

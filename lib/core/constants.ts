@@ -65,6 +65,7 @@ export type Loader = (typeof LOADERS)[number];
  */
 const defaultHome = process.env.USERPROFILE || process.env.HOME || "";
 
+/** Platform default only. Prefer getSourceBase() from settings for writes. */
 export const SOURCE_BASE: string =
   process.env.MIM_SOURCE_BASE ??
   (process.platform === "win32"
@@ -73,7 +74,7 @@ export const SOURCE_BASE: string =
 
 /**
  * Root where finished builds are written.
- * Override via MIM_BUILDS_BASE env var.
+ * Override via MIM_BUILDS_BASE env var. Prefer getBuildsBase() from settings for writes.
  */
 export const BUILDS_BASE: string =
   process.env.MIM_BUILDS_BASE ??

@@ -19,7 +19,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE, SUBCATEGORIES, type Loader } from "@/lib/core/constants";
+import { SUBCATEGORIES, type Loader } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import { getSettings } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import { validatePack, type ValidatorMod } from "@/lib/modding/packValidator";
@@ -86,10 +87,10 @@ export const POST = withApiGuard(
     } else {
       // ── Collect mod files (Original logic) ─────────────────────────────────────────────────────
       const safeName = (projectName as string).replace(/[<>:"/\\|?*]/g, "_").trim();
-      const projectModsPath = path.join(SOURCE_BASE, "_projects", safeName, "mods");
+      const projectModsPath = path.join(getSourceBase(), "_projects", safeName, "mods");
       const loaderPath = fs.existsSync(projectModsPath)
         ? projectModsPath
-        : path.join(SOURCE_BASE, version, loader as Loader);
+        : path.join(getSourceBase(), version, loader as Loader);
 
       const overrides = loadProjectConfig(projectName);
 

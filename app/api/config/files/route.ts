@@ -18,7 +18,7 @@ function getConfigRoots(project: string) {
     ? path.resolve(settings.minecraftPath, "config")
     : resolveWithin(path.join(settings.sourceBase, "_projects"), path.join(project, "config"));
   const historyProjectRoot = resolveWithin(
-    path.join(settings.sourceBase, ".mim-index", "history", "config"),
+    path.join(settings.mimIndexPath, "history", "config"),
     project
   );
 

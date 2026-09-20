@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/core/settings";
 import { scanMod, type ModMeta } from "@/lib/scanner";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
@@ -34,7 +34,7 @@ export const GET = withApiGuard(
       return NextResponse.json({ pendingFiles: [] });
     }
 
-    const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
+    const HISTORY_FILE = currentMimIndexLayout().downloadHistory;
     let history: DownloadHistoryEntry[] = [];
     if (fs.existsSync(HISTORY_FILE)) {
       try { 

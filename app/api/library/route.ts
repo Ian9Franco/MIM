@@ -2,7 +2,7 @@
  * /api/library — GET
  * ─────────────────────────────────────────────────────────────────────────────
  * Devuelve todos los mods clasificados para una combinación de versión+loader.
- * Recorre el árbol de categorías en el SOURCE_BASE y escanea cada JAR.
+ * Recorre el árbol de categorías en el getSourceBase() y escanea cada JAR.
  *
  * Query params: ?version=1.20.1&loader=forge
  * Respuesta: { library: LibraryEntry[] }
@@ -14,10 +14,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE, CATEGORIES, isValidLoader } from "@/lib/core/constants";
+import { CATEGORIES, isValidLoader } from "@/lib/core/constants";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
-import { getSettings } from "@/lib/core/settings";
+import { getSettings, getSourceBase } from "@/lib/core/settings";
+import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -79,8 +80,8 @@ export const GET = withApiGuard(
   }
 
   const loaderPath = project
-    ? path.join(SOURCE_BASE, "_projects", project, "mods")
-    : path.join(SOURCE_BASE, version, loader!);
+    ? path.join(getSourceBase(), "_projects", project, "mods")
+    : path.join(getSourceBase(), version, loader!);
 
   // Helper to enrich meta from history
   function enrichMetaFromHistory(meta: ModMeta, fileName: string, history: any[]) {
@@ -96,7 +97,7 @@ export const GET = withApiGuard(
     }
   }
 
-  const HISTORY_FILE = path.join(SOURCE_BASE, ".mim-index", "download-history.json");
+  const HISTORY_FILE = currentMimIndexLayout().downloadHistory;
   let history = [];
   if (fs.existsSync(HISTORY_FILE)) {
     try { 
@@ -142,7 +143,7 @@ export const GET = withApiGuard(
 
   // ── Read Resource Packs ──────────────────────────────────────────────────────
   const resourcePacksPath = project
-    ? path.join(SOURCE_BASE, "_projects", project, "resourcepacks")
+    ? path.join(getSourceBase(), "_projects", project, "resourcepacks")
     : null;
 
   if (resourcePacksPath && fs.existsSync(resourcePacksPath)) {
@@ -188,7 +189,7 @@ export const GET = withApiGuard(
 
   // ── Read Datapacks ──────────────────────────────────────────────────────────
   const datapacksPath = project
-    ? path.join(SOURCE_BASE, "_projects", project, "datapacks")
+    ? path.join(getSourceBase(), "_projects", project, "datapacks")
     : null;
 
   if (datapacksPath && fs.existsSync(datapacksPath)) {
@@ -226,7 +227,7 @@ export const GET = withApiGuard(
 
   // ── Read Shaders ────────────────────────────────────────────────────────────
   const shaderPacksPath = project
-    ? path.join(SOURCE_BASE, "_projects", project, "shaderpacks")
+    ? path.join(getSourceBase(), "_projects", project, "shaderpacks")
     : path.join(getSettings().minecraftPath || path.join(os.homedir(), "AppData", "Roaming", ".minecraft"), "shaderpacks");
 
   if (fs.existsSync(shaderPacksPath)) {

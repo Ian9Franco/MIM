@@ -9,6 +9,7 @@ import path from "path";
 import os from "os";
 import { execSync } from "child_process";
 import { getSettings } from "@/lib/core/settings";
+import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import { mimMsg } from "@/lib/core/voice";
 import { Keybind, SnapshotMetadata } from "./lib/types";
 import { 
@@ -294,7 +295,7 @@ export const GET = withApiGuard(
     resData.recommendations = getRecommendations(loader, version, installedMods, hardware, globalModCount, ramParam ? parseInt(ramParam) : 4);
     
     // Snapshots — read from global .mim-index/tweak/snapshots
-    const globalSnapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+    const globalSnapshotDir = currentMimIndexLayout().tweakSnapshots;
     if (fs.existsSync(globalSnapshotDir)) {
       resData.snapshots = fs.readdirSync(globalSnapshotDir)
           .filter(f => f.endsWith(".json"))
@@ -307,7 +308,7 @@ export const GET = withApiGuard(
     }
 
     // Load Draft (Always global now)
-    const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+    const globalDraftPath = currentMimIndexLayout().tweakDraft;
     if (fs.existsSync(globalDraftPath)) {
       try { 
         resData.draft = JSON.parse(fs.readFileSync(globalDraftPath, "utf-8")); 
@@ -357,7 +358,7 @@ export const POST = withApiGuard(
     const resourcePacksDir = path.join(realMinecraftPath, "resourcepacks");
     
     // Internal MIM storage for backups and global data
-    const internalTweakDir = path.join(sourceBase, ".mim-index", "tweak");
+    const internalTweakDir = currentMimIndexLayout().tweak;
     if (!fs.existsSync(internalTweakDir)) fs.mkdirSync(internalTweakDir, { recursive: true });
 
     if (action === "save") {
@@ -370,7 +371,7 @@ export const POST = withApiGuard(
         }
         
         // AUTO-SNAPSHOT (Rescue): Save current state before overwriting
-        const rescueDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+        const rescueDir = currentMimIndexLayout().tweakSnapshots;
         if (!fs.existsSync(rescueDir)) fs.mkdirSync(rescueDir, { recursive: true });
         const rescueId = `rescue-${Date.now()}`;
         const currentContent = fs.readFileSync(optionsPath, "utf-8");
@@ -407,7 +408,7 @@ export const POST = withApiGuard(
       
       if (keybinds) {
         // Use global draft for locked keys if available, otherwise no locks
-        const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+        const globalDraftPath = currentMimIndexLayout().tweakDraft;
         let lockedKeys = new Set<string>();
         if (fs.existsSync(globalDraftPath)) {
           try { 
@@ -456,7 +457,7 @@ export const POST = withApiGuard(
       fs.writeFileSync(optionsPath, content.filter(l => l.trim()).join("\n"));
       
       // Clear draft once saved to game
-      const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+      const globalDraftPath = currentMimIndexLayout().tweakDraft;
       if (fs.existsSync(globalDraftPath)) fs.unlinkSync(globalDraftPath);
 
       return NextResponse.json({ success: true, message: mimMsg.tweakSaved() });
@@ -469,7 +470,7 @@ export const POST = withApiGuard(
         updatedAt: new Date().toISOString()
       };
 
-      const globalDraftPath = path.join(sourceBase, ".mim-index", "tweak_global_draft.json");
+      const globalDraftPath = currentMimIndexLayout().tweakDraft;
       fs.writeFileSync(globalDraftPath, JSON.stringify(draft, null, 2));
       return NextResponse.json({ success: true, message: mimMsg.tweakDraftSaved() });
     }
@@ -554,7 +555,7 @@ export const POST = withApiGuard(
       }
 
       const snapshotId = `snap-${Date.now()}`;
-      const snapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+      const snapshotDir = currentMimIndexLayout().tweakSnapshots;
       if (!fs.existsSync(snapshotDir)) fs.mkdirSync(snapshotDir, { recursive: true });
 
       const globalModsDir = path.join(minecraftPath, "mods");
@@ -585,7 +586,7 @@ export const POST = withApiGuard(
 
     if (action === "apply-snapshot") {
       const { snapshotId } = body;
-      const snapshotDir = path.join(sourceBase, ".mim-index", "tweak", "snapshots");
+      const snapshotDir = currentMimIndexLayout().tweakSnapshots;
       const snapshotFile = path.join(snapshotDir, `${snapshotId}.json`);
 
       if (!fs.existsSync(snapshotFile)) {

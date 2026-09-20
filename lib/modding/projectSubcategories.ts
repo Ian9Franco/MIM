@@ -14,7 +14,7 @@
 
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 
 // Subcategorías por defecto para nuevos proyectos
 export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
@@ -62,7 +62,7 @@ interface ProjectConfig {
  * Obtiene la ruta del archivo de configuración del proyecto
  */
 function getConfigPath(projectName: string): string {
-  return path.join(SOURCE_BASE, projectName, CONFIG_FILE);
+  return path.join(getSourceBase(), projectName, CONFIG_FILE);
 }
 
 /**

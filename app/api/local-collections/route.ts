@@ -14,8 +14,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import os from "os";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { currentMimIndexLayout, ensureDirForWrite } from "@/lib/core/mimIndex";
+import { getSettings } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
 import {
   localCollectionsDeleteBodySchema,
@@ -42,41 +42,26 @@ interface LocalCollection {
 
 // ── Persistencia ──────────────────────────────────────────────────────────────
 
-const OLD_ROOT_COLLECTIONS_FILE = path.join(process.cwd(), "mim-collections.json");
-const OLD_INDEX_COLLECTIONS_FILE = path.join(process.cwd(), "mim-index", "collections.json");
-const COLLECTIONS_FILE = path.join(SOURCE_BASE, ".mim-index", "collections.json");
-
-// Migrate legacy file if it exists
-if (!fs.existsSync(COLLECTIONS_FILE)) {
-  try {
-    fs.mkdirSync(path.dirname(COLLECTIONS_FILE), { recursive: true });
-    if (fs.existsSync(OLD_INDEX_COLLECTIONS_FILE)) {
-      fs.renameSync(OLD_INDEX_COLLECTIONS_FILE, COLLECTIONS_FILE);
-      console.log("[collections] Legacy collections file successfully migrated from mim-index/ to SOURCE_BASE/.mim-index/");
-    } else if (fs.existsSync(OLD_ROOT_COLLECTIONS_FILE)) {
-      fs.renameSync(OLD_ROOT_COLLECTIONS_FILE, COLLECTIONS_FILE);
-      console.log("[collections] Legacy collections file successfully migrated from root to SOURCE_BASE/.mim-index/");
-    }
-  } catch (e) {
-    console.error("[collections] Failed to migrate legacy collections file:", e);
-  }
+function collectionsFile(): string {
+  return currentMimIndexLayout().collections;
 }
 
 /** Lee las colecciones desde el archivo JSON local. Devuelve [] si no existe o está corrupto. */
 function getLocalCollections(): LocalCollection[] {
-  if (!fs.existsSync(COLLECTIONS_FILE)) return [];
+  const file = collectionsFile();
+  if (!fs.existsSync(file)) return [];
   try {
-    return JSON.parse(fs.readFileSync(COLLECTIONS_FILE, "utf-8"));
+    return JSON.parse(fs.readFileSync(file, "utf-8"));
   } catch {
-    // Archivo corrupto o inválido — devolvemos vacío para no bloquear la app
     return [];
   }
 }
 
 /** Persiste el array de colecciones en el archivo JSON local. */
 function saveLocalCollections(data: LocalCollection[]): void {
-  fs.mkdirSync(path.dirname(COLLECTIONS_FILE), { recursive: true });
-  fs.writeFileSync(COLLECTIONS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  const file = collectionsFile();
+  ensureDirForWrite(file);
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
 }
 
 // ── GET — Listar colecciones ───────────────────────────────────────────────────
@@ -160,7 +145,7 @@ export const POST = withApiGuard(
       }
       const projectIds = coll.projects.map((p) => p.projectId);
       
-      const downloadsDir = path.join(os.homedir(), "Downloads");
+      const downloadsDir = getSettings().downloadsPath;
       const queued = [];
       const failed = [];
       const headers = { "User-Agent": "MIM-App/1.0" };

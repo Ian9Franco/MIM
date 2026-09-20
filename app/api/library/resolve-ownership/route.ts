@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_BASE, CATEGORIES, isValidLoader } from "@/lib/core/constants";
+import { CATEGORIES, isValidLoader } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
 import { isLibrary, resolveDependencyScopes } from "@/lib/modding/dependencyResolver";
@@ -58,8 +59,8 @@ export const GET = withApiGuard(
   }
 
   const loaderPath = project
-    ? path.join(SOURCE_BASE, "_projects", project, "mods")
-    : path.join(SOURCE_BASE, version, loader!);
+    ? path.join(getSourceBase(), "_projects", project, "mods")
+    : path.join(getSourceBase(), version, loader!);
 
   if (!fs.existsSync(loaderPath)) {
     return NextResponse.json({ success: true, actions: [] });

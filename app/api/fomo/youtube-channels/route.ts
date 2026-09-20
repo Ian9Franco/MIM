@@ -3,9 +3,9 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getPortableDir } from "@/lib/core/settings";
+import { getMimIndexPath } from "@/lib/core/settings";
 
-const DATA_DIR = path.join(getPortableDir(), "data");
+const DATA_DIR = path.join(getMimIndexPath(), "data");
 const CHANNELS_FILE = path.join(DATA_DIR, "showcase_channels.json");
 
 function getChannels(): string[] {

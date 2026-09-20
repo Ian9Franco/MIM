@@ -22,7 +22,7 @@ function errorCode(error: unknown): string | undefined {
 }
 
 export function createNodeCacheAdapter(deps: NodeCacheDependencies): SageCacheAdapter {
-  const cacheFile = () => deps.path.join(deps.cwd(), ".mim-index", "cache", "sage-cache.json");
+  const cacheFile = () => deps.path.join(deps.cwd(), "cache", "sage-cache.json");
 
   const read = (warnLabel: string): SageCacheStore => {
     const file = cacheFile();

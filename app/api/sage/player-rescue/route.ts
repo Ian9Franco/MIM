@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPortableDir, getSettings } from "@/lib/core/settings";
+import { getMimIndexPath, getSettings } from "@/lib/core/settings";
 import { readNBT, writeNBT, TagType, NBTTag } from "@/lib/modding/nbt";
 import path from "path";
 import fs from "fs";
@@ -68,17 +68,7 @@ export const GET = withApiGuard(
       }
     }
 
-    const portableDir = getPortableDir();
-    const playerRescueDir = path.join(portableDir, "player-rescue");
-
-    // Create the folder automatically if it doesn't exist
-    if (!fs.existsSync(playerRescueDir)) {
-      try {
-        fs.mkdirSync(playerRescueDir, { recursive: true });
-      } catch (err) {
-        console.error("Could not create player-rescue directory", err);
-      }
-    }
+    const playerRescueDir = path.join(getMimIndexPath(), "player-rescue");
 
     interface DiscoveredPlayerFile {
       fileName: string;

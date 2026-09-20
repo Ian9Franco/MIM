@@ -4,9 +4,9 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getPortableDir } from "@/lib/core/settings";
+import { getMimIndexPath } from "@/lib/core/settings";
 
-const CACHE_DIR = path.join(getPortableDir(), "cache");
+const CACHE_DIR = path.join(getMimIndexPath(), "cache");
 
 // Canales predeterminados que tienen posts de comunidad con compilaciones de mods
 export const HARDCODED_POSTS_CHANNELS = [

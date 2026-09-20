@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings } from "@/lib/core/settings";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSettings, getSourceBase } from "@/lib/core/settings";
 import { scanMod } from "@/lib/scanner";
 import type { ModMeta } from "@/lib/scanner";
 import path from "path";
@@ -95,7 +94,7 @@ export const GET = withApiGuard(
 
     // 3. Scan Project Resourcepacks (if active project is provided)
     if (projectName) {
-      const projectRpDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+      const projectRpDir = path.join(getSourceBase(), "_projects", projectName, "resourcepacks");
       if (fs.existsSync(projectRpDir)) {
         try {
           const files = fs.readdirSync(projectRpDir);

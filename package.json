@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.6.0",
+  "version": "11.7.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -72,6 +72,8 @@
     "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary --include=\"lib/modding/nbt.ts\" --include=\"lib/intelligence/sage/**\" node scripts/test-runner.js",
     "demo": "node scripts/demo-tour.js",
+    "sinceramiento": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/sinceramiento.ts",
+    "test:sinceramiento": "ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sinceramiento-01.test.ts",
     "build:standalone": "next build && node standalone/prepare.js",
     "start:standalone": "electron standalone/main.js",
     "package:win": "npm run build:standalone && electron-builder build --win --publish never",

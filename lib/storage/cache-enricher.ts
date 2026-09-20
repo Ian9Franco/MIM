@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { currentMimIndexLayout, ensureDirForWrite } from "@/lib/core/mimIndex";
 
-const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+function remoteCacheFile(): string {
+  return currentMimIndexLayout().remoteCache;
+}
 
 export function enrichUpdatesCache(options: {
   filePath: string;
@@ -34,9 +36,9 @@ export function enrichUpdatesCache(options: {
 
     // 2. Load the current remote cache
     let cache: { version: number; entries: Record<string, any> } = { version: 1, entries: {} };
-    if (fs.existsSync(REMOTE_CACHE_FILE)) {
+    if (fs.existsSync(remoteCacheFile())) {
       try {
-        cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+        cache = JSON.parse(fs.readFileSync(remoteCacheFile(), "utf-8"));
       } catch (e) {
         console.error("[cache-enricher] Error loading remote cache file, resetting cache", e);
       }
@@ -80,8 +82,8 @@ export function enrichUpdatesCache(options: {
     }
 
     // 5. Ensure folder exists and write synchronously
-    fs.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
-    fs.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
+    fs.mkdirSync(path.dirname(remoteCacheFile()), { recursive: true });
+    fs.writeFileSync(remoteCacheFile(), JSON.stringify(cache, null, 2), "utf-8");
     console.log(`[cache-enricher] Successfully cached remote metadata for ${path.basename(filePath)} (iconUrl: ${iconUrl})`);
   } catch (err) {
     console.error("[cache-enricher] Failed to enrich updates cache:", err);

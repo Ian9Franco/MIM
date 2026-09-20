@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getApiKey, getPortableDir } from "@/lib/core/settings";
+import { getApiKey, getMimIndexPath } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
@@ -41,7 +41,7 @@ interface CurseForgeFileItem {
   dependencies?: CurseForgeFileDep[];
 }
 
-const CACHE_FILE = path.join(getPortableDir(), "cache", "fomo_modpack_dependencies_cache.json");
+const CACHE_FILE = path.join(getMimIndexPath(), "cache", "fomo_modpack_dependencies_cache.json");
 
 function getModpackCache(): Record<string, ModpackDependency[]> {
   if (fs.existsSync(CACHE_FILE)) {

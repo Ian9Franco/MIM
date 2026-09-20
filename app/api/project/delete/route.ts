@@ -10,7 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import fs from "fs";
 import path from "path";
 import { withApiGuard } from "@/lib/apiGuard";
@@ -31,7 +31,7 @@ export const POST = withApiGuard(
 
     try {
       assertPathSegment(projectName);
-      const projectsRoot = path.join(SOURCE_BASE, "_projects");
+      const projectsRoot = path.join(getSourceBase(), "_projects");
       const projectPath = resolveWithin(projectsRoot, projectName);
 
       if (fs.existsSync(projectPath)) {

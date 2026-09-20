@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { getPortableDir } from "@/lib/core/settings";
+import { getMimIndexPath } from "@/lib/core/settings";
 import { withApiGuard } from "@/lib/apiGuard";
 
-const DATA_DIR = path.join(getPortableDir(), "data");
+const DATA_DIR = path.join(getMimIndexPath(), "data");
 const CHANNELS_FILE = path.join(DATA_DIR, "showcase_channels.json");
 const STORAGE_KEY = "mim_fomo_last_sync_state";
 
@@ -87,7 +87,7 @@ export const GET = withApiGuard(
     }
 
     try {
-      const cacheDir = path.join(getPortableDir(), "cache");
+      const cacheDir = path.join(getMimIndexPath(), "cache");
       const channelHash = crypto.createHash("md5").update(channelUrl).digest("hex").substring(0, 10);
 
       // Delete all cache files for this channel
@@ -122,7 +122,7 @@ export const GET = withApiGuard(
       for (const channelUrl of channels) {
         try {
           // Limpiamos caché antes de testear
-          const cacheDir = path.join(getPortableDir(), "cache");
+          const cacheDir = path.join(getMimIndexPath(), "cache");
           const channelHash = crypto.createHash("md5").update(channelUrl).digest("hex").substring(0, 10);
 
           const files = fs.readdirSync(cacheDir);

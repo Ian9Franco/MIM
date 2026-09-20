@@ -1,5 +1,5 @@
 import { withApiGuard } from "@/lib/apiGuard";
-import { BUILDS_BASE } from "@/lib/core/constants";
+import { getBuildsBase } from "@/lib/core/settings";
 import { inspectServerSchema } from "@/lib/server/inspectSchema";
 import { inspectServer } from "@/lib/server/inspectServer";
 import { SftpAuditError } from "@/lib/server/transport/sftpReadTransport";
@@ -14,7 +14,7 @@ export const POST = withApiGuard(
     const timeout = AbortSignal.timeout(90000);
     const signal = AbortSignal.any([request.signal, timeout]);
     try {
-      return Response.json(await inspectServer(body, BUILDS_BASE, signal), { headers: { "Cache-Control": "no-store" } });
+      return Response.json(await inspectServer(body, getBuildsBase(), signal), { headers: { "Cache-Control": "no-store" } });
     } catch (error: unknown) {
       // Never return/log transport exceptions, credentials or server.properties.
       const message = signal.aborted ? "La auditoría se canceló o superó los 90 segundos." :

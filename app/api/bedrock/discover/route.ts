@@ -4,9 +4,9 @@ import fs from "fs";
 import path from "path";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getPortableDir } from "@/lib/core/settings";
+import { getMimIndexPath } from "@/lib/core/settings";
 
-const CACHE_DIR = path.join(getPortableDir(), "cache");
+const CACHE_DIR = path.join(getMimIndexPath(), "cache");
 
 const querySchema = z.object({
   q: z.string().trim().max(120).optional().default(""),

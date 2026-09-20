@@ -15,6 +15,7 @@ type SettingsResponse = {
   downloadsPath: string;
   minecraftPath: string;
   stagingPath: string;
+  mimIndexPath: string;
   apiKeysConfigured: ApiKeyStatus;
 };
 
@@ -35,6 +36,7 @@ export function useSettingsManager(onClose: () => void) {
   const [downloadsPath, setDownloadsPath] = useState("");
   const [minecraftPath, setMinecraftPath] = useState("");
   const [stagingPath, setStagingPath] = useState("");
+  const [mimIndexPath, setMimIndexPath] = useState("");
   
   const [modrinthApiKey, setModrinthApiKey] = useState("");
   const [curseforgeApiKey, setCurseforgeApiKey] = useState("");
@@ -89,6 +91,7 @@ export function useSettingsManager(onClose: () => void) {
         setDownloadsPath(d.downloadsPath || "");
         setMinecraftPath(d.minecraftPath || "");
         setStagingPath(d.stagingPath || "");
+        setMimIndexPath(d.mimIndexPath || "");
         setModrinthApiKey("");
         setCurseforgeApiKey("");
         setVirusTotalApiKey("");
@@ -104,7 +107,7 @@ export function useSettingsManager(onClose: () => void) {
         setLoading(false);
         
         validatePaths([
-          d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.stagingPath
+          d.sourceBase, d.buildsBase, d.downloadsPath, d.minecraftPath, d.mimIndexPath
         ]);
       })
       .catch((e) => {
@@ -171,11 +174,11 @@ export function useSettingsManager(onClose: () => void) {
   useEffect(() => {
     if (!loading) {
       const timer = setTimeout(() => {
-        validatePaths([sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath]);
+        validatePaths([sourceBase, buildsBase, downloadsPath, minecraftPath, mimIndexPath]);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath, loading]);
+  }, [sourceBase, buildsBase, downloadsPath, minecraftPath, mimIndexPath, loading]);
 
   useEffect(() => {
     if (!loading) {
@@ -227,6 +230,7 @@ export function useSettingsManager(onClose: () => void) {
       setDownloadsPath(originalSettings.downloadsPath || "");
       setMinecraftPath(originalSettings.minecraftPath || "");
       setStagingPath(originalSettings.stagingPath || "");
+      setMimIndexPath(originalSettings.mimIndexPath || "");
       setModrinthApiKey("");
       setCurseforgeApiKey("");
       setVirusTotalApiKey("");
@@ -244,13 +248,14 @@ export function useSettingsManager(onClose: () => void) {
       downloadsPath !== originalSettings.downloadsPath ||
       minecraftPath !== originalSettings.minecraftPath ||
       stagingPath !== originalSettings.stagingPath ||
+      mimIndexPath !== originalSettings.mimIndexPath ||
       Boolean(modrinthApiKey || curseforgeApiKey || virusTotalApiKey || geminiApiKey || openrouterApiKey)
     );
   };
 
   const handleCloseAttempt = () => {
     if (saving) return;
-    const currentPaths = [sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath];
+    const currentPaths = [sourceBase, buildsBase, downloadsPath, minecraftPath, mimIndexPath];
     const hasInvalid = currentPaths.some(p => pathValidation[p] === false);
 
     if (hasInvalid) {
@@ -282,6 +287,7 @@ export function useSettingsManager(onClose: () => void) {
     if (downloadsPath !== originalSettings.downloadsPath) changes.push({ name: "Descargas", old: originalSettings.downloadsPath, new: downloadsPath });
     if (minecraftPath !== originalSettings.minecraftPath) changes.push({ name: "Minecraft", old: originalSettings.minecraftPath, new: minecraftPath });
     if (stagingPath !== originalSettings.stagingPath) changes.push({ name: "Staging", old: originalSettings.stagingPath, new: stagingPath });
+    if (mimIndexPath !== originalSettings.mimIndexPath) changes.push({ name: "Índice MIM", old: originalSettings.mimIndexPath, new: mimIndexPath });
 
     if (changes.length > 0) {
       const move = window.confirm(
@@ -310,7 +316,7 @@ export function useSettingsManager(onClose: () => void) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath,
+        sourceBase, buildsBase, downloadsPath, minecraftPath, stagingPath, mimIndexPath,
         ...secretUpdates,
         validated: true 
       })
@@ -329,6 +335,7 @@ export function useSettingsManager(onClose: () => void) {
   return {
     sourceBase, setSourceBase, buildsBase, setBuildsBase, downloadsPath, setDownloadsPath, 
     minecraftPath, setMinecraftPath, stagingPath, setStagingPath,
+    mimIndexPath, setMimIndexPath,
     modrinthApiKey, setModrinthApiKey, curseforgeApiKey, setCurseforgeApiKey, virusTotalApiKey, setVirusTotalApiKey,
     geminiApiKey, setGeminiApiKey,
     openrouterApiKey, setOpenrouterApiKey,

@@ -10,7 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
@@ -34,7 +34,7 @@ export const POST = withApiGuard(
         return NextResponse.json({ error: "Invalid project name" }, { status: 400 });
       }
 
-      const projectPath = path.join(SOURCE_BASE, "_projects", safeName);
+      const projectPath = path.join(getSourceBase(), "_projects", safeName);
       
       // Create necessary folders
       fs.mkdirSync(path.join(projectPath, "resourcepacks"), { recursive: true });

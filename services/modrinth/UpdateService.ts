@@ -1,5 +1,5 @@
-import { SOURCE_BASE } from "@/lib/core/constants";
 import { getApiKey } from "@/lib/core/settings";
+import { currentMimIndexLayout, ensureDirForWrite } from "@/lib/core/mimIndex";
 import path from "path";
 import * as fsSync from "fs";
 
@@ -13,7 +13,9 @@ import * as fsSync from "fs";
  */
 
 const MODRINTH_API = "https://api.modrinth.com/v2";
-const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+function remoteCacheFile(): string {
+  return currentMimIndexLayout().remoteCache;
+}
 
 /**
  * Normaliza versiones de Minecraft y mods para una comparación precisa.
@@ -55,9 +57,9 @@ export function hasRealUpdate(latest: string, current: string): boolean {
  */
 export const updateCache = {
   get: () => {
-    if (fsSync.existsSync(REMOTE_CACHE_FILE)) {
+    if (fsSync.existsSync(remoteCacheFile())) {
       try { 
-        return JSON.parse(fsSync.readFileSync(REMOTE_CACHE_FILE, "utf-8")); 
+        return JSON.parse(fsSync.readFileSync(remoteCacheFile(), "utf-8")); 
       } catch (err) { 
         console.warn("[/services/UpdateService] Corrupted update cache file, resetting:", err);
         return { entries: {} }; 
@@ -67,8 +69,8 @@ export const updateCache = {
   },
   save: (data: any) => {
     try {
-      fsSync.mkdirSync(path.dirname(REMOTE_CACHE_FILE), { recursive: true });
-      fsSync.writeFileSync(REMOTE_CACHE_FILE, JSON.stringify(data, null, 2), "utf-8");
+      fsSync.mkdirSync(path.dirname(remoteCacheFile()), { recursive: true });
+      fsSync.writeFileSync(remoteCacheFile(), JSON.stringify(data, null, 2), "utf-8");
     } catch (err) {
       console.warn("[/services/UpdateService] Failed to persist update cache to disk:", err);
     }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
 import { loadProjectConfig } from "@/lib/modding/projectConfig";
 import { scanMod } from "@/lib/scanner";
 import { withApiGuard } from "@/lib/apiGuard";
@@ -20,7 +20,7 @@ export const POST = withApiGuard(
   try {
     const { project } = body;
     
-    const projectDir = path.join(SOURCE_BASE, "_projects", project);
+    const projectDir = path.join(getSourceBase(), "_projects", project);
     const modsDir = path.join(projectDir, "mods");
     
     if (!fs.existsSync(modsDir)) {

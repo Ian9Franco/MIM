@@ -2,8 +2,8 @@
 
 > Este documento existe por una razón concreta: la documentación técnica de MIM es ambiciosa y detallada, pero algunos commits y secciones usan frases como "100% completo" o "producción" que no reflejan con precisión el estado real. Este documento lo corrige — no para restar mérito al trabajo hecho, sino porque la credibilidad a largo plazo vale más que el marketing a corto plazo.
 
-**Última actualización:** 2026-09-14  
-**Versión:** v11.6.0 (Desarrollo Activo)  
+**Última actualización:** 2026-09-20  
+**Versión:** v11.7.0 (Desarrollo Activo)  
 **Autor:** Ian Franco (único desarrollador)  
 *(Nota: Este documento es una auditoría de madurez y transparencia técnica. Para el plan de tareas y evolución activa, consultar [ROADMAP.md](./ROADMAP.md)).*
 

@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { withApiGuard } from "@/lib/apiGuard";
-import { getPortableDir } from "@/lib/core/settings";
+import { getMimIndexPath } from "@/lib/core/settings";
 import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
 
 // Definimos la ruta del binario en la carpeta standalone del proyecto
@@ -171,7 +171,7 @@ export const GET = withApiGuard(
     }
 
     const channelHash = crypto.createHash("md5").update(targetUrl).digest("hex").substring(0, 10);
-    const cacheDir = path.join(getPortableDir(), "cache");
+    const cacheDir = path.join(getMimIndexPath(), "cache");
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true });
     }

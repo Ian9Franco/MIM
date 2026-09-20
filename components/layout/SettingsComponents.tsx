@@ -632,6 +632,7 @@ export function SovereignVaultSettingsCard({ settingsData, onApplySettings }: So
           stagingPath: settingsData.stagingPath,
           sourceBase: settingsData.sourceBase,
           buildsBase: settingsData.buildsBase,
+          mimIndexPath: settingsData.mimIndexPath,
           curseforgeApiKey: settingsData.curseforgeApiKey,
           modrinthApiKey: settingsData.modrinthApiKey,
           virusTotalApiKey: settingsData.virusTotalApiKey,

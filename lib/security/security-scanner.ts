@@ -17,10 +17,9 @@ import type { SecurityScanResult, SecurityFinding } from "../core/types";
 function getWhitelistedMods(): Set<string> {
   const modsSet = new Set<string>(TRUSTED_MODS.map(m => m.toLowerCase()));
   try {
-    const { getPortableDir } = require("../core/settings");
-    const portableDir = getPortableDir();
-    if (portableDir) {
-      const pFile = path.join(portableDir, "data", "whitelist.json");
+    const { currentMimIndexLayout } = require("../core/mimIndex/current");
+    const pFile = currentMimIndexLayout().whitelist;
+    if (pFile) {
       if (fs.existsSync(pFile)) {
         const custom = JSON.parse(fs.readFileSync(pFile, "utf-8"));
         if (Array.isArray(custom)) custom.forEach(m => modsSet.add(String(m).toLowerCase().trim()));
@@ -44,7 +43,14 @@ function isTrustedMod(modId: string, filename: string): boolean {
 export type VirusTotalCachedEntry = NonNullable<SecurityScanResult["virusTotal"]>;
 export type VirusTotalCache = Record<string, VirusTotalCachedEntry>;
 
-const CACHE_FILE = path.join(path.dirname(path.dirname(__filename)), ".mim-index", "cache", "vt-cache.json");
+function getVtCacheFile(): string {
+  try {
+    const { currentMimIndexLayout } = require("../core/mimIndex/current") as typeof import("../core/mimIndex/current");
+    return currentMimIndexLayout().vtCache;
+  } catch {
+    return path.join(path.dirname(path.dirname(__filename)), ".mim-index", "cache", "vt-cache.json");
+  }
+}
 let inMemoryVTCache: VirusTotalCache | null = null;
 let vtWriteQueue: Promise<void> = Promise.resolve();
 
@@ -52,9 +58,9 @@ export function loadVTCache(): VirusTotalCache {
   if (inMemoryVTCache !== null) {
     return inMemoryVTCache;
   }
-  if (fs.existsSync(CACHE_FILE)) {
+  if (fs.existsSync(getVtCacheFile())) {
     try {
-      inMemoryVTCache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8")) as VirusTotalCache;
+      inMemoryVTCache = JSON.parse(fs.readFileSync(getVtCacheFile(), "utf-8")) as VirusTotalCache;
       return inMemoryVTCache || {};
     } catch (err) {
       console.warn("[/lib/security-scanner] Corrupted VT cache file, starting with empty cache:", err);
@@ -74,14 +80,14 @@ export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
 
   // 2. Serialized FIFO write queue: prevents concurrent disk write collisions and file corruption
   vtWriteQueue = vtWriteQueue.then(async () => {
-    const dir = path.dirname(CACHE_FILE);
+    const dir = path.dirname(getVtCacheFile());
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     // Read on-disk state to merge in case another process modified the file
     let diskData: VirusTotalCache = {};
-    if (fs.existsSync(CACHE_FILE)) {
+    if (fs.existsSync(getVtCacheFile())) {
       try {
-        diskData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8")) as VirusTotalCache;
+        diskData = JSON.parse(fs.readFileSync(getVtCacheFile(), "utf-8")) as VirusTotalCache;
       } catch (err) {
         console.warn("[/lib/security-scanner] Failed to read existing VT cache during merge:", err);
       }
@@ -90,7 +96,7 @@ export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
     const merged: VirusTotalCache = { ...diskData, ...inMemoryVTCache };
     inMemoryVTCache = merged;
 
-    const tempFile = `${CACHE_FILE}.tmp.${process.pid}.${Date.now()}.${crypto.randomUUID()}`;
+    const tempFile = `${getVtCacheFile()}.tmp.${process.pid}.${Date.now()}.${crypto.randomUUID()}`;
     
     try {
       fs.writeFileSync(tempFile, JSON.stringify(merged, null, 2), "utf-8");
@@ -99,7 +105,7 @@ export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
       let retries = 5;
       while (retries > 0) {
         try {
-          fs.renameSync(tempFile, CACHE_FILE);
+          fs.renameSync(tempFile, getVtCacheFile());
           break;
         } catch (err: unknown) {
           const nodeErr = err as NodeJS.ErrnoException;
@@ -108,7 +114,7 @@ export function saveVTCache(newEntries: VirusTotalCache): Promise<void> {
             await new Promise(r => setTimeout(r, 50));
           } else if (retries === 0) {
             // Windows fallback: copy and unlink
-            fs.copyFileSync(tempFile, CACHE_FILE);
+            fs.copyFileSync(tempFile, getVtCacheFile());
             try { 
               fs.unlinkSync(tempFile); 
             } catch (unlinkErr) {

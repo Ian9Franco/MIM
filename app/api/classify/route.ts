@@ -21,7 +21,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { SOURCE_BASE, isValidCategory } from "@/lib/core/constants";
+import { isValidCategory } from "@/lib/core/constants";
+import { getSourceBase } from "@/lib/core/settings";
+import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import { MimClassifier } from "@/lib/classifier";
 import { getProjectSubcategories } from "@/lib/modding/projectSubcategories";
 import { scanMod } from "@/lib/scanner";
@@ -133,7 +135,7 @@ export const POST = withApiGuard(
           }
         }
         
-        const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+        const REMOTE_CACHE_FILE = currentMimIndexLayout().remoteCache;
         let cachedProjectType: string | undefined = undefined;
         if (fs.existsSync(REMOTE_CACHE_FILE)) {
           try {
@@ -213,7 +215,7 @@ export const POST = withApiGuard(
             finalTargetDir = path.join(settings.minecraftPath, "resourcepacks");
           } else {
             if (!projectName) throw new Error("projectName required for resourcepack classification");
-            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "resourcepacks");
+            finalTargetDir = path.join(getSourceBase(), "_projects", projectName, "resourcepacks");
           }
         } else if (effectiveProjectType === "shader") {
           if (toGame) {
@@ -221,7 +223,7 @@ export const POST = withApiGuard(
             finalTargetDir = path.join(settings.minecraftPath, "shaderpacks");
           } else if (projectName) {
             // MIM: a shaderpacks del proyecto
-            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "shaderpacks");
+            finalTargetDir = path.join(getSourceBase(), "_projects", projectName, "shaderpacks");
           } else {
             finalTargetDir = path.join(settings.minecraftPath, "shaderpacks");
           }
@@ -230,7 +232,7 @@ export const POST = withApiGuard(
             finalTargetDir = path.join(settings.minecraftPath, "saves", worldName, "datapacks");
           } else {
             if (!projectName) throw new Error("projectName required for datapack classification");
-            finalTargetDir = path.join(SOURCE_BASE, "_projects", projectName, "datapacks");
+            finalTargetDir = path.join(getSourceBase(), "_projects", projectName, "datapacks");
           }
         } else {
           // Explicit or Automatic Mod Classification
@@ -254,8 +256,8 @@ export const POST = withApiGuard(
             }
 
             finalTargetDir = projectName
-              ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
-              : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
+              ? path.join(getSourceBase(), "_projects", projectName, "mods", finalCategory, finalSub)
+              : path.join(getSourceBase(), version, modloader, finalCategory, finalSub);
           }
         }
       } catch (e) {
@@ -265,8 +267,8 @@ export const POST = withApiGuard(
           finalSub = "vanilla + & qol";
         }
         finalTargetDir = projectName
-          ? path.join(SOURCE_BASE, "_projects", projectName, "mods", finalCategory, finalSub)
-          : path.join(SOURCE_BASE, version, modloader, finalCategory, finalSub);
+          ? path.join(getSourceBase(), "_projects", projectName, "mods", finalCategory, finalSub)
+          : path.join(getSourceBase(), version, modloader, finalCategory, finalSub);
       }
       }
       
@@ -283,8 +285,8 @@ export const POST = withApiGuard(
           const projectRoot = toGame && settings.minecraftPath
             ? path.join(settings.minecraftPath, "mods")
             : projectName 
-              ? path.join(SOURCE_BASE, "_projects", projectName, "mods")
-              : path.join(SOURCE_BASE, version, modloader);
+              ? path.join(getSourceBase(), "_projects", projectName, "mods")
+              : path.join(getSourceBase(), version, modloader);
 
           if (fs.existsSync(projectRoot)) {
             const scanAndDelete = (dir: string) => {

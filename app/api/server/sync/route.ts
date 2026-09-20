@@ -1,5 +1,5 @@
 import { withApiGuard } from "@/lib/apiGuard";
-import { BUILDS_BASE } from "@/lib/core/constants";
+import { getBuildsBase } from "@/lib/core/settings";
 import { syncClientServerSchema } from "@/lib/server/multiplayerSchema";
 import { syncClientWithRemoteServer } from "@/lib/server/multiplayerServer";
 import { SftpAuditError } from "@/lib/server/transport/sftpReadTransport";
@@ -18,7 +18,7 @@ export const POST = withApiGuard(
     const timeout = AbortSignal.timeout(90000);
     const signal = AbortSignal.any([request.signal, timeout]);
     try {
-      return Response.json(await syncClientWithRemoteServer(body, BUILDS_BASE, signal), {
+      return Response.json(await syncClientWithRemoteServer(body, getBuildsBase(), signal), {
         headers: { "Cache-Control": "no-store" },
       });
     } catch (error: unknown) {

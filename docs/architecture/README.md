@@ -11,6 +11,7 @@
 | :--- | :--- |
 | **[overview.md](./overview.md)** 🗺️ | **Topología y Motores:** Vista panorámica de los 7 dominios desacoplados en `lib/` y el bus reactivo (`MimEventMap`). |
 | **[mim-core.md](./mim-core.md)** 📘 | **Manual Maestro de MIM:** Especificación integral de ciclo de vida, carpetas, frontend, backend y standalone. |
+| **[mim-index.md](./mim-index.md)** 📂 | **Índice local único:** layout canónico de `.mim-index`, detector de raíces zombie y migración `sinceramiento_01` (v11.7.0). |
 | **[boundaries.md](./boundaries.md)** 🛡️ | **Fronteras de Código:** Reglas de importación unidireccional forzadas por CI (`lint:architecture`). |
 | **[api-catalog.md](./api-catalog.md)** 🔌 | **Catálogo de Endpoints:** Referencia de rutas HTTP en `app/api/` con sus métodos, parámetros y respuestas. |
 | **[distributed-sync.md](./distributed-sync.md)** 🔄 | **Sistemas Distribuidos:** Modelo Offline-First, sincronización Last-Write-Wins (LWW) y Supabase. |

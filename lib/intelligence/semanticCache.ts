@@ -104,7 +104,8 @@ function loadStore(): SemanticCacheStore {
     const path = process.getBuiltinModule("path");
     if (fs && path) {
       try {
-        const filePath = path.join(process.cwd(), ".mim-index", "semantic-cache.json");
+        const { getMimIndexPath } = require("../core/settings");
+        const filePath = path.join(getMimIndexPath(), "cache", "semantic-cache.json");
         if (fs.existsSync(filePath)) {
           const content = fs.readFileSync(filePath, "utf-8");
           inMemoryStore = JSON.parse(content);
@@ -136,11 +137,12 @@ function persistStore(store: SemanticCacheStore): Promise<void> {
     if (fs && path) {
       writeQueue = writeQueue.then(async () => {
         try {
-          const dir = path.join(process.cwd(), ".mim-index");
+          const { getMimIndexPath } = require("../core/settings");
+          const filePath = path.join(getMimIndexPath(), "cache", "semantic-cache.json");
+          const dir = path.dirname(filePath);
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
           }
-          const filePath = path.join(dir, "semantic-cache.json");
           fs.writeFileSync(filePath, JSON.stringify(store, null, 2), "utf-8");
         } catch {
           // Best-effort persistence

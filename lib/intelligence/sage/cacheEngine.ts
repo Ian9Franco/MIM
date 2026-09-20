@@ -58,7 +58,18 @@ function resolveRuntimeAdapter(): SageCacheAdapter | null {
   const crypto = process.getBuiltinModule("crypto");
 
   runtimeAdapter = fs && path && crypto
-    ? createNodeCacheAdapter({ fs, path, crypto, cwd: () => process.cwd() })
+    ? createNodeCacheAdapter({
+        fs,
+        path,
+        crypto,
+        cwd: () => {
+          try {
+            return require("../../core/settings").getMimIndexPath() as string;
+          } catch {
+            return process.cwd();
+          }
+        },
+      })
     : null;
 
   return runtimeAdapter;

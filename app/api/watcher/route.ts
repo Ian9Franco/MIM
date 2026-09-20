@@ -28,10 +28,10 @@ import os from "os";
 import fs from "fs";
 import crypto from "crypto";
 import { getSettings } from "@/lib/core/settings";
-import { SOURCE_BASE } from "@/lib/core/constants";
+import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import { withApiGuard } from "@/lib/apiGuard";
 
-const REMOTE_CACHE_FILE = path.join(SOURCE_BASE, ".mim-index", "remote-cache.json");
+const REMOTE_CACHE_FILE = () => currentMimIndexLayout().remoteCache;
 
 function readCachedMeta(filePath: string): { 
   projectType?: string; 
@@ -41,8 +41,8 @@ function readCachedMeta(filePath: string): {
   iconUrl?: string;
 } {
   try {
-    if (!fs.existsSync(REMOTE_CACHE_FILE)) return {};
-    const cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE, "utf-8"));
+    if (!fs.existsSync(REMOTE_CACHE_FILE())) return {};
+    const cache = JSON.parse(fs.readFileSync(REMOTE_CACHE_FILE(), "utf-8"));
     // Try matching by filePath first
     for (const entry of Object.values(cache.entries || {}) as any[]) {
       if (entry?.result?.path === filePath) {

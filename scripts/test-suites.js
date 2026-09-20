@@ -113,6 +113,11 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-mimbot.test.ts"]
     },
     {
+      name: "Sinceramiento_01 MIM Index Unification",
+      cmd: "npm",
+      args: ["run", "test:sinceramiento"]
+    },
+    {
       name: "SAGE Cache Runtime Adapter Contract",
       cmd: "npx",
       args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/sage-cache-runtime.test.ts"]

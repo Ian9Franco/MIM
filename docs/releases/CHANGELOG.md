@@ -2,12 +2,24 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.6.0  
+> **Versión Actual:** v11.7.0  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
-> **Última actualización:** 2026-09-19
+> **Última actualización:** 2026-09-20
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 11.7.0 — Sinceramiento_01: índice local único (2026-09-20)
+
+### Sinceramiento_01: índice local único
+
+- **Índice canónico:** `mimIndexPath` configurable; caches, tweak e historial dejan de escribirse en `cwd`, `lib/.mim-index` y `SOURCE_BASE/.mim-index`. Spec: [mim-index.md](../architecture/mim-index.md).
+- **Detector de update:** al primer arranque se migran archivos útiles y se borran raíces zombie. Marker en `.migrations/sinceramiento_01.json`.
+- **Sin mkdir ansioso:** leer settings ya no crea `staging/` ni `player-rescue/`.
+- **FOMO registry** unificado en `_projects/<nombre>/.fomo-registry.json`.
+- **SAGE / VirusTotal / semantic cache** escriben en `mimIndexPath/cache/`.
 
 ---
 

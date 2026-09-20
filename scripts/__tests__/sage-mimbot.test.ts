@@ -13,6 +13,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { computeCrashSignature, loadSageCache, saveSageCacheEntry, getCachedDiagnosis, _resetInMemoryCacheForTests } from "../../lib/intelligence/sage/cacheEngine";
+import { _resetSettingsRuntimeForTests } from "../../lib/core/settings";
+import { _resetSinceramientoGuardForTests } from "../../lib/core/mimIndex/runMigrations";
 import { correlateSuspectsWithFomo, normalizeModId } from "../../lib/intelligence/sage/fomoCorrelator";
 import { profileLogStream } from "../../lib/intelligence/sage/logProfiler";
 import { 
@@ -76,10 +78,13 @@ export async function runSageMimbotTests() {
   };
 
   const originalCwd = process.cwd();
+  const originalPortable = process.env.MIM_PORTABLE_DIR;
   const isolatedCacheRoot = mkdtempSync(join(tmpdir(), "mim-sage-cache-test-"));
 
   try {
-    process.chdir(isolatedCacheRoot);
+    process.env.MIM_PORTABLE_DIR = isolatedCacheRoot;
+    _resetSettingsRuntimeForTests();
+    _resetSinceramientoGuardForTests();
     _resetInMemoryCacheForTests();
 
     await saveSageCacheEntry(testEntry);
@@ -87,7 +92,7 @@ export async function runSageMimbotTests() {
     assert(fetched !== null, "Successfully saved and retrieved entry from local cache");
     assert(fetched?.culprit === "optifine", "Cached culprit accurately preserved");
 
-    const cacheFile = join(isolatedCacheRoot, ".mim-index", "cache", "sage-cache.json");
+    const cacheFile = join(isolatedCacheRoot, "cache", "sage-cache.json");
     writeFileSync(cacheFile, "{ definitely-not-json", "utf-8");
     _resetInMemoryCacheForTests();
 
@@ -99,6 +104,10 @@ export async function runSageMimbotTests() {
     assert(repairedDisk[sig1]?.culprit === "optifine", "Cache write repairs corrupt persisted JSON");
   } finally {
     process.chdir(originalCwd);
+    if (originalPortable === undefined) delete process.env.MIM_PORTABLE_DIR;
+    else process.env.MIM_PORTABLE_DIR = originalPortable;
+    _resetSettingsRuntimeForTests();
+    _resetSinceramientoGuardForTests();
     _resetInMemoryCacheForTests();
     rmSync(isolatedCacheRoot, { recursive: true, force: true });
   }

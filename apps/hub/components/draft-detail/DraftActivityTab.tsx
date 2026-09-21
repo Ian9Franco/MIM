@@ -11,12 +11,38 @@ export interface DraftActivityEvent {
   created_at: string;
   payload?: {
     name?: string;
+    description?: string;
+    cover_image?: string | null;
+    minecraft_version?: string;
+    loader?: string;
+    visibility?: string;
+    type?: string;
+    project_id?: string;
+    [key: string]: unknown;
   } | null;
   profiles?: {
     username?: string | null;
     avatar_url?: string | null;
     color?: string | null;
   } | null;
+}
+
+function activityDetailLines(payload: DraftActivityEvent["payload"]): string[] {
+  if (!payload) return [];
+  const lines: string[] = [];
+  if (typeof payload.name === "string" && payload.name.trim()) lines.push(payload.name);
+  if (typeof payload.description === "string") {
+    const desc = payload.description.trim();
+    lines.push(desc ? `Descripción: ${desc}` : "Descripción vacía");
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "cover_image")) {
+    const cover = typeof payload.cover_image === "string" ? payload.cover_image.trim() : "";
+    lines.push(cover ? `Portada: ${cover}` : "Portada eliminada");
+  }
+  if (typeof payload.visibility === "string") {
+    lines.push(`Visibilidad: ${payload.visibility === "public" ? "público" : "privado"}`);
+  }
+  return lines;
 }
 
 interface DraftActivityTabProps {
@@ -75,11 +101,11 @@ export function DraftActivityTab({
                   {" "}
                   <span className="text-white/60">{evt.action}</span>
                 </p>
-                {evt.payload?.name && (
-                  <p className="text-[9px] text-orange-300/80 mt-0.5 truncate font-semibold">
-                    {evt.payload.name}
+                {activityDetailLines(evt.payload).map((line) => (
+                  <p key={line} className="text-[9px] text-orange-300/80 mt-0.5 truncate font-semibold">
+                    {line}
                   </p>
-                )}
+                ))}
                 <p className="text-[9px] font-mono text-white/30 mt-0.5">{date}</p>
               </div>
             </div>

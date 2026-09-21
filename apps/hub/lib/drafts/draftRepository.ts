@@ -139,7 +139,7 @@ export function createDraftRepository(client: DraftRepositoryClient): DraftRepos
     async recordDraftActivity({ draftId, profileId, action, payload }) {
       const { error } = await client.from("draft_activity").insert({
         draft_id: draftId,
-        profile_id: profileId,
+        user_id: profileId,
         action,
         payload,
       });

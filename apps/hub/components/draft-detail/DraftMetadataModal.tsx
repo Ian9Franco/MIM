@@ -75,8 +75,6 @@ export function DraftMetadataModal({
             </div>
 
             <div className="space-y-3.5">
-              {isOwner && (
-              <>
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
                   Nombre del Draft
@@ -92,6 +90,7 @@ export function DraftMetadataModal({
                 />
               </div>
 
+              {isOwner && (
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
@@ -125,6 +124,7 @@ export function DraftMetadataModal({
                   </select>
                 </div>
               </div>
+              )}
 
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
@@ -193,8 +193,6 @@ export function DraftMetadataModal({
                   </p>
                 </div>
               )}
-              </>
-              )}
 
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
@@ -225,7 +223,7 @@ export function DraftMetadataModal({
               <button
                 type="button"
                 onClick={onSave}
-                disabled={savingMetadata || (isOwner && !editName.trim())}
+                disabled={savingMetadata || !editName.trim()}
                 className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:hover:bg-orange-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
               >
                 {savingMetadata ? (

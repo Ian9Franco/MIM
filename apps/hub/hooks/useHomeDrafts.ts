@@ -269,7 +269,7 @@ export function useHomeDrafts({
 
       await supabase.from("draft_activity").insert({
         draft_id: draftId,
-        profile_id: userId,
+        user_id: userId,
         action: draftActivityAction(contentType),
         payload: { name: mod.title || mod.projectId, type: contentType, project_id: mod.projectId },
       });

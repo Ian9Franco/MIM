@@ -10,14 +10,16 @@ interface BottomNavProps {
   setActiveTab: (tab: string) => void;
 }
 
-const TABS = [
+export const HUB_NAV_TABS = [
   { id: "profile", label: "Perfil", icon: User },
   { id: "spotlight", label: "Spotlight", icon: Flame },
   { id: "discover", label: "Explorar", icon: Search },
   { id: "collections", label: "Colecciones", icon: Compass },
   { id: "feed", label: "Canales", icon: Film },
   { id: "rankings", label: "Comunidad", icon: Users },
-];
+] as const;
+
+const TABS = HUB_NAV_TABS;
 
 const SHELL_SPRING = { type: "spring" as const, stiffness: 420, damping: 34, mass: 0.82 };
 
@@ -30,7 +32,7 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md px-4 pb-4 pt-3"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md px-4 pb-4 pt-3 md:hidden"
       aria-label="Navegación principal"
     >
       <motion.div

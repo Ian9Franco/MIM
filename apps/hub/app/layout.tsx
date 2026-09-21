@@ -190,8 +190,8 @@ export default function RootLayout({
           </p>
         </section>
 
-        {/* Mobile viewport container */}
-        <div className="min-h-screen flex flex-col max-w-md mx-auto bg-background shadow-2xl relative pb-20 transition-all duration-300">
+        {/* App shell: phone column on mobile, full-width desktop workspace */}
+        <div className="min-h-screen flex flex-col max-w-md mx-auto bg-background shadow-2xl relative pb-20 transition-all duration-300 md:max-w-none md:mx-0 md:shadow-none md:pb-0 md:bg-[var(--color-background)]">
           {children}
         </div>
       </body>

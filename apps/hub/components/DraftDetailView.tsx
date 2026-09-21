@@ -272,29 +272,30 @@ export function DraftDetailView({
     if (!draft?.id || !onUpdateDraftMetadata) return;
     setSavingMetadata(true);
     const description = editDescription.trim().slice(0, 100);
-    const ok = await onUpdateDraftMetadata(draft.id, isOwner ? {
-      name: editName,
-      minecraft_version: editVersion,
-      loader: editLoader,
-      cover_image: editCoverImage || null,
-      visibility: editVisibility,
-      description,
-    } : { description });
-    if (ok) {
-      setDraft((prev) => ({
-        ...prev,
-        ...(isOwner ? {
+    // Invited editors can update title/cover/description; owner-only fields stay gated.
+    const updates = isOwner
+      ? {
           name: editName,
           minecraft_version: editVersion,
           loader: editLoader,
           cover_image: editCoverImage || null,
           visibility: editVisibility,
-        } : {}),
-        description,
+          description,
+        }
+      : {
+          name: editName,
+          cover_image: editCoverImage || null,
+          description,
+        };
+    const ok = await onUpdateDraftMetadata(draft.id, updates);
+    if (ok) {
+      setDraft((prev) => ({
+        ...prev,
+        ...updates,
       }));
       setShowMetadataModal(false);
       onRefreshDrafts?.();
-      loadActivity();
+      void loadActivity();
     }
     setSavingMetadata(false);
   };

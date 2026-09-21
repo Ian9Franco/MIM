@@ -116,7 +116,8 @@ export function DraftMetadataModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+        /* z-[200] above BottomNav (z-50); ImageCropper portals itself even higher */
+        <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -132,6 +133,7 @@ export function DraftMetadataModal({
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
             className="bg-zinc-950 border border-white/[0.08] rounded-t-2xl sm:rounded-2xl w-full max-w-sm max-h-[92vh] overflow-y-auto p-5 relative z-10 flex flex-col gap-4 shadow-2xl"
+            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))" }}
           >
             <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">

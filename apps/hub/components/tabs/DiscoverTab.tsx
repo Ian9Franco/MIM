@@ -133,7 +133,7 @@ export function DiscoverTab({
             runDiscoverSearch={runDiscoverSearch}
           />
 
-          <div className="mim-discover-grid grid w-full grid-cols-2 gap-3.5">
+          <div className="mim-discover-grid grid w-full grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
             {discoverResults.map((mod, resultIndex) => (
               <div key={mod.projectId} className="mim-discover-card-slot min-w-0">
                 <DiscoverModCard

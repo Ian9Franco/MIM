@@ -349,7 +349,7 @@ export function ModDetailsSheet({
       {selectedMod && (
         <motion.div
           key="mod-details-backdrop"
-          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end justify-center z-50"
+          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end md:items-center justify-center z-50 md:p-6"
           onClick={closeWithSound}
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
@@ -368,7 +368,7 @@ export function ModDetailsSheet({
               type: "tween",
               ease: [0.22, 1, 0.36, 1],
             }}
-            className="mim-details-sheet bg-surface border-t border-border rounded-t-3xl w-full max-w-md pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[96dvh] overflow-hidden"
+            className="mim-details-sheet bg-surface border-t md:border border-border rounded-t-3xl md:rounded-3xl w-full max-w-md md:max-w-3xl lg:max-w-4xl pb-2 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex flex-col gap-0 relative max-h-[96dvh] md:max-h-[90dvh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             drag="y"
             dragControls={dragControls}

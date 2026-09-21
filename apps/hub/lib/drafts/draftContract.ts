@@ -207,11 +207,12 @@ export function writeActiveDraft(storage: DraftStorage, draft: HomeDraft | null)
 
 export function changedDraftMetadata(updates: DraftMetadataUpdates): string[] {
   const changed: string[] = [];
-  if (updates.name) changed.push("nombre");
-  if (updates.minecraft_version) changed.push("versión");
-  if (updates.loader) changed.push("loader");
-  if (updates.visibility) changed.push("visibilidad");
+  if (typeof updates.name === "string") changed.push("nombre");
+  if (typeof updates.minecraft_version === "string") changed.push("versión");
+  if (typeof updates.loader === "string") changed.push("loader");
+  if (typeof updates.visibility === "string") changed.push("visibilidad");
   if (typeof updates.description === "string") changed.push("descripción");
+  if (Object.prototype.hasOwnProperty.call(updates, "cover_image")) changed.push("portada");
   return changed;
 }
 

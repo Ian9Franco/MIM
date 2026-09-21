@@ -21,6 +21,7 @@ export function DesktopUpdateBanner({ onOpenSettings }: DesktopUpdateBannerProps
         <div className="min-w-0 flex items-center gap-3">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
           <div className="min-w-0">
+            {updater.status === "error" && <p role="alert" className="text-xs text-red-200">{updater.errorMsg}</p>}
             {updater.status === "update-available" && (
               <p className="text-xs text-emerald-100 truncate">
                 Actualización de MIM disponible: <span className="font-mono font-semibold">{latestLabel}</span>
@@ -40,6 +41,7 @@ export function DesktopUpdateBanner({ onOpenSettings }: DesktopUpdateBannerProps
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {updater.status === "error" && <button type="button" onClick={() => void updater.checkUpdate()} className="text-xs px-3 py-1.5 rounded-lg bg-white/10">Reintentar</button>}
           {updater.status === "update-available" && (
             <button
               type="button"

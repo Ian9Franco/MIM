@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ModHit, VersionEntry } from "@/lib/core/types";
 
 export function useFomoDetails(
@@ -11,18 +11,24 @@ export function useFomoDetails(
   const [projectVersions, setProjectVersions] = useState<VersionEntry[]>([]);
   const [versLoading, setVersLoading] = useState(false);
 
+  const requestId = useRef(0);
+
   // Global listener to close details when clicking the backdrop
   useEffect(() => {
     const handleCloseDetails = () => {
+      requestId.current += 1;
       setSelectingVersionFor(null);
       setVersLoading(false);
     };
     window.addEventListener("fomo-close-details", handleCloseDetails);
-    return () => window.removeEventListener("fomo-close-details", handleCloseDetails);
+    return () => {
+      requestId.current += 1;
+      window.removeEventListener("fomo-close-details", handleCloseDetails);
+    };
   }, []);
 
   const loadVersionsForMod = useCallback(
-    async (modHit: ModHit) => {
+    async (modHit: ModHit, token: number) => {
       const apiSource = modHit._source === "curseforge" ? "curseforge" : "modrinth";
       const pt = modHit.projectType || projectType;
       const versRes = await fetch(
@@ -30,8 +36,8 @@ export function useFomoDetails(
       );
       if (versRes.ok) {
         const dataV = await versRes.json();
-        setProjectVersions(dataV.versions ?? []);
-      } else {
+        if (token === requestId.current) setProjectVersions(dataV.versions ?? []);
+      } else if (token === requestId.current) {
         setProjectVersions([]);
       }
     },
@@ -133,14 +139,16 @@ export function useFomoDetails(
 
   const handleOpenVersionSelector = useCallback(
     async (mod: ModHit) => {
+      const token = ++requestId.current;
+      setProjectVersions([]);
       setSelectingVersionFor(mod);
       setVersLoading(true);
       try {
-        await loadVersionsForMod(mod);
+        await loadVersionsForMod(mod, token);
       } catch (e) {
         console.error(e);
       } finally {
-        setVersLoading(false);
+        if (token === requestId.current) setVersLoading(false);
       }
     },
     [loadVersionsForMod]
@@ -148,6 +156,8 @@ export function useFomoDetails(
 
   const handleOpenLiveProject = useCallback(
     async (mod: ModHit) => {
+      const token = ++requestId.current;
+      setProjectVersions([]);
       setSelectingVersionFor(mod);
       setVersLoading(true);
       try {
@@ -194,6 +204,7 @@ export function useFomoDetails(
             )
           );
 
+          if (token !== requestId.current) return;
           setSelectingVersionFor({
             ...mod,
             ...data,
@@ -203,18 +214,19 @@ export function useFomoDetails(
           });
         }
 
-        await loadVersionsForMod(mod);
+        await loadVersionsForMod(mod, token);
       } catch (e) {
         console.error(e);
       } finally {
-        setVersLoading(false);
+        if (token === requestId.current) setVersLoading(false);
       }
     },
-    [loadVersionsForMod, projectType]
+    [loadVersionsForMod]
   );
 
   const handleOpenProjectById = useCallback(
     async (id: string, sourcePlatform?: string) => {
+      const token = ++requestId.current;
       setVersLoading(true);
       setProjectVersions([]);
       try {
@@ -229,9 +241,10 @@ export function useFomoDetails(
           if (modHit) break;
         }
 
+        if (token !== requestId.current) return;
         if (modHit) {
           setSelectingVersionFor(modHit);
-          await loadVersionsForMod(modHit);
+          await loadVersionsForMod(modHit, token);
         } else {
           setSelectingVersionFor(null);
           window.dispatchEvent(
@@ -245,9 +258,9 @@ export function useFomoDetails(
         }
       } catch (e) {
         console.error(e);
-        setSelectingVersionFor(null);
+        if (token === requestId.current) setSelectingVersionFor(null);
       } finally {
-        setVersLoading(false);
+        if (token === requestId.current) setVersLoading(false);
       }
     },
     [fetchProjectAsModHit, loadVersionsForMod]

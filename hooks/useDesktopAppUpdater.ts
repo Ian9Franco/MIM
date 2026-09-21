@@ -46,11 +46,14 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
   const [errorMsg, setErrorMsg] = useState("");
   const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const currentVersion = versionInfo?.current;
 
   useEffect(() => {
     if (!desktopApi) return;
 
-    const unsubscribe = desktopApi.onUpdaterStatus((payload: MimUpdaterStatus) => {
+    let receivedStatus = false;
+    const applyStatus = (payload: MimUpdaterStatus) => {
+      if (payload.current) setVersionInfo(prev => ({ current: payload.current!, latest: payload.latest ?? prev?.latest ?? null }));
       if (payload.status === "checking") {
         setStatus("checking");
         setErrorMsg("");
@@ -101,12 +104,18 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
         return;
       }
       if (payload.status === "error") {
+        setBannerDismissed(false);
         setStatus("error");
         setErrorMsg(payload.message || "No se pudo verificar actualizaciones.");
       }
+    };
+    const unsubscribe = desktopApi.onUpdaterStatus((payload) => {
+      receivedStatus = true;
+      applyStatus(payload);
     });
 
     desktopApi.getVersion().then((info) => {
+      if (receivedStatus) return;
       if (!info.supported) {
         setStatus("unsupported");
         setUnsupportedReason(info.reason || "unsupported");
@@ -115,6 +124,10 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
       }
       const latest = info.latest || null;
       setVersionInfo({ current: info.current, latest });
+      if (info.state) {
+        applyStatus(info.state);
+        return;
+      }
       if (latest && latest !== info.current) {
         setStatus("update-available");
         setBannerDismissed(readDismissed(latest));
@@ -141,13 +154,20 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
     setErrorMsg("");
     try {
       const result = await desktopApi.checkForUpdates();
+      if (result.state?.status === "downloaded" || result.state?.status === "downloading") {
+        setStatus(result.state.status);
+        setVersionInfo({ current: result.current || currentVersion || "unknown", latest: result.latest || null });
+        setDownloadPercent(result.state.percent || 0);
+        setBannerDismissed(false);
+        return;
+      }
       if (!result.supported) {
         setStatus("unsupported");
         setUnsupportedReason(result.reason || "unsupported");
         return;
       }
       setVersionInfo({
-        current: result.current || versionInfo?.current || "unknown",
+        current: result.current || currentVersion || "unknown",
         latest: result.latest || null,
       });
       if (result.updateAvailable) {
@@ -160,14 +180,15 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "No se pudo verificar actualizaciones.");
     }
-  }, [desktopApi, versionInfo?.current]);
+  }, [desktopApi, currentVersion]);
 
   const downloadUpdate = useCallback(async () => {
     if (!desktopApi) return;
     setStatus("downloading");
     setErrorMsg("");
     try {
-      await desktopApi.downloadUpdate();
+      const result = await desktopApi.downloadUpdate();
+      if (!result.ok) throw new Error("La descarga automática no está disponible en este entorno.");
     } catch (err: unknown) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Fallo al descargar la actualización.");
@@ -177,7 +198,8 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
   const installUpdate = useCallback(async () => {
     if (!desktopApi) return;
     try {
-      await desktopApi.installUpdate();
+      const result = await desktopApi.installUpdate();
+      if (!result.ok) throw new Error("La instalación automática no está disponible en este entorno.");
     } catch (err: unknown) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Fallo al instalar la actualización.");
@@ -201,7 +223,7 @@ export function useDesktopAppUpdater(): DesktopUpdaterState {
   const showBanner = Boolean(
     desktopApi
     && !bannerDismissed
-    && (status === "update-available" || status === "downloading" || status === "downloaded")
+    && (status === "update-available" || status === "downloading" || status === "downloaded" || status === "error")
   );
 
   return {

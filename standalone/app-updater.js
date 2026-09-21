@@ -7,6 +7,8 @@ function getAutoUpdater() {
 const STARTUP_CHECK_DELAY_MS = 12_000;
 
 let pendingUpdateInfo = null;
+let lastStatus = null;
+let updateDownloaded = false;
 
 function isPortableRuntime() {
   return Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
@@ -23,6 +25,7 @@ function resolveMainWindow(getMainWindowFn) {
 }
 
 function sendStatus(getMainWindowFn, payload) {
+  lastStatus = payload;
   const win = resolveMainWindow(getMainWindowFn);
   if (!win) return;
   win.webContents.send('mim:updater:status', payload);
@@ -62,9 +65,14 @@ function registerUpdaterHandlers(getMainWindowFn) {
     current: app.getVersion(),
     supported: true,
     latest: pendingUpdateInfo?.version || null,
+    state: lastStatus,
   }));
 
   ipcMain.handle('mim:updater:check', async () => {
+    if (updateDownloaded || lastStatus?.status === 'downloading') {
+      if (updateDownloaded) sendStatus(getMainWindowFn, { status: 'downloaded', current: app.getVersion(), latest: pendingUpdateInfo?.version });
+      return { supported: true, current: app.getVersion(), latest: pendingUpdateInfo?.version, updateAvailable: true, state: lastStatus };
+    }
     try {
       const result = await getAutoUpdater().checkForUpdates();
       const latest = result?.updateInfo?.version || null;
@@ -83,6 +91,12 @@ function registerUpdaterHandlers(getMainWindowFn) {
 
   ipcMain.handle('mim:updater:download', async () => {
     try {
+      if (updateDownloaded) {
+        sendStatus(getMainWindowFn, { status: 'downloaded', current: app.getVersion(), latest: pendingUpdateInfo?.version });
+        return { ok: true };
+      }
+      if (lastStatus?.status === 'downloading') return { ok: true };
+      sendStatus(getMainWindowFn, { status: 'downloading', current: app.getVersion(), latest: pendingUpdateInfo?.version, percent: 0 });
       await getAutoUpdater().downloadUpdate();
       return { ok: true };
     } catch (error) {
@@ -93,7 +107,9 @@ function registerUpdaterHandlers(getMainWindowFn) {
   });
 
   ipcMain.handle('mim:updater:install', async () => {
-    getAutoUpdater().quitAndInstall(false, true);
+    if (!updateDownloaded) throw new Error('La actualización todavía no está descargada.');
+    // Complete the IPC response before closing its renderer.
+    setImmediate(() => getAutoUpdater().quitAndInstall(false, true));
     return { ok: true };
   });
 }
@@ -136,6 +152,7 @@ function bindUpdaterEvents(getMainWindowFn) {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    updateDownloaded = true;
     pendingUpdateInfo = info;
     sendStatus(getMainWindowFn, {
       status: 'downloaded',

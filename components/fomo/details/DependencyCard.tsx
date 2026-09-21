@@ -3,6 +3,7 @@ import { ExternalLink, Download, Loader2 } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { openExternal } from "@/utils/format";
 import type { FomoDependencyItem } from "@/types/fomo";
+import { openProjectDetailsInFomo, searchProjectInFomo } from "@/lib/fomo/fomoProjectNavigation";
 
 interface DependencyCardProps {
   dep: FomoDependencyItem;
@@ -30,7 +31,7 @@ export function DependencyCard({ dep, source, onDownload, downloading, onSearch,
 
   return (
     <div className="flex items-center justify-between p-3 rounded-2xl border transition-colors hover:bg-white/5" style={{ background: "var(--color-secondary-bg)", borderColor: COLORS.border }}>
-      <div onClick={() => onSearch?.(depTitle)} className={`min-w-0 flex-1 pr-2 ${onSearch ? "cursor-pointer group/dep" : ""}`}>
+      <button type="button" onClick={() => depId ? openProjectDetailsInFomo(depId, source, { title: depTitle, projectType: dep.projectType }) : onSearch?.(depTitle)} className="min-w-0 flex-1 pr-2 text-left cursor-pointer group/dep" aria-label={`Abrir ${depTitle}`}>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-sm font-bold truncate transition-colors" style={{ color: COLORS.foreground }}>{depTitle}</p>
           <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border" style={{ background: tc.bg, color: tc.color, borderColor: tc.border }}>
@@ -38,8 +39,12 @@ export function DependencyCard({ dep, source, onDownload, downloading, onSearch,
           </span>
         </div>
         <p className="text-[0.6rem] flex items-center gap-1.5" style={{ color: COLORS.muted }}><span>ID: {depId}</span></p>
-      </div>
+      </button>
       <div className="flex items-center gap-1.5 shrink-0">
+        <button type="button" onClick={() => {
+          window.dispatchEvent(new CustomEvent("fomo-close-details"));
+          searchProjectInFomo({ query: depTitle, projectId: depId, platform: source, projectType: dep.projectType });
+        }} className="p-2 rounded-xl bg-white/5 text-xs hover:bg-white/10" aria-label={`Buscar ${depTitle} en FOMO`}>Buscar</button>
         <button onClick={() => openExternal(depUrl)} className="p-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"><ExternalLink className="w-4 h-4" /></button>
         {onDownload && dep.dependencyType !== "incompatible" && (
           <button onClick={() => onDownload(depId, depTitle)} disabled={downloading} className="p-2 rounded-xl transition-colors disabled:opacity-30" style={{ background: tc.bg, color: tc.color }}>

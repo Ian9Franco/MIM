@@ -620,6 +620,7 @@ function FomoSidebarDiscoverBranchInner({
           >
             {discover.selectingVersionFor ? (
               <FomoVersionOverlay
+                key={`${discover.selectingVersionFor._source}:${discover.selectingVersionFor.projectId}`}
                 mod={discover.selectingVersionFor}
                 versions={discover.projectVersions}
                 loading={discover.versLoading}
@@ -628,7 +629,7 @@ function FomoSidebarDiscoverBranchInner({
                 gameVersions={discover.gameVersions}
                 projectType={discover.projectType}
                 disablePortal={true}
-                onClose={() => discover.setSelectingVersionFor(null)}
+                onClose={() => window.dispatchEvent(new CustomEvent("fomo-close-details"))}
                 onDownload={discover.handleDownload}
                 onSearchAuthor={(a: string) => {
                   const authorClean = (a || "").trim();

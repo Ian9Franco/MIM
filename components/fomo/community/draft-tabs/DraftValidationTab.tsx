@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Server, Monitor, Layers, Activity, ShieldCheck, HelpCircle } from "lucide-react";
 import type { CommunityDraft, CommunityDraftItem } from "@/types/fomo";
 
+import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
+
 interface ValidationResult {
+  missingProject?: { id: string; title: string; source: string };
   id: string;
   type: "critical" | "warning" | "success";
   title: string;
@@ -143,9 +146,9 @@ export function DraftValidationTab({
           newResults.push({
             id: `missing_${missing.missingProject}`,
             type: "critical",
-            title: "Dependencia Requerida Faltante",
-            description: `Falta instalar el mod [${missing.missingProject}]. Es requerido por los siguientes mods:`,
-            affectedItems: missing.requiredBy,
+            title: `Falta: ${missing.missingProject}`,
+            missingProject: { id: missing.missingProject, title: missing.missingProject, source: missing.requiredBy[0]?.source || "modrinth" },
+            description: `Requerida por: ${missing.requiredBy.map(item => item.mod_name || item.project_id).join(", ")}.`,
             icon: Server
           });
         });
@@ -190,7 +193,10 @@ export function DraftValidationTab({
             await Promise.all(itemsWithoutVersion.map(async (item) => {
               try {
                 // Fetch versions for this project (we just take the first one to check deps)
-                const res = await fetch(`https://api.modrinth.com/v2/project/${item.project_id}/version`);
+                const params = new URLSearchParams();
+                if (draft?.game_version) params.set("game_versions", JSON.stringify([draft.game_version]));
+                if (draft?.loader) params.set("loaders", JSON.stringify([draft.loader.toLowerCase()]));
+                const res = await fetch(`https://api.modrinth.com/v2/project/${item.project_id}/version?${params}`);
                 if (res.ok) {
                   const data = await res.json();
                   if (data && data.length > 0) {
@@ -248,9 +254,9 @@ export function DraftValidationTab({
               newResults.push({
                 id: `missing_${missing.missingProject}`,
                 type: "critical",
-                title: "Dependencia Requerida Faltante",
-                description: `Falta instalar el mod [${missing.missingProject}]. Es requerido por los siguientes mods:`,
-                affectedItems: missing.requiredBy,
+                title: `Falta: ${missing.missingProject}`,
+                missingProject: { id: missing.missingProject, title: missing.missingProject, source: missing.requiredBy[0]?.source || "modrinth" },
+                description: `Requerida por: ${missing.requiredBy.map(item => item.mod_name || item.project_id).join(", ")}.`,
                 icon: Server
               });
             });
@@ -266,6 +272,18 @@ export function DraftValidationTab({
           icon: AlertTriangle
         });
       }
+
+      await Promise.all(newResults.map(async result => {
+        const missing = result.missingProject;
+        if (!missing) return;
+        try {
+          const response = await fetch("/api/" + (missing.source === "curseforge" ? "curseforge" : "modrinth") + "/project?projectId=" + encodeURIComponent(missing.id));
+          if (!response.ok) return;
+          const project = await response.json();
+          missing.title = project.title || project.name || missing.id;
+          result.title = "Falta: " + missing.title;
+        } catch { /* Keep the project ID when metadata is unavailable. */ }
+      }));
 
       // 4. Success state if everything is fine (or close to it)
       if (newResults.length === 0) {
@@ -386,6 +404,11 @@ export function DraftValidationTab({
                     </div>
                   </div>
 
+                  {result.missingProject && (
+                    <button type="button" className="self-start px-3 py-2 rounded-xl border border-primary/30 text-primary text-sm font-bold" onClick={() => openProjectDetailsInFomo(result.missingProject!.id, result.missingProject!.source, { title: result.missingProject!.title })}>
+                      Abrir {result.missingProject.title} en FOMO
+                    </button>
+                  )}
                   {result.affectedItems && result.affectedItems.length > 0 && (
                     <div className={`mt-2 p-3 rounded-xl border flex flex-wrap gap-2 ${isModern ? "bg-muted/30 border-border" : "bg-black/20 border-white/10"}`}>
                       {result.affectedItems.map((item, idx) => (

@@ -1,6 +1,6 @@
 {
   "name": "mim",
-  "version": "11.7.0",
+  "version": "11.7.1",
   "private": true,
   "repository": {
     "type": "git",
@@ -160,11 +160,15 @@
     },
     "forceCodeSigning": false,
     "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MIM"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     },
     "publish": {
       "provider": "github",

@@ -17,6 +17,7 @@ export interface MimUpdaterStatus {
 }
 
 export interface MimDesktopVersionInfo {
+  state?: MimUpdaterStatus | null;
   current: string;
   supported: boolean;
   latest?: string | null;
@@ -27,6 +28,7 @@ export interface MimDesktopApi {
   isDesktop: boolean;
   getVersion: () => Promise<MimDesktopVersionInfo>;
   checkForUpdates: () => Promise<{
+    state?: MimUpdaterStatus | null;
     supported: boolean;
     current?: string;
     latest?: string | null;

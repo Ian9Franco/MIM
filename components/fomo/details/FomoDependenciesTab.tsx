@@ -21,7 +21,7 @@ export function FomoDependenciesTab({
   onSearchProject,
 }: FomoDependenciesTabProps) {
   const filtered = allDependencies.filter((d) =>
-    (d.title || d.projectId).toLowerCase().includes(depSearchQuery.toLowerCase())
+    (d.title || d.projectId || "").toLowerCase().includes(depSearchQuery.toLowerCase())
   );
 
   return (
@@ -38,7 +38,6 @@ export function FomoDependenciesTab({
           key={d.projectId}
           dep={d}
           source={source}
-          onDownload={() => {}}
           downloading={depDownloading === d.projectId}
           onSearch={onSearchProject}
         />

@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { useAuth } from "@/components/security/AuthContext";
 import { activeDraftManager } from "@/lib/fomo/activeDraftManager";
+
+import { resolveDraftDependencies } from "@/lib/fomo/draftDependencies";
+
+let draftAddQueue = Promise.resolve();
 
 export function CommunityAddToDraftModal() {
   const { user } = useAuth();
@@ -13,7 +17,7 @@ export function CommunityAddToDraftModal() {
       const detail = (e as CustomEvent).detail;
       if (!detail || !detail.projectId || !user) return;
 
-      const activeDraft = activeDraftManager.getActiveDraft();
+      const activeDraft = detail.draft;
       if (!activeDraft) {
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
           detail: { text: "No hay Draft Activo. Selecciona uno en Drafts.", type: "warning" }
@@ -22,127 +26,48 @@ export function CommunityAddToDraftModal() {
       }
 
       try {
-        // Optimistic update
-        activeDraftManager.addItem({
-          projectId: detail.projectId,
-          source: detail.platform,
-          addedBy: user.id
-        });
+        const source = detail.platform === "curseforge" ? "curseforge" : "modrinth";
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
-          detail: { text: "Añadiendo al Draft...", type: "info" }
+          detail: { text: "Resolviendo dependencias del Draft...", type: "info" }
         }));
-
-        const { data: existing, error: checkErr } = await supabase
-          .from("draft_items")
-          .select("id")
-          .eq("draft_id", activeDraft.id)
-          .eq("project_id", detail.projectId)
-          .maybeSingle();
-
-        if (checkErr) throw checkErr;
-        if (existing) {
-          window.dispatchEvent(new CustomEvent("fomo-show-status", {
-            detail: { text: "El mod ya está en el Draft.", type: "info" }
-          }));
-          return;
+        const { data: existing, error: checkError } = await supabase.from("draft_items")
+          .select("project_id, version_id").eq("draft_id", activeDraft.id).eq("source", source);
+        if (checkError) throw checkError;
+        const existingIds = new Set((existing || []).map(item => String(item.project_id)));
+        const existingVersions = new Map<string, string>((existing || [])
+          .filter(item => item.version_id).map(item => [String(item.project_id), String(item.version_id)]));
+        const projects = await resolveDraftDependencies({
+          projectId: String(detail.projectId), title: detail.title,
+          contentType: detail.contentType || "mod", versionId: detail.versionId,
+        }, { source, version: activeDraft.version, loader: activeDraft.loader }, existingVersions);
+        const additions = projects.filter(project => !existingIds.has(project.project_id));
+        if (additions.length) {
+          const { error } = await supabase.from("draft_items").insert(additions.map(project => ({
+            ...project, draft_id: activeDraft.id, source, added_by: user.id,
+          })));
+          if (error) throw error;
+          if (activeDraftManager.getActiveDraft()?.id === activeDraft.id) {
+            additions.forEach(project => activeDraftManager.addItem({
+              projectId: project.project_id, source, addedBy: user.id,
+            }));
+          }
         }
-
-        // 1. FAST INSERT: Insert the main mod instantly
-        const { error: insertErr } = await supabase
-          .from("draft_items")
-          .insert({
-            draft_id: activeDraft.id,
-            source: detail.platform === "curseforge" ? "curseforge" : "modrinth",
-            project_id: detail.projectId,
-            mod_name: detail.title || detail.projectId,
-            content_type: detail.contentType || "mod",
-            added_by: user.id,
-            dependencies: []
-          });
-
-        if (insertErr) throw insertErr;
-        
-        window.dispatchEvent(new CustomEvent("fomo-show-status", {
-          detail: { text: "Añadido al Draft Activo", type: "success" }
-        }));
         window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-
-        // 2. BACKGROUND RESOLUTION: Fetch and insert dependencies silently
-        if (detail.platform !== "curseforge") {
-          (async () => {
-            try {
-               let fetchedDependencies: any[] = [];
-               let versionIdToSave = null;
-               
-               const loaderStr = activeDraft.loader.toLowerCase() === "fabric" ? "fabric" : (activeDraft.loader.toLowerCase() === "neoforge" ? "neoforge" : "forge");
-               const res = await fetch(`https://api.modrinth.com/v2/project/${detail.projectId}/version?game_versions=[%22${activeDraft.version}%22]&loaders=[%22${loaderStr}%22]`);
-               if (res.ok) {
-                 const data = await res.json();
-                 if (data && data.length > 0) {
-                   fetchedDependencies = data[0].dependencies || [];
-                   versionIdToSave = data[0].id;
-                 }
-               }
-
-               // Update main item with its versionId and dependencies
-               await supabase
-                 .from("draft_items")
-                 .update({ version_id: versionIdToSave, dependencies: fetchedDependencies })
-                 .eq("draft_id", activeDraft.id)
-                 .eq("project_id", detail.projectId);
-
-               // Auto-add missing required dependencies
-               const existingDraftProjectIds = new Set(activeDraft.items.map(i => i.projectId));
-               existingDraftProjectIds.add(detail.projectId);
-
-               const requiredDeps = fetchedDependencies.filter(d => d.dependency_type === "required" && d.project_id);
-               const missingDepsIds = requiredDeps.map(d => d.project_id).filter(id => !existingDraftProjectIds.has(id));
-
-               if (missingDepsIds.length > 0) {
-                 const queryIds = encodeURIComponent(JSON.stringify(missingDepsIds));
-                 const projectsRes = await fetch(`https://api.modrinth.com/v2/projects?ids=${queryIds}`);
-                 if (projectsRes.ok) {
-                   const projectsData = await projectsRes.json();
-                   const itemsToInsert: any[] = [];
-                   
-                   projectsData.forEach((proj: any) => {
-                     itemsToInsert.push({
-                       draft_id: activeDraft.id,
-                       source: "modrinth",
-                       project_id: proj.id,
-                       version_id: null,
-                       mod_name: proj.title || proj.id,
-                       content_type: proj.project_type === "modpack" ? "mod" : (proj.project_type || "mod"),
-                       added_by: user.id,
-                       dependencies: []
-                     });
-                     activeDraftManager.addItem({
-                       projectId: proj.id,
-                       source: "modrinth",
-                       addedBy: user.id
-                     });
-                   });
-
-                   await supabase.from("draft_items").insert(itemsToInsert);
-                   window.dispatchEvent(new CustomEvent("fomo-show-status", {
-                     detail: { text: `Autocompletado con ${itemsToInsert.length} dependencia(s)`, type: "info" }
-                   }));
-                   window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
-                 }
-               }
-            } catch (e) {
-              console.error("Failed background dependency resolution", e);
-            }
-          })();
-        }
-      } catch (err: any) {
-        console.error(err);
-        // Revert optimistic update
-        activeDraftManager.removeItem(detail.projectId);
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
-          detail: { text: "Error al añadir al draft.", type: "error" }
+          detail: { text: additions.length ? "Añadidos al Draft: " + additions.length + " proyecto(s), con sus dependencias requeridas." : "El proyecto y sus dependencias ya están en el Draft.", type: "success" }
+        }));
+      } catch (err: unknown) {
+        console.error(err);
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: err instanceof Error ? err.message : "Error al guardar el draft y sus dependencias.", type: "error" }
         }));
       }
+    };
+    const enqueueAdd = (event: Event) => {
+      // Capture the target before queueing, so a tab/draft change cannot redirect the write.
+      const draft = activeDraftManager.getActiveDraft();
+      const captured = new CustomEvent("fomo-open-add-to-draft", { detail: { ...(event as CustomEvent).detail, draft } });
+      draftAddQueue = draftAddQueue.then(() => handleAdd(captured)).catch(console.error);
     };
 
     const handleRemove = async (e: Event) => {
@@ -187,10 +112,10 @@ export function CommunityAddToDraftModal() {
       }
     };
 
-    window.addEventListener("fomo-open-add-to-draft", handleAdd);
+    window.addEventListener("fomo-open-add-to-draft", enqueueAdd);
     window.addEventListener("fomo-remove-from-draft", handleRemove);
     return () => {
-      window.removeEventListener("fomo-open-add-to-draft", handleAdd);
+      window.removeEventListener("fomo-open-add-to-draft", enqueueAdd);
       window.removeEventListener("fomo-remove-from-draft", handleRemove);
     };
   }, [user]);

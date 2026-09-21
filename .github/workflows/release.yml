@@ -78,6 +78,11 @@ jobs:
           # Prefer the explicit CI cert; do not scavenge random certs on the runner.
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: Verify updater assets before publishing
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: node scripts/verify-release-assets.js dist "$env:RELEASE_TAG"
+
       - name: Resolve Release Notes
         id: notes
         shell: bash
@@ -102,6 +107,7 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
           files: |
             dist/*.exe
             dist/*.blockmap

@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useStatusBanner } from "@/hooks/useStatusBanner";
-import { PillToggleGroup, StatusBanner } from "@/components/ui/primitives";
+import { StatusBanner } from "@/components/ui/primitives";
 import { supabase } from "@/lib/core/supabaseClient";
 import { useAuth } from "@/components/security/AuthContext";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
@@ -91,7 +91,7 @@ function FomoSidebarInner({
   // Read initial mode from localStorage safely after mount
   useEffect(() => {
     const saved = localStorage.getItem("fomo_active_tab") as FomoMode;
-    if (saved && saved !== mode) {
+    if (TAB_OPTIONS.some(tab => tab.value === saved) && saved !== mode) {
       setMode(saved);
     }
   }, []); // Only run once on mount
@@ -435,27 +435,32 @@ function FomoSidebarInner({
             borderColor: "var(--fomo-border)",
           }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="relative h-8 w-8 shrink-0" aria-hidden>
                 <FomoEye />
               </div>
               <div>
                 <h2 className="font-headline text-base" style={{ color: "var(--fomo-text-primary)" }}>FOMO</h2>
-                <p suppressHydrationWarning className="text-[8px] uppercase" style={{ color: "var(--fomo-text-secondary)" }}>{mode}</p>
+                <p suppressHydrationWarning className="text-[8px] uppercase" style={{ color: "var(--fomo-text-secondary)" }}>{TAB_OPTIONS.find(tab => tab.value === mode)?.label}</p>
               </div>
             </div>
             <div
               id="onboarding-fomo-tabs"
-              className="min-w-0 flex-1 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15"
+              className="min-w-0 flex-1"
             >
-              <PillToggleGroup
-                options={TAB_OPTIONS}
-                value={mode}
-                onChange={(v: string) => setMode(v as FomoMode)}
-                className="p-1.5 min-w-max"
-                ariaLabel="Seleccionar pestaña"
-              />
+              <nav aria-label="Secciones de FOMO" className="flex flex-wrap gap-1 rounded-2xl border border-white/10 p-1.5">
+                {TAB_OPTIONS.map(tab => (
+                  <button key={tab.value} type="button" aria-current={mode === tab.value ? "page" : undefined}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("fomo-close-details"));
+                      setMode(tab.value as FomoMode);
+                    }}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary ${mode === tab.value ? "bg-primary/15 text-primary" : "text-foreground/70 hover:bg-white/5 hover:text-foreground"}`}>
+                    {tab.icon}{tab.label}
+                  </button>
+                ))}
+              </nav>
             </div>
           </div>
           <div className="flex items-center gap-3">

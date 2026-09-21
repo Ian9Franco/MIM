@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ModHit, VersionEntry } from "@/lib/core/types";
 
+type DetailsStackEntry = { mod: ModHit; versions: VersionEntry[] };
+
 export function useFomoDetails(
   source: string,
   loader: string,
@@ -10,22 +12,49 @@ export function useFomoDetails(
   const [selectingVersionFor, setSelectingVersionFor] = useState<ModHit | null>(null);
   const [projectVersions, setProjectVersions] = useState<VersionEntry[]>([]);
   const [versLoading, setVersLoading] = useState(false);
+  const [detailsStack, setDetailsStack] = useState<DetailsStackEntry[]>([]);
 
   const requestId = useRef(0);
+
+  const resetDetails = useCallback(() => {
+    requestId.current += 1;
+    setSelectingVersionFor(null);
+    setProjectVersions([]);
+    setDetailsStack([]);
+    setVersLoading(false);
+  }, []);
 
   // Global listener to close details when clicking the backdrop
   useEffect(() => {
     const handleCloseDetails = () => {
-      requestId.current += 1;
-      setSelectingVersionFor(null);
-      setVersLoading(false);
+      resetDetails();
     };
     window.addEventListener("fomo-close-details", handleCloseDetails);
     return () => {
-      requestId.current += 1;
       window.removeEventListener("fomo-close-details", handleCloseDetails);
     };
-  }, []);
+  }, [resetDetails]);
+
+  const detailsBackLabel =
+    detailsStack.length > 0 ? detailsStack[detailsStack.length - 1]?.mod.title || null : null;
+
+  const handleDetailsBack = useCallback(() => {
+    setDetailsStack((prev) => {
+      if (prev.length === 0) {
+        resetDetails();
+        return prev;
+      }
+      const next = [...prev];
+      const popped = next.pop();
+      if (popped) {
+        requestId.current += 1;
+        setSelectingVersionFor(popped.mod);
+        setProjectVersions(popped.versions);
+        setVersLoading(false);
+      }
+      return next;
+    });
+  }, [resetDetails]);
 
   const loadVersionsForMod = useCallback(
     async (modHit: ModHit, token: number) => {
@@ -140,6 +169,7 @@ export function useFomoDetails(
   const handleOpenVersionSelector = useCallback(
     async (mod: ModHit) => {
       const token = ++requestId.current;
+      setDetailsStack([]);
       setProjectVersions([]);
       setSelectingVersionFor(mod);
       setVersLoading(true);
@@ -157,6 +187,7 @@ export function useFomoDetails(
   const handleOpenLiveProject = useCallback(
     async (mod: ModHit) => {
       const token = ++requestId.current;
+      setDetailsStack([]);
       setProjectVersions([]);
       setSelectingVersionFor(mod);
       setVersLoading(true);
@@ -225,8 +256,17 @@ export function useFomoDetails(
   );
 
   const handleOpenProjectById = useCallback(
-    async (id: string, sourcePlatform?: string) => {
+    async (id: string, sourcePlatform?: string, options?: { pushOrigin?: boolean }) => {
       const token = ++requestId.current;
+      if (options?.pushOrigin && selectingVersionFor) {
+        setDetailsStack((prev) => [
+          ...prev,
+          { mod: selectingVersionFor, versions: projectVersions },
+        ]);
+      } else if (!options?.pushOrigin) {
+        setDetailsStack([]);
+      }
+
       setVersLoading(true);
       setProjectVersions([]);
       try {
@@ -263,7 +303,7 @@ export function useFomoDetails(
         if (token === requestId.current) setVersLoading(false);
       }
     },
-    [fetchProjectAsModHit, loadVersionsForMod]
+    [fetchProjectAsModHit, loadVersionsForMod, selectingVersionFor, projectVersions]
   );
 
   return {
@@ -271,6 +311,9 @@ export function useFomoDetails(
     setSelectingVersionFor,
     projectVersions,
     versLoading,
+    detailsStack,
+    detailsBackLabel,
+    handleDetailsBack,
     handleOpenVersionSelector,
     handleOpenLiveProject,
     handleOpenProjectById,

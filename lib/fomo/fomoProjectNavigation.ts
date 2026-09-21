@@ -44,7 +44,7 @@ export function searchAuthorInFomo(author: string) {
 export function openProjectDetailsInFomo(
   id: string,
   platform?: string,
-  opts?: { title?: string; projectType?: string }
+  opts?: { title?: string; projectType?: string; pushOrigin?: boolean }
 ) {
   window.dispatchEvent(
     new CustomEvent("fomo-open-project-details", {
@@ -53,6 +53,7 @@ export function openProjectDetailsInFomo(
         platform,
         title: opts?.title,
         projectType: normalizeProjectType(opts?.projectType),
+        pushOrigin: opts?.pushOrigin ?? false,
       },
     })
   );

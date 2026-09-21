@@ -3,6 +3,7 @@ module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-n
     { name: "Draft Dependency Resolution", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/draft-dependencies.test.ts"] },
     { name: "Desktop Updater Runtime", cmd: "node", args: ["scripts/__tests__/app-updater-runtime.test.js"] },
     { name: "Release Asset Integrity", cmd: "node", args: ["scripts/__tests__/release-assets.test.js"] },
+    { name: "FOMO Layout (wide screen)", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/fomo-layout.test.ts"] },
     { name: "Server Engine & Recovery", cmd: "npm", args: ["run", "test:server"] },
     { name: "Network Resilience", cmd: "npm", args: ["run", "test:network"] },
     {

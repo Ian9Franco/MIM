@@ -14,7 +14,12 @@ export function useFomoFiltersManager(p: any) {
   }, [isCurseForge, p.projectType]);
 
   const clear = useCallback(() => {
-    p.onCategories([]); p.onEnvironments([]); p.onVersions(["1.20.1"]); p.onQuery(""); p.onOnlyExclusives(false);
+    p.onCategories([]);
+    p.onEnvironments([]);
+    p.onVersions([]);
+    p.onLoader?.("unknown");
+    p.onQuery("");
+    p.onOnlyExclusives(false);
   }, [p]);
 
   return { expandedCats, setExpandedCats, toggleFilter, clear, isCurseForge };

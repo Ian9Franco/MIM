@@ -40,6 +40,8 @@ interface FomoVersionOverlayProps {
   gameVersions: string[];
   projectType: string;
   onClose: () => void;
+  onBack?: () => void;
+  backLabel?: string | null;
   onDownload: (mod: ModHit, version: VersionEntry) => void;
   onSearchProject?: (title: string) => void;
   onSearchAuthor?: (author: string) => void;
@@ -54,7 +56,7 @@ interface FomoVersionOverlayProps {
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onDownload,
+  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onBack, backLabel, onDownload,
   onSearchProject, onSearchAuthor, onSearchMod, disablePortal = false, hideVersions = false,
   pendingFilesCount: _pendingFilesCount = 0, onOpenDownloads,
   communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null,
@@ -104,20 +106,15 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
 
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isFullView, setIsFullView] = useState(false);
-  const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(gameVersions[0] || null);
-  const [selectedLoaderFilter, setSelectedLoaderFilter] = useState<string | null>(loader || null);
+  const [selectedVersionFilter, setSelectedVersionFilter] = useState<string | null>(null);
+  const [selectedLoaderFilter, setSelectedLoaderFilter] = useState<string | null>(null);
   const [selectedProjectType, setSelectedProjectType] = useState<string>(mod.projectType || projectType || "mod");
 
   useEffect(() => {
     setSelectedProjectType(mod.projectType || projectType || "mod");
+    setSelectedVersionFilter(null);
+    setSelectedLoaderFilter(null);
   }, [mod.projectId, mod.projectType, projectType]);
-
-  useEffect(() => {
-    if (gameVersions.length > 0) {
-      setSelectedVersionFilter(gameVersions[0]);
-    }
-    setSelectedLoaderFilter(loader || null);
-  }, [gameVersions, loader]);
 
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -264,6 +261,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
         <>
           <FomoOverlayTopBar
             onClose={onClose}
+            onBack={onBack}
+            backLabel={backLabel}
             pendingCount={pendingCount}
             onOpenDownloads={handleOpenDownloadsWrapper}
           />

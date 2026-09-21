@@ -261,7 +261,7 @@ function createWindow() {
     height: 768,
     minWidth: 1000,
     minHeight: 600,
-    title: 'MIM - Minecraft Instance Manager',
+    title: `MIM v${app.getVersion()} — Minecraft Intelligent Manager`,
     backgroundColor: '#141416',
     icon: path.join(__dirname, '..', 'app', 'favicon.ico'),
     webPreferences: {

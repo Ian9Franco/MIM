@@ -17,6 +17,20 @@ export function DesktopUpdateBanner({ onOpenSettings }: DesktopUpdateBannerProps
 
   return (
     <div className="border-b border-emerald-500/20 bg-emerald-500/10 backdrop-blur-md">
+      {updater.status === "downloading" && (
+        <div
+          role="progressbar"
+          aria-valuenow={updater.downloadPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className="h-0.5 bg-emerald-950/40"
+        >
+          <div
+            className="h-full bg-emerald-400 transition-all duration-300 ease-out"
+            style={{ width: `${Math.max(0, Math.min(100, updater.downloadPercent))}%` }}
+          />
+        </div>
+      )}
       <div className="max-w-400 mx-auto px-6 py-2.5 flex items-center justify-between gap-4">
         <div className="min-w-0 flex items-center gap-3">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />

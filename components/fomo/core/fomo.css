@@ -1121,3 +1121,40 @@
     animation: none !important;
   }
 }
+
+/* FOMO section nav — Explorar destacado */
+.fomo-nav-tab {
+  color: color-mix(in srgb, var(--fomo-text-primary) 70%, transparent);
+}
+
+.fomo-nav-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fomo-text-primary);
+}
+
+.fomo-nav-tab--active {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+.fomo-nav-tab--discover {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.fomo-nav-tab--discover:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  color: var(--color-accent);
+}
+
+.fomo-nav-tab--discover-active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.fomo-nav-tab--discover .fomo-nav-tab__icon {
+  transform: scale(1.08);
+}

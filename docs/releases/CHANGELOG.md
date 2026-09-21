@@ -2,12 +2,22 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.7.1  
+> **Versión Actual:** v11.7.2  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
 > **Última actualización:** 2026-09-21
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 11.7.2 — FOMO UX y layout (2026-09-21)
+
+- Versión visible en título y badge Beta; barra de progreso en el banner de actualización.
+- Explorar por defecto: cualquier loader, cualquier versión, relevancia.
+- Navbar FOMO con Explorar destacado; dependencias con «Volver al mod de origen».
+- Fix versiones vacías en detalles y layout en pantallas 27".
+- [Notas completas](./release-notes-v11.7.2.md).
 
 ---
 

@@ -11,6 +11,7 @@ import {
 import type { Project } from "@/lib/core/types";
 import { DesktopUpdateBanner } from "@/components/layout/DesktopUpdateBanner";
 import { GuidesToggle } from "@/components/layout/GuidesToggle";
+import { useDesktopAppUpdater } from "@/hooks/useDesktopAppUpdater";
 
 interface LayoutHeaderProps {
   fomoOpen: boolean;
@@ -47,6 +48,15 @@ export function LayoutHeader({
   const [appMode, setAppMode] = React.useState<string>("MIMU");
   const [profile, setProfile] = React.useState<{ username: string } | null>(null);
   const [isAutoClassify, setIsAutoClassify] = React.useState(false);
+  const { versionInfo } = useDesktopAppUpdater();
+  const appVersion =
+    versionInfo?.current ||
+    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_APP_VERSION : undefined);
+
+  React.useEffect(() => {
+    const base = "MIM — Minecraft Intelligent Manager";
+    document.title = appVersion ? `MIM v${appVersion} — Minecraft Intelligent Manager` : base;
+  }, [appVersion]);
 
   React.useEffect(() => {
     fetch("/api/sage/profile")
@@ -153,7 +163,9 @@ export function LayoutHeader({
               </span>
             </h1>
             <div className="flex items-center gap-2 mt-2.5 relative z-10">
-              <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10">Beta</span>
+              <span className="font-label text-[9px] text-accent/90 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10">
+                Beta{appVersion ? ` · v${appVersion}` : ""}
+              </span>
               <span id="onboarding-watcher" className="font-label text-[9px] text-[#66C8A0] bg-[#66C8A0]/5 px-2.5 py-1 rounded-lg border border-[#66C8A0]/10 flex items-center gap-2">
                 {(() => {
                   const status = watcherStatus || "Watcher";

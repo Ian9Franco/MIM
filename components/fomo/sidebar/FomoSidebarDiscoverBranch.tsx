@@ -64,8 +64,8 @@ function FomoSidebarDiscoverBranchInner({
   onDiscoverKeepAlive,
   onRegisterOpenProjectById,
   onClose,
-  defaultLoader = "forge",
-  defaultVersion = "1.20.1",
+  defaultLoader = "unknown",
+  defaultVersion = "",
   activeProject,
   pendingFiles = [],
   onOpenDownloads,
@@ -131,25 +131,6 @@ function FomoSidebarDiscoverBranchInner({
     return () => window.removeEventListener("fomo-apply-pending-discover", onApply);
   }, [applyPendingAction]);
 
-  const syncedProjectKeyRef = useRef<string | null>(null);
-  const projectLoader =
-    activeProject && typeof activeProject === "object"
-      ? (activeProject as { loader?: string }).loader
-      : undefined;
-  const projectVersion =
-    activeProject && typeof activeProject === "object"
-      ? (activeProject as { version?: string }).version
-      : undefined;
-
-  useEffect(() => {
-    if (!projectLoader && !projectVersion) return;
-    const key = `${projectLoader ?? ""}|${projectVersion ?? ""}`;
-    if (syncedProjectKeyRef.current === key) return;
-    syncedProjectKeyRef.current = key;
-    if (projectLoader) discover.setLoader(projectLoader);
-    if (projectVersion) discover.setGameVersions([projectVersion]);
-  }, [projectLoader, projectVersion, discover.setLoader, discover.setGameVersions]);
-
   useEffect(() => {
     const handleOpenDetails = (e: Event) => {
       const modHit = (e as CustomEvent).detail;
@@ -179,9 +160,9 @@ function FomoSidebarDiscoverBranchInner({
       }
     };
     const handleOpenProjectDetails = (e: Event) => {
-      const { id, platform } = (e as CustomEvent).detail || {};
+      const { id, platform, pushOrigin } = (e as CustomEvent).detail || {};
       if (id) {
-        void discover.handleOpenProjectById(id, platform);
+        void discover.handleOpenProjectById(id, platform, { pushOrigin: Boolean(pushOrigin) });
       }
     };
     const handleSearchProjectEvent = (e: Event) => {
@@ -606,7 +587,7 @@ function FomoSidebarDiscoverBranchInner({
               bottom: `${FOMO_DETAILS_VISUAL_GAP}px`,
               width: `${FOMO_DETAILS_PANEL_WIDTH}px`,
               maxWidth: `min(${FOMO_DETAILS_PANEL_WIDTH}px, calc(100vw - 300px))`,
-              left: layoutDetailsOpen ? fomoDetailsPanelLeft() : detailsOpen ? `calc(50vw - ${FOMO_DETAILS_PANEL_WIDTH / 2}px)` : "100vw",
+              left: detailsOpen ? fomoDetailsPanelLeft() : "100vw",
               opacity: detailsOpen ? 1 : 0,
               pointerEvents: detailsOpen ? "auto" : "none",
               visibility: detailsOpen ? "visible" : "hidden",
@@ -630,6 +611,8 @@ function FomoSidebarDiscoverBranchInner({
                 projectType={discover.projectType}
                 disablePortal={true}
                 onClose={() => window.dispatchEvent(new CustomEvent("fomo-close-details"))}
+                onBack={discover.detailsBackLabel ? discover.handleDetailsBack : undefined}
+                backLabel={discover.detailsBackLabel}
                 onDownload={discover.handleDownload}
                 onSearchAuthor={(a: string) => {
                   const authorClean = (a || "").trim();

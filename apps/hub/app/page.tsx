@@ -4,6 +4,7 @@ import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Coffee, Ghost, Share2, Sun, X, Puzzle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
+import { DesktopSideNav } from "../components/DesktopSideNav";
 import ChannelPickerModal from "../components/ChannelPickerModal";
 import { DraftPickerModal } from "../components/DraftPickerModal";
 import EditProfileModal from "../components/EditProfileModal";
@@ -175,8 +176,15 @@ export default function Home() {
     c.setShowDraftPicker(true);
   }, [c]);
 
+  const onNavTab = React.useCallback((tab: string) => {
+    c.handleCloseModDetails();
+    c.setActiveTab(tab);
+  }, [c]);
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden px-4 pt-6">
+    <div className="flex flex-1 h-full min-h-0 overflow-hidden md:flex-row">
+      <DesktopSideNav activeTab={c.activeTab} setActiveTab={onNavTab} />
+      <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden px-4 pt-6 md:px-8 md:pt-8">
       <header className="flex justify-between items-center mb-6 px-1 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <div
@@ -212,7 +220,8 @@ export default function Home() {
                 </AnimatePresence>
               </span>
             </h1>
-            <p className="text-[10px] font-mono text-white/30 mt-1 uppercase tracking-widest">Mobile</p>
+            <p className="text-[10px] font-mono text-white/30 mt-1 uppercase tracking-widest md:hidden">Mobile</p>
+            <p className="hidden md:block text-[10px] font-mono text-white/30 mt-1 uppercase tracking-widest">Web</p>
           </div>
         </div>
 
@@ -302,7 +311,7 @@ export default function Home() {
               email={c.email}
               setEmail={c.setEmail}
               password={c.password}
-              setPassword={c.setPassword}
+              setPassword={c.password}
               username={c.username}
               setUsername={c.setUsername}
               isRegistering={c.isRegistering}
@@ -456,13 +465,7 @@ export default function Home() {
         </AnimatePresence>
       </main>
 
-      <BottomNav
-        activeTab={c.activeTab}
-        setActiveTab={(tab) => {
-          c.handleCloseModDetails();
-          c.setActiveTab(tab);
-        }}
-      />
+      <BottomNav activeTab={c.activeTab} setActiveTab={onNavTab} />
 
       <ModDetailsSheet
         selectedMod={c.selectedMod}
@@ -565,6 +568,7 @@ export default function Home() {
           <span>Buscar en FOMO</span>
         </button>
       )}
+    </div>
     </div>
   );
 }

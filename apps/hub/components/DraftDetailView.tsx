@@ -444,6 +444,7 @@ export function DraftDetailView({
         onClose={() => {
           setShowMetadataModal(false);
         }}
+        draftId={draft.id}
         editName={editName}
         setEditName={setEditName}
         editVersion={editVersion}

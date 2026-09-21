@@ -311,7 +311,7 @@ export default function Home() {
               email={c.email}
               setEmail={c.setEmail}
               password={c.password}
-              setPassword={c.password}
+              setPassword={c.setPassword}
               username={c.username}
               setUsername={c.setUsername}
               isRegistering={c.isRegistering}

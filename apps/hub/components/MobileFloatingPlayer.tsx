@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_FAIL
+LOAD_FROM_/tmp/mcp_content.txt

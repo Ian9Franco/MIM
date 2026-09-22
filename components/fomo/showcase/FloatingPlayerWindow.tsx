@@ -22,23 +22,15 @@ import {
   getPlayerVideoSize,
   playerSizeLabel,
 } from "@/lib/fomo/playVideo";
+import {
+  getHubPlayerFullHeight,
+  getHubPlayerVideoSize,
+} from "@/lib/fomo/floatingPlayerLayout";
 import { useSingleFloatingPlayer } from "@/hooks/fomo/useSingleFloatingPlayer";
 
 const EDGE = 10;
 
 type Variant = "desktop" | "hub";
-
-function hubSizes(isShort: boolean, size: PlayerSizeKey) {
-  const base = getPlayerVideoSize(size, isShort);
-  if (typeof window === "undefined") return base;
-  const w = Math.min(base.w, window.innerWidth - 16);
-  const h = isShort ? Math.round((w * 16) / 9) : Math.round((w * 9) / 16);
-  return { w, h };
-}
-
-function hubFullHeight(size: PlayerSizeKey, isShort: boolean) {
-  return hubSizes(isShort, size).h + (size === "mini" ? 36 : 96);
-}
 
 function clampPosition(
   x: number,
@@ -48,9 +40,9 @@ function clampPosition(
   variant: Variant,
 ) {
   if (typeof window === "undefined") return { x, y };
-  const { w } = variant === "hub" ? hubSizes(isShort, size) : getPlayerVideoSize(size, isShort);
+  const { w } = variant === "hub" ? getHubPlayerVideoSize(size, isShort) : getPlayerVideoSize(size, isShort);
   const h =
-    variant === "hub" ? hubFullHeight(size, isShort) : getPlayerFullHeight(size, isShort);
+    variant === "hub" ? getHubPlayerFullHeight(size, isShort) : getPlayerFullHeight(size, isShort);
   const maxX = Math.max(EDGE, window.innerWidth - w - EDGE);
   const maxY = Math.max(EDGE, window.innerHeight - h - EDGE);
   return { x: Math.max(EDGE, Math.min(x, maxX)), y: Math.max(EDGE, Math.min(y, maxY)) };
@@ -186,7 +178,7 @@ export function FloatingPlayerWindow({
 
   const dimensions =
     variant === "hub"
-      ? hubSizes(isShort, size)
+      ? getHubPlayerVideoSize(size, isShort)
       : getPlayerVideoSize(size, isShort);
 
   const startPhysics = useCallback(
@@ -202,10 +194,10 @@ export function FloatingPlayerWindow({
         const short = isShortRef.current;
         const currentSize = sizeRef.current;
         const { w } =
-          variant === "hub" ? hubSizes(short, currentSize) : getPlayerVideoSize(currentSize, short);
+          variant === "hub" ? getHubPlayerVideoSize(currentSize, short) : getPlayerVideoSize(currentSize, short);
         const h =
           variant === "hub"
-            ? hubFullHeight(currentSize, short)
+            ? getHubPlayerFullHeight(currentSize, short)
             : getPlayerFullHeight(currentSize, short);
 
         let curX = positionRef.current.x + vx;

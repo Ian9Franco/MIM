@@ -51,7 +51,10 @@ export function ImageCropper({
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null);
   const zoomRef = useRef(zoom);
-  zoomRef.current = zoom;
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     setMounted(true);

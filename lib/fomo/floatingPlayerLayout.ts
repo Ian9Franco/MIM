@@ -1,4 +1,47 @@
 import type { FloatingPlayerInstance } from "@/lib/fomo/floatingPlayers";
+import type { PlayerSizeKey } from "@/lib/fomo/playVideo";
+
+const HUB_LANDSCAPE_WIDTH_RATIO: Record<PlayerSizeKey, number> = {
+  mini: 0.5,
+  normal: 0.72,
+  maxi: 1,
+};
+const HUB_LANDSCAPE_WIDTH_CAP: Record<PlayerSizeKey, number> = {
+  mini: 220,
+  normal: 340,
+  maxi: 800,
+};
+const HUB_SHORT_BASE_WIDTH: Record<PlayerSizeKey, number> = {
+  mini: 200,
+  normal: 280,
+  maxi: 360,
+};
+
+/** Hub floating player video viewport — viewport-relative on mobile so sizes stay distinct. */
+export function getHubPlayerVideoSize(
+  size: PlayerSizeKey,
+  isShort: boolean,
+  viewportWidth?: number,
+): { w: number; h: number } {
+  const innerWidth = viewportWidth ?? (typeof window !== "undefined" ? window.innerWidth : 390);
+  const available = innerWidth - 16;
+  const w = isShort
+    ? Math.min(HUB_SHORT_BASE_WIDTH[size], available)
+    : Math.min(
+        Math.round(available * HUB_LANDSCAPE_WIDTH_RATIO[size]),
+        HUB_LANDSCAPE_WIDTH_CAP[size],
+      );
+  const h = isShort ? Math.round((w * 16) / 9) : Math.round((w * 9) / 16);
+  return { w, h };
+}
+
+export function getHubPlayerFullHeight(
+  size: PlayerSizeKey,
+  isShort: boolean,
+  viewportWidth?: number,
+): number {
+  return getHubPlayerVideoSize(size, isShort, viewportWidth).h + (size === "mini" ? 36 : 96);
+}
 
 export function clampFloatingPlayerPositions(
   players: FloatingPlayerInstance[],
@@ -12,13 +55,8 @@ export function clampFloatingPlayerPositions(
     const isShort = player.isShort;
     const size = player.size;
     if (variant === "hub") {
-      const baseW = isShort
-        ? ({ mini: 200, normal: 280, maxi: 360 } as const)[size]
-        : ({ mini: 350, normal: 550, maxi: 800 } as const)[size];
-      const w = Math.min(baseW, window.innerWidth - 16);
-      const h = isShort ? Math.round((w * 16) / 9) : Math.round((w * 9) / 16);
-      const chrome = size === "mini" ? 36 : 96;
-      return { w, h: h + chrome };
+      const { w } = getHubPlayerVideoSize(size, isShort);
+      return { w, h: getHubPlayerFullHeight(size, isShort) };
     }
 
     const landscape = {

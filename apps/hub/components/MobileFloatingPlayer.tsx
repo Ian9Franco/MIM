@@ -1,1 +1,1 @@
-@/workspace/agent-tools/MobileFloatingPlayer_restore.txt
+PLACEHOLDER_WILL_FAIL

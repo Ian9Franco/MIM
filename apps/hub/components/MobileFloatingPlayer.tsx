@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_REPLACE
+file:///tmp/mcp_content.txt

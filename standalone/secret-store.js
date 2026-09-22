@@ -135,6 +135,47 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath, trustedRoot
     return migrated;
   }
 
+  function isWeakEncryptedEnvelope(filePath) {
+    if (!fs.existsSync(filePath)) return true;
+    try {
+      const envelope = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      const values = envelope?.values;
+      if (!values || typeof values !== "object") return true;
+      return !Object.values(values).some((value) => typeof value === "string" && value.length > 0);
+    } catch {
+      return true;
+    }
+  }
+
+  function mergeEncryptedFromPath(sourcePath) {
+    let resolvedSource;
+    try {
+      resolvedSource = resolveTrustedPath(sourcePath, pathRoots);
+    } catch {
+      return false;
+    }
+    if (!fs.existsSync(resolvedSource) || resolvedSource === secretsPath) return false;
+    if (!isWeakEncryptedEnvelope(secretsPath)) return false;
+
+    let envelope;
+    try {
+      envelope = JSON.parse(fs.readFileSync(resolvedSource, "utf8"));
+    } catch {
+      return false;
+    }
+    if (envelope.version !== 1 || typeof envelope.values !== "object" || !envelope.values) return false;
+
+    const merged = {};
+    for (const field of SECRET_FIELDS) {
+      const encrypted = envelope.values[field];
+      if (typeof encrypted === "string" && encrypted.length > 0) merged[field] = encrypted;
+    }
+    if (Object.keys(merged).length === 0) return false;
+
+    writeJsonAtomic(secretsPath, { version: 1, values: merged });
+    return true;
+  }
+
   function toEnvironment(values = readEncryptedValues()) {
     const environment = {};
     for (const field of SECRET_FIELDS) {
@@ -146,6 +187,7 @@ function createSecretStore({ safeStorage, settingsPath, secretsPath, trustedRoot
   return {
     migratePlaintextSettings,
     migratePlaintextFromPaths,
+    mergeEncryptedFromPath,
     readAll: readEncryptedValues,
     update,
     toEnvironment,

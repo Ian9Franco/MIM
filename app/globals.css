@@ -42,8 +42,9 @@
   --color-primary:    #BB96E4;
   --color-accent:     #FFD066;
   --color-foreground: #DEDEDE; /* Gris claro de la paleta */
-  --color-muted:      #777777;
-  --color-border:     rgba(187, 150, 228, 0.12);
+  --color-muted:      #A394B8;
+  --color-border:     rgba(187, 150, 228, 0.18);
+  --color-border-strong: rgba(187, 150, 228, 0.30);
 
   --color-theme-error:   #fca5a5;
   --color-theme-warning: #fdba74;

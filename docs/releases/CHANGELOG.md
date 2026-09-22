@@ -2,12 +2,40 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v11.7.2  
+> **Versión Actual:** v12.0.0  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
-> **Última actualización:** 2026-09-21
+> **Última actualización:** 2026-09-22
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 12.0.0 — Release v12.0.0 — Sistemas y Criterio Técnico MIM (2026-09-22)
+
+### Cambios incluidos
+
+- fix(hub): mobile ImageCropper actions + pinch zoom above BottomNav (#100) (775dd31)
+- feat(hub): draft cover upload from device with client-side compression (#99) (562c1ad)
+- Merge pull request #98 from Ian9Franco/fix/public-draft-collaborator-metadata (e9029ed)
+- fix(hub): allow invited editors to persist title/cover/description (f1e562b)
+- fix(hub): restore useHomeDrafts; activity insert uses user_id (1378967)
+- WIP: temp - do not merge (0d360da)
+- fix(hub): draft activity insert uses user_id column (de3d371)
+- fix(hub): let invited editors edit nombre and portada (e132a40)
+- fix(hub): include portada in draft metadata changelog labels (78638c2)
+- fix(hub): show metadata changelog details in Activity (931c434)
+- fix(hub): record draft activity with user_id column (bd11ddd)
+- fix(hub): allow draft editors to update cover/title/description and log activity (aa9c26d)
+- Merge pull request #97 from Ian9Franco/fix/mimhub-desktop-layout (b9c3dfd)
+- feat(hub): desktop layout with side nav and wider explore grid (d233c29)
+- feat(hub): desktop layout with side nav and wider explore grid (f74e032)
+- feat(hub): desktop layout with side nav and wider explore grid (e409c44)
+- feat(hub): desktop layout with side nav and wider explore grid (b4200fb)
+- feat(hub): desktop layout with side nav and wider explore grid (9336b22)
+- feat(hub): desktop layout with side nav and wider explore grid (04be963)
+- feat(hub): desktop layout with side nav and wider explore grid (80e8bc3)
+- feat(hub): desktop layout with side nav and wider explore grid (f248737)
 
 ---
 

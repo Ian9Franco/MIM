@@ -77,7 +77,7 @@ export function CommunityHeader({ active, onChange, metrics, isModern = false }:
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}
-              <Icon className="h-3.5 w-3.5 shrink-0" style={selected ? { color: "var(--color-primary)" } : undefined} />
+              <Icon className="h-3.5 w-3.5 shrink-0" style={selected ? { color: isModern ? "var(--color-primary)" : "var(--color-accent)" } : undefined} />
               <span className="truncate hidden sm:inline">{label}</span>
             </button>
           );

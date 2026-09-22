@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, ChevronDown, ChevronUp, LayoutGrid, List, Tag } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
+import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 
 const TYPE_CONFIG = {
   mod:          { label: "Mods",      icon: Puzzle,   color: "text-primary",      bg: "bg-primary/15",    border: "border-primary/20" },
@@ -95,17 +96,15 @@ export function DraftItemsTab({
     }
   };
 
-  const handleOpenDetails = (item: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.dispatchEvent(
-      new CustomEvent("fomo-open-details", {
-        detail: {
-          projectId: item.project_id,
-          platform: item.source === "curseforge" ? "curseforge" : "modrinth",
-          contentType: item.content_type || "mod",
-          title: item.mod_name || item.project_id
-        },
-      })
+  const handleOpenDetails = (item: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    openProjectDetailsInFomo(
+      item.project_id,
+      item.source === "curseforge" ? "curseforge" : "modrinth",
+      {
+        title: item.mod_name || item.project_id,
+        projectType: item.content_type || "mod",
+      },
     );
   };
 
@@ -192,10 +191,21 @@ export function DraftItemsTab({
     const side = item.side || "both";
     const sideStyle = SIDE_STYLES[side as keyof typeof SIDE_STYLES] || SIDE_STYLES.both;
 
+    const iconUrl = item.icon_url || item.iconUrl;
+
     return (
       <div
         key={item.id}
-        className={`group relative flex ${viewMode === "grid" ? "flex-col items-start gap-1.5 p-2.5" : "items-center gap-3 px-3 py-2"} rounded-xl border transition-all duration-200 ${
+        role="button"
+        tabIndex={0}
+        onClick={() => handleOpenDetails(item)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpenDetails(item);
+          }
+        }}
+        className={`group relative flex cursor-pointer ${viewMode === "grid" ? "flex-col items-start gap-1.5 p-2.5" : "items-center gap-3 px-3 py-2"} rounded-xl border transition-all duration-200 ${
           isSelected
             ? `${cfg.bg} ${cfg.border} border`
             : `${cardBg} ${cardHover}`
@@ -203,7 +213,8 @@ export function DraftItemsTab({
       >
         {/* Checkbox */}
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const next = new Set(selectedItems);
             if (next.has(item.id)) next.delete(item.id);
             else next.add(item.id);
@@ -226,9 +237,9 @@ export function DraftItemsTab({
 
         {/* Icon */}
         <div className={viewMode === "grid" ? "mb-0.5" : "shrink-0"}>
-          {item.icon_url ? (
+          {iconUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.icon_url} alt="" className={`${viewMode === "grid" ? "w-8 h-8" : "w-8 h-8"} rounded-lg object-cover shrink-0`} />
+            <img src={iconUrl} alt="" className={`${viewMode === "grid" ? "w-8 h-8" : "w-8 h-8"} rounded-lg object-cover shrink-0`} />
           ) : (
             <div className={`${viewMode === "grid" ? "w-8 h-8" : "w-8 h-8"} rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
               <Icon className={`${viewMode === "grid" ? "w-4 h-4" : "w-4 h-4"} ${cfg.color}`} />
@@ -293,7 +304,7 @@ export function DraftItemsTab({
             {/* Open Details */}
             <button
               onClick={(e) => handleOpenDetails(item, e)}
-              className={`p-1 rounded-lg cursor-pointer ${
+              className={`p-1 rounded-lg cursor-pointer shrink-0 ${
                 isModern ? "hover:bg-primary/10 text-muted-foreground hover:text-primary" : "bg-primary/10 text-primary/50 hover:text-primary hover:bg-primary/20"
               }`}
               title="Ver Detalles"
@@ -303,8 +314,11 @@ export function DraftItemsTab({
 
             {/* Delete (single) */}
             <button
-              onClick={() => handleDeleteItems([item.id])}
-              className={`p-1 rounded-lg cursor-pointer ${
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteItems([item.id]);
+              }}
+              className={`p-1 rounded-lg cursor-pointer shrink-0 ${
                 isModern ? "hover:bg-red-500/10 text-muted-foreground hover:text-red-500" : "bg-red-500/10 text-red-400/50 hover:text-red-400 hover:bg-red-500/20"
               }`}
               title="Eliminar del Draft"

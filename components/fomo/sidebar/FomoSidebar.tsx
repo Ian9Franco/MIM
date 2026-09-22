@@ -430,27 +430,27 @@ function FomoSidebarInner({
         />
 
         <div
-          className="flex items-center justify-between px-6 py-3 border-b shrink-0 relative z-10"
+          className="flex items-center justify-between gap-3 px-6 py-2.5 border-b shrink-0 relative z-10"
           style={{
             background: "var(--fomo-secondary-bg)",
             borderColor: "var(--fomo-border)",
           }}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               <div className="relative h-8 w-8 shrink-0" aria-hidden>
                 <FomoEye />
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <h2 className="font-headline text-base" style={{ color: "var(--fomo-text-primary)" }}>FOMO</h2>
                 <p suppressHydrationWarning className="text-[8px] uppercase" style={{ color: "var(--fomo-text-secondary)" }}>{TAB_OPTIONS.find(tab => tab.value === mode)?.label}</p>
               </div>
             </div>
             <div
               id="onboarding-fomo-tabs"
-              className="min-w-0 flex-1"
+              className="min-w-0 flex-1 overflow-hidden"
             >
-              <nav aria-label="Secciones de FOMO" className="flex flex-wrap gap-1 rounded-2xl border border-white/10 p-1.5 fomo-nav-tabs">
+              <nav aria-label="Secciones de FOMO" className="fomo-nav-tabs flex flex-nowrap gap-1 overflow-x-auto rounded-2xl border border-white/10 p-1.5 scrollbar-none">
                 {TAB_OPTIONS.map(tab => {
                   const isActive = mode === tab.value;
                   const isDiscover = tab.value === "discover";
@@ -471,7 +471,7 @@ function FomoSidebarInner({
                         window.dispatchEvent(new CustomEvent("fomo-close-details"));
                         setMode(tab.value as FomoMode);
                       }}
-                      className={`${tabClass} flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary`}
+                      className={`${tabClass} flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary`}
                     >
                       <span className={isDiscover ? "fomo-nav-tab__icon" : undefined}>{tab.icon}</span>
                       {tab.label}
@@ -481,7 +481,7 @@ function FomoSidebarInner({
               </nav>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <FomoActiveDraftSelector isModern={currentTheme === "modern"} />
             <div
               className="fomo-sidebar-header-slime hidden sm:block"
@@ -500,10 +500,11 @@ function FomoSidebarInner({
               <X className="w-5 h-5" />
             </button>
           </div>
-          {status && (
-            <StatusBanner text={status.text} type={status.type} onClose={clearStatus} />
-          )}
         </div>
+
+        {status && (
+          <StatusBanner text={status.text} type={status.type} onClose={clearStatus} variant="strip" />
+        )}
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <FomoSidebarCommunityBranch

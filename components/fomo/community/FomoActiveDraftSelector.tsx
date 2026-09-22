@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { FlaskConical, ChevronDown, X } from "lucide-react";
+import React, { useEffect } from "react";
+import { FlaskConical } from "lucide-react";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { activeDraftManager } from "@/lib/fomo/activeDraftManager";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -26,18 +26,19 @@ export function FomoActiveDraftSelector({ isModern }: { isModern?: boolean }) {
           100% { transform: rotate(-12deg); }
         }
       `}} />
-      <button 
+      <button
+        type="button"
         onClick={clearActiveDraft}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer hover:opacity-80 active:scale-95 ${
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all cursor-pointer hover:opacity-90 active:scale-95 ${
           isModern ? "bg-primary/10 border-primary/20" : "bg-primary/20 border-primary/30"
         }`}
-        title="Desactivar Draft"
+        title={`Draft activo: ${activeDraft.name}. Clic para desactivar.`}
+        aria-label={`Desactivar draft ${activeDraft.name}`}
       >
-        <FlaskConical className={`w-3.5 h-3.5 ${isModern ? "text-primary" : "text-primary"}`} style={{ transformOrigin: "bottom center", animation: "pendulum 1.5s infinite ease-in-out" }} />
-        <span className={`text-xs font-bold ${isModern ? "text-primary" : "text-primary"}`}>
-          Draft: {activeDraft.name}
-        </span>
-        <X className={`w-3.5 h-3.5 ml-1 ${isModern ? "text-primary/70" : "text-primary/70"}`} />
+        <FlaskConical
+          className="w-4 h-4 text-primary"
+          style={{ transformOrigin: "bottom center", animation: "pendulum 1.5s infinite ease-in-out" }}
+        />
       </button>
     </>
   );

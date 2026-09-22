@@ -79,6 +79,38 @@ function listLegacyIndexCandidates(input: SinceramientoInput): string[] {
   return [...homeRoots, ...extra, ...sourceRoots, ...cwdRoots];
 }
 
+function isWeakSecretsEnvelope(filePath: string): boolean {
+  if (!fs.existsSync(filePath)) return true;
+  try {
+    const envelope = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
+      values?: Record<string, string>;
+    };
+    const values = envelope?.values;
+    if (!values || typeof values !== "object") return true;
+    return !Object.values(values).some((value) => typeof value === "string" && value.length > 0);
+  } catch {
+    return true;
+  }
+}
+
+function isWeakSettingsPayload(filePath: string): boolean {
+  if (!fs.existsSync(filePath)) return true;
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+    const keys = Object.keys(data).filter((key) => key !== "mimIndexPath" && key !== "validated");
+    return keys.length === 0;
+  } catch {
+    return true;
+  }
+}
+
+function shouldReplaceCanonicalFile(from: string, to: string): boolean {
+  if (!fs.existsSync(to)) return true;
+  if (to.endsWith("mim-secrets.enc.json")) return isWeakSecretsEnvelope(to);
+  if (to.endsWith("mim-settings.json")) return isWeakSettingsPayload(to);
+  return false;
+}
+
 function copyFileIfAbsent(
   from: string,
   to: string,
@@ -86,7 +118,7 @@ function copyFileIfAbsent(
 ): void {
   if (!fs.existsSync(from) || !fs.statSync(from).isFile()) return;
   if (samePath(from, to)) return;
-  if (fs.existsSync(to)) {
+  if (fs.existsSync(to) && !shouldReplaceCanonicalFile(from, to)) {
     report.skipped.push({ path: from, reason: "canonical-wins" });
     return;
   }
@@ -197,19 +229,29 @@ function removeZombie(target: string, input: SinceramientoInput, dest: string, r
 }
 
 function persistMimIndexPath(layout: MimIndexLayout): void {
-  let data: Record<string, unknown> = {};
-  if (fs.existsSync(layout.settings)) {
-    try {
-      data = JSON.parse(fs.readFileSync(layout.settings, "utf-8"));
-    } catch {
-      data = {};
-    }
+  if (!fs.existsSync(layout.settings)) {
+    ensureDirForWrite(layout.settings);
+    const tmp = `${layout.settings}.${process.pid}.sinceramiento.tmp`;
+    fs.writeFileSync(
+      tmp,
+      JSON.stringify({ mimIndexPath: layout.root }, null, 2),
+      { encoding: "utf-8", mode: 0o600 },
+    );
+    fs.renameSync(tmp, layout.settings);
+    return;
   }
-  data.mimIndexPath = layout.root;
-  ensureDirForWrite(layout.settings);
-  const tmp = `${layout.settings}.${process.pid}.sinceramiento.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
-  fs.renameSync(tmp, layout.settings);
+
+  try {
+    const data = JSON.parse(fs.readFileSync(layout.settings, "utf-8")) as Record<string, unknown>;
+    if (data.mimIndexPath === layout.root) return;
+    data.mimIndexPath = layout.root;
+    ensureDirForWrite(layout.settings);
+    const tmp = `${layout.settings}.${process.pid}.sinceramiento.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
+    fs.renameSync(tmp, layout.settings);
+  } catch {
+    console.warn("[sinceramiento_01] Skipped mimIndexPath pin — settings file is corrupt");
+  }
 }
 
 function writeMarker(layout: MimIndexLayout, report: SinceramientoReport): void {

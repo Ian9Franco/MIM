@@ -27,8 +27,9 @@ export function useFomoSearch(filters: any) {
 
   const { 
     source, loader, gameVersions, categories, environments, 
-    projectType, sortOrder, query, page, sinytraActive, collectionId
+    projectType, sortOrder, query, page, sinytraActive, collectionId, pageSize: filterPageSize
   } = filters;
+  const pageSize = typeof filterPageSize === "number" && filterPageSize > 0 ? filterPageSize : 21;
 
   const refetch = useCallback(async (overrideQuery?: string) => {
     setLoading(true);
@@ -48,6 +49,7 @@ export function useFomoSearch(filters: any) {
         page: String(page), 
         q: qClean,
         sort: sortOrder || "relevance",
+        pageSize: String(pageSize),
         gameVersions: JSON.stringify(gameVersions || []),
         categories: JSON.stringify(categories || []),
         environments: JSON.stringify(environments || [])
@@ -63,7 +65,6 @@ export function useFomoSearch(filters: any) {
         const data = await res.json();
         const allMods = data.mods || [];
         
-        const pageSize = 21;
         const start = (page - 1) * pageSize;
         fetchedMods = allMods.slice(start, start + pageSize).map((m: any) => ({ ...m, _source: source }));
         
@@ -188,6 +189,7 @@ export function useFomoSearch(filters: any) {
     sortOrder, 
     query, 
     page,
+    pageSize,
     sinytraActive,
     collectionId
   ]);

@@ -7,6 +7,9 @@ import { useFomoDiscover } from "@/hooks/useFomoDiscover";
 import { useFomoSidebarManager } from "@/hooks/useFomoSidebarManager";
 import { FomoDiscoverFilters } from "@/components/fomo/discover/FomoDiscoverFilters";
 import { FomoModCard } from "@/components/fomo/discover/FomoModCard";
+import { FomoModRow } from "@/components/fomo/discover/FomoModRow";
+import { FomoModGalleryCard } from "@/components/fomo/discover/FomoModGalleryCard";
+import { FomoDiscoverToolbar } from "@/components/fomo/discover/FomoDiscoverToolbar";
 import { FomoPagination } from "@/components/fomo/discover/FomoPagination";
 import { FomoVersionOverlay } from "@/components/fomo/core/FomoVersionOverlay";
 import { FomoSpotlight } from "@/components/fomo/spotlight/FomoSpotlight";
@@ -25,6 +28,7 @@ import {
 } from "@/lib/fomo/fomoLayout";
 import type { FomoMode } from "@/components/fomo/sidebar/fomoSidebarTypes";
 import { runFomoBulkExplain } from "@/lib/fomo/fomoBulkExplain";
+import { useUserModMarks } from "@/hooks/fomo/useUserModMarks";
 
 interface FomoSidebarDiscoverBranchProps {
   open: boolean;
@@ -44,7 +48,7 @@ interface FomoSidebarDiscoverBranchProps {
   activeProject?: unknown;
   pendingFiles?: unknown[];
   onOpenDownloads?: () => void;
-  showStatus: (text: string, type?: "success" | "error" | "info") => void;
+  showStatus: (text: string, type?: "success" | "error" | "info" | "warning") => void;
   allSharedMods: unknown[];
   allSharedVideos: unknown[];
   currentUser: unknown;
@@ -93,6 +97,8 @@ function FomoSidebarDiscoverBranchInner({
   );
   const isModern = currentTheme === "modern";
   const [bulkExplaining, setBulkExplaining] = useState(false);
+  const userId = currentUser && typeof currentUser === "object" ? (currentUser as { id?: string }).id : undefined;
+  const userModMarks = useUserModMarks(userId);
 
   async function handleBulkExplain() {
     if (!discover.selectedMods.length || bulkExplaining) return;
@@ -396,6 +402,15 @@ function FomoSidebarDiscoverBranchInner({
                   className="flex-1 bg-transparent border-none outline-none text-sm text-white"
                 />
               </div>
+              <FomoDiscoverToolbar
+                sortOrder={discover.sortOrder}
+                onSort={discover.setSortOrder}
+                pageSize={discover.pageSize}
+                onPageSize={discover.setPageSize}
+                viewMode={discover.viewMode}
+                onViewMode={discover.setViewMode}
+                pageSizeDisabled={discover.source === "all"}
+              />
               <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {discover.sourceError && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-xs flex flex-col gap-2 shrink-0">
@@ -421,40 +436,44 @@ function FomoSidebarDiscoverBranchInner({
                 )}
 
                 {discover.loading ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className={discover.viewMode === "list" ? "flex flex-col gap-2" : discover.viewMode === "gallery" ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"}>
                     <FomoSkeleton
                       count={9}
-                      variant="card"
+                      variant={discover.viewMode === "list" ? "row" : discover.viewMode === "gallery" ? "gallery" : "card"}
                       isCurseForge={discover.source === "curseforge"}
                     />
                   </div>
                 ) : discover.mods.length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className={discover.viewMode === "list" ? "flex flex-col gap-2" : discover.viewMode === "gallery" ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"}>
                     {discover.mods.map((mod) => {
                       const platformKey =
                         mod._source === "curseforge" ? "curseforge" : "modrinth";
                       const communitySharers =
                         sharersByMod.get(`${platformKey}:${mod.projectId}`) || [];
+                      const shared = {
+                        mod,
+                        isDownloading: !!discover.downloading[mod.projectId],
+                        onDownload: discover.handleDownload,
+                        onOpenVersions: discover.handleOpenLiveProject,
+                        isSelected: discover.selectedMods.some(
+                          (s) => s.projectId === mod.projectId
+                        ),
+                        detailsOpenForThisMod:
+                          discover.selectingVersionFor?.projectId === mod.projectId,
+                        onToggleSelect: discover.toggleModSelection,
+                        followedByUsers: communitySharers,
+                        inDraft: userModMarks.isInActiveDraft(mod.projectId),
+                        isUserFollowed: userModMarks.isFollowedByUser(platformKey, mod.projectId),
+                        isUserFavorite: userModMarks.isFavoritedByUser(platformKey, mod.projectId),
+                      };
+                      const key = `${platformKey}:${mod.projectId}`;
+                      if (discover.viewMode === "list") return <FomoModRow key={key} {...shared} />;
+                      if (discover.viewMode === "gallery") return <FomoModGalleryCard key={key} {...shared} />;
                       return (
                         <FomoModCard
-                          key={`${platformKey}:${mod.projectId}`}
-                          mod={mod}
-                          isDownloading={!!discover.downloading[mod.projectId]}
-                          onDownload={discover.handleDownload}
-                          onOpenVersions={discover.handleOpenLiveProject}
-                          isSelected={discover.selectedMods.some(
-                            (s) => s.projectId === mod.projectId
-                          )}
-                          detailsOpenForThisMod={
-                            discover.selectingVersionFor?.projectId === mod.projectId
-                          }
-                          onToggleSelect={discover.toggleModSelection}
+                          key={key}
+                          {...shared}
                           sinytraActive={discover.sinytraActive}
-                          onAddToCollection={() => {
-                            m.setAddingToCollectionFor(mod);
-                            m.loadCollections();
-                          }}
-                          followedByUsers={communitySharers}
                         />
                       );
                     })}

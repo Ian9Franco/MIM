@@ -35,6 +35,23 @@ function buildLegacyTrustedRoots() {
   return [homeIndex, standaloneDir, devSourceIndex];
 }
 
+function listInstallDataRoots() {
+  const roots = [];
+  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
+  roots.push(standaloneDir, path.join(standaloneDir, '.mim-index'));
+  if (app.isPackaged) {
+    const execDir = path.dirname(process.execPath);
+    roots.push(execDir, path.join(execDir, '.mim-index'));
+    if (process.resourcesPath) {
+      roots.push(
+        path.join(process.resourcesPath, 'app', '.next', 'standalone'),
+        path.join(process.resourcesPath, 'app', '.next', 'standalone', '.mim-index'),
+      );
+    }
+  }
+  return roots;
+}
+
 function listLegacySettingsCandidates(portableSettings, trustedRoots) {
   const homeIndex = path.join(app.getPath('home'), '.mim-index');
   const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
@@ -43,6 +60,7 @@ function listLegacySettingsCandidates(portableSettings, trustedRoots) {
     path.join(standaloneDir, 'mim-settings.json'),
     path.join(homeIndex, 'mim-settings.json'),
     path.join(devSourceIndex, 'mim-settings.json'),
+    ...listInstallDataRoots().map((root) => path.join(root, 'mim-settings.json')),
   ];
   const resolvedPortable = path.resolve(portableSettings);
   return [...new Set(candidates)]
@@ -54,7 +72,7 @@ function listLegacySecretsCandidates(portableSecretsPath, portableDir, trustedRo
   const homeIndex = path.join(app.getPath('home'), '.mim-index');
   const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
   const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
-  const dirs = [homeIndex, devSourceIndex, standaloneDir];
+  const dirs = [homeIndex, devSourceIndex, standaloneDir, ...listInstallDataRoots()];
   const resolvedPortableDir = path.resolve(portableDir);
   const resolvedPortableSecrets = path.resolve(portableSecretsPath);
   return [...new Set(dirs)]
@@ -64,20 +82,43 @@ function listLegacySecretsCandidates(portableSecretsPath, portableDir, trustedRo
     .filter((candidate) => candidate !== resolvedPortableSecrets && fs.existsSync(candidate));
 }
 
+function isWeakSettingsFile(filePath) {
+  if (!fs.existsSync(filePath)) return true;
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const keys = Object.keys(data).filter((key) => key !== 'mimIndexPath' && key !== 'validated');
+    return keys.length === 0;
+  } catch {
+    return true;
+  }
+}
+
 function recoverPortableSettings(portableSettings, trustedRoots) {
   const resolvedTarget = resolveTrustedPath(portableSettings, trustedRoots);
-  if (fs.existsSync(resolvedTarget)) return;
   const legacySettings = listLegacySettingsCandidates(resolvedTarget, trustedRoots);
   if (legacySettings.length === 0) return;
+  if (fs.existsSync(resolvedTarget) && !isWeakSettingsFile(resolvedTarget)) return;
   fs.copyFileSync(legacySettings[0], resolvedTarget);
   console.log('[MIM] Recovered settings from', legacySettings[0]);
 }
 
 function recoverEncryptedSecrets(portableSecretsPath, portableDir, trustedRoots) {
   const resolvedTarget = resolveTrustedPath(portableSecretsPath, trustedRoots);
-  if (fs.existsSync(resolvedTarget)) return;
   const legacySecrets = listLegacySecretsCandidates(resolvedTarget, portableDir, trustedRoots);
   if (legacySecrets.length === 0) return;
+  if (!fs.existsSync(resolvedTarget)) {
+    fs.copyFileSync(legacySecrets[0], resolvedTarget);
+    console.log('[MIM] Recovered encrypted credentials from', legacySecrets[0]);
+    return;
+  }
+  try {
+    const envelope = JSON.parse(fs.readFileSync(resolvedTarget, 'utf8'));
+    const values = envelope?.values;
+    const hasValues = values && Object.values(values).some((value) => typeof value === 'string' && value.length > 0);
+    if (hasValues) return;
+  } catch {
+    // fall through to recovery
+  }
   fs.copyFileSync(legacySecrets[0], resolvedTarget);
   console.log('[MIM] Recovered encrypted credentials from', legacySecrets[0]);
 }
@@ -104,6 +145,12 @@ function initializeSecretStore() {
 
   secretStore.migratePlaintextSettings();
   secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
+  for (const legacySecrets of listLegacySecretsCandidates(portableSecrets, portableDir, trustedRoots)) {
+    if (secretStore.mergeEncryptedFromPath(legacySecrets)) {
+      console.log('[MIM] Merged encrypted credentials from', legacySecrets);
+      break;
+    }
+  }
 
   console.log('[MIM] Portable data directory:', portableDir);
 

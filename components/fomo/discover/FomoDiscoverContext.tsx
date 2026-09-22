@@ -27,7 +27,16 @@ export function FomoDiscoverProvider({
 }
 
 const SOURCE_OPTIONS = [
-  { value: "all", label: "Ambos" },
+  {
+    value: "all",
+    label: "Ambos",
+    icon: (
+      <span className="inline-flex items-center gap-0.5">
+        <ModrinthIcon />
+        <CurseForgeIcon />
+      </span>
+    ),
+  },
   { value: "modrinth", label: "Modrinth", icon: <ModrinthIcon /> },
   { value: "curseforge", label: "CurseForge", icon: <CurseForgeIcon /> },
   { value: "chunk", label: "Bedrock", icon: <BedrockIcon /> },

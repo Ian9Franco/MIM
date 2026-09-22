@@ -68,27 +68,29 @@ export const Chip = React.memo(function Chip({ children, color, bg, className = 
 
 /* ── StatusBanner ───────────────────────────────────────────────────────────── */
 
-import { X, CheckCircle } from "lucide-react";
+import { X, CheckCircle, AlertTriangle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface StatusBannerProps {
   text:    string;
   type:    StatusType;
   onClose: () => void;
+  variant?: "overlay" | "strip";
 }
 
-const STATUS_BG: Record<StatusType, string> = {
-  success: COLORS.emerald,
-  error:   "#EF4444",
-  info:    COLORS.primary,
+const STATUS_ICON: Record<StatusType, React.ReactNode> = {
+  success: <CheckCircle className="w-4 h-4 shrink-0" />,
+  error:   <AlertTriangle className="w-4 h-4 shrink-0" />,
+  warning: <AlertTriangle className="w-4 h-4 shrink-0" />,
+  info:    <Info className="w-4 h-4 shrink-0" />,
 };
 
 /**
- * Transient top/bottom banner for feedback messages.
+ * Transient banner for feedback messages.
  * Accessible via role="status" for screen readers.
  */
 export const StatusBanner = React.memo(function StatusBanner({
-  text, type, onClose,
+  text, type, onClose, variant = "strip",
 }: StatusBannerProps) {
   return (
     <AnimatePresence mode="wait">
@@ -96,19 +98,27 @@ export const StatusBanner = React.memo(function StatusBanner({
         key={text + type}
         role="status"
         aria-live="polite"
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: variant === "strip" ? -6 : 10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
+        exit={{ opacity: 0, y: variant === "strip" ? -6 : -10 }}
         transition={{ duration: 0.2 }}
-        className="absolute bottom-0 left-0 right-0 py-2 px-4 flex items-center justify-between text-xs font-bold z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.15)]"
-        style={{ background: STATUS_BG[type], color: "white" }}
+        className={`fomo-status-banner fomo-status-banner--${type} flex items-center justify-between gap-3 text-xs font-bold ${
+          variant === "strip"
+            ? "w-full px-4 py-2.5 border-b"
+            : "absolute bottom-0 left-0 right-0 py-2 px-4 z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.15)]"
+        }`}
       >
-        <span className="truncate pr-4 flex items-center gap-2">
-          {type === "success" && <CheckCircle className="w-3.5 h-3.5" />}
-          {text}
+        <span className="min-w-0 flex items-center gap-2.5">
+          {STATUS_ICON[type]}
+          <span className="truncate">{text}</span>
         </span>
-        <button onClick={onClose} aria-label="Cerrar notificación" className="shrink-0 opacity-70 hover:opacity-100 transition-opacity">
-          <X className="w-3 h-3 text-white" />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar notificación"
+          className="fomo-status-banner__close shrink-0 rounded-lg p-1 opacity-80 transition-opacity hover:opacity-100"
+        >
+          <X className="w-3.5 h-3.5" />
         </button>
       </motion.div>
     </AnimatePresence>

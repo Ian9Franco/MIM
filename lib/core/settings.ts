@@ -11,6 +11,7 @@ import {
   updateStoredApiKeys,
 } from "./secretStore";
 import { mimIndexLayout } from "./mimIndex/layout";
+import { ensureDesktopDataMigrated, getDesktopDataRoot, isDesktopRuntime } from "./desktopDataRoot";
 
 export interface MimSettings {
   sourceBase: string;
@@ -66,6 +67,12 @@ function readMimIndexPathFromFile(settingsFile: string, fallback: string): strin
  */
 export function getMimIndexPath(): string {
   if (cachedMimIndexPath) return cachedMimIndexPath;
+  if (isDesktopRuntime()) {
+    const canonical = getDesktopDataRoot();
+    ensureDesktopDataMigrated(canonical);
+    cachedMimIndexPath = canonical;
+    return canonical;
+  }
   const bootstrap = getPortableDir();
   const resolved = readMimIndexPathFromFile(path.join(bootstrap, "mim-settings.json"), bootstrap);
   cachedMimIndexPath = resolved;
@@ -80,6 +87,8 @@ export function setCachedMimIndexPath(next: string): void {
 export function _resetSettingsRuntimeForTests(): void {
   cachedMimIndexPath = null;
   sinceramientoBooted = false;
+  const { _resetDesktopMigrationGuardForTests } = require("./desktopDataRoot") as typeof import("./desktopDataRoot");
+  _resetDesktopMigrationGuardForTests();
 }
 
 function bootSinceramiento(): void {
@@ -253,11 +262,13 @@ export async function saveSettings(settings: SettingsUpdate): Promise<PublicSett
   // The encrypted write succeeds before public settings are committed. A
   // failed safeStorage operation therefore cannot fall back to plaintext.
   await updateStoredApiKeys(secrets);
-  if (next.mimIndexPath) {
-    cachedMimIndexPath = path.resolve(next.mimIndexPath);
-    next.mimIndexPath = cachedMimIndexPath;
+  if (isDesktopRuntime()) {
+    next.mimIndexPath = getDesktopDataRoot();
+  } else if (next.mimIndexPath) {
+    next.mimIndexPath = path.resolve(next.mimIndexPath);
   }
-  const targetFile = path.join(next.mimIndexPath, "mim-settings.json");
+  cachedMimIndexPath = path.resolve(next.mimIndexPath);
+  const targetFile = path.join(cachedMimIndexPath, "mim-settings.json");
   const dir = path.dirname(targetFile);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const temporaryFile = `${targetFile}.${process.pid}.tmp`;

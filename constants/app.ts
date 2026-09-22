@@ -21,7 +21,7 @@ export const PROJECT_TYPES: { value: string; label: string }[] = [
   { value: "shader", label: "Shaders" },
   { value: "datapack", label: "Data Packs" }
 ];
-export const SORT_OPTIONS: { value: string; label: string }[] = [
+export const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: "relevance", label: "Relevancia" },
   { value: "downloads", label: "Descargas" },
   { value: "updated", label: "Actividad" },
@@ -100,4 +100,4 @@ export const ENVIRONMENTS = [
   { value: "both", label: "Client & Server" }
 ];
 
-export type SortOrder = "relevance" | "downloads" | "newest" | "updated";
+export type SortOrder = "relevance" | "downloads" | "newest" | "updated" | "follows";

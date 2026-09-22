@@ -6,10 +6,63 @@
 "use client";
 
 import React, { memo, useMemo, useState, useEffect } from "react";
-import { RefreshCw, Globe, Laptop, Server, Tags, Sparkles, SlidersHorizontal, ChevronRight, ChevronDown, Zap } from "lucide-react";
-import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, SORT_OPTIONS, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
+import { RefreshCw, Globe, Server, Tags, Sparkles, ChevronRight, ChevronDown, Zap } from "lucide-react";
+import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
 import { useFomoFiltersManager } from "@/hooks/useFomoFiltersManager";
-import { CATEGORY_ICONS, SORT_ICONS } from "@/components/fomo/discover/FomoFilterConfig";
+import { CATEGORY_ICONS } from "@/components/fomo/discover/FomoFilterConfig";
+
+const SECTION_KEY = "fomo_discover_filter_sections";
+
+function useSectionOpen(id: string, fallback = true) {
+  const [open, setOpen] = useState(fallback);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SECTION_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, boolean>;
+      if (typeof parsed[id] === "boolean") setOpen(parsed[id]);
+    } catch {
+      // ignore
+    }
+  }, [id]);
+  const toggle = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      try {
+        const raw = localStorage.getItem(SECTION_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        parsed[id] = next;
+        localStorage.setItem(SECTION_KEY, JSON.stringify(parsed));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+  return [open, toggle] as const;
+}
+
+function FilterSection({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [open, toggle] = useSectionOpen(id);
+  return (
+    <section className="fomo-filter-block rounded-xl border">
+      <button type="button" onClick={toggle} className="flex w-full items-center justify-between px-3 py-2.5 text-xs font-bold">
+        <span>{title}</span>
+        {open ? <ChevronDown className="w-3.5 h-3.5 opacity-60" /> : <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+      </button>
+      {open && <div className="flex flex-col gap-2 px-3 pb-3">{children}</div>}
+    </section>
+  );
+}
 
 export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any) {
   const m = useFomoFiltersManager(props);
@@ -17,6 +70,9 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
   const isBedrockSource = props.source === "chunk";
   const [projectTypeOpen, setProjectTypeOpen] = useState(false);
   const [loaderOpen, setLoaderOpen] = useState(false);
+  const [versionQuery, setVersionQuery] = useState("");
+  const [showAllVersions, setShowAllVersions] = useState(false);
+  const [remoteVersions, setRemoteVersions] = useState<string[]>([]);
   
   const [currentTheme, setCurrentTheme] = useState("official");
   
@@ -30,6 +86,25 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
 
   const isModern = currentTheme === "modern";
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/modrinth/game-versions")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.versions)) setRemoteVersions(data.versions);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const versionOptions = useMemo(() => {
+    const base = showAllVersions && remoteVersions.length ? remoteVersions : GAME_VERSIONS;
+    const q = versionQuery.trim().toLowerCase();
+    return q ? base.filter((v) => v.toLowerCase().includes(q)) : base;
+  }, [showAllVersions, remoteVersions, versionQuery]);
+
   const currentFilters = useMemo(() => {
     if (m.isCurseForge) return [{ title: "Categorías (CurseForge)", items: CURSEFORGE_CATEGORIES[props.projectType as keyof typeof CURSEFORGE_CATEGORIES] || [] }];
     if (props.projectType === "mod" || props.projectType === "datapack" || props.projectType === "modpack") return [{ title: "Categorías", items: MODRINTH_CATEGORIES.map(c => ({ value: c })) }];
@@ -39,7 +114,7 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
   }, [props.projectType, m.isCurseForge]);
 
   return (
-    <div className="flex flex-col gap-6 h-full overflow-hidden">
+    <div className="flex flex-col gap-2">
       {/* Panel especial para Bedrock Addons (chunk.gg) */}
       {isBedrockSource ? (
         <div className="flex-1 flex flex-col gap-4">
@@ -84,8 +159,8 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
           </div>
         </div>
       ) : (
-      <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-      <div className="flex flex-col gap-3 shrink-0">
+      <div className="flex flex-col gap-2">
+      <div className="fomo-filter-block flex shrink-0 flex-col gap-2 rounded-xl border p-3">
         {/* Project Type Dropdown */}
         <div className="relative">
           <button 
@@ -147,9 +222,9 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1 custom-scrollbar">
-        <div className="flex flex-col gap-3">
-          <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Sparkles className="w-3 h-3" /> Exclusividad</p>
+      <div className="flex flex-col gap-2">
+        <section className="fomo-filter-block flex flex-col gap-2 rounded-xl border p-3">
+          <p className="flex items-center gap-2 text-xs font-bold"><Sparkles className="w-3 h-3" /> Exclusividad</p>
           <button onClick={() => props.onOnlyExclusives(!props.onlyExclusives)} className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-[10px] font-bold ${props.onlyExclusives ? "bg-orange-500/10 text-orange-400 border-orange-500/30" : "bg-white/5 border-white/5 text-white/40"}`}>
             <div className="flex flex-col items-start gap-0.5">
               <span>Solo Exclusivos</span>
@@ -159,12 +234,12 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
             </div>
             <div className={`w-6 h-3.5 rounded-full p-0.5 ${props.onlyExclusives ? "bg-orange-500" : "bg-white/10"}`}><div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${props.onlyExclusives ? "translate-x-2.5" : "translate-x-0"}`} /></div>
           </button>
-        </div>
+        </section>
 
         {/* Sinytra Connector toggle: visible solo para Forge/NeoForge buscando en Modrinth */}
         {(props.loader === "forge" || props.loader === "neoforge") && (
-          <div className="flex flex-col gap-3">
-            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Zap className="w-3 h-3" /> Compatibilidad</p>
+          <section className="fomo-filter-block flex flex-col gap-2 rounded-xl border p-3">
+            <p className="flex items-center gap-2 text-xs font-bold"><Zap className="w-3 h-3" /> Compatibilidad</p>
             <button
               onClick={() => props.setSinytraActive(!props.sinytraActive)}
               className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
@@ -181,17 +256,27 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
                 <div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${props.sinytraActive ? "translate-x-2.5" : "translate-x-0"}`} />
               </div>
             </button>
-          </div>
+          </section>
         )}
 
-        <div className="flex flex-col gap-3">
-          <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Globe className="w-3 h-3" /> Versión</p>
-          <div className="flex flex-wrap gap-1.5">{GAME_VERSIONS.map(v => <button key={v} onClick={() => m.toggleFilter(props.gameVersions, props.onVersions, v)} className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${props.gameVersions.includes(v) ? "bg-primary text-white border-primary" : "bg-white/5 border-white/5 text-white/40"}`}>{v}</button>)}</div>
-        </div>
+        <FilterSection id="versions" title="Versión" icon={<Globe className="w-3 h-3" />}>
+          <input
+            value={versionQuery}
+            onChange={(e) => setVersionQuery(e.target.value)}
+            placeholder="Buscar versión..."
+            className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-[10px] outline-none"
+            style={{ borderColor: "var(--fomo-border)", color: "var(--fomo-text-primary)" }}
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {versionOptions.map(v => <button key={v} onClick={() => m.toggleFilter(props.gameVersions, props.onVersions, v)} className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${props.gameVersions.includes(v) ? "bg-primary text-white border-primary" : "bg-white/5 border-white/5 text-white/40"}`}>{v}</button>)}
+          </div>
+          <button type="button" onClick={() => setShowAllVersions((v) => !v)} className="text-left text-[10px] font-bold text-primary">
+            {showAllVersions ? "Mostrar versiones recientes" : "Mostrar todas las versiones"}
+          </button>
+        </FilterSection>
 
         {!m.isCurseForge && (
-          <div className="flex flex-col gap-3">
-            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Server className="w-3 h-3" /> Entorno</p>
+          <FilterSection id="environment" title="Entorno" icon={<Server className="w-3 h-3" />}>
             <div className="flex flex-wrap gap-1.5">
               {ENVIRONMENTS.map(e => (
                 <button 
@@ -203,12 +288,11 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
                 </button>
               ))}
             </div>
-          </div>
+          </FilterSection>
         )}
 
         {currentFilters.map(group => (
-          <div key={group.title} className="flex flex-col gap-3">
-            <p className="text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50"><Tags className="w-3 h-3" /> {group.title}</p>
+          <FilterSection key={group.title} id={`cat-${group.title}`} title={group.title} icon={<Tags className="w-3 h-3" />}>
             <div className="flex flex-col gap-1.5">{group.items.map((cat: any) => {
               const val = typeof cat === 'string' ? cat : cat.value;
               const active = props.categories.includes(val);
@@ -256,31 +340,12 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
                 </div>
               );
             })}</div>
-          </div>
+          </FilterSection>
         ))}
       </div>
 
       <div className="pt-4 border-t border-white/5 flex flex-col gap-3 shrink-0">
         <button onClick={m.clear} className="w-full py-2 rounded-xl border border-white/5 bg-white/5 text-white/40 text-[10px] font-bold">Limpiar Filtros</button>
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-foreground/5 rounded-2xl border border-white/5 relative">
-          {SORT_OPTIONS.map((opt, i) => {
-            const isActive = props.sortOrder === opt.value;
-            return (
-              <button 
-                key={opt.value} 
-                onClick={() => props.onSort(opt.value)} 
-                className={`flex items-center gap-2 px-2 py-2 rounded-xl text-[10px] font-bold border transition-all duration-300 ${isActive ? "text-white border-transparent z-10" : "bg-transparent border-transparent text-white/40 hover:text-white hover:bg-white/5"} ${opt.value === "relevance" ? "col-span-2 justify-center" : ""}`}
-                style={isActive ? {
-                  background: "var(--color-primary)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 12px color-mix(in srgb, var(--color-primary) 30%, transparent)"
-                } : {}}
-              >
-                {SORT_ICONS[opt.value] || <SlidersHorizontal className="w-3.5 h-3.5" />}
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
         <button onClick={props.onRefresh} disabled={props.loading} className="w-full py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">{props.loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{props.loading ? "Actualizando..." : "Actualizar"}</button>
       </div>
       </div>

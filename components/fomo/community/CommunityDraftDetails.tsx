@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Box, CheckCircle, Clock, Eye, EyeOff, Info, Blend, Users, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
+import { ArrowLeft, Box, Eye, EyeOff, LayoutGrid, Layers, ShieldCheck, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/core/supabaseClient";
 import { downloadBroker } from "@/lib/downloads/DraftDownloadBroker";
@@ -13,11 +13,10 @@ import { ImageCropper } from "@/components/fomo/core/ImageCropper";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { CommunityDraft, CommunityDraftItem, CommunityDraftSnapshot, CommunityDraftMember } from "@/types/fomo";
 import { DraftOverviewTab } from "./draft-tabs/DraftOverviewTab";
-import { DraftMembersTab } from "./draft-tabs/DraftMembersTab";
 import { DraftSnapshotsTab } from "./draft-tabs/DraftSnapshotsTab";
 import { DraftItemsTab } from "./draft-tabs/DraftItemsTab";
 import { DraftValidationTab } from "./draft-tabs/DraftValidationTab";
-import { DraftActivityTab } from "./draft-tabs/DraftActivityTab";
+import { enrichDraftItemsWithIcons } from "@/lib/fomo/enrichDraftItemIcons";
 
 export function CommunityDraftDetails({
   draftId,
@@ -81,7 +80,8 @@ export function CommunityDraftDetails({
         .order("position", { ascending: true });
 
       if (itemsError) throw itemsError;
-      setDraftItems(itemsData || []);
+      const enrichedItems = await enrichDraftItemsWithIcons(itemsData || []);
+      setDraftItems(enrichedItems);
 
       const { data: snapsData } = await supabase
         .from("draft_snapshots")
@@ -312,19 +312,13 @@ export function CommunityDraftDetails({
   }
 
   const TABS = [
-    { id: "overview", label: "Resumen", icon: <Info className="w-4 h-4" /> },
-    { id: "mods", label: "Items", icon: <Blend className="w-4 h-4" /> },
-    { id: "activity", label: "Actividad", icon: <Clock className="w-4 h-4" /> },
-    { id: "members", label: "Miembros", icon: <Users className="w-4 h-4" /> },
-    { id: "validation", label: "Validación", icon: <CheckCircle className="w-4 h-4" /> },
+    { id: "overview", label: "Resumen", icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "mods", label: "Items", icon: <Layers className="w-4 h-4" /> },
+    { id: "validation", label: "Validación", icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
-  if (!draft) {
-    return <div className="p-8 text-center text-white/40">Draft no encontrado o cargando...</div>;
-  }
-
   return (
-    <div className="flex flex-col gap-4 animate-fade-in w-full h-full min-h-0 max-w-[1400px] mx-auto pb-4">
+    <div className="flex flex-col gap-3 animate-fade-in w-full h-full min-h-0 pb-2">
       {/* Header */}
       <div className={`shrink-0 relative w-full min-h-[140px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
         {typeof draft.cover_image === "string" && draft.cover_image ? (
@@ -429,11 +423,11 @@ export function CommunityDraftDetails({
       </div>
 
       { /* Tabs Nav */}
-      <div className={`shrink-0 z-20 w-fit`}>
+      <div className="shrink-0 z-20 w-full">
         <div
-          className="relative grid items-center h-12 p-1.5 rounded-2xl overflow-hidden shadow-sm"
+          className="relative grid items-center h-12 p-1.5 rounded-2xl overflow-hidden shadow-sm w-full"
           style={{
-            gridTemplateColumns: `repeat(${TABS.length}, minmax(120px, 1fr))`,
+            gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))`,
             background: isModern ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
             border: `1px solid ${isModern ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'}`,
             backdropFilter: 'blur(20px)',
@@ -446,9 +440,9 @@ export function CommunityDraftDetails({
             style={{
               left: `calc(6px + ${TABS.findIndex(t => t.id === activeTab)} * (100% - 12px) / ${TABS.length})`,
               width: `calc((100% - 12px) / ${TABS.length})`,
-              background: isModern ? 'white' : 'rgba(255,255,255,0.1)',
-              border: `1px solid ${isModern ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}`,
-              boxShadow: isModern ? '0 4px 12px rgba(0,0,0,0.05)' : '0 4px 12px rgba(0,0,0,0.2)',
+              background: isModern ? 'white' : 'rgba(255, 208, 102, 0.12)',
+              border: `1px solid ${isModern ? 'rgba(0,0,0,0.05)' : 'rgba(255, 208, 102, 0.25)'}`,
+              boxShadow: isModern ? '0 4px 12px rgba(0,0,0,0.05)' : '0 4px 12px rgba(255, 208, 102, 0.15)',
             }}
           />
 
@@ -461,8 +455,8 @@ export function CommunityDraftDetails({
                 className="relative z-10 h-full w-full flex items-center justify-center gap-2 text-xs font-bold tracking-wide rounded-xl transition-all duration-300 cursor-pointer"
                 style={{
                   color: isActive
-                    ? (isModern ? 'var(--color-primary)' : 'white')
-                    : (isModern ? 'rgba(13,39,80,0.5)' : 'rgba(255,255,255,0.4)'),
+                    ? (isModern ? 'var(--color-primary)' : 'var(--color-accent)')
+                    : (isModern ? 'rgba(13,39,80,0.5)' : 'rgba(255,255,255,0.55)'),
                 }}
               >
                 {React.cloneElement(tab.icon as React.ReactElement<{ className?: string }>, {
@@ -476,7 +470,7 @@ export function CommunityDraftDetails({
       </div>
 
       {/* Tab Content */}
-      <div className={`flex flex-col flex-1 min-h-0 p-5 md:p-6 rounded-3xl border overflow-hidden relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
+      <div className={`flex flex-col flex-1 min-h-0 p-4 md:p-5 rounded-3xl border overflow-hidden relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -487,7 +481,14 @@ export function CommunityDraftDetails({
             className="flex flex-col flex-1 min-h-0 w-full h-full"
           >
         {activeTab === "overview" && (
-          <DraftOverviewTab draftId={draftId} isModern={isModern} />
+          <DraftOverviewTab
+            draftId={draftId}
+            draft={draft}
+            members={members}
+            user={user}
+            isModern={isModern}
+            setIsInviteModalOpen={setIsInviteModalOpen}
+          />
         )}
         
         {activeTab === "mods" && (
@@ -509,20 +510,6 @@ export function CommunityDraftDetails({
             setSnapshotToDelete={(id) => setSnapshotToDelete(id)}
             handleInstallSnapshot={handleInstallSnapshot}
           />
-        )}
-
-        {activeTab === "members" && (
-          <DraftMembersTab
-            draft={draft}
-            members={members}
-            user={user}
-            isModern={isModern}
-            setIsInviteModalOpen={setIsInviteModalOpen}
-          />
-        )}
-
-        {activeTab === "activity" && (
-          <DraftActivityTab draftId={draftId} isModern={isModern} />
         )}
 
         {activeTab === "validation" && (

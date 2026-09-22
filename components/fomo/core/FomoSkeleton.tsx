@@ -5,7 +5,7 @@ import React from "react";
 interface FomoSkeletonProps {
   message?: string;
   count?: number;
-  variant?: "list" | "card" | "spotlight" | "details";
+  variant?: "list" | "card" | "spotlight" | "details" | "row" | "gallery";
   isCurseForge?: boolean;
 }
 
@@ -130,6 +130,26 @@ export function FomoSkeleton({
             </span>
           </div>
         </div>
+      </>
+    );
+  }
+
+  if (variant === "row") {
+    return (
+      <>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="h-20 w-full animate-pulse rounded-2xl border" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }} />
+        ))}
+      </>
+    );
+  }
+
+  if (variant === "gallery") {
+    return (
+      <>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="h-56 w-full animate-pulse overflow-hidden rounded-2xl border" style={{ background: "var(--fomo-secondary-bg)", borderColor: "var(--fomo-border)" }} />
+        ))}
       </>
     );
   }

@@ -7,6 +7,7 @@
   --fomo-card-border: rgba(255, 255, 255, 0.08);
   --fomo-card-hover-border: rgba(255, 255, 255, 0.16);
   --fomo-text-primary: #F4F4F5;
+  --fomo-text-secondary: #C4C4CC;
   --fomo-text-muted: #A1A1AA;
   --fomo-text-subtle: rgba(255, 255, 255, 0.5);
   
@@ -57,23 +58,24 @@
 /* Vampire Theme Overrides */
 [data-theme="vampire"] .fomo-sidebar {
   --fomo-bg: rgba(32, 13, 45, 0.96);
-  --fomo-card-bg: #1e0d29;
-  --fomo-card-border: rgba(187, 150, 228, 0.16);
-  --fomo-card-hover-border: rgba(187, 150, 228, 0.32);
+  --fomo-card-bg: #2b1640;
+  --fomo-card-border: rgba(187, 150, 228, 0.28);
+  --fomo-card-hover-border: rgba(187, 150, 228, 0.48);
   --fomo-text-primary: #F2ECF9;
-  --fomo-text-muted: rgba(242, 236, 249, 0.75);
-  --fomo-text-subtle: rgba(242, 236, 249, 0.5);
+  --fomo-text-secondary: #C8B4E8;
+  --fomo-text-muted: rgba(242, 236, 249, 0.85);
+  --fomo-text-subtle: rgba(242, 236, 249, 0.68);
   
-  --fomo-border: rgba(187, 150, 228, 0.16);
-  --fomo-secondary-bg: rgba(187, 150, 228, 0.06);
+  --fomo-border: rgba(187, 150, 228, 0.24);
+  --fomo-secondary-bg: rgba(187, 150, 228, 0.10);
   
   --fomo-input-bg: rgba(187, 150, 228, 0.04);
   --fomo-input-border: rgba(187, 150, 228, 0.16);
   
   --fomo-pill-inactive-bg: rgba(187, 150, 228, 0.06);
-  --fomo-pill-inactive-text: rgba(242, 236, 249, 0.6);
-  --fomo-pill-inactive-border: rgba(187, 150, 228, 0.16);
-  --fomo-icon-color: rgba(187, 150, 228, 0.4);
+  --fomo-pill-inactive-text: rgba(242, 236, 249, 0.78);
+  --fomo-pill-inactive-border: rgba(187, 150, 228, 0.24);
+  --fomo-icon-color: rgba(187, 150, 228, 0.62);
 
   /* Sinytra Switch Vampire Custom Tokens */
   --fomo-sinytra-bg-inactive: rgba(187, 150, 228, 0.04);
@@ -114,6 +116,7 @@
   --fomo-card-border: rgba(124, 58, 237, 0.12);
   --fomo-card-hover-border: rgba(124, 58, 237, 0.28);
   --fomo-text-primary: #1E1B4B; /* High-contrast indigo dark text */
+  --fomo-text-secondary: #4F46E5;
   --fomo-text-muted: #4338CA; /* Dark blue/purple */
   --fomo-text-subtle: #4B5563; /* Dark slate gray for descriptions */
   
@@ -1011,6 +1014,46 @@
   ) !important;
 }
 
+/* Vampire contrast — community section */
+[data-theme="vampire"] .fomo-community .text-white\/30,
+[data-theme="vampire"] .fomo-community .text-white\/40,
+[data-theme="vampire"] .fomo-community .text-white\/45 {
+  color: rgba(255, 208, 102, 0.72) !important;
+  opacity: 1 !important;
+}
+
+[data-theme="vampire"] .fomo-community .text-white\/50,
+[data-theme="vampire"] .fomo-community .text-white\/55,
+[data-theme="vampire"] .fomo-community .text-white\/60 {
+  color: rgba(242, 236, 249, 0.82) !important;
+  opacity: 1 !important;
+}
+
+[data-theme="vampire"] .fomo-community .text-white\/70,
+[data-theme="vampire"] .fomo-community .text-white\/80,
+[data-theme="vampire"] .fomo-community .text-white\/85,
+[data-theme="vampire"] .fomo-community .text-white\/90 {
+  color: var(--fomo-text-primary) !important;
+  opacity: 1 !important;
+}
+
+[data-theme="vampire"] .fomo-community .bg-white\/5,
+[data-theme="vampire"] .fomo-community .bg-white\/\[0\.02\],
+[data-theme="vampire"] .fomo-community .bg-white\/\[0\.03\] {
+  background-color: rgba(187, 150, 228, 0.08) !important;
+}
+
+[data-theme="vampire"] .fomo-community .border-white\/5,
+[data-theme="vampire"] .fomo-community .border-white\/10 {
+  border-color: rgba(187, 150, 228, 0.22) !important;
+}
+
+[data-theme="vampire"] .fomo-community .bg-black\/20,
+[data-theme="vampire"] .fomo-community .bg-black\/30,
+[data-theme="vampire"] .fomo-community .bg-black\/40 {
+  background-color: rgba(43, 22, 64, 0.75) !important;
+}
+
 /* Discover cards — 3D collectible surface */
 .mim-discover-card {
   overflow: hidden;
@@ -1123,6 +1166,14 @@
 }
 
 /* FOMO section nav — Explorar destacado */
+.fomo-nav-tabs {
+  scrollbar-width: none;
+}
+
+.fomo-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .fomo-nav-tab {
   color: color-mix(in srgb, var(--fomo-text-primary) 70%, transparent);
 }
@@ -1157,4 +1208,161 @@
 
 .fomo-nav-tab--discover .fomo-nav-tab__icon {
   transform: scale(1.08);
+}
+
+.fomo-mod-row,
+.fomo-mod-gallery {
+  background: var(--fomo-card-bg);
+  border-color: var(--fomo-card-border);
+  color: var(--fomo-text-primary);
+}
+
+.fomo-mod-row:hover,
+.fomo-mod-gallery:hover {
+  border-color: var(--fomo-card-hover-border);
+}
+
+.fomo-filter-block {
+  background: var(--fomo-card-bg);
+  border-color: var(--fomo-card-border);
+  color: var(--fomo-text-primary);
+}
+
+.fomo-mod-chip {
+  border-radius: 999px;
+  border: 1px solid var(--fomo-border);
+  background: var(--fomo-pill-inactive-bg);
+  color: var(--fomo-pill-inactive-text);
+  padding: 0.1rem 0.45rem;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Vampire contrast — scoped to FOMO sidebar */
+[data-theme="vampire"] .fomo-sidebar .opacity-30 { opacity: 0.55 !important; }
+[data-theme="vampire"] .fomo-sidebar .opacity-35 { opacity: 0.60 !important; }
+[data-theme="vampire"] .fomo-sidebar .opacity-40 { opacity: 0.65 !important; }
+[data-theme="vampire"] .fomo-sidebar .opacity-50 { opacity: 0.72 !important; }
+[data-theme="vampire"] .fomo-sidebar .opacity-60 { opacity: 0.80 !important; }
+
+[data-theme="vampire"] .fomo-sidebar .text-white\/30 { color: var(--fomo-text-subtle) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/40 { color: var(--fomo-text-muted) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/50 { color: var(--fomo-text-muted) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/60 { color: var(--fomo-text-primary) !important; opacity: 0.88 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/70 { color: var(--fomo-text-primary) !important; opacity: 0.92 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/80 { color: var(--fomo-text-primary) !important; opacity: 0.96 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-white\/90 { color: var(--fomo-text-primary) !important; opacity: 1 !important; }
+
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/20 { color: var(--fomo-text-subtle) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/30 { color: var(--fomo-text-subtle) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/40 { color: var(--fomo-text-muted) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/50 { color: var(--fomo-text-muted) !important; opacity: 1 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/60 { color: var(--fomo-text-primary) !important; opacity: 0.88 !important; }
+[data-theme="vampire"] .fomo-sidebar .text-foreground\/70 { color: var(--fomo-text-primary) !important; opacity: 0.94 !important; }
+
+[data-theme="vampire"] .fomo-sidebar .bg-white\/5 { background-color: var(--fomo-pill-inactive-bg) !important; }
+[data-theme="vampire"] .fomo-sidebar .bg-white\/10 { background-color: var(--fomo-secondary-bg) !important; }
+[data-theme="vampire"] .fomo-sidebar .bg-black\/20 { background-color: rgba(187, 150, 228, 0.08) !important; }
+[data-theme="vampire"] .fomo-sidebar .bg-black\/60 { background-color: rgba(32, 13, 45, 0.85) !important; }
+
+[data-theme="vampire"] .fomo-sidebar .border-white\/5 { border-color: var(--fomo-border) !important; }
+[data-theme="vampire"] .fomo-sidebar .border-white\/10 { border-color: var(--fomo-card-border) !important; }
+[data-theme="vampire"] .fomo-sidebar .border-white\/20 { border-color: var(--fomo-card-hover-border) !important; }
+
+[data-theme="vampire"] .fomo-sidebar .fomo-nav-tab {
+  color: color-mix(in srgb, var(--fomo-text-primary) 82%, transparent);
+}
+
+[data-theme="vampire"] .fomo-sidebar .fomo-nav-tab:hover {
+  background: rgba(187, 150, 228, 0.10);
+}
+
+[data-theme="vampire"] .fomo-sidebar .fomo-filter-block {
+  box-shadow: 0 1px 0 rgba(187, 150, 228, 0.08);
+}
+
+[data-theme="vampire"] .fomo-sidebar .fomo-mod-chip {
+  border-color: var(--fomo-pill-inactive-border);
+  background: rgba(187, 150, 228, 0.10);
+}
+
+[data-theme="vampire"] .fomo-sidebar .fomo-nav-tab--active {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+[data-theme="vampire"] .fomo-sidebar .fomo-pagination-pill {
+  background: var(--color-accent) !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 12px color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
+}
+
+/* Status banners */
+.fomo-status-banner {
+  backdrop-filter: blur(12px);
+}
+
+.fomo-status-banner--success {
+  background: color-mix(in srgb, #10b981 18%, var(--fomo-card-bg, #1c1c1f));
+  border-color: color-mix(in srgb, #10b981 35%, transparent);
+  color: #a7f3d0;
+}
+
+.fomo-status-banner--error {
+  background: color-mix(in srgb, #ef4444 16%, var(--fomo-card-bg, #1c1c1f));
+  border-color: color-mix(in srgb, #ef4444 35%, transparent);
+  color: #fecaca;
+}
+
+.fomo-status-banner--info {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--fomo-card-bg, #1c1c1f));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  color: var(--fomo-text-primary, #f4f4f5);
+}
+
+.fomo-status-banner--warning {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--fomo-card-bg, #1c1c1f));
+  border-color: color-mix(in srgb, var(--color-accent) 42%, transparent);
+  color: var(--color-accent);
+}
+
+[data-theme="vampire"] .fomo-status-banner--warning {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 22%, #2b1640),
+    color-mix(in srgb, var(--color-accent) 10%, #2b1640)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 208, 102, 0.12);
+}
+
+.fomo-status-banner__close {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+/* Mod status badges */
+.fomo-mod-status-badge--draft {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-accent);
+}
+
+.fomo-mod-status-badge--follow {
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+  color: #fcd34d;
+}
+
+.fomo-mod-status-badge--community {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 32%, transparent);
+  color: var(--fomo-text-primary, #f4f4f5);
+}
+
+[data-theme="vampire"] .fomo-mod-status-badge--draft {
+  background: rgba(255, 208, 102, 0.14);
+  border-color: rgba(255, 208, 102, 0.45);
+  color: #ffe08a;
+  box-shadow: 0 0 10px rgba(255, 208, 102, 0.12);
 }

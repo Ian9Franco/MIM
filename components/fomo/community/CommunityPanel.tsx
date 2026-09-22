@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { TvMinimalPlay, RefreshCw, Blocks, FlaskConical } from "lucide-react";
+import { TvMinimalPlay, RefreshCw, Blocks, Layers } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "@/components/fomo/core/LoginPortal";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -371,7 +371,7 @@ function CommunityPanelInner({
 
           {[
             { id: "modpacks" as const, icon: <Blocks className="w-4 h-4" />, label: "Pool" },
-            { id: "drafts" as const, icon: <FlaskConical className="w-4 h-4" />, label: "Drafts" },
+            { id: "drafts" as const, icon: <Layers className="w-4 h-4" />, label: "Drafts" },
             { id: "videos" as const, icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
           ].map((tab) => {
             const isActive = activeSubTab === tab.id;
@@ -445,7 +445,7 @@ function CommunityPanelInner({
         )}
 
         {communitySection === "compartidos" && activeSubTab !== 'profile' && (
-          <div className="p-6 pt-2 flex-1 animate-fade-in" id={activeSubTab === "modpacks" ? "onboarding-community-pool" : undefined}>
+          <div className={`flex-1 animate-fade-in ${insideDraft ? "px-2 pt-0 pb-2" : "p-6 pt-2"}`} id={activeSubTab === "modpacks" ? "onboarding-community-pool" : undefined}>
             {activeSubTab === "modpacks" && (
               <CommunityModPool
                 cloudFavorites={cloudFavorites}

@@ -57,4 +57,4 @@ function evaluateFomoLayoutWidthPart(part: string, viewportWidth: number): numbe
   }
   return NaN;
 }
-
+

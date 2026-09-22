@@ -1,23 +1,17 @@
 "use client";
 
 import React, { memo } from "react";
-import { ListTree, Download, Loader2, Info, ExternalLink, CheckCircle2, Circle, Flame, FlaskConical, FlaskConicalOff, Check } from "lucide-react";
+import { Download, Info, ExternalLink, Flame } from "lucide-react";
 import { SecurityBadgeCompact } from "@/components/security/SecurityBadge";
 import { formatNumber, openExternal } from "@/utils/format";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
-import { COLORS } from "@/theme/tokens";
-import { Chip } from "@/components/ui/primitives";
 import { ModrinthIcon, CurseForgeIcon, BedrockIcon } from "@/components/fomo/parts/FomoPlatformIcons";
 import { FomoCompatibilityBadge } from "@/components/fomo/parts/FomoCompatibilityBadge";
-import {
-  getBannerFallbackStyle,
-  inferPrimaryProjectType,
-  resolveModBannerUrl,
-} from "@/lib/fomo/fomoModBanner";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { activateDiscoverCard } from "@/lib/fomo/discoverCardActivation";
 import { CollectibleSurface } from "@/components/fomo/shared/CollectibleSurface";
+import { useModCardMeta } from "@/components/fomo/discover/useModCardMeta";
+import { FomoModActions } from "@/components/fomo/discover/FomoModActions";
+import { FomoModStatusBadges } from "@/components/fomo/discover/FomoModStatusBadges";
 
 /**
  * @fileoverview Tarjeta Visual de Búsqueda y Descubrimiento (FOMO).
@@ -32,74 +26,19 @@ export const FomoModCard = memo(function FomoModCard({
   mod, isDownloading, onDownload, onOpenVersions,
   isSelected, onToggleSelect, sinytraActive,
   riskScore, riskLevel, onSecurityDetails, followedByUsers = [],
+  inDraft: inDraftProp,
+  isUserFollowed = false,
+  isUserFavorite = false,
   detailsOpenForThisMod = false,
 }: any) {
-  const { isProjectInDraft, getDraftItem } = useActiveDraft();
-  
-  const draftItem = getDraftItem(mod.id || mod.slug);
-
-  const categories = React.useMemo(() => {
-    return (mod.categories || []).map((c: any) => {
-      if (typeof c === "string") return c;
-      if (c && typeof c === "object") {
-        if (typeof c.name === "string") return c.name;
-        if (typeof c.slug === "string") return c.slug;
-      }
-      return "";
-    }).filter(Boolean);
-  }, [mod.categories]);
-
-  // Identificación del proveedor y exclusividad de loader
-  const isCF = mod._source === "curseforge";
-  const isBedrock = mod._source === "chunk";
-  const isFabricOnly = categories.includes("fabric") && !categories.includes("forge");
-
-  // Disponibilidad en ambas plataformas
-  const onModrinth = mod.availability?.modrinth ?? !isCF;
-  const onCurseForge = mod.availability?.curseforge ?? isCF;
-  const isOnBoth = onModrinth && onCurseForge;
-  const isExclusive = !isOnBoth;
-  const knownLoaders = ["forge", "fabric", "neoforge", "quilt"];
-  const potentialTypes = ["datapack", "mod", "resourcepack", "shader", "textura", "modpack"];
-  
-  // Extraer los tipos reales del proyecto
-  const foundTypes = new Set<string>();
-  if (mod.projectType) {
-    const pt = mod.projectType.toLowerCase();
-    if (pt === "resourcepack") foundTypes.add("textura");
-    else foundTypes.add(pt);
-  }
-  categories.forEach((c: string) => {
-    const lc = c.toLowerCase();
-    if (potentialTypes.includes(lc)) {
-      if (lc === "resourcepack") foundTypes.add("textura");
-      else foundTypes.add(lc);
-    }
-  });
-  
-  // Ordenar tipos: datapack > modpack > mod > otros
-  const sortedTypes = Array.from(foundTypes).sort((a, b) => {
-    if (a === "datapack") return -1;
-    if (b === "datapack") return 1;
-    if (a === "modpack") return -1;
-    if (b === "modpack") return 1;
-    if (a === "mod") return -1;
-    if (b === "mod") return 1;
-    return a.localeCompare(b);
-  });
-
-  const modLoaders = categories.filter((c: string) => knownLoaders.includes(c.toLowerCase())) || [];
-  
-  // Filtrar categorías que no sean ni loaders ni tipos base
-  const otherCategories = categories.filter((c: string) => 
-    !knownLoaders.includes(c.toLowerCase()) && 
-    !potentialTypes.includes(c.toLowerCase()) &&
-    c.toLowerCase() !== "resourcepack"
-  ).slice(0, 2) || [];
-  
-  const bannerUrl = resolveModBannerUrl(mod);
-  const primaryType = sortedTypes[0] || inferPrimaryProjectType(mod);
-  const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(primaryType);
+  const { isProjectInDraft } = useActiveDraft();
+  const projectId = mod.projectId || mod.id || mod.slug;
+  const inDraft = inDraftProp ?? isProjectInDraft(projectId);
+  const meta = useModCardMeta(mod);
+  const {
+    categories, isCF, isBedrock, isFabricOnly, isOnBoth, sortedTypes, modLoaders, otherCategories,
+    bannerUrl, primaryType, bannerBgColor, fallbackTexture,
+  } = meta;
 
   const platformBorderClass = isCF
     ? "border-orange-500/20 hover:border-orange-500/45 mim-discover-card--curse"
@@ -163,114 +102,32 @@ export const FomoModCard = memo(function FomoModCard({
             )}
           </div>
           
-          {/* Draft Item Badge */}
-          {draftItem && (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border backdrop-blur-md bg-primary/20 border-primary/40 text-primary shadow-lg select-none" title={`Añadido al Draft por ${draftItem.username || 'ti'}`}>
-              <Check className="w-2 h-2" />
-              <span className="text-[8px] font-black uppercase tracking-wider">Draft</span>
-            </div>
+          {(inDraft || isUserFollowed || isUserFavorite) && (
+            <FomoModStatusBadges
+              inDraft={inDraft}
+              isUserFollowed={isUserFollowed}
+              isUserFavorite={isUserFavorite}
+              layout="inline"
+            />
           )}
         </div>
 
-        {/* Seguido por — aparece debajo del badge de exclusividad, mismo X */}
         {followedByUsers && followedByUsers.length > 0 && (
-          <div 
-            className="absolute top-10 left-3 z-30 flex items-center gap-1 px-1.5 py-0.5 rounded border backdrop-blur-md bg-black/60 border-white/10 shadow-lg select-none cursor-pointer hover:border-white/30 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              const first = followedByUsers[0];
-              if (first?.username) {
-                window.dispatchEvent(
-                  new CustomEvent("fomo-open-community-user", {
-                    detail: { username: first.username },
-                  })
-                );
-              }
-            }}
-            title={`Ver perfil de @${followedByUsers[0]?.username}`}
-          >
-            <div className="flex items-center gap-0.5">
-              {followedByUsers.slice(0, 3).map((info: any, i: number) => (
-                <div
-                  key={i}
-                  className="w-3.5 h-3.5 rounded-full overflow-hidden border shrink-0"
-                  style={{ borderColor: info.color || 'rgba(255,255,255,0.2)' }}
-                  title={`@${info.username}`}
-                >
-                  {info.avatar_url ? (
-                    <img src={info.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[5px] font-black text-white" style={{ backgroundColor: info.color || 'var(--primary)' }}>
-                      {(info.username || "U").charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <span className="fomo-badge-seg-label text-[7px] font-black uppercase tracking-wider">
-              Seg{followedByUsers.length > 1 ? ` x${followedByUsers.length}` : ""}
-            </span>
+          <div className="absolute top-10 left-3 z-30">
+            <FomoModStatusBadges followedByUsers={followedByUsers} layout="inline" />
           </div>
         )}
 
-        {/* Botones de acción flotantes (Opción A del plan) */}
-        <div className="absolute top-3 right-3 flex gap-2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-y-2.5 group-hover:translate-y-0">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(mod); }} 
-            className={`fomo-action-btn w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
-              isSelected ? 'bg-primary border-primary text-white' : 'fomo-action-btn--list bg-black/60 border-white/20 text-white hover:bg-black/80'
-            }`}
-            title={isSelected ? "Quitar de la lista" : "Añadir a la lista"}
-          >
-            <ListTree className="w-4 h-4" />
-          </button>
-          {isProjectInDraft(mod.id || mod.slug) ? (
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                window.dispatchEvent(new CustomEvent("fomo-remove-from-draft", {
-                  detail: {
-                    projectId: mod.id || mod.slug,
-                  }
-                }));
-              }} 
-              className="fomo-action-btn w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md shadow-xl bg-red-500/20 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all hover:scale-110 active:scale-95"
-              title="Quitar del Draft Activo"
-            >
-              <FlaskConicalOff className="w-4 h-4" />
-            </button>
-          ) : (
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", {
-                  detail: {
-                    projectId: mod.id || mod.slug,
-                    platform: mod._source || "modrinth",
-                    title: mod.title,
-                    contentType: primaryType === "textura" ? "resourcepack" : primaryType
-                  }
-                }));
-              }} 
-              className="fomo-action-btn w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 bg-black/60 border-white/20 text-white hover:bg-primary hover:border-primary"
-              title="Añadir a Draft"
-            >
-              <FlaskConical className="w-4 h-4" />
-            </button>
-          )}
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDownload(mod); }} 
-            disabled={isDownloading} 
-            className={`fomo-action-btn fomo-action-btn--download w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all shadow-xl hover:scale-110 active:scale-95 ${
-              isBedrock
-                ? "bg-[#00CC44]/80 border-[#00CC44] text-white hover:bg-[#00CC44]"
-                : "bg-emerald-500/90 border-emerald-400 text-white hover:bg-emerald-500"
-            }`}
-            title={isBedrock ? "Ver en Minecraft Marketplace" : "Descargar"}
-          >
-            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : isBedrock ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-          </button>
-        </div>
+        <FomoModActions
+          mod={mod}
+          primaryType={primaryType}
+          isBedrock={isBedrock}
+          isDownloading={isDownloading}
+          isSelected={isSelected}
+          onDownload={onDownload}
+          onToggleSelect={onToggleSelect}
+          variant="floating"
+        />
       </div>
 
       {/* 2. Contenido Principal */}

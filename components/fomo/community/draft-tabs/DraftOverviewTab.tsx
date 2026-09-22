@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { DraftActivityFeed } from "@/components/fomo/community/DraftActivityFeed";
-import { Puzzle, Image, Sun, Database, HardDrive, Users, Clock, Blend } from "lucide-react";
+import { DraftMembersTab } from "@/components/fomo/community/draft-tabs/DraftMembersTab";
+import { LayoutGrid, Box, Image as ImageIcon, Glasses, Database, HardDrive, Users, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -15,7 +16,21 @@ interface DraftStats {
   lastActivity: string | null;
 }
 
-export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isModern: boolean }) {
+export function DraftOverviewTab({
+  draftId,
+  draft,
+  members,
+  user,
+  isModern,
+  setIsInviteModalOpen,
+}: {
+  draftId: string;
+  draft: any;
+  members: any[];
+  user: any;
+  isModern: boolean;
+  setIsInviteModalOpen: (open: boolean) => void;
+}) {
   const [stats, setStats] = useState<DraftStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,12 +57,12 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
         const lastActivity = items.length > 0 ? items[0].created_at : null;
 
         setStats({
-          mods: items.filter(i => (i.content_type || "mod") === "mod").length,
-          resourcepacks: items.filter(i => i.content_type === "resourcepack").length,
-          shaders: items.filter(i => i.content_type === "shader").length,
-          datapacks: items.filter(i => i.content_type === "datapack").length,
+          mods: items.filter((i) => (i.content_type || "mod") === "mod").length,
+          resourcepacks: items.filter((i) => i.content_type === "resourcepack").length,
+          shaders: items.filter((i) => i.content_type === "shader").length,
+          datapacks: items.filter((i) => i.content_type === "datapack").length,
           snapshots: snapsRes.count ?? 0,
-          members: Math.max(1, membersRes.count || 0), // Si la DB devuelve 0 o 1, siempre hay al menos 1 (owner)
+          members: Math.max(1, membersRes.count || 0),
           lastActivity,
         });
       } catch (err) {
@@ -63,25 +78,25 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
   const statCards = stats
     ? [
         {
-          icon: <Puzzle className="w-5 h-5 text-primary" />,
+          icon: <Box className="w-5 h-5 text-primary" />,
           label: "Mods",
           value: stats.mods,
           color: "bg-primary/10 border-primary/20",
         },
         {
-          icon: <Image className="w-5 h-5 text-amber-500" />,
+          icon: <ImageIcon className="w-5 h-5 text-amber-400" />,
           label: "Texturas",
           value: stats.resourcepacks,
           color: "bg-amber-500/10 border-amber-500/20",
         },
         {
-          icon: <Sun className="w-5 h-5 text-purple-500" />,
+          icon: <Glasses className="w-5 h-5 text-purple-400" />,
           label: "Shaders",
           value: stats.shaders,
           color: "bg-purple-500/10 border-purple-500/20",
         },
         {
-          icon: <Database className="w-5 h-5 text-emerald-500" />,
+          icon: <Database className="w-5 h-5 text-emerald-400" />,
           label: "Datapacks",
           value: stats.datapacks,
           color: "bg-emerald-500/10 border-emerald-500/20",
@@ -93,27 +108,27 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
           color: "bg-blue-500/10 border-blue-500/20",
         },
         {
-          icon: <Users className="w-5 h-5 text-rose-400" />,
+          icon: <Users className="w-5 h-5 text-[var(--color-accent)]" />,
           label: "Miembros",
           value: stats.members,
-          color: "bg-rose-500/10 border-rose-500/20",
+          color: "bg-[var(--color-accent)]/10 border-[var(--color-accent)]/25",
         },
       ]
     : [];
 
+  const labelClass = isModern ? "text-muted-foreground" : "text-[var(--color-accent)]/80";
+  const titleClass = isModern ? "text-foreground" : "text-white";
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Left: Stats */}
-      <div className="md:col-span-2 flex flex-col gap-4">
+    <div className="flex flex-col gap-6 w-full">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <Blend className="w-4 h-4 text-primary" />
-          <h3 className={`text-lg font-bold ${isModern ? "text-foreground" : "text-white"}`}>
-            Resumen del Draft
-          </h3>
+          <LayoutGrid className="w-4 h-4 text-[var(--color-accent)]" />
+          <h3 className={`text-lg font-bold ${titleClass}`}>Resumen del Draft</h3>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 animate-pulse">
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
@@ -123,7 +138,7 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
               {statCards.map((card) => (
                 <div
                   key={card.label}
@@ -131,23 +146,21 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
                 >
                   <div className="flex items-center gap-2">
                     {card.icon}
-                    <span className={`text-xs font-bold uppercase tracking-widest ${isModern ? "text-muted-foreground" : "text-white/60"}`}>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${labelClass}`}>
                       {card.label}
                     </span>
                   </div>
-                  <span className={`text-3xl font-black ${isModern ? "text-foreground" : "text-white"}`}>
-                    {card.value}
-                  </span>
+                  <span className={`text-3xl font-black ${titleClass}`}>{card.value}</span>
                 </div>
               ))}
             </div>
 
             {stats?.lastActivity && (
-              <div className={`flex items-center gap-2 mt-1 text-xs ${isModern ? "text-muted-foreground" : "text-white/40"}`}>
+              <div className={`flex items-center gap-2 text-xs ${isModern ? "text-muted-foreground" : "text-[var(--color-accent)]/70"}`}>
                 <Clock className="w-3.5 h-3.5" />
                 <span>
                   Última actividad{" "}
-                  <strong className={isModern ? "text-foreground" : "text-white/70"}>
+                  <strong className={isModern ? "text-foreground" : "text-[var(--color-accent)]"}>
                     {formatDistanceToNow(new Date(stats.lastActivity), { addSuffix: true, locale: es })}
                   </strong>
                 </span>
@@ -157,9 +170,20 @@ export function DraftOverviewTab({ draftId, isModern }: { draftId: string; isMod
         )}
       </div>
 
-      {/* Right: Activity Feed */}
-      <div className="md:col-span-1 h-[320px]">
-        <DraftActivityFeed draftId={draftId} isModern={isModern} />
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-0">
+        <div className="xl:col-span-2 flex flex-col min-h-[300px]">
+          <DraftActivityFeed draftId={draftId} isModern={isModern} />
+        </div>
+        <div className="xl:col-span-1 flex flex-col min-h-[300px]">
+          <DraftMembersTab
+            draft={draft}
+            members={members}
+            user={user}
+            isModern={isModern}
+            setIsInviteModalOpen={setIsInviteModalOpen}
+            embedded
+          />
+        </div>
       </div>
     </div>
   );

@@ -7,17 +7,19 @@ export function DraftMembersTab({
   user,
   isModern,
   setIsInviteModalOpen,
+  embedded = false,
 }: {
   draft: any;
   members: any[];
   user: any;
   isModern: boolean;
   setIsInviteModalOpen: (open: boolean) => void;
+  embedded?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className={`flex flex-col gap-4 h-full ${embedded ? `p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}` : ""}`}>
       <div className="flex items-center justify-between">
-        <h3 className={`text-lg font-bold ${isModern ? "text-foreground" : "text-white"}`}>Miembros</h3>
+        <h3 className={`font-bold ${embedded ? "text-sm" : "text-lg"} ${isModern ? "text-foreground" : "text-white"}`}>Miembros</h3>
         {draft.owner_id === user?.id ? (
           <button 
             onClick={() => setIsInviteModalOpen(true)}
@@ -41,7 +43,7 @@ export function DraftMembersTab({
         )}
       </div>
       
-      <div className="flex flex-col gap-2 mt-2 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+      <div className={`flex flex-col gap-2 mt-2 overflow-y-auto custom-scrollbar pr-1 ${embedded ? "flex-1 min-h-0" : "max-h-[350px]"}`}>
         {/* Owner */}
         <div className={`flex items-center justify-between p-3 rounded-xl border ${isModern ? "bg-background border-border" : "bg-black/20 border-white/5"}`}>
           <div className="flex items-center gap-3">

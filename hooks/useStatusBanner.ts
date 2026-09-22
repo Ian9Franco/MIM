@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 
-export type StatusType = "success" | "error" | "info";
+export type StatusType = "success" | "error" | "info" | "warning";
 
 export function useStatusBanner() {
   const [status, setStatus] = useState<{text: string, type: StatusType} | null>(null);

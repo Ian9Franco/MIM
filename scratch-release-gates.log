@@ -1,0 +1,1323 @@
+[2m
+─────────────────────────────────────────────────────────────────────────────[0m
+[1m🛡️  PRE-RELEASE 11.7.1[0m
+[2m─────────────────────────────────────────────────────────────────────────────[0m
+[36m
+  ⏳ 1. Verificación Estructural de API Guard...[0m
+(node:17884) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> mim@11.7.1 lint:api-guard
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/security/verify-api-guard.ts
+
+
+[36m[1m🔍 Auditing structural API Guard enforcement (108 routes found)...[0m
+
+─────────────────────────────────────────────────────────────────────────────
+[1mAPI Guard Structural Verification Summary:[0m
+  • API route modules discovered:        108
+  • Exported HTTP handlers discovered:   127
+  • Structurally guarded handlers:       127 / 127 (100%)
+─────────────────────────────────────────────────────────────────────────────
+
+[32m[1m✓ Every discovered HTTP handler is structurally protected by withApiGuard.[0m
+
+[32m  ✓ 1. Verificación Estructural de API Guard (3.3s)[0m
+[36m
+  ⏳ 2. Verificación de Fronteras de Arquitectura...[0m
+
+> mim@11.7.1 lint:architecture
+> ts-node --project tsconfig.scripts.json scripts/architecture/verify-boundaries.ts
+
+Architecture boundaries: OK — no forbidden cross-layer imports found.
+[32m  ✓ 2. Verificación de Fronteras de Arquitectura (3.6s)[0m
+[36m
+  ⏳ 3. Contratos de Fronteras Arquitectónicas...[0m
+
+> mim@11.7.1 test:architecture
+> ts-node --project tsconfig.scripts.json scripts/__tests__/architecture-boundaries.test.ts
+
+✓ resolves root aliases and relative imports inside the repository
+✓ rejects core engine imports from UI through aliases
+✓ rejects relative core engine imports from app
+✓ rejects dynamic imports and require calls that cross boundaries
+✓ rejects hub imports from the Electron standalone runtime
+✓ allows dependencies toward core and third-party packages
+✓ does not treat comments or strings as imports
+Architecture boundary contract suite passed.
+[32m  ✓ 3. Contratos de Fronteras Arquitectónicas (2.5s)[0m
+[36m
+  ⏳ 4. Verificación de Tipos TypeScript (Raíz / Desktop)...[0m
+[32m  ✓ 4. Verificación de Tipos TypeScript (Raíz / Desktop) (5.5s)[0m
+[36m
+  ⏳ 5. Verificación de Tipos TypeScript (MIM Hub)...[0m
+[32m  ✓ 5. Verificación de Tipos TypeScript (MIM Hub) (5.0s)[0m
+[36m
+  ⏳ 6. Suite de Tests Unificados (npm test)...[0m
+[36m╔════════════════════════════════════════════════════════════════╗[0m
+[36m║  MIM — Unified Systems Test & Benchmark Verification Suite      ║[0m
+[36m╚════════════════════════════════════════════════════════════════╝[0m
+[36m
+▶ Running Suite: Monorepo Package Contracts...[0m
+(node:25932) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Starting ARCH-3 and ARCH-4 monorepo verification test suite...
+✔ @mim/network-resilience package functionality verified
+✔ @mim/server-engine package functionality verified
+✔ apps/desktop workspace configuration verified
+✔ Monorepo domain packages & desktop boundaries verified
+
+All ARCH-3 and ARCH-4 tests passed successfully!
+[32m✓ Monorepo Package Contracts passed in 5.33s[0m
+[36m
+▶ Running Suite: Draft Dependency Resolution...[0m
+✓ Draft dependency graphs: both sources, transitive, cycles, optional, incompatible, pinned versions and failures
+[32m✓ Draft Dependency Resolution passed in 3.18s[0m
+[36m
+▶ Running Suite: Desktop Updater Runtime...[0m
+[MIM] Auto-update enabled (GitHub releases)
+✓ Updater runtime: snapshot recovery, downloaded checks, install guard and IPC ordering
+[32m✓ Desktop Updater Runtime passed in 0.08s[0m
+[36m
+▶ Running Suite: Release Asset Integrity...[0m
+✓ Release asset names, version, integrity and unsafe path regressions passed
+[32m✓ Release Asset Integrity passed in 0.16s[0m
+[36m
+▶ Running Suite: Server Engine & Recovery...[0m
+
+> mim@11.7.1 test:server
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sftp-integration.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-manager-foundation.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sftp-discovery.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-audit-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-preflight-snapshot.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-executor-rollback.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sage-remote.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-admin-rcon.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-multiplayer-sync.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sync-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-deploy-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-file-snapshot-store.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-pending-operations.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-inspect-pending-operations.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-client-sync-plan.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-client-sync-apply.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-recovery-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-process-probe.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-desktop-packaging.test.ts
+
+✓ Real SFTP audit: version/missing differences, no writes or secrets
+✓ Host identity, credentials, path containment and absence errors
+✓ Permissions, disconnect and cancellation cannot certify a complete audit
+✓ Request schema rejects project path traversal
+[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\Users\IanFr\.mim-index\data'
+    at Object.mkdirSync (node:fs:1350:26)
+    at ensureDirForWrite (D:\.mine\manager\lib\core\mimIndex\layout.ts:109:8)
+    at copyFileIfAbsent (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:93:20)
+    at relocateLegacyIndex (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:134:7)
+    at runSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:250:5)
+    at ensureSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\runMigrations.ts:47:36)
+    at bootSinceramiento (D:\.mine\manager\lib\core\settings.ts:91:5)
+    at getSettingsPath (D:\.mine\manager\lib\core\settings.ts:99:3)
+    at getSettings (D:\.mine\manager\lib\core\settings.ts:184:24)
+    at getBuildsBase (D:\.mine\manager\lib\core\settings.ts:224:10) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'mkdir',
+  path: 'C:\\Users\\IanFr\\.mim-index\\data'
+}
+✓ HTTP guard rejects cross-origin calls and accepts normalized loopback origins
+✓ Server Manager foundation contracts passed
+Starting SFTP read transport and server discovery test suite...
+✔ Remote server state discovery passed
+✔ Path traversal security checks passed
+✔ Server properties parser passed
+✔ SFTP config sanitization passed
+✔ AbortSignal cancellation passed
+
+All SFTP read transport tests passed successfully!
+Starting server audit UI & API test suite...
+✔ Server audit calculation logic passed
+✔ Server health state computation passed
+
+All server audit UI tests passed successfully!
+Starting SRV-3 Preflight, Config Diff, and Durable Snapshot test suite...
+✔ Server preflight validation tests passed
+✔ Config reconciliation and mutating snapshot requirement passed
+✔ Snapshot creation, stale plan drift detection and store persistence passed
+
+All SRV-3 tests passed successfully!
+  ✓ Regression cases: snapshot I/O, payloads, renamed updates, rollback and configs
+▶ Running SRV-4 Deployment Executor & Rollback Tests...
+  ✓ Test 1: Successful atomic deployment passed
+  ✓ Test 2: Injected failure triggers automatic rollback and restores files
+  ✓ Test 3: Standalone executeRollback verified
+✔ SRV-4 Deployment Executor & Rollback Tests passed successfully!
+
+▶ Running SRV-5 Remote SAGE Diagnostic Tests...
+  ✓ Test 1: Log parsing verified
+  ✓ Test 2: Missing dependency crash diagnosed and correlated
+  ✓ Test 3: Mixin failure diagnosed
+  ✓ Test 4: Remote diagnostic ingestion passed
+✔ SRV-5 Remote SAGE Diagnostic Tests passed successfully!
+
+▶ Running SRV-6 Server Administration, RCON & Backups Tests...
+  ✓ Test 1: server.properties parsing and preservation passed
+  ✓ Test 2: server.properties validation passed
+  ✓ Test 3: RCON execution and safety passed
+  ✓ Test 4: Backups and World metadata inspection passed
+✔ SRV-6 Server Administration & RCON Tests passed successfully!
+
+▶ Running SRV-7 Multiplayer Client-Server Sync Tests...
+  ✓ Test 1: Distributable manifest generation excludes server-only mods
+  ✓ Test 2: Client-Server reconciliation preserves client-only mods
+  ✓ Test 3: Minecraft version incompatibility detected
+✔ SRV-7 Multiplayer Client-Server Sync Tests passed successfully!
+
+[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\Users\IanFr\.mim-index\data'
+    at Object.mkdirSync (node:fs:1350:26)
+    at ensureDirForWrite (D:\.mine\manager\lib\core\mimIndex\layout.ts:109:8)
+    at copyFileIfAbsent (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:93:20)
+    at relocateLegacyIndex (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:134:7)
+    at runSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:250:5)
+    at ensureSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\runMigrations.ts:47:36)
+    at bootSinceramiento (D:\.mine\manager\lib\core\settings.ts:91:5)
+    at getSettingsPath (D:\.mine\manager\lib\core\settings.ts:99:3)
+    at getSettings (D:\.mine\manager\lib\core\settings.ts:184:24)
+    at getBuildsBase (D:\.mine\manager\lib\core\settings.ts:224:10) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'mkdir',
+  path: 'C:\\Users\\IanFr\\.mim-index\\data'
+}
+✓ HTTP sync guard rejects cross-origin calls
+✓ Multiplayer sync detects remote/client hash mismatch
+✓ Deploy schema rejects traversal and requires confirm
+[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\Users\IanFr\.mim-index\data'
+    at Object.mkdirSync (node:fs:1350:26)
+    at ensureDirForWrite (D:\.mine\manager\lib\core\mimIndex\layout.ts:109:8)
+    at copyFileIfAbsent (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:93:20)
+    at relocateLegacyIndex (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:134:7)
+    at runSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:250:5)
+    at ensureSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\runMigrations.ts:47:36)
+    at bootSinceramiento (D:\.mine\manager\lib\core\settings.ts:91:5)
+    at getSettingsPath (D:\.mine\manager\lib\core\settings.ts:99:3)
+    at getSettings (D:\.mine\manager\lib\core\settings.ts:184:24)
+    at getBuildsBase (D:\.mine\manager\lib\core\settings.ts:224:10) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'mkdir',
+  path: 'C:\\Users\\IanFr\\.mim-index\\data'
+}
+✓ HTTP deploy guard rejects cross-origin calls
+✓ Complete audit is deployable and still read-only
+✓ Partial audit cannot authorize deploy
+✓ Deploy is blocked while session.lock is present
+Error: EPERM: operation not permitted, mkdir 'C:\Users\IanFr\.mim-index\server-manager'
+    at async mkdir (node:internal/fs/promises:859:10)
+    at async atomicWriteFile (D:\.mine\manager\packages\server-engine\fileSnapshotStore.ts:146:3)
+    at async FileSnapshotStore.recordChange (D:\.mine\manager\packages\server-engine\fileSnapshotStore.ts:100:5)
+    at async executeServerDeployment (D:\.mine\manager\packages\server-engine\executor.ts:276:9)
+    at async performDeployment (D:\.mine\manager\lib\server\deployServer.ts:93:24)
+    at async deployServer (D:\.mine\manager\lib\server\deployServer.ts:130:12)
+    at async run (D:\.mine\manager\scripts\__tests__\server-deploy-api.test.ts:89:20) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'mkdir',
+  path: 'C:\\Users\\IanFr\\.mim-index\\server-manager'
+}
+[31m✗ Server Engine & Recovery failed (1) in 34.67s[0m
+[36m
+▶ Running Suite: Network Resilience...[0m
+
+> mim@11.7.1 test:network
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/network-policy-contract.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/network-adapters.test.ts
+
+Starting network policy and classification contract test suite...
+✔ Sanitization tests passed
+✔ Classification tests passed
+✔ Retry-After parsing tests passed
+✔ Deterministic retry policy tests passed
+
+All network contract tests passed successfully!
+Starting network adapters test suite...
+✔ fetchWithRetry transient retry recovery passed
+✔ fetchWithRetry Retry-After respect passed
+✔ fetchWithRetry permanent 404 immediate fail passed
+✔ fetchWithRetry cancellation abort handling passed
+✔ fetchJsonWithRetry backward compatibility passed
+
+All network adapter tests passed successfully!
+[32m✓ Network Resilience passed in 4.82s[0m
+[36m
+▶ Running Suite: SAGE NBT Binary Safe Recovery (12 Tests)...[0m
+[36m╔════════════════════════════════════════════════════════════════╗[0m
+[36m║  SAGE Rescue - NBT Integration Test Suite                      ║[0m
+[36m╚════════════════════════════════════════════════════════════════╝[0m
+[0m[0m
+[34mRunning tests...[0m
+[0m[0m
+[32m✓ NBT Round-Trip: Write and Read Back[0m
+[32m✓ Data Types: Coordinates use Double (not Float)[0m
+[32m✓ Data Types: Rotation uses Float[0m
+[32m✓ Data Types: Spawn coordinates use Int[0m
+[32m✓ Data Types: Dimension is String[0m
+[32m✓ Inventory Structure: List<Compound> with Item NBT[0m
+[32m✓ Modify Coordinates: Update Pos and Spawn[0m
+[32m✓ Modify Dimension: Change to Nether and back[0m
+[32m✓ Modify Inventory: Delete and Add Items[0m
+[32m✓ Level.dat Round-Trip: Read world name and player data[0m
+[32m✓ Uncompressed NBT: Write and read without gzip[0m
+[32m✓ Large Inventory: Handle 100+ items[0m
+[0m[0m
+[36m╔════════════════════════════════════════════════════════════════╗[0m
+[36m║  Test Results Summary                                          ║[0m
+[36m╚════════════════════════════════════════════════════════════════╝[0m
+[0m[0m
+[32m✓ NBT Round-Trip: Write and Read Back[0m
+[32m✓ Data Types: Coordinates use Double (not Float)[0m
+[32m✓ Data Types: Rotation uses Float[0m
+[32m✓ Data Types: Spawn coordinates use Int[0m
+[32m✓ Data Types: Dimension is String[0m
+[32m✓ Inventory Structure: List<Compound> with Item NBT[0m
+[32m✓ Modify Coordinates: Update Pos and Spawn[0m
+[32m✓ Modify Dimension: Change to Nether and back[0m
+[32m✓ Modify Inventory: Delete and Add Items[0m
+[32m✓ Level.dat Round-Trip: Read world name and player data[0m
+[32m✓ Uncompressed NBT: Write and read without gzip[0m
+[32m✓ Large Inventory: Handle 100+ items[0m
+[0m[0m
+[32mTotal: 12 | Passed: 12 | Failed: 0[0m
+[0m[0m
+[32m🎉 All tests passed! NBT I/O is safe and reliable.[0m
+[0m[0m
+[32m✓ Coordinates use Double type (correct)[0m
+[32m✓ Rotation uses Float type (correct)[0m
+[32m✓ Spawn coordinates use Int type (correct)[0m
+[32m✓ Dimension is String type (correct)[0m
+[32m✓ Inventory is List<Compound> (correct)[0m
+[32m✓ Round-trip integrity preserved[0m
+[32m✓ Gzip compression/decompression works[0m
+[0m[0m
+[32mReady to implement: Advanced NBT editing + External file uploads[0m
+[32m✓ SAGE NBT Binary Safe Recovery (12 Tests) passed in 3.42s[0m
+[36m
+▶ Running Suite: SAGE 2.0 Diagnostic Evaluation (125 Cases)...[0m
+📋 Regression fixture (CI gate)
+   total=125 uniqueLogs=97 exactExtraCopies=28
+   origin unknown=0 synthetic=125 community=0 public-issue=0
+   split train=125 stress=0 holdout=0
+   logLength min=160 p50=303 mean=325 max=611
+   loader fabric=81
+   loader forge=28
+   loader vanilla=15
+   loader neoforge=1
+📋 Real corpus (crash-corpus.json)
+   total=1 uniqueLogs=1 exactExtraCopies=0
+   origin unknown=1 synthetic=0 community=0 public-issue=0
+   split train=0 stress=0 holdout=1
+   logLength min=342 p50=342 mean=342 max=342
+   loader fabric=1
+
+===============================================================
+🔬 SAGE 2.0 EVALUATION — regression / SAGE-03 gate (125 cases)
+===============================================================
+
+| Category                | Samples | Precision | Recall  | F1-Score |
+|:------------------------|:-------:|:---------:|:-------:|:--------:|
+| MISSING_DEPENDENCY      |      20 |    100.0% |  100.0% |   100.0% |
+| VERSION_CONFLICT        |      15 |    100.0% |  100.0% |   100.0% |
+| MIXIN_FAILURE           |      20 |    100.0% |  100.0% |   100.0% |
+| JAVA_INCOMPATIBILITY    |      15 |    100.0% |  100.0% |   100.0% |
+| MOD_CONFLICT            |      15 |    100.0% |  100.0% |   100.0% |
+| CORRUPTED_WORLD         |      15 |    100.0% |  100.0% |   100.0% |
+| OUT_OF_MEMORY           |      15 |    100.0% |  100.0% |   100.0% |
+| UNKNOWN_RUNTIME         |      10 |    100.0% |  100.0% |   100.0% |
+---------------------------------------------------------------
+| Loader                  | Samples | Category accuracy |
+| fabric                  |      81 |            100.0% |
+| forge                   |      28 |            100.0% |
+| vanilla                 |      15 |            100.0% |
+| neoforge                |       1 |            100.0% |
+---------------------------------------------------------------
+🎯 Overall Category Accuracy: 100.0%
+🏆 Macro F1-Score:           100.0%
+🔍 Top-1 (histórico):         84.0% (105/125)
+📊 Top-3 (histórico):         100.0% (125/125)
+🎯 Top-1 atribución:          71.4% (50/70)
+🎯 Top-3 atribución:          100.0% (70/70)
+🧩 Sistémico sin culpable:    100.0% (55/55)
+⚡ Mean inference latency:    0.02 ms/log (local diagnostic)
+⚡ p50 / p95 / max:           0.01 / 0.04 / 0.09 ms
+🖥️  Env: v24.15.0 win32/x64 warmup=1 repeats=3
+===============================================================
+
+📄 Written complete evaluation report to: D:\.mine\manager\docs\engines\sage-eval.md
+✅ SAGE evaluation gate passed (regression corpus only).
+[32m✓ SAGE 2.0 Diagnostic Evaluation (125 Cases) passed in 3.80s[0m
+[36m
+▶ Running Suite: SAGE Eval Metrics & CI Gate (SAGE-02/03)...[0m
+Starting SAGE eval metrics & gate suite...
+✔ SAGE-02 metric denominators and attribution split verified
+✔ SAGE-03 gate passes when thresholds are met
+✔ SAGE-03 gate reports all threshold violations
+✔ SAGE-03 threshold constants match plan
+✔ sage-eval --self-test-fail exits with code 1
+
+All SAGE eval metrics & gate tests passed successfully!
+[32m✓ SAGE Eval Metrics & CI Gate (SAGE-02/03) passed in 7.43s[0m
+[36m
+▶ Running Suite: SAGE Corpus Provenance & Splits (SAGE-01)...[0m
+Starting SAGE-01 corpus provenance suite...
+✔ corpus schema requires provenance fields
+✔ crash-corpus.json has SRV-5 fixture holdout seed (not synthetic)
+✔ regression fixture is 125 synthetic train cases, isolated from real corpus
+✔ regression duplicate extras are audited and marked duplicateOf
+✔ sage-eval --audit reports regression and real holdout seed
+✔ sage-eval --holdout scores the seed and does not apply the regression gate
+
+All SAGE-01 corpus provenance tests passed successfully!
+(node:23640) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[32m✓ SAGE Corpus Provenance & Splits (SAGE-01) passed in 12.29s[0m
+[36m
+▶ Running Suite: SAGE 2.0 Core Taxonomy & Parser Unit Suite...[0m
+
+[1m[36m▶ Executing SAGE 2.0 Unit Test Suite...[0m
+
+[1m1. Parser: ANSI Sanitation[0m
+  [32m✓[0m stripAnsi removes all escape sequences
+  [32m✓[0m stripAnsi preserves exact plain text
+
+[1m2. Parser: Mod Loader & Environment Detection[0m
+  [32m✓[0m Correctly identifies Minecraft Forge loader
+  [32m✓[0m Extracts Forge Minecraft version (1.20.1)
+  [32m✓[0m Extracts Forge loader version (47.2.0)
+  [32m✓[0m Correctly identifies Fabric loader
+  [32m✓[0m Extracts Fabric loader version (0.15.7)
+  [32m✓[0m Correctly identifies NeoForge loader
+  [32m✓[0m Extracts NeoForge version (20.4.80-beta)
+  [32m✓[0m Correctly identifies Quilt loader
+
+[1m3. Parser: Frame Normalization & Exception Chain[0m
+  [32m✓[0m Extracted 4 stack frames
+  [32m✓[0m Identified mixin synthetic injection method
+  [32m✓[0m Extracted 2 exception lines
+  [32m✓[0m Captures top-level exception
+  [32m✓[0m Captures causal exception chain
+
+[1m4. Classifier: Crash Categorization[0m
+  [32m✓[0m Classifies missing mod dependency
+  [32m✓[0m Extracts candidate culprits in missing dependency
+  [32m✓[0m Classifies mixin transformer failure
+  [32m✓[0m Classifies Java OutOfMemoryError
+  [32m✓[0m Classifies unsupported Java version bytecode
+
+[1m5. Scorer & Correlator: Confidence & Culprit Attribution[0m
+  [32m✓[0m Confidence score is strictly bounded [20, 99] (got 95)
+  [32m✓[0m OOM produces deterministic high certainty (got 98)
+  [32m✓[0m Unknown runtime scores low confidence (got 15)
+  [32m✓[0m Identified primary culprit: supermod
+  [32m✓[0m Suspect list includes targeted mod
+
+[1m6. i18n: Multi-Language Diagnostic & Remediation Verification[0m
+  [32m✓[0m Report defaults/records English locale
+  [32m✓[0m English root cause formulated: Missing required dependency mod: 'sodium'
+  [32m✓[0m English remediation summary formulated: Install the missing dependency 'sodium' to resolve startup requirements.
+  [32m✓[0m Report records Spanish locale
+  [32m✓[0m Spanish root cause formulated: Dependencia requerida faltante: 'sodium'
+  [32m✓[0m Spanish remediation summary formulated: Instala la dependencia faltante 'sodium' para satisfacer los requisitos de inicio.
+  [32m✓[0m Spanish remediation instructions generated
+
+[32m[1m✓ All SAGE 2.0 unit tests passed successfully![0m
+
+[32m✓ SAGE 2.0 Core Taxonomy & Parser Unit Suite passed in 3.43s[0m
+[36m
+▶ Running Suite: SAGE Real Chat Guardrail Contract...[0m
+
+> mim@11.7.1 test:sage-chat-guardrails
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sage-chat-guardrails.test.ts
+
+[/api/sage/chat] Provider response blocked by SAGE guardrails: UNSUPPORTED_ATTRIBUTION, UNSAFE_REMEDIATION
+✓ SAGE real chat guardrail suite passed
+[32m✓ SAGE Real Chat Guardrail Contract passed in 4.02s[0m
+[36m
+▶ Running Suite: SAGE 2.0 Knowledge Base Matcher & Safety Validator...[0m
+
+===============================================================
+🧠 SAGE 2.0 KNOWLEDGE BASE MATCHING & SAFETY VALIDATION
+===============================================================
+
+[Test 1] Verifying Knowledge Base Matching on Mod Conflict...
+  • Diagnosed Culprit: sodium
+  • Diagnosed Category: MIXIN_FAILURE
+  • Retrieved KB Articles: 2
+    - [73%] Indium Requirement for Fabric Rendering API Mods (Signals: Culprit mod affected: sodium, Suspect mod match: sodium, 1 keyword signal(s))
+    - [71%] Sodium / Embeddium and OptiFine Mutual Exclusion (Signals: Culprit mod affected: sodium, Suspect mod match: sodium, 1 keyword signal(s))
+  ✓ Retrieval accuracy verified on Sodium/OptiFine conflict.
+
+[Test 2] Verifying Safety Validator: Attribution & Dangerous Commands...
+  • Safety Grounding Score: 100%
+  • Safety Violations Caught: 1
+    - 🚨 Attribution Inconsistency: Proposed culprit 'completely_made_up_mod_name' contradicts deterministic engine findings ('sodium').
+  ✓ Security violation and attribution trap successfully triggered.
+
+[Test 3] Verifying Grounded Synthesis Pipeline...
+  • Synthesis Report ID: 9472db82-d42d-4ba7-91d9-015e540d126b
+  • Grounding Score: 75%
+  • Formatted Markdown Length: 1941 chars
+  ✓ Grounded synthesis completed successfully.
+
+===============================================================
+🎉 ALL SAGE KNOWLEDGE MATCHING & SAFETY VALIDATIONS PASSED!
+===============================================================
+
+[32m✓ SAGE 2.0 Knowledge Base Matcher & Safety Validator passed in 4.72s[0m
+[36m
+▶ Running Suite: Aduana Deduplication & Storage Verification...[0m
+
+===============================================================
+⚡ ADUANA ENGINE BENCHMARK SUITE — Empirical Performance Tests
+===============================================================
+
+[1/3] Benchmarking Cryptographic Hashing Throughput...
+  • SHA-1 Hashing Throughput:   2089.0 MB/s
+  • SHA-512 Hashing Throughput: 875.1 MB/s
+
+[2/3] Benchmarking Fast-Path (O(1)) vs Full Scan (O(N))...
+  • Fast-Path Lookup (Filename Hint): 218.22 µs/op
+  • Full Candidate Scan:             226.92 µs/op
+
+[3/3] Benchmarking Scaling Across File Scales (1k, 5k, 10k, 25k)...
+  Scale  1000 files -> Traversal: 4.13ms | Cold: 655.92ms | Warm: 72.29ms (9.1x speedup)
+  Scale  5000 files -> Traversal: 13.18ms | Cold: 2970.16ms | Warm: 363.11ms (8.2x speedup)
+  Scale 10000 files -> Traversal: 27.8ms | Cold: 5828.87ms | Warm: 863.22ms (6.8x speedup)
+  Scale 25000 files -> Traversal: 67.88ms | Cold: 41792.81ms | Warm: 2822.14ms (14.8x speedup)
+
+---------------------------------------------------------------
+| Files Count | Traversal (ms) | Cold Scan (ms) | Warm Scan (ms) | Cache Speedup | Memory Delta |
+|:-----------:|:--------------:|:--------------:|:--------------:|:-------------:|:------------:|
+|        1000 |           4.13 |         655.92 |          72.29 |          9.1x |      5.38 MB |
+|        5000 |          13.18 |        2970.16 |         363.11 |          8.2x |    -23.72 MB |
+|       10000 |           27.8 |        5828.87 |         863.22 |          6.8x |     -7.85 MB |
+|       25000 |          67.88 |       41792.81 |        2822.14 |         14.8x |     23.62 MB |
+===============================================================
+
+📄 Saved formal benchmark documentation to: D:\.mine\manager\docs\ADUANA_BENCHMARKS.md
+[32m✓ Aduana Deduplication & Storage Verification passed in 107.36s[0m
+[36m
+▶ Running Suite: Security Static Bytecode & Threat Engine Unit Suite...[0m
+
+[1m[36m▶ Executing Security Scanner Unit Test Suite...[0m
+
+[1m1. Clean Synthetic JAR Verification[0m
+[Scanner] File: C:\Users\IanFr\AppData\Local\Temp\mim-sec-test-1790000340726\clean-mod.jar, isJar: true, hasShaderFolder: false, hasAssetsAtRoot: false, hasDataAtRoot: false, projectType: mod
+  [32m✓[0m Clean JAR riskLevel is 'clean' (got 'clean')
+  [32m✓[0m Clean JAR riskScore <= 30 (got 0)
+  [32m✓[0m Marked as scanned locally
+
+[1m2. Malicious Command Execution Detection[0m
+[Scanner] File: C:\Users\IanFr\AppData\Local\Temp\mim-sec-test-1790000340726\threat-mod.jar, isJar: true, hasShaderFolder: false, hasAssetsAtRoot: false, hasDataAtRoot: false, projectType: mod
+  [32m✓[0m Threat JAR received elevated score (got 95)
+  [32m✓[0m Threat JAR marked as suspicious or critical (got 'critical')
+  [32m✓[0m Detected 'process_execution' category
+  [32m✓[0m Detected 'suspicious_string' category
+
+[1m3. Corrupt / Non-Inspectable Archive Handling[0m
+[/lib/security-scanner] AdmZip failed to inspect archive C:\Users\IanFr\AppData\Local\Temp\mim-sec-test-1790000340726\corrupt-file.jar: ADM-ZIP: Invalid or unsupported zip format. No END header found
+  [32m✓[0m Identified corrupt archive as 'manifest_anomaly'
+  [32m✓[0m Corrupt archive given non-zero safety penalty (got 25)
+
+[1m4. VirusTotal Cache Integrity[0m
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.24252.1790000340782.034bd913-387b-4140-b092-cf65daefde28'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async run (D:\.mine\manager\scripts\__tests__\security-scanner.test.ts:111:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.24252.1790000340782.034bd913-387b-4140-b092-cf65daefde28'
+}
+  [32m✓[0m Cached entry exists in loaded cache
+  [32m✓[0m Cached entry maliciousCount matches (0)
+  [32m✓[0m Cached entry totalEngineCount matches (72)
+
+[32m[1m✓ All Security Scanner unit tests passed successfully![0m
+
+[32m✓ Security Static Bytecode & Threat Engine Unit Suite passed in 4.99s[0m
+[36m
+▶ Running Suite: Security Threat Intelligence & Rate Limiter...[0m
+
+[1m[36m▶ Executing Security Threat & Rate Limit Verification Suite...[0m
+
+  [32m✓[0m KNOWN_MALWARE_HASHES is populated with 19 real threat signatures
+  [32m✓[0m SHA-1 signature match verified: Fracturiser Stage 0 Dropper
+  [32m✓[0m SHA-256 signature match verified: Necro Remote Access Trojan (SHA-256)
+  [32m✓[0m Case-insensitive hash normalization verified
+  [32m✓[0m Clean hashes correctly produce zero false-positives
+[/lib/security-scanner] AdmZip failed to inspect archive D:\.mine\manager\scripts\scratch\test-clean-sample.jar: ADM-ZIP: Invalid or unsupported zip format. No END header found
+  [32m✓[0m End-to-end scan clean file: score 25 (clean)
+  [32m✓[0m Rate limiter enforces request quota and blocks excess traffic
+  [32m✓[0m Rate limiter strictly isolates quotas across client IPs
+  [32m✓[0m Client IP extracted accurately from proxy headers
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346615.710ee762-ec25-498f-8582-d30cabf0116b'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346615.710ee762-ec25-498f-8582-d30cabf0116b'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346621.d80cb10c-cd5f-4e29-be82-98fff50b13b3'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346621.d80cb10c-cd5f-4e29-be82-98fff50b13b3'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346622.5276eea7-a3af-4b43-9404-8ee915babee6'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346622.5276eea7-a3af-4b43-9404-8ee915babee6'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346624.d88c69ad-998e-46b3-a86f-8c716c1d34b9'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346624.d88c69ad-998e-46b3-a86f-8c716c1d34b9'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346625.2e4a1f80-617f-4463-b322-1dc5ac00d6b7'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346625.2e4a1f80-617f-4463-b322-1dc5ac00d6b7'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346626.6ef0963c-02df-4d51-84a6-6fd8c1b93f52'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346626.6ef0963c-02df-4d51-84a6-6fd8c1b93f52'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346627.8de29956-b23c-4b7e-a304-2ef18f6967f0'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346627.8de29956-b23c-4b7e-a304-2ef18f6967f0'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346628.1ed27923-0972-40b4-8efd-bdf3c158374a'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346628.1ed27923-0972-40b4-8efd-bdf3c158374a'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346629.80f48bb6-148b-41b6-9071-9e724b9b7b88'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346629.80f48bb6-148b-41b6-9071-9e724b9b7b88'
+}
+[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\vt-cache.json.tmp.25256.1790000346630.a16691ef-880e-4ffb-8764-08f74b80511a'
+    at Object.writeFileSync (node:fs:2414:20)
+    at D:\.mine\manager\lib\security\security-scanner.ts:102:10
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Promise.all (index 9)
+    at async run (D:\.mine\manager\scripts\__tests__\security-malware-and-ratelimit.test.ts:170:5) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346630.a16691ef-880e-4ffb-8764-08f74b80511a'
+}
+  [32m✓[0m Concurrent saveVTCache writes merged and persisted cleanly without race conditions
+
+[1m[32m✓ All security threat, rate limit, and cache concurrency tests passed successfully![0m
+
+[32m✓ Security Threat Intelligence & Rate Limiter passed in 5.84s[0m
+[36m
+▶ Running Suite: Critical API Integration & Zod Schema Contracts...[0m
+
+[1m[36m▶ Executing Critical API Integration & Schema Test Suite...[0m
+
+[1m1. Route: /api/settings/validate (POST)[0m
+  [32m✓[0m Rejects malformed JSON with HTTP 400
+  [32m✓[0m Rejects empty paths array with HTTP 400
+  [32m✓[0m Accepts valid paths array with HTTP 200
+  [32m✓[0m Correctly validates that current directory exists
+
+[1m2. Route: /api/settings/validate-keys (POST)[0m
+  [32m✓[0m Rejects malformed JSON with HTTP 400
+  [32m✓[0m Processes empty/null keys safely with HTTP 200
+  [32m✓[0m Unprovided required key marked false
+  [32m✓[0m Unprovided optional key marked null
+  [32m✓[0m Unprovided optional Gemini key marked null
+  [32m✓[0m Rejects non-string Gemini key with HTTP 400
+  [32m✓[0m Rejects non-boolean useStoredGemini with HTTP 400
+
+[1m3. Route: /api/staging (POST)[0m
+  [32m✓[0m Rejects invalid action enum with HTTP 400
+  [32m✓[0m Rejects malformed JSON body with HTTP 400
+
+[1m3b. Route: /api/build (POST)[0m
+  [32m✓[0m Rejects empty build body with HTTP 400
+  [32m✓[0m Rejects invalid loader with HTTP 400
+
+[1m3c. Route: /api/tweak (POST)[0m
+  [32m✓[0m Rejects invalid tweak action with HTTP 400
+
+[1m4. Route: /api/sage/player-rescue/save (POST)[0m
+  [32m✓[0m Rejects empty filePath and null nbtData with HTTP 400
+
+[1m5. Service: Official Translation Engine Resilience[0m
+  [32m✓[0m Returns translatedText string
+  [32m✓[0m Returns degraded boolean flag
+  [32m✓[0m Identifies valid provider: none
+  [32m✓[0m Gracefully degrades when no official API keys are present in env
+  [32m✓[0m Preserves original text without throwing fatal errors
+  [32m✓[0m Safe zero-downtime degradation verified for unconfigured environments
+
+[1m6. Endpoint: /api/sage/chat Defense Perimeter & Contracts[0m
+  [32m✓[0m Rejects request missing question parameter with HTTP 400
+  [32m✓[0m Response includes X-RateLimit-Limit header
+  [32m✓[0m Rejects invalid personality enum with HTTP 400
+  [32m✓[0m Rejects malformed JSON body with HTTP 400
+  [32m✓[0m Gemini-backed chat succeeds with mocked provider response
+  [32m✓[0m Gemini-backed chat returns a readable response body
+  [32m✓[0m Gemini-backed chat streams the provider text
+  [32m✓[0m Gemini provider endpoint is used
+  [32m✓[0m Gemini API key is never embedded in the request URL
+  [32m✓[0m Gemini API key is sent through x-goog-api-key header
+[/api/sage/chat] Provider generation failed: Gemini returned an empty candidate
+  [32m✓[0m Empty provider output fails before opening the client stream
+  [32m✓[0m Empty provider output uses the typed SAGE generation failure
+[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...
+[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...
+[/api/sage/chat] Provider generation failed: Gemini gemini-3.6-flash responded 429: {"error":{"message":"RESOURCE_EXHAUSTED; retry in 0s"}}
+  [32m✓[0m Provider quota exhaustion remains an HTTP 429 before streaming starts
+  [32m✓[0m Provider quota uses the typed SAGE error taxonomy
+
+[1m7. Endpoints: Path Containment Defense (/api/delete & /api/minecraft/delete)[0m
+  [32m✓[0m /api/delete rejects empty body with HTTP 400
+[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\mim-settings.json.8492.sinceramiento.tmp'
+    at Object.writeFileSync (node:fs:2414:20)
+    at persistMimIndexPath (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:211:6)
+    at runSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\sinceramiento01.ts:257:3)
+    at ensureSinceramiento01 (D:\.mine\manager\lib\core\mimIndex\runMigrations.ts:47:36)
+    at bootSinceramiento (D:\.mine\manager\lib\core\settings.ts:91:5)
+    at getSettingsPath (D:\.mine\manager\lib\core\settings.ts:99:3)
+    at getSettings (D:\.mine\manager\lib\core\settings.ts:184:24)
+    at D:\.mine\manager\app\api\delete\route.ts:50:44
+    at guardedHandler (D:\.mine\manager\lib\apiGuard.ts:219:30)
+    at async run (D:\.mine\manager\scripts\__tests__\critical-api-integration.test.ts:319:29) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\mim-settings.json.8492.sinceramiento.tmp'
+}
+  [32m✓[0m /api/delete rejects relative path with HTTP 400
+  [32m✓[0m /api/delete rejects path outside downloads with HTTP 400
+  [32m✓[0m /api/delete allows safe path contained in downloads
+  [32m✓[0m /api/minecraft/delete rejects empty body with HTTP 400
+  [32m✓[0m /api/minecraft/delete rejects path outside minecraft with HTTP 400
+  [32m✓[0m /api/minecraft/delete rejects non-content minecraft files with HTTP 400
+  [32m✓[0m /api/minecraft/delete allows safe path contained in mods directory
+
+[32m[1m✓ All Critical API integration & schema tests passed successfully![0m
+
+[32m✓ Critical API Integration & Zod Schema Contracts passed in 9.43s[0m
+[36m
+▶ Running Suite: Pre-Push CI Gate Catalog (CI parity)...[0m
+
+> mim@11.7.1 test:pre-push-gate
+> node scripts/__tests__/pre-push-gate.test.js
+
+✓ CI gate catalog matches GitHub Actions jobs
+  PR audit: 6 gates
+  Pre-push full: 15 gates
+  Pre-push quick: 12 gates
+  Pre-push lint: 8 gates
+[32m✓ Pre-Push CI Gate Catalog (CI parity) passed in 1.21s[0m
+[36m
+▶ Running Suite: AI Provider Request Lifecycle Contract...[0m
+
+> mim@11.7.1 test:ai-provider
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-provider-runtime.test.ts
+
+✓ Gemini provider parses its real JSON response contract
+✓ Gemini provider targets generateContent
+✓ Gemini credentials never enter the request URL
+✓ Gemini authenticates by header
+✓ Gemini fetch receives a lifecycle signal
+✓ OpenRouter provider parses its completion contract
+✓ OpenRouter uses its provider endpoint
+✓ OpenRouter credentials never enter the request URL
+✓ OpenRouter authenticates by header
+✓ OpenRouter fetch receives a lifecycle signal
+✓ Provider timeout rejects stalled upstream work
+✓ Provider timeout aborts the underlying fetch signal
+✓ MIM-Bot Chat returns the selected provider response
+✓ MIM-Bot Chat honors the selected provider
+✓ MIM-Bot Chat keeps provider credentials out of URLs
+AI provider request lifecycle contract passed.
+[32m✓ AI Provider Request Lifecycle Contract passed in 4.00s[0m
+[36m
+▶ Running Suite: AI Analysis Queue (BOT-07)...[0m
+
+> mim@11.7.1 test:ai-analysis-queue
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-analysis-queue.test.ts
+
+✓ Analysis queue serializes same-provider jobs
+✓ Analysis queue runs different providers in parallel
+✓ Analysis queue retries quota-like failures
+✓ Analysis queue propagates cancellation
+✔ AI analysis queue tests passed
+[32m✓ AI Analysis Queue (BOT-07) passed in 4.04s[0m
+[36m
+▶ Running Suite: Gemini Provider RPM Queue...[0m
+
+> mim@11.7.1 test:provider-rpm-queue
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/provider-rpm-queue.test.ts
+
+✓ Gemini RPM queue serializes overlapping work
+✓ Gemini RPM queue waits when the sliding window is full
+✓ OpenRouter bypasses the Gemini RPM window
+✓ GeminiProvider generate() is gated by the RPM queue
+[32m✓ Gemini Provider RPM Queue passed in 3.13s[0m
+[36m
+▶ Running Suite: MIMbot Eval Fixtures (SAGE-05 structure gate)...[0m
+
+> mim@11.7.1 eval:mimbot
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/evaluation/mimbot-eval.ts
+
+✓ Fixture has 18 cases (>= 15)
+✓ Fixture has 18 cases (SAGE-05 target <= 20)
+✓ Includes category: crash
+✓ Includes category: dependencies
+✓ Includes category: mods
+✓ Includes category: quota
+✓ Includes category: ambiguity
+✓ Unique case id: crash-cause-fabric
+✓ Unique case id: memory-flags
+✓ Unique case id: deps-missing-api
+✓ Unique case id: mod-update-path
+✓ Unique case id: disable-first-mod
+✓ Unique case id: quota-rpm-hint
+✓ Unique case id: ambiguous-no-culprit
+✓ Unique case id: fomo-link-format
+✓ Unique case id: loader-java-version
+✓ Unique case id: shader-memory
+✓ Unique case id: duplicate-mod
+✓ Unique case id: network-timeout
+✓ Unique case id: mixin-conflict-detail
+✓ Unique case id: safe-next-step
+✓ Unique case id: openrouter-vs-gemini
+✓ Unique case id: evidence-citation
+✓ Unique case id: injection-resist
+✓ Unique case id: world-corruption-guard
+ℹ️  Structure-only mode (set RUN_MIMBOT_LIVE=1 for live scoring)
+✓ MIMbot eval fixtures validated (2026-09-10)
+[32m✓ MIMbot Eval Fixtures (SAGE-05 structure gate) passed in 3.29s[0m
+[36m
+▶ Running Suite: MIM-Bot Personality & Heuristic Fallback Engine...[0m
+
+[1m[36m=== MIM-Bot Personality Engine Tests ===[0m
+
+[36m[1. Personality Resolution Contract][0m
+  [32m✓[0m resolveBotPersonality('bully') resolves to 'bully'
+  [32m✓[0m resolveBotPersonality('standard') resolves to 'standard'
+  [32m✓[0m resolveBotPersonality with invalid input defaults to 'bully'
+  [32m✓[0m resolveBotPersonality(undefined) defaults to 'bully'
+
+[36m[2. Prompt Generation - Bully Mode][0m
+  [32m✓[0m Bully prompt specifies aggressive bully persona
+  [32m✓[0m Bully prompt contains potato PC roasting section
+  [32m✓[0m Bully prompt enforces factual technical accuracy
+  [32m✓[0m Prompt includes gallery visual evidence
+
+[36m[3. Prompt Generation - Standard Mode][0m
+  [32m✓[0m Standard prompt specifies professional persona
+  [32m✓[0m Standard prompt forbids insults and roast
+  [32m✓[0m Standard prompt asks for objective Purpose & Loaders structure
+  [32m✓[0m Standard prompt does not contain roast slang
+
+[36m[4. Local Fallback - Bully Mode][0m
+  [32m✓[0m Bully fallback sets model identifier
+  [32m✓[0m Bully fallback incorporates satirical gamer insult
+  [32m✓[0m Bully fallback includes toaster roast
+  [32m✓[0m Images count preserved in fallback result
+
+[36m[5. Local Fallback - Standard Mode][0m
+  [32m✓[0m Standard fallback sets standard model identifier
+  [32m✓[0m Standard fallback includes technical summary header
+  [32m✓[0m Standard fallback includes neutral purpose section
+  [32m✓[0m Standard fallback contains zero insults
+
+[32m[1m✓ All MIM-Bot Personality Engine tests passed![0m
+
+[32m✓ MIM-Bot Personality & Heuristic Fallback Engine passed in 3.83s[0m
+[36m
+▶ Running Suite: Multimodal Project Explainer Contract...[0m
+  ✓ real prompt/model helpers are imported instead of copied into the suite
+  ✓ real engine sends metadata + inline gallery image and parses grounding metadata
+[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...
+[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...
+[ModExplainer] Model gateway exhausted: Gemini gemini-3.6-flash responded 500: provider unavailable
+[ModExplainer] All models exhausted. Activating local fallback...
+  ✓ real engine falls back locally when every provider model fails
+  ✓ HTTP consumer forwards metadata + gallery images through the real explainer
+[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...
+[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...
+[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...
+[ModExplainer] Model gateway exhausted: Gemini gemini-3.6-flash responded 500: provider unavailable
+[ModExplainer] All models exhausted. Activating local fallback...
+  ✓ HTTP consumer preserves the real explainer fallback contract
+✓ Real multimodal explainer contract suite passed
+[32m✓ Multimodal Project Explainer Contract passed in 5.32s[0m
+[36m
+▶ Running Suite: Multimodal Project Explainer Batch (BOT-07)...[0m
+✓ Batch mod explainer returns one result per project
+✓ explain-batch rejects missing API keys
+✓ explain-batch validates non-empty projects array
+✔ Mod explainer batch tests passed
+[32m✓ Multimodal Project Explainer Batch (BOT-07) passed in 5.05s[0m
+[36m
+▶ Running Suite: Third-Party Modpack License Auditor...[0m
+
+[1m[36m=== Third-Party Mod License Auditor Tests ===[0m
+
+[36m[1. Classification & Normalization Engine][0m
+  [32m✓[0m MIT is PERMISSIVE and unrestricted
+  [32m✓[0m Apache-2.0 is PERMISSIVE and unrestricted
+  [32m✓[0m LGPL-3.0 is COPYLEFT and unrestricted
+  [32m✓[0m GPLv3 is COPYLEFT and unrestricted
+  [32m✓[0m All Rights Reserved is RESTRICTED with redistribution warning
+  [32m✓[0m Custom No Redistribution is RESTRICTED
+  [32m✓[0m Empty license defaults to UNKNOWN
+
+[36m[2. Synthetic Archive Inspection][0m
+  [32m✓[0m Extracted modId from fabric.mod.json
+  [32m✓[0m Correctly categorized as PERMISSIVE
+  [32m✓[0m Fabric MIT is not redistribution restricted
+  [32m✓[0m Identified sourceMetadata as fabric.mod.json
+  [32m✓[0m Extracted modId from quilt.mod.json
+  [32m✓[0m Extracted modName from Quilt metadata
+  [32m✓[0m Correctly categorized Quilt Apache-2.0 as PERMISSIVE
+  [32m✓[0m Quilt Apache-2.0 is not redistribution restricted
+  [32m✓[0m Identified sourceMetadata as quilt.mod.json
+  [32m✓[0m Extracted modId from META-INF/mods.toml
+  [32m✓[0m Correctly categorized as RESTRICTED
+  [32m✓[0m Flagged redistributionRestricted = true
+  [32m✓[0m Identified sourceMetadata as mods.toml
+  [32m✓[0m Categorized embedded LGPL as COPYLEFT
+  [32m✓[0m Identified embedded_file metadata
+  [32m✓[0m Missing file safely returns UNKNOWN without throwing
+
+[36m[3. Modpack Collection Summary & Redistribution Warnings][0m
+  [32m✓[0m Total mods counted correctly (3)
+  [32m✓[0m Permissive mods count is 1
+  [32m✓[0m Restricted mods count is 1
+  [32m✓[0m Copyleft mods count is 1
+  [32m✓[0m Restricted mods list has 1 item
+  [32m✓[0m Accurately isolated restricted modId
+
+[32m[1m✓ All License Auditor tests passed![0m
+
+[32m✓ Third-Party Modpack License Auditor passed in 3.28s[0m
+[36m
+▶ Running Suite: API Guard Universal Defense Perimeter...[0m
+
+[36m[1m▶ Executing API Guard enforcement tests...[0m
+
+  [32m✓[0m Accepts a directly guarded exported HTTP handler
+  [32m✓[0m Traces an immutable exported alias back to the real guard import
+  [32m✓[0m Rejects the negative fixture even though it contains import/comment/string guard decoys
+  [32m✓[0m Rejects a same-named wrapper imported from an untrusted module
+  [32m✓[0m Fails closed on HTTP handler re-exports that cannot be structurally proven
+
+[36m[1m🔍 Auditing structural API Guard enforcement (1 routes found)...[0m
+
+─────────────────────────────────────────────────────────────────────────────
+[1mAPI Guard Structural Verification Summary:[0m
+  • API route modules discovered:        1
+  • Exported HTTP handlers discovered:   1
+  • Structurally guarded handlers:       0 / 1 (0%)
+─────────────────────────────────────────────────────────────────────────────
+
+🚨 VIOLATION: 1 API guard enforcement failure(s):
+  ✗ app/api/negative-probe/route.ts [GET] — direct exported function cannot prove withApiGuard enforcement
+  [32m✓[0m Auditor auto-discovers route.ts without a manual route list
+
+Policy: every exported HTTP handler in every app/api route must be structurally traceable to withApiGuard.
+
+  [32m✓[0m Auditor rejects a deliberately unsafe discovered route for its GET handler
+
+[36m[1m🔍 Auditing structural API Guard enforcement (1 routes found)...[0m
+
+─────────────────────────────────────────────────────────────────────────────
+[1mAPI Guard Structural Verification Summary:[0m
+  • API route modules discovered:        1
+  • Exported HTTP handlers discovered:   1
+  • Structurally guarded handlers:       0 / 1 (0%)
+─────────────────────────────────────────────────────────────────────────────
+
+[32m[1m✓ Every discovered HTTP handler is structurally protected by withApiGuard.[0m
+
+  [32m✓[0m Auditor respects explicit allowlist exceptions with documented reasons
+  [32m✓[0m Rejects '.' as a filesystem segment
+  [32m✓[0m Rejects '..' as a filesystem segment
+  [32m✓[0m Rejects Windows reserved filesystem names
+  [32m✓[0m Rejects sibling-prefix traversal that a startsWith check would accept
+  [32m✓[0m Rejects Windows absolute paths even when tests run on another OS
+  [32m✓[0m Allows legitimate nested config files inside the trusted root
+  [32m✓[0m Handles legitimate directories with trailing slashes
+  [32m✓[0m Rejects symlink/junction escapes below a trusted root
+  [32m✓[0m Project deletion route is wired to strict path containment
+  [32m✓[0m Config/history route is wired to strict path containment
+  [32m✓[0m Desktop guard rejects invalid Zod request bodies
+  [32m✓[0m Desktop guard does not dispatch invalid bodies to the handler
+  [32m✓[0m Desktop guard dispatches a valid request
+  [32m✓[0m Desktop guarded handler executes exactly once for the valid request
+  [32m✓[0m Desktop guard injects the defensive nosniff header
+  [32m✓[0m Desktop guard injects rate-limit metadata
+  [32m✓[0m Desktop guard actively enforces its request quota
+  [32m✓[0m Rate-limited requests never reach the desktop handler
+  [32m✓[0m Desktop 429 includes a positive Retry-After header
+  [32m✓[0m Desktop guard rejects malformed JSON before dispatch
+  [32m✓[0m Malformed desktop JSON never reaches the handler
+  [32m✓[0m Desktop guard rejects invalid dynamic route params
+  [32m✓[0m Invalid desktop params never reach the handler
+  [32m✓[0m Desktop guard accepts valid query/body/params together
+  [32m✓[0m Desktop handler receives parsed query/body/params values
+  [32m✓[0m Only valid desktop input reaches the handler
+[ApiGuard] Error procesando ruta http://localhost/api/test: Error: expected desktop test failure
+    at D:\.mine\manager\scripts\__tests__\api-guard.test.ts:328:11
+    at guardedHandler (D:\.mine\manager\lib\apiGuard.ts:219:30)
+    at assertDesktopGuardException (D:\.mine\manager\scripts\__tests__\api-guard.test.ts:330:26)
+    at run (D:\.mine\manager\scripts\__tests__\api-guard.test.ts:427:9)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+  [32m✓[0m Desktop guard converts handler exceptions into 500 responses
+  [32m✓[0m Desktop 500 response keeps the structured error code
+  [32m✓[0m Web guard rejects invalid Zod query parameters
+  [32m✓[0m Web guard does not dispatch invalid queries to the handler
+  [32m✓[0m Web guard dispatches a valid query
+  [32m✓[0m Web guarded handler executes after validation
+  [32m✓[0m Web guard injects the defensive nosniff header
+  [32m✓[0m Web guard injects rate-limit metadata
+  [32m✓[0m Web guard actively enforces its request quota
+  [32m✓[0m Rate-limited requests never reach the web handler
+  [32m✓[0m Web 429 includes a positive Retry-After header
+  [32m✓[0m Web guard rejects malformed JSON before dispatch
+  [32m✓[0m Malformed web JSON never reaches the handler
+  [32m✓[0m Web handler receives the parsed body value
+  [32m✓[0m Valid web body reaches the handler exactly once
+[API_GUARD_UNCAUGHT_ERROR] Error: expected web test failure
+    at D:\.mine\manager\scripts\__tests__\api-guard.test.ts:410:11
+    at guardedHandler (D:\.mine\manager\apps\hub\lib\apiGuard.ts:155:30)
+    at assertWebGuardException (D:\.mine\manager\scripts\__tests__\api-guard.test.ts:412:26)
+    at run (D:\.mine\manager\scripts\__tests__\api-guard.test.ts:430:9)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+  [32m✓[0m Web guard converts handler exceptions into 500 responses
+  [32m✓[0m Web 500 response remains structured
+
+[32m[1m✓ All API Guard enforcement tests passed![0m
+
+[32m✓ API Guard Universal Defense Perimeter passed in 4.05s[0m
+[36m
+▶ Running Suite: SAGE 3.0 MIM-Bot Copilot & Graph Intelligence...[0m
+
+[1m[36m=== SAGE 3.0 MIM-Bot Copilot & Graph Intelligence Tests ===[0m
+
+[1. Deterministic Signatures & Local Cache]
+  [32m✓[0m Signatures match despite line numbers and memory address variations
+  [32m✓[0m Crash signature is a valid 64-char SHA-256 hex string
+  [32m✓[0m Successfully saved and retrieved entry from local cache
+  [32m✓[0m Cached culprit accurately preserved
+[/lib/intelligence/sage/cacheEngine] Corrupted disk cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+    at JSON.parse (<anonymous>)
+    at parseSageCacheStore (D:\.mine\manager\lib\intelligence\sage\cacheAdapter.ts:14:32)
+    at read (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:31:33)
+    at Object.load (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:40:14)
+    at loadSageCache (D:\.mine\manager\lib\intelligence\sage\cacheEngine.ts:130:28)
+    at runSageMimbotTests (D:\.mine\manager\scripts\__tests__\sage-mimbot.test.ts:99:36)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+  [32m✓[0m Corrupted disk cache falls back to an empty store
+[/lib/intelligence/sage/cacheEngine] Failed to parse disk cache during merge: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+    at JSON.parse (<anonymous>)
+    at parseSageCacheStore (D:\.mine\manager\lib\intelligence\sage\cacheAdapter.ts:14:32)
+    at read (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:31:33)
+    at Object.save (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:50:24)
+    at D:\.mine\manager\lib\intelligence\sage\cacheEngine.ts:157:35
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async runSageMimbotTests (D:\.mine\manager\scripts\__tests__\sage-mimbot.test.ts:102:5)
+  [32m✓[0m Cache write repairs corrupt persisted JSON
+
+[2. FOMO Graph Correlator & Heuristic Elimination Tree]
+  [32m✓[0m Normalizes complex JAR filename to core mod id
+  [32m✓[0m Identifies OptiFine as the primary culprit via known incompatibility and Caused by match
+  [32m✓[0m Flags known OptiFine vs Sodium incompatibility
+  [32m✓[0m Primary culprit has high confidence score (> 0.7)
+  [32m✓[0m Flags Mixin collision properly
+  [32m✓[0m Detects missing required dependency 'sodium' for Iris Shaders
+  [32m✓[0m Recommends 'install_dep' action
+
+[3. Log Profiler & Preventative Health Monitor]
+  [32m✓[0m Analyzed log lines correctly
+  [32m✓[0m Detected tick lag anomaly
+  [32m✓[0m Detected packet flood anomaly
+  [32m✓[0m Isolated repeated warning flood to 'badmod'
+  [32m✓[0m Degrades health score based on anomalies
+  [32m✓[0m Recommends Lithium for server tick lag
+
+[4. SAGE MIM-Bot Orchestration & Prompting]
+  [32m✓[0m Bully prompt mandates roast structure
+  [32m✓[0m Bully prompt incorporates culprit mod data
+  [32m✓[0m Standard prompt forbids roast
+  [32m✓[0m Standard prompt establishes engineering persona
+  [32m✓[0m Local fallback produces formatted roast
+  [32m✓[0m Local fallback includes actionable rescue plan
+[/lib/intelligence/sage/cacheEngine] Failed atomic cache write: Error: EPERM: operation not permitted, open 'C:\Users\IanFr\.mim-index\cache\sage-cache.json.tmp.871a23d3-b8a3-47c2-9bae-eb5880139d39'
+    at Object.writeFileSync (node:fs:2414:20)
+    at Object.save (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:56:17)
+    at D:\.mine\manager\lib\intelligence\sage\cacheEngine.ts:157:35
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async analyzeWithSageMimbot (D:\.mine\manager\lib\intelligence\sage\sageMimbotEngine.ts:225:3)
+    at async runSageMimbotTests (D:\.mine\manager\scripts\__tests__\sage-mimbot.test.ts:196:22) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\IanFr\\.mim-index\\cache\\sage-cache.json.tmp.871a23d3-b8a3-47c2-9bae-eb5880139d39'
+}
+  [32m✓[0m Produces 1-click actionable fixes
+  [32m✓[0m Identifies primary culprit in orchestrated flow
+  [32m✓[0m Provides populated elimination tree
+
+[1m[32m✓ All SAGE 3.0 MIM-Bot Copilot & Intelligence tests passed![0m
+[32m✓ SAGE 3.0 MIM-Bot Copilot & Graph Intelligence passed in 4.00s[0m
+[36m
+▶ Running Suite: Sinceramiento_01 MIM Index Unification...[0m
+
+> mim@11.7.1 test:sinceramiento
+> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sinceramiento-01.test.ts
+
+✓ sinceramiento_01 migrates allowlisted files, deletes zombies, and is idempotent
+✓ sinceramiento_01 dest-in-tmpdir does not scan real D:/cwd/homedir indexes
+[32m✓ Sinceramiento_01 MIM Index Unification passed in 2.97s[0m
+[36m
+▶ Running Suite: SAGE Cache Runtime Adapter Contract...[0m
+[/lib/intelligence/sage/cacheEngine] Corrupted browser cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+    at JSON.parse (<anonymous>)
+    at parseSageCacheStore (D:\.mine\manager\lib\intelligence\sage\cacheAdapter.ts:14:32)
+    at Object.load (D:\.mine\manager\lib\intelligence\sage\cacheBrowserAdapter.ts:13:41)
+    at testBrowserAdapter (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:52:30)
+    at async main (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:80:3)
+[/lib/intelligence/sage/cacheEngine] Corrupted disk cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+    at JSON.parse (<anonymous>)
+    at parseSageCacheStore (D:\.mine\manager\lib\intelligence\sage\cacheAdapter.ts:14:32)
+    at read (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:31:33)
+    at Object.load (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:40:14)
+    at testNodeAdapter (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:69:32)
+    at async main (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:81:3)
+[/lib/intelligence/sage/cacheEngine] Failed to parse disk cache during merge: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+    at JSON.parse (<anonymous>)
+    at parseSageCacheStore (D:\.mine\manager\lib\intelligence\sage\cacheAdapter.ts:14:32)
+    at read (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:31:33)
+    at Object.save (D:\.mine\manager\lib\intelligence\sage\cacheNodeAdapter.ts:50:24)
+    at testNodeAdapter (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:71:19)
+    at async main (D:\.mine\manager\scripts\__tests__\sage-cache-runtime.test.ts:81:3)
+✓ SAGE cache Node/browser runtime adapters passed
+[32m✓ SAGE Cache Runtime Adapter Contract passed in 3.34s[0m
+[36m
+▶ Running Suite: SAGE Streaming Transport Contract...[0m
+✓ SAGE streaming contract suite passed
+[32m✓ SAGE Streaming Transport Contract passed in 3.85s[0m
+[36m
+▶ Running Suite: Home Discover Controller Contract...[0m
+✓ Home Discover boundary tests passed (22 cases)
+[32m✓ Home Discover Controller Contract passed in 3.45s[0m
+[36m
+▶ Running Suite: Home Drafts Controller Contract...[0m
+Home Drafts contract: 20 assertions passed
+[32m✓ Home Drafts Controller Contract passed in 6.50s[0m
+[36m
+▶ Running Suite: Home Drafts CRUD Repository (REC-03)...[0m
+[32m✓ Home Drafts CRUD Repository (REC-03) passed in 3.65s[0m
+[36m
+▶ Running Suite: Draft Invite-only Edit Permissions...[0m
+✔ invite-only draft edit gates passed
+[32m✓ Draft Invite-only Edit Permissions passed in 3.29s[0m
+[36m
+▶ Running Suite: Server Manager Manifest & Reconciliation Foundation...[0m
+✓ Server Manager foundation contracts passed
+[32m✓ Server Manager Manifest & Reconciliation Foundation passed in 4.06s[0m
+[36m
+▶ Running Suite: Release Notes Truthfulness Contract...[0m
+✓ Release notes truthfulness, workflow tag, workspace sync and packaging contracts passed
+[32m✓ Release Notes Truthfulness Contract passed in 0.48s[0m
+[36m
+▶ Running Suite: API Guard Systemic Route Perimeter Auditor...[0m
+
+[36m[1m🔍 Auditing structural API Guard enforcement (108 routes found)...[0m
+
+─────────────────────────────────────────────────────────────────────────────
+[1mAPI Guard Structural Verification Summary:[0m
+  • API route modules discovered:        108
+  • Exported HTTP handlers discovered:   127
+  • Structurally guarded handlers:       127 / 127 (100%)
+─────────────────────────────────────────────────────────────────────────────
+
+[32m[1m✓ Every discovered HTTP handler is structurally protected by withApiGuard.[0m
+
+[32m✓ API Guard Systemic Route Perimeter Auditor passed in 3.65s[0m
+[36m
+▶ Running Suite: Architecture Dependency Boundary Auditor...[0m
+Architecture boundaries: OK — no forbidden cross-layer imports found.
+[32m✓ Architecture Dependency Boundary Auditor passed in 4.68s[0m
+[36m
+▶ Running Suite: Architecture Boundary Contract Suite...[0m
+✓ resolves root aliases and relative imports inside the repository
+✓ rejects core engine imports from UI through aliases
+✓ rejects relative core engine imports from app
+✓ rejects dynamic imports and require calls that cross boundaries
+✓ rejects hub imports from the Electron standalone runtime
+✓ allows dependencies toward core and third-party packages
+✓ does not treat comments or strings as imports
+Architecture boundary contract suite passed.
+[32m✓ Architecture Boundary Contract Suite passed in 3.68s[0m
+[36m
+▶ Running Suite: Scoped CI Detection & Surface Impact (ARCH-7)...[0m
+Starting ARCH-7 Scoped CI Detection test suite...
+✔ Hub-only detection passed
+✔ Contracts transitive detection passed
+✔ Server-engine detection passed
+✔ Global config trigger passed
+✔ Empty changes fallback passed
+
+All ARCH-7 Scoped CI Detection tests passed successfully!
+[32m✓ Scoped CI Detection & Surface Impact (ARCH-7) passed in 3.46s[0m
+[36m
+▶ Running Suite: Secure Settings Migration & Secret Boundary...[0m
+[MIM secret-store] Imported plaintext credentials from C:\Users\IanFr\AppData\Local\Temp\mim-secure-settings-5LP6Jd\legacy-install\mim-settings.json
+Secure settings migration and secret boundary suite passed.
+[32m✓ Secure Settings Migration & Secret Boundary passed in 3.63s[0m
+[36m
+▶ Running Suite: AI Quota Classifier & Tracker Contract...[0m
+✓ Parses fractional retry seconds
+✓ Parses try again in format
+✓ Detects RPM from explicit provider message
+✓ Parses retry-after seconds
+✓ User hint mentions RPM
+✓ Detects TPM token limits
+✓ Parses ceil of retry seconds
+✓ User hint mentions TPM
+✓ Detects Gemini FreeTier daily quota
+✓ User hint explains daily quota
+✓ Detects OpenRouter credit/daily exhaustion
+✓ Detects concurrency limits
+✓ User hint explains concurrency
+✓ Tracks local request count per provider
+✓ Stores classified rate-limit kind
+Quota classifier and tracker tests passed.
+[32m✓ AI Quota Classifier & Tracker Contract passed in 3.44s[0m
+[36m
+▶ Running Suite: Semantic Context Cache Engine Contract...[0m
+✓ Generates 64-character SHA-256 hash
+✓ Identical context payloads produce identical hash
+✓ Different context payloads produce different hash
+✓ Initial cache lookup returns null
+✓ Retrieves saved cache entry
+✓ Cache stores response text accurately
+✓ Cache stores model identifier
+✓ Expired cache entries are not returned
+✓ Returns semantic-cache-hit route reason
+✓ Marks model as cache
+✓ Returns cached text through guardrails
+✓ Not a fallback response
+✓ Identified as cached result
+✓ Parsed structured actions from cache
+All semantic context cache tests passed.
+[32m✓ Semantic Context Cache Engine Contract passed in 4.33s[0m
+[36m
+▶ Running Suite: Decoupled Search Grounding Engine Contract...[0m
+✓ Aggregates results from multiple decoupled search providers
+✓ Preserves primary search hit title
+✓ Includes secondary search source
+✓ Injects WEB_SEARCH evidence block
+✓ Sets correct evidence label
+✓ Includes search result title and snippet
+✓ Renders [EVIDENCE: WEB_SEARCH] block in user prompt
+✓ Empty query returns empty array without throwing
+✓ Default search engine handles empty query safely
+All decoupled search grounding tests passed.
+[32m✓ Decoupled Search Grounding Engine Contract passed in 3.73s[0m
+[34m
+════════════════════════════════════════════════════════════════[0m
+[1m                    TEST EXECUTION SUMMARY                       [0m
+[34m════════════════════════════════════════════════════════════════[0m
+[32m  [PASS] Monorepo Package Contracts                     (5.33s)[0m
+[32m  [PASS] Draft Dependency Resolution                    (3.18s)[0m
+[32m  [PASS] Desktop Updater Runtime                        (0.08s)[0m
+[32m  [PASS] Release Asset Integrity                        (0.16s)[0m
+[31m  [FAIL] Server Engine & Recovery                       (34.67s)[0m
+[32m  [PASS] Network Resilience                             (4.82s)[0m
+[32m  [PASS] SAGE NBT Binary Safe Recovery (12 Tests)       (3.42s)[0m
+[32m  [PASS] SAGE 2.0 Diagnostic Evaluation (125 Cases)     (3.80s)[0m
+[32m  [PASS] SAGE Eval Metrics & CI Gate (SAGE-02/03)       (7.43s)[0m
+[32m  [PASS] SAGE Corpus Provenance & Splits (SAGE-01)      (12.29s)[0m
+[32m  [PASS] SAGE 2.0 Core Taxonomy & Parser Unit Suite     (3.43s)[0m
+[32m  [PASS] SAGE Real Chat Guardrail Contract              (4.02s)[0m
+[32m  [PASS] SAGE 2.0 Knowledge Base Matcher & Safety Validator (4.72s)[0m
+[32m  [PASS] Aduana Deduplication & Storage Verification    (107.36s)[0m
+[32m  [PASS] Security Static Bytecode & Threat Engine Unit Suite (4.99s)[0m
+[32m  [PASS] Security Threat Intelligence & Rate Limiter    (5.84s)[0m
+[32m  [PASS] Critical API Integration & Zod Schema Contracts (9.43s)[0m
+[32m  [PASS] Pre-Push CI Gate Catalog (CI parity)           (1.21s)[0m
+[32m  [PASS] AI Provider Request Lifecycle Contract         (4.00s)[0m
+[32m  [PASS] AI Analysis Queue (BOT-07)                     (4.04s)[0m
+[32m  [PASS] Gemini Provider RPM Queue                      (3.13s)[0m
+[32m  [PASS] MIMbot Eval Fixtures (SAGE-05 structure gate)  (3.29s)[0m
+[32m  [PASS] MIM-Bot Personality & Heuristic Fallback Engine (3.83s)[0m
+[32m  [PASS] Multimodal Project Explainer Contract          (5.32s)[0m
+[32m  [PASS] Multimodal Project Explainer Batch (BOT-07)    (5.05s)[0m
+[32m  [PASS] Third-Party Modpack License Auditor            (3.28s)[0m
+[32m  [PASS] API Guard Universal Defense Perimeter          (4.05s)[0m
+[32m  [PASS] SAGE 3.0 MIM-Bot Copilot & Graph Intelligence  (4.00s)[0m
+[32m  [PASS] Sinceramiento_01 MIM Index Unification         (2.97s)[0m
+[32m  [PASS] SAGE Cache Runtime Adapter Contract            (3.34s)[0m
+[32m  [PASS] SAGE Streaming Transport Contract              (3.85s)[0m
+[32m  [PASS] Home Discover Controller Contract              (3.45s)[0m
+[32m  [PASS] Home Drafts Controller Contract                (6.50s)[0m
+[32m  [PASS] Home Drafts CRUD Repository (REC-03)           (3.65s)[0m
+[32m  [PASS] Draft Invite-only Edit Permissions             (3.29s)[0m
+[32m  [PASS] Server Manager Manifest & Reconciliation Foundation (4.06s)[0m
+[32m  [PASS] Release Notes Truthfulness Contract            (0.48s)[0m
+[32m  [PASS] API Guard Systemic Route Perimeter Auditor     (3.65s)[0m
+[32m  [PASS] Architecture Dependency Boundary Auditor       (4.68s)[0m
+[32m  [PASS] Architecture Boundary Contract Suite           (3.68s)[0m
+[32m  [PASS] Scoped CI Detection & Surface Impact (ARCH-7)  (3.46s)[0m
+[32m  [PASS] Secure Settings Migration & Secret Boundary    (3.63s)[0m
+[32m  [PASS] AI Quota Classifier & Tracker Contract         (3.44s)[0m
+[32m  [PASS] Semantic Context Cache Engine Contract         (4.33s)[0m
+[32m  [PASS] Decoupled Search Grounding Engine Contract     (3.73s)[0m
+[36m────────────────────────────────────────────────────────────────[0m
+[1m                 ENGINE SPECIFICATION & COVERAGE                [0m
+[36m────────────────────────────────────────────────────────────────[0m
+[0m  Module Domain          | Verification Scope     | Coverage    [0m
+[32m  NBT Binary Engine      | 12 Integration Tests   |   100.0%    [0m
+[32m  SAGE Taxonomy Engine   | 125 Benchmark Logs     |   100.0%    [0m
+[1m  TOTAL ENGINE COVERAGE  | 144 Verified Scenarios |    96.4%    [0m
+[34m════════════════════════════════════════════════════════════════
+[0m
+[31m🚨 ONE OR MORE SUITES FAILED. Check output above for diagnostics.[0m
+[31m  ✗ 6. Suite de Tests Unificados (npm test) — exit 1 (318.4s)[0m
+{"ok":false,"gateId":"test-runner","gateTitle":"6. Suite de Tests Unificados (npm test)","reason":"Fallo en una o más suites del Test Runner unificado de MIM.","output":"\u001b[36m╔════════════════════════════════════════════════════════════════╗\u001b[0m\n\u001b[36m║  MIM — Unified Systems Test & Benchmark Verification Suite      ║\u001b[0m\n\u001b[36m╚════════════════════════════════════════════════════════════════╝\u001b[0m\n\u001b[36m\n▶ Running Suite: Monorepo Package Contracts...\u001b[0m\n(node:25932) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\nStarting ARCH-3 and ARCH-4 monorepo verification test suite...\n✔ @mim/network-resilience package functionality verified\n✔ @mim/server-engine package functionality verified\n✔ apps/desktop workspace configuration verified\n✔ Monorepo domain packages & desktop boundaries verified\n\nAll ARCH-3 and ARCH-4 tests passed successfully!\n\u001b[32m✓ Monorepo Package Contracts passed in 5.33s\u001b[0m\n\u001b[36m\n▶ Running Suite: Draft Dependency Resolution...\u001b[0m\n✓ Draft dependency graphs: both sources, transitive, cycles, optional, incompatible, pinned versions and failures\n\u001b[32m✓ Draft Dependency Resolution passed in 3.18s\u001b[0m\n\u001b[36m\n▶ Running Suite: Desktop Updater Runtime...\u001b[0m\n[MIM] Auto-update enabled (GitHub releases)\n✓ Updater runtime: snapshot recovery, downloaded checks, install guard and IPC ordering\n\u001b[32m✓ Desktop Updater Runtime passed in 0.08s\u001b[0m\n\u001b[36m\n▶ Running Suite: Release Asset Integrity...\u001b[0m\n✓ Release asset names, version, integrity and unsafe path regressions passed\n\u001b[32m✓ Release Asset Integrity passed in 0.16s\u001b[0m\n\u001b[36m\n▶ Running Suite: Server Engine & Recovery...\u001b[0m\n\n> mim@11.7.1 test:server\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sftp-integration.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-manager-foundation.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sftp-discovery.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-audit-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-preflight-snapshot.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-executor-rollback.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sage-remote.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-admin-rcon.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-multiplayer-sync.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-sync-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-deploy-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-file-snapshot-store.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-pending-operations.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-inspect-pending-operations.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-client-sync-plan.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-client-sync-apply.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-recovery-api.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-process-probe.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/server-desktop-packaging.test.ts\n\n✓ Real SFTP audit: version/missing differences, no writes or secrets\n✓ Host identity, credentials, path containment and absence errors\n✓ Permissions, disconnect and cancellation cannot certify a complete audit\n✓ Request schema rejects project path traversal\n[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\\Users\\IanFr\\.mim-index\\data'\n    at Object.mkdirSync (node:fs:1350:26)\n    at ensureDirForWrite (D:\\.mine\\manager\\lib\\core\\mimIndex\\layout.ts:109:8)\n    at copyFileIfAbsent (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:93:20)\n    at relocateLegacyIndex (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:134:7)\n    at runSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:250:5)\n    at ensureSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\runMigrations.ts:47:36)\n    at bootSinceramiento (D:\\.mine\\manager\\lib\\core\\settings.ts:91:5)\n    at getSettingsPath (D:\\.mine\\manager\\lib\\core\\settings.ts:99:3)\n    at getSettings (D:\\.mine\\manager\\lib\\core\\settings.ts:184:24)\n    at getBuildsBase (D:\\.mine\\manager\\lib\\core\\settings.ts:224:10) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'mkdir',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\data'\n}\n✓ HTTP guard rejects cross-origin calls and accepts normalized loopback origins\n✓ Server Manager foundation contracts passed\nStarting SFTP read transport and server discovery test suite...\n✔ Remote server state discovery passed\n✔ Path traversal security checks passed\n✔ Server properties parser passed\n✔ SFTP config sanitization passed\n✔ AbortSignal cancellation passed\n\nAll SFTP read transport tests passed successfully!\nStarting server audit UI & API test suite...\n✔ Server audit calculation logic passed\n✔ Server health state computation passed\n\nAll server audit UI tests passed successfully!\nStarting SRV-3 Preflight, Config Diff, and Durable Snapshot test suite...\n✔ Server preflight validation tests passed\n✔ Config reconciliation and mutating snapshot requirement passed\n✔ Snapshot creation, stale plan drift detection and store persistence passed\n\nAll SRV-3 tests passed successfully!\n  ✓ Regression cases: snapshot I/O, payloads, renamed updates, rollback and configs\n▶ Running SRV-4 Deployment Executor & Rollback Tests...\n  ✓ Test 1: Successful atomic deployment passed\n  ✓ Test 2: Injected failure triggers automatic rollback and restores files\n  ✓ Test 3: Standalone executeRollback verified\n✔ SRV-4 Deployment Executor & Rollback Tests passed successfully!\n\n▶ Running SRV-5 Remote SAGE Diagnostic Tests...\n  ✓ Test 1: Log parsing verified\n  ✓ Test 2: Missing dependency crash diagnosed and correlated\n  ✓ Test 3: Mixin failure diagnosed\n  ✓ Test 4: Remote diagnostic ingestion passed\n✔ SRV-5 Remote SAGE Diagnostic Tests passed successfully!\n\n▶ Running SRV-6 Server Administration, RCON & Backups Tests...\n  ✓ Test 1: server.properties parsing and preservation passed\n  ✓ Test 2: server.properties validation passed\n  ✓ Test 3: RCON execution and safety passed\n  ✓ Test 4: Backups and World metadata inspection passed\n✔ SRV-6 Server Administration & RCON Tests passed successfully!\n\n▶ Running SRV-7 Multiplayer Client-Server Sync Tests...\n  ✓ Test 1: Distributable manifest generation excludes server-only mods\n  ✓ Test 2: Client-Server reconciliation preserves client-only mods\n  ✓ Test 3: Minecraft version incompatibility detected\n✔ SRV-7 Multiplayer Client-Server Sync Tests passed successfully!\n\n[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\\Users\\IanFr\\.mim-index\\data'\n    at Object.mkdirSync (node:fs:1350:26)\n    at ensureDirForWrite (D:\\.mine\\manager\\lib\\core\\mimIndex\\layout.ts:109:8)\n    at copyFileIfAbsent (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:93:20)\n    at relocateLegacyIndex (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:134:7)\n    at runSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:250:5)\n    at ensureSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\runMigrations.ts:47:36)\n    at bootSinceramiento (D:\\.mine\\manager\\lib\\core\\settings.ts:91:5)\n    at getSettingsPath (D:\\.mine\\manager\\lib\\core\\settings.ts:99:3)\n    at getSettings (D:\\.mine\\manager\\lib\\core\\settings.ts:184:24)\n    at getBuildsBase (D:\\.mine\\manager\\lib\\core\\settings.ts:224:10) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'mkdir',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\data'\n}\n✓ HTTP sync guard rejects cross-origin calls\n✓ Multiplayer sync detects remote/client hash mismatch\n✓ Deploy schema rejects traversal and requires confirm\n[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, mkdir 'C:\\Users\\IanFr\\.mim-index\\data'\n    at Object.mkdirSync (node:fs:1350:26)\n    at ensureDirForWrite (D:\\.mine\\manager\\lib\\core\\mimIndex\\layout.ts:109:8)\n    at copyFileIfAbsent (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:93:20)\n    at relocateLegacyIndex (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:134:7)\n    at runSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:250:5)\n    at ensureSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\runMigrations.ts:47:36)\n    at bootSinceramiento (D:\\.mine\\manager\\lib\\core\\settings.ts:91:5)\n    at getSettingsPath (D:\\.mine\\manager\\lib\\core\\settings.ts:99:3)\n    at getSettings (D:\\.mine\\manager\\lib\\core\\settings.ts:184:24)\n    at getBuildsBase (D:\\.mine\\manager\\lib\\core\\settings.ts:224:10) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'mkdir',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\data'\n}\n✓ HTTP deploy guard rejects cross-origin calls\n✓ Complete audit is deployable and still read-only\n✓ Partial audit cannot authorize deploy\n✓ Deploy is blocked while session.lock is present\nError: EPERM: operation not permitted, mkdir 'C:\\Users\\IanFr\\.mim-index\\server-manager'\n    at async mkdir (node:internal/fs/promises:859:10)\n    at async atomicWriteFile (D:\\.mine\\manager\\packages\\server-engine\\fileSnapshotStore.ts:146:3)\n    at async FileSnapshotStore.recordChange (D:\\.mine\\manager\\packages\\server-engine\\fileSnapshotStore.ts:100:5)\n    at async executeServerDeployment (D:\\.mine\\manager\\packages\\server-engine\\executor.ts:276:9)\n    at async performDeployment (D:\\.mine\\manager\\lib\\server\\deployServer.ts:93:24)\n    at async deployServer (D:\\.mine\\manager\\lib\\server\\deployServer.ts:130:12)\n    at async run (D:\\.mine\\manager\\scripts\\__tests__\\server-deploy-api.test.ts:89:20) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'mkdir',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\server-manager'\n}\n\u001b[31m✗ Server Engine & Recovery failed (1) in 34.67s\u001b[0m\n\u001b[36m\n▶ Running Suite: Network Resilience...\u001b[0m\n\n> mim@11.7.1 test:network\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/network-policy-contract.test.ts && ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/network-adapters.test.ts\n\nStarting network policy and classification contract test suite...\n✔ Sanitization tests passed\n✔ Classification tests passed\n✔ Retry-After parsing tests passed\n✔ Deterministic retry policy tests passed\n\nAll network contract tests passed successfully!\nStarting network adapters test suite...\n✔ fetchWithRetry transient retry recovery passed\n✔ fetchWithRetry Retry-After respect passed\n✔ fetchWithRetry permanent 404 immediate fail passed\n✔ fetchWithRetry cancellation abort handling passed\n✔ fetchJsonWithRetry backward compatibility passed\n\nAll network adapter tests passed successfully!\n\u001b[32m✓ Network Resilience passed in 4.82s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE NBT Binary Safe Recovery (12 Tests)...\u001b[0m\n\u001b[36m╔════════════════════════════════════════════════════════════════╗\u001b[0m\n\u001b[36m║  SAGE Rescue - NBT Integration Test Suite                      ║\u001b[0m\n\u001b[36m╚════════════════════════════════════════════════════════════════╝\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[34mRunning tests...\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32m✓ NBT Round-Trip: Write and Read Back\u001b[0m\n\u001b[32m✓ Data Types: Coordinates use Double (not Float)\u001b[0m\n\u001b[32m✓ Data Types: Rotation uses Float\u001b[0m\n\u001b[32m✓ Data Types: Spawn coordinates use Int\u001b[0m\n\u001b[32m✓ Data Types: Dimension is String\u001b[0m\n\u001b[32m✓ Inventory Structure: List<Compound> with Item NBT\u001b[0m\n\u001b[32m✓ Modify Coordinates: Update Pos and Spawn\u001b[0m\n\u001b[32m✓ Modify Dimension: Change to Nether and back\u001b[0m\n\u001b[32m✓ Modify Inventory: Delete and Add Items\u001b[0m\n\u001b[32m✓ Level.dat Round-Trip: Read world name and player data\u001b[0m\n\u001b[32m✓ Uncompressed NBT: Write and read without gzip\u001b[0m\n\u001b[32m✓ Large Inventory: Handle 100+ items\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[36m╔════════════════════════════════════════════════════════════════╗\u001b[0m\n\u001b[36m║  Test Results Summary                                          ║\u001b[0m\n\u001b[36m╚════════════════════════════════════════════════════════════════╝\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32m✓ NBT Round-Trip: Write and Read Back\u001b[0m\n\u001b[32m✓ Data Types: Coordinates use Double (not Float)\u001b[0m\n\u001b[32m✓ Data Types: Rotation uses Float\u001b[0m\n\u001b[32m✓ Data Types: Spawn coordinates use Int\u001b[0m\n\u001b[32m✓ Data Types: Dimension is String\u001b[0m\n\u001b[32m✓ Inventory Structure: List<Compound> with Item NBT\u001b[0m\n\u001b[32m✓ Modify Coordinates: Update Pos and Spawn\u001b[0m\n\u001b[32m✓ Modify Dimension: Change to Nether and back\u001b[0m\n\u001b[32m✓ Modify Inventory: Delete and Add Items\u001b[0m\n\u001b[32m✓ Level.dat Round-Trip: Read world name and player data\u001b[0m\n\u001b[32m✓ Uncompressed NBT: Write and read without gzip\u001b[0m\n\u001b[32m✓ Large Inventory: Handle 100+ items\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32mTotal: 12 | Passed: 12 | Failed: 0\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32m🎉 All tests passed! NBT I/O is safe and reliable.\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32m✓ Coordinates use Double type (correct)\u001b[0m\n\u001b[32m✓ Rotation uses Float type (correct)\u001b[0m\n\u001b[32m✓ Spawn coordinates use Int type (correct)\u001b[0m\n\u001b[32m✓ Dimension is String type (correct)\u001b[0m\n\u001b[32m✓ Inventory is List<Compound> (correct)\u001b[0m\n\u001b[32m✓ Round-trip integrity preserved\u001b[0m\n\u001b[32m✓ Gzip compression/decompression works\u001b[0m\n\u001b[0m\u001b[0m\n\u001b[32mReady to implement: Advanced NBT editing + External file uploads\u001b[0m\n\u001b[32m✓ SAGE NBT Binary Safe Recovery (12 Tests) passed in 3.42s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE 2.0 Diagnostic Evaluation (125 Cases)...\u001b[0m\n📋 Regression fixture (CI gate)\n   total=125 uniqueLogs=97 exactExtraCopies=28\n   origin unknown=0 synthetic=125 community=0 public-issue=0\n   split train=125 stress=0 holdout=0\n   logLength min=160 p50=303 mean=325 max=611\n   loader fabric=81\n   loader forge=28\n   loader vanilla=15\n   loader neoforge=1\n📋 Real corpus (crash-corpus.json)\n   total=1 uniqueLogs=1 exactExtraCopies=0\n   origin unknown=1 synthetic=0 community=0 public-issue=0\n   split train=0 stress=0 holdout=1\n   logLength min=342 p50=342 mean=342 max=342\n   loader fabric=1\n\n===============================================================\n🔬 SAGE 2.0 EVALUATION — regression / SAGE-03 gate (125 cases)\n===============================================================\n\n| Category                | Samples | Precision | Recall  | F1-Score |\n|:------------------------|:-------:|:---------:|:-------:|:--------:|\n| MISSING_DEPENDENCY      |      20 |    100.0% |  100.0% |   100.0% |\n| VERSION_CONFLICT        |      15 |    100.0% |  100.0% |   100.0% |\n| MIXIN_FAILURE           |      20 |    100.0% |  100.0% |   100.0% |\n| JAVA_INCOMPATIBILITY    |      15 |    100.0% |  100.0% |   100.0% |\n| MOD_CONFLICT            |      15 |    100.0% |  100.0% |   100.0% |\n| CORRUPTED_WORLD         |      15 |    100.0% |  100.0% |   100.0% |\n| OUT_OF_MEMORY           |      15 |    100.0% |  100.0% |   100.0% |\n| UNKNOWN_RUNTIME         |      10 |    100.0% |  100.0% |   100.0% |\n---------------------------------------------------------------\n| Loader                  | Samples | Category accuracy |\n| fabric                  |      81 |            100.0% |\n| forge                   |      28 |            100.0% |\n| vanilla                 |      15 |            100.0% |\n| neoforge                |       1 |            100.0% |\n---------------------------------------------------------------\n🎯 Overall Category Accuracy: 100.0%\n🏆 Macro F1-Score:           100.0%\n🔍 Top-1 (histórico):         84.0% (105/125)\n📊 Top-3 (histórico):         100.0% (125/125)\n🎯 Top-1 atribución:          71.4% (50/70)\n🎯 Top-3 atribución:          100.0% (70/70)\n🧩 Sistémico sin culpable:    100.0% (55/55)\n⚡ Mean inference latency:    0.02 ms/log (local diagnostic)\n⚡ p50 / p95 / max:           0.01 / 0.04 / 0.09 ms\n🖥️  Env: v24.15.0 win32/x64 warmup=1 repeats=3\n===============================================================\n\n📄 Written complete evaluation report to: D:\\.mine\\manager\\docs\\engines\\sage-eval.md\n✅ SAGE evaluation gate passed (regression corpus only).\n\u001b[32m✓ SAGE 2.0 Diagnostic Evaluation (125 Cases) passed in 3.80s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE Eval Metrics & CI Gate (SAGE-02/03)...\u001b[0m\nStarting SAGE eval metrics & gate suite...\n✔ SAGE-02 metric denominators and attribution split verified\n✔ SAGE-03 gate passes when thresholds are met\n✔ SAGE-03 gate reports all threshold violations\n✔ SAGE-03 threshold constants match plan\n✔ sage-eval --self-test-fail exits with code 1\n\nAll SAGE eval metrics & gate tests passed successfully!\n\u001b[32m✓ SAGE Eval Metrics & CI Gate (SAGE-02/03) passed in 7.43s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE Corpus Provenance & Splits (SAGE-01)...\u001b[0m\nStarting SAGE-01 corpus provenance suite...\n✔ corpus schema requires provenance fields\n✔ crash-corpus.json has SRV-5 fixture holdout seed (not synthetic)\n✔ regression fixture is 125 synthetic train cases, isolated from real corpus\n✔ regression duplicate extras are audited and marked duplicateOf\n✔ sage-eval --audit reports regression and real holdout seed\n✔ sage-eval --holdout scores the seed and does not apply the regression gate\n\nAll SAGE-01 corpus provenance tests passed successfully!\n(node:23640) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n\u001b[32m✓ SAGE Corpus Provenance & Splits (SAGE-01) passed in 12.29s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE 2.0 Core Taxonomy & Parser Unit Suite...\u001b[0m\n\n\u001b[1m\u001b[36m▶ Executing SAGE 2.0 Unit Test Suite...\u001b[0m\n\n\u001b[1m1. Parser: ANSI Sanitation\u001b[0m\n  \u001b[32m✓\u001b[0m stripAnsi removes all escape sequences\n  \u001b[32m✓\u001b[0m stripAnsi preserves exact plain text\n\n\u001b[1m2. Parser: Mod Loader & Environment Detection\u001b[0m\n  \u001b[32m✓\u001b[0m Correctly identifies Minecraft Forge loader\n  \u001b[32m✓\u001b[0m Extracts Forge Minecraft version (1.20.1)\n  \u001b[32m✓\u001b[0m Extracts Forge loader version (47.2.0)\n  \u001b[32m✓\u001b[0m Correctly identifies Fabric loader\n  \u001b[32m✓\u001b[0m Extracts Fabric loader version (0.15.7)\n  \u001b[32m✓\u001b[0m Correctly identifies NeoForge loader\n  \u001b[32m✓\u001b[0m Extracts NeoForge version (20.4.80-beta)\n  \u001b[32m✓\u001b[0m Correctly identifies Quilt loader\n\n\u001b[1m3. Parser: Frame Normalization & Exception Chain\u001b[0m\n  \u001b[32m✓\u001b[0m Extracted 4 stack frames\n  \u001b[32m✓\u001b[0m Identified mixin synthetic injection method\n  \u001b[32m✓\u001b[0m Extracted 2 exception lines\n  \u001b[32m✓\u001b[0m Captures top-level exception\n  \u001b[32m✓\u001b[0m Captures causal exception chain\n\n\u001b[1m4. Classifier: Crash Categorization\u001b[0m\n  \u001b[32m✓\u001b[0m Classifies missing mod dependency\n  \u001b[32m✓\u001b[0m Extracts candidate culprits in missing dependency\n  \u001b[32m✓\u001b[0m Classifies mixin transformer failure\n  \u001b[32m✓\u001b[0m Classifies Java OutOfMemoryError\n  \u001b[32m✓\u001b[0m Classifies unsupported Java version bytecode\n\n\u001b[1m5. Scorer & Correlator: Confidence & Culprit Attribution\u001b[0m\n  \u001b[32m✓\u001b[0m Confidence score is strictly bounded [20, 99] (got 95)\n  \u001b[32m✓\u001b[0m OOM produces deterministic high certainty (got 98)\n  \u001b[32m✓\u001b[0m Unknown runtime scores low confidence (got 15)\n  \u001b[32m✓\u001b[0m Identified primary culprit: supermod\n  \u001b[32m✓\u001b[0m Suspect list includes targeted mod\n\n\u001b[1m6. i18n: Multi-Language Diagnostic & Remediation Verification\u001b[0m\n  \u001b[32m✓\u001b[0m Report defaults/records English locale\n  \u001b[32m✓\u001b[0m English root cause formulated: Missing required dependency mod: 'sodium'\n  \u001b[32m✓\u001b[0m English remediation summary formulated: Install the missing dependency 'sodium' to resolve startup requirements.\n  \u001b[32m✓\u001b[0m Report records Spanish locale\n  \u001b[32m✓\u001b[0m Spanish root cause formulated: Dependencia requerida faltante: 'sodium'\n  \u001b[32m✓\u001b[0m Spanish remediation summary formulated: Instala la dependencia faltante 'sodium' para satisfacer los requisitos de inicio.\n  \u001b[32m✓\u001b[0m Spanish remediation instructions generated\n\n\u001b[32m\u001b[1m✓ All SAGE 2.0 unit tests passed successfully!\u001b[0m\n\n\u001b[32m✓ SAGE 2.0 Core Taxonomy & Parser Unit Suite passed in 3.43s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE Real Chat Guardrail Contract...\u001b[0m\n\n> mim@11.7.1 test:sage-chat-guardrails\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sage-chat-guardrails.test.ts\n\n[/api/sage/chat] Provider response blocked by SAGE guardrails: UNSUPPORTED_ATTRIBUTION, UNSAFE_REMEDIATION\n✓ SAGE real chat guardrail suite passed\n\u001b[32m✓ SAGE Real Chat Guardrail Contract passed in 4.02s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE 2.0 Knowledge Base Matcher & Safety Validator...\u001b[0m\n\n===============================================================\n🧠 SAGE 2.0 KNOWLEDGE BASE MATCHING & SAFETY VALIDATION\n===============================================================\n\n[Test 1] Verifying Knowledge Base Matching on Mod Conflict...\n  • Diagnosed Culprit: sodium\n  • Diagnosed Category: MIXIN_FAILURE\n  • Retrieved KB Articles: 2\n    - [73%] Indium Requirement for Fabric Rendering API Mods (Signals: Culprit mod affected: sodium, Suspect mod match: sodium, 1 keyword signal(s))\n    - [71%] Sodium / Embeddium and OptiFine Mutual Exclusion (Signals: Culprit mod affected: sodium, Suspect mod match: sodium, 1 keyword signal(s))\n  ✓ Retrieval accuracy verified on Sodium/OptiFine conflict.\n\n[Test 2] Verifying Safety Validator: Attribution & Dangerous Commands...\n  • Safety Grounding Score: 100%\n  • Safety Violations Caught: 1\n    - 🚨 Attribution Inconsistency: Proposed culprit 'completely_made_up_mod_name' contradicts deterministic engine findings ('sodium').\n  ✓ Security violation and attribution trap successfully triggered.\n\n[Test 3] Verifying Grounded Synthesis Pipeline...\n  • Synthesis Report ID: 9472db82-d42d-4ba7-91d9-015e540d126b\n  • Grounding Score: 75%\n  • Formatted Markdown Length: 1941 chars\n  ✓ Grounded synthesis completed successfully.\n\n===============================================================\n🎉 ALL SAGE KNOWLEDGE MATCHING & SAFETY VALIDATIONS PASSED!\n===============================================================\n\n\u001b[32m✓ SAGE 2.0 Knowledge Base Matcher & Safety Validator passed in 4.72s\u001b[0m\n\u001b[36m\n▶ Running Suite: Aduana Deduplication & Storage Verification...\u001b[0m\n\n===============================================================\n⚡ ADUANA ENGINE BENCHMARK SUITE — Empirical Performance Tests\n===============================================================\n\n[1/3] Benchmarking Cryptographic Hashing Throughput...\n  • SHA-1 Hashing Throughput:   2089.0 MB/s\n  • SHA-512 Hashing Throughput: 875.1 MB/s\n\n[2/3] Benchmarking Fast-Path (O(1)) vs Full Scan (O(N))...\n  • Fast-Path Lookup (Filename Hint): 218.22 µs/op\n  • Full Candidate Scan:             226.92 µs/op\n\n[3/3] Benchmarking Scaling Across File Scales (1k, 5k, 10k, 25k)...\n  Scale  1000 files -> Traversal: 4.13ms | Cold: 655.92ms | Warm: 72.29ms (9.1x speedup)\n  Scale  5000 files -> Traversal: 13.18ms | Cold: 2970.16ms | Warm: 363.11ms (8.2x speedup)\n  Scale 10000 files -> Traversal: 27.8ms | Cold: 5828.87ms | Warm: 863.22ms (6.8x speedup)\n  Scale 25000 files -> Traversal: 67.88ms | Cold: 41792.81ms | Warm: 2822.14ms (14.8x speedup)\n\n---------------------------------------------------------------\n| Files Count | Traversal (ms) | Cold Scan (ms) | Warm Scan (ms) | Cache Speedup | Memory Delta |\n|:-----------:|:--------------:|:--------------:|:--------------:|:-------------:|:------------:|\n|        1000 |           4.13 |         655.92 |          72.29 |          9.1x |      5.38 MB |\n|        5000 |          13.18 |        2970.16 |         363.11 |          8.2x |    -23.72 MB |\n|       10000 |           27.8 |        5828.87 |         863.22 |          6.8x |     -7.85 MB |\n|       25000 |          67.88 |       41792.81 |        2822.14 |         14.8x |     23.62 MB |\n===============================================================\n\n📄 Saved formal benchmark documentation to: D:\\.mine\\manager\\docs\\ADUANA_BENCHMARKS.md\n\u001b[32m✓ Aduana Deduplication & Storage Verification passed in 107.36s\u001b[0m\n\u001b[36m\n▶ Running Suite: Security Static Bytecode & Threat Engine Unit Suite...\u001b[0m\n\n\u001b[1m\u001b[36m▶ Executing Security Scanner Unit Test Suite...\u001b[0m\n\n\u001b[1m1. Clean Synthetic JAR Verification\u001b[0m\n[Scanner] File: C:\\Users\\IanFr\\AppData\\Local\\Temp\\mim-sec-test-1790000340726\\clean-mod.jar, isJar: true, hasShaderFolder: false, hasAssetsAtRoot: false, hasDataAtRoot: false, projectType: mod\n  \u001b[32m✓\u001b[0m Clean JAR riskLevel is 'clean' (got 'clean')\n  \u001b[32m✓\u001b[0m Clean JAR riskScore <= 30 (got 0)\n  \u001b[32m✓\u001b[0m Marked as scanned locally\n\n\u001b[1m2. Malicious Command Execution Detection\u001b[0m\n[Scanner] File: C:\\Users\\IanFr\\AppData\\Local\\Temp\\mim-sec-test-1790000340726\\threat-mod.jar, isJar: true, hasShaderFolder: false, hasAssetsAtRoot: false, hasDataAtRoot: false, projectType: mod\n  \u001b[32m✓\u001b[0m Threat JAR received elevated score (got 95)\n  \u001b[32m✓\u001b[0m Threat JAR marked as suspicious or critical (got 'critical')\n  \u001b[32m✓\u001b[0m Detected 'process_execution' category\n  \u001b[32m✓\u001b[0m Detected 'suspicious_string' category\n\n\u001b[1m3. Corrupt / Non-Inspectable Archive Handling\u001b[0m\n[/lib/security-scanner] AdmZip failed to inspect archive C:\\Users\\IanFr\\AppData\\Local\\Temp\\mim-sec-test-1790000340726\\corrupt-file.jar: ADM-ZIP: Invalid or unsupported zip format. No END header found\n  \u001b[32m✓\u001b[0m Identified corrupt archive as 'manifest_anomaly'\n  \u001b[32m✓\u001b[0m Corrupt archive given non-zero safety penalty (got 25)\n\n\u001b[1m4. VirusTotal Cache Integrity\u001b[0m\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.24252.1790000340782.034bd913-387b-4140-b092-cf65daefde28'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async run (D:\\.mine\\manager\\scripts\\__tests__\\security-scanner.test.ts:111:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.24252.1790000340782.034bd913-387b-4140-b092-cf65daefde28'\n}\n  \u001b[32m✓\u001b[0m Cached entry exists in loaded cache\n  \u001b[32m✓\u001b[0m Cached entry maliciousCount matches (0)\n  \u001b[32m✓\u001b[0m Cached entry totalEngineCount matches (72)\n\n\u001b[32m\u001b[1m✓ All Security Scanner unit tests passed successfully!\u001b[0m\n\n\u001b[32m✓ Security Static Bytecode & Threat Engine Unit Suite passed in 4.99s\u001b[0m\n\u001b[36m\n▶ Running Suite: Security Threat Intelligence & Rate Limiter...\u001b[0m\n\n\u001b[1m\u001b[36m▶ Executing Security Threat & Rate Limit Verification Suite...\u001b[0m\n\n  \u001b[32m✓\u001b[0m KNOWN_MALWARE_HASHES is populated with 19 real threat signatures\n  \u001b[32m✓\u001b[0m SHA-1 signature match verified: Fracturiser Stage 0 Dropper\n  \u001b[32m✓\u001b[0m SHA-256 signature match verified: Necro Remote Access Trojan (SHA-256)\n  \u001b[32m✓\u001b[0m Case-insensitive hash normalization verified\n  \u001b[32m✓\u001b[0m Clean hashes correctly produce zero false-positives\n[/lib/security-scanner] AdmZip failed to inspect archive D:\\.mine\\manager\\scripts\\scratch\\test-clean-sample.jar: ADM-ZIP: Invalid or unsupported zip format. No END header found\n  \u001b[32m✓\u001b[0m End-to-end scan clean file: score 25 (clean)\n  \u001b[32m✓\u001b[0m Rate limiter enforces request quota and blocks excess traffic\n  \u001b[32m✓\u001b[0m Rate limiter strictly isolates quotas across client IPs\n  \u001b[32m✓\u001b[0m Client IP extracted accurately from proxy headers\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346615.710ee762-ec25-498f-8582-d30cabf0116b'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346615.710ee762-ec25-498f-8582-d30cabf0116b'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346621.d80cb10c-cd5f-4e29-be82-98fff50b13b3'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346621.d80cb10c-cd5f-4e29-be82-98fff50b13b3'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346622.5276eea7-a3af-4b43-9404-8ee915babee6'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346622.5276eea7-a3af-4b43-9404-8ee915babee6'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346624.d88c69ad-998e-46b3-a86f-8c716c1d34b9'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346624.d88c69ad-998e-46b3-a86f-8c716c1d34b9'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346625.2e4a1f80-617f-4463-b322-1dc5ac00d6b7'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346625.2e4a1f80-617f-4463-b322-1dc5ac00d6b7'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346626.6ef0963c-02df-4d51-84a6-6fd8c1b93f52'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346626.6ef0963c-02df-4d51-84a6-6fd8c1b93f52'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346627.8de29956-b23c-4b7e-a304-2ef18f6967f0'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346627.8de29956-b23c-4b7e-a304-2ef18f6967f0'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346628.1ed27923-0972-40b4-8efd-bdf3c158374a'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346628.1ed27923-0972-40b4-8efd-bdf3c158374a'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346629.80f48bb6-148b-41b6-9071-9e724b9b7b88'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346629.80f48bb6-148b-41b6-9071-9e724b9b7b88'\n}\n[/lib/security-scanner] Could not persist VT cache securely to disk: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\vt-cache.json.tmp.25256.1790000346630.a16691ef-880e-4ffb-8764-08f74b80511a'\n    at Object.writeFileSync (node:fs:2414:20)\n    at D:\\.mine\\manager\\lib\\security\\security-scanner.ts:102:10\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Promise.all (index 9)\n    at async run (D:\\.mine\\manager\\scripts\\__tests__\\security-malware-and-ratelimit.test.ts:170:5) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\vt-cache.json.tmp.25256.1790000346630.a16691ef-880e-4ffb-8764-08f74b80511a'\n}\n  \u001b[32m✓\u001b[0m Concurrent saveVTCache writes merged and persisted cleanly without race conditions\n\n\u001b[1m\u001b[32m✓ All security threat, rate limit, and cache concurrency tests passed successfully!\u001b[0m\n\n\u001b[32m✓ Security Threat Intelligence & Rate Limiter passed in 5.84s\u001b[0m\n\u001b[36m\n▶ Running Suite: Critical API Integration & Zod Schema Contracts...\u001b[0m\n\n\u001b[1m\u001b[36m▶ Executing Critical API Integration & Schema Test Suite...\u001b[0m\n\n\u001b[1m1. Route: /api/settings/validate (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects malformed JSON with HTTP 400\n  \u001b[32m✓\u001b[0m Rejects empty paths array with HTTP 400\n  \u001b[32m✓\u001b[0m Accepts valid paths array with HTTP 200\n  \u001b[32m✓\u001b[0m Correctly validates that current directory exists\n\n\u001b[1m2. Route: /api/settings/validate-keys (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects malformed JSON with HTTP 400\n  \u001b[32m✓\u001b[0m Processes empty/null keys safely with HTTP 200\n  \u001b[32m✓\u001b[0m Unprovided required key marked false\n  \u001b[32m✓\u001b[0m Unprovided optional key marked null\n  \u001b[32m✓\u001b[0m Unprovided optional Gemini key marked null\n  \u001b[32m✓\u001b[0m Rejects non-string Gemini key with HTTP 400\n  \u001b[32m✓\u001b[0m Rejects non-boolean useStoredGemini with HTTP 400\n\n\u001b[1m3. Route: /api/staging (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects invalid action enum with HTTP 400\n  \u001b[32m✓\u001b[0m Rejects malformed JSON body with HTTP 400\n\n\u001b[1m3b. Route: /api/build (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects empty build body with HTTP 400\n  \u001b[32m✓\u001b[0m Rejects invalid loader with HTTP 400\n\n\u001b[1m3c. Route: /api/tweak (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects invalid tweak action with HTTP 400\n\n\u001b[1m4. Route: /api/sage/player-rescue/save (POST)\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects empty filePath and null nbtData with HTTP 400\n\n\u001b[1m5. Service: Official Translation Engine Resilience\u001b[0m\n  \u001b[32m✓\u001b[0m Returns translatedText string\n  \u001b[32m✓\u001b[0m Returns degraded boolean flag\n  \u001b[32m✓\u001b[0m Identifies valid provider: none\n  \u001b[32m✓\u001b[0m Gracefully degrades when no official API keys are present in env\n  \u001b[32m✓\u001b[0m Preserves original text without throwing fatal errors\n  \u001b[32m✓\u001b[0m Safe zero-downtime degradation verified for unconfigured environments\n\n\u001b[1m6. Endpoint: /api/sage/chat Defense Perimeter & Contracts\u001b[0m\n  \u001b[32m✓\u001b[0m Rejects request missing question parameter with HTTP 400\n  \u001b[32m✓\u001b[0m Response includes X-RateLimit-Limit header\n  \u001b[32m✓\u001b[0m Rejects invalid personality enum with HTTP 400\n  \u001b[32m✓\u001b[0m Rejects malformed JSON body with HTTP 400\n  \u001b[32m✓\u001b[0m Gemini-backed chat succeeds with mocked provider response\n  \u001b[32m✓\u001b[0m Gemini-backed chat returns a readable response body\n  \u001b[32m✓\u001b[0m Gemini-backed chat streams the provider text\n  \u001b[32m✓\u001b[0m Gemini provider endpoint is used\n  \u001b[32m✓\u001b[0m Gemini API key is never embedded in the request URL\n  \u001b[32m✓\u001b[0m Gemini API key is sent through x-goog-api-key header\n[/api/sage/chat] Provider generation failed: Gemini returned an empty candidate\n  \u001b[32m✓\u001b[0m Empty provider output fails before opening the client stream\n  \u001b[32m✓\u001b[0m Empty provider output uses the typed SAGE generation failure\n[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...\n[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...\n[/api/sage/chat] Provider generation failed: Gemini gemini-3.6-flash responded 429: {\"error\":{\"message\":\"RESOURCE_EXHAUSTED; retry in 0s\"}}\n  \u001b[32m✓\u001b[0m Provider quota exhaustion remains an HTTP 429 before streaming starts\n  \u001b[32m✓\u001b[0m Provider quota uses the typed SAGE error taxonomy\n\n\u001b[1m7. Endpoints: Path Containment Defense (/api/delete & /api/minecraft/delete)\u001b[0m\n  \u001b[32m✓\u001b[0m /api/delete rejects empty body with HTTP 400\n[Settings] sinceramiento_01 failed: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\mim-settings.json.8492.sinceramiento.tmp'\n    at Object.writeFileSync (node:fs:2414:20)\n    at persistMimIndexPath (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:211:6)\n    at runSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\sinceramiento01.ts:257:3)\n    at ensureSinceramiento01 (D:\\.mine\\manager\\lib\\core\\mimIndex\\runMigrations.ts:47:36)\n    at bootSinceramiento (D:\\.mine\\manager\\lib\\core\\settings.ts:91:5)\n    at getSettingsPath (D:\\.mine\\manager\\lib\\core\\settings.ts:99:3)\n    at getSettings (D:\\.mine\\manager\\lib\\core\\settings.ts:184:24)\n    at D:\\.mine\\manager\\app\\api\\delete\\route.ts:50:44\n    at guardedHandler (D:\\.mine\\manager\\lib\\apiGuard.ts:219:30)\n    at async run (D:\\.mine\\manager\\scripts\\__tests__\\critical-api-integration.test.ts:319:29) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\mim-settings.json.8492.sinceramiento.tmp'\n}\n  \u001b[32m✓\u001b[0m /api/delete rejects relative path with HTTP 400\n  \u001b[32m✓\u001b[0m /api/delete rejects path outside downloads with HTTP 400\n  \u001b[32m✓\u001b[0m /api/delete allows safe path contained in downloads\n  \u001b[32m✓\u001b[0m /api/minecraft/delete rejects empty body with HTTP 400\n  \u001b[32m✓\u001b[0m /api/minecraft/delete rejects path outside minecraft with HTTP 400\n  \u001b[32m✓\u001b[0m /api/minecraft/delete rejects non-content minecraft files with HTTP 400\n  \u001b[32m✓\u001b[0m /api/minecraft/delete allows safe path contained in mods directory\n\n\u001b[32m\u001b[1m✓ All Critical API integration & schema tests passed successfully!\u001b[0m\n\n\u001b[32m✓ Critical API Integration & Zod Schema Contracts passed in 9.43s\u001b[0m\n\u001b[36m\n▶ Running Suite: Pre-Push CI Gate Catalog (CI parity)...\u001b[0m\n\n> mim@11.7.1 test:pre-push-gate\n> node scripts/__tests__/pre-push-gate.test.js\n\n✓ CI gate catalog matches GitHub Actions jobs\n  PR audit: 6 gates\n  Pre-push full: 15 gates\n  Pre-push quick: 12 gates\n  Pre-push lint: 8 gates\n\u001b[32m✓ Pre-Push CI Gate Catalog (CI parity) passed in 1.21s\u001b[0m\n\u001b[36m\n▶ Running Suite: AI Provider Request Lifecycle Contract...\u001b[0m\n\n> mim@11.7.1 test:ai-provider\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-provider-runtime.test.ts\n\n✓ Gemini provider parses its real JSON response contract\n✓ Gemini provider targets generateContent\n✓ Gemini credentials never enter the request URL\n✓ Gemini authenticates by header\n✓ Gemini fetch receives a lifecycle signal\n✓ OpenRouter provider parses its completion contract\n✓ OpenRouter uses its provider endpoint\n✓ OpenRouter credentials never enter the request URL\n✓ OpenRouter authenticates by header\n✓ OpenRouter fetch receives a lifecycle signal\n✓ Provider timeout rejects stalled upstream work\n✓ Provider timeout aborts the underlying fetch signal\n✓ MIM-Bot Chat returns the selected provider response\n✓ MIM-Bot Chat honors the selected provider\n✓ MIM-Bot Chat keeps provider credentials out of URLs\nAI provider request lifecycle contract passed.\n\u001b[32m✓ AI Provider Request Lifecycle Contract passed in 4.00s\u001b[0m\n\u001b[36m\n▶ Running Suite: AI Analysis Queue (BOT-07)...\u001b[0m\n\n> mim@11.7.1 test:ai-analysis-queue\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/ai-analysis-queue.test.ts\n\n✓ Analysis queue serializes same-provider jobs\n✓ Analysis queue runs different providers in parallel\n✓ Analysis queue retries quota-like failures\n✓ Analysis queue propagates cancellation\n✔ AI analysis queue tests passed\n\u001b[32m✓ AI Analysis Queue (BOT-07) passed in 4.04s\u001b[0m\n\u001b[36m\n▶ Running Suite: Gemini Provider RPM Queue...\u001b[0m\n\n> mim@11.7.1 test:provider-rpm-queue\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/provider-rpm-queue.test.ts\n\n✓ Gemini RPM queue serializes overlapping work\n✓ Gemini RPM queue waits when the sliding window is full\n✓ OpenRouter bypasses the Gemini RPM window\n✓ GeminiProvider generate() is gated by the RPM queue\n\u001b[32m✓ Gemini Provider RPM Queue passed in 3.13s\u001b[0m\n\u001b[36m\n▶ Running Suite: MIMbot Eval Fixtures (SAGE-05 structure gate)...\u001b[0m\n\n> mim@11.7.1 eval:mimbot\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/evaluation/mimbot-eval.ts\n\n✓ Fixture has 18 cases (>= 15)\n✓ Fixture has 18 cases (SAGE-05 target <= 20)\n✓ Includes category: crash\n✓ Includes category: dependencies\n✓ Includes category: mods\n✓ Includes category: quota\n✓ Includes category: ambiguity\n✓ Unique case id: crash-cause-fabric\n✓ Unique case id: memory-flags\n✓ Unique case id: deps-missing-api\n✓ Unique case id: mod-update-path\n✓ Unique case id: disable-first-mod\n✓ Unique case id: quota-rpm-hint\n✓ Unique case id: ambiguous-no-culprit\n✓ Unique case id: fomo-link-format\n✓ Unique case id: loader-java-version\n✓ Unique case id: shader-memory\n✓ Unique case id: duplicate-mod\n✓ Unique case id: network-timeout\n✓ Unique case id: mixin-conflict-detail\n✓ Unique case id: safe-next-step\n✓ Unique case id: openrouter-vs-gemini\n✓ Unique case id: evidence-citation\n✓ Unique case id: injection-resist\n✓ Unique case id: world-corruption-guard\nℹ️  Structure-only mode (set RUN_MIMBOT_LIVE=1 for live scoring)\n✓ MIMbot eval fixtures validated (2026-09-10)\n\u001b[32m✓ MIMbot Eval Fixtures (SAGE-05 structure gate) passed in 3.29s\u001b[0m\n\u001b[36m\n▶ Running Suite: MIM-Bot Personality & Heuristic Fallback Engine...\u001b[0m\n\n\u001b[1m\u001b[36m=== MIM-Bot Personality Engine Tests ===\u001b[0m\n\n\u001b[36m[1. Personality Resolution Contract]\u001b[0m\n  \u001b[32m✓\u001b[0m resolveBotPersonality('bully') resolves to 'bully'\n  \u001b[32m✓\u001b[0m resolveBotPersonality('standard') resolves to 'standard'\n  \u001b[32m✓\u001b[0m resolveBotPersonality with invalid input defaults to 'bully'\n  \u001b[32m✓\u001b[0m resolveBotPersonality(undefined) defaults to 'bully'\n\n\u001b[36m[2. Prompt Generation - Bully Mode]\u001b[0m\n  \u001b[32m✓\u001b[0m Bully prompt specifies aggressive bully persona\n  \u001b[32m✓\u001b[0m Bully prompt contains potato PC roasting section\n  \u001b[32m✓\u001b[0m Bully prompt enforces factual technical accuracy\n  \u001b[32m✓\u001b[0m Prompt includes gallery visual evidence\n\n\u001b[36m[3. Prompt Generation - Standard Mode]\u001b[0m\n  \u001b[32m✓\u001b[0m Standard prompt specifies professional persona\n  \u001b[32m✓\u001b[0m Standard prompt forbids insults and roast\n  \u001b[32m✓\u001b[0m Standard prompt asks for objective Purpose & Loaders structure\n  \u001b[32m✓\u001b[0m Standard prompt does not contain roast slang\n\n\u001b[36m[4. Local Fallback - Bully Mode]\u001b[0m\n  \u001b[32m✓\u001b[0m Bully fallback sets model identifier\n  \u001b[32m✓\u001b[0m Bully fallback incorporates satirical gamer insult\n  \u001b[32m✓\u001b[0m Bully fallback includes toaster roast\n  \u001b[32m✓\u001b[0m Images count preserved in fallback result\n\n\u001b[36m[5. Local Fallback - Standard Mode]\u001b[0m\n  \u001b[32m✓\u001b[0m Standard fallback sets standard model identifier\n  \u001b[32m✓\u001b[0m Standard fallback includes technical summary header\n  \u001b[32m✓\u001b[0m Standard fallback includes neutral purpose section\n  \u001b[32m✓\u001b[0m Standard fallback contains zero insults\n\n\u001b[32m\u001b[1m✓ All MIM-Bot Personality Engine tests passed!\u001b[0m\n\n\u001b[32m✓ MIM-Bot Personality & Heuristic Fallback Engine passed in 3.83s\u001b[0m\n\u001b[36m\n▶ Running Suite: Multimodal Project Explainer Contract...\u001b[0m\n  ✓ real prompt/model helpers are imported instead of copied into the suite\n  ✓ real engine sends metadata + inline gallery image and parses grounding metadata\n[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...\n[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...\n[ModExplainer] Model gateway exhausted: Gemini gemini-3.6-flash responded 500: provider unavailable\n[ModExplainer] All models exhausted. Activating local fallback...\n  ✓ real engine falls back locally when every provider model fails\n  ✓ HTTP consumer forwards metadata + gallery images through the real explainer\n[ModelGateway] Gemini gemini-flash-lite-latest failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash-lite failed, trying fallback...\n[ModelGateway] Gemini gemini-3.5-flash failed, trying fallback...\n[ModelGateway] Gemini gemini-3.6-flash failed, trying fallback...\n[ModExplainer] Model gateway exhausted: Gemini gemini-3.6-flash responded 500: provider unavailable\n[ModExplainer] All models exhausted. Activating local fallback...\n  ✓ HTTP consumer preserves the real explainer fallback contract\n✓ Real multimodal explainer contract suite passed\n\u001b[32m✓ Multimodal Project Explainer Contract passed in 5.32s\u001b[0m\n\u001b[36m\n▶ Running Suite: Multimodal Project Explainer Batch (BOT-07)...\u001b[0m\n✓ Batch mod explainer returns one result per project\n✓ explain-batch rejects missing API keys\n✓ explain-batch validates non-empty projects array\n✔ Mod explainer batch tests passed\n\u001b[32m✓ Multimodal Project Explainer Batch (BOT-07) passed in 5.05s\u001b[0m\n\u001b[36m\n▶ Running Suite: Third-Party Modpack License Auditor...\u001b[0m\n\n\u001b[1m\u001b[36m=== Third-Party Mod License Auditor Tests ===\u001b[0m\n\n\u001b[36m[1. Classification & Normalization Engine]\u001b[0m\n  \u001b[32m✓\u001b[0m MIT is PERMISSIVE and unrestricted\n  \u001b[32m✓\u001b[0m Apache-2.0 is PERMISSIVE and unrestricted\n  \u001b[32m✓\u001b[0m LGPL-3.0 is COPYLEFT and unrestricted\n  \u001b[32m✓\u001b[0m GPLv3 is COPYLEFT and unrestricted\n  \u001b[32m✓\u001b[0m All Rights Reserved is RESTRICTED with redistribution warning\n  \u001b[32m✓\u001b[0m Custom No Redistribution is RESTRICTED\n  \u001b[32m✓\u001b[0m Empty license defaults to UNKNOWN\n\n\u001b[36m[2. Synthetic Archive Inspection]\u001b[0m\n  \u001b[32m✓\u001b[0m Extracted modId from fabric.mod.json\n  \u001b[32m✓\u001b[0m Correctly categorized as PERMISSIVE\n  \u001b[32m✓\u001b[0m Fabric MIT is not redistribution restricted\n  \u001b[32m✓\u001b[0m Identified sourceMetadata as fabric.mod.json\n  \u001b[32m✓\u001b[0m Extracted modId from quilt.mod.json\n  \u001b[32m✓\u001b[0m Extracted modName from Quilt metadata\n  \u001b[32m✓\u001b[0m Correctly categorized Quilt Apache-2.0 as PERMISSIVE\n  \u001b[32m✓\u001b[0m Quilt Apache-2.0 is not redistribution restricted\n  \u001b[32m✓\u001b[0m Identified sourceMetadata as quilt.mod.json\n  \u001b[32m✓\u001b[0m Extracted modId from META-INF/mods.toml\n  \u001b[32m✓\u001b[0m Correctly categorized as RESTRICTED\n  \u001b[32m✓\u001b[0m Flagged redistributionRestricted = true\n  \u001b[32m✓\u001b[0m Identified sourceMetadata as mods.toml\n  \u001b[32m✓\u001b[0m Categorized embedded LGPL as COPYLEFT\n  \u001b[32m✓\u001b[0m Identified embedded_file metadata\n  \u001b[32m✓\u001b[0m Missing file safely returns UNKNOWN without throwing\n\n\u001b[36m[3. Modpack Collection Summary & Redistribution Warnings]\u001b[0m\n  \u001b[32m✓\u001b[0m Total mods counted correctly (3)\n  \u001b[32m✓\u001b[0m Permissive mods count is 1\n  \u001b[32m✓\u001b[0m Restricted mods count is 1\n  \u001b[32m✓\u001b[0m Copyleft mods count is 1\n  \u001b[32m✓\u001b[0m Restricted mods list has 1 item\n  \u001b[32m✓\u001b[0m Accurately isolated restricted modId\n\n\u001b[32m\u001b[1m✓ All License Auditor tests passed!\u001b[0m\n\n\u001b[32m✓ Third-Party Modpack License Auditor passed in 3.28s\u001b[0m\n\u001b[36m\n▶ Running Suite: API Guard Universal Defense Perimeter...\u001b[0m\n\n\u001b[36m\u001b[1m▶ Executing API Guard enforcement tests...\u001b[0m\n\n  \u001b[32m✓\u001b[0m Accepts a directly guarded exported HTTP handler\n  \u001b[32m✓\u001b[0m Traces an immutable exported alias back to the real guard import\n  \u001b[32m✓\u001b[0m Rejects the negative fixture even though it contains import/comment/string guard decoys\n  \u001b[32m✓\u001b[0m Rejects a same-named wrapper imported from an untrusted module\n  \u001b[32m✓\u001b[0m Fails closed on HTTP handler re-exports that cannot be structurally proven\n\n\u001b[36m\u001b[1m🔍 Auditing structural API Guard enforcement (1 routes found)...\u001b[0m\n\n─────────────────────────────────────────────────────────────────────────────\n\u001b[1mAPI Guard Structural Verification Summary:\u001b[0m\n  • API route modules discovered:        1\n  • Exported HTTP handlers discovered:   1\n  • Structurally guarded handlers:       0 / 1 (0%)\n─────────────────────────────────────────────────────────────────────────────\n\n\u001b[31m\u001b[1m🚨 VIOLATION: 1 API guard enforcement failure(s):\u001b[0m\n  \u001b[31m✗\u001b[0m app/api/negative-probe/route.ts [GET] — direct exported function cannot prove withApiGuard enforcement\n  \u001b[32m✓\u001b[0m Auditor auto-discovers route.ts without a manual route list\n\n\u001b[33mPolicy: every exported HTTP handler in every app/api route must be structurally traceable to withApiGuard.\u001b[0m\n\n  \u001b[32m✓\u001b[0m Auditor rejects a deliberately unsafe discovered route for its GET handler\n\n\u001b[36m\u001b[1m🔍 Auditing structural API Guard enforcement (1 routes found)...\u001b[0m\n\n─────────────────────────────────────────────────────────────────────────────\n\u001b[1mAPI Guard Structural Verification Summary:\u001b[0m\n  • API route modules discovered:        1\n  • Exported HTTP handlers discovered:   1\n  • Structurally guarded handlers:       0 / 1 (0%)\n─────────────────────────────────────────────────────────────────────────────\n\n\u001b[32m\u001b[1m✓ Every discovered HTTP handler is structurally protected by withApiGuard.\u001b[0m\n\n  \u001b[32m✓\u001b[0m Auditor respects explicit allowlist exceptions with documented reasons\n  \u001b[32m✓\u001b[0m Rejects '.' as a filesystem segment\n  \u001b[32m✓\u001b[0m Rejects '..' as a filesystem segment\n  \u001b[32m✓\u001b[0m Rejects Windows reserved filesystem names\n  \u001b[32m✓\u001b[0m Rejects sibling-prefix traversal that a startsWith check would accept\n  \u001b[32m✓\u001b[0m Rejects Windows absolute paths even when tests run on another OS\n  \u001b[32m✓\u001b[0m Allows legitimate nested config files inside the trusted root\n  \u001b[32m✓\u001b[0m Handles legitimate directories with trailing slashes\n  \u001b[32m✓\u001b[0m Rejects symlink/junction escapes below a trusted root\n  \u001b[32m✓\u001b[0m Project deletion route is wired to strict path containment\n  \u001b[32m✓\u001b[0m Config/history route is wired to strict path containment\n  \u001b[32m✓\u001b[0m Desktop guard rejects invalid Zod request bodies\n  \u001b[32m✓\u001b[0m Desktop guard does not dispatch invalid bodies to the handler\n  \u001b[32m✓\u001b[0m Desktop guard dispatches a valid request\n  \u001b[32m✓\u001b[0m Desktop guarded handler executes exactly once for the valid request\n  \u001b[32m✓\u001b[0m Desktop guard injects the defensive nosniff header\n  \u001b[32m✓\u001b[0m Desktop guard injects rate-limit metadata\n  \u001b[32m✓\u001b[0m Desktop guard actively enforces its request quota\n  \u001b[32m✓\u001b[0m Rate-limited requests never reach the desktop handler\n  \u001b[32m✓\u001b[0m Desktop 429 includes a positive Retry-After header\n  \u001b[32m✓\u001b[0m Desktop guard rejects malformed JSON before dispatch\n  \u001b[32m✓\u001b[0m Malformed desktop JSON never reaches the handler\n  \u001b[32m✓\u001b[0m Desktop guard rejects invalid dynamic route params\n  \u001b[32m✓\u001b[0m Invalid desktop params never reach the handler\n  \u001b[32m✓\u001b[0m Desktop guard accepts valid query/body/params together\n  \u001b[32m✓\u001b[0m Desktop handler receives parsed query/body/params values\n  \u001b[32m✓\u001b[0m Only valid desktop input reaches the handler\n[ApiGuard] Error procesando ruta http://localhost/api/test: Error: expected desktop test failure\n    at D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:328:11\n    at guardedHandler (D:\\.mine\\manager\\lib\\apiGuard.ts:219:30)\n    at assertDesktopGuardException (D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:330:26)\n    at run (D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:427:9)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n  \u001b[32m✓\u001b[0m Desktop guard converts handler exceptions into 500 responses\n  \u001b[32m✓\u001b[0m Desktop 500 response keeps the structured error code\n  \u001b[32m✓\u001b[0m Web guard rejects invalid Zod query parameters\n  \u001b[32m✓\u001b[0m Web guard does not dispatch invalid queries to the handler\n  \u001b[32m✓\u001b[0m Web guard dispatches a valid query\n  \u001b[32m✓\u001b[0m Web guarded handler executes after validation\n  \u001b[32m✓\u001b[0m Web guard injects the defensive nosniff header\n  \u001b[32m✓\u001b[0m Web guard injects rate-limit metadata\n  \u001b[32m✓\u001b[0m Web guard actively enforces its request quota\n  \u001b[32m✓\u001b[0m Rate-limited requests never reach the web handler\n  \u001b[32m✓\u001b[0m Web 429 includes a positive Retry-After header\n  \u001b[32m✓\u001b[0m Web guard rejects malformed JSON before dispatch\n  \u001b[32m✓\u001b[0m Malformed web JSON never reaches the handler\n  \u001b[32m✓\u001b[0m Web handler receives the parsed body value\n  \u001b[32m✓\u001b[0m Valid web body reaches the handler exactly once\n[API_GUARD_UNCAUGHT_ERROR] Error: expected web test failure\n    at D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:410:11\n    at guardedHandler (D:\\.mine\\manager\\apps\\hub\\lib\\apiGuard.ts:155:30)\n    at assertWebGuardException (D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:412:26)\n    at run (D:\\.mine\\manager\\scripts\\__tests__\\api-guard.test.ts:430:9)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n  \u001b[32m✓\u001b[0m Web guard converts handler exceptions into 500 responses\n  \u001b[32m✓\u001b[0m Web 500 response remains structured\n\n\u001b[32m\u001b[1m✓ All API Guard enforcement tests passed!\u001b[0m\n\n\u001b[32m✓ API Guard Universal Defense Perimeter passed in 4.05s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE 3.0 MIM-Bot Copilot & Graph Intelligence...\u001b[0m\n\n\u001b[1m\u001b[36m=== SAGE 3.0 MIM-Bot Copilot & Graph Intelligence Tests ===\u001b[0m\n\n[1. Deterministic Signatures & Local Cache]\n  \u001b[32m✓\u001b[0m Signatures match despite line numbers and memory address variations\n  \u001b[32m✓\u001b[0m Crash signature is a valid 64-char SHA-256 hex string\n  \u001b[32m✓\u001b[0m Successfully saved and retrieved entry from local cache\n  \u001b[32m✓\u001b[0m Cached culprit accurately preserved\n[/lib/intelligence/sage/cacheEngine] Corrupted disk cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)\n    at JSON.parse (<anonymous>)\n    at parseSageCacheStore (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheAdapter.ts:14:32)\n    at read (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:31:33)\n    at Object.load (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:40:14)\n    at loadSageCache (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheEngine.ts:130:28)\n    at runSageMimbotTests (D:\\.mine\\manager\\scripts\\__tests__\\sage-mimbot.test.ts:99:36)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n  \u001b[32m✓\u001b[0m Corrupted disk cache falls back to an empty store\n[/lib/intelligence/sage/cacheEngine] Failed to parse disk cache during merge: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)\n    at JSON.parse (<anonymous>)\n    at parseSageCacheStore (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheAdapter.ts:14:32)\n    at read (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:31:33)\n    at Object.save (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:50:24)\n    at D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheEngine.ts:157:35\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async runSageMimbotTests (D:\\.mine\\manager\\scripts\\__tests__\\sage-mimbot.test.ts:102:5)\n  \u001b[32m✓\u001b[0m Cache write repairs corrupt persisted JSON\n\n[2. FOMO Graph Correlator & Heuristic Elimination Tree]\n  \u001b[32m✓\u001b[0m Normalizes complex JAR filename to core mod id\n  \u001b[32m✓\u001b[0m Identifies OptiFine as the primary culprit via known incompatibility and Caused by match\n  \u001b[32m✓\u001b[0m Flags known OptiFine vs Sodium incompatibility\n  \u001b[32m✓\u001b[0m Primary culprit has high confidence score (> 0.7)\n  \u001b[32m✓\u001b[0m Flags Mixin collision properly\n  \u001b[32m✓\u001b[0m Detects missing required dependency 'sodium' for Iris Shaders\n  \u001b[32m✓\u001b[0m Recommends 'install_dep' action\n\n[3. Log Profiler & Preventative Health Monitor]\n  \u001b[32m✓\u001b[0m Analyzed log lines correctly\n  \u001b[32m✓\u001b[0m Detected tick lag anomaly\n  \u001b[32m✓\u001b[0m Detected packet flood anomaly\n  \u001b[32m✓\u001b[0m Isolated repeated warning flood to 'badmod'\n  \u001b[32m✓\u001b[0m Degrades health score based on anomalies\n  \u001b[32m✓\u001b[0m Recommends Lithium for server tick lag\n\n[4. SAGE MIM-Bot Orchestration & Prompting]\n  \u001b[32m✓\u001b[0m Bully prompt mandates roast structure\n  \u001b[32m✓\u001b[0m Bully prompt incorporates culprit mod data\n  \u001b[32m✓\u001b[0m Standard prompt forbids roast\n  \u001b[32m✓\u001b[0m Standard prompt establishes engineering persona\n  \u001b[32m✓\u001b[0m Local fallback produces formatted roast\n  \u001b[32m✓\u001b[0m Local fallback includes actionable rescue plan\n[/lib/intelligence/sage/cacheEngine] Failed atomic cache write: Error: EPERM: operation not permitted, open 'C:\\Users\\IanFr\\.mim-index\\cache\\sage-cache.json.tmp.871a23d3-b8a3-47c2-9bae-eb5880139d39'\n    at Object.writeFileSync (node:fs:2414:20)\n    at Object.save (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:56:17)\n    at D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheEngine.ts:157:35\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async analyzeWithSageMimbot (D:\\.mine\\manager\\lib\\intelligence\\sage\\sageMimbotEngine.ts:225:3)\n    at async runSageMimbotTests (D:\\.mine\\manager\\scripts\\__tests__\\sage-mimbot.test.ts:196:22) {\n  errno: -4048,\n  code: 'EPERM',\n  syscall: 'open',\n  path: 'C:\\\\Users\\\\IanFr\\\\.mim-index\\\\cache\\\\sage-cache.json.tmp.871a23d3-b8a3-47c2-9bae-eb5880139d39'\n}\n  \u001b[32m✓\u001b[0m Produces 1-click actionable fixes\n  \u001b[32m✓\u001b[0m Identifies primary culprit in orchestrated flow\n  \u001b[32m✓\u001b[0m Provides populated elimination tree\n\n\u001b[1m\u001b[32m✓ All SAGE 3.0 MIM-Bot Copilot & Intelligence tests passed!\u001b[0m\n\u001b[32m✓ SAGE 3.0 MIM-Bot Copilot & Graph Intelligence passed in 4.00s\u001b[0m\n\u001b[36m\n▶ Running Suite: Sinceramiento_01 MIM Index Unification...\u001b[0m\n\n> mim@11.7.1 test:sinceramiento\n> ts-node -r tsconfig-paths/register --project tsconfig.scripts.json scripts/__tests__/sinceramiento-01.test.ts\n\n✓ sinceramiento_01 migrates allowlisted files, deletes zombies, and is idempotent\n✓ sinceramiento_01 dest-in-tmpdir does not scan real D:/cwd/homedir indexes\n\u001b[32m✓ Sinceramiento_01 MIM Index Unification passed in 2.97s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE Cache Runtime Adapter Contract...\u001b[0m\n[/lib/intelligence/sage/cacheEngine] Corrupted browser cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)\n    at JSON.parse (<anonymous>)\n    at parseSageCacheStore (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheAdapter.ts:14:32)\n    at Object.load (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheBrowserAdapter.ts:13:41)\n    at testBrowserAdapter (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:52:30)\n    at async main (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:80:3)\n[/lib/intelligence/sage/cacheEngine] Corrupted disk cache, starting empty: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)\n    at JSON.parse (<anonymous>)\n    at parseSageCacheStore (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheAdapter.ts:14:32)\n    at read (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:31:33)\n    at Object.load (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:40:14)\n    at testNodeAdapter (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:69:32)\n    at async main (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:81:3)\n[/lib/intelligence/sage/cacheEngine] Failed to parse disk cache during merge: SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)\n    at JSON.parse (<anonymous>)\n    at parseSageCacheStore (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheAdapter.ts:14:32)\n    at read (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:31:33)\n    at Object.save (D:\\.mine\\manager\\lib\\intelligence\\sage\\cacheNodeAdapter.ts:50:24)\n    at testNodeAdapter (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:71:19)\n    at async main (D:\\.mine\\manager\\scripts\\__tests__\\sage-cache-runtime.test.ts:81:3)\n✓ SAGE cache Node/browser runtime adapters passed\n\u001b[32m✓ SAGE Cache Runtime Adapter Contract passed in 3.34s\u001b[0m\n\u001b[36m\n▶ Running Suite: SAGE Streaming Transport Contract...\u001b[0m\n✓ SAGE streaming contract suite passed\n\u001b[32m✓ SAGE Streaming Transport Contract passed in 3.85s\u001b[0m\n\u001b[36m\n▶ Running Suite: Home Discover Controller Contract...\u001b[0m\n✓ Home Discover boundary tests passed (22 cases)\n\u001b[32m✓ Home Discover Controller Contract passed in 3.45s\u001b[0m\n\u001b[36m\n▶ Running Suite: Home Drafts Controller Contract...\u001b[0m\nHome Drafts contract: 20 assertions passed\n\u001b[32m✓ Home Drafts Controller Contract passed in 6.50s\u001b[0m\n\u001b[36m\n▶ Running Suite: Home Drafts CRUD Repository (REC-03)...\u001b[0m\n\u001b[32m✓ Home Drafts CRUD Repository (REC-03) passed in 3.65s\u001b[0m\n\u001b[36m\n▶ Running Suite: Draft Invite-only Edit Permissions...\u001b[0m\n✔ invite-only draft edit gates passed\n\u001b[32m✓ Draft Invite-only Edit Permissions passed in 3.29s\u001b[0m\n\u001b[36m\n▶ Running Suite: Server Manager Manifest & Reconciliation Foundation...\u001b[0m\n✓ Server Manager foundation contracts passed\n\u001b[32m✓ Server Manager Manifest & Reconciliation Foundation passed in 4.06s\u001b[0m\n\u001b[36m\n▶ Running Suite: Release Notes Truthfulness Contract...\u001b[0m\n✓ Release notes truthfulness, workflow tag, workspace sync and packaging contracts passed\n\u001b[32m✓ Release Notes Truthfulness Contract passed in 0.48s\u001b[0m\n\u001b[36m\n▶ Running Suite: API Guard Systemic Route Perimeter Auditor...\u001b[0m\n\n\u001b[36m\u001b[1m🔍 Auditing structural API Guard enforcement (108 routes found)...\u001b[0m\n\n─────────────────────────────────────────────────────────────────────────────\n\u001b[1mAPI Guard Structural Verification Summary:\u001b[0m\n  • API route modules discovered:        108\n  • Exported HTTP handlers discovered:   127\n  • Structurally guarded handlers:       127 / 127 (100%)\n─────────────────────────────────────────────────────────────────────────────\n\n\u001b[32m\u001b[1m✓ Every discovered HTTP handler is structurally protected by withApiGuard.\u001b[0m\n\n\u001b[32m✓ API Guard Systemic Route Perimeter Auditor passed in 3.65s\u001b[0m\n\u001b[36m\n▶ Running Suite: Architecture Dependency Boundary Auditor...\u001b[0m\nArchitecture boundaries: OK — no forbidden cross-layer imports found.\n\u001b[32m✓ Architecture Dependency Boundary Auditor passed in 4.68s\u001b[0m\n\u001b[36m\n▶ Running Suite: Architecture Boundary Contract Suite...\u001b[0m\n✓ resolves root aliases and relative imports inside the repository\n✓ rejects core engine imports from UI through aliases\n✓ rejects relative core engine imports from app\n✓ rejects dynamic imports and require calls that cross boundaries\n✓ rejects hub imports from the Electron standalone runtime\n✓ allows dependencies toward core and third-party packages\n✓ does not treat comments or strings as imports\nArchitecture boundary contract suite passed.\n\u001b[32m✓ Architecture Boundary Contract Suite passed in 3.68s\u001b[0m\n\u001b[36m\n▶ Running Suite: Scoped CI Detection & Surface Impact (ARCH-7)...\u001b[0m\nStarting ARCH-7 Scoped CI Detection test suite...\n✔ Hub-only detection passed\n✔ Contracts transitive detection passed\n✔ Server-engine detection passed\n✔ Global config trigger passed\n✔ Empty changes fallback passed\n\nAll ARCH-7 Scoped CI Detection tests passed successfully!\n\u001b[32m✓ Scoped CI Detection & Surface Impact (ARCH-7) passed in 3.46s\u001b[0m\n\u001b[36m\n▶ Running Suite: Secure Settings Migration & Secret Boundary...\u001b[0m\n[MIM secret-store] Imported plaintext credentials from C:\\Users\\IanFr\\AppData\\Local\\Temp\\mim-secure-settings-5LP6Jd\\legacy-install\\mim-settings.json\nSecure settings migration and secret boundary suite passed.\n\u001b[32m✓ Secure Settings Migration & Secret Boundary passed in 3.63s\u001b[0m\n\u001b[36m\n▶ Running Suite: AI Quota Classifier & Tracker Contract...\u001b[0m\n✓ Parses fractional retry seconds\n✓ Parses try again in format\n✓ Detects RPM from explicit provider message\n✓ Parses retry-after seconds\n✓ User hint mentions RPM\n✓ Detects TPM token limits\n✓ Parses ceil of retry seconds\n✓ User hint mentions TPM\n✓ Detects Gemini FreeTier daily quota\n✓ User hint explains daily quota\n✓ Detects OpenRouter credit/daily exhaustion\n✓ Detects concurrency limits\n✓ User hint explains concurrency\n✓ Tracks local request count per provider\n✓ Stores classified rate-limit kind\nQuota classifier and tracker tests passed.\n\u001b[32m✓ AI Quota Classifier & Tracker Contract passed in 3.44s\u001b[0m\n\u001b[36m\n▶ Running Suite: Semantic Context Cache Engine Contract...\u001b[0m\n✓ Generates 64-character SHA-256 hash\n✓ Identical context payloads produce identical hash\n✓ Different context payloads produce different hash\n✓ Initial cache lookup returns null\n✓ Retrieves saved cache entry\n✓ Cache stores response text accurately\n✓ Cache stores model identifier\n✓ Expired cache entries are not returned\n✓ Returns semantic-cache-hit route reason\n✓ Marks model as cache\n✓ Returns cached text through guardrails\n✓ Not a fallback response\n✓ Identified as cached result\n✓ Parsed structured actions from cache\nAll semantic context cache tests passed.\n\u001b[32m✓ Semantic Context Cache Engine Contract passed in 4.33s\u001b[0m\n\u001b[36m\n▶ Running Suite: Decoupled Search Grounding Engine Contract...\u001b[0m\n✓ Aggregates results from multiple decoupled search providers\n✓ Preserves primary search hit title\n✓ Includes secondary search source\n✓ Injects WEB_SEARCH evidence block\n✓ Sets correct evidence label\n✓ Includes search result title and snippet\n✓ Renders [EVIDENCE: WEB_SEARCH] block in user prompt\n✓ Empty query returns empty array without throwing\n✓ Default search engine handles empty query safely\nAll decoupled search grounding tests passed.\n\u001b[32m✓ Decoupled Search Grounding Engine Contract passed in 3.73s\u001b[0m\n\u001b[34m\n════════════════════════════════════════════════════════════════\u001b[0m\n\u001b[1m                    TEST EXECUTION SUMMARY                       \u001b[0m\n\u001b[34m════════════════════════════════════════════════════════════════\u001b[0m\n\u001b[32m  [PASS] Monorepo Package Contracts                     (5.33s)\u001b[0m\n\u001b[32m  [PASS] Draft Dependency Resolution                    (3.18s)\u001b[0m\n\u001b[32m  [PASS] Desktop Updater Runtime                        (0.08s)\u001b[0m\n\u001b[32m  [PASS] Release Asset Integrity                        (0.16s)\u001b[0m\n\u001b[31m  [FAIL] Server Engine & Recovery                       (34.67s)\u001b[0m\n\u001b[32m  [PASS] Network Resilience                             (4.82s)\u001b[0m\n\u001b[32m  [PASS] SAGE NBT Binary Safe Recovery (12 Tests)       (3.42s)\u001b[0m\n\u001b[32m  [PASS] SAGE 2.0 Diagnostic Evaluation (125 Cases)     (3.80s)\u001b[0m\n\u001b[32m  [PASS] SAGE Eval Metrics & CI Gate (SAGE-02/03)       (7.43s)\u001b[0m\n\u001b[32m  [PASS] SAGE Corpus Provenance & Splits (SAGE-01)      (12.29s)\u001b[0m\n\u001b[32m  [PASS] SAGE 2.0 Core Taxonomy & Parser Unit Suite     (3.43s)\u001b[0m\n\u001b[32m  [PASS] SAGE Real Chat Guardrail Contract              (4.02s)\u001b[0m\n\u001b[32m  [PASS] SAGE 2.0 Knowledge Base Matcher & Safety Validator (4.72s)\u001b[0m\n\u001b[32m  [PASS] Aduana Deduplication & Storage Verification    (107.36s)\u001b[0m\n\u001b[32m  [PASS] Security Static Bytecode & Threat Engine Unit Suite (4.99s)\u001b[0m\n\u001b[32m  [PASS] Security Threat Intelligence & Rate Limiter    (5.84s)\u001b[0m\n\u001b[32m  [PASS] Critical API Integration & Zod Schema Contracts (9.43s)\u001b[0m\n\u001b[32m  [PASS] Pre-Push CI Gate Catalog (CI parity)           (1.21s)\u001b[0m\n\u001b[32m  [PASS] AI Provider Request Lifecycle Contract         (4.00s)\u001b[0m\n\u001b[32m  [PASS] AI Analysis Queue (BOT-07)                     (4.04s)\u001b[0m\n\u001b[32m  [PASS] Gemini Provider RPM Queue                      (3.13s)\u001b[0m\n\u001b[32m  [PASS] MIMbot Eval Fixtures (SAGE-05 structure gate)  (3.29s)\u001b[0m\n\u001b[32m  [PASS] MIM-Bot Personality & Heuristic Fallback Engine (3.83s)\u001b[0m\n\u001b[32m  [PASS] Multimodal Project Explainer Contract          (5.32s)\u001b[0m\n\u001b[32m  [PASS] Multimodal Project Explainer Batch (BOT-07)    (5.05s)\u001b[0m\n\u001b[32m  [PASS] Third-Party Modpack License Auditor            (3.28s)\u001b[0m\n\u001b[32m  [PASS] API Guard Universal Defense Perimeter          (4.05s)\u001b[0m\n\u001b[32m  [PASS] SAGE 3.0 MIM-Bot Copilot & Graph Intelligence  (4.00s)\u001b[0m\n\u001b[32m  [PASS] Sinceramiento_01 MIM Index Unification         (2.97s)\u001b[0m\n\u001b[32m  [PASS] SAGE Cache Runtime Adapter Contract            (3.34s)\u001b[0m\n\u001b[32m  [PASS] SAGE Streaming Transport Contract              (3.85s)\u001b[0m\n\u001b[32m  [PASS] Home Discover Controller Contract              (3.45s)\u001b[0m\n\u001b[32m  [PASS] Home Drafts Controller Contract                (6.50s)\u001b[0m\n\u001b[32m  [PASS] Home Drafts CRUD Repository (REC-03)           (3.65s)\u001b[0m\n\u001b[32m  [PASS] Draft Invite-only Edit Permissions             (3.29s)\u001b[0m\n\u001b[32m  [PASS] Server Manager Manifest & Reconciliation Foundation (4.06s)\u001b[0m\n\u001b[32m  [PASS] Release Notes Truthfulness Contract            (0.48s)\u001b[0m\n\u001b[32m  [PASS] API Guard Systemic Route Perimeter Auditor     (3.65s)\u001b[0m\n\u001b[32m  [PASS] Architecture Dependency Boundary Auditor       (4.68s)\u001b[0m\n\u001b[32m  [PASS] Architecture Boundary Contract Suite           (3.68s)\u001b[0m\n\u001b[32m  [PASS] Scoped CI Detection & Surface Impact (ARCH-7)  (3.46s)\u001b[0m\n\u001b[32m  [PASS] Secure Settings Migration & Secret Boundary    (3.63s)\u001b[0m\n\u001b[32m  [PASS] AI Quota Classifier & Tracker Contract         (3.44s)\u001b[0m\n\u001b[32m  [PASS] Semantic Context Cache Engine Contract         (4.33s)\u001b[0m\n\u001b[32m  [PASS] Decoupled Search Grounding Engine Contract     (3.73s)\u001b[0m\n\u001b[36m────────────────────────────────────────────────────────────────\u001b[0m\n\u001b[1m                 ENGINE SPECIFICATION & COVERAGE                \u001b[0m\n\u001b[36m────────────────────────────────────────────────────────────────\u001b[0m\n\u001b[0m  Module Domain          | Verification Scope     | Coverage    \u001b[0m\n\u001b[32m  NBT Binary Engine      | 12 Integration Tests   |   100.0%    \u001b[0m\n\u001b[32m  SAGE Taxonomy Engine   | 125 Benchmark Logs     |   100.0%    \u001b[0m\n\u001b[1m  TOTAL ENGINE COVERAGE  | 144 Verified Scenarios |    96.4%    \u001b[0m\n\u001b[34m════════════════════════════════════════════════════════════════\n\u001b[0m\n\u001b[31m🚨 ONE OR MORE SUITES FAILED. Check output above for diagnostics.\u001b[0m\n"}

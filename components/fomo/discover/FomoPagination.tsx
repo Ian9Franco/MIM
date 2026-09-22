@@ -51,7 +51,7 @@ export const FomoPagination = memo(function FomoPagination({
         {/* Liquid Sliding Background */}
         {pages.indexOf(page) !== -1 && (
           <div 
-            className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none"
+            className="fomo-pagination-pill absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none"
             style={{
               width: "2.25rem",
               height: "2.25rem",

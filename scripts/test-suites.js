@@ -1,6 +1,8 @@
 /** Suite catalog for scripts/test-runner.js */
 module.exports = [{ name: "Monorepo Package Contracts", cmd: "npx", args: ["ts-node", "-r", "tsconfig-paths/register", "--project", "tsconfig.scripts.json", "scripts/__tests__/monorepo-arch3-arch4.test.ts"] },
     { name: "Draft Dependency Resolution", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/draft-dependencies.test.ts"] },
+    { name: "Draft Item Icon Enrichment", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/enrich-draft-item-icons.test.ts"] },
+    { name: "Desktop Data Persistence", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/desktop-data-persistence.test.ts"] },
     { name: "Desktop Updater Runtime", cmd: "node", args: ["scripts/__tests__/app-updater-runtime.test.js"] },
     { name: "Release Asset Integrity", cmd: "node", args: ["scripts/__tests__/release-assets.test.js"] },
     { name: "FOMO Layout (wide screen)", cmd: "npx", args: ["ts-node", "--project", "tsconfig.scripts.json", "scripts/__tests__/fomo-layout.test.ts"] },

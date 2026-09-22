@@ -85,7 +85,7 @@ export function DraftActivityFeed({ draftId, isModern }: { draftId: string; isMo
   return (
     <div className={`flex flex-col h-full p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}`}>
       <div className="flex items-center gap-2 mb-4 shrink-0">
-        <Clock className={`w-4 h-4 ${isModern ? "text-primary" : "text-primary"}`} />
+        <Clock className={`w-4 h-4 ${isModern ? "text-primary" : "text-[var(--color-accent)]"}`} />
         <h3 className={`font-bold text-sm ${isModern ? "text-foreground" : "text-white"}`}>Actividad Reciente</h3>
       </div>
 

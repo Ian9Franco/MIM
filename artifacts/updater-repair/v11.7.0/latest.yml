@@ -1,0 +1,8 @@
+version: 11.7.0
+files:
+  - url: MIM.Setup.11.7.0.exe
+    sha512: eFJKFXjtoOCVTDyLVTknHJ1/MyrDjdNzSA10pHv0ZhbWi0YqQ5R0mIJ1t+vTHb2q9S1NAJZncPD/VDDD6IGKOg==
+    size: 200396638
+path: MIM.Setup.11.7.0.exe
+sha512: eFJKFXjtoOCVTDyLVTknHJ1/MyrDjdNzSA10pHv0ZhbWi0YqQ5R0mIJ1t+vTHb2q9S1NAJZncPD/VDDD6IGKOg==
+releaseDate: '2026-09-20T22:39:14.726Z'

@@ -159,6 +159,7 @@ export function ModHeader({
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "¡Compartido en la Comunidad exitosamente!", type: "success" }
       }));
+      window.dispatchEvent(new CustomEvent("fomo-community-favorite-changed"));
       window.dispatchEvent(new CustomEvent("fomo-refresh-sharing"));
       setShowShareModal(false);
       setShareComment("");

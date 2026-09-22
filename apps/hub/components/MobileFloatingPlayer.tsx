@@ -1,1 +1,1 @@
-file:///tmp/mcp_content.txt
+file:///home/box/.cursor/projects/workspace/agent-tools/MobileFloatingPlayer_restore.txt

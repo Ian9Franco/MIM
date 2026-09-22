@@ -37,10 +37,10 @@ export function DraftItemsTab({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -12 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-3 h-full min-h-0 max-h-[min(70vh,720px)] overflow-hidden"
     >
       {/* Type filter */}
-      <div className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-white/[0.06] bg-black/10 p-1">
+      <div className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-white/[0.06] bg-black/10 p-1 shrink-0">
         {TYPE_FILTERS.map((f) => {
           const active = typeFilter === f.id;
           return (
@@ -72,6 +72,7 @@ export function DraftItemsTab({
         })}
       </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none space-y-3 pr-1">
       {loadingActiveMods ? (
         <CollectionsSkeleton />
       ) : visibleMods.length === 0 ? (
@@ -160,6 +161,7 @@ export function DraftItemsTab({
           );
         })
       )}
+      </div>
     </motion.div>
   );
 }

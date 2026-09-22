@@ -109,10 +109,10 @@ export function HorizontalEditorialMarquee({
 
       <div 
         ref={containerRef}
-        className="relative w-full flex-1 overflow-hidden mask-horizontal-edges cursor-grab active:cursor-grabbing"
+        className="relative w-full flex-1 overflow-x-hidden overflow-y-visible mask-horizontal-edges cursor-grab active:cursor-grabbing pt-3 pb-2"
         {...handlers}
       >
-        <div ref={innerRef} className="flex gap-6 w-max min-w-full px-4 py-6 h-full items-center">
+        <div ref={innerRef} className="flex gap-6 w-max min-w-full px-4 py-4 h-full items-center">
           {duplicatedItems.map((item: any, i: number) => (
             type === "collection" ? (
               <SpotlightCollectionCard

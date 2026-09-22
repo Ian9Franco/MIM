@@ -543,9 +543,10 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
   if (loading) return <CommunityFeedSkeleton />;
   if (!shares.length) return <EmptyCommunity icon={<Share2 className="h-10 w-10" />} title="Nada compartido todavía" text="Cuando alguien comparta un proyecto en la comunidad, aparecerá acá." />;
   const featuredShares = shares.slice(0, 6);
+  const activityShares = shares.slice(6);
 
   return (
-    <motion.div key="community-feed" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-5 overflow-y-auto pb-28 pr-1 scrollbar-none">
+    <motion.div key="community-feed" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex-1 space-y-5 overflow-y-auto pb-28 pr-1 scrollbar-none max-h-[calc(100vh-11rem)]">
       <section aria-labelledby="community-featured-title">
         <div className="flex items-end justify-between px-1 pb-2">
           <div><p className="text-[9px] font-mono uppercase text-white/30">Selección del hub</p><h3 id="community-featured-title" className="mt-0.5 text-xs font-bold text-white/80">Destacados</h3></div>
@@ -559,9 +560,28 @@ function CommunityFeed({ shares, loading, recentUpdates, page, hasNext, onPageCh
       <section aria-labelledby="community-activity-title" className="space-y-2.5">
         <div className="flex items-end justify-between px-1">
           <div><p className="text-[9px] font-mono uppercase text-white/30">En tiempo real</p><h3 id="community-activity-title" className="mt-0.5 text-xs font-bold text-white/80">Actividad reciente</h3></div>
-          <span className="text-[8px] font-mono uppercase text-white/25">Lo último</span>
+          <span className="text-[8px] font-mono uppercase text-white/25">{activityShares.length} publicaciones</span>
         </div>
-        {shares.map((item, index) => <ShareCard key={item.id} item={item} index={index} updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]} onOpenProfile={onOpenProfile} onOpenMod={onOpenMod} userFavorites={userFavorites} onToggleFavorite={onToggleFavorite} reaction={reactions[item.id]} onToggleReaction={onToggleReaction} />)}
+        {activityShares.length === 0 ? (
+          <p className="px-1 text-[11px] text-white/40">No hay más actividad aparte de los destacados.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[min(58vh,560px)] overflow-y-auto pr-1 scrollbar-none">
+            {activityShares.map((item, index) => (
+              <ShareCard
+                key={item.id}
+                item={item}
+                index={index}
+                updated={!!recentUpdates[updateKey(item.platform ?? "modrinth", item.mod_id ?? item.id)]}
+                onOpenProfile={onOpenProfile}
+                onOpenMod={onOpenMod}
+                userFavorites={userFavorites}
+                onToggleFavorite={onToggleFavorite}
+                reaction={reactions[item.id]}
+                onToggleReaction={onToggleReaction}
+              />
+            ))}
+          </div>
+        )}
       </section>
       <div className="sticky bottom-0 flex items-center justify-between rounded-xl border border-white/[0.07] bg-surface/90 p-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
         <button type="button" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))} className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-[9px] font-bold text-white/55 transition-colors hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-20"><ChevronLeft className="h-3.5 w-3.5" />Recientes</button>
@@ -592,7 +612,11 @@ function ShareCard({ item, index, updated, featured = false, onOpenProfile, onOp
     String(favorite.mod_id || favorite.project_id || favorite.projectId || favorite.id) === String(projectId)
     && (favorite.platform || favorite.source || "modrinth") === platform
   );
-  const playVideo = () => meta.embeddedVideoId && window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId } }));
+  const playVideo = () => {
+    if (!meta.embeddedVideoId) return;
+    const isShort = projectType.startsWith("youtube-short") || projectType === "short";
+    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: meta.embeddedVideoId, isShort } }));
+  };
 
   return (
     <motion.article

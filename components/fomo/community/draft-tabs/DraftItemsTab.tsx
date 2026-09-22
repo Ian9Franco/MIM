@@ -332,7 +332,7 @@ export function DraftItemsTab({
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full min-h-0">
+    <div className="flex flex-col gap-4 h-full min-h-0 max-h-[min(70vh,720px)] overflow-hidden">
       {/* Header toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">

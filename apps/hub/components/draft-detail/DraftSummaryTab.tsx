@@ -38,7 +38,7 @@ export function DraftSummaryTab({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -12 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-4 h-full min-h-0 max-h-[min(70vh,720px)] overflow-y-auto scrollbar-none"
     >
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2">

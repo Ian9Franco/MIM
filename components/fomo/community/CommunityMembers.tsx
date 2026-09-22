@@ -14,9 +14,10 @@ interface MemberProfile {
 
 interface CommunityMembersProps {
   onOpenProfile: (username: string) => void;
+  onOpenMineProfile?: () => void;
 }
 
-export function CommunityMembers({ onOpenProfile }: CommunityMembersProps) {
+export function CommunityMembers({ onOpenProfile, onOpenMineProfile }: CommunityMembersProps) {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -60,6 +61,16 @@ export function CommunityMembers({ onOpenProfile }: CommunityMembersProps) {
 
   return (
     <div className="px-6 pb-8 space-y-4">
+      {onOpenMineProfile && (
+        <button
+          type="button"
+          onClick={onOpenMineProfile}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-xs font-black uppercase tracking-wider text-primary hover:bg-primary/15 transition-colors"
+        >
+          <UserRound className="w-4 h-4" />
+          Mi perfil
+        </button>
+      )}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <input

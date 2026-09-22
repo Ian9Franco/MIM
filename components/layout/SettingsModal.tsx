@@ -24,7 +24,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, apiKeysConfigured,
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
     showInvalidPathsWarning, setShowInvalidPathsWarning,
-    pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
+    pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave,
+    hasChanges, secretPersistence, saveError,
   } = useSettingsManager(onClose);
 
   const { showOnboarding, dismiss: dismissOnboarding } = useOnboardingVisibility("onboarding_settings", true);
@@ -151,6 +152,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 )}
                 {activeTab === "apiKeys" && (
                   <div id="onboarding-settings-keys" className="space-y-5">
+                    {secretPersistence === "session" && (
+                      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200/90 leading-relaxed">
+                        En este entorno las API keys se guardan solo para la sesión actual del servidor. En la app Desktop se persisten de forma cifrada.
+                      </div>
+                    )}
+                    {saveError && (
+                      <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-300 leading-relaxed">
+                        {saveError}
+                      </div>
+                    )}
                     <ApiKeyInputGroup label="Google Gemini API Key" value={geminiApiKey} onChange={setGeminiApiKey} show={showGemini} onToggleShow={() => setShowGemini(!showGemini)} canEdit={canEdit} isValid={keyValidation.gemini} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.geminiApiKey} placeholder="AIzaSy..." badge="Gratis / BYOK" color="purple" link="https://aistudio.google.com/app/apikey" desc="Obligatoria para multimodal y search grounding. El copiloto SAGE la valida al conectar." />
                     <ApiKeyInputGroup label="OpenRouter API Key" value={openrouterApiKey} onChange={setOpenrouterApiKey} show={showOpenrouter} onToggleShow={() => setShowOpenrouter(!showOpenrouter)} canEdit={canEdit} isValid={keyValidation.openrouter} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.openrouterApiKey} placeholder="sk-or-v1-..." badge="Opcional" color="blue" link="https://openrouter.ai/keys" linkText="Crear clave" desc="Opcional: enruta chat de texto a GLM vía OpenRouter y ahorra cuota Gemini. Ver docs/guides/mimbot-byok-setup.md." />
                     <ApiKeyInputGroup label="CurseForge API Key" value={curseforgeApiKey} onChange={setCurseforgeApiKey} show={showCurseforge} onToggleShow={() => setShowCurseforge(!showCurseforge)} canEdit={canEdit} isValid={keyValidation.curseforge} isValidating={isValidatingKeys} saving={saving} configured={apiKeysConfigured.curseforgeApiKey} placeholder="Tu clave de CurseForge..." badge="Requerida" link="https://console.curseforge.com/" />
@@ -201,7 +212,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               <SettingsFooter 
                 saving={saving} moveProgress={moveProgress} isValidating={isValidating} isValidatingKeys={isValidatingKeys} 
                 activeTab={activeTab} pathValidation={pathValidation} keyValidation={keyValidation} 
-                canEdit={canEdit} onCancel={handleCloseAttempt} onSave={handleSave} 
+                canEdit={canEdit} hasChanges={hasChanges} onCancel={handleCloseAttempt} onSave={handleSave} 
               />
             </div>
           )}

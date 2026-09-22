@@ -2,12 +2,20 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v12.0.0  
+> **Versión Actual:** v13.0.0  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
 > **Última actualización:** 2026-09-22
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 13.0.0 — Release v13.0.0 — Sistemas y Criterio Técnico MIM (2026-09-22)
+
+### Cambios incluidos
+
+- Release v13.0.0 — Sistemas y Criterio Técnico MIM
 
 ---
 

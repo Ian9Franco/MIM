@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FlaskConical, Heart } from "lucide-react";
+import { FlaskConical, Heart, Users } from "lucide-react";
 
 type Sharer = { username?: string; color?: string | null; avatar_url?: string | null };
 
@@ -23,6 +23,13 @@ export function FomoModStatusBadges({
   if (!inDraft && !userTracks && !hasCommunity) return null;
 
   const favoriteLabel = isUserFollowed ? "Seguido" : "Favorito";
+  const primarySharer = followedByUsers[0]?.username;
+  const sharerLabel =
+    followedByUsers.length > 1
+      ? `Favorito de @${primarySharer} +${followedByUsers.length - 1}`
+      : primarySharer
+        ? `Favorito de @${primarySharer}`
+        : "Favorito en comunidad";
 
   const base =
     layout === "overlay"
@@ -51,27 +58,26 @@ export function FomoModStatusBadges({
       )}
       {hasCommunity && (
         <span
-          className="fomo-mod-status-badge fomo-mod-status-badge--community inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
-          title={`Recomendado por ${followedByUsers.map((u) => `@${u.username}`).join(", ")}`}
+          className="fomo-mod-status-badge fomo-mod-status-badge--community inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-bold tracking-wide normal-case"
+          title={`Favorito de ${followedByUsers.map((u) => `@${u.username}`).join(", ")}`}
         >
-          <span className="flex -space-x-1">
-            {followedByUsers.slice(0, 2).map((info, i) => (
-              <span
-                key={i}
-                className="h-3.5 w-3.5 overflow-hidden rounded-full border border-white/20"
-                style={{ backgroundColor: info.color || "var(--color-primary)" }}
-              >
-                {info.avatar_url ? (
-                  <img src={info.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-[6px] text-white">
-                    {(info.username || "U").charAt(0)}
-                  </span>
-                )}
-              </span>
-            ))}
-          </span>
-          Comunidad
+          {primarySharer ? (
+            <span
+              className="h-3.5 w-3.5 shrink-0 overflow-hidden rounded-full border border-white/20"
+              style={{ backgroundColor: followedByUsers[0].color || "var(--color-primary)" }}
+            >
+              {followedByUsers[0].avatar_url ? (
+                <img src={followedByUsers[0].avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-[6px] text-white">
+                  {primarySharer.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </span>
+          ) : (
+            <Users className="h-3 w-3 shrink-0" />
+          )}
+          <span className="truncate">{sharerLabel}</span>
         </span>
       )}
     </div>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { Clock, PlusCircle } from "lucide-react";
+import { openCommunityUserProfile } from "@/components/fomo/community/communityActions";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -83,7 +84,7 @@ export function DraftActivityFeed({ draftId, isModern }: { draftId: string; isMo
   }, [draftId]);
 
   return (
-    <div className={`flex flex-col h-full p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}`}>
+    <div className={`flex flex-col h-full max-h-full p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}`}>
       <div className="flex items-center gap-2 mb-4 shrink-0">
         <Clock className={`w-4 h-4 ${isModern ? "text-primary" : "text-[var(--color-accent)]"}`} />
         <h3 className={`font-bold text-sm ${isModern ? "text-foreground" : "text-white"}`}>Actividad Reciente</h3>
@@ -103,7 +104,13 @@ export function DraftActivityFeed({ draftId, isModern }: { draftId: string; isMo
           {activities.map(act => {
             const timeAgo = formatDistanceToNow(new Date(act.created_at), { addSuffix: true, locale: es });
             return (
-              <div key={act.id} className={`group flex items-center gap-3 p-2 rounded-xl transition-colors ${isModern ? "hover:bg-muted/50" : "hover:bg-white/5"}`}>
+              <button
+                key={act.id}
+                type="button"
+                onClick={() => act.profiles?.username && openCommunityUserProfile(act.profiles.username)}
+                disabled={!act.profiles?.username}
+                className={`group flex w-full items-center gap-3 p-2 rounded-xl transition-colors text-left cursor-pointer disabled:cursor-default ${isModern ? "hover:bg-muted/50" : "hover:bg-white/5"}`}
+              >
                 <div 
                   className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden border shadow-sm"
                   style={{ borderColor: act.profiles?.color || (isModern ? 'var(--border)' : 'rgba(255,255,255,0.2)') }}
@@ -128,7 +135,7 @@ export function DraftActivityFeed({ draftId, isModern }: { draftId: string; isMo
                     {timeAgo}
                   </p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

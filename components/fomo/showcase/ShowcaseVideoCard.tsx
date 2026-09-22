@@ -4,6 +4,7 @@ import React from "react";
 import { TvMinimalPlay, Globe, Puzzle } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 import { supabase } from "@/lib/core/supabaseClient";
+import { playFomoVideo } from "@/lib/fomo/playVideo";
 
 function formatYoutubeDate(rawDate?: string): string {
   if (!rawDate || rawDate.length !== 8) return "";
@@ -70,6 +71,7 @@ interface ShowcaseVideoCardProps {
   currentUserColor?: string | null;
   isLatest?: boolean;
   theme?: string;
+  isShort?: boolean;
 }
 
 function ShowcaseVideoCardInner({
@@ -82,7 +84,8 @@ function ShowcaseVideoCardInner({
   setExpandedVideo,
   currentUserColor,
   isLatest = false,
-  theme = "official"
+  theme = "official",
+  isShort = false,
 }: ShowcaseVideoCardProps) {
   const isModern = theme === "modern";
   const isSharedByMe = allSharedVideos.some(v => v.youtube_video_id === video.videoId && v.profile_id === currentUser?.id);
@@ -178,7 +181,7 @@ function ShowcaseVideoCardInner({
     >
       <div className={`flex flex-col ${isExpanded ? 'w-full xl:w-[450px] shrink-0' : 'w-full'}`}>
         {/* Background Image / Thumbnail Area */}
-        <div className={`relative w-full overflow-hidden bg-black/40 ${isLatest && !isExpanded ? "aspect-video" : "aspect-[16/9]"}`}>
+        <div className={`relative w-full overflow-hidden bg-black/40 ${isShort ? "aspect-9/16 max-h-80" : isLatest && !isExpanded ? "aspect-video" : "aspect-[16/9]"}`}>
           <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-110">
              <ShowcaseVideoThumbnail video={video} />
           </div>
@@ -240,7 +243,7 @@ function ShowcaseVideoCardInner({
              <button 
                onClick={(e) => {
                  e.stopPropagation();
-                 window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId: video.videoId } }));
+                 playFomoVideo(video.videoId, { isShort });
                }}
                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95"
              >

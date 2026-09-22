@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Film, ExternalLink, X, Play, Eye, EyeOff, Puzzle, Share2, Check } from "lucide-react";
 import { FeedSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
+import { playFomoVideo } from "@/lib/fomo/playVideo";
 
 function CollapsibleVideoDescription({ text }: { text: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -91,8 +92,8 @@ export function FeedTab({
     setExpandedPostMods(null);
   }, [currentChannel, youtubeFeedType]);
 
-  const handlePlayVideo = (videoId: string) => {
-    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId } }));
+  const handlePlayVideo = (videoId: string, isShort = false) => {
+    playFomoVideo(videoId, { isShort });
   };
 
   const visibleChannels = followedChannels.filter(c => c.visible !== false);
@@ -117,9 +118,8 @@ export function FeedTab({
         </button>
       </div>
 
-      {/* Channel manager */}
       {showChannelManager && (
-        <div className="bg-white/5 border border-white/[0.06] rounded-2xl p-3.5 mb-4 flex flex-col gap-3 shrink-0 animate-fadeIn">
+        <div className="bg-white/5 border border-white/[0.06] rounded-xl p-2.5 mb-3 flex flex-col gap-2 shrink-0 animate-fadeIn max-h-44">
           <div className="flex gap-2">
             <input
               type="text"
@@ -137,10 +137,10 @@ export function FeedTab({
             </button>
           </div>
           
-          <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-none pr-1">
-            <span className="text-[9px] font-bold text-white/30 block mb-1">Elegir hasta 3 visibles:</span>
+          <div className="max-h-24 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 scrollbar-none pr-1">
+            <span className="text-[9px] font-bold text-white/30 block mb-0.5 sm:col-span-2">Hasta 3 visibles en el feed:</span>
             {followedChannels.map((chan) => (
-              <div key={chan.url} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-1.5">
+              <div key={chan.url} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-lg px-2 py-1">
                 <span className="text-[11px] font-semibold text-white/70 truncate mr-2 flex-1">{chan.name}</span>
                 <div className="flex items-center gap-2">
                   <button
@@ -177,8 +177,7 @@ export function FeedTab({
         </div>
       )}
 
-      {/* Channel selector pills (Max 3 visible) */}
-      <div className="flex gap-1 mb-3 shrink-0 overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.025] p-1 scrollbar-none">
+      <div className="flex flex-wrap gap-1 mb-2 shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.025] p-1">
         {visibleChannels.map(chan => (
           <button
             key={chan.url}
@@ -196,7 +195,7 @@ export function FeedTab({
       </div>
 
       {/* Feed type tab selector */}
-      <div className="flex bg-white/5 border border-white/[0.06] rounded-xl p-1 gap-1 mb-4 shrink-0">
+      <div className="flex bg-white/5 border border-white/[0.06] rounded-xl p-1 gap-1 mb-3 shrink-0">
         {[
           { id: "posts", label: "Publicaciones" },
           { id: "videos", label: "Videos" },
@@ -222,13 +221,13 @@ export function FeedTab({
       {loadingYoutube ? (
         <FeedSkeleton />
       ) : youtubePosts.length > 0 ? (
-        <motion.div key={`${currentChannel}-${youtubeFeedType}`} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }} className="flex-1 overflow-y-auto space-y-4 pb-28 pr-1 scrollbar-none">
+        <motion.div key={`${currentChannel}-${youtubeFeedType}`} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }} className={`flex-1 overflow-y-auto pb-28 pr-1 scrollbar-none max-h-[min(68vh,680px)] ${youtubeFeedType === "shorts" ? "grid grid-cols-2 sm:grid-cols-3 gap-3 content-start" : "space-y-4"}`}>
           {youtubePosts.slice(0, visibleCount).map((post, postIndex) => {
             const shareId = `youtube:${post.postId || post.embeddedVideoId}`;
             const isShared = userShares.some((share) => (share.mod_id || share.project_id || share.id) === shareId);
 
             return (
-            <motion.article key={post.postId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(postIndex * 0.03, 0.18) }} whileHover={{ y: -2 }} className="mim-feed-card bg-surface/90 border border-border rounded-2xl p-4 flex flex-col gap-3 transition-shadow">
+            <motion.article key={post.postId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(postIndex * 0.03, 0.18) }} whileHover={{ y: -2 }} className={`mim-feed-card bg-surface/90 border border-border rounded-2xl flex flex-col gap-3 transition-shadow ${youtubeFeedType === "shorts" ? "p-2.5" : "p-4"}`}>
               {/* Bold Title for videos and shorts */}
               {(post.mode === "video" || post.mode === "short" || post.mode === "video-short") && post.title && (
                 <h3 className="text-xs font-bold text-white/90 leading-snug">{post.title}</h3>
@@ -242,8 +241,8 @@ export function FeedTab({
               {/* Clickable Video Thumbnail Trigger */}
               {post.embeddedVideoId ? (
                 <div
-                  onClick={() => handlePlayVideo(post.embeddedVideoId)}
-                  className="relative aspect-video w-full rounded-xl overflow-hidden bg-white/[0.05] border border-white/[0.05] cursor-pointer group/thumb"
+                  onClick={() => handlePlayVideo(post.embeddedVideoId, youtubeFeedType === "shorts" || post.mode === "short" || post.mode === "video-short")}
+                  className={`relative w-full rounded-xl overflow-hidden bg-white/[0.05] border border-white/[0.05] cursor-pointer group/thumb ${youtubeFeedType === "shorts" || post.mode === "short" || post.mode === "video-short" ? "aspect-9/16 max-h-64" : "aspect-video"}`}
                 >
                   {post.modSlugs && post.modSlugs.length > 0 && (
                     <div

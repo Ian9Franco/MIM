@@ -2,22 +2,29 @@
 
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
-import { ExternalLink, ChevronRight } from "lucide-react";
+import { ExternalLink, ChevronRight, ListTree } from "lucide-react";
 import { DefaultModIcon } from "../../DefaultModIcon";
 import { CollectibleSurface } from "../../CollectibleSurface";
 import { formatDownloads, getBannerFallbackStyle } from "./discoverConstants";
+import { activateDiscoverCard } from "@/lib/fomo/discoverCardActivation";
 import type { ModHit } from "../../SpotlightMarquees";
 
 interface DiscoverModCardProps {
   mod: ModHit;
   resultIndex: number;
   handleOpenModDetails: (mod: ModHit) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (mod: ModHit) => void;
+  detailsOpenForThisMod?: boolean;
 }
 
 export function DiscoverModCard({
   mod,
   resultIndex,
   handleOpenModDetails,
+  isSelected = false,
+  onToggleSelect,
+  detailsOpenForThisMod = false,
 }: DiscoverModCardProps) {
   const fallbackIconRef = useRef<HTMLDivElement>(null);
   const isCurse = mod._source === "curseforge";
@@ -35,16 +42,26 @@ export function DiscoverModCard({
   return (
     <CollectibleSurface
       key={mod.projectId}
-      onClick={() => handleOpenModDetails(mod)}
       label={`Ver detalles de ${mod.title}`}
-      className={`mim-discover-card ${cardShapeClass} flex flex-col ${platformBorderClass}`}
+      className={`mim-discover-card ${cardShapeClass} flex flex-col ${platformBorderClass} ${
+        isSelected ? "ring-2 ring-primary shadow-[0_0_24px_rgba(var(--color-primary-rgb),0.28)]" : ""
+      }`}
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(resultIndex * 0.025, 0.18) }}
         whileTap={{ scale: 0.985 }}
-        className="flex h-full flex-col"
+        onClick={(event) =>
+          activateDiscoverCard({
+            clickDetail: event.detail,
+            detailsOpenForThisMod,
+            isSelected,
+            openDetails: () => handleOpenModDetails(mod),
+            toggleSelect: onToggleSelect ? () => onToggleSelect(mod) : undefined,
+          })
+        }
+        className="flex h-full flex-col cursor-pointer"
       >
         {/* Banner/Header of the card */}
         <div
@@ -62,8 +79,26 @@ export function DiscoverModCard({
                 }
           }
         >
+          {onToggleSelect && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleSelect(mod);
+              }}
+              className={`absolute top-2 left-2 z-20 w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${
+                isSelected
+                  ? "bg-primary border-primary text-white"
+                  : "bg-black/60 border-white/20 text-white hover:bg-black/80"
+              }`}
+              title={isSelected ? "Quitar de la selección" : "Seleccionar"}
+            >
+              <ListTree className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           {/* Small tag/badge on the banner */}
-          <div className="absolute top-2 left-2.5 flex items-center gap-1 z-10">
+          <div className={`absolute top-2 flex items-center gap-1 z-10 ${onToggleSelect ? "left-11" : "left-2.5"}`}>
             <span className="text-[7.5px] font-black uppercase tracking-wider bg-black/75 text-white px-1.5 py-0.5 rounded">
               {pType}
             </span>

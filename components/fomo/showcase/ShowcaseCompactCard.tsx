@@ -29,24 +29,30 @@ const TYPE_META: Record<
 interface ShowcaseCompactCardProps {
   item: ShowcaseOverviewItem;
   isModern?: boolean;
+  variant?: "row" | "block";
   onClick?: () => void;
 }
 
-export function ShowcaseCompactCard({ item, isModern = false, onClick }: ShowcaseCompactCardProps) {
+export function ShowcaseCompactCard({ item, isModern = false, variant = "row", onClick }: ShowcaseCompactCardProps) {
   const meta = TYPE_META[item.type];
+  const isBlock = variant === "block";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer group ${
+      className={`w-full rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer group ${
+        isBlock ? "flex flex-col overflow-hidden p-0" : "flex items-center gap-3 p-2.5"
+      } ${
         isModern
           ? "bg-white border-slate-200 hover:border-primary/30"
           : "bg-white/3 border-white/8 hover:border-primary/25 hover:bg-white/5"
       }`}
     >
       <div
-        className={`w-16 h-11 rounded-lg overflow-hidden shrink-0 border ${
+        className={`${isBlock ? "w-full aspect-video" : "w-16 h-11 shrink-0"} rounded-lg overflow-hidden border ${
+          isBlock ? "rounded-b-none border-0" : ""
+        } ${
           isModern ? "border-slate-200 bg-slate-100" : "border-white/10 bg-black/30"
         }`}
       >
@@ -60,9 +66,9 @@ export function ShowcaseCompactCard({ item, isModern = false, onClick }: Showcas
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className={`flex-1 min-w-0 ${isBlock ? "p-3" : ""}`}>
         <p
-          className={`text-xs font-semibold truncate transition-colors ${
+          className={`text-xs font-semibold ${isBlock ? "line-clamp-2" : "truncate"} transition-colors ${
             isModern ? "text-slate-800 group-hover:text-primary" : "text-white/90 group-hover:text-white"
           }`}
         >

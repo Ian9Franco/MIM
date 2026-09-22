@@ -371,6 +371,7 @@ export default function Home() {
               onSearchAuthor={c.handleSearchAuthor}
               onAddToDraft={(mod) => {
                 setEditingDraftId(null);
+                c.setPendingMods([]);
                 c.setPendingMod(mod);
                 c.setShowDraftPicker(true);
               }}
@@ -460,6 +461,13 @@ export default function Home() {
               setDiscoverCategory={c.setDiscoverCategory}
               discoverSort={c.discoverSort}
               setDiscoverSort={c.setDiscoverSort}
+              selectedMods={c.selectedMods}
+              isModSelected={c.isModSelected}
+              onToggleModSelection={c.toggleModSelection}
+              onClearModSelection={c.clearModSelection}
+              onBulkAddToDraft={c.handleOpenBulkDraftPicker}
+              detailsOpenModId={c.selectedMod?.projectId ?? null}
+              detailsSheetOpen={!!c.selectedMod}
             />
           )}
         </AnimatePresence>
@@ -486,6 +494,7 @@ export default function Home() {
         onAddToDraft={(mod, draftId) => c.addModToDraft(draftId, mod, mod.projectType || "mod").then(() => undefined)}
         onOpenDraftPicker={(mod) => {
           setEditingDraftId(null);
+          c.setPendingMods([]);
           c.setPendingMod(mod);
           c.setShowDraftPicker(true);
         }}
@@ -504,10 +513,17 @@ export default function Home() {
         open={c.showDraftPicker}
         initialEditDraftId={editingDraftId}
         pendingMod={c.pendingMod}
+        pendingMods={c.pendingMods}
         drafts={c.userDrafts}
+        onBatchAdded={() => {
+          c.clearModSelection();
+          c.setPendingMods([]);
+        }}
         onClose={() => {
           setEditingDraftId(null);
           c.setShowDraftPicker(false);
+          c.setPendingMod(null);
+          c.setPendingMods([]);
         }}
         onCreateDraft={c.createDraft}
         currentUserId={c.session?.user?.id}

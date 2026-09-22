@@ -7,6 +7,7 @@ import { ShowcaseCompactCard } from "./ShowcaseCompactCard";
 import { toOverviewItem } from "./showcaseOverviewTypes";
 import type { ShowcaseContentType } from "./showcaseOverviewTypes";
 import { useSmoothMarquee } from "@/hooks/fomo/useSmoothMarquee";
+import { playFomoVideo } from "@/lib/fomo/playVideo";
 
 interface ShowcaseOverviewFeedProps {
   activeChannel: string;
@@ -66,11 +67,9 @@ function OverviewVideoCard({
 function ShortsMarquee({
   shorts,
   isModern,
-  onPlay,
 }: {
   shorts: ReturnType<typeof toOverviewItem>[];
   isModern: boolean;
-  onPlay: (id: string) => void;
 }) {
   const duplicated = [...shorts, ...shorts];
   const { containerRef, innerRef, handlers } = useSmoothMarquee(0.6, false, false, false);
@@ -99,7 +98,7 @@ function ShortsMarquee({
               <button
                 key={`${item.id}-${i}`}
                 type="button"
-                onClick={() => item.videoId && onPlay(item.videoId)}
+                onClick={() => item.videoId && playFomoVideo(item.videoId, { isShort: true })}
                 className={`w-28 shrink-0 rounded-xl overflow-hidden border transition-transform hover:-translate-y-1 ${
                   isModern ? "border-slate-200 bg-white" : "border-white/10 bg-white/3"
                 }`}
@@ -196,7 +195,7 @@ export function ShowcaseOverviewFeed({
     : activeChannel.split("/").pop();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
       <div
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
           isModern
@@ -229,11 +228,7 @@ export function ShowcaseOverviewFeed({
         </section>
       )}
 
-      <ShortsMarquee
-        shorts={topShorts}
-        isModern={isModern}
-        onPlay={(id) => onPlayVideo?.(id)}
-      />
+      <ShortsMarquee shorts={topShorts} isModern={isModern} />
 
       {topPosts.length > 0 && (
         <section className="space-y-2">
@@ -243,12 +238,13 @@ export function ShowcaseOverviewFeed({
               Publicaciones recientes
             </h4>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {topPosts.map((item) => (
               <ShowcaseCompactCard
                 key={item.id}
                 item={item}
                 isModern={isModern}
+                variant="block"
                 onClick={() => playItem(item)}
               />
             ))}

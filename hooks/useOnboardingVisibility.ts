@@ -25,11 +25,6 @@ export function useOnboardingVisibility(seenStorageKey: string, active = true) {
       setShowOnboarding(false);
       return;
     }
-    if (!guidesEnabled) {
-      const seen = localStorage.getItem(seenStorageKey);
-      setShowOnboarding(!seen);
-      return;
-    }
     setShowOnboarding(shouldShowPanelOnboarding(seenStorageKey));
   }, [seenStorageKey, active, guidesEnabled]);
 
@@ -38,11 +33,13 @@ export function useOnboardingVisibility(seenStorageKey: string, active = true) {
       const enabled = (event as CustomEvent<boolean>).detail;
       if (!enabled) {
         setShowOnboarding(false);
+        return;
       }
+      if (active) setShowOnboarding(shouldShowPanelOnboarding(seenStorageKey));
     };
     window.addEventListener(SHOW_ONBOARDING_EVENT, handleForce);
     return () => window.removeEventListener(SHOW_ONBOARDING_EVENT, handleForce);
-  }, []);
+  }, [seenStorageKey, active]);
 
   return { showOnboarding, dismiss };
 }

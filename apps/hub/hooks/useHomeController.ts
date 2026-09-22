@@ -19,6 +19,7 @@ import type { HubUserProfile } from "../types/profile";
 import type { FomoUserSession } from "../types/fomo";
 import { useHomeDiscover } from "./useHomeDiscover";
 import { useHomeDrafts } from "./useHomeDrafts";
+import { useDiscoverSelection } from "./useDiscoverSelection";
 import type { CommunitySection } from "../components/community/CommunityShell";
 
 export const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
@@ -229,6 +230,7 @@ export function useHomeController() {
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [showDraftPicker, setShowDraftPicker] = useState(false);
   const [pendingMod, setPendingMod] = useState<ModHit | null>(null);
+  const [pendingMods, setPendingMods] = useState<ModHit[]>([]);
   const [communitySection, setCommunitySection] = useState<CommunitySection>("compartidos");
 
   const closeProjectDetails = useCallback(() => {
@@ -244,6 +246,15 @@ export function useHomeController() {
     setActiveTab,
     closeProjectDetails,
   });
+
+  const discoverSelection = useDiscoverSelection();
+
+  const handleOpenBulkDraftPicker = useCallback(() => {
+    if (discoverSelection.selectedMods.length === 0) return;
+    setPendingMod(null);
+    setPendingMods(discoverSelection.selectedMods);
+    setShowDraftPicker(true);
+  }, [discoverSelection.selectedMods]);
 
   const showAlert = useCallback((title: string, message: string) => setCustomAlert({ title, message }), []);
 
@@ -1084,7 +1095,13 @@ export function useHomeController() {
     loadingLatestMods, activeSpotlightPlatform, setActiveSpotlightPlatform, activeCollection, activeCollectionMods,
     loadingActiveMods, theme, customAlert, setCustomAlert, showAlert, youtubePosts, loadingYoutube, currentChannel,
     setCurrentChannel, youtubeFeedType, setYoutubeFeedType, followedChannels, showChannelManager, setShowChannelManager, newChannelInput, setNewChannelInput,
-    rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, handleThemeChange,
+    rankings, loadingRankings, showDraftPicker, setShowDraftPicker, pendingMod, setPendingMod, pendingMods, setPendingMods,
+    selectedMods: discoverSelection.selectedMods,
+    isModSelected: discoverSelection.isModSelected,
+    toggleModSelection: discoverSelection.toggleModSelection,
+    clearModSelection: discoverSelection.clearSelection,
+    handleOpenBulkDraftPicker,
+    handleThemeChange,
     handleSaveShowcaseChannels, handleAuth, handleLogout: () => supabase.auth.signOut(), handleAddChannel,
     handleRemoveChannel, handleEnterCollection, handleExitCollection: () => { setActiveCollection(null); setActiveCollectionMods([]); },
     handleEnterDraftCollection: drafts.handleEnterDraftCollection, handleExitDraft: drafts.handleExitDraft, handleOpenModDetails, handleSwitchStackIndex,

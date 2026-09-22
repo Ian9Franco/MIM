@@ -72,8 +72,10 @@ interface DraftPickerModalProps {
   open: boolean;
   initialEditDraftId?: string | null;
   pendingMod: ModHit | null;
+  pendingMods?: ModHit[];
   drafts: Draft[];
   onClose: () => void;
+  onBatchAdded?: () => void;
   onCreateDraft: (name: string, version: string, loader: string, visibility?: "public" | "private", description?: string) => Promise<Draft | null>;
   onAddModToDraft: (draftId: string, mod: ModHit, category: string) => Promise<DraftAddResult>;
   onRemoveModFromDraft: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
@@ -93,10 +95,10 @@ const LOADERS = ["fabric", "forge", "neoforge", "quilt", "any"];
  * También permite editar drafts existentes (eliminar items, recategorizar).
  */
 export function DraftPickerModal({
-  open, initialEditDraftId, pendingMod, drafts, onClose,
+  open, initialEditDraftId, pendingMod, pendingMods = [], drafts, onClose,
   onCreateDraft, onAddModToDraft, onRemoveModFromDraft,
   onRecategorize, onUpdateSide, onUpdateDraftCover, onDeleteDraft, onRefreshDrafts,
-  currentUserId,
+  currentUserId, onBatchAdded,
 }: DraftPickerModalProps) {
   const [view, setView] = useState<"pick" | "create" | "edit">("pick");
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
@@ -136,15 +138,44 @@ export function DraftPickerModal({
     onClose();
   };
 
+  const modsToAdd = pendingMods.length > 0 ? pendingMods : (pendingMod ? [pendingMod] : []);
+
   const handleAddToDraft = async (draft: Draft) => {
-    if (!pendingMod) return;
+    if (!modsToAdd.length) return;
     setLoading(true);
-    const cat = autoCategory(pendingMod);
-    const result = await onAddModToDraft(draft.id, pendingMod, cat);
+
+    if (modsToAdd.length === 1) {
+      const result = await onAddModToDraft(draft.id, modsToAdd[0], autoCategory(modsToAdd[0]));
+      setLoading(false);
+      setFeedbackStatus(result.status);
+      setFeedback(result.message);
+      setTimeout(resetAndClose, result.status === "compatible" ? 1400 : 2600);
+      return;
+    }
+
+    let added = 0;
+    const issues: string[] = [];
+    for (const mod of modsToAdd) {
+      const result = await onAddModToDraft(draft.id, mod, autoCategory(mod));
+      if (result.status === "compatible" || result.status === "exists") {
+        added += 1;
+      } else {
+        issues.push(`${mod.title}: ${result.message}`);
+      }
+    }
+
     setLoading(false);
-    setFeedbackStatus(result.status);
-    setFeedback(result.message);
-    setTimeout(resetAndClose, result.status === "compatible" ? 1400 : 2600);
+    if (issues.length > 0) {
+      setFeedbackStatus("warning");
+      setFeedback(`${added}/${modsToAdd.length} agregados. ${issues.slice(0, 2).join(" · ")}`);
+      setTimeout(resetAndClose, 2800);
+      return;
+    }
+
+    setFeedbackStatus("compatible");
+    setFeedback(`${added} items agregados al draft`);
+    onBatchAdded?.();
+    setTimeout(resetAndClose, 1400);
   };
 
   const handleCreate = async () => {
@@ -152,7 +183,7 @@ export function DraftPickerModal({
     setLoading(true);
     const created = await onCreateDraft(newName.trim(), newVersion, newLoader, newVisibility, newDescription.trim().slice(0, 100));
     setLoading(false);
-    if (created && pendingMod) {
+    if (created && modsToAdd.length > 0) {
       await handleAddToDraft(created);
     } else if (created) {
       onRefreshDrafts();
@@ -189,17 +220,37 @@ export function DraftPickerModal({
             </div>
 
             {/* Pending mod preview */}
-            {pendingMod && view !== "edit" && (
+            {modsToAdd.length > 0 && view !== "edit" && (
               <div className="flex items-center gap-3 px-5 py-3 border-b shrink-0" style={{ borderColor: "var(--color-border)", background: "color-mix(in srgb, var(--color-primary) 6%, transparent)" }}>
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/[0.08] flex items-center justify-center">
-                  {pendingMod.iconUrl ? <img src={pendingMod.iconUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white/40 text-xs font-bold uppercase">{pendingMod.title.substring(0, 2)}</span>}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white truncate">{pendingMod.title}</p>
-                  <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>
-                    Se categorizará como: <strong style={{ color: CAT_COLORS[autoCategory(pendingMod)] }}>{CAT_LABELS[autoCategory(pendingMod)]}</strong>
-                  </p>
-                </div>
+                {modsToAdd.length === 1 ? (
+                  <>
+                    <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/[0.08] flex items-center justify-center">
+                      {modsToAdd[0].iconUrl ? <img src={modsToAdd[0].iconUrl ?? undefined} alt="" className="w-full h-full object-cover" /> : <span className="text-white/40 text-xs font-bold uppercase">{modsToAdd[0].title.substring(0, 2)}</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white truncate">{modsToAdd[0].title}</p>
+                      <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>
+                        Se categorizará como: <strong style={{ color: CAT_COLORS[autoCategory(modsToAdd[0])] }}>{CAT_LABELS[autoCategory(modsToAdd[0])]}</strong>
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex -space-x-2 shrink-0">
+                      {modsToAdd.slice(0, 5).map((mod, index) => (
+                        <div key={mod.projectId} className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border-2 border-[var(--color-surface)] flex items-center justify-center" style={{ zIndex: 5 - index }}>
+                          {mod.iconUrl ? <img src={mod.iconUrl ?? undefined} alt="" className="w-full h-full object-cover" /> : <span className="text-white/40 text-[9px] font-bold uppercase">{mod.title.substring(0, 2)}</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white">{modsToAdd.length} mods seleccionados</p>
+                      <p className="text-[9px]" style={{ color: "var(--color-muted)" }}>
+                        Se agregarán al draft con su categoría automática
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -238,7 +289,7 @@ export function DraftPickerModal({
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             )}
-                            {pendingMod && canAdd && (
+                            {modsToAdd.length > 0 && canAdd && (
                               <button
                                 onClick={() => handleAddToDraft(draft)}
                                 disabled={loading}
@@ -357,7 +408,7 @@ export function DraftPickerModal({
                         Cancelar
                       </button>
                       <button onClick={handleCreate} disabled={loading || !newName.trim()} className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50" style={{ background: "var(--color-primary)", color: "white" }}>
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> {pendingMod ? "Crear y Agregar" : "Crear Draft"}</>}
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> {modsToAdd.length > 0 ? "Crear y Agregar" : "Crear Draft"}</>}
                       </button>
                     </div>
                   </motion.div>

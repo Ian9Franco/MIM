@@ -1,6 +1,6 @@
 {
   "name": "@mim/network-resilience",
-  "version": "12.0.0",
+  "version": "13.0.0",
   "description": "Network resilience engine with deterministic retry policy, jitter, classification, and sanitized diagnostics",
   "main": "./index.ts",
   "types": "./index.ts",

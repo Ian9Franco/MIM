@@ -61,7 +61,7 @@ export function GuidesSettingsCard() {
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
           <span className={`text-[10px] font-mono ${enabled ? "text-emerald-400" : "text-muted"}`}>
-            {enabled ? "Activadas — se muestran al entrar a cada sección" : "Desactivadas — solo la primera visita de cada panel"}
+            {enabled ? "Activadas — se muestran al entrar a cada sección" : "Desactivadas — no se muestran recorridos"}
           </span>
 
           <button

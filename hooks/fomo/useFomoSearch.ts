@@ -17,8 +17,10 @@ export function useFomoSearch(filters: any) {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [sourceError, setSourceError] = useState("");
+  const [sourceWarning, setSourceWarning] = useState("");
   const skipNextRefetch = useRef(false);
-  
+  const requestIdRef = useRef(0);
+
   const intelligentPaginationResolver = useRef({
     pool: [] as ModHit[],
     cfOffset: 1,
@@ -32,8 +34,12 @@ export function useFomoSearch(filters: any) {
   const pageSize = typeof filterPageSize === "number" && filterPageSize > 0 ? filterPageSize : 21;
 
   const refetch = useCallback(async (overrideQuery?: string) => {
+    const requestId = ++requestIdRef.current;
+    const isCurrent = () => requestId === requestIdRef.current;
+
     setLoading(true);
     setSourceError("");
+    setSourceWarning("");
     const qClean = (typeof overrideQuery === "string" ? overrideQuery : typeof query === "string" ? query : "")?.trim() || "";
 
     try {
@@ -68,6 +74,7 @@ export function useFomoSearch(filters: any) {
         const start = (page - 1) * pageSize;
         fetchedMods = allMods.slice(start, start + pageSize).map((m: any) => ({ ...m, _source: source }));
         
+        if (!isCurrent()) return;
         setTotal(allMods.length);
         setTotalPages(Math.ceil(allMods.length / pageSize));
       } else if (source === "all") {
@@ -75,13 +82,25 @@ export function useFomoSearch(filters: any) {
           fetch(`/api/modrinth/discover?${params}`),
           fetch(`/api/curseforge/discover?${params}`)
         ]);
+        let modrinthOk = false;
+        let curseforgeOk = false;
         if (mRes.status === "fulfilled" && mRes.value.ok) {
           const d = await mRes.value.json();
           fetchedMods.push(...(d.mods || []).map((m: any) => ({ ...m, _source: "modrinth" })));
+          modrinthOk = true;
         }
         if (cRes.status === "fulfilled" && cRes.value.ok) {
           const d = await cRes.value.json();
           fetchedMods.push(...(d.mods || []).map((m: any) => ({ ...m, _source: "curseforge" })));
+          curseforgeOk = true;
+        }
+        if (!isCurrent()) return;
+        if (!modrinthOk && curseforgeOk) {
+          setSourceWarning("Modrinth no respondió; se muestran resultados de CurseForge.");
+        } else if (modrinthOk && !curseforgeOk) {
+          setSourceWarning("CurseForge no respondió; se muestran resultados de Modrinth.");
+        } else if (!modrinthOk && !curseforgeOk) {
+          throw new Error("No se pudo consultar Modrinth ni CurseForge en este momento.");
         }
         setTotal(fetchedMods.length);
         setTotalPages(1);
@@ -94,6 +113,7 @@ export function useFomoSearch(filters: any) {
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
 
+        if (!isCurrent()) return;
         // Para Bedrock no hacemos crosscheck — no aplica cruce Modrinth/CurseForge
         if (fetchedMods.length > 0) {
           setMods(fetchedMods.map(m => ({ ...m, availability: { checking: false, modrinth: false, curseforge: false } })));
@@ -101,7 +121,6 @@ export function useFomoSearch(filters: any) {
           setMods([]);
         }
         if (qClean) eventBus.emit("fomo:search", { query: qClean, source });
-        setLoading(false);
         return;
       } else {
         const res = await fetch(`/api/${source}/discover?${params}`);
@@ -112,14 +131,13 @@ export function useFomoSearch(filters: any) {
           );
         }
         const data = await res.json();
+        if (!isCurrent()) return;
         fetchedMods = (data.mods || []).map((m: any) => ({ ...m, _source: source }));
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
-        
-        if (source === "modrinth" && fetchedMods.length === 0 && (data.total || 0) > 0) {
-          throw new Error("El índice de búsqueda de Modrinth está caído o en mantenimiento.");
-        }
       }
+
+      if (!isCurrent()) return;
 
       // Inicializar con estado de verificación
       const initialMods = fetchedMods.map(m => ({
@@ -141,6 +159,7 @@ export function useFomoSearch(filters: any) {
             mods: initialMods.map(m => ({ title: m.title, slug: m.slug, source: m._source }))
           })
         }).then(r => r.json()).then(data => {
+          if (!isCurrent()) return;
           if (data && data.results) {
             setMods(prev => prev.map(m => {
               const key = m.title + (m.slug || "");
@@ -159,6 +178,7 @@ export function useFomoSearch(filters: any) {
             }));
           }
         }).catch(() => {
+          if (!isCurrent()) return;
           setMods(prev => prev.map(m => ({
             ...m,
             availability: {
@@ -174,10 +194,11 @@ export function useFomoSearch(filters: any) {
 
       if (qClean) eventBus.emit("fomo:search", { query: qClean, source });
     } catch (e: any) {
+      if (!isCurrent()) return;
       setMods([]);
       setSourceError(e.message || "Error al buscar mods");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
     source, 
@@ -211,5 +232,5 @@ export function useFomoSearch(filters: any) {
     skipNextRefetch.current = val;
   }, []);
 
-  return { loading, mods, total, totalPages, sourceError, refetch, setMods, setTotal, setSkipNextRefetch };
+  return { loading, mods, total, totalPages, sourceError, sourceWarning, refetch, setMods, setTotal, setSkipNextRefetch };
 }

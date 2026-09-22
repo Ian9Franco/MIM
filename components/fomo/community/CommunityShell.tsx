@@ -2,15 +2,13 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Radio, Share2, Trophy, User, Users } from "lucide-react";
+import { Radio, Share2, Users } from "lucide-react";
 
-export type CommunitySection = "compartidos" | "rankings" | "miembros" | "perfil";
+export type CommunitySection = "compartidos" | "miembros";
 
 const SECTIONS = [
   { id: "compartidos" as const, label: "Compartidos", icon: Share2 },
-  { id: "rankings" as const, label: "Rankings", icon: Trophy },
   { id: "miembros" as const, label: "Miembros", icon: Users },
-  { id: "perfil" as const, label: "Perfil", icon: User },
 ];
 
 interface CommunityHeaderProps {
@@ -56,7 +54,7 @@ export function CommunityHeader({ active, onChange, metrics, isModern = false }:
           </div>
         </div>
 
-      <div className={`relative mt-3 grid grid-cols-4 rounded-xl border ${borderCls} bg-(--fomo-secondary-bg) p-1 shadow-inner`}>
+      <div className={`relative mt-3 grid grid-cols-2 rounded-xl border ${borderCls} bg-(--fomo-secondary-bg) p-1 shadow-inner`}>
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const selected = active === id;
           return (

@@ -478,7 +478,7 @@ export function CommunityDraftDetails({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col flex-1 min-h-0 w-full h-full"
+            className="flex flex-col flex-1 min-h-0 w-full h-full overflow-hidden"
           >
         {activeTab === "overview" && (
           <DraftOverviewTab

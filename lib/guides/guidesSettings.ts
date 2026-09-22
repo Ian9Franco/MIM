@@ -20,10 +20,10 @@ export function toggleGuidesEnabled(): boolean {
   return next;
 }
 
-/** True when the panel tour should appear (first visit or guides forced on). */
+/** True when guides are on and the panel tour has not been completed yet. */
 export function shouldShowPanelOnboarding(seenStorageKey: string): boolean {
-  const seen = localStorage.getItem(seenStorageKey);
-  return !seen || isGuidesEnabled();
+  if (!isGuidesEnabled()) return false;
+  return !localStorage.getItem(seenStorageKey);
 }
 
 const ONBOARDING_SEEN_KEYS = [

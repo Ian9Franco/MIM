@@ -17,6 +17,7 @@ type SettingsResponse = {
   stagingPath: string;
   mimIndexPath: string;
   apiKeysConfigured: ApiKeyStatus;
+  secretPersistence?: "safeStorage" | "session";
 };
 
 const EMPTY_KEY_STATUS: ApiKeyStatus = {
@@ -73,6 +74,8 @@ export function useSettingsManager(onClose: () => void) {
     message: string;
     onConfirm: () => void;
   } | null>(null);
+  const [secretPersistence, setSecretPersistence] = useState<"safeStorage" | "session">("session");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     migrateLegacyBrowserGeminiKey()
@@ -86,6 +89,7 @@ export function useSettingsManager(onClose: () => void) {
         setOriginalSettings(d);
         const configured = d.apiKeysConfigured || EMPTY_KEY_STATUS;
         setApiKeysConfigured(configured);
+        setSecretPersistence(d.secretPersistence === "safeStorage" ? "safeStorage" : "session");
         setSourceBase(d.sourceBase || "");
         setBuildsBase(d.buildsBase || "");
         setDownloadsPath(d.downloadsPath || "");
@@ -277,6 +281,7 @@ export function useSettingsManager(onClose: () => void) {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError("");
     if (!originalSettings) {
       setSaving(false);
       return;
@@ -322,15 +327,25 @@ export function useSettingsManager(onClose: () => void) {
       })
     });
     if (!response.ok) {
+      let message = "No se pudieron guardar los ajustes.";
+      try {
+        const body = await response.json();
+        if (typeof body?.error === "string" && body.error.trim()) message = body.error;
+      } catch {
+        // ignore parse errors
+      }
       setSaving(false);
-      setMoveProgress("No se pudieron guardar los ajustes.");
+      setSaveError(message);
+      setMoveProgress("");
       return;
     }
-    
+
     setSaving(false);
     onClose();
     window.location.reload();
   };
+
+  const hasChanges = checkHasChanges();
 
   return {
     sourceBase, setSourceBase, buildsBase, setBuildsBase, downloadsPath, setDownloadsPath, 
@@ -345,6 +360,7 @@ export function useSettingsManager(onClose: () => void) {
     showConfirmClose, setShowConfirmClose, pathValidation, keyValidation, apiKeysConfigured,
     isValidating, isValidatingKeys, showStagingWarning, setShowStagingWarning,
     showInvalidPathsWarning, setShowInvalidPathsWarning,
-    pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave
+    pathPickWarning, setPathPickWarning, handlePickFolder, handleReset, handleCloseAttempt, handleSave,
+    hasChanges, secretPersistence, saveError,
   };
 }

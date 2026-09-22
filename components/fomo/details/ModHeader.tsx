@@ -223,7 +223,7 @@ export function ModHeader({
               
               {sharersToShow.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 ml-1">
-                  <span className="text-[8px] uppercase tracking-wider text-white/50 shrink-0">Compartido por:</span>
+                  <span className="text-[8px] uppercase tracking-wider text-white/50 shrink-0">Favorito de:</span>
                   {sharersToShow.map((info: { username: string; color?: string | null; avatar_url?: string | null }, idx: number) => (
                     <button
                       key={`${info.username}-${idx}`}

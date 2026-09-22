@@ -10,6 +10,7 @@ import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 import { ShowcaseVideoCard } from "@/components/fomo/showcase/ShowcaseVideoCard";
 import { ShowcaseOverviewFeed } from "@/components/fomo/showcase/ShowcaseOverviewFeed";
 import type { ShowcaseContentType } from "@/components/fomo/showcase/showcaseOverviewTypes";
+import { playFomoVideo } from "@/lib/fomo/playVideo";
 
 // No hardcoded POSTS_CHANNELS limit anymore
 
@@ -358,14 +359,14 @@ export function FomoFollowedShowcases({
     else setShowcaseType("videos");
   };
 
-  const handlePlayVideo = (videoId: string) => {
-    window.dispatchEvent(new CustomEvent("fomo-play-video", { detail: { videoId } }));
+  const handlePlayVideo = (videoId: string, isShortVideo = false) => {
+    playFomoVideo(videoId, { isShort: isShortVideo });
   };
 
   return (
-    <div key="showcases" className={animationClass}>
-      {/* Gestor de Canales */}
-      <div className="mb-6 bg-white/5 p-4 rounded-2xl border border-white/10 space-y-4">
+    <div key="showcases" className={`${animationClass} flex flex-col min-h-0 max-h-full`}>
+      {/* Gestor de Canales — compacto */}
+      <div className="mb-4 shrink-0 bg-white/5 p-3 rounded-2xl border border-white/10 space-y-3">
         {(() => {
           const quickAccess = Object.entries(channelUsage)
             .sort((a, b) => b[1] - a[1])
@@ -395,11 +396,9 @@ export function FomoFollowedShowcases({
           );
         })()}
 
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="w-full sm:w-1/2 min-w-0">
-            <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><MonitorCheck className="w-3.5 h-3.5 text-primary" />Canal Activo</p>
-            
-            {/* Custom Dropdown */}
+        <div className="flex flex-col lg:flex-row items-stretch gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-headline text-[10px] mb-1 flex items-center gap-1.5 opacity-70"><MonitorCheck className="w-3 h-3 text-primary" />Canal activo</p>
             <div className="relative">
               <button 
                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -479,8 +478,8 @@ export function FomoFollowedShowcases({
             </div>
           </div>
           
-          <div className="w-full sm:w-1/2 min-w-0">
-            <p className="font-headline text-xs mb-1.5 flex items-center gap-2"><MonitorUp className="w-3.5 h-3.5 text-primary" />Añadir Canal</p>
+          <div className="flex-1 min-w-0 lg:max-w-xs">
+            <p className="font-headline text-[10px] mb-1 flex items-center gap-1.5 opacity-70"><MonitorUp className="w-3 h-3 text-primary" />Añadir canal</p>
             <input 
               type="text" 
               placeholder="@usuario o URL + Enter"
@@ -534,14 +533,10 @@ export function FomoFollowedShowcases({
           </div>
         </div>
 
-        {/* Spotlight activo */}
-        <div className="flex items-center gap-2 pt-1">
-          <Flame className="w-3 h-3 text-amber-400 fill-amber-400/20" />
-          <span className="text-[10px] text-amber-400/80 font-bold">
-            Spotlight showcase:
-          </span>
-          <span className="text-[10px] text-amber-300 font-mono">
-            {spotlightChannels.length} canal{spotlightChannels.length !== 1 ? "es" : ""}
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <Flame className="w-3 h-3 text-amber-400 fill-amber-400/20 shrink-0" />
+          <span className="text-[9px] text-amber-400/80 font-bold uppercase tracking-wider">
+            Spotlight: {spotlightChannels.length}
           </span>
           {activeChannel && !spotlightChannels.includes(activeChannel) && (
             <button
@@ -564,8 +559,7 @@ export function FomoFollowedShowcases({
         </div>
       </div>
 
-      {/* Top Loading Progress Bar */}
-      <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-4">
+      <div className="h-1 w-full relative overflow-hidden bg-white/5 rounded-full mb-3 shrink-0">
         <div 
           className="h-full bg-linear-to-r from-red-500 via-orange-500 to-red-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(239,68,68,0.8)]"
           style={{ 
@@ -577,7 +571,7 @@ export function FomoFollowedShowcases({
       </div>
 
       {/* Toggle Resumen / Videos / Shorts / Posts */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3 shrink-0">
         <div className={`flex gap-1 p-1 rounded-xl w-fit border flex-wrap ${isModern ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/5"}`}>
           <button
             onClick={() => setShowcaseType("overview")}
@@ -624,7 +618,7 @@ export function FomoFollowedShowcases({
           </div>
         )}
       </div>
-      {/* === Modo Resumen === */}
+      <div className="flex-1 min-h-0 overflow-hidden">
       {showcaseType === "overview" && (
         <ShowcaseOverviewFeed
           activeChannel={activeChannel}
@@ -634,13 +628,13 @@ export function FomoFollowedShowcases({
           loading={loadingOverview}
           isModern={isModern}
           onNavigateToType={handleNavigateToType}
-          onPlayVideo={handlePlayVideo}
+          onPlayVideo={(id) => handlePlayVideo(id, false)}
         />
       )}
 
       {/* === Modo Posts de Comunidad === */}
       {showcaseType === "posts" && (
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20">
             <Newspaper className="w-3.5 h-3.5 text-orange-400 shrink-0" />
             <p className="text-[10px] text-orange-300/80">Posts de comunidad — compilaciones de mods compartidas por el canal.</p>
@@ -777,8 +771,8 @@ export function FomoFollowedShowcases({
               <p className="text-xs max-w-sm">Los {showcaseType === "videos" ? "videos" : "shorts"} del canal aparecerán acá.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-4 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
+              <div className={`grid gap-4 ${showcaseType === "shorts" ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
                 {showcasesList.map((video, idx) => (
                   <ShowcaseVideoCard 
                     key={`${video.videoId}-${idx}`}
@@ -792,6 +786,7 @@ export function FomoFollowedShowcases({
                     currentUserColor={currentUserColor}
                     isLatest={idx === 0 && cursor === 1}
                     theme={currentTheme}
+                    isShort={showcaseType === "shorts"}
                   />
                 ))}
               </div>
@@ -813,6 +808,7 @@ export function FomoFollowedShowcases({
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

@@ -249,6 +249,7 @@ function FomoSidebarDiscoverBranchInner({
       };
     }
     const pf = dm._source === "curseforge" ? "curseforge" : "modrinth";
+    const currentUserId = (currentUser as { id?: string } | null)?.id;
     const byProfile = new Map<
       string,
       { username: string; color?: string | null; avatar_url?: string | null }
@@ -263,20 +264,19 @@ function FomoSidebarDiscoverBranchInner({
       if (s.platform !== pf) continue;
       const pid = s.profile_id;
       const username = s.profiles?.username;
-      if (!pid || !username) continue;
+      if (!pid || !username || pid === currentUserId) continue;
       byProfile.set(pid, {
         username,
         color: s.profiles?.color,
         avatar_url: s.profiles?.avatar_url,
       });
     }
-    const userId = (currentUser as { id?: string } | null)?.id;
     const sharedByMe = !!(
-      userId &&
+      currentUserId &&
       (allSharedMods as { mod_id: string; profile_id?: string; platform: string }[]).some(
         (s) =>
           String(s.mod_id) === String(dm.projectId) &&
-          s.profile_id === userId &&
+          s.profile_id === currentUserId &&
           s.platform === pf
       )
     );
@@ -296,7 +296,7 @@ function FomoSidebarDiscoverBranchInner({
     }[]) {
       const pid = s.profile_id;
       const username = s.profiles?.username;
-      if (!pid || !username) continue;
+      if (!pid || !username || pid === userId) continue;
       const key = `${s.platform}:${s.mod_id}`;
       if (!map.has(key)) map.set(key, []);
       const list = map.get(key)!;
@@ -309,7 +309,7 @@ function FomoSidebarDiscoverBranchInner({
       }
     }
     return map;
-  }, [allSharedMods]);
+  }, [allSharedMods, userId]);
 
   return (
     <FomoDiscoverProvider discover={discover as import("@/components/fomo/discover/FomoDiscoverContext").FomoDiscoverApi}>
@@ -383,21 +383,7 @@ function FomoSidebarDiscoverBranchInner({
                 <input
                   type="search"
                   value={discover.query.startsWith("author:") ? "" : discover.query}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    discover.setQuery(val);
-                    if (val === "" && discover.source === "all") {
-                      discover.setSource("modrinth");
-                    }
-                  }}
-                  onFocus={() => {
-                    if (discover.query !== "") {
-                      discover.setQuery("");
-                      if (discover.source === "all") {
-                        discover.setSource("modrinth");
-                      }
-                    }
-                  }}
+                  onChange={(e) => discover.setQuery(e.target.value)}
                   placeholder={discover.source === "chunk" ? "Buscar addons en Marketplace..." : "Buscar mods..."}
                   className="flex-1 bg-transparent border-none outline-none text-sm text-white"
                 />
@@ -412,15 +398,20 @@ function FomoSidebarDiscoverBranchInner({
                 pageSizeDisabled={discover.source === "all"}
               />
               <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-                {discover.sourceError && (
+                {discover.sourceWarning && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-xs text-amber-200/90 shrink-0">
+                    {discover.sourceWarning}
+                  </div>
+                )}
+                {discover.sourceError && !discover.loading && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-xs flex flex-col gap-2 shrink-0">
                     <div className="flex items-center gap-2 text-red-400 font-semibold">
                       <span>⚠️ {discover.sourceError}</span>
                     </div>
                     {discover.source === "modrinth" && (
                       <div className="text-white/60">
-                        Parece que los servidores de búsqueda de Modrinth están experimentando problemas en este momento. 
-                        Te recomendamos cambiar a **CurseForge** para continuar explorando.
+                        Parece que los servidores de búsqueda de Modrinth están experimentando problemas en este momento.
+                        Te recomendamos cambiar a CurseForge para continuar explorando.
                         <button
                           onClick={() => {
                             discover.setSource("curseforge");

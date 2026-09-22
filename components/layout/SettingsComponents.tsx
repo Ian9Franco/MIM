@@ -188,19 +188,15 @@ export function ApiKeyInputGroup({
         )}
       </div>
       <div className="relative flex items-center">
-        <KeyRound className={`w-4 h-4 absolute left-3 transition-colors duration-300 ${canEdit ? colorClass : "text-muted/40"}`} />
+        <KeyRound className={`w-4 h-4 absolute left-3 transition-colors duration-300 ${colorClass}`} />
         <input 
           type={show ? "text" : "password"}
           value={value} 
           onChange={e => onChange(e.target.value)} 
-          className={`input-base w-full pr-12 text-sm font-mono transition-all duration-300 ${
-            canEdit 
-              ? `text-foreground bg-white/4 ${borderClass} ${isValid === false && value ? "border-red-500/50" : ""}` 
-              : "text-foreground/40 bg-white/1 border-white/5 cursor-not-allowed select-none"
-          }`}
+          className={`input-base w-full pr-12 text-sm font-mono transition-all duration-300 text-foreground bg-white/4 ${borderClass} ${isValid === false && value ? "border-red-500/50" : ""}`}
           style={{ paddingLeft: "2.5rem" }}
           placeholder={configured ? "Configurada • ingresá otra para reemplazarla" : placeholder}
-          disabled={saving || !canEdit}
+          disabled={saving}
         />
         <div className="absolute right-12 flex items-center gap-2">
           {isValidating && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted/40" />}
@@ -211,7 +207,7 @@ export function ApiKeyInputGroup({
           type="button"
           onClick={onToggleShow}
           className="absolute right-3 p-1.5 text-muted hover:text-foreground transition-colors"
-          disabled={!canEdit}
+          disabled={saving}
         >
           {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
@@ -289,14 +285,16 @@ interface SettingsFooterProps {
   pathValidation: Record<string, boolean>;
   keyValidation: Record<string, boolean | null>;
   canEdit: boolean;
+  hasChanges: boolean;
   onCancel: () => void;
   onSave: () => void;
 }
 
 export function SettingsFooter({ 
   saving, moveProgress, isValidating, isValidatingKeys, activeTab, 
-  pathValidation, keyValidation, canEdit, onCancel, onSave 
+  pathValidation, keyValidation, canEdit, hasChanges, onCancel, onSave 
 }: SettingsFooterProps) {
+  const canSave = hasChanges && (activeTab === "apiKeys" || canEdit);
   return (
     <div className="pt-6 border-t border-primary/10 flex items-center justify-between">
       <div className="text-[10px] font-label animate-fade-in flex items-center gap-2">
@@ -335,9 +333,9 @@ export function SettingsFooter({
         </button>
         <button 
           onClick={onSave}
-          disabled={saving || !canEdit}
+          disabled={saving || !canSave}
           className={`flex items-center gap-1.5 px-6 py-2.5 rounded-xl font-subhead text-sm transition-all duration-300 shadow-lg ${
-            canEdit ? "bg-primary text-background hover:opacity-90 shadow-primary/20 cursor-pointer" : "bg-white/5 text-foreground/30 border border-white/5 cursor-not-allowed shadow-none"
+            canSave ? "bg-primary text-background hover:opacity-90 shadow-primary/20 cursor-pointer" : "bg-white/5 text-foreground/30 border border-white/5 cursor-not-allowed shadow-none"
           }`}
         >
           <Check className="w-4 h-4" /> Guardar y Recargar

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { TvMinimalPlay, RefreshCw, Blocks, Layers } from "lucide-react";
+import { TvMinimalPlay, RefreshCw, Blocks, Layers, Trophy, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "@/components/fomo/core/LoginPortal";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -36,11 +36,17 @@ function CommunityPanelInner({
   
   // Navigation Tabs: 'modpacks' (pool) | 'drafts' | 'videos' | 'profile'
   const [activeSubTab, setActiveSubTab] = useState<
-    "modpacks" | "drafts" | "videos" | "profile"
+    "modpacks" | "drafts" | "videos" | "rankings" | "profile"
   >(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("fomo_community_subtab");
-      if (saved === "modpacks" || saved === "drafts" || saved === "videos" || saved === "profile") {
+      if (
+        saved === "modpacks" ||
+        saved === "drafts" ||
+        saved === "videos" ||
+        saved === "rankings" ||
+        saved === "profile"
+      ) {
         return saved;
       }
     }
@@ -78,9 +84,10 @@ function CommunityPanelInner({
 
   const [currentTheme, setCurrentTheme] = useState("official");
   const [tabIndex, setTabIndex] = useState(0);
-  const tabOrder = ["modpacks", "drafts", "videos"] as const;
+  const tabOrder = ["modpacks", "drafts", "videos", "rankings"] as const;
   const [insideDraft, setInsideDraft] = useState(false);
   const [communitySection, setCommunitySection] = useState<CommunitySection>("compartidos");
+  const [membersView, setMembersView] = useState<"list" | "mine">("list");
   const [memberCount, setMemberCount] = useState(0);
 
   useEffect(() => {
@@ -139,6 +146,8 @@ function CommunityPanelInner({
     const handleOpenUser = (e: Event) => {
       const { username } = (e as CustomEvent).detail || {};
       if (username) {
+        setCommunitySection("miembros");
+        setMembersView("list");
         setActiveSubTab("profile");
         setSelectedUserProfile(username);
       }
@@ -147,9 +156,12 @@ function CommunityPanelInner({
     const handleTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
       if (tab) {
-        const idx = ["modpacks", "drafts", "videos"].indexOf(tab);
+        const idx = ["modpacks", "drafts", "videos", "rankings"].indexOf(tab);
         if (idx !== -1) setTabIndex(idx);
-        setActiveSubTab(tab);
+        if (tab === "modpacks" || tab === "drafts" || tab === "videos" || tab === "rankings") {
+          setCommunitySection("compartidos");
+          setActiveSubTab(tab);
+        }
       }
     };
 
@@ -323,8 +335,12 @@ function CommunityPanelInner({
   const isModern = currentTheme === "modern";
   const ownShares = cloudFavorites.filter((f) => f.profile_id === user.id);
 
-  const switchTab = (tab: "modpacks" | "drafts" | "videos" | "profile") => {
-    const idx = tabOrder.indexOf(tab as (typeof tabOrder)[number]);
+  const switchTab = (tab: "modpacks" | "drafts" | "videos" | "rankings" | "profile") => {
+    if (tab === "profile") {
+      setActiveSubTab("profile");
+      return;
+    }
+    const idx = tabOrder.indexOf(tab);
     if (idx !== -1) setTabIndex(idx);
     setActiveSubTab(tab);
   };
@@ -335,7 +351,10 @@ function CommunityPanelInner({
         <>
           <CommunityHeader
             active={communitySection}
-            onChange={setCommunitySection}
+            onChange={(section) => {
+              setCommunitySection(section);
+              setMembersView("list");
+            }}
             isModern={isModern}
             metrics={{
               members: memberCount,
@@ -359,8 +378,8 @@ function CommunityPanelInner({
           <div
             className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none inset-y-1.5"
             style={{
-              left: `calc(6px + ${tabIndex} * (100% - 12px) / 3)`,
-              width: 'calc((100% - 12px) / 3)',
+              left: `calc(6px + ${tabIndex} * (100% - 12px) / 4)`,
+              width: 'calc((100% - 12px) / 4)',
               background: isModern
                 ? 'white'
                 : 'rgba(255,255,255,0.1)',
@@ -373,6 +392,7 @@ function CommunityPanelInner({
             { id: "modpacks" as const, icon: <Blocks className="w-4 h-4" />, label: "Pool" },
             { id: "drafts" as const, icon: <Layers className="w-4 h-4" />, label: "Drafts" },
             { id: "videos" as const, icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
+            { id: "rankings" as const, icon: <Trophy className="w-4 h-4" />, label: "Rankings" },
           ].map((tab) => {
             const isActive = activeSubTab === tab.id;
             return (
@@ -401,21 +421,9 @@ function CommunityPanelInner({
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col relative z-10">
-        {communitySection === "rankings" && !selectedUserProfile && (
-          <CommunityRankings
-            isModern={isModern}
-            onOpen={(mod: ModHit) => {
-              window.dispatchEvent(
-                new CustomEvent("fomo-open-project-details", {
-                  detail: { id: mod.projectId, platform: mod._source },
-                })
-              );
-            }}
-          />
-        )}
-
-        {communitySection === "miembros" && !selectedUserProfile && (
+        {communitySection === "miembros" && membersView === "list" && !selectedUserProfile && (
           <CommunityMembers
+            onOpenMineProfile={() => setMembersView("mine")}
             onOpenProfile={(username) => {
               setSelectedUserProfile(username);
               setActiveSubTab("profile");
@@ -423,25 +431,37 @@ function CommunityPanelInner({
           />
         )}
 
-        {communitySection === "perfil" && !selectedUserProfile && (
-          <CommunityProfileTab
-            userId={user.id}
-            profile={profile}
-            email={user.email}
-            isModern={isModern}
-            ownShares={ownShares}
-            onEditProfile={handleOpenEditProfile}
-            onSignOut={signOut}
-            onOpenProjectDetails={onOpenProjectDetails}
-            onGoToDrafts={() => {
-              setCommunitySection("compartidos");
-              switchTab("drafts");
-            }}
-            onGoToPool={() => {
-              setCommunitySection("compartidos");
-              switchTab("modpacks");
-            }}
-          />
+        {communitySection === "miembros" && membersView === "mine" && !selectedUserProfile && (
+          <div className="px-6 pb-8 space-y-4">
+            <button
+              type="button"
+              onClick={() => setMembersView("list")}
+              className="inline-flex items-center gap-2 text-xs font-bold text-white/60 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver a miembros
+            </button>
+            <CommunityProfileTab
+              userId={user.id}
+              profile={profile}
+              email={user.email}
+              isModern={isModern}
+              ownShares={ownShares}
+              onEditProfile={handleOpenEditProfile}
+              onSignOut={signOut}
+              onOpenProjectDetails={onOpenProjectDetails}
+              onGoToDrafts={() => {
+                setCommunitySection("compartidos");
+                setMembersView("list");
+                switchTab("drafts");
+              }}
+              onGoToPool={() => {
+                setCommunitySection("compartidos");
+                setMembersView("list");
+                switchTab("modpacks");
+              }}
+            />
+          </div>
         )}
 
         {communitySection === "compartidos" && activeSubTab !== 'profile' && (
@@ -486,6 +506,19 @@ function CommunityPanelInner({
                   onOpenProjectDetails={onOpenProjectDetails}
                 />
               </div>
+            )}
+
+            {activeSubTab === "rankings" && (
+              <CommunityRankings
+                isModern={isModern}
+                onOpen={(mod: ModHit) => {
+                  window.dispatchEvent(
+                    new CustomEvent("fomo-open-project-details", {
+                      detail: { id: mod.projectId, platform: mod._source },
+                    })
+                  );
+                }}
+              />
             )}
           </div>
         )}

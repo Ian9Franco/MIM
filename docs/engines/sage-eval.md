@@ -68,7 +68,7 @@ Near-duplicate prefix groups:
 | **Acierto sistémico sin culpable** | **100.0%** | informativo | 55/55 |
 | **Mean Inference Latency (local)** | **0.02 ms** | < 15.0 ms | ✅ Pass (0.02 ms) |
 | **p50 latency (local)** | **0.01 ms** | informativo | warmup 1, repeats 3 |
-| **p95 latency (local)** | **0.04 ms** | informativo | max 0.06 ms |
+| **p95 latency (local)** | **0.04 ms** | informativo | max 0.11 ms |
 
 ### SAGE-04 — Latencia reproducible (diagnóstico local)
 
@@ -76,7 +76,7 @@ Esta medición es **solo el clasificador determinista** (`SageCrashEngine.diagno
 
 - Entorno: Node v24.15.0, win32/x64
 - Calentamiento: 1 pasada(s); cronometraje: 3 repetición(es)
-- mean 0.018 ms · p50 0.014 ms · p95 0.039 ms · max 0.062 ms
+- mean 0.019 ms · p50 0.014 ms · p95 0.042 ms · max 0.113 ms
 - Override: `SAGE_EVAL_WARMUP`, `SAGE_EVAL_REPEATS`
 
 ### Métricas desglosadas (SAGE-02)

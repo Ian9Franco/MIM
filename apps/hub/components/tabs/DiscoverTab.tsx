@@ -11,6 +11,7 @@ import {
   DiscoverFiltersPanel,
   DiscoverPagination,
   DiscoverModCard,
+  DiscoverBulkDraftBar,
   type DiscoverSourceType,
 } from "./discover";
 
@@ -40,6 +41,13 @@ export interface DiscoverTabProps {
   discoverSource: DiscoverSourceType;
   setDiscoverSource: (s: DiscoverSourceType) => void;
   discoverError: string;
+  selectedMods: ModHit[];
+  isModSelected: (mod: ModHit) => boolean;
+  onToggleModSelection: (mod: ModHit) => void;
+  onClearModSelection: () => void;
+  onBulkAddToDraft: () => void;
+  detailsOpenModId?: string | null;
+  detailsSheetOpen?: boolean;
 }
 
 /**
@@ -52,6 +60,9 @@ export function DiscoverTab({
   discoverResults, discoverLoading, discoverPage, discoverTotal,
   setDiscoverResults, setDiscoverPage, runDiscoverSearch, handleOpenModDetails,
   discoverSource, setDiscoverSource, discoverError, discoverSort, setDiscoverSort,
+  selectedMods, isModSelected, onToggleModSelection, onClearModSelection, onBulkAddToDraft,
+  detailsOpenModId,
+  detailsSheetOpen = false,
 }: DiscoverTabProps) {
   const [showFilters, setShowFilters] = React.useState(false);
 
@@ -140,6 +151,9 @@ export function DiscoverTab({
                   mod={mod}
                   resultIndex={resultIndex}
                   handleOpenModDetails={handleOpenModDetails}
+                  isSelected={isModSelected(mod)}
+                  onToggleSelect={onToggleModSelection}
+                  detailsOpenForThisMod={detailsOpenModId === mod.projectId}
                 />
               </div>
             ))}
@@ -161,6 +175,14 @@ export function DiscoverTab({
             No se encontraron mods que coincidan con la búsqueda o filtros aplicados.
           </p>
         </div>
+      )}
+
+      {!detailsSheetOpen && (
+        <DiscoverBulkDraftBar
+          mods={selectedMods}
+          onCancel={onClearModSelection}
+          onAddToDraft={onBulkAddToDraft}
+        />
       )}
     </motion.div>
   );

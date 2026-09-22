@@ -1,5 +1,6 @@
 import React from "react";
 import { Users, UserPlus } from "lucide-react";
+import { openCommunityUserProfile } from "@/components/fomo/community/communityActions";
 
 export function DraftMembersTab({
   draft,
@@ -45,8 +46,13 @@ export function DraftMembersTab({
       
       <div className={`flex flex-col gap-2 mt-2 overflow-y-auto custom-scrollbar pr-1 ${embedded ? "flex-1 min-h-0" : "max-h-[350px]"}`}>
         {/* Owner */}
-        <div className={`flex items-center justify-between p-3 rounded-xl border ${isModern ? "bg-background border-border" : "bg-black/20 border-white/5"}`}>
-          <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => draft.profiles?.username && openCommunityUserProfile(draft.profiles.username)}
+          disabled={!draft.profiles?.username}
+          className={`flex w-full items-center justify-between p-3 rounded-xl border text-left transition-colors cursor-pointer disabled:cursor-default disabled:opacity-70 ${isModern ? "bg-background border-border hover:bg-muted/50" : "bg-black/20 border-white/5 hover:bg-white/5"}`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
             <div 
               className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-background"
               style={{ 
@@ -67,12 +73,18 @@ export function DraftMembersTab({
               </span>
             </div>
           </div>
-        </div>
+        </button>
 
         {/* Other Members */}
         {members.filter(m => m.role !== 'owner').map(member => (
-          <div key={member.id} className={`flex items-center justify-between p-3 rounded-xl border ${isModern ? "bg-background border-border" : "bg-black/20 border-white/5"}`}>
-            <div className="flex items-center gap-3">
+          <button
+            key={member.id}
+            type="button"
+            onClick={() => member.profiles?.username && openCommunityUserProfile(member.profiles.username)}
+            disabled={!member.profiles?.username}
+            className={`flex w-full items-center justify-between p-3 rounded-xl border text-left transition-colors cursor-pointer disabled:cursor-default disabled:opacity-70 ${isModern ? "bg-background border-border hover:bg-muted/50" : "bg-black/20 border-white/5 hover:bg-white/5"}`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
               <div 
                 className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-background"
                 style={{ 
@@ -91,7 +103,7 @@ export function DraftMembersTab({
                 <span className={`text-xs capitalize ${isModern ? "text-muted-foreground" : "text-white/50"}`}>{member.role}</span>
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

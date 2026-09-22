@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCurseForgeApiKey } from "@/lib/curseforgeApiKey";
 import { withApiGuard } from "@/lib/apiGuard";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
@@ -220,7 +221,7 @@ export const GET = withApiGuard(
       );
     }
 
-    const apiKey = process.env.CURSEFORGE_API_KEY;
+    const apiKey = requireCurseForgeApiKey();
     if (!apiKey) {
       console.warn("[CurseForge Picks] CURSEFORGE_API_KEY is not defined, returning fallback.");
       return NextResponse.json(

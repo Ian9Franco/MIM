@@ -22,7 +22,7 @@ export const POST = withApiGuard(
       const results: Record<string, boolean | null> = {};
       let geminiStatus: GeminiKeyStatus | undefined;
 
-      // 1. CurseForge Validation (Required)
+      // 1. CurseForge Validation (Optional — needed only for CF discover/downloads)
       if (curseforge?.trim()) {
         try {
           const cfRes = await fetch("https://api.curseforge.com/v1/games/432", {
@@ -33,7 +33,7 @@ export const POST = withApiGuard(
           results.curseforge = false;
         }
       } else {
-        results.curseforge = false;
+        results.curseforge = null;
       }
 
       // 2. Modrinth Validation (Optional)

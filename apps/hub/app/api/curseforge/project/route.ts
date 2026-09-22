@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
+import { requireCurseForgeApiKey } from "@/lib/curseforgeApiKey";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
 const CF_LOADER_NAMES = ["forge", "fabric", "neoforge", "quilt", "cauldron", "liteloader"];
@@ -77,7 +78,7 @@ export const GET = withApiGuard(
     querySchema,
   },
   async ({ query: { projectId } }) => {
-    const apiKey = process.env.CURSEFORGE_API_KEY;
+    const apiKey = requireCurseForgeApiKey();
     if (!apiKey) {
       return NextResponse.json({ error: "CURSEFORGE_API_KEY no configurada" }, { status: 503 });
     }

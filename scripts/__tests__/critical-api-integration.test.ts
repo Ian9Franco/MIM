@@ -107,7 +107,7 @@ async function run() {
   const resGood2 = await validateKeysPost(goodReq2);
   assert(resGood2.status === 200, "Processes empty/null keys safely with HTTP 200");
   const dataGood2 = await resGood2.json();
-  assert(dataGood2.results.curseforge === false, "Unprovided required key marked false");
+  assert(dataGood2.results.curseforge === null, "Unprovided optional CurseForge key marked null");
   assert(dataGood2.results.modrinth === null, "Unprovided optional key marked null");
   assert(dataGood2.results.gemini === null, "Unprovided optional Gemini key marked null");
 

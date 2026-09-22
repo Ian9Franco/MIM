@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuard } from "@/lib/apiGuard";
+import { requireCurseForgeApiKey } from "@/lib/curseforgeApiKey";
 import { PROJECT_TYPE_TO_CLASS_ID, LOADER_TO_CF_ID, SORT_TO_CF_FIELD, CF_CATEGORY_MAPS } from "./CurseForgeMapper";
 
 const CURSEFORGE_API = "https://api.curseforge.com/v1";
@@ -64,7 +65,7 @@ export const GET = withApiGuard(
     querySchema,
   },
   async ({ query }) => {
-    const apiKey = process.env.CURSEFORGE_API_KEY;
+    const apiKey = requireCurseForgeApiKey();
     if (!apiKey) {
       return NextResponse.json(
         { error: "CURSEFORGE_API_KEY no está configurada en las variables de entorno de Vercel / .env.local" },

@@ -320,10 +320,9 @@ export function SettingsFooter({
           (() => {
             const activeCount = Object.values(keyValidation).filter(v => v === true).length;
             const hasError = Object.values(keyValidation).some(v => v === false);
-            const isComplete = activeCount === 3;
             if (hasError) return <span className="flex items-center gap-2 text-red-400"><AlertTriangle className="w-3 h-3" /> Verificá las claves ingresadas</span>;
-            if (activeCount > 0) return <span className="flex items-center gap-2 text-[#66C8A0]"><Check className="w-3 h-3" /> {activeCount === 1 ? "1 servicio activo" : `${activeCount} servicios activos`} {isComplete && "(Todo OK)"}</span>;
-            return <span className="flex items-center gap-2 text-amber-400"><AlertTriangle className="w-3 h-3" /> Falta configurar claves</span>;
+            if (activeCount > 0) return <span className="flex items-center gap-2 text-[#66C8A0]"><Check className="w-3 h-3" /> {activeCount === 1 ? "1 servicio activo" : `${activeCount} servicios activos`}</span>;
+            return <span className="flex items-center gap-2 text-muted"><AlertTriangle className="w-3 h-3" /> Podés guardar una o más claves</span>;
           })()
         )}
       </div>

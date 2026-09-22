@@ -1,5 +1,9 @@
 import path from "path";
+import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
+
+// Hub lives in apps/hub but secrets live in the monorepo root .env.local
+loadEnvConfig(path.resolve(__dirname, "../.."));
 
 const nextConfig: NextConfig = {
   turbopack: {

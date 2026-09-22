@@ -102,7 +102,7 @@ export function useSettingsManager(onClose: () => void) {
         setGeminiApiKey("");
         setOpenrouterApiKey("");
         setKeyValidation({
-          curseforge: configured.curseforgeApiKey,
+          curseforge: configured.curseforgeApiKey ? true : null,
           modrinth: configured.modrinthApiKey ? true : null,
           virusTotal: configured.virusTotalApiKey ? true : null,
           gemini: configured.geminiApiKey ? true : null,
@@ -123,7 +123,7 @@ export function useSettingsManager(onClose: () => void) {
   const validateKeys = useCallback(async (cf: string, mr: string, vt: string, gemini: string, openrouter: string) => {
     if (!cf && !mr && !vt && !gemini && !openrouter) {
       setKeyValidation({
-        curseforge: apiKeysConfigured.curseforgeApiKey,
+        curseforge: apiKeysConfigured.curseforgeApiKey ? true : null,
         modrinth: apiKeysConfigured.modrinthApiKey ? true : null,
         virusTotal: apiKeysConfigured.virusTotalApiKey ? true : null,
         gemini: apiKeysConfigured.geminiApiKey ? true : null,
@@ -142,7 +142,7 @@ export function useSettingsManager(onClose: () => void) {
       if (res.ok) {
         const { results } = await res.json();
         setKeyValidation({
-          curseforge: cf ? results.curseforge : apiKeysConfigured.curseforgeApiKey,
+          curseforge: cf ? results.curseforge : (apiKeysConfigured.curseforgeApiKey ? true : null),
           modrinth: mr ? results.modrinth : (apiKeysConfigured.modrinthApiKey ? true : null),
           virusTotal: vt ? results.virusTotal : (apiKeysConfigured.virusTotalApiKey ? true : null),
           gemini: gemini ? results.gemini : (apiKeysConfigured.geminiApiKey ? true : null),
@@ -284,6 +284,25 @@ export function useSettingsManager(onClose: () => void) {
     setSaveError("");
     if (!originalSettings) {
       setSaving(false);
+      return;
+    }
+
+    const attemptedKeyFields: Array<keyof typeof keyValidation> = [
+      "curseforge", "modrinth", "virusTotal", "gemini", "openrouter",
+    ];
+    const keyInputs: Record<typeof attemptedKeyFields[number], string> = {
+      curseforge: curseforgeApiKey,
+      modrinth: modrinthApiKey,
+      virusTotal: virusTotalApiKey,
+      gemini: geminiApiKey,
+      openrouter: openrouterApiKey,
+    };
+    const hasInvalidEnteredKey = attemptedKeyFields.some(
+      (field) => keyInputs[field].trim() && keyValidation[field] === false,
+    );
+    if (hasInvalidEnteredKey) {
+      setSaving(false);
+      setSaveError("Hay claves con error de validación. Corregilas o borrá el campo antes de guardar.");
       return;
     }
     const changes = [];

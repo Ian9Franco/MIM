@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { motion } from "framer-motion";
 
 const pulseVariants = {
@@ -14,30 +13,6 @@ const pulseVariants = {
     },
   },
 };
-
-interface SkeletonWrapperProps {
-  children: React.ReactNode;
-  className?: string;
-  count?: number;
-}
-
-function SkeletonWrapper({ children, className = "", count = 1 }: SkeletonWrapperProps) {
-  return (
-    <div className={className}>
-      {Array.from({ length: count }).map((_, i) => (
-        <motion.div
-          key={i}
-          variants={pulseVariants}
-          initial="initial"
-          animate="animate"
-          className="relative overflow-hidden"
-        >
-          {children}
-        </motion.div>
-      ))}
-    </div>
-  );
-}
 
 /**
  * DiscoverSkeleton: Grid structure matching the discovery results.

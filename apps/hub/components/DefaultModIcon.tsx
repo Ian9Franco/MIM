@@ -16,7 +16,7 @@ export function DefaultModIcon({
     : "bg-gradient-to-br from-emerald-950/25 via-zinc-900 to-zinc-950 text-[#1bd672]/50 border border-emerald-500/10 flex items-center justify-center w-full h-full";
 
   return (
-    <div className={containerClass}>
+    <div className={`${containerClass} ${className}`}>
       <svg
         className="w-1/2 h-1/2 opacity-70"
         viewBox="0 0 24 24"

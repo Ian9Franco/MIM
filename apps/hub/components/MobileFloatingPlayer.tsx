@@ -1,1 +1,1 @@
-file:///home/box/.cursor/projects/workspace/agent-tools/MobileFloatingPlayer_restore.txt
+@/workspace/agent-tools/MobileFloatingPlayer_restore.txt

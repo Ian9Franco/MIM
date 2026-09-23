@@ -42,11 +42,33 @@ export const GET = withApiGuard(
   }
 );
 
+function settingsSaveErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message.trim() : "";
+  if (/safeStorage is not available/i.test(raw)) {
+    return "No se pudo cifrar la clave en este equipo. El almacenamiento seguro del sistema no está disponible.";
+  }
+  if (/Secret store is not initialized/i.test(raw)) {
+    return "El almacén de claves no está listo. Reiniciá MIM Desktop e intentá de nuevo.";
+  }
+  if (/Timed out while persisting secrets/i.test(raw)) {
+    return "Se agotó el tiempo al guardar la clave cifrada. Reintentá.";
+  }
+  if (raw && raw.length <= 300 && !raw.includes("\n")) return raw;
+  return "No se pudieron guardar los ajustes.";
+}
+
 export const POST = withApiGuard(
   { bodySchema: settingsUpdateSchema },
   async ({ body }) => {
-  const next = await saveSettings(body);
-  return NextResponse.json(next);
-
+    try {
+      const next = await saveSettings(body);
+      return NextResponse.json(next);
+    } catch (error) {
+      console.error("[settings] No se pudieron guardar los ajustes:", error);
+      return NextResponse.json(
+        { error: settingsSaveErrorMessage(error) },
+        { status: 500 },
+      );
+    }
   }
 );

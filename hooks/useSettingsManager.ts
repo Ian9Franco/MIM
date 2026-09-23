@@ -349,7 +349,13 @@ export function useSettingsManager(onClose: () => void) {
       let message = "No se pudieron guardar los ajustes.";
       try {
         const body = await response.json();
-        if (typeof body?.error === "string" && body.error.trim()) message = body.error;
+        const detail = typeof body?.message === "string" ? body.message.trim() : "";
+        const code = typeof body?.error === "string" ? body.error.trim() : "";
+        if (code === "INTERNAL_SERVER_ERROR") {
+          console.error("[settings] INTERNAL_SERVER_ERROR", body);
+        }
+        if (detail) message = detail;
+        else if (code && code !== "INTERNAL_SERVER_ERROR") message = code;
       } catch {
         // ignore parse errors
       }

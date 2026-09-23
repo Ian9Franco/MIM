@@ -9,6 +9,10 @@ const SERVER_READY_DELAY_MS = 250;
 const { runCurseForgeScraper } = require('./scraper');
 const { createSecretStore } = require('./secret-store');
 const { resolveTrustedPath } = require('./trusted-path');
+const {
+  listLegacySettingsCandidates: selectLegacySettingsCandidates,
+  listLegacySecretsCandidates: selectLegacySecretsCandidates,
+} = require('./legacy-candidates');
 const { setupAppUpdater } = require('./app-updater');
 
 let mainWindow = null;
@@ -32,7 +36,17 @@ function buildLegacyTrustedRoots() {
   const homeIndex = path.join(app.getPath('home'), '.mim-index');
   const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
   const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
-  return [homeIndex, standaloneDir, devSourceIndex];
+  return [...new Set([homeIndex, standaloneDir, devSourceIndex, ...listInstallDataRoots()])];
+}
+
+function legacyCandidateContext(trustedRoots) {
+  return {
+    trustedRoots,
+    homeIndex: path.join(app.getPath('home'), '.mim-index'),
+    standaloneDir: path.join(__dirname, '..', '.next', 'standalone'),
+    devSourceIndex: path.join('D:', '.MIM', 'source', '.mim-index'),
+    installRoots: listInstallDataRoots(),
+  };
 }
 
 function listInstallDataRoots() {
@@ -53,33 +67,18 @@ function listInstallDataRoots() {
 }
 
 function listLegacySettingsCandidates(portableSettings, trustedRoots) {
-  const homeIndex = path.join(app.getPath('home'), '.mim-index');
-  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
-  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
-  const candidates = [
-    path.join(standaloneDir, 'mim-settings.json'),
-    path.join(homeIndex, 'mim-settings.json'),
-    path.join(devSourceIndex, 'mim-settings.json'),
-    ...listInstallDataRoots().map((root) => path.join(root, 'mim-settings.json')),
-  ];
-  const resolvedPortable = path.resolve(portableSettings);
-  return [...new Set(candidates)]
-    .map((candidate) => resolveTrustedPath(candidate, trustedRoots))
-    .filter((candidate) => candidate !== resolvedPortable && fs.existsSync(candidate));
+  return selectLegacySettingsCandidates({
+    ...legacyCandidateContext(trustedRoots),
+    portableSettings,
+  });
 }
 
 function listLegacySecretsCandidates(portableSecretsPath, portableDir, trustedRoots) {
-  const homeIndex = path.join(app.getPath('home'), '.mim-index');
-  const standaloneDir = path.join(__dirname, '..', '.next', 'standalone');
-  const devSourceIndex = path.join('D:', '.MIM', 'source', '.mim-index');
-  const dirs = [homeIndex, devSourceIndex, standaloneDir, ...listInstallDataRoots()];
-  const resolvedPortableDir = path.resolve(portableDir);
-  const resolvedPortableSecrets = path.resolve(portableSecretsPath);
-  return [...new Set(dirs)]
-    .map((dir) => resolveTrustedPath(dir, trustedRoots))
-    .filter((dir) => dir !== resolvedPortableDir)
-    .map((dir) => resolveTrustedPath(path.join(dir, 'mim-secrets.enc.json'), trustedRoots))
-    .filter((candidate) => candidate !== resolvedPortableSecrets && fs.existsSync(candidate));
+  return selectLegacySecretsCandidates({
+    ...legacyCandidateContext(trustedRoots),
+    portableSecretsPath,
+    portableDir,
+  });
 }
 
 function isWeakSettingsFile(filePath) {
@@ -133,9 +132,6 @@ function initializeSecretStore() {
   const trustedRoots = buildLegacyTrustedRoots();
   trustedRoots.push(portableDir);
 
-  recoverPortableSettings(portableSettings, trustedRoots);
-  recoverEncryptedSecrets(portableSecrets, portableDir, trustedRoots);
-
   secretStore = createSecretStore({
     safeStorage,
     settingsPath: portableSettings,
@@ -143,13 +139,19 @@ function initializeSecretStore() {
     trustedRoots,
   });
 
-  secretStore.migratePlaintextSettings();
-  secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
-  for (const legacySecrets of listLegacySecretsCandidates(portableSecrets, portableDir, trustedRoots)) {
-    if (secretStore.mergeEncryptedFromPath(legacySecrets)) {
-      console.log('[MIM] Merged encrypted credentials from', legacySecrets);
-      break;
+  try {
+    recoverPortableSettings(portableSettings, trustedRoots);
+    recoverEncryptedSecrets(portableSecrets, portableDir, trustedRoots);
+    secretStore.migratePlaintextSettings();
+    secretStore.migratePlaintextFromPaths(listLegacySettingsCandidates(portableSettings, trustedRoots));
+    for (const legacySecrets of listLegacySecretsCandidates(portableSecrets, portableDir, trustedRoots)) {
+      if (secretStore.mergeEncryptedFromPath(legacySecrets)) {
+        console.log('[MIM] Merged encrypted credentials from', legacySecrets);
+        break;
+      }
     }
+  } catch (error) {
+    console.error('[MIM] Legacy credential recovery failed; encrypted store remains available:', error);
   }
 
   console.log('[MIM] Portable data directory:', portableDir);

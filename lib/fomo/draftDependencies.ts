@@ -36,8 +36,20 @@ export async function resolveDraftDependencies(
       continue;
     }
     const params = new URLSearchParams({ projectId: item.projectId, gameVersion: context.version, loader: context.loader.toLowerCase(), projectType: item.contentType || "mod" });
-    const response = await request(`/api/${context.source}/versions?${params}`);
-    if (!response.ok) throw new Error(`No se pudieron resolver las dependencias de ${item.title || item.projectId}.`);
+    const versionsUrl = `/api/${context.source}/versions?${params}`;
+    let response = await request(versionsUrl);
+    if (response.status === 429 || response.status >= 500) {
+      const retryAfter = Number(response.headers.get("Retry-After"));
+      const wait = Math.min(Math.max((Number.isFinite(retryAfter) ? retryAfter : 1) * 1000, 400), 8000);
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      response = await request(versionsUrl);
+    }
+    if (!response.ok) {
+      const transient = response.status === 429 || response.status >= 500;
+      throw new Error(transient
+        ? `La API no respondió al resolver ${item.title || item.projectId}. Reintenta en unos segundos.`
+        : `No se pudieron resolver las dependencias de ${item.title || item.projectId}.`);
+    }
     const data = await response.json() as { versions: VersionEntry[] };
     const compatible = (data.versions || []).filter(v =>
       v.gameVersions.includes(context.version) &&

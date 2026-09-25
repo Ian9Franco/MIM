@@ -488,6 +488,19 @@ function FomoSidebarDiscoverBranchInner({
                     m.setBulkAdding(true);
                     m.loadCollections();
                   }}
+                  onAddToDraft={() => {
+                    discover.selectedMods.forEach((mod) => {
+                      window.dispatchEvent(new CustomEvent("fomo-open-add-to-draft", {
+                        detail: {
+                          projectId: mod.projectId,
+                          platform: mod._source || "modrinth",
+                          title: mod.title,
+                          contentType: mod.projectType || "mod",
+                        },
+                      }));
+                    });
+                    discover.clearSelection();
+                  }}
                   onDownload={() =>
                     discover.selectedMods.forEach((mod) => discover.handleDownload(mod))
                   }
@@ -615,6 +628,8 @@ function FomoSidebarDiscoverBranchInner({
                 mod={discover.selectingVersionFor}
                 versions={discover.projectVersions}
                 loading={discover.versLoading}
+                versionsError={discover.versionsError}
+                onRetryVersions={discover.retryVersions}
                 downloading={!!discover.downloading[discover.selectingVersionFor.projectId]}
                 loader={discover.loader}
                 gameVersions={discover.gameVersions}

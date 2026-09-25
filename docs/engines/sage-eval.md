@@ -2,7 +2,7 @@
 
 > **Canonical eval source (SAGE-07):** this file. MimBot structure/live eval is `npm run eval:mimbot` + `scripts/evaluation/mimbot-fixtures.json`. Do not copy numeric claims elsewhere.
 
-> **Evaluation Date:** 2026-09-23  
+> **Evaluation Date:** 2026-09-25  
 > **Regression gate (`crash-corpus-regression.json`):** 125 templated cases — CI only, not real captured logs  
 > **Real corpus (`crash-corpus.json`):** 1 cases — holdout for generalization (SAGE-01)  
 > **MIM Server remote logs (SRV-5):** separate path via SFTP/`latest.log`; ingest excerpts here with `npm run sage:ingest-log`  
@@ -76,7 +76,7 @@ Esta medición es **solo el clasificador determinista** (`SageCrashEngine.diagno
 
 - Entorno: Node v24.15.0, win32/x64
 - Calentamiento: 1 pasada(s); cronometraje: 3 repetición(es)
-- mean 0.018 ms · p50 0.014 ms · p95 0.039 ms · max 0.072 ms
+- mean 0.018 ms · p50 0.014 ms · p95 0.043 ms · max 0.069 ms
 - Override: `SAGE_EVAL_WARMUP`, `SAGE_EVAL_REPEATS`
 
 ### Métricas desglosadas (SAGE-02)

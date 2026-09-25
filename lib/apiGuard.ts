@@ -73,9 +73,16 @@ export function withApiGuard<
       maxRequests: config.rateLimit?.maxRequests ?? 60,
     };
 
-    const identifier = config.rateLimit?.customIdentifier
-      ? config.rateLimit.customIdentifier(request)
-      : clientIp;
+    let identifier = clientIp;
+    if (config.rateLimit?.customIdentifier) {
+      identifier = config.rateLimit.customIdentifier(request);
+    } else {
+      try {
+        identifier = `${new URL(request.url).pathname}:${clientIp}`;
+      } catch {
+        identifier = clientIp;
+      }
+    }
 
     const rateResult = checkRateLimit(identifier, rateLimitOpts);
 

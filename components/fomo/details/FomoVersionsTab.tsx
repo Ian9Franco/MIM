@@ -6,6 +6,8 @@ import type { ModHit, VersionEntry } from "@/lib/core/types";
 
 interface FomoVersionsTabProps {
   versions: VersionEntry[];
+  loadError?: string;
+  onRetry?: () => void;
   mod: ModHit;
   gameVersions: string[];
   selectedVersionFilter: string | null;
@@ -20,6 +22,8 @@ interface FomoVersionsTabProps {
 
 export function FomoVersionsTab({
   versions,
+  loadError,
+  onRetry,
   mod,
   gameVersions,
   selectedVersionFilter,
@@ -99,6 +103,17 @@ export function FomoVersionsTab({
       return matchesVersion && matchesLoader && matchesType;
     })
     .slice(!selectedVersionFilter && !selectedLoaderFilter ? 2 : 0);
+
+  if (loadError && versions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <p className="text-sm font-headline opacity-60">{loadError}</p>
+        <button type="button" onClick={onRetry} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white/10">
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

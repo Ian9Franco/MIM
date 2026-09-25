@@ -1,6 +1,6 @@
 {
   "name": "@mim/contracts-core",
-  "version": "13.0.2",
+  "version": "13.0.3",
   "description": "Pure domain contracts and interfaces for Minecraft Instance Manager",
   "main": "./index.ts",
   "types": "./index.ts",

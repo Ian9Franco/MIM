@@ -35,6 +35,8 @@ interface FomoVersionOverlayProps {
   mod: ModHit;
   versions: VersionEntry[];
   loading: boolean;
+  versionsError?: string;
+  onRetryVersions?: () => void;
   downloading: boolean;
   loader: string;
   gameVersions: string[];
@@ -56,7 +58,7 @@ interface FomoVersionOverlayProps {
 }
 
 export const FomoVersionOverlay = memo(function FomoVersionOverlay({
-  mod, versions, loading, downloading, loader, gameVersions, projectType, onClose, onBack, backLabel, onDownload,
+  mod, versions, loading, versionsError, onRetryVersions, downloading, loader, gameVersions, projectType, onClose, onBack, backLabel, onDownload,
   onSearchProject, onSearchAuthor, onSearchMod, disablePortal = false, hideVersions = false,
   pendingFilesCount: _pendingFilesCount = 0, onOpenDownloads,
   communitySharers = [], communitySharedByMe = false, currentUserCommunityColor = null,
@@ -68,7 +70,7 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
   const { 
     activeTab, setActiveTab, expandedVersion, setExpandedVersion, depDownloading,
     isTranslating, translatedBody, fullBody, depSearchQuery, setDepSearchQuery, followedAuthors, followedMods, 
-    toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery,
+    toggleFollowAuthor, toggleFollowMod, allDependencies, handleTranslate, gallery, loadingGallery, galleryError, retryGallery,
     explainedBody, isExplaining, explanationSources, explanationSearchUsed,
     explanationImagesAnalyzed,
     explainError, showGeminiKeyInput, setShowGeminiKeyInput, handleExplain,
@@ -356,6 +358,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 showSkeleton={showSkeleton}
                 loadingGallery={loadingGallery}
                 gallery={gallery}
+                galleryError={galleryError}
+                onRetry={retryGallery}
                 onSelectImage={(idx) => setSelectedImageIndex(idx)}
               />
             )}
@@ -364,6 +368,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
                 depSearchQuery={depSearchQuery}
                 setDepSearchQuery={setDepSearchQuery}
                 allDependencies={allDependencies}
+                loadError={versionsError}
+                onRetry={onRetryVersions}
                 source={mod._source}
                 depDownloading={depDownloading}
                 onSearchProject={onSearchProject}
@@ -372,6 +378,8 @@ export const FomoVersionOverlay = memo(function FomoVersionOverlay({
             {activeTab === "versions" && (
               <FomoVersionsTab
                 versions={versions}
+                loadError={versionsError}
+                onRetry={onRetryVersions}
                 mod={mod}
                 gameVersions={gameVersions}
                 selectedVersionFilter={selectedVersionFilter}

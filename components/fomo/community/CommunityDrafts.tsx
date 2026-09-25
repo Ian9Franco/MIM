@@ -18,6 +18,12 @@ export function CommunityDrafts() {
   useEffect(() => {
     const saved = localStorage.getItem("fomo_community_draft_id");
     if (saved) setSelectedDraftId(saved);
+    const openDraft = (event: Event) => {
+      const id = (event as CustomEvent<string>).detail;
+      if (id) setSelectedDraftId(id);
+    };
+    window.addEventListener("fomo-open-draft", openDraft);
+    return () => window.removeEventListener("fomo-open-draft", openDraft);
   }, []);
 
   useEffect(() => {

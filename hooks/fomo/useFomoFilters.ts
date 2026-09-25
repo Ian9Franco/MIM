@@ -5,23 +5,55 @@ export type DiscoverViewMode = "list" | "gallery" | "card";
 export const DISCOVER_PAGE_SIZES = [21, 42, 63] as const;
 
 export function useFomoFilters(defaultLoader = "unknown", defaultGameVersion = "") {
-  const [source, setSource] = useState<"modrinth" | "curseforge" | "all" | "chunk">("all");
-  const [loader, setLoader] = useState(defaultLoader);
-  const [gameVersions, setGameVersions] = useState<string[]>(
+  const [source, setSourceRaw] = useState<"modrinth" | "curseforge" | "all" | "chunk">("all");
+  const [loader, setLoaderRaw] = useState(defaultLoader);
+  const [gameVersions, setGameVersionsRaw] = useState<string[]>(
     defaultGameVersion ? [defaultGameVersion] : []
   );
-  const [projectType, setProjectType] = useState("mod");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [environments, setEnvironments] = useState<string[]>([]);
+  const [projectType, setProjectTypeRaw] = useState("mod");
+  const [categories, setCategoriesRaw] = useState<string[]>([]);
+  const [environments, setEnvironmentsRaw] = useState<string[]>([]);
   const [sortOrder, setSortOrderRaw] = useState<SortOrder>("relevance");
-  const [query, setQuery] = useState("");
+  const [query, setQueryRaw] = useState("");
   const [sinytraActive, setSinytraActive] = useState(false);
   const [page, setPage] = useState(1);
   const [onlyExclusives, setOnlyExclusives] = useState(false);
-  const [collectionId, setCollectionId] = useState<string | null>(null);
+  const [collectionId, setCollectionIdRaw] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<DiscoverViewMode>("list");
   const [pageSize, setPageSizeRaw] = useState<number>(21);
 
+  const setSource = useCallback((next: "modrinth" | "curseforge" | "all" | "chunk") => {
+    setSourceRaw(next);
+    setPage(1);
+  }, []);
+  const setLoader = useCallback((next: string) => {
+    setLoaderRaw(next);
+    setPage(1);
+  }, []);
+  const setGameVersions = useCallback((next: string[]) => {
+    setGameVersionsRaw(next);
+    setPage(1);
+  }, []);
+  const setProjectType = useCallback((next: string) => {
+    setProjectTypeRaw(next);
+    setPage(1);
+  }, []);
+  const setCategories = useCallback((next: string[]) => {
+    setCategoriesRaw(next);
+    setPage(1);
+  }, []);
+  const setEnvironments = useCallback((next: string[]) => {
+    setEnvironmentsRaw(next);
+    setPage(1);
+  }, []);
+  const setQuery = useCallback((next: string) => {
+    setQueryRaw(next);
+    setPage(1);
+  }, []);
+  const setCollectionId = useCallback((next: string | null) => {
+    setCollectionIdRaw(next);
+    setPage(1);
+  }, []);
   const setSortOrder = useCallback((next: SortOrder) => {
     setSortOrderRaw(next);
     setPage(1);
@@ -45,20 +77,20 @@ export function useFomoFilters(defaultLoader = "unknown", defaultGameVersion = "
       try {
         const s = JSON.parse(saved);
         const nextSource = !migratedSource && s.source === "modrinth" ? "all" : s.source;
-        if (nextSource) setSource(nextSource);
+        if (nextSource) setSourceRaw(nextSource);
         if (!migratedDefaultsV3 && s.loader === "forge" && Array.isArray(s.gameVersions) && s.gameVersions.includes("1.20.1")) {
-          setLoader("unknown");
-          setGameVersions([]);
+          setLoaderRaw("unknown");
+          setGameVersionsRaw([]);
         } else {
-          if (s.loader) setLoader(s.loader);
-          if (s.gameVersions) setGameVersions(s.gameVersions);
+          if (s.loader) setLoaderRaw(s.loader);
+          if (s.gameVersions) setGameVersionsRaw(s.gameVersions);
         }
-        if (s.projectType) setProjectType(s.projectType);
+        if (s.projectType) setProjectTypeRaw(s.projectType);
         if (s.sortOrder) setSortOrderRaw(s.sortOrder);
-        if (s.query) setQuery(s.query);
+        if (s.query) setQueryRaw(s.query);
         if (s.sinytraActive !== undefined) setSinytraActive(s.sinytraActive);
-        if (Array.isArray(s.categories)) setCategories(s.categories);
-        if (Array.isArray(s.environments)) setEnvironments(s.environments);
+        if (Array.isArray(s.categories)) setCategoriesRaw(s.categories);
+        if (Array.isArray(s.environments)) setEnvironmentsRaw(s.environments);
         if (typeof s.page === "number" && s.page >= 1) setPage(s.page);
         if (typeof s.onlyExclusives === "boolean") setOnlyExclusives(s.onlyExclusives);
         if (s.viewMode === "list" || s.viewMode === "gallery" || s.viewMode === "card") setViewMode(s.viewMode);

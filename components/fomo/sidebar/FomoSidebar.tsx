@@ -100,6 +100,7 @@ function FomoSidebarInner({
   useEffect(() => {
     modeRef.current = mode;
     localStorage.setItem("fomo_active_tab", mode);
+    window.dispatchEvent(new CustomEvent("fomo-mode", { detail: mode }));
   }, [mode]);
 
   const discoverMounted = true;

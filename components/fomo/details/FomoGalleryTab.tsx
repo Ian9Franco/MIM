@@ -3,17 +3,64 @@
 import React from "react";
 import { Images, Maximize2 } from "lucide-react";
 
+interface GalleryImage {
+  url: string;
+  thumbnailUrl?: string;
+  title?: string;
+}
+
 interface FomoGalleryTabProps {
   showSkeleton: boolean;
   loadingGallery: boolean;
-  gallery: Array<{ url: string; thumbnailUrl?: string; title?: string }>;
+  gallery: GalleryImage[];
+  galleryError?: string;
+  onRetry?: () => void;
   onSelectImage: (index: number) => void;
+}
+
+function GalleryTile({
+  img,
+  index,
+  onSelectImage,
+}: {
+  img: GalleryImage;
+  index: number;
+  onSelectImage: (index: number) => void;
+}) {
+  return (
+    <div
+      onClick={() => onSelectImage(index)}
+      className="group relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 aspect-video cursor-zoom-in hover:border-primary/50 transition-all"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={img.thumbnailUrl || img.url}
+        alt={img.title || ""}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+        loading="lazy"
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src =
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23999' font-size='12'%3EImage Error%3C/text%3E%3C/svg%3E";
+        }}
+      />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+        <Maximize2 className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity scale-50 group-hover:scale-100 duration-300" />
+      </div>
+      {img.title && (
+        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+          {img.title}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function FomoGalleryTab({
   showSkeleton,
   loadingGallery,
   gallery,
+  galleryError,
+  onRetry,
   onSelectImage,
 }: FomoGalleryTabProps) {
   return (
@@ -21,10 +68,7 @@ export function FomoGalleryTab({
       {showSkeleton ? (
         <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="h-32 bg-white/5 animate-pulse rounded-2xl border border-white/5"
-            />
+            <div key={i} className="h-32 bg-white/5 animate-pulse rounded-2xl border border-white/5" />
           ))}
         </div>
       ) : !loadingGallery && gallery.length === 0 ? (
@@ -34,41 +78,29 @@ export function FomoGalleryTab({
           </div>
           <div>
             <p className="text-sm font-headline opacity-60">
-              Este proyecto aún no tiene capturas de pantalla públicas.
+              {galleryError || "Este proyecto aún no tiene capturas de pantalla públicas."}
             </p>
-            <p className="text-[10px] opacity-30 mt-1 uppercase tracking-widest">Galería Vacía</p>
+            {galleryError ? (
+              <button type="button" onClick={onRetry} className="mt-3 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white/10">
+                Reintentar
+              </button>
+            ) : (
+              <p className="text-[10px] opacity-30 mt-1 uppercase tracking-widest">Galería Vacía</p>
+            )}
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {gallery.map((img, i) => (
-            <div
-              key={i}
-              onClick={() => onSelectImage(i)}
-              className="group relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 aspect-video cursor-zoom-in hover:border-primary/50 transition-all"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img.thumbnailUrl || img.url}
-                alt={img.title || ""}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                loading="lazy"
-                onError={(e) => {
-                  console.warn(`[Gallery] Failed to load image at index ${i}:`, img.url);
-                  (e.currentTarget as HTMLImageElement).src =
-                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23999' font-size='12'%3EImage Error%3C/text%3E%3C/svg%3E";
-                }}
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <Maximize2 className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity scale-50 group-hover:scale-100 duration-300" />
-              </div>
-              {img.title && (
-                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  {img.title}
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="space-y-3">
+          {galleryError && (
+            <button type="button" onClick={onRetry} className="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 text-white/70 hover:bg-white/10">
+              {galleryError} Reintentar
+            </button>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            {gallery.map((img, i) => (
+              <GalleryTile key={i} img={img} index={i} onSelectImage={onSelectImage} />
+            ))}
+          </div>
         </div>
       )}
     </div>

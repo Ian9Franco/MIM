@@ -153,8 +153,8 @@ export function LayoutHeader({
                 <span id="onboarding-slime">
                   <Image src="/icon.png" alt="MIM Logo" width={32} height={32} className="w-8 h-8 rounded-lg shadow-lg animate-slime" />
                 </span>
-                <span key={appMode} className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent animate-scale-in inline-block">
-                  {appMode === "MIMU" ? "MIMu" : "MIM"}
+                <span key={serverActive ? "MIMSV" : appMode} className="bg-linear-to-br from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent animate-scale-in inline-block">
+                  {serverActive ? "MIMsv" : appMode === "MIMU" ? "MIMu" : "MIM"}
                 </span>
               </span>
               <div className="w-px h-4 bg-primary/30" />

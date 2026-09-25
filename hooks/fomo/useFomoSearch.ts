@@ -32,10 +32,17 @@ export function useFomoSearch(filters: any) {
     projectType, sortOrder, query, page, sinytraActive, collectionId, pageSize: filterPageSize
   } = filters;
   const pageSize = typeof filterPageSize === "number" && filterPageSize > 0 ? filterPageSize : 21;
+  const setPage = filters.setPage as ((page: number) => void) | undefined;
 
   const refetch = useCallback(async (overrideQuery?: string) => {
     const requestId = ++requestIdRef.current;
     const isCurrent = () => requestId === requestIdRef.current;
+
+    const clampToAvailablePage = (pages: number) => {
+      const safe = Math.max(1, pages || 1);
+      if (page > safe) setPage?.(safe);
+      return safe;
+    };
 
     setLoading(true);
     setSourceError("");
@@ -76,7 +83,7 @@ export function useFomoSearch(filters: any) {
         
         if (!isCurrent()) return;
         setTotal(allMods.length);
-        setTotalPages(Math.ceil(allMods.length / pageSize));
+        setTotalPages(clampToAvailablePage(Math.ceil(allMods.length / pageSize) || 1));
       } else if (source === "all") {
         const [mRes, cRes] = await Promise.allSettled([
           fetch(`/api/modrinth/discover?${params}`),
@@ -103,7 +110,7 @@ export function useFomoSearch(filters: any) {
           throw new Error("No se pudo consultar Modrinth ni CurseForge en este momento.");
         }
         setTotal(fetchedMods.length);
-        setTotalPages(1);
+        setTotalPages(clampToAvailablePage(1));
       } else if (source === "chunk") {
         // Fuente Bedrock — chunk.gg proxy
         const res = await fetch(`/api/bedrock/discover?${params}`);
@@ -111,7 +118,7 @@ export function useFomoSearch(filters: any) {
         const data = await res.json();
         fetchedMods = (data.mods || []).map((m: any) => ({ ...m, _source: "chunk" }));
         setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
+        setTotalPages(clampToAvailablePage(data.totalPages || 1));
 
         if (!isCurrent()) return;
         // Para Bedrock no hacemos crosscheck — no aplica cruce Modrinth/CurseForge
@@ -134,7 +141,7 @@ export function useFomoSearch(filters: any) {
         if (!isCurrent()) return;
         fetchedMods = (data.mods || []).map((m: any) => ({ ...m, _source: source }));
         setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
+        setTotalPages(clampToAvailablePage(data.totalPages || 1));
       }
 
       if (!isCurrent()) return;
@@ -211,6 +218,7 @@ export function useFomoSearch(filters: any) {
     query, 
     page,
     pageSize,
+    setPage,
     sinytraActive,
     collectionId
   ]);

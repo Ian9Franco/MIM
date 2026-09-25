@@ -162,6 +162,7 @@ export default function Page() {
   const [fomoOpen,         setFomoOpen]         = useState(false);
   const [sageOpen,         setSageOpen]         = useState(false);
   const [detailsOpen,      setDetailsOpen]      = useState(false);
+  const [fomoMode,         setFomoMode]         = useState("spotlight");
   const [downloadsSidebarCollapsed, setDownloadsSidebarCollapsed] = useState(true);
   const [mounted,          setMounted]          = useState(false);
   const [autoClassify,     setAutoClassify]     = useState(false);
@@ -197,6 +198,7 @@ export default function Page() {
     const handleFomoToggle = (e: Event) => setFomoOpen((e as CustomEvent<boolean>).detail);
     const handleSageToggle = (e: Event) => setSageOpen((e as CustomEvent<boolean>).detail);
     const handleFomoDetails = (e: Event) => setDetailsOpen((e as CustomEvent<{ open: boolean }>).detail.open);
+    const handleFomoMode = (e: Event) => setFomoMode((e as CustomEvent<string>).detail || "spotlight");
     const handleAlertSidebar = (e: Event) => setSidebarOpen((e as CustomEvent<boolean>).detail);
     const handleRefreshSystem = () => {
       lib.refreshLibrary();
@@ -209,6 +211,7 @@ export default function Page() {
     window.addEventListener("fomo-toggle", handleFomoToggle);
     window.addEventListener("sage-toggle", handleSageToggle);
     window.addEventListener("fomo-details-toggle", handleFomoDetails);
+    window.addEventListener("fomo-mode", handleFomoMode);
     window.addEventListener("alert-sidebar-toggle", handleAlertSidebar);
     window.addEventListener("refresh-system", handleRefreshSystem);
     window.addEventListener("active-project-changed", handleProjectChanged);
@@ -217,6 +220,7 @@ export default function Page() {
       window.removeEventListener("fomo-toggle", handleFomoToggle);
       window.removeEventListener("sage-toggle", handleSageToggle);
       window.removeEventListener("fomo-details-toggle", handleFomoDetails);
+      window.removeEventListener("fomo-mode", handleFomoMode);
       window.removeEventListener("alert-sidebar-toggle", handleAlertSidebar);
       window.removeEventListener("refresh-system", handleRefreshSystem);
       window.removeEventListener("active-project-changed", handleProjectChanged);
@@ -466,7 +470,7 @@ export default function Page() {
         {lib.modDescription && <DescriptionModal modDescription={lib.modDescription} onClose={() => lib.setModDescription(null)} />}
         <AlertSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} conflicts={lib.conflicts} bytecodeConflicts={lib.bytecodeConflicts} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} library={lib.library} downloadingMods={lib.downloadingMods} handleResolveConflict={lib.handleResolveConflict} handleDownloadUpdate={lib.handleDownloadUpdate} handleDismissUpdate={lib.handleDismissUpdate} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} />
 
-        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />, document.body)}
+        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} fomoMode={fomoMode} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />, document.body)}
       </div>
 
       <ConfirmModal isOpen={filesToDelete.length > 0} onClose={() => setFilesToDelete([])} onConfirm={handleBulkDelete} title={filesToDelete.length > 1 ? "¿Eliminar seleccionados?" : "¿Eliminar archivo?"} message={`¿Estás seguro? Esta acción no se puede deshacer.`} confirmLabel="Eliminar" cancelLabel="Cancelar" type="danger" />

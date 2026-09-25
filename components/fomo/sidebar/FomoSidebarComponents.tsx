@@ -1,10 +1,10 @@
 import React from "react";
-import { X, Plus, Download, Library, Loader2, ChevronRight, Sparkles } from "lucide-react";
+import { X, Plus, Download, Library, Loader2, ChevronRight, Sparkles, FlaskConical } from "lucide-react";
 import { COLORS } from "@/theme/tokens";
 
 // ── BulkActionsBar ──────────────────────────────────────────────────────────
 
-export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, onExplain, explaining, isModern, hideAdd, actionLabel, actionIcon }: { mods: any[], onCancel: () => void, onAdd?: () => void, onDownload: () => void, onExplain?: () => void, explaining?: boolean, isModern?: boolean, hideAdd?: boolean, actionLabel?: string, actionIcon?: React.ReactNode }) {
+export function BulkActionsBar({ mods, onCancel, onAdd, onAddToDraft, onDownload, onExplain, explaining, isModern, hideAdd, actionLabel, actionIcon }: { mods: any[], onCancel: () => void, onAdd?: () => void, onAddToDraft?: () => void, onDownload: () => void, onExplain?: () => void, explaining?: boolean, isModern?: boolean, hideAdd?: boolean, actionLabel?: string, actionIcon?: React.ReactNode }) {
   const displayMods = mods.slice(0, 10);
   const remaining = mods.length - 10;
 
@@ -41,6 +41,9 @@ export function BulkActionsBar({ mods, onCancel, onAdd, onDownload, onExplain, e
         <button onClick={onCancel} className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${isModern ? 'text-black/40 hover:bg-black/5' : 'text-white/40 hover:bg-white/10'}`}>Cancelar</button>
         {!hideAdd && onAdd && (
           <button onClick={onAdd} className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border transition-all ${isModern ? 'border-black/10 text-black/80 hover:bg-black/5' : 'border-white/10 text-white/80 hover:bg-white/20'}`}><Plus className="w-3.5 h-3.5" />Añadir a...</button>
+        )}
+        {onAddToDraft && (
+          <button onClick={onAddToDraft} className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold border transition-all ${isModern ? 'border-black/10 text-black/80 hover:bg-black/5' : 'border-primary/40 text-primary hover:bg-primary/10'}`}><FlaskConical className="w-3.5 h-3.5" />Al draft activo</button>
         )}
         {onExplain && (
           <button

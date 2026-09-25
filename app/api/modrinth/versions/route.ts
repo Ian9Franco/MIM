@@ -77,18 +77,25 @@ export const GET = withApiGuard(
       // El filtro de loader solo aplica para mods (resourcepacks/shaders no lo usan)
       if (loader && projectType === "mod") params.set("loaders", JSON.stringify([loader]));
 
+      const readVersions = async (target: string) => {
+        const res = await fetch(target, { headers, cache: "no-store" });
+        if (!res.ok) return null;
+        const body = await res.json().catch(() => null);
+        return Array.isArray(body) ? body as ModrinthRawVersion[] : null;
+      };
+
       let url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params.toString()}`;
-      let res = await fetch(url, { headers, cache: "no-store" });
-      let rawVersions: ModrinthRawVersion[] = await res.json();
+      let rawVersions = await readVersions(url);
 
       // 2. Fallback: si no hay versiones con filtros estrictos, traer TODAS
-      if (Array.isArray(rawVersions) && rawVersions.length === 0 && (gameVersion || loader)) {
-        url        = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version`;
-        res        = await fetch(url, { headers, cache: "no-store" });
-        rawVersions = await res.json();
+      if (rawVersions && rawVersions.length === 0 && (gameVersion || loader)) {
+        url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version`;
+        rawVersions = await readVersions(url);
       }
 
-      if (!Array.isArray(rawVersions)) return NextResponse.json({ versions: [] });
+      if (!rawVersions) {
+        return NextResponse.json({ error: "UPSTREAM_UNAVAILABLE", versions: [] }, { status: 502 });
+      }
 
       // 2.5 Filter versions based on projectType priority
       if (projectType === "datapack" || projectType === "resourcepack") {

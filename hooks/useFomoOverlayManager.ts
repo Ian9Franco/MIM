@@ -69,6 +69,8 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
   // Gallery Logic
   const [gallery, setGallery] = useState<FomoGalleryItem[]>(normalizeGallery(mod.gallery));
   const [loadingGallery, setLoadingGallery] = useState(false);
+  const [galleryError, setGalleryError] = useState("");
+  const [galleryRetry, setGalleryRetry] = useState(0);
   const lastFetchedKey = useRef<string | null>(null);
 
   // Reset states when switching mods
@@ -117,62 +119,45 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     const fetchKey = `${gallerySource}:${mod.projectId}`;
     if (lastFetchedKey.current === fetchKey) return; // Ya se hizo fetch para este proyecto
     
-    console.log(`[Gallery Hook] Starting fetch for ${fetchKey}, gallery init size: ${(mod.gallery || []).length}`);
-    
     setLoadingGallery(true);
-    lastFetchedKey.current = fetchKey;
+    setGalleryError("");
     const controller = new AbortController();
-    
+
     const doFetch = async (retries = 2, delayMs = 400) => {
       try {
         const url = `/api/mod-gallery?projectId=${encodeURIComponent(mod.projectId)}&source=${gallerySource}&debug=true`;
-        console.log(`[Gallery Hook] Fetching: ${url}`);
-        
         const r = await fetch(url, { signal: controller.signal });
-        
-        console.log(`[Gallery Hook] Response status: ${r.status}`);
-        
         if (!r.ok) {
-          const text = await r.text();
-          console.warn(`[Gallery] HTTP ${r.status} - Response: ${text}`);
-          throw new Error(`HTTP ${r.status}`);
+          const retryAfter = Number(r.headers.get("Retry-After"));
+          const error = new Error(`HTTP ${r.status}`) as Error & { status?: number; retryAfter?: number };
+          error.status = r.status;
+          error.retryAfter = Number.isFinite(retryAfter) ? retryAfter : undefined;
+          throw error;
         }
-        
         const d = await r.json();
-        console.log(`[Gallery Hook] Response data:`, d);
-        
         const items = normalizeGallery(d.gallery || []);
-        console.log(`[Gallery Hook] Extracted ${items.length} images, first item:`, items[0]);
-        
         setGallery(items);
-        
-        if (items.length > 0) {
-          // NOTE: Disabled automatic preload for debugging render issues.
-          // Preloading can be re-enabled once root cause is identified.
-          console.log(`[Gallery Hook] Preload disabled for debugging. First image: ${items[0].url}`);
-        }
+        setGalleryError("");
+        lastFetchedKey.current = fetchKey;
       } catch (e: unknown) {
-        const err = e as { name?: string; message?: string };
-        if (err?.name === "AbortError") {
-          console.log("[Gallery Hook] Fetch aborted");
-          return;
-        }
+        const err = e as { name?: string; message?: string; status?: number; retryAfter?: number };
+        if (err?.name === "AbortError") return;
         if (retries > 0) {
-          console.warn(`[Gallery Hook] Fetch failed, retrying (${retries} left):`, err?.message);
-          await new Promise(res => setTimeout(res, delayMs));
+          const wait = err.status === 429
+            ? Math.min(Math.max((err.retryAfter || 1) * 1000, 400), 8000)
+            : delayMs;
+          await new Promise(res => setTimeout(res, wait));
           return doFetch(retries - 1, delayMs * 1.5);
         }
-        console.error("[Gallery] Fetch failed after retries:", e);
-        setGallery([]); // Mostrar galería vacía en lugar de skeleton infinito
+        setGalleryError("No se pudo cargar la galería. Reintenta en unos segundos.");
       } finally {
         setLoadingGallery(false);
       }
     };
-    
-    // Small delay to avoid race with other fetches on mount
+
     const t = setTimeout(() => doFetch(), 150);
     return () => { controller.abort(); clearTimeout(t); };
-  }, [mod.projectId, mod._source]);
+  }, [mod.projectId, mod._source, mod.url, galleryRetry]);
 
   useEffect(() => {
     if (mod.body || mod._source === "chunk") return;
@@ -535,6 +520,11 @@ export function useFomoOverlayManager(mod: ModHit, versions: VersionEntry[], hid
     handleTranslate,
     gallery,
     loadingGallery,
+    galleryError,
+    retryGallery: () => {
+      lastFetchedKey.current = "";
+      setGalleryRetry((n) => n + 1);
+    },
     // Explainer additions:
     explainedBody,
     setExplainedBody,

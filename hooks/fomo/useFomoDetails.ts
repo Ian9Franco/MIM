@@ -12,6 +12,7 @@ export function useFomoDetails(
   const [selectingVersionFor, setSelectingVersionFor] = useState<ModHit | null>(null);
   const [projectVersions, setProjectVersions] = useState<VersionEntry[]>([]);
   const [versLoading, setVersLoading] = useState(false);
+  const [versionsError, setVersionsError] = useState("");
   const [detailsStack, setDetailsStack] = useState<DetailsStackEntry[]>([]);
 
   const requestId = useRef(0);
@@ -20,6 +21,7 @@ export function useFomoDetails(
     requestId.current += 1;
     setSelectingVersionFor(null);
     setProjectVersions([]);
+    setVersionsError("");
     setDetailsStack([]);
     setVersLoading(false);
   }, []);
@@ -60,14 +62,23 @@ export function useFomoDetails(
     async (modHit: ModHit, token: number) => {
       const apiSource = modHit._source === "curseforge" ? "curseforge" : "modrinth";
       const pt = modHit.projectType || projectType;
-      const versRes = await fetch(
-        `/api/${apiSource}/versions?projectId=${modHit.projectId}&loader=all&projectType=${pt}`
-      );
+      const url = `/api/${apiSource}/versions?projectId=${modHit.projectId}&loader=all&projectType=${pt}`;
+      let versRes = await fetch(url);
+      if (versRes.status === 429 || versRes.status >= 500) {
+        const retryAfter = Number(versRes.headers.get("Retry-After"));
+        const wait = Math.min(Math.max((Number.isFinite(retryAfter) ? retryAfter : 1) * 1000, 400), 8000);
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        if (token !== requestId.current) return;
+        versRes = await fetch(url);
+      }
       if (versRes.ok) {
         const dataV = await versRes.json();
-        if (token === requestId.current) setProjectVersions(dataV.versions ?? []);
+        if (token === requestId.current) {
+          setProjectVersions(dataV.versions ?? []);
+          setVersionsError("");
+        }
       } else if (token === requestId.current) {
-        setProjectVersions([]);
+        setVersionsError("No se pudieron cargar las versiones. Reintenta en unos segundos.");
       }
     },
     [projectType]
@@ -171,6 +182,7 @@ export function useFomoDetails(
       const token = ++requestId.current;
       setDetailsStack([]);
       setProjectVersions([]);
+      setVersionsError("");
       setSelectingVersionFor(mod);
       setVersLoading(true);
       try {
@@ -189,6 +201,7 @@ export function useFomoDetails(
       const token = ++requestId.current;
       setDetailsStack([]);
       setProjectVersions([]);
+      setVersionsError("");
       setSelectingVersionFor(mod);
       setVersLoading(true);
       try {
@@ -269,6 +282,7 @@ export function useFomoDetails(
 
       setVersLoading(true);
       setProjectVersions([]);
+      setVersionsError("");
       try {
         const order: ("modrinth" | "curseforge")[] =
           sourcePlatform === "curseforge"
@@ -311,6 +325,15 @@ export function useFomoDetails(
     setSelectingVersionFor,
     projectVersions,
     versLoading,
+    versionsError,
+    retryVersions: () => {
+      if (!selectingVersionFor) return;
+      const token = ++requestId.current;
+      setVersLoading(true);
+      void loadVersionsForMod(selectingVersionFor, token).finally(() => {
+        if (token === requestId.current) setVersLoading(false);
+      });
+    },
     detailsStack,
     detailsBackLabel,
     handleDetailsBack,

@@ -4,6 +4,7 @@ import React from "react";
 import { FlaskConical, Inbox } from "lucide-react";
 import { activeDraftManager } from "@/lib/fomo/activeDraftManager";
 import { PendingFilesSection } from "@/components/library/PendingFilesSection";
+import { ActiveDraftItemsSection } from "@/components/fomo/sidebar/ActiveDraftItemsSection";
 import type { PendingFile } from "@/lib/core/types";
 
 interface FomoSidebarPortalProps {
@@ -12,6 +13,8 @@ interface FomoSidebarPortalProps {
   fomoMode?: string;
   downloadsSidebarCollapsed: boolean;
   setDownloadsSidebarCollapsed: (v: boolean) => void;
+  draftSidebarCollapsed: boolean;
+  setDraftSidebarCollapsed: (v: boolean) => void;
   pendingFiles: PendingFile[];
   loading: boolean;
   selectedFiles: PendingFile[];
@@ -30,6 +33,8 @@ export function FomoSidebarPortal({
   fomoMode = "spotlight",
   downloadsSidebarCollapsed,
   setDownloadsSidebarCollapsed,
+  draftSidebarCollapsed,
+  setDraftSidebarCollapsed,
   pendingFiles,
   loading,
   selectedFiles,
@@ -42,10 +47,12 @@ export function FomoSidebarPortal({
   setDetectedVersion,
 }: FomoSidebarPortalProps) {
   const showExploreFloaters = fomoOpen && !detailsOpen && fomoMode === "discover";
-  const showDownloads = showExploreFloaters && !downloadsSidebarCollapsed;
-  const showDownloadsButton = showExploreFloaters && downloadsSidebarCollapsed;
+  const showDownloads = showExploreFloaters && !downloadsSidebarCollapsed && draftSidebarCollapsed;
+  const showDraftSidebar = showExploreFloaters && !draftSidebarCollapsed;
+  const showDownloadsButton = showExploreFloaters && downloadsSidebarCollapsed && draftSidebarCollapsed;
+  const showDraftButton = showExploreFloaters && draftSidebarCollapsed;
 
-  const openActiveDraft = () => {
+  const openDraftSidebar = () => {
     const draft = activeDraftManager.getActiveDraft();
     if (!draft) {
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
@@ -53,11 +60,8 @@ export function FomoSidebarPortal({
       }));
       return;
     }
-    localStorage.setItem("fomo_community_draft_id", draft.id);
-    localStorage.setItem("fomo_community_subtab", "drafts");
-    window.dispatchEvent(new CustomEvent("fomo-open-draft", { detail: draft.id }));
-    window.dispatchEvent(new CustomEvent("fomo-community-tab", { detail: "drafts" }));
-    window.dispatchEvent(new CustomEvent("fomo-switch-tab", { detail: { tab: "community" } }));
+    setDownloadsSidebarCollapsed(true);
+    setDraftSidebarCollapsed(false);
   };
 
   return (
@@ -92,11 +96,31 @@ export function FomoSidebarPortal({
         </div>
       </aside>
 
+      <aside
+        className={`fomo-sidebar fomo-sidebar-container fixed top-0 right-0 h-screen z-[80] w-[320px] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.4)] transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] border-l ${
+          showDraftSidebar
+            ? "translate-x-0 opacity-100"
+            : "translate-x-full opacity-0 pointer-events-none"
+        }`}
+        style={{
+          background: "var(--fomo-bg, color-mix(in srgb, var(--color-card) 94%, transparent))",
+          borderColor: "var(--fomo-border, var(--color-border))",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        <div className="flex-1 flex flex-col min-h-0 p-6 overflow-hidden">
+          <ActiveDraftItemsSection onCloseSidebar={() => setDraftSidebarCollapsed(true)} />
+        </div>
+      </aside>
+
       {showExploreFloaters && (
         <div className="fixed top-20 right-5 z-[80] flex flex-col items-end gap-2">
           {showDownloadsButton && (
             <button
-              onClick={() => setDownloadsSidebarCollapsed(false)}
+              onClick={() => {
+                setDraftSidebarCollapsed(true);
+                setDownloadsSidebarCollapsed(false);
+              }}
               className="flex items-center gap-2.5 px-4 py-3 rounded-full border backdrop-blur-md hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-fade-in group"
               style={{
                 borderColor: "rgba(99, 102, 241, 0.3)",
@@ -116,8 +140,9 @@ export function FomoSidebarPortal({
               </span>
             </button>
           )}
+          {showDraftButton && (
           <button
-            onClick={openActiveDraft}
+            onClick={openDraftSidebar}
             className="flex items-center gap-2.5 px-4 py-3 rounded-full border backdrop-blur-md hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-fade-in group"
             style={{
               borderColor: "rgba(187, 150, 228, 0.35)",
@@ -129,6 +154,7 @@ export function FomoSidebarPortal({
               Ver draft activo
             </span>
           </button>
+          )}
         </div>
       )}
     </>

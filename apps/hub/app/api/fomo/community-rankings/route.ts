@@ -51,7 +51,7 @@ export const GET = withApiGuard(
 
     if (error) {
       console.error("Error fetching shared mods:", error);
-      return NextResponse.json({ rankings: [] }, { status: 500 });
+      return NextResponse.json({ error: error.message || "No se pudieron cargar los rankings.", rankings: [] }, { status: 500 });
     }
 
     const rows = Array.isArray(sharedMods) ? sharedMods : [];

@@ -195,7 +195,7 @@ export function ShowcaseOverviewFeed({
     : activeChannel.split("/").pop();
 
   return (
-    <div className="space-y-6 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
+    <div className="space-y-6">
       <div
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
           isModern

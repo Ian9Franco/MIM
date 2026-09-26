@@ -2,8 +2,8 @@
 
 import React from "react";
 import { 
-  TvMinimalPlay, RefreshCw, Trash2, ChevronDown, 
-  MonitorCheck, MonitorUp, Pin, Newspaper, ExternalLink, Flame, Puzzle, LayoutGrid
+  TvMinimalPlay, RefreshCw, Trash2, Film, Flame,
+  MonitorCheck, MonitorUp, Pin, Newspaper, ExternalLink, Puzzle, LayoutGrid
 } from "lucide-react";
 import { mimDB } from "@/lib/storage/indexeddb";
 import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
@@ -11,6 +11,8 @@ import { ShowcaseVideoCard } from "@/components/fomo/showcase/ShowcaseVideoCard"
 import { ShowcaseOverviewFeed } from "@/components/fomo/showcase/ShowcaseOverviewFeed";
 import type { ShowcaseContentType } from "@/components/fomo/showcase/showcaseOverviewTypes";
 import { playFomoVideo } from "@/lib/fomo/playVideo";
+import { FomoDropdown } from "@/components/fomo/shared/FomoDropdown";
+import { FomoSegmentedNav } from "@/components/fomo/shared/FomoSegmentedNav";
 
 // No hardcoded POSTS_CHANNELS limit anymore
 
@@ -103,7 +105,6 @@ export function FomoFollowedShowcases({
 
   const [channels, setChannels] = React.useState<string[]>([]);
   const [activeChannel, setActiveChannel] = React.useState("https://www.youtube.com/@EnderVerseMC");
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [channelUsage, setChannelUsage] = React.useState<Record<string, number>>({});
   // Canales pinneados al Spotlight showcase (multi-canal)
   const [spotlightChannels, setSpotlightChannels] = React.useState<string[]>(DEFAULT_SPOTLIGHT_CHANNELS);
@@ -364,7 +365,7 @@ export function FomoFollowedShowcases({
   };
 
   return (
-    <div key="showcases" className={`${animationClass} flex flex-col min-h-0 max-h-full`}>
+    <div key="showcases" className={`${animationClass} flex flex-col min-h-0 h-full overflow-hidden`}>
       {/* Gestor de Canales — compacto */}
       <div className="mb-4 shrink-0 bg-white/5 p-3 rounded-2xl border border-white/10 space-y-3">
         {(() => {
@@ -400,81 +401,78 @@ export function FomoFollowedShowcases({
           <div className="flex-1 min-w-0">
             <p className="font-headline text-[10px] mb-1 flex items-center gap-1.5 opacity-70"><MonitorCheck className="w-3 h-3 text-primary" />Canal activo</p>
             <div className="relative">
-              <button 
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`w-full border rounded-xl px-3 py-2 text-xs flex items-center justify-between focus:border-primary/50 outline-none transition-all cursor-pointer ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/40 text-white border-white/10"}`}
+              <FomoDropdown
+                fullWidth
+                valueLabel={
+                  <span className="truncate">
+                    {activeChannel.includes("@") ? activeChannel.split("@")[1].split("/")[0] : activeChannel.split("/").pop()}
+                  </span>
+                }
+                menuClassName="max-h-60 overflow-y-auto"
               >
-                <span className="truncate">
-                  {activeChannel.includes("@") ? activeChannel.split("@")[1].split("/")[0] : activeChannel.split("/").pop()}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-              
-              {dropdownOpen && (
-                <div className={`absolute z-50 w-full mt-1 border rounded-xl shadow-xl max-h-60 overflow-y-auto ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`} style={{ background: isModern ? "white" : "hsl(220 14% 9%)" }}>
-                  {channels.map(c => (
-                    <div 
-                      key={c} 
-                      className={`flex items-center justify-between px-3 py-2 text-xs hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"}`}
-                      onClick={() => {
-                        setActiveChannel(c);
-                        trackChannelUsage(c);
-                        setDropdownOpen(false);
-                      }}
-                    >
-                      <span className={`truncate ${c === activeChannel ? "text-primary font-bold" : "opacity-80"}`}>
-                        {c.includes("@") ? c.split("@")[1].split("/")[0] : c.split("/").pop()}
-                        {spotlightChannels.includes(c) && (
-                          <span className="ml-1.5 text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black uppercase tracking-wider align-middle">Spotlight</span>
-                        )}
-                      </span>
-                      <div className="flex items-center gap-1 ml-2 shrink-0">
-                        {/* Botón Spotlight */}
-                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                {channels.map((c) => (
+                  <div
+                    key={c}
+                    className="flex items-center justify-between px-3 py-2 text-xs cursor-pointer hover:bg-white/5"
+                    onClick={() => {
+                      setActiveChannel(c);
+                      trackChannelUsage(c);
+                    }}
+                    style={{ color: c === activeChannel ? "var(--color-primary)" : "var(--fomo-text-primary)" }}
+                  >
+                    <span className="truncate">
+                      {c.includes("@") ? c.split("@")[1].split("/")[0] : c.split("/").pop()}
+                      {spotlightChannels.includes(c) && (
+                        <span className="ml-1.5 text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black uppercase tracking-wider align-middle">
+                          Spotlight
+                        </span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-1 ml-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSpotlightChannel(c);
+                        }}
+                        title={spotlightChannels.includes(c) ? "Quitar del Spotlight" : "Agregar al Spotlight"}
+                        className={`transition-all cursor-pointer bg-transparent border-none p-0.5 rounded ${
+                          spotlightChannels.includes(c)
+                            ? "text-amber-400 opacity-100"
+                            : "opacity-30 hover:opacity-100 hover:text-amber-400"
+                        }`}
+                      >
+                        <Pin className={`w-3 h-3 ${spotlightChannels.includes(c) ? "fill-amber-400/30" : ""}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const next = channels.filter((chan) => chan !== c);
+                          setChannels(next);
+                          if (activeChannel === c) {
+                            setActiveChannel(next[0] || "");
+                          }
+                          if (spotlightChannels.includes(c)) {
                             handleToggleSpotlightChannel(c);
-                          }}
-                          title={spotlightChannels.includes(c) ? "Quitar del Spotlight" : "Agregar al Spotlight"}
-                          className={`transition-all cursor-pointer bg-transparent border-none p-0.5 rounded ${
-                            spotlightChannels.includes(c)
-                              ? "text-amber-400 opacity-100"
-                              : "opacity-30 hover:opacity-100 hover:text-amber-400"
-                          }`}
-                        >
-                          <Pin className={`w-3 h-3 ${spotlightChannels.includes(c) ? "fill-amber-400/30" : ""}`} />
-                        </button>
-                        {/* Botón Eliminar */}
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const next = channels.filter(chan => chan !== c);
-                            setChannels(next);
-                            if (activeChannel === c) {
-                              setActiveChannel(next[0] || "");
-                            }
-                            // Si el canal estaba pineado en el Spotlight, sacarlo
-                            if (spotlightChannels.includes(c)) {
-                              handleToggleSpotlightChannel(c);
-                            }
-                            fetch(`/api/fomo/youtube-channels`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ channels: next }),
-                            }).then(() => {
-                              window.dispatchEvent(new CustomEvent("fomo-club-changed"));
-                            });
-                          }}
-                          className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-1 cursor-pointer bg-transparent border-none"
-                          title="Eliminar canal"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                          }
+                          fetch(`/api/fomo/youtube-channels`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ channels: next }),
+                          }).then(() => {
+                            window.dispatchEvent(new CustomEvent("fomo-club-changed"));
+                          });
+                        }}
+                        className="opacity-40 hover:opacity-100 hover:text-red-500 transition-all ml-1 cursor-pointer bg-transparent border-none"
+                        title="Eliminar canal"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </FomoDropdown>
             </div>
           </div>
           
@@ -571,46 +569,18 @@ export function FomoFollowedShowcases({
       </div>
 
       {/* Toggle Resumen / Videos / Shorts / Posts */}
-      <div className="flex justify-between items-center mb-3 shrink-0">
-        <div className={`flex gap-1 p-1 rounded-xl w-fit border flex-wrap ${isModern ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/5"}`}>
-          <button
-            onClick={() => setShowcaseType("overview")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              showcaseType === "overview"
-                ? "bg-primary text-white shadow-lg shadow-primary/20"
-                : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"
-            }`}
-          >
-            <LayoutGrid className="w-3 h-3" />
-            Resumen
-          </button>
-          <button 
-            onClick={() => setShowcaseType("videos")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "videos" ? "bg-primary text-white" : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"}`}
-          >
-            <TvMinimalPlay className="w-3 h-3" />
-            Videos
-          </button>
-          <button 
-            onClick={() => setShowcaseType("shorts")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${showcaseType === "shorts" ? "bg-primary text-white" : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"}`}
-          >
-            Shorts
-          </button>
-          <button 
-            onClick={() => setShowcaseType("posts")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              showcaseType === "posts" 
-                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30" 
-                : isModern ? "opacity-50 text-slate-600 hover:opacity-100" : "opacity-40 text-white hover:opacity-100"
-            }`}
-            title="Posts de Comunidad"
-          >
-            <Newspaper className="w-3 h-3" />
-            Posts
-          </button>
-        </div>
-        
+      <div className="flex justify-between items-center mb-3 shrink-0 gap-3">
+        <FomoSegmentedNav
+          layoutId="fomo-showcase-type"
+          value={showcaseType}
+          onChange={setShowcaseType}
+          items={[
+            { id: "overview", label: "Resumen", icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+            { id: "videos", label: "Videos", icon: <TvMinimalPlay className="w-3.5 h-3.5" /> },
+            { id: "shorts", label: "Shorts", icon: <Film className="w-3.5 h-3.5" /> },
+            { id: "posts", label: "Posts", icon: <Newspaper className="w-3.5 h-3.5" /> },
+          ]}
+        />        
         {(loadingShowcases || loadingPosts || loadingOverview) && (showcasesList.length > 0 || showcaseType === "overview") && (
           <div className="flex items-center gap-1.5 opacity-55 text-[10px] font-mono select-none mr-2">
             <RefreshCw className="w-3 h-3 animate-spin text-primary" />
@@ -618,7 +588,7 @@ export function FomoFollowedShowcases({
           </div>
         )}
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
       {showcaseType === "overview" && (
         <ShowcaseOverviewFeed
           activeChannel={activeChannel}
@@ -634,7 +604,7 @@ export function FomoFollowedShowcases({
 
       {/* === Modo Posts de Comunidad === */}
       {showcaseType === "posts" && (
-        <div className="space-y-4 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
+        <div className="space-y-4">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20">
             <Newspaper className="w-3.5 h-3.5 text-orange-400 shrink-0" />
             <p className="text-[10px] text-orange-300/80">Posts de comunidad — compilaciones de mods compartidas por el canal.</p>
@@ -771,7 +741,7 @@ export function FomoFollowedShowcases({
               <p className="text-xs max-w-sm">Los {showcaseType === "videos" ? "videos" : "shorts"} del canal aparecerán acá.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-4 max-h-[min(70vh,720px)] overflow-y-auto custom-scrollbar pr-1">
+            <div className="flex flex-col gap-4">
               <div className={`grid gap-4 ${showcaseType === "shorts" ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
                 {showcasesList.map((video, idx) => (
                   <ShowcaseVideoCard 

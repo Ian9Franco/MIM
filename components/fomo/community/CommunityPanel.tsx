@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { TvMinimalPlay, RefreshCw, Blocks, Layers, Trophy, ArrowLeft } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { RefreshCw, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/security/AuthContext";
 import { LoginPortal } from "@/components/fomo/core/LoginPortal";
 import { supabase } from "@/lib/core/supabaseClient";
@@ -13,9 +13,8 @@ import { CommunityVideos, type ShowcaseVideo } from "@/components/fomo/community
 
 import { CommunityDrafts } from "@/components/fomo/community/CommunityDrafts";
 import { CommunityUserProfile } from "@/components/fomo/community/CommunityUserProfile";
-import { CommunityAddToDraftModal } from "@/components/fomo/community/CommunityAddToDraftModal";
 import { DraftDownloadProgress } from "@/components/fomo/community/DraftDownloadProgress";
-import { CommunityHeader, type CommunitySection } from "@/components/fomo/community/CommunityShell";
+import { CommunityHeader, type CommunityTab } from "@/components/fomo/community/CommunityShell";
 import { CommunityRankings } from "@/components/fomo/community/CommunityRankings";
 import { CommunityMembers } from "@/components/fomo/community/CommunityMembers";
 import { CommunityProfileTab } from "@/components/fomo/community/CommunityProfileTab";
@@ -35,9 +34,7 @@ function CommunityPanelInner({
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   
   // Navigation Tabs: 'modpacks' (pool) | 'drafts' | 'videos' | 'profile'
-  const [activeSubTab, setActiveSubTab] = useState<
-    "modpacks" | "drafts" | "videos" | "rankings" | "profile"
-  >(() => {
+  const [activeSubTab, setActiveSubTab] = useState<CommunityTab>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("fomo_community_subtab");
       if (
@@ -45,10 +42,11 @@ function CommunityPanelInner({
         saved === "drafts" ||
         saved === "videos" ||
         saved === "rankings" ||
-        saved === "profile"
+        saved === "members"
       ) {
         return saved;
       }
+      if (saved === "profile") return "members";
     }
     return "modpacks";
   });
@@ -76,6 +74,7 @@ function CommunityPanelInner({
   // States for Favorites
   const [cloudFavorites, setCloudFavorites] = useState<SharedFavorite[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [favoritesError, setFavoritesError] = useState("");
 
   // Auto-fetch data trigger (only used after publish/profile update)
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -83,10 +82,7 @@ function CommunityPanelInner({
   const loadedTabs = React.useRef<Set<string>>(new Set());
 
   const [currentTheme, setCurrentTheme] = useState("official");
-  const [tabIndex, setTabIndex] = useState(0);
-  const tabOrder = ["modpacks", "drafts", "videos", "rankings"] as const;
   const [insideDraft, setInsideDraft] = useState(false);
-  const [communitySection, setCommunitySection] = useState<CommunitySection>("compartidos");
   const [membersView, setMembersView] = useState<"list" | "mine">("list");
   const [memberCount, setMemberCount] = useState(0);
 
@@ -112,18 +108,10 @@ function CommunityPanelInner({
   }, []);
 
   useEffect(() => {
-    if (activeSubTab !== "profile") {
-      setSelectedUserProfile(null);
-      const idx = tabOrder.indexOf(activeSubTab as (typeof tabOrder)[number]);
-      if (idx !== -1) setTabIndex(idx);
-    }
-  }, [activeSubTab]);
-
-  useEffect(() => {
     const handleApplyFilter = (e: Event) => {
       const { username } = (e as CustomEvent).detail || {};
       if (username) {
-        setActiveSubTab('profile');
+        setActiveSubTab("members");
         setSelectedUserProfile(username);
       }
     };
@@ -134,7 +122,7 @@ function CommunityPanelInner({
       try {
         const { username } = JSON.parse(savedFilter);
         if (username) {
-          setActiveSubTab('profile');
+          setActiveSubTab("members");
           setSelectedUserProfile(username);
         }
       } catch (err) {
@@ -146,22 +134,17 @@ function CommunityPanelInner({
     const handleOpenUser = (e: Event) => {
       const { username } = (e as CustomEvent).detail || {};
       if (username) {
-        setCommunitySection("miembros");
         setMembersView("list");
-        setActiveSubTab("profile");
+        setActiveSubTab("members");
         setSelectedUserProfile(username);
       }
     };
     
     const handleTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
-      if (tab) {
-        const idx = ["modpacks", "drafts", "videos", "rankings"].indexOf(tab);
-        if (idx !== -1) setTabIndex(idx);
-        if (tab === "modpacks" || tab === "drafts" || tab === "videos" || tab === "rankings") {
-          setCommunitySection("compartidos");
-          setActiveSubTab(tab);
-        }
+      if (tab === "modpacks" || tab === "drafts" || tab === "videos" || tab === "rankings" || tab === "members") {
+        setMembersView("list");
+        setActiveSubTab(tab);
       }
     };
 
@@ -269,6 +252,7 @@ function CommunityPanelInner({
 
   const fetchFavorites = React.useCallback(async (retries = 2): Promise<void> => {
     setLoadingFavorites(true);
+    setFavoritesError("");
     try {
       const { data, error } = await supabase
         .from("favorite_mods")
@@ -277,6 +261,7 @@ function CommunityPanelInner({
       if (error) {
         if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchFavorites(retries - 1); }
         console.error("Error fetching favorites:", error.message);
+        setFavoritesError(error.message || "No se pudo cargar el pool de la comunidad.");
         return;
       }
       setCloudFavorites((data as unknown as SharedFavorite[]) || []);
@@ -284,6 +269,7 @@ function CommunityPanelInner({
       if (retries > 0) { await new Promise(res => setTimeout(res, 500)); return fetchFavorites(retries - 1); }
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Error fetching favorites:", msg);
+      setFavoritesError(msg || "No se pudo cargar el pool de la comunidad.");
     } finally {
       setLoadingFavorites(false);
     }
@@ -306,14 +292,14 @@ function CommunityPanelInner({
     const refreshShares = () => {
       if (!user) return;
       loadedTabs.current.delete("modpacks");
-      if (activeSubTab === "modpacks" || communitySection === "compartidos") {
+      if (activeSubTab === "modpacks" || activeSubTab === "members") {
         loadedTabs.current.add("modpacks");
         fetchFavorites();
       }
     };
     window.addEventListener("fomo-refresh-sharing", refreshShares);
     return () => window.removeEventListener("fomo-refresh-sharing", refreshShares);
-  }, [user, activeSubTab, communitySection, fetchFavorites]);
+  }, [user, activeSubTab, fetchFavorites]);
 
   if (loading) {
     return (
@@ -335,103 +321,55 @@ function CommunityPanelInner({
   const isModern = currentTheme === "modern";
   const ownShares = cloudFavorites.filter((f) => f.profile_id === user.id);
 
-  const switchTab = (tab: "modpacks" | "drafts" | "videos" | "rankings" | "profile") => {
-    if (tab === "profile") {
-      setActiveSubTab("profile");
-      return;
-    }
-    const idx = tabOrder.indexOf(tab);
-    if (idx !== -1) setTabIndex(idx);
+  const switchTab = (tab: CommunityTab) => {
+    setMembersView("list");
+    setSelectedUserProfile(null);
     setActiveSubTab(tab);
   };
+
+  const headerTab = activeSubTab;
 
   return (
     <div className={`fomo-community flex-1 flex flex-col overflow-hidden animate-fade-in ${isModern ? 'bg-background text-foreground' : 'bg-[#09090b] text-white/90'}`}>
       {!selectedUserProfile && !insideDraft && (
-        <>
-          <CommunityHeader
-            active={communitySection}
-            onChange={(section) => {
-              setCommunitySection(section);
-              setMembersView("list");
-            }}
-            isModern={isModern}
-            metrics={{
-              members: memberCount,
-              recommendations: cloudFavorites.length,
-              featured: Math.min(cloudFavorites.length, 12),
-            }}
-          />
-
-          {communitySection === "compartidos" && (
-          <div id="onboarding-fomo-community-tabs" className={`px-4 py-2 shrink-0 z-20 ${isModern ? 'bg-card/40' : 'bg-black/20'}`}>
-        <div
-          className="relative flex items-center h-12 p-1.5 rounded-2xl overflow-hidden shadow-sm"
-          style={{
-            background: isModern ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${isModern ? 'rgba(0,0,0,0.05)' : 'var(--color-border)'}`,
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+        <CommunityHeader
+          active={headerTab}
+          onChange={switchTab}
+          onOpenMineProfile={() => {
+            setSelectedUserProfile(null);
+            setMembersView("mine");
+            setActiveSubTab("members");
           }}
-        >
-          {/* Liquid Sliding Pill */}
-          <div
-            className="absolute transition-all duration-500 ease-[cubic-bezier(0.6,0.01,-0.05,0.95)] rounded-xl pointer-events-none inset-y-1.5"
-            style={{
-              left: `calc(6px + ${tabIndex} * (100% - 12px) / 4)`,
-              width: 'calc((100% - 12px) / 4)',
-              background: isModern
-                ? 'white'
-                : 'rgba(255,255,255,0.1)',
-              border: `1px solid ${isModern ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}`,
-              boxShadow: isModern ? '0 4px 12px rgba(0,0,0,0.05)' : '0 4px 12px rgba(0,0,0,0.2)',
-            }}
-          />
+          isModern={isModern}
+          metrics={{
+            members: memberCount,
+            recommendations: cloudFavorites.length,
+            featured: Math.min(cloudFavorites.length, 12),
+          }}
+        />
+      )}
 
-          {[
-            { id: "modpacks" as const, icon: <Blocks className="w-4 h-4" />, label: "Pool" },
-            { id: "drafts" as const, icon: <Layers className="w-4 h-4" />, label: "Drafts" },
-            { id: "videos" as const, icon: <TvMinimalPlay className="w-4 h-4" />, label: "Showcases" },
-            { id: "rankings" as const, icon: <Trophy className="w-4 h-4" />, label: "Rankings" },
-          ].map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => switchTab(tab.id)}
-                className="relative z-10 flex-1 h-full flex items-center justify-center gap-2 text-xs font-headline font-bold tracking-wide rounded-xl transition-all duration-300 cursor-pointer"
-                style={{
-                  color: isActive
-                    ? (isModern ? 'var(--color-primary)' : 'white')
-                    : (isModern ? 'rgba(13,39,80,0.5)' : 'rgba(255,255,255,0.4)'),
-                }}
-              >
-                {React.cloneElement(tab.icon, {
-                  className: `w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`
-                })}
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-          )}
-
-      </>)}
-
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col relative z-10">
-        {communitySection === "miembros" && membersView === "list" && !selectedUserProfile && (
-          <CommunityMembers
-            onOpenMineProfile={() => setMembersView("mine")}
-            onOpenProfile={(username) => {
-              setSelectedUserProfile(username);
-              setActiveSubTab("profile");
+        {selectedUserProfile && (
+          <CommunityUserProfile
+            username={selectedUserProfile}
+            onOpenProjectDetails={onOpenProjectDetails}
+            onBack={() => {
+              setSelectedUserProfile(null);
+              setActiveSubTab("members");
             }}
           />
         )}
 
-        {communitySection === "miembros" && membersView === "mine" && !selectedUserProfile && (
+        {!selectedUserProfile && activeSubTab === "members" && membersView === "list" && (
+          <CommunityMembers
+            onOpenProfile={(username) => {
+              setSelectedUserProfile(username);
+            }}
+          />
+        )}
+
+        {!selectedUserProfile && activeSubTab === "members" && membersView === "mine" && (
           <div className="px-6 pb-8 space-y-4">
             <button
               type="button"
@@ -450,26 +388,24 @@ function CommunityPanelInner({
               onEditProfile={handleOpenEditProfile}
               onSignOut={signOut}
               onOpenProjectDetails={onOpenProjectDetails}
-              onGoToDrafts={() => {
-                setCommunitySection("compartidos");
-                setMembersView("list");
-                switchTab("drafts");
-              }}
-              onGoToPool={() => {
-                setCommunitySection("compartidos");
-                setMembersView("list");
-                switchTab("modpacks");
-              }}
+              onGoToDrafts={() => switchTab("drafts")}
+              onGoToPool={() => switchTab("modpacks")}
             />
           </div>
         )}
 
-        {communitySection === "compartidos" && activeSubTab !== 'profile' && (
+        {!selectedUserProfile && activeSubTab !== "members" && (
           <div className={`flex-1 animate-fade-in ${insideDraft ? "px-2 pt-0 pb-2" : "p-6 pt-2"}`} id={activeSubTab === "modpacks" ? "onboarding-community-pool" : undefined}>
             {activeSubTab === "modpacks" && (
               <CommunityModPool
                 cloudFavorites={cloudFavorites}
                 loadingFavorites={loadingFavorites}
+                loadError={favoritesError}
+                onRetry={() => {
+                  loadedTabs.current.delete("modpacks");
+                  loadedTabs.current.add("modpacks");
+                  fetchFavorites();
+                }}
                 currentUserId={user.id}
                 onOpenProjectDetails={onOpenProjectDetails}
                 onFavoriteDeleted={(id) =>
@@ -477,7 +413,6 @@ function CommunityPanelInner({
                 }
                 onOpenProfile={(username) => {
                   setSelectedUserProfile(username);
-                  setActiveSubTab("profile");
                 }}
                 onContentDeleted={() => setReloadTrigger((p) => p + 1)}
               />
@@ -501,7 +436,6 @@ function CommunityPanelInner({
                   }
                   onOpenProfile={(username) => {
                     setSelectedUserProfile(username);
-                    setActiveSubTab("profile");
                   }}
                   onOpenProjectDetails={onOpenProjectDetails}
                 />
@@ -521,17 +455,6 @@ function CommunityPanelInner({
               />
             )}
           </div>
-        )}
-
-        {activeSubTab === 'profile' && selectedUserProfile && (
-          <CommunityUserProfile
-            username={selectedUserProfile}
-            onOpenProjectDetails={onOpenProjectDetails}
-            onBack={() => {
-              setActiveSubTab("modpacks");
-              setSelectedUserProfile(null);
-            }}
-          />
         )}
       </div>
 

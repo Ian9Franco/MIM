@@ -6,10 +6,12 @@
 "use client";
 
 import React, { memo, useMemo, useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RefreshCw, Globe, Server, Tags, Sparkles, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { LOADERS, GAME_VERSIONS, PROJECT_TYPES, MODRINTH_CATEGORIES, CURSEFORGE_CATEGORIES, RESOURCEPACK_FILTERS, SHADER_FILTERS, ENVIRONMENTS } from "@/constants/app";
 import { useFomoFiltersManager } from "@/hooks/useFomoFiltersManager";
 import { CATEGORY_ICONS } from "@/components/fomo/discover/FomoFilterConfig";
+import { FomoDropdown, FomoDropdownOption } from "@/components/fomo/shared/FomoDropdown";
 
 const SECTION_KEY = "fomo_discover_filter_sections";
 
@@ -57,9 +59,21 @@ function FilterSection({
     <section className="fomo-filter-block rounded-xl border">
       <button type="button" onClick={toggle} className="flex w-full items-center justify-between px-3 py-2.5 text-xs font-bold">
         <span>{title}</span>
-        {open ? <ChevronDown className="w-3.5 h-3.5 opacity-60" /> : <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+        <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform duration-300 ${open ? "rotate-0" : "-rotate-90"}`} />
       </button>
-      {open && <div className="flex flex-col gap-2 px-3 pb-3">{children}</div>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-2 px-3 pb-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -68,23 +82,9 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
   const m = useFomoFiltersManager(props);
   const isAuthorSearch = props.query.startsWith("author:");
   const isBedrockSource = props.source === "chunk";
-  const [projectTypeOpen, setProjectTypeOpen] = useState(false);
-  const [loaderOpen, setLoaderOpen] = useState(false);
   const [versionQuery, setVersionQuery] = useState("");
   const [showAllVersions, setShowAllVersions] = useState(false);
   const [remoteVersions, setRemoteVersions] = useState<string[]>([]);
-  
-  const [currentTheme, setCurrentTheme] = useState("official");
-  
-  useEffect(() => {
-    const update = () => setCurrentTheme(document.documentElement.getAttribute("data-theme") || "official");
-    update();
-    const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => obs.disconnect();
-  }, []);
-
-  const isModern = currentTheme === "modern";
 
   useEffect(() => {
     let cancelled = false;
@@ -161,64 +161,33 @@ export const FomoDiscoverFilters = memo(function FomoDiscoverFilters(props: any)
       ) : (
       <div className="flex flex-col gap-2">
       <div className="fomo-filter-block flex shrink-0 flex-col gap-2 rounded-xl border p-3">
-        {/* Project Type Dropdown */}
-        <div className="relative">
-          <button 
-            onClick={() => !isAuthorSearch && (setProjectTypeOpen(!projectTypeOpen), setLoaderOpen(false))} 
-            disabled={isAuthorSearch}
-            className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/20 text-white border-white/10"}`}
-          >
-            <span>{isAuthorSearch ? "Cualquier Tipo" : (PROJECT_TYPES.find(pt => pt.value === props.projectType)?.label || "Seleccionar Tipo")}</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${projectTypeOpen ? "rotate-180" : ""}`} />
-          </button>
-          
-          {projectTypeOpen && !isAuthorSearch && (
-            <div className={`absolute top-full left-0 w-full mt-1 backdrop-blur-md border rounded-xl overflow-hidden z-50 shadow-xl ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`}>
-              {PROJECT_TYPES.map(pt => (
-                <div 
-                  key={pt.value} 
-                  onClick={() => { props.onProjectType(pt.value); setProjectTypeOpen(false); }} 
-                  className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.projectType === pt.value ? "bg-primary/20 text-primary" : ""}`}
-                >
-                  {pt.label}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        {/* Loader Dropdown */}
+        <FomoDropdown
+          fullWidth
+          disabled={isAuthorSearch}
+          valueLabel={isAuthorSearch ? "Cualquier Tipo" : (PROJECT_TYPES.find(pt => pt.value === props.projectType)?.label || "Seleccionar Tipo")}
+        >
+          {PROJECT_TYPES.map((pt) => (
+            <FomoDropdownOption key={pt.value} active={props.projectType === pt.value} onClick={() => props.onProjectType(pt.value)}>
+              {pt.label}
+            </FomoDropdownOption>
+          ))}
+        </FomoDropdown>
+
         {(props.projectType === "mod" || props.projectType === "modpack" || isAuthorSearch) && (
-          <div className="relative">
-            <button 
-              onClick={() => !isAuthorSearch && (setLoaderOpen(!loaderOpen), setProjectTypeOpen(false))} 
-              disabled={isAuthorSearch}
-              className={`w-full text-xs font-bold border rounded-xl px-3.5 py-2.5 flex justify-between items-center ${isAuthorSearch ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${isModern ? "bg-white text-slate-700 border-slate-200" : "bg-black/20 text-white border-white/10"}`}
-            >
-              <span>{isAuthorSearch ? "Cualquier Loader" : (props.loader === "unknown" ? "Cualquier Loader" : (props.loader.charAt(0).toUpperCase() + props.loader.slice(1)))}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${loaderOpen ? "rotate-180" : ""}`} />
-            </button>
-            
-            {loaderOpen && !isAuthorSearch && (
-              <div className={`absolute top-full left-0 w-full mt-1 backdrop-blur-md border rounded-xl overflow-hidden z-50 shadow-xl ${isModern ? "bg-white border-slate-200" : "bg-neutral-900/95 border-white/10"}`}>
-                <div 
-                  onClick={() => { props.onLoader("unknown"); setLoaderOpen(false); }} 
-                  className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.loader === "unknown" ? "bg-primary/20 text-primary" : ""}`}
-                >
-                  Cualquier Loader
-                </div>
-                {LOADERS.map(l => (
-                  <div 
-                    key={l} 
-                    onClick={() => { props.onLoader(l); setLoaderOpen(false); }} 
-                    className={`px-3.5 py-2.5 text-xs font-bold hover:bg-primary/10 cursor-pointer ${isModern ? "text-slate-700" : "text-white"} ${props.loader === l ? "bg-primary/20 text-primary" : ""}`}
-                  >
-                    {l.charAt(0).toUpperCase() + l.slice(1)}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FomoDropdown
+            fullWidth
+            disabled={isAuthorSearch}
+            valueLabel={isAuthorSearch ? "Cualquier Loader" : (props.loader === "unknown" ? "Cualquier Loader" : (props.loader.charAt(0).toUpperCase() + props.loader.slice(1)))}
+          >
+            <FomoDropdownOption active={props.loader === "unknown"} onClick={() => props.onLoader("unknown")}>
+              Cualquier Loader
+            </FomoDropdownOption>
+            {LOADERS.map((l) => (
+              <FomoDropdownOption key={l} active={props.loader === l} onClick={() => props.onLoader(l)}>
+                {l.charAt(0).toUpperCase() + l.slice(1)}
+              </FomoDropdownOption>
+            ))}
+          </FomoDropdown>
         )}
       </div>
 

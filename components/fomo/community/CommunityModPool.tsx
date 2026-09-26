@@ -44,6 +44,8 @@ const TYPE_TABS: { id: CommunityProjectType | "all"; label: string }[] = [
 interface CommunityModPoolProps {
   cloudFavorites: SharedFavorite[];
   loadingFavorites: boolean;
+  loadError?: string;
+  onRetry?: () => void;
   currentUserId?: string;
   /** Igual que Seguidos/Colecciones: abre panel de detalles sin salir de FOMO Cloud. */
   onOpenProjectDetails?: (id: string, platform?: string) => void;
@@ -70,6 +72,8 @@ const formatSharedDate = (dateStr?: string) => {
 export function CommunityModPool({
   cloudFavorites,
   loadingFavorites,
+  loadError,
+  onRetry,
   currentUserId,
   onOpenProjectDetails,
   onFavoriteDeleted,
@@ -203,6 +207,20 @@ export function CommunityModPool({
       {loadingFavorites ? (
         <div className="py-12 text-center text-white/40">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3 text-primary" /> Cargando pool...
+        </div>
+      ) : loadError ? (
+        <div className="py-16 border border-dashed border-red-500/30 bg-red-500/5 rounded-3xl text-center text-sm backdrop-blur-sm">
+          <p className="text-red-400 font-bold">No se pudo cargar el pool</p>
+          <p className="text-white/40 text-xs mt-1 max-w-sm mx-auto">{loadError}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-4 px-4 py-2 rounded-xl bg-primary/20 text-primary text-xs font-bold"
+            >
+              Reintentar
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-16 border border-dashed border-white/10 bg-white/[0.02] rounded-3xl text-center text-white/40 text-sm font-medium backdrop-blur-sm">

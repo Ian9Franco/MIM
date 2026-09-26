@@ -1,7 +1,29 @@
-import React, { useState, useMemo } from "react";
-import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, ChevronDown, ChevronUp, LayoutGrid, List, Tag } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, ChevronDown, ChevronUp, LayoutGrid, List, Tag, Map as MapIcon } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
+import { analyzeDraftItems } from "@/lib/fomo/draftItemInsights";
+import {
+  MAP_CHILD_PRESETS,
+  MAP_PARENTS,
+  addMapChild,
+  categoryDisplayLabel,
+  childCategoryId,
+  slugifyCategory,
+  itemParentId,
+  parseChildCategoryId,
+  parseMapLayout,
+  reparentMapChild,
+  resolveItemChildId,
+  withCategoryLabel,
+  withCategoryPosition,
+  type DraftMapLayout,
+  type DraftMapPosition,
+  type MapParentId,
+} from "@/lib/fomo/draftMapLayout";
+import { useDraftItemCatalog } from "@/hooks/fomo/useDraftItemCatalog";
+import { DraftItemMapBoard, DraftInsightsStrip, type MapBoardFilter } from "./DraftItemMapBoard";
+import { FomoDropdown, FomoDropdownOption } from "@/components/fomo/shared/FomoDropdown";
 
 const TYPE_CONFIG = {
   mod:          { label: "Mods",      icon: Puzzle,   color: "text-primary",      bg: "bg-primary/15",    border: "border-primary/20" },
@@ -33,25 +55,45 @@ export function DraftItemsTab({
   selectedItems,
   setSelectedItems,
   fetchDraftInfo,
+  draftLoader = "",
+  draftVersion = "",
+  draftId,
+  mapLayout,
 }: {
   draftItems: any[];
   isModern: boolean;
   selectedItems: Set<string>;
   setSelectedItems: (items: Set<string>) => void;
   fetchDraftInfo: (silent?: boolean) => void;
+  draftLoader?: string;
+  draftVersion?: string;
+  draftId: string;
+  mapLayout?: unknown;
 }) {
   const [search, setSearch] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [viewMode, setViewMode] = useState<"map" | "list" | "grid">("map");
   const [activeCategoryTab, setActiveCategoryTab] = useState<"mods" | "others">("mods");
+  const [mapFilter, setMapFilter] = useState<MapBoardFilter>("all");
+  const [layout, setLayout] = useState<DraftMapLayout>(() => parseMapLayout(mapLayout));
+
+  useEffect(() => {
+    setLayout(parseMapLayout(mapLayout));
+  }, [mapLayout, draftId]);
   
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [assignParent, setAssignParent] = useState<MapParentId>("both");
 
   const handleUpdateSide = async (itemId: string, side: string) => {
     try {
-      const { error } = await supabase.from("draft_items").update({ side }).eq("id", itemId);
+      const parent = itemParentId(side);
+      const item = draftItems.find((entry) => entry.id === itemId);
+      const slug = parseChildCategoryId(String(item?.category || ""))?.slug
+        || slugifyCategory(String(item?.category || "other"));
+      const updates = { side: parent, category: childCategoryId(parent, slug) };
+      const { error } = await supabase.from("draft_items").update(updates).eq("id", itemId);
       if (error) throw error;
       fetchDraftInfo(true);
     } catch (err) {
@@ -62,23 +104,95 @@ export function DraftItemsTab({
     }
   };
 
-  const handleUpdateCategory = async (category: string) => {
-    if (selectedItems.size === 0) return;
-    const ids = Array.from(selectedItems);
+  const persistLayout = (next: DraftMapLayout) => {
+    setLayout(next);
+    void supabase.from("drafts").update({ map_layout: next }).eq("id", draftId).then(({ error }) => {
+      if (!error) return;
+      console.error("Error saving map layout", error);
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "No se pudo guardar el mapa de categorías.", type: "error" }
+      }));
+    });
+  };
+
+  const handleMoveCategory = (categoryId: string, position: DraftMapPosition) => {
+    setLayout((prev) => {
+      const next = withCategoryPosition(prev, categoryId, position);
+      void supabase.from("drafts").update({ map_layout: next }).eq("id", draftId);
+      return next;
+    });
+  };
+
+  const handleCreateChild = (parent: MapParentId, label: string) => {
+    const { layout: next } = addMapChild(layout, parent, label);
+    persistLayout(next);
+  };
+
+  const handleSaveChild = async (childId: string, label: string, nextParent: MapParentId) => {
+    const next = withCategoryLabel(layout, childId, label);
+    const result = reparentMapChild(next, childId, nextParent);
+    if (result.ok) {
+      persistLayout(result.layout);
+      const ids = draftItems
+        .filter((item) => resolveItemChildId(item) === result.fromId || item.category === result.fromId)
+        .map((item) => String(item.id));
+      if (ids.length === 0) return;
+      try {
+        const { error } = await supabase.from("draft_items").update({ category: result.toId, side: nextParent }).in("id", ids);
+        if (error) throw error;
+        fetchDraftInfo(true);
+      } catch (err) {
+        console.error("Error reparenting category", err);
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "No se pudieron mover los mods de la categoría.", type: "error" },
+        }));
+      }
+      return;
+    }
+    persistLayout(next);
+    if (result.reason === "exists") {
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Esa categoría ya existe en esa rama.", type: "error" },
+      }));
+    }
+  };
+
+  const handleUpdateCategory = async (category: string, idsOverride?: string[], silent = false, side?: MapParentId) => {
+    const ids = idsOverride || Array.from(selectedItems);
+    if (ids.length === 0) return;
     try {
-      const { error } = await supabase.from("draft_items").update({ category }).in("id", ids);
+      const parsed = parseChildCategoryId(category);
+      const nextSide = side || parsed?.parent;
+      const updates: Record<string, string> = { category };
+      if (nextSide) updates.side = nextSide;
+      const { error } = await supabase.from("draft_items").update(updates).in("id", ids);
       if (error) throw error;
       fetchDraftInfo(true);
       setIsCategoryModalOpen(false);
       setNewCategoryName("");
-      setSelectedItems(new Set());
-      window.dispatchEvent(new CustomEvent("fomo-show-status", {
-        detail: { text: "Categoría asignada a los mods seleccionados.", type: "success" }
-      }));
+      if (!idsOverride) setSelectedItems(new Set());
+      if (!silent) {
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "Categoría asignada a los mods seleccionados.", type: "success" }
+        }));
+      }
     } catch (err) {
       console.error("Error updating category", err);
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "Error al actualizar la categoría.", type: "error" }
+      }));
+    }
+  };
+
+  const handleUpdateVersion = async (itemId: string, versionId: string) => {
+    try {
+      const { error } = await supabase.from("draft_items").update({ version_id: versionId }).eq("id", itemId);
+      if (error) throw error;
+      fetchDraftInfo(true);
+    } catch (err) {
+      console.error("Error updating version", err);
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Error al actualizar la versión.", type: "error" }
       }));
     }
   };
@@ -130,40 +244,54 @@ export function DraftItemsTab({
   const modItems = useMemo(() => filteredItems.filter(i => (i.content_type || "mod") === "mod"), [filteredItems]);
   const otherItems = useMemo(() => filteredItems.filter(i => (i.content_type || "mod") !== "mod"), [filteredItems]);
 
-  const dynamicCustomCategories = useMemo(() => {
-    const custom = new Set<string>();
-    modItems.forEach(mod => {
-      if (mod.category && mod.category !== "other" && !MOD_CATEGORIES.some(c => c.id === mod.category)) {
-        custom.add(mod.category);
-      }
+  const mapGroups = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    for (const child of layout.children) groups[child.id] = [];
+    for (const parent of MAP_PARENTS) {
+      const fallback = childCategoryId(parent.id, "other");
+      if (!groups[fallback]) groups[fallback] = [];
+    }
+    modItems.forEach((mod) => {
+      const id = resolveItemChildId(mod);
+      if (!groups[id]) groups[id] = [];
+      groups[id].push(mod);
     });
-    return Array.from(custom).sort();
-  }, [modItems]);
+    return groups;
+  }, [modItems, layout.children]);
 
   const groupedMods = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    MOD_CATEGORIES.forEach(c => { groups[c.id] = []; });
-    dynamicCustomCategories.forEach(c => { groups[c] = []; });
-    
-    modItems.forEach(mod => {
-      const cat = mod.category || "other";
-      if (groups[cat]) {
-        groups[cat].push(mod);
-      } else {
-        groups["other"].push(mod);
-      }
-    });
-
-    // Clean up empty categories
     const result: Record<string, any[]> = {};
-    MOD_CATEGORIES.forEach(c => {
-      if (groups[c.id].length > 0) result[c.id] = groups[c.id];
-    });
-    dynamicCustomCategories.forEach(c => {
-      if (groups[c].length > 0) result[c] = groups[c];
-    });
+    for (const [id, items] of Object.entries(mapGroups)) {
+      if (items.length > 0) result[id] = items;
+    }
     return result;
-  }, [modItems, dynamicCustomCategories]);
+  }, [mapGroups]);
+
+  const insights = useMemo(
+    () =>
+      analyzeDraftItems(
+        draftItems.map((item) => ({
+          id: String(item.id),
+          project_id: String(item.project_id || item.projectId || ""),
+          source: item.source,
+          mod_name: item.mod_name,
+          dependencies: item.dependencies || [],
+        })),
+      ),
+    [draftItems],
+  );
+
+  const catalogTargets = useMemo(
+    () => [
+      ...draftItems,
+      ...insights.missing.map((item) => ({
+        project_id: item.project_id,
+        source: item.fromSource || "modrinth",
+      })),
+    ],
+    [draftItems, insights.missing],
+  );
+  const { catalog, loading: catalogLoading } = useDraftItemCatalog(catalogTargets, catalogTargets.length > 0);
 
   const groupedOtherItems = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -177,6 +305,21 @@ export function DraftItemsTab({
   const totalCount = draftItems.length;
   const selectedCount = selectedItems.size;
   const allSelected = totalCount > 0 && selectedCount === totalCount;
+  const mapChildren = useMemo(() => {
+    const extra = Object.keys(mapGroups).filter((id) => !layout.children.some((child) => child.id === id));
+    const inferred = extra.map((id) => {
+      const parsed = parseChildCategoryId(id);
+      const slug = parsed?.slug || id;
+      const preset = MAP_CHILD_PRESETS.find((entry) => entry.slug === slug);
+      return {
+        id,
+        parent: parsed?.parent || "both",
+        slug,
+        label: categoryDisplayLabel(id, preset?.label || slug, layout),
+      };
+    });
+    return [...layout.children, ...inferred];
+  }, [layout, mapGroups]);
 
   const txt = isModern ? "text-foreground" : "text-white";
   const txtSub = isModern ? "text-muted-foreground" : "text-white/50";
@@ -193,6 +336,16 @@ export function DraftItemsTab({
 
     const iconUrl = item.icon_url || item.iconUrl;
 
+    const compact = viewMode !== "list";
+    const catalogKey = `${item.source || "modrinth"}::${item.project_id || item.projectId}`;
+    const entry = catalog[catalogKey];
+    const sourceTags = entry?.tags || [];
+    const compatibleVersions = (entry?.versions || []).filter((v) => {
+      const versionOk = !draftVersion || v.gameVersions.includes(draftVersion);
+      const loaderOk = !draftLoader || v.loaders.some((l) => l.toLowerCase() === draftLoader.toLowerCase());
+      return versionOk && loaderOk;
+    }).slice(0, 12);
+
     return (
       <div
         key={item.id}
@@ -205,7 +358,7 @@ export function DraftItemsTab({
             handleOpenDetails(item);
           }
         }}
-        className={`group relative flex cursor-pointer ${viewMode === "grid" ? "flex-col items-start gap-1.5 p-2.5" : "items-center gap-3 px-3 py-2"} rounded-xl border transition-all duration-200 ${
+        className={`group relative flex cursor-pointer ${compact ? "flex-col items-start gap-1.5 p-2.5" : "items-center gap-3 px-3 py-2"} rounded-xl border transition-all duration-200 ${
           isSelected
             ? `${cfg.bg} ${cfg.border} border`
             : `${cardBg} ${cardHover}`
@@ -221,7 +374,7 @@ export function DraftItemsTab({
             setSelectedItems(next);
           }}
           className={`shrink-0 w-5 h-5 rounded flex items-center justify-center border transition-colors cursor-pointer ${
-            viewMode === "grid" ? "absolute top-2.5 right-2.5" : ""
+            compact ? "absolute top-2.5 right-2.5" : ""
           } ${
             isSelected
               ? "bg-primary border-primary text-white"
@@ -236,46 +389,78 @@ export function DraftItemsTab({
         </button>
 
         {/* Icon */}
-        <div className={viewMode === "grid" ? "mb-0.5" : "shrink-0"}>
+        <div className={compact ? "mb-0.5" : "shrink-0"}>
           {iconUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={iconUrl} alt="" className={`${viewMode === "grid" ? "w-8 h-8" : "w-8 h-8"} rounded-lg object-cover shrink-0`} />
+            <img src={iconUrl} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
           ) : (
-            <div className={`${viewMode === "grid" ? "w-8 h-8" : "w-8 h-8"} rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
-              <Icon className={`${viewMode === "grid" ? "w-4 h-4" : "w-4 h-4"} ${cfg.color}`} />
+            <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-4 h-4 ${cfg.color}`} />
             </div>
           )}
         </div>
 
-        {/* Name + source */}
-        <div className={`flex flex-col min-w-0 ${viewMode === "grid" ? "w-full" : "flex-1"}`}>
+        <div className={`flex flex-col min-w-0 ${compact ? "w-full" : "flex-1"}`}>
           <span className={`text-xs md:text-sm font-semibold truncate ${txt}`} title={item.mod_name || item.project_id}>
             {item.mod_name || item.project_id}
           </span>
           <span className={`text-[9px] md:text-[10px] ${txtSub} truncate`}>
             {item.source}
           </span>
+          {sourceTags.length > 0 && viewMode !== "map" && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {sourceTags.slice(0, 3).map((tag) => (
+                <span key={tag} title="Tag del proyecto" className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold text-emerald-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Category Badge & Delete */}
-        <div className={`flex items-center gap-1.5 ${viewMode === "grid" ? "w-full justify-between mt-auto pt-1.5 border-t " + (isModern ? "border-border/50" : "border-white/10") : "shrink-0"}`}>
+        <div className={`flex items-center gap-1.5 ${compact ? "w-full justify-between mt-auto pt-1.5 border-t " + (isModern ? "border-border/50" : "border-white/10") : "shrink-0"}`}>
           
           {type === "mod" && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedItems(new Set([item.id]));
+                setAssignParent(itemParentId(item.side));
                 setIsCategoryModalOpen(true);
               }}
               className={`text-[9px] font-bold px-1.5 py-1 rounded-lg border transition-colors truncate max-w-[90px] ${
                 isModern 
-                  ? "bg-muted border-border/50 text-muted-foreground hover:bg-muted/80 hover:text-foreground" 
-                  : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20" 
+                  : "bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20"
               }`}
-              title="Cambiar Categoría"
+              title="Categoría del draft (no reemplaza los tags del mod)"
             >
-              {MOD_CATEGORIES.find(c => c.id === item.category)?.label || item.category || "Sin Asignar"}
+              {categoryDisplayLabel(resolveItemChildId(item), item.category || "Draft", layout)}
             </button>
+          )}
+
+          {type === "mod" && compatibleVersions.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()} className="min-w-0 max-w-[7.5rem]">
+              <FomoDropdown
+                fullWidth
+                valueLabel={
+                  <span className="truncate">
+                    {compatibleVersions.find((v) => v.id === item.version_id)?.name || "Versión"}
+                  </span>
+                }
+              >
+                {compatibleVersions.map((v) => (
+                  <FomoDropdownOption
+                    key={v.id}
+                    active={v.id === item.version_id}
+                    onClick={() => handleUpdateVersion(item.id, v.id)}
+                  >
+                    {v.name}
+                  </FomoDropdownOption>
+                ))}
+              </FomoDropdown>
+            </div>
           )}
 
           {type === "mod" ? (
@@ -300,7 +485,7 @@ export function DraftItemsTab({
           )}
           
           
-          <div className={`flex items-center gap-1 shrink-0 ${viewMode === "grid" ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all`}>
+          <div className={`flex items-center gap-1 shrink-0 ${compact ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all`}>
             {/* Open Details */}
             <button
               onClick={(e) => handleOpenDetails(item, e)}
@@ -332,7 +517,7 @@ export function DraftItemsTab({
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full min-h-0 max-h-[min(70vh,720px)] overflow-hidden">
+    <div className="flex flex-col gap-4 h-full min-h-0 overflow-hidden">
       {/* Header toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
@@ -365,13 +550,22 @@ export function DraftItemsTab({
           {totalCount > 0 && (
             <div className={`flex items-center rounded-lg p-0.5 border ${isModern ? "border-border bg-muted/50" : "border-white/10 bg-black/20"}`}>
               <button
+                onClick={() => setViewMode("map")}
+                title="Mapa"
+                className={`p-1 rounded-md transition-colors ${viewMode === "map" ? (isModern ? "bg-background shadow-sm text-foreground" : "bg-white/10 text-white") : txtSub}`}
+              >
+                <MapIcon className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => setViewMode("list")}
+                title="Lista"
                 className={`p-1 rounded-md transition-colors ${viewMode === "list" ? (isModern ? "bg-background shadow-sm text-foreground" : "bg-white/10 text-white") : txtSub}`}
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode("grid")}
+                title="Tarjetas"
                 className={`p-1 rounded-md transition-colors ${viewMode === "grid" ? (isModern ? "bg-background shadow-sm text-foreground" : "bg-white/10 text-white") : txtSub}`}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -402,7 +596,11 @@ export function DraftItemsTab({
                 <>
                   {activeCategoryTab === "mods" && (
                     <button
-                      onClick={() => setIsCategoryModalOpen(true)}
+                      onClick={() => {
+                        const first = draftItems.find((item) => selectedItems.has(item.id));
+                        setAssignParent(itemParentId(first?.side));
+                        setIsCategoryModalOpen(true);
+                      }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 transition-colors cursor-pointer"
                     >
                       <Tag className="w-3.5 h-3.5" />
@@ -471,6 +669,31 @@ export function DraftItemsTab({
           Sin resultados para &quot;{search}&quot;
         </div>
       ) : (
+        <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
+          <DraftInsightsStrip
+            insights={insights}
+            catalog={catalog}
+            catalogLoading={catalogLoading}
+            isModern={isModern}
+            filter={mapFilter}
+            children={mapChildren}
+            onFilterChange={setMapFilter}
+          />
+          {activeCategoryTab === "mods" && viewMode === "map" ? (
+            <DraftItemMapBoard
+              groupedMods={mapGroups}
+              catalog={catalog}
+              insights={insights}
+              isModern={isModern}
+              layout={{ ...layout, children: mapChildren }}
+              filter={mapFilter}
+              renderCard={(item) => renderItemCard(item, "mod")}
+              onDropCategory={(category, itemId, parent) => handleUpdateCategory(category, [itemId], true, parent)}
+              onMoveCategory={handleMoveCategory}
+              onCreateChild={handleCreateChild}
+              onSaveChild={handleSaveChild}
+            />
+          ) : (
         <div className="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 pb-8">
           
           {/* ====== MODS SECTION ====== */}
@@ -480,23 +703,28 @@ export function DraftItemsTab({
                 No tienes mods en este draft.
               </div>
             ) : (
-              <div className="flex flex-col gap-6">
-                {Object.entries(groupedMods).map(([catId, items]) => {
-                  const catDef = MOD_CATEGORIES.find(c => c.id === catId);
-                  const isCustom = !catDef;
-                  const label = catDef ? catDef.label : catId;
-                  
+              <div className="flex flex-col gap-8">
+                {MAP_PARENTS.map((parent) => {
+                  const kids = mapChildren.filter((child) => child.parent === parent.id && (groupedMods[child.id]?.length || 0) > 0);
+                  if (kids.length === 0) return null;
                   return (
-                    <div key={catId} className="flex flex-col gap-3">
-                      <div className="flex items-center gap-2 pl-2">
-                        <Tag className={`w-3.5 h-3.5 ${isCustom ? "text-indigo-400" : "text-primary/60"}`} />
-                        <h4 className={`text-sm font-bold ${txt}`}>{label}</h4>
-                        <span className={`text-[10px] font-bold ${txtSub}`}>({items.length})</span>
-                      </div>
-
-                      <div className={`${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-1.5"}`}>
-                        {items.map(item => renderItemCard(item, "mod"))}
-                      </div>
+                    <div key={parent.id} className="flex flex-col gap-4">
+                      <h3 className={`text-sm font-black uppercase tracking-wider ${txt}`}>{categoryDisplayLabel(parent.id, parent.label, layout)}</h3>
+                      {kids.map((child) => {
+                        const items = groupedMods[child.id] || [];
+                        return (
+                          <div key={child.id} className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2 pl-2">
+                              <Tag className="w-3.5 h-3.5 text-primary/60" />
+                              <h4 className={`text-sm font-bold ${txt}`}>{child.label}</h4>
+                              <span className={`text-[10px] font-bold ${txtSub}`}>({items.length})</span>
+                            </div>
+                            <div className={`${viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-1.5"}`}>
+                              {items.map(item => renderItemCard(item, "mod"))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -555,6 +783,8 @@ export function DraftItemsTab({
           )}
 
         </div>
+          )}
+        </div>
       )}
 
       {/* Category Assignment Modal */}
@@ -567,47 +797,53 @@ export function DraftItemsTab({
                 Asignar Categoría
               </h3>
               <p className={`text-xs mt-1 ${txtSub}`}>
-                Clasificando {selectedCount} mod{selectedCount !== 1 ? 's' : ''} seleccionado{selectedCount !== 1 ? 's' : ''}.
+                Categoría del draft (organización interna). No reescribe los tags del mod.
               </p>
             </div>
 
             <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
-              {/* Default Categories */}
-              <div className="grid grid-cols-2 gap-2">
-                {MOD_CATEGORIES.map(c => (
+              <div className="flex gap-2">
+                {MAP_PARENTS.map((parent) => (
                   <button
-                    key={c.id}
-                    onClick={() => handleUpdateCategory(c.id)}
-                    className={`px-3 py-2 text-xs font-bold text-left rounded-xl border transition-colors ${
-                      isModern 
-                        ? "bg-muted/30 border-border/50 text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary" 
-                        : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20"
-                    }`}
+                    key={parent.id}
+                    type="button"
+                    onClick={() => setAssignParent(parent.id)}
+                    className={`flex-1 rounded-xl border px-2 py-2 text-[10px] font-black uppercase ${assignParent === parent.id ? "border-primary/40 bg-primary/15 text-primary" : "border-white/10 opacity-70"}`}
                   >
-                    {c.label}
+                    {parent.label}
                   </button>
                 ))}
               </div>
-
-              {/* Dynamic Custom Categories */}
-              {dynamicCustomCategories.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <h4 className={`text-[10px] font-bold uppercase tracking-wider ${txtSub}`}>Categorías Personalizadas</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {dynamicCustomCategories.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => handleUpdateCategory(c)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-colors ${
-                          isModern 
-                            ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-600 hover:bg-indigo-500/20" 
-                            : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-2 gap-2">
+                {MAP_CHILD_PRESETS.map((preset) => (
+                  <button
+                    key={preset.slug}
+                    onClick={() => {
+                      const { layout: next } = addMapChild(layout, assignParent, preset.label);
+                      persistLayout(next);
+                      handleUpdateCategory(childCategoryId(assignParent, preset.slug), undefined, false, assignParent);
+                    }}
+                    className={`px-3 py-2 text-xs font-bold text-left rounded-xl border transition-colors ${
+                      isModern
+                        ? "bg-muted/30 border-border/50 text-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary"
+                        : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              {mapChildren.filter((child) => child.parent === assignParent && !MAP_CHILD_PRESETS.some((preset) => preset.slug === child.slug)).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {mapChildren.filter((child) => child.parent === assignParent && !MAP_CHILD_PRESETS.some((preset) => preset.slug === child.slug)).map((child) => (
+                    <button
+                      key={child.id}
+                      onClick={() => handleUpdateCategory(child.id, undefined, false, assignParent)}
+                      className="px-3 py-1.5 text-xs font-bold rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-300"
+                    >
+                      {child.label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -623,7 +859,9 @@ export function DraftItemsTab({
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newCategoryName.trim()) {
-                      handleUpdateCategory(newCategoryName.trim());
+                      const { layout: next, child } = addMapChild(layout, assignParent, newCategoryName.trim());
+                      persistLayout(next);
+                      handleUpdateCategory(child.id, undefined, false, assignParent);
                     }
                   }}
                   className={`flex-1 px-3 py-2 rounded-xl text-xs border outline-none focus:border-indigo-500/50 transition-colors ${
@@ -632,7 +870,10 @@ export function DraftItemsTab({
                 />
                 <button
                   onClick={() => {
-                    if (newCategoryName.trim()) handleUpdateCategory(newCategoryName.trim());
+                    if (!newCategoryName.trim()) return;
+                    const { layout: next, child } = addMapChild(layout, assignParent, newCategoryName.trim());
+                    persistLayout(next);
+                    handleUpdateCategory(child.id, undefined, false, assignParent);
                   }}
                   disabled={!newCategoryName.trim()}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors"

@@ -215,6 +215,7 @@ CREATE TABLE IF NOT EXISTS public.drafts (
   loader text NOT NULL,
   visibility text DEFAULT 'private',
   cover_image text,
+  map_layout jsonb DEFAULT '{}'::jsonb,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

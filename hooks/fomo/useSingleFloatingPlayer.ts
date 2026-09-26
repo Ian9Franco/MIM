@@ -188,6 +188,23 @@ export function useSingleFloatingPlayer({ videoId, hasAudio, onRequestAudio }: O
     return `${m}:${sStr}`;
   };
 
+  const seekToTime = (seconds: number) => {
+    if (!duration && seconds < 0) return;
+    const newTime = duration ? Math.max(0, Math.min(duration, seconds)) : Math.max(0, seconds);
+    setCurrentTime(newTime);
+    sendCommand("seekTo", [newTime, true]);
+  };
+
+  const setCaptionsEnabled = (enabled: boolean) => {
+    if (enabled) {
+      sendCommand("loadModule", ["captions"]);
+      sendCommand("setOption", ["captions", "track", { languageCode: "es" }]);
+    } else {
+      sendCommand("unloadModule", ["captions"]);
+      sendCommand("setOption", ["captions", "track", {}]);
+    }
+  };
+
   return {
     iframeRef,
     isPlaying,
@@ -207,7 +224,10 @@ export function useSingleFloatingPlayer({ videoId, hasAudio, onRequestAudio }: O
     handleSeekStart,
     handleSeekMove,
     handleSeekEnd,
+    seekToTime,
+    setCaptionsEnabled,
     handleIframeReady,
     formatTime,
+    sendCommand,
   };
 }

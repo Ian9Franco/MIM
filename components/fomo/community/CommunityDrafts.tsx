@@ -131,6 +131,7 @@ export function CommunityDrafts() {
 
   if (selectedDraftId) {
     return (
+      <div className="flex flex-col flex-1 min-h-0 h-full w-full">
       <CommunityDraftDetails 
         draftId={selectedDraftId} 
         currentTheme={currentTheme} 
@@ -139,6 +140,7 @@ export function CommunityDrafts() {
           fetchDrafts(); // refresh if they edited something
         }} 
       />
+      </div>
     );
   }
 

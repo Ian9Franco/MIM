@@ -318,7 +318,7 @@ export function CommunityDraftDetails({
   ];
 
   return (
-    <div className="flex flex-col gap-3 animate-fade-in w-full h-full min-h-0 pb-2">
+    <div className="flex flex-col gap-3 animate-fade-in w-full flex-1 min-h-0 pb-2">
       {/* Header */}
       <div className={`shrink-0 relative w-full min-h-[140px] rounded-3xl overflow-hidden flex flex-col justify-between p-5 border ${isModern ? "bg-card border-border shadow-sm" : "bg-white/5 border-white/10"}`}>
         {typeof draft.cover_image === "string" && draft.cover_image ? (
@@ -470,7 +470,7 @@ export function CommunityDraftDetails({
       </div>
 
       {/* Tab Content */}
-      <div className={`flex flex-col flex-1 min-h-0 p-4 md:p-5 rounded-3xl border overflow-hidden relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
+      <div className={`flex flex-col flex-1 min-h-[420px] p-4 md:p-5 rounded-3xl border relative ${isModern ? "bg-card border-border" : "bg-white/5 border-white/10"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -478,7 +478,7 @@ export function CommunityDraftDetails({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col flex-1 min-h-0 w-full h-full overflow-hidden"
+            className={`flex flex-col flex-1 min-h-0 w-full ${activeTab === "mods" ? "overflow-hidden" : "overflow-y-auto custom-scrollbar"}`}
           >
         {activeTab === "overview" && (
           <DraftOverviewTab
@@ -498,6 +498,10 @@ export function CommunityDraftDetails({
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
             fetchDraftInfo={fetchDraftInfo}
+            draftLoader={String(draft.loader || "")}
+            draftVersion={String(draft.minecraft_version || "")}
+            draftId={draftId}
+            mapLayout={draft.map_layout}
           />
         )}
 

@@ -2,47 +2,69 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Radio, Share2, Users } from "lucide-react";
+import { Blocks, Layers, Radio, Trophy, TvMinimalPlay, UserRound, Users } from "lucide-react";
 
-export type CommunitySection = "compartidos" | "miembros";
+export type CommunityTab = "modpacks" | "drafts" | "videos" | "rankings" | "members";
 
-const SECTIONS = [
-  { id: "compartidos" as const, label: "Compartidos", icon: Share2 },
-  { id: "miembros" as const, label: "Miembros", icon: Users },
+const TABS: { id: CommunityTab; label: string; icon: typeof Blocks }[] = [
+  { id: "modpacks", label: "Pool", icon: Blocks },
+  { id: "drafts", label: "Drafts", icon: Layers },
+  { id: "videos", label: "Showcases", icon: TvMinimalPlay },
+  { id: "rankings", label: "Rankings", icon: Trophy },
+  { id: "members", label: "Miembros", icon: Users },
 ];
 
 interface CommunityHeaderProps {
-  active: CommunitySection;
-  onChange: (section: CommunitySection) => void;
+  active: CommunityTab;
+  onChange: (tab: CommunityTab) => void;
+  onOpenMineProfile?: () => void;
   metrics?: { members: number; recommendations: number; featured: number };
   isModern?: boolean;
 }
 
-export function CommunityHeader({ active, onChange, metrics, isModern = false }: CommunityHeaderProps) {
+export function CommunityHeader({
+  active,
+  onChange,
+  onOpenMineProfile,
+  metrics,
+  isModern = false,
+}: CommunityHeaderProps) {
   const borderCls = isModern ? "border-border" : "border-(--fomo-border)";
   const textMuted = isModern ? "text-muted-foreground" : "text-[var(--fomo-text-secondary)]";
   const textMain = isModern ? "text-foreground" : "text-[var(--fomo-text-primary)]";
 
   return (
-    <div className="mb-4 shrink-0 px-4 pt-2">
+    <div className="mb-3 shrink-0 px-4 pt-2">
       <div className={`relative overflow-hidden rounded-2xl border ${borderCls} bg-(--fomo-secondary-bg) px-4 py-3 shadow-[0_12px_34px_rgba(0,0,0,0.12)]`}>
-          <div
-            className="absolute inset-y-0 left-0 w-1"
-            style={{ background: "var(--color-primary)", boxShadow: "0 0 18px var(--color-primary)" }}
-          />
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className={`text-[9px] font-mono font-bold uppercase ${textMuted}`}>Comunidad MIM</p>
-              <h2 className={`mt-1 text-sm font-black ${textMain}`}>Descubrí lo que mueve al hub.</h2>
-              <div className={`mt-1.5 flex items-center gap-2 text-[8px] font-semibold ${textMuted}`}>
-                <span><b className={textMain}>{metrics?.members ?? 0}</b> miembros</span>
-                <span aria-hidden="true">·</span>
-                <span><b className={textMain}>{metrics?.recommendations ?? 0}</b> recomendaciones</span>
-                <span aria-hidden="true">·</span>
-                <span><b className={textMain}>{metrics?.featured ?? 0}</b> destacadas</span>
-              </div>
+        <div
+          className="absolute inset-y-0 left-0 w-1"
+          style={{ background: "var(--color-primary)", boxShadow: "0 0 18px var(--color-primary)" }}
+        />
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className={`text-[9px] font-mono font-bold uppercase ${textMuted}`}>Comunidad MIM</p>
+            <h2 className={`mt-1 text-sm font-black ${textMain}`}>Descubrí lo que mueve al hub.</h2>
+            <div className={`mt-1.5 flex items-center gap-2 text-[8px] font-semibold ${textMuted}`}>
+              <span><b className={textMain}>{metrics?.members ?? 0}</b> miembros</span>
+              <span aria-hidden="true">·</span>
+              <span><b className={textMain}>{metrics?.recommendations ?? 0}</b> recomendaciones</span>
+              <span aria-hidden="true">·</span>
+              <span><b className={textMain}>{metrics?.featured ?? 0}</b> destacadas</span>
             </div>
-            <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${borderCls} bg-white/4`}>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {onOpenMineProfile && (
+              <button
+                type="button"
+                onClick={onOpenMineProfile}
+                className={`flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-black uppercase tracking-wider ${borderCls} hover:border-primary/40`}
+                style={{ color: "var(--color-primary)" }}
+              >
+                <UserRound className="h-3.5 w-3.5" />
+                Mi perfil
+              </button>
+            )}
+            <div className={`relative flex h-10 w-10 items-center justify-center rounded-xl border ${borderCls} bg-white/4`}>
               <Radio className="h-4 w-4" style={{ color: "var(--color-primary)" }} />
               <motion.span
                 className="absolute inset-1 rounded-lg border"
@@ -53,9 +75,10 @@ export function CommunityHeader({ active, onChange, metrics, isModern = false }:
             </div>
           </div>
         </div>
+      </div>
 
-      <div className={`relative mt-3 grid grid-cols-2 rounded-xl border ${borderCls} bg-(--fomo-secondary-bg) p-1 shadow-inner`}>
-        {SECTIONS.map(({ id, label, icon: Icon }) => {
+      <div className={`relative mt-3 grid grid-cols-5 rounded-xl border ${borderCls} bg-(--fomo-secondary-bg) p-1 shadow-inner`}>
+        {TABS.map(({ id, label, icon: Icon }) => {
           const selected = active === id;
           return (
             <button
@@ -76,7 +99,7 @@ export function CommunityHeader({ active, onChange, metrics, isModern = false }:
                 />
               )}
               <Icon className="h-3.5 w-3.5 shrink-0" style={selected ? { color: isModern ? "var(--color-primary)" : "var(--color-accent)" } : undefined} />
-              <span className="truncate hidden sm:inline">{label}</span>
+              <span className="truncate hidden md:inline">{label}</span>
             </button>
           );
         })}
@@ -84,3 +107,5 @@ export function CommunityHeader({ active, onChange, metrics, isModern = false }:
     </div>
   );
 }
+
+export type CommunitySection = CommunityTab;

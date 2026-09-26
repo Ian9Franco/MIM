@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { X, Search, Workflow } from "lucide-react";
 import { useFomoDiscover } from "@/hooks/useFomoDiscover";
@@ -435,7 +436,15 @@ function FomoSidebarDiscoverBranchInner({
                     />
                   </div>
                 ) : discover.mods.length > 0 ? (
-                  <div className={discover.viewMode === "list" ? "flex flex-col gap-2" : discover.viewMode === "gallery" ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={discover.viewMode}
+                      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className={discover.viewMode === "list" ? "flex flex-col gap-2" : discover.viewMode === "gallery" ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"}
+                    >
                     {discover.mods.map((mod) => {
                       const platformKey =
                         mod._source === "curseforge" ? "curseforge" : "modrinth";
@@ -468,7 +477,8 @@ function FomoSidebarDiscoverBranchInner({
                         />
                       );
                     })}
-                  </div>
+                    </motion.div>
+                  </AnimatePresence>
                 ) : (
                   <div className="flex-1 flex flex-col justify-center items-center text-center p-6 min-h-[300px]">
                     <Search className="w-12 h-12 text-white/20 mb-4" />
@@ -530,7 +540,7 @@ function FomoSidebarDiscoverBranchInner({
           </div>
 
           <div id="onboarding-fomo-showcases" className="absolute inset-0 flex-col overflow-hidden" style={{ display: mode === "showcases" ? "flex" : "none" }}>
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-6">
               <FomoFollowedShowcases
                 currentUser={currentUser}
                 allSharedVideos={allSharedVideos}

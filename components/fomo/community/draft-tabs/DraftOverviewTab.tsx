@@ -120,7 +120,7 @@ export function DraftOverviewTab({
   const titleClass = isModern ? "text-foreground" : "text-white";
 
   return (
-    <div className="flex flex-col gap-6 w-full h-full min-h-0 max-h-[min(70vh,720px)] overflow-hidden">
+    <div className="flex flex-col gap-6 w-full flex-1 min-h-0">
       <div className="flex flex-col gap-4 shrink-0">
         <div className="flex items-center gap-2">
           <LayoutGrid className="w-4 h-4 text-[var(--color-accent)]" />
@@ -170,11 +170,11 @@ export function DraftOverviewTab({
         )}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        <div className="xl:col-span-2 flex flex-col max-h-[min(52vh,480px)] min-h-[220px]">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-[280px] items-stretch">
+        <div className="xl:col-span-2 flex flex-col min-h-0">
           <DraftActivityFeed draftId={draftId} isModern={isModern} />
         </div>
-        <div className="xl:col-span-1 flex flex-col max-h-[min(52vh,480px)] min-h-[220px]">
+        <div className="xl:col-span-1 flex flex-col min-h-0">
           <DraftMembersTab
             draft={draft}
             members={members}

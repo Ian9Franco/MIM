@@ -14,6 +14,8 @@ import {
   VolumeX,
   RotateCcw,
   RotateCw,
+  Captions,
+  PanelBottom,
 } from "lucide-react";
 import {
   type PlayerSizeKey,
@@ -27,6 +29,8 @@ import {
   getHubPlayerVideoSize,
 } from "@/lib/fomo/floatingPlayerLayout";
 import { useSingleFloatingPlayer } from "@/hooks/fomo/useSingleFloatingPlayer";
+import { readPlayerPrefs, writePlayerPrefs } from "@/lib/fomo/playerPrefs";
+import type { VideoTimelineMarker } from "@/lib/fomo/videoTimelineMarkers";
 
 const EDGE = 10;
 
@@ -54,23 +58,25 @@ const YoutubePlayerIframe = React.memo(function YoutubePlayerIframe({
   iframeRef,
   onReady,
   autoplay,
+  captions,
 }: {
   videoId: string;
   isDragging: boolean;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
   onReady: () => void;
   autoplay: boolean;
+  captions: boolean;
 }) {
   const src = useMemo(() => {
     const origin =
       typeof window !== "undefined" ? encodeURIComponent(window.location.origin) : "";
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${autoplay ? 1 : 0}&controls=0&modestbranding=1&rel=0&playsinline=1&origin=${origin}`;
-  }, [videoId, autoplay]);
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${autoplay ? 1 : 0}&controls=0&modestbranding=1&rel=0&playsinline=1&cc_load_policy=${captions ? 1 : 0}&iv_load_policy=3&origin=${origin}`;
+  }, [videoId, autoplay, captions]);
 
   return (
     <iframe
       ref={iframeRef}
-      key={videoId}
+      key={`${videoId}:${captions ? "cc" : "nocc"}`}
       width="100%"
       height="100%"
       src={src}
@@ -138,6 +144,29 @@ export function FloatingPlayerWindow({
   const controlsTimerRef = useRef<number | null>(null);
 
   const player = useSingleFloatingPlayer({ videoId, hasAudio, onRequestAudio });
+  const [prefs, setPrefs] = useState(() => readPlayerPrefs());
+  const [markers, setMarkers] = useState<VideoTimelineMarker[]>([]);
+  const [hoverMarker, setHoverMarker] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMarkers([]);
+    fetch(`/api/fomo/youtube-video?videoId=${encodeURIComponent(videoId)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.markers)) setMarkers(data.markers);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [videoId]);
+
+  const updatePrefs = (patch: Partial<typeof prefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    writePlayerPrefs(next);
+  };
 
   useEffect(() => {
     positionRef.current = position;
@@ -316,6 +345,7 @@ export function FloatingPlayerWindow({
   };
 
   const showChrome = variant === "desktop" || controlsVisible || isDragging || player.isSeeking;
+  const showPlaybackChrome = prefs.showControls && showChrome;
   const videoAsDragSurface = variant === "hub" && (isDragging || !showChrome);
   const audioRing = hasAudio ? "ring-2 ring-emerald-500/70" : "ring-1 ring-white/10";
 
@@ -380,6 +410,32 @@ export function FloatingPlayerWindow({
             Audio
           </button>
         )}
+        <button
+          type="button"
+          data-player-no-drag
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            updatePrefs({ showControls: !prefs.showControls });
+          }}
+          className={`p-1 rounded-md border transition-colors cursor-pointer ${prefs.showControls ? "bg-white/10 border-white/10 opacity-90" : "bg-white/5 border-white/10 opacity-50"}`}
+          title={prefs.showControls ? "Ocultar controles" : "Mostrar controles"}
+        >
+          <PanelBottom className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          data-player-no-drag
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            updatePrefs({ captions: !prefs.captions });
+          }}
+          className={`p-1 rounded-md border transition-colors cursor-pointer ${prefs.captions ? "bg-sky-500/20 border-sky-400/30 text-sky-300" : "bg-white/5 border-white/10 opacity-60"}`}
+          title={prefs.captions ? "Ocultar subtítulos" : "Mostrar subtítulos"}
+        >
+          <Captions className="w-3.5 h-3.5" />
+        </button>
         <button
           type="button"
           data-player-no-drag
@@ -470,6 +526,31 @@ export function FloatingPlayerWindow({
           className={`absolute top-1/2 -translate-y-1/2 -ml-1.5 w-3 h-3 rounded-full bg-white border border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-200 pointer-events-none ${player.isSeeking ? "scale-100" : "scale-0 group-hover:scale-100"}`}
           style={{ left: `${player.duration ? (player.currentTime / player.duration) * 100 : 0}%` }}
         />
+        {player.duration > 0 &&
+          markers.map((marker) => (
+            <button
+              key={`${marker.kind}-${marker.t}-${marker.label}`}
+              type="button"
+              data-player-no-drag
+              title={marker.label}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                player.seekToTime(marker.t);
+              }}
+              onMouseEnter={() => setHoverMarker(marker.label)}
+              onMouseLeave={() => setHoverMarker(null)}
+              className={`absolute top-1/2 z-10 h-2.5 w-0.5 -translate-y-1/2 cursor-pointer ${
+                marker.spoiler ? "bg-amber-400" : marker.kind === "chapter" ? "bg-sky-400" : "bg-violet-400"
+              }`}
+              style={{ left: `${Math.min(100, Math.max(0, (marker.t / player.duration) * 100))}%` }}
+            />
+          ))}
+        {hoverMarker && (
+          <div className="pointer-events-none absolute -top-7 left-1/2 z-20 max-w-[14rem] -translate-x-1/2 truncate rounded-md bg-black/80 px-2 py-0.5 text-[9px] font-bold text-white">
+            {hoverMarker}
+          </div>
+        )}
       </div>
       <span
         className="text-[9px] font-mono tracking-wider tabular-nums min-w-[30px]"
@@ -573,10 +654,11 @@ export function FloatingPlayerWindow({
             iframeRef={player.iframeRef}
             onReady={player.handleIframeReady}
             autoplay
+            captions={prefs.captions}
           />
         </div>
-        <AnimatePresence initial={false}>{showChrome && <motion.div key="seek" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 20 }} exit={{ opacity: 0, height: 0 }}>{seekBar}</motion.div>}</AnimatePresence>
-        <AnimatePresence initial={false}>{showChrome && <motion.div key="controls" initial={{ opacity: 0, height: 0, y: 8 }} animate={{ opacity: 1, height: 40, y: 0 }} exit={{ opacity: 0, height: 0, y: 8 }}>{controls}</motion.div>}</AnimatePresence>
+        <AnimatePresence initial={false}>{showPlaybackChrome && <motion.div key="seek" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 20 }} exit={{ opacity: 0, height: 0 }}>{seekBar}</motion.div>}</AnimatePresence>
+        <AnimatePresence initial={false}>{showPlaybackChrome && <motion.div key="controls" initial={{ opacity: 0, height: 0, y: 8 }} animate={{ opacity: 1, height: 40, y: 0 }} exit={{ opacity: 0, height: 0, y: 8 }}>{controls}</motion.div>}</AnimatePresence>
       </motion.div>
     );
   }
@@ -622,6 +704,24 @@ export function FloatingPlayerWindow({
           <button
             type="button"
             data-player-no-drag
+            onClick={() => updatePrefs({ showControls: !prefs.showControls })}
+            className={`p-1 rounded-md border transition-colors cursor-pointer ${prefs.showControls ? "bg-white/10 border-white/10" : "bg-white/5 border-white/10 opacity-50"}`}
+            title={prefs.showControls ? "Ocultar controles" : "Mostrar controles"}
+          >
+            <PanelBottom className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            data-player-no-drag
+            onClick={() => updatePrefs({ captions: !prefs.captions })}
+            className={`p-1 rounded-md border transition-colors cursor-pointer ${prefs.captions ? "bg-sky-500/20 border-sky-400/30 text-sky-300" : "bg-white/5 border-white/10 opacity-60"}`}
+            title={prefs.captions ? "Ocultar subtítulos" : "Mostrar subtítulos"}
+          >
+            <Captions className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            data-player-no-drag
             onClick={cycleSize}
             className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-md transition-all active:scale-90 cursor-pointer"
             title="Cambiar tamaño (Mini / Normal / Maxi)"
@@ -646,10 +746,11 @@ export function FloatingPlayerWindow({
           iframeRef={player.iframeRef}
           onReady={player.handleIframeReady}
           autoplay={false}
+          captions={prefs.captions}
         />
       </div>
-      {seekBar}
-      {controls}
+      {showPlaybackChrome && seekBar}
+      {showPlaybackChrome && controls}
     </div>
   );
 }

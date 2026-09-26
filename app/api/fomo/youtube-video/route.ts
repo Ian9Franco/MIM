@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
 import { checkYtdlpUpdate } from "@/lib/ytdlp/updater";
+import { chaptersFromYtDlp, mergeTimelineMarkers, parseDescriptionTimestamps } from "@/lib/fomo/videoTimelineMarkers";
 
 const binDir = path.join(process.cwd(), "standalone");
 const binPath = path.join(binDir, "yt-dlp.exe");
@@ -78,12 +79,17 @@ export const GET = withApiGuard(
       const detailOut = await ytDlpWrap.execPromise([videoUrl, "--dump-json", "--no-playlist"]);
       const detail = JSON.parse(detailOut.trim());
       
+      const description = detail.description || "";
       return NextResponse.json({
         title: detail.title,
         thumbnail: detail.thumbnail,
         videoUrl,
         videoId: detail.id,
-        modSlugs: extractModSlugs(detail.description || ""),
+        modSlugs: extractModSlugs(description),
+        markers: mergeTimelineMarkers(
+          chaptersFromYtDlp(detail.chapters),
+          parseDescriptionTimestamps(description),
+        ),
         publishedAt: detail.upload_date ?? "",
         channelUrl: detail.uploader_url || (detail.uploader_id ? `https://www.youtube.com/@${detail.uploader_id.replace(/^@/, "")}` : detail.channel_url) || "",
         channelName: detail.uploader ?? "",

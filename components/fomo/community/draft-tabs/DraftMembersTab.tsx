@@ -18,7 +18,7 @@ export function DraftMembersTab({
   embedded?: boolean;
 }) {
   return (
-    <div className={`flex flex-col gap-4 h-full ${embedded ? `p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}` : ""}`}>
+    <div className={`flex flex-col gap-4 h-full min-h-0 ${embedded ? `flex-1 p-4 rounded-2xl border ${isModern ? "bg-card border-border/60" : "bg-white/[0.02] border-white/10"}` : ""}`}>
       <div className="flex items-center justify-between">
         <h3 className={`font-bold ${embedded ? "text-sm" : "text-lg"} ${isModern ? "text-foreground" : "text-white"}`}>Miembros</h3>
         {draft.owner_id === user?.id ? (

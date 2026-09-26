@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Bookmark, Crown, Share2, Trophy } from "lucide-react";
+import { Bookmark, Crown, Share2, Trophy, RefreshCw, AlertTriangle } from "lucide-react";
 import type { ModHit } from "@/lib/core/types";
 import { FomoSkeleton } from "@/components/fomo/core/FomoSkeleton";
 
@@ -24,6 +24,8 @@ export function CommunityRankings({ onOpen, isModern = false }: CommunityRanking
   const [metric, setMetric] = useState<"shares" | "saves">("shares");
   const [visibleRankings, setVisibleRankings] = useState<ModHit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
 
   const borderCls = isModern ? "border-border" : "border-[var(--fomo-border)]";
   const panelBg = isModern ? "bg-surface/70" : "bg-[var(--fomo-secondary-bg)]";
@@ -35,13 +37,26 @@ export function CommunityRankings({ onOpen, isModern = false }: CommunityRanking
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setLoadError("");
     fetch(`/api/fomo/community-rankings?period=${period}&metric=${metric}&limit=20`)
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data) => {
-        if (!cancelled) setVisibleRankings(data.rankings || []);
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || `Error ${response.status} al cargar rankings`);
+        }
+        const rankings = data.rankings;
+        if (Array.isArray(rankings)) return rankings as ModHit[];
+        if (rankings && Array.isArray(rankings.mod)) return rankings.mod as ModHit[];
+        return [] as ModHit[];
       })
-      .catch(() => {
-        if (!cancelled) setVisibleRankings([]);
+      .then((list) => {
+        if (!cancelled) setVisibleRankings(list);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setVisibleRankings([]);
+          setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los rankings.");
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -49,7 +64,7 @@ export function CommunityRankings({ onOpen, isModern = false }: CommunityRanking
     return () => {
       cancelled = true;
     };
-  }, [metric, period]);
+  }, [metric, period, reloadToken]);
 
   const controls = (
     <div className="mb-4 space-y-2">
@@ -82,6 +97,27 @@ export function CommunityRankings({ onOpen, isModern = false }: CommunityRanking
       <div className="flex-1 overflow-y-auto px-6 pb-8">
         {controls}
         <FomoSkeleton variant="list" message="Cargando rankings..." count={6} />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex-1 overflow-y-auto px-6 pb-8">
+        {controls}
+        <div className="flex flex-col items-center justify-center p-8 text-center rounded-3xl border border-dashed border-red-500/30 bg-red-500/5">
+          <AlertTriangle className="mb-3 h-10 w-10 text-red-400/70" />
+          <h3 className="text-sm font-bold text-white">No se pudieron cargar los rankings</h3>
+          <p className="mt-1 text-[10px] text-white/35 max-w-sm">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => setReloadToken((n) => n + 1)}
+            className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/20 text-primary text-xs font-bold"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }

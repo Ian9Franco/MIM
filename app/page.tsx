@@ -164,6 +164,7 @@ export default function Page() {
   const [detailsOpen,      setDetailsOpen]      = useState(false);
   const [fomoMode,         setFomoMode]         = useState("spotlight");
   const [downloadsSidebarCollapsed, setDownloadsSidebarCollapsed] = useState(true);
+  const [draftSidebarCollapsed, setDraftSidebarCollapsed] = useState(true);
   const [mounted,          setMounted]          = useState(false);
   const [autoClassify,     setAutoClassify]     = useState(false);
   const [filesToDelete,    setFilesToDelete]    = useState<PendingFile[]>([]);
@@ -470,7 +471,7 @@ export default function Page() {
         {lib.modDescription && <DescriptionModal modDescription={lib.modDescription} onClose={() => lib.setModDescription(null)} />}
         <AlertSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} conflicts={lib.conflicts} bytecodeConflicts={lib.bytecodeConflicts} modrinthStatus={lib.modrinthStatus} ignoredUpdates={lib.ignoredUpdates} library={lib.library} downloadingMods={lib.downloadingMods} handleResolveConflict={lib.handleResolveConflict} handleDownloadUpdate={lib.handleDownloadUpdate} handleDismissUpdate={lib.handleDismissUpdate} checkingUpdates={lib.checkingUpdates} handleCheckUpdates={lib.handleCheckUpdates} />
 
-        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} fomoMode={fomoMode} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />, document.body)}
+        {mounted && createPortal(<FomoSidebarPortal fomoOpen={fomoOpen} detailsOpen={detailsOpen} fomoMode={fomoMode} downloadsSidebarCollapsed={downloadsSidebarCollapsed} setDownloadsSidebarCollapsed={setDownloadsSidebarCollapsed} draftSidebarCollapsed={draftSidebarCollapsed} setDraftSidebarCollapsed={setDraftSidebarCollapsed} pendingFiles={pendingFiles} loading={loading} selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} activeProject={projects.activeProject} onDeleteFile={handleDeleteFile} modrinthStatus={lib.modrinthStatus} detectedVersion={detectedVersion} availableVersions={availableVersions} setDetectedVersion={setDetectedVersion} />, document.body)}
       </div>
 
       <ConfirmModal isOpen={filesToDelete.length > 0} onClose={() => setFilesToDelete([])} onConfirm={handleBulkDelete} title={filesToDelete.length > 1 ? "¿Eliminar seleccionados?" : "¿Eliminar archivo?"} message={`¿Estás seguro? Esta acción no se puede deshacer.`} confirmLabel="Eliminar" cancelLabel="Cancelar" type="danger" />

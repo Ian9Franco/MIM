@@ -60,7 +60,7 @@ export const GET = withApiGuard(
 
       if (error) {
         console.error("Error fetching shared mods:", error);
-        return NextResponse.json({ rankings: { mod: [] }, metric, period }, { status: 500 });
+        return NextResponse.json({ error: error.message || "No se pudieron cargar los rankings.", rankings: { mod: [] }, metric, period }, { status: 500 });
       }
 
       const rows = Array.isArray(sharedMods) ? sharedMods : [];
@@ -106,7 +106,7 @@ export const GET = withApiGuard(
       });
     } catch (e) {
       console.error("Error in community rankings API:", e);
-      return NextResponse.json({ rankings: { mod: [] } }, { status: 500 });
+      return NextResponse.json({ error: "No se pudieron cargar los rankings.", rankings: { mod: [] } }, { status: 500 });
     }
   }
 );

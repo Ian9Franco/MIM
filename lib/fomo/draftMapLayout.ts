@@ -12,6 +12,7 @@ export type DraftMapLayout = {
   categories: Record<string, DraftMapPosition>;
   labels: Record<string, string>;
   children: DraftMapChild[];
+  itemOrder?: Record<string, string[]>;
 };
 
 export const MAP_PARENTS: { id: MapParentId; label: string }[] = [
@@ -168,7 +169,17 @@ export function parseMapLayout(raw: unknown): DraftMapLayout {
     if (labels[String(row.id)] && !labels[id]) labels[id] = labels[String(row.id)];
   }
 
-  return ensureDefaultTree({ categories, labels, children });
+  const itemOrder: Record<string, string[]> = {};
+  const rawItemOrder = source.itemOrder && typeof source.itemOrder === "object"
+    ? (source.itemOrder as Record<string, unknown>)
+    : {};
+  for (const [categoryId, value] of Object.entries(rawItemOrder)) {
+    if (!Array.isArray(value)) continue;
+    const ids = value.map((entry) => String(entry)).filter(Boolean);
+    if (ids.length > 0) itemOrder[categoryId] = ids;
+  }
+
+  return ensureDefaultTree({ categories, labels, children, itemOrder });
 }
 
 export function defaultParentPosition(parent: MapParentId): DraftMapPosition {
@@ -216,7 +227,7 @@ export function ensureDefaultTree(layout: DraftMapLayout): DraftMapLayout {
     }
   }
 
-  return { categories, labels, children };
+  return { categories, labels, children, itemOrder: layout.itemOrder };
 }
 
 export function resolveCategoryPositions(
@@ -333,7 +344,74 @@ export function relocateCategoryLayout(
       label: labels[toId] || child.label,
     };
   });
-  return { categories, labels, children };
+  const itemOrder = { ...(layout.itemOrder || {}) };
+  if (itemOrder[fromId]) {
+    itemOrder[toId] = itemOrder[fromId];
+    delete itemOrder[fromId];
+  }
+  return { categories, labels, children, itemOrder };
+}
+
+export function mergeMapLayout(base: DraftMapLayout, overlay: DraftMapLayout): DraftMapLayout {
+  const mergedChildren = [...base.children];
+  const seen = new Set(mergedChildren.map((child) => child.id));
+  for (const child of overlay.children) {
+    if (seen.has(child.id)) continue;
+    mergedChildren.push(child);
+    seen.add(child.id);
+  }
+  return ensureDefaultTree({
+    categories: { ...base.categories, ...overlay.categories },
+    labels: { ...base.labels, ...overlay.labels },
+    children: mergedChildren.map((child) => {
+      const fromOverlay = overlay.children.find((entry) => entry.id === child.id);
+      return fromOverlay ? { ...child, ...fromOverlay } : child;
+    }),
+    itemOrder: { ...(base.itemOrder || {}), ...(overlay.itemOrder || {}) },
+  });
+}
+
+export function sortItemsInCategory<T extends { id: string; position?: number; mod_name?: string; project_id?: string }>(
+  items: T[],
+  categoryId: string,
+  layout: DraftMapLayout,
+): T[] {
+  const order = layout.itemOrder?.[categoryId] || [];
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => {
+    const idA = String(a.id);
+    const idB = String(b.id);
+    const rankA = rank.has(idA) ? rank.get(idA)! : Number.MAX_SAFE_INTEGER;
+    const rankB = rank.has(idB) ? rank.get(idB)! : Number.MAX_SAFE_INTEGER;
+    if (rankA !== rankB) return rankA - rankB;
+    const posA = Number(a.position) || 0;
+    const posB = Number(b.position) || 0;
+    if (posA !== posB) return posA - posB;
+    return String(a.mod_name || a.project_id || "").localeCompare(String(b.mod_name || b.project_id || ""));
+  });
+}
+
+export function withItemsAssignedToCategory(
+  layout: DraftMapLayout,
+  categoryId: string,
+  itemIds: string[],
+): DraftMapLayout {
+  if (itemIds.length === 0) return layout;
+  const itemOrder = { ...(layout.itemOrder || {}) };
+  const idSet = new Set(itemIds.map(String));
+  for (const [catId, list] of Object.entries(itemOrder)) {
+    itemOrder[catId] = list.filter((id) => !idSet.has(id));
+    if (itemOrder[catId].length === 0) delete itemOrder[catId];
+  }
+  const nextList = [...(itemOrder[categoryId] || [])];
+  for (const id of itemIds) {
+    const sid = String(id);
+    const existing = nextList.indexOf(sid);
+    if (existing >= 0) nextList.splice(existing, 1);
+    nextList.push(sid);
+  }
+  itemOrder[categoryId] = nextList;
+  return { ...layout, itemOrder };
 }
 
 export function reparentMapChild(
@@ -346,7 +424,13 @@ export function reparentMapChild(
   const toId = childCategoryId(nextParent, child.slug);
   if (toId === childId) return { ok: false, reason: "same" };
   if (layout.children.some((entry) => entry.id === toId)) return { ok: false, reason: "exists" };
-  return { ok: true, layout: relocateCategoryLayout(layout, childId, toId), fromId: childId, toId };
+  const next = relocateCategoryLayout(layout, childId, toId);
+  const itemOrder = { ...(next.itemOrder || {}) };
+  if (itemOrder[childId]) {
+    itemOrder[toId] = itemOrder[childId];
+    delete itemOrder[childId];
+  }
+  return { ok: true, layout: { ...next, itemOrder }, fromId: childId, toId };
 }
 
 export function clampMapZoom(value: number): number {

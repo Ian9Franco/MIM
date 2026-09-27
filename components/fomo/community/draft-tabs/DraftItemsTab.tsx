@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, ChevronDown, ChevronUp, LayoutGrid, List, Tag, Map as MapIcon } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
@@ -15,12 +15,15 @@ import {
   parseMapLayout,
   reparentMapChild,
   resolveItemChildId,
+  sortItemsInCategory,
   withCategoryLabel,
   withCategoryPosition,
+  withItemsAssignedToCategory,
   type DraftMapLayout,
   type DraftMapPosition,
   type MapParentId,
 } from "@/lib/fomo/draftMapLayout";
+import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { useDraftItemCatalog } from "@/hooks/fomo/useDraftItemCatalog";
 import { DraftItemMapBoard, DraftInsightsStrip, type MapBoardFilter } from "./DraftItemMapBoard";
 import { FomoDropdown, FomoDropdownOption } from "@/components/fomo/shared/FomoDropdown";
@@ -75,12 +78,51 @@ export function DraftItemsTab({
   const [viewMode, setViewMode] = useState<"map" | "list" | "grid">("map");
   const [activeCategoryTab, setActiveCategoryTab] = useState<"mods" | "others">("mods");
   const [mapFilter, setMapFilter] = useState<MapBoardFilter>("all");
-  const [layout, setLayout] = useState<DraftMapLayout>(() => parseMapLayout(mapLayout));
+  const [layout, setLayout] = useState<DraftMapLayout>(() => resolveSessionMapLayout(mapLayout, draftId));
+  const layoutDirtyRef = useRef(false);
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastDraftIdRef = useRef(draftId);
+
+  const flushPersistLayout = useCallback((next: DraftMapLayout) => {
+    writeDraftMapLayoutCache(draftId, next);
+    void supabase.from("drafts").update({ map_layout: next }).eq("id", draftId).then(({ error }) => {
+      if (error) {
+        console.error("Error saving map layout", error);
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: { text: "No se pudo guardar el mapa de categorías.", type: "error" },
+        }));
+        return;
+      }
+      layoutDirtyRef.current = false;
+    });
+  }, [draftId]);
+
+  const schedulePersistLayout = useCallback((next: DraftMapLayout) => {
+    layoutDirtyRef.current = true;
+    writeDraftMapLayoutCache(draftId, next);
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => flushPersistLayout(next), 300);
+  }, [draftId, flushPersistLayout]);
+
+  const persistLayout = useCallback((next: DraftMapLayout) => {
+    setLayout(next);
+    schedulePersistLayout(next);
+  }, [schedulePersistLayout]);
 
   useEffect(() => {
-    setLayout(parseMapLayout(mapLayout));
+    if (lastDraftIdRef.current !== draftId) {
+      lastDraftIdRef.current = draftId;
+      layoutDirtyRef.current = false;
+      setLayout(resolveSessionMapLayout(mapLayout, draftId));
+      return;
+    }
+    if (layoutDirtyRef.current) return;
+    setLayout(resolveSessionMapLayout(mapLayout, draftId));
   }, [mapLayout, draftId]);
-  
+
+  useEffect(() => () => {
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+  }, []);
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -104,21 +146,10 @@ export function DraftItemsTab({
     }
   };
 
-  const persistLayout = (next: DraftMapLayout) => {
-    setLayout(next);
-    void supabase.from("drafts").update({ map_layout: next }).eq("id", draftId).then(({ error }) => {
-      if (!error) return;
-      console.error("Error saving map layout", error);
-      window.dispatchEvent(new CustomEvent("fomo-show-status", {
-        detail: { text: "No se pudo guardar el mapa de categorías.", type: "error" }
-      }));
-    });
-  };
-
   const handleMoveCategory = (categoryId: string, position: DraftMapPosition) => {
     setLayout((prev) => {
       const next = withCategoryPosition(prev, categoryId, position);
-      void supabase.from("drafts").update({ map_layout: next }).eq("id", draftId);
+      schedulePersistLayout(next);
       return next;
     });
   };
@@ -160,6 +191,11 @@ export function DraftItemsTab({
   const handleUpdateCategory = async (category: string, idsOverride?: string[], silent = false, side?: MapParentId) => {
     const ids = idsOverride || Array.from(selectedItems);
     if (ids.length === 0) return;
+    setLayout((prev) => {
+      const next = withItemsAssignedToCategory(prev, category, ids);
+      schedulePersistLayout(next);
+      return next;
+    });
     try {
       const parsed = parseChildCategoryId(category);
       const nextSide = side || parsed?.parent;
@@ -256,8 +292,11 @@ export function DraftItemsTab({
       if (!groups[id]) groups[id] = [];
       groups[id].push(mod);
     });
+    for (const id of Object.keys(groups)) {
+      groups[id] = sortItemsInCategory(groups[id], id, layout);
+    }
     return groups;
-  }, [modItems, layout.children]);
+  }, [modItems, layout.children, layout.itemOrder]);
 
   const groupedMods = useMemo(() => {
     const result: Record<string, any[]> = {};

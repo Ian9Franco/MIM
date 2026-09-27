@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import {
   childCategoryId,
   defaultCategoryPosition,
+  mergeMapLayout,
   parseChildCategoryId,
   parseMapLayout,
   relocateCategoryLayout,
   reparentMapChild,
   resolveCategoryPositions,
   resolveItemChildId,
+  sortItemsInCategory,
   withCategoryLabel,
+  withItemsAssignedToCategory,
 } from "../../lib/fomo/draftMapLayout";
 import {
   roundedOrthogonalD,
@@ -78,6 +81,34 @@ async function run() {
     assert.equal(reparented.toId, "server:mobs");
     assert.ok(reparented.layout.children.some((child) => child.id === "server:mobs" && child.parent === "server"));
   }
+
+  const mergedLayout = mergeMapLayout(parseMapLayout({}), {
+    categories: { "both:core": { x: 99, y: 88 } },
+    labels: {},
+    children: [],
+    itemOrder: { "both:core": ["a", "b"] },
+  });
+  assert.equal(mergedLayout.categories["both:core"].x, 99);
+  assert.deepEqual(mergedLayout.itemOrder?.["both:core"], ["a", "b"]);
+
+  const ordered = sortItemsInCategory(
+    [
+      { id: "b", mod_name: "Beta" },
+      { id: "a", mod_name: "Alpha" },
+      { id: "c", mod_name: "Gamma" },
+    ],
+    "both:core",
+    { categories: {}, labels: {}, children: [], itemOrder: { "both:core": ["c", "a"] } },
+  );
+  assert.deepEqual(ordered.map((item) => item.id), ["c", "a", "b"]);
+
+  const assigned = withItemsAssignedToCategory(
+    { categories: {}, labels: {}, children: [], itemOrder: { "client:other": ["x"] } },
+    "both:utility",
+    ["y", "z"],
+  );
+  assert.deepEqual(assigned.itemOrder?.["both:utility"], ["y", "z"]);
+  assert.deepEqual(assigned.itemOrder?.["client:other"], ["x"]);
 
   const clearPath = routeOrthogonalPath({ x: 50, y: 0 }, { x: 50, y: 120 }, []);
   assert.equal(clearPath.length, 2);

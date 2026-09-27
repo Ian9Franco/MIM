@@ -151,8 +151,12 @@ export function DraftItemMapBoard({
     startY: number;
     origX: number;
     origY: number;
+    latestX: number;
+    latestY: number;
     moved: boolean;
   } | null>(null);
+  const onMoveCategoryRef = useRef(onMoveCategory);
+  onMoveCategoryRef.current = onMoveCategory;
 
   const sized = useMemo(() => {
     const sizes: Record<string, { w: number; h: number }> = {};
@@ -218,12 +222,20 @@ export function DraftItemMapBoard({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      const drag = catDrag.current;
+      if (drag?.moved) {
+        onMoveCategoryRef.current(drag.id, { x: drag.latestX, y: drag.latestY });
+      }
+    };
+  }, []);
+
   const finishCatDrag = () => {
     const drag = catDrag.current;
     catDrag.current = null;
     if (!drag?.moved) return;
-    const pos = positions[drag.id];
-    if (pos) onMoveCategory(drag.id, pos);
+    onMoveCategory(drag.id, { x: drag.latestX, y: drag.latestY });
   };
 
   const beginNodeDrag = (id: string, e: React.PointerEvent) => {
@@ -238,6 +250,8 @@ export function DraftItemMapBoard({
       startY: e.clientY,
       origX: current.x,
       origY: current.y,
+      latestX: current.x,
+      latestY: current.y,
       moved: false,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -291,9 +305,13 @@ export function DraftItemMapBoard({
             const dx = (e.clientX - drag.startX) / zoom;
             const dy = (e.clientY - drag.startY) / zoom;
             if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+            const nextX = drag.origX + dx;
+            const nextY = drag.origY + dy;
+            drag.latestX = nextX;
+            drag.latestY = nextY;
             setPositions((prev) => ({
               ...prev,
-              [drag.id]: { x: drag.origX + dx, y: drag.origY + dy },
+              [drag.id]: { x: nextX, y: nextY },
             }));
             return;
           }

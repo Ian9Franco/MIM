@@ -16,7 +16,11 @@ import {
   DraftItemEditModal,
   type DraftTab,
 } from "./draft-detail";
+import { fixedOrgParentForContentType } from "@/lib/fomo/draftMapLayout";
 import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
+import { DRAFT_ITEMS_CHANGED_EVENT } from "../lib/drafts/draftContract";
+
+const DRAFT_ACTIVITY_LIMIT = 5;
 
 export interface DraftDetailModel {
   id: string;
@@ -225,19 +229,19 @@ export function DraftDetailView({
     setLoadingMembers(false);
   }, [draft?.id, draft?.owner_id]);
 
-  const loadActivity = useCallback(async () => {
+  const loadActivity = useCallback(async (silent = false) => {
     if (!draft?.id) return;
-    setLoadingActivity(true);
+    if (!silent) setLoadingActivity(true);
     const { data, error } = await supabase
       .from("draft_activity")
       .select("*")
       .eq("draft_id", draft.id)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(DRAFT_ACTIVITY_LIMIT);
     if (error) {
       console.error("Error loading draft activity:", error);
       setActivity([]);
-      setLoadingActivity(false);
+      if (!silent) setLoadingActivity(false);
       return;
     }
     const rows = (data || []) as DraftActivityRecord[];
@@ -250,7 +254,7 @@ export function DraftDetailView({
         profiles: profiles[String(row.profile_id || row.user_id || "")] || null,
       })),
     );
-    setLoadingActivity(false);
+    if (!silent) setLoadingActivity(false);
   }, [draft?.id]);
 
   useEffect(() => {
@@ -258,8 +262,33 @@ export function DraftDetailView({
   }, [loadMembers]);
 
   useEffect(() => {
-    void loadActivity();
-  }, [loadActivity]);
+    if (!draft?.id) return;
+    void loadActivity(false);
+
+    const refresh = () => {
+      void loadActivity(true);
+    };
+    window.addEventListener(DRAFT_ITEMS_CHANGED_EVENT, refresh);
+
+    const channel = supabase
+      .channel(`draft-activity:${draft.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "draft_activity",
+          filter: `draft_id=eq.${draft.id}`,
+        },
+        refresh,
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener(DRAFT_ITEMS_CHANGED_EVENT, refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [draft?.id, loadActivity]);
 
   const visibleMods = activeCollectionMods.filter((mod: ModHit) => {
     const key = mod.itemId || mod.projectId;
@@ -293,7 +322,7 @@ export function DraftDetailView({
       }));
       setShowMetadataModal(false);
       onRefreshDrafts?.();
-      void loadActivity();
+      void loadActivity(true);
     }
     setSavingMetadata(false);
   };
@@ -326,17 +355,19 @@ export function DraftDetailView({
       if (onUpdateDraftItemContentType && itemType !== editingItem.projectType) {
         await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId);
       }
-      if (onUpdateDraftItemSide && itemSide !== editingItem.side) {
-        await onUpdateDraftItemSide(draft.id, editingItem.projectId, itemSide, editingItem.itemId);
+      const fixedSide = fixedOrgParentForContentType(itemType);
+      const nextSide = fixedSide || itemSide;
+      if (onUpdateDraftItemSide && nextSide !== editingItem.side) {
+        await onUpdateDraftItemSide(draft.id, editingItem.projectId, nextSide, editingItem.itemId);
       }
       setEditingItem(null);
       onRefreshDrafts?.();
       const idx = activeCollectionMods.findIndex(m => m.itemId === editingItem.itemId);
       if (idx !== -1) {
         activeCollectionMods[idx].projectType = itemType;
-        activeCollectionMods[idx].side = itemSide;
+        activeCollectionMods[idx].side = nextSide;
       }
-      loadActivity();
+      void loadActivity(true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -350,7 +381,7 @@ export function DraftDetailView({
     await onRemoveModFromDraft(draft.id, mod.projectId, itemId);
     setRemovedIds((prev) => new Set(prev).add(itemId || mod.projectId));
     onRefreshDrafts?.();
-    loadActivity();
+    void loadActivity(true);
   };
 
   return (

@@ -8,6 +8,7 @@ import {
   relocateCategoryLayout,
   removeMapChild,
   reparentMapChild,
+  fixedOrgParentForContentType,
   resolveCategoryPositions,
   resolveItemChildId,
   sortItemsInCategory,
@@ -53,6 +54,17 @@ async function run() {
   assert.deepEqual(parseChildCategoryId("server:world"), { parent: "server", slug: "world" });
   assert.equal(resolveItemChildId({ side: "client", category: "performance" }), "client:performance");
   assert.equal(resolveItemChildId({ side: "both", category: "core" }), "both:core");
+  assert.equal(
+    resolveItemChildId({ side: "server", content_type: "shader", category: "server:other" }),
+    "client:other",
+  );
+  assert.equal(
+    resolveItemChildId({ side: "client", content_type: "datapack", category: "client:world" }),
+    "server:world",
+  );
+  assert.equal(fixedOrgParentForContentType("resourcepack"), "client");
+  assert.equal(fixedOrgParentForContentType("datapack"), "server");
+  assert.equal(fixedOrgParentForContentType("mod"), null);
 
   const first = defaultCategoryPosition(0);
   const fifth = defaultCategoryPosition(4);

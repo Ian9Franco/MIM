@@ -3,6 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Check } from "lucide-react";
+import { fixedOrgParentForContentType } from "@/lib/fomo/draftMapLayout";
 
 import type { ModHit } from "../SpotlightMarquees";
 
@@ -30,6 +31,11 @@ const ITEM_SIDES = [
   { id: "server", label: "Servidor" },
 ];
 
+const FIXED_SIDE_LABEL: Record<string, string> = {
+  client: "Cliente (alluser — texturas y shaders)",
+  server: "Servidor (allhost — datapacks)",
+};
+
 export function DraftItemEditModal({
   editingItem,
   onClose,
@@ -40,6 +46,8 @@ export function DraftItemEditModal({
   savingItem,
   onSave,
 }: DraftItemEditModalProps) {
+  const fixedSide = fixedOrgParentForContentType(itemType);
+
   return (
     <AnimatePresence>
       {editingItem && (
@@ -73,7 +81,6 @@ export function DraftItemEditModal({
             </div>
 
             <div className="space-y-4">
-              {/* Type Selection */}
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
                   Tipo de Proyecto
@@ -87,6 +94,8 @@ export function DraftItemEditModal({
                         type="button"
                         onClick={() => {
                           setItemType(t.id);
+                          const nextFixed = fixedOrgParentForContentType(t.id);
+                          if (nextFixed) setItemSide(nextFixed);
                         }}
                         className={`py-2 px-2 rounded-xl text-[10px] font-semibold transition-all border text-center ${
                           active
@@ -101,32 +110,37 @@ export function DraftItemEditModal({
                 </div>
               </div>
 
-              {/* Side Selection */}
               <div>
                 <label className="text-[9px] font-mono uppercase text-white/40 tracking-wider">
                   Entorno / Lado
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 mt-1.5">
-                  {ITEM_SIDES.map((s) => {
-                    const active = itemSide === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => {
-                          setItemSide(s.id);
-                        }}
-                        className={`py-2 px-1 rounded-xl text-[9px] font-semibold transition-all border text-center ${
-                          active
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                            : "bg-white/[0.02] text-white/60 border-white/[0.06] hover:bg-white/5"
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                {fixedSide ? (
+                  <p className="mt-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200">
+                    {FIXED_SIDE_LABEL[fixedSide]}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+                    {ITEM_SIDES.map((s) => {
+                      const active = itemSide === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setItemSide(s.id);
+                          }}
+                          className={`py-2 px-1 rounded-xl text-[9px] font-semibold transition-all border text-center ${
+                            active
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                              : "bg-white/[0.02] text-white/60 border-white/[0.06] hover:bg-white/5"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -54,6 +54,8 @@ export function DraftActivityTab({
   loadingActivity,
   activity,
 }: DraftActivityTabProps) {
+  const recent = activity.slice(0, 5);
+
   return (
     <motion.div
       key="activity"
@@ -65,13 +67,13 @@ export function DraftActivityTab({
     >
       {loadingActivity ? (
         <MiembrosSkeleton />
-      ) : activity.length === 0 ? (
+      ) : recent.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/[0.06] py-8 text-center">
           <Activity className="w-8 h-8 text-white/15 mx-auto mb-3" />
           <p className="text-xs text-white/40">Sin actividad registrada aún.</p>
         </div>
       ) : (
-        activity.map((evt: DraftActivityEvent) => {
+        recent.map((evt: DraftActivityEvent) => {
           const profile = evt.profiles;
           const initial = (profile?.username || "?").charAt(0).toUpperCase();
           const date = new Date(evt.created_at).toLocaleDateString("es-AR", {

@@ -14,6 +14,8 @@ import {
   isUncategorizedChildId,
   itemMatchesTreeFilter,
   itemParentId,
+  orgParentForItem,
+  orgParentForTypeFilter,
   parseChildCategoryId,
   reparentMapChild,
   removeMapChild,
@@ -132,6 +134,10 @@ export function DraftItemsTab({
   useEffect(() => () => {
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
   }, []);
+  useEffect(() => {
+    const locked = orgParentForTypeFilter(typeFilter);
+    if (locked !== "all") setParentFilter(locked);
+  }, [typeFilter]);
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -225,18 +231,26 @@ export function DraftItemsTab({
   const handleUpdateCategory = async (category: string, idsOverride?: string[], silent = false, side?: MapParentId) => {
     const ids = idsOverride || Array.from(selectedItems);
     if (ids.length === 0) return;
+    const parsed = parseChildCategoryId(category);
+    const slug = parsed?.slug || slugifyCategory(category);
     setLayout((prev) => {
-      const next = withItemsAssignedToCategory(prev, category, ids);
+      let next = prev;
+      for (const id of ids) {
+        const item = draftItems.find((entry) => entry.id === id);
+        const parent = side || orgParentForItem({ side: item?.side, content_type: item?.content_type });
+        next = withItemsAssignedToCategory(next, childCategoryId(parent, slug), [id]);
+      }
       schedulePersistLayout(next);
       return next;
     });
     try {
-      const parsed = parseChildCategoryId(category);
-      const nextSide = side || parsed?.parent;
-      const updates: Record<string, string> = { category };
-      if (nextSide) updates.side = nextSide;
-      const { error } = await supabase.from("draft_items").update(updates).in("id", ids);
-      if (error) throw error;
+      for (const id of ids) {
+        const item = draftItems.find((entry) => entry.id === id);
+        const parent = side || orgParentForItem({ side: item?.side, content_type: item?.content_type });
+        const catId = childCategoryId(parent, slug);
+        const { error } = await supabase.from("draft_items").update({ category: catId, side: parent }).eq("id", id);
+        if (error) throw error;
+      }
       fetchDraftInfo(true);
       setIsCategoryModalOpen(false);
       setNewCategoryName("");
@@ -351,7 +365,10 @@ export function DraftItemsTab({
   );
 
   const openCreateCategory = () => {
-    setAssignParent(parentFilter !== "all" ? parentFilter : "both");
+    const locked = orgParentForTypeFilter(typeFilter);
+    const branch = locked !== "all" ? locked : parentFilter;
+    if (branch === "all") return;
+    setAssignParent(branch);
     setNewCategoryName("");
     setShowCreateCategory(true);
   };
@@ -465,7 +482,7 @@ export function DraftItemsTab({
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedItems(new Set([item.id]));
-                setAssignParent(itemParentId(item.side));
+                setAssignParent(orgParentForItem({ side: item.side, content_type: item.content_type || type }));
                 setIsCategoryModalOpen(true);
               }}
               className={`text-[9px] font-bold px-1.5 py-1 rounded-lg border transition-colors truncate max-w-[90px] ${
@@ -635,7 +652,7 @@ export function DraftItemsTab({
                   <button
                     onClick={() => {
                       const first = draftItems.find((item) => selectedItems.has(item.id));
-                      setAssignParent(itemParentId(first?.side));
+                      setAssignParent(orgParentForItem({ side: first?.side, content_type: first?.content_type }));
                       setIsCategoryModalOpen(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 transition-colors cursor-pointer"
@@ -688,6 +705,16 @@ export function DraftItemsTab({
             onChildFilter={setChildFilter}
             canEditCategories
             onCreateCategory={openCreateCategory}
+            createCategoryDisabled={
+              orgParentForTypeFilter(typeFilter) === "all" && parentFilter === "all"
+            }
+            createCategoryTitle={
+              orgParentForTypeFilter(typeFilter) !== "all"
+                ? "Nueva categoría en la rama fija de este tipo"
+                : parentFilter === "all"
+                  ? "Elegí Client, Server o Both en el filtro de rama"
+                  : "Nueva categoría en la rama seleccionada"
+            }
           />
           </div>
           {filteredItems.length === 0 ? (
@@ -795,6 +822,25 @@ export function DraftItemsTab({
           )}
         </div>
       )}
+
+      <DraftCreateCategoryModal
+        open={showCreateCategory}
+        onClose={() => setShowCreateCategory(false)}
+        layout={layout}
+        assignParent={assignParent}
+        setAssignParent={setAssignParent}
+        newCategoryName={newCategoryName}
+        setNewCategoryName={setNewCategoryName}
+        onCreated={handleCategoryCreated}
+        onRenameCategory={(childId, label) => {
+          persistLayout(withCategoryLabel(layout, childId, label));
+        }}
+        lockedParent={(() => {
+          const locked = orgParentForTypeFilter(typeFilter);
+          if (locked !== "all") return locked;
+          return parentFilter !== "all" ? parentFilter : undefined;
+        })()}
+      />
 
       {/* Category Assignment Modal */}
       {isCategoryModalOpen && (

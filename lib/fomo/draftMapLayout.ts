@@ -74,6 +74,34 @@ export function itemParentId(side?: string): MapParentId {
   return "both";
 }
 
+export function normalizeDraftContentType(value?: string): string {
+  const raw = String(value || "mod").toLowerCase();
+  if (raw === "resourcepack" || raw === "texture" || raw === "texture-pack" || raw === "resource-pack") {
+    return "resourcepack";
+  }
+  if (raw === "shader" || raw === "shaderpack") return "shader";
+  if (raw === "datapack" || raw === "data-pack") return "datapack";
+  return "mod";
+}
+
+/** alluser (client) vs allhost (server): texturas/shaders vs datapacks. Mods: null → side editable. */
+export function fixedOrgParentForContentType(contentType?: string): MapParentId | null {
+  const type = normalizeDraftContentType(contentType);
+  if (type === "resourcepack" || type === "shader") return "client";
+  if (type === "datapack") return "server";
+  return null;
+}
+
+export function orgParentForItem(item: {
+  side?: string;
+  content_type?: string;
+  projectType?: string;
+}): MapParentId {
+  const fixed = fixedOrgParentForContentType(item.content_type || item.projectType);
+  if (fixed) return fixed;
+  return itemParentId(item.side);
+}
+
 const CONTENT_TYPE_IDS = new Set(["mod", "resourcepack", "shader", "datapack"]);
 
 export const DRAFT_CONTENT_TYPE_FILTERS = [
@@ -86,11 +114,22 @@ export const DRAFT_CONTENT_TYPE_FILTERS = [
 
 export type DraftContentTypeFilter = (typeof DRAFT_CONTENT_TYPE_FILTERS)[number]["id"];
 
-export function resolveItemChildId(item: { side?: string; category?: string }): string {
-  const parent = itemParentId(item.side);
+export function orgParentForTypeFilter(typeFilter: DraftContentTypeFilter): MapParentId | "all" {
+  if (typeFilter === "resourcepack" || typeFilter === "shader") return "client";
+  if (typeFilter === "datapack") return "server";
+  return "all";
+}
+
+export function resolveItemChildId(item: {
+  side?: string;
+  category?: string;
+  content_type?: string;
+  projectType?: string;
+}): string {
+  const parent = orgParentForItem(item);
   const raw = (item.category || "other").trim() || "other";
   const parsed = parseChildCategoryId(raw);
-  if (parsed) return childCategoryId(parsed.parent, parsed.slug);
+  if (parsed) return childCategoryId(parent, parsed.slug);
   if (CONTENT_TYPE_IDS.has(raw.toLowerCase())) return childCategoryId(parent, "other");
   return childCategoryId(parent, raw);
 }

@@ -16,7 +16,10 @@ import {
   groupItemsByChildId,
   isUncategorizedChildId,
   itemMatchesTreeFilter,
-  itemParentId,
+  orgParentForItem,
+  orgParentForTypeFilter,
+  fixedOrgParentForContentType,
+  parseChildCategoryId,
   removeMapChild,
   visibleMapChildren,
   withCategoryLabel,
@@ -27,7 +30,7 @@ import {
 } from "@/lib/fomo/draftMapLayout";
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { DraftCategoryFilterBar } from "@/components/fomo/community/draft-tabs/DraftCategoryFilterBar";
-import { DraftCreateCategoryModal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
+import { DraftCreateCategoryModal, DraftOverlayPortal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
 
 interface DraftItemsTabProps {
   draftId: string;
@@ -77,6 +80,11 @@ export function DraftItemsTab({
     setChildFilter("all");
   }, [draftId]);
 
+  useEffect(() => {
+    const locked = orgParentForTypeFilter(typeFilter);
+    if (locked !== "all") setParentFilter(locked);
+  }, [typeFilter]);
+
   const persistLayout = useCallback((next: DraftMapLayout) => {
     setLayout(next);
     writeDraftMapLayoutCache(draftId, next);
@@ -91,6 +99,8 @@ export function DraftItemsTab({
       side: mod.side,
       mod_name: mod.title,
       project_id: mod.projectId,
+      content_type: mod.projectType,
+      projectType: mod.projectType,
     })),
     [visibleMods],
   );
@@ -122,16 +132,22 @@ export function DraftItemsTab({
     onBulkRelocate?.(result.fromId, result.otherId, result.parent);
   };
 
-  const commitAssign = async (nextLayout: DraftMapLayout, childId: string, parent: MapParentId) => {
+  const commitAssign = async (nextLayout: DraftMapLayout, childId: string, _parent: MapParentId) => {
     if (!assigning) return;
-    persistLayout(withItemsAssignedToCategory(nextLayout, childId, [String(assigning.itemId || assigning.projectId)]));
-    await onAssignOrgCategory?.(assigning, childId, parent);
+    const parent = orgParentForItem({ projectType: assigning.projectType, side: assigning.side });
+    const parsed = parseChildCategoryId(childId);
+    const resolvedChild = parsed ? childCategoryId(parent, parsed.slug) : childId;
+    persistLayout(withItemsAssignedToCategory(nextLayout, resolvedChild, [String(assigning.itemId || assigning.projectId)]));
+    await onAssignOrgCategory?.(assigning, resolvedChild, parent);
     setAssigning(null);
     setNewCategoryName("");
   };
 
   const openCreateCategory = () => {
-    setAssignParent(parentFilter !== "all" ? parentFilter : "both");
+    const locked = orgParentForTypeFilter(typeFilter);
+    const branch = locked !== "all" ? locked : parentFilter;
+    if (branch === "all") return;
+    setAssignParent(branch);
     setNewCategoryName("");
     setShowCreateCategory(true);
   };
@@ -163,6 +179,16 @@ export function DraftItemsTab({
         onChildFilter={setChildFilter}
         canEditCategories={canEditItems}
         onCreateCategory={canEditItems ? openCreateCategory : undefined}
+        createCategoryDisabled={
+          orgParentForTypeFilter(typeFilter) === "all" && parentFilter === "all"
+        }
+        createCategoryTitle={
+          orgParentForTypeFilter(typeFilter) !== "all"
+            ? "Nueva categoría en la rama fija de este tipo"
+            : parentFilter === "all"
+              ? "Elegí Client, Server o Both en el filtro de rama"
+              : "Nueva categoría en la rama seleccionada"
+        }
       />
       </div>
 
@@ -270,7 +296,7 @@ export function DraftItemsTab({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setAssignParent(itemParentId(mod.side));
+                                    setAssignParent(orgParentForItem({ projectType: mod.projectType, side: mod.side }));
                                     setAssigning(mod);
                                   }}
                                   className="text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 truncate max-w-[8rem]"
@@ -347,16 +373,34 @@ export function DraftItemsTab({
         newCategoryName={newCategoryName}
         setNewCategoryName={setNewCategoryName}
         onCreated={handleCategoryCreated}
+        onRenameCategory={(childId, label) => {
+          persistLayout(withCategoryLabel(layout, childId, label));
+        }}
+        lockedParent={(() => {
+          const locked = orgParentForTypeFilter(typeFilter);
+          if (locked !== "all") return locked;
+          return parentFilter !== "all" ? parentFilter : undefined;
+        })()}
       />
 
       {assigning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setAssigning(null)}>
+        <DraftOverlayPortal open onClose={() => setAssigning(null)}>
           <div
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-4 space-y-3"
+            className="relative z-[201] w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-4 space-y-3 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-sm font-bold text-white">Mover categoría</h3>
             <p className="text-[10px] text-white/50">Organización del draft. No cambia el tipo (mod, textura, shader).</p>
+            {(() => {
+              const lockedBranch = assigning ? fixedOrgParentForContentType(assigning.projectType) : null;
+              const branch = lockedBranch ?? assignParent;
+              return (
+                <>
+            {lockedBranch ? (
+              <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-[10px] font-bold uppercase text-orange-200">
+                Rama: {MAP_PARENTS.find((p) => p.id === lockedBranch)?.label || lockedBranch} (fijo)
+              </div>
+            ) : (
             <div className="flex gap-1">
               {MAP_PARENTS.map((parent) => (
                 <button
@@ -369,14 +413,15 @@ export function DraftItemsTab({
                 </button>
               ))}
             </div>
+            )}
             <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
               {MAP_CHILD_PRESETS.map((preset) => (
                 <button
                   key={preset.slug}
                   type="button"
                   onClick={() => {
-                    const { layout: next } = addMapChild(layout, assignParent, preset.label);
-                    void commitAssign(next, childCategoryId(assignParent, preset.slug), assignParent);
+                    const { layout: next } = addMapChild(layout, branch, preset.label);
+                    void commitAssign(next, childCategoryId(branch, preset.slug), branch);
                   }}
                   className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-left text-[10px] font-bold text-white/80"
                 >
@@ -395,19 +440,22 @@ export function DraftItemsTab({
                 type="button"
                 disabled={!newCategoryName.trim()}
                 onClick={() => {
-                  const { layout: next, child } = addMapChild(layout, assignParent, newCategoryName.trim());
-                  void commitAssign(next, child.id, assignParent);
+                  const { layout: next, child } = addMapChild(layout, branch, newCategoryName.trim());
+                  void commitAssign(next, child.id, branch);
                 }}
                 className="rounded-xl bg-orange-500 px-3 py-2 text-[10px] font-bold text-white disabled:opacity-40"
               >
                 Añadir
               </button>
             </div>
+                </>
+              );
+            })()}
             <button type="button" onClick={() => setAssigning(null)} className="w-full py-2 text-[10px] text-white/40">
               Cancelar
             </button>
           </div>
-        </div>
+        </DraftOverlayPortal>
       )}
     </motion.div>
   );

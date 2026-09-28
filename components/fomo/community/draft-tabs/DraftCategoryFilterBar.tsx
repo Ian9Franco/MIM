@@ -18,7 +18,7 @@ export function DraftCategoryFilterBar({
   typeFilter,
   parentFilter,
   childFilter,
-  children,
+  mapChildren,
   layout,
   isModern,
   onTypeFilter,
@@ -32,7 +32,7 @@ export function DraftCategoryFilterBar({
   typeFilter: DraftContentTypeFilter;
   parentFilter: MapParentId | "all";
   childFilter: string | "all";
-  children: DraftMapChild[];
+  mapChildren: DraftMapChild[];
   layout: DraftMapLayout;
   isModern?: boolean;
   onTypeFilter: (value: DraftContentTypeFilter) => void;
@@ -46,8 +46,8 @@ export function DraftCategoryFilterBar({
   const typeLockedParent = orgParentForTypeFilter(typeFilter);
   const parentLockedByType = typeLockedParent !== "all";
   const visibleChildren = parentFilter === "all"
-    ? children
-    : children.filter((child) => child.parent === parentFilter);
+    ? mapChildren
+    : mapChildren.filter((child) => child.parent === parentFilter);
   const childLabel = childFilter === "all"
     ? "Todas las categorías"
     : categoryDisplayLabel(childFilter, childFilter, layout);

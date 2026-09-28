@@ -697,7 +697,7 @@ export function DraftItemsTab({
             typeFilter={typeFilter}
             parentFilter={parentFilter}
             childFilter={childFilter}
-            children={mapChildren}
+            mapChildren={mapChildren}
             layout={layout}
             isModern={isModern}
             onTypeFilter={setTypeFilter}
@@ -729,7 +729,7 @@ export function DraftItemsTab({
             catalogLoading={catalogLoading}
             isModern={isModern}
             filter={mapFilter}
-            children={mapChildren}
+            mapChildren={mapChildren}
             onFilterChange={setMapFilter}
           />
           {viewMode === "map" ? (

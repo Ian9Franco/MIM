@@ -227,7 +227,7 @@ export function DraftItemsTab({
         typeFilter={typeFilter}
         parentFilter={parentFilter}
         childFilter={childFilter}
-        children={mapChildren}
+        mapChildren={mapChildren}
         layout={layout}
         onTypeFilter={setTypeFilter}
         onParentFilter={setParentFilter}

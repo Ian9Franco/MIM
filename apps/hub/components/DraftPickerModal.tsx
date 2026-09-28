@@ -80,6 +80,7 @@ interface DraftPickerModalProps {
   onAddModToDraft: (draftId: string, mod: ModHit, category: string) => Promise<DraftAddResult>;
   onRemoveModFromDraft: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRecategorize: (draftId: string, projectId: string, newCat: string) => Promise<void>;
+  onUpdateContentType: (draftId: string, projectId: string, contentType: string, itemId?: string) => Promise<void>;
   onUpdateSide: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
   onUpdateDraftCover: (draftId: string, coverImage: string | null) => Promise<void>;
   onDeleteDraft: (draftId: string) => Promise<void>;
@@ -97,7 +98,7 @@ const LOADERS = ["fabric", "forge", "neoforge", "quilt", "any"];
 export function DraftPickerModal({
   open, initialEditDraftId, pendingMod, pendingMods = [], drafts, onClose,
   onCreateDraft, onAddModToDraft, onRemoveModFromDraft,
-  onRecategorize, onUpdateSide, onUpdateDraftCover, onDeleteDraft, onRefreshDrafts,
+  onUpdateContentType, onUpdateSide, onUpdateDraftCover, onDeleteDraft, onRefreshDrafts,
   currentUserId, onBatchAdded,
 }: DraftPickerModalProps) {
   const [view, setView] = useState<"pick" | "create" | "edit">("pick");
@@ -515,7 +516,7 @@ export function DraftPickerModal({
                               <div className="flex flex-wrap gap-1 mt-1">
                                 <select
                                   value={itemType}
-                                  onChange={async (e) => { await onRecategorize(editingDraft.id, item.project_id, e.target.value); onRefreshDrafts(); setEditingDraft(d => d ? { ...d, items: d.items?.map(i => i.project_id === item.project_id ? { ...i, category: e.target.value, content_type: e.target.value } : i) } : null); }}
+                                  onChange={async (e) => { await onUpdateContentType(editingDraft.id, item.project_id, e.target.value, item.id); onRefreshDrafts(); setEditingDraft(d => d ? { ...d, items: d.items?.map(i => i.project_id === item.project_id ? { ...i, content_type: e.target.value } : i) } : null); }}
                                   className="text-[9px] rounded-md py-0.5 px-1 outline-none cursor-pointer"
                                   style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: CAT_COLORS[itemType] || "var(--color-muted)" }}
                                 >

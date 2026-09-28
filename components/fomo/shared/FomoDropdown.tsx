@@ -84,9 +84,9 @@ export function FomoDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className={`absolute top-full z-50 mt-1.5 min-w-[10rem] overflow-hidden rounded-xl border shadow-[0_18px_40px_rgba(0,0,0,0.35)] origin-top ${
+            className={`absolute top-full z-[120] mt-1.5 min-w-full max-h-60 overflow-y-auto overflow-x-visible rounded-xl border shadow-[0_18px_40px_rgba(0,0,0,0.35)] origin-top ${
               align === "right" ? "right-0" : "left-0"
-            } ${fullWidth ? "w-full" : ""} ${menuClassName}`}
+            } ${fullWidth ? "w-full" : "min-w-[10rem]"} ${menuClassName}`}
             style={{
               borderColor: "var(--fomo-border)",
               background: "color-mix(in srgb, var(--fomo-card-bg) 92%, transparent)",
@@ -117,7 +117,7 @@ export function FomoDropdownOption({
       role="option"
       aria-selected={active}
       onClick={onClick}
-      className="block w-full px-3.5 py-2.5 text-left text-xs font-bold transition-colors hover:bg-white/6"
+      className="block w-full px-3.5 py-2.5 text-left text-xs font-bold leading-snug whitespace-normal break-words transition-colors hover:bg-white/6"
       style={{
         color: active ? "var(--color-primary)" : "var(--fomo-text-primary)",
         background: active ? "color-mix(in srgb, var(--color-primary) 14%, transparent)" : "transparent",

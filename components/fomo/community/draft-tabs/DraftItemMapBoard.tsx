@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Copy, GitBranch, Minus, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Copy, GitBranch, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import type { DraftCatalogEntry } from "@/hooks/fomo/useDraftItemCatalog";
 import type { DraftItemInsights } from "@/lib/fomo/draftItemInsights";
 import {
@@ -14,6 +14,7 @@ import {
   clampMapZoom,
   categoryDisplayLabel,
   isMapParentId,
+  isUncategorizedChildId,
   type DraftMapChild,
   type DraftMapLayout,
   type DraftMapPosition,
@@ -61,6 +62,7 @@ export function DraftItemMapBoard({
   onMoveCategory,
   onCreateChild,
   onSaveChild,
+  onRemoveChild,
 }: {
   groupedMods: Record<string, DraftItem[]>;
   catalog: Record<string, DraftCatalogEntry>;
@@ -73,6 +75,7 @@ export function DraftItemMapBoard({
   onMoveCategory: (categoryId: string, position: DraftMapPosition) => void;
   onCreateChild: (parent: MapParentId, label: string) => void;
   onSaveChild: (childId: string, label: string, parent: MapParentId) => void;
+  onRemoveChild?: (childId: string) => void;
 }) {
   const duplicateIds = useMemo(
     () => new Set(insights.duplicates.flatMap((g) => g.items.map((i) => i.id))),
@@ -473,6 +476,21 @@ export function DraftItemMapBoard({
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
+                    {onRemoveChild && !isUncategorizedChildId(col.id) && (
+                      <button
+                        type="button"
+                        data-map-edit
+                        aria-label="Eliminar categoría"
+                        className="rounded-md p-1 opacity-70 hover:opacity-100 hover:bg-red-500/20 hover:text-red-300"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveChild(col.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 </header>
                 {editingId === col.id && (

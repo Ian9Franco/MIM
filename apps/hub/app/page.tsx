@@ -33,6 +33,13 @@ const HUB_VARIANTS = {
   exit: (direction: number) => ({ y: direction >= 0 ? "-100%" : "100%", opacity: 0 }),
 };
 
+const HEADER_ANIM_SSR = {
+  fomoDuration: "7s",
+  fomoDelay: "0s",
+  slimeDuration: "6s",
+  slimeDelay: "0s",
+};
+
 function createHeaderAnim() {
   return {
     fomoDuration: `${(6.1 + Math.random() * 3.8).toFixed(2)}s`,
@@ -41,8 +48,6 @@ function createHeaderAnim() {
     slimeDelay: `-${(Math.random() * 5).toFixed(2)}s`,
   };
 }
-
-const HEADER_ANIM = createHeaderAnim();
 
 function formatSearchQuery(input: string): string {
   let text = input.trim();
@@ -145,7 +150,10 @@ export default function Home() {
   }
 
   const hubAnimationDirection = themeTransition.direction;
-  const headerAnim = HEADER_ANIM;
+  const [headerAnim, setHeaderAnim] = React.useState(HEADER_ANIM_SSR);
+  React.useEffect(() => {
+    setHeaderAnim(createHeaderAnim());
+  }, []);
 
   /**
    * Fetches the latest MIM release from GitHub and opens it.
@@ -430,6 +438,7 @@ export default function Home() {
               onRefreshDrafts={() => c.refreshUserData()}
               onUpdateDraftMetadata={c.updateDraftMetadata}
               onRecategorizeDraftItem={c.recategorizeDraftItem}
+              onUpdateDraftItemContentType={c.updateDraftItemContentType}
               onUpdateDraftItemSide={c.updateDraftItemSide}
             />
           )}
@@ -530,6 +539,7 @@ export default function Home() {
         onAddModToDraft={c.addModToDraft}
         onRemoveModFromDraft={c.removeModFromDraft}
         onRecategorize={c.recategorizeDraftItem}
+        onUpdateContentType={c.updateDraftItemContentType}
         onUpdateSide={c.updateDraftItemSide}
         onUpdateDraftCover={c.updateDraftCover}
         onDeleteDraft={c.deleteDraft}

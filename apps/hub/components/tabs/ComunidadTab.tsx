@@ -72,7 +72,8 @@ interface ComunidadTabProps {
   onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRefreshDrafts?: () => void;
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
-  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
+  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string, itemId?: string, side?: string) => Promise<void>;
+  onUpdateDraftItemContentType?: (draftId: string, projectId: string, contentType: string, itemId?: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
 }
 
@@ -187,6 +188,7 @@ export function ComunidadTab({
   onRefreshDrafts,
   onUpdateDraftMetadata,
   onRecategorizeDraftItem,
+  onUpdateDraftItemContentType,
   onUpdateDraftItemSide,
 }: ComunidadTabProps) {
   const [internalSection, setInternalSection] = useState<CommunitySection>("compartidos");
@@ -478,6 +480,7 @@ export function ComunidadTab({
           onRefreshDrafts={onRefreshDrafts}
           onUpdateDraftMetadata={onUpdateDraftMetadata}
           onRecategorizeDraftItem={onRecategorizeDraftItem}
+          onUpdateDraftItemContentType={onUpdateDraftItemContentType}
           onUpdateDraftItemSide={onUpdateDraftItemSide}
           onOpenProfile={(value) => {
             void openProfile(value, { stayInSection: true });

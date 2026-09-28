@@ -1109,6 +1109,7 @@ export function useHomeController() {
     handleCloseModDetails: closeProjectDetails,
     createDraft: drafts.createDraft, addModToDraft: drafts.addModToDraft,
     removeModFromDraft: drafts.removeModFromDraft, recategorizeDraftItem: drafts.recategorizeDraftItem,
+    updateDraftItemContentType: drafts.updateDraftItemContentType,
     updateDraftItemSide: drafts.updateDraftItemSide, updateDraftCover: drafts.updateDraftCover,
     deleteDraft: drafts.deleteDraft, updateDraftMetadata: drafts.updateDraftMetadata,
     onToggleFavorite, onToggleFollowAuthor,

@@ -74,12 +74,45 @@ export function itemParentId(side?: string): MapParentId {
   return "both";
 }
 
+const CONTENT_TYPE_IDS = new Set(["mod", "resourcepack", "shader", "datapack"]);
+
+export const DRAFT_CONTENT_TYPE_FILTERS = [
+  { id: "all", label: "Todos" },
+  { id: "mod", label: "Mods" },
+  { id: "resourcepack", label: "Texturas" },
+  { id: "shader", label: "Shaders" },
+  { id: "datapack", label: "Datapacks" },
+] as const;
+
+export type DraftContentTypeFilter = (typeof DRAFT_CONTENT_TYPE_FILTERS)[number]["id"];
+
 export function resolveItemChildId(item: { side?: string; category?: string }): string {
   const parent = itemParentId(item.side);
   const raw = (item.category || "other").trim() || "other";
   const parsed = parseChildCategoryId(raw);
   if (parsed) return childCategoryId(parsed.parent, parsed.slug);
+  if (CONTENT_TYPE_IDS.has(raw.toLowerCase())) return childCategoryId(parent, "other");
   return childCategoryId(parent, raw);
+}
+
+export function uncategorizedChildId(parent: MapParentId): string {
+  return childCategoryId(parent, "other");
+}
+
+export function isUncategorizedChildId(id: string): boolean {
+  return parseChildCategoryId(id)?.slug === "other";
+}
+
+export function itemMatchesTreeFilter(
+  item: { side?: string; category?: string },
+  parentFilter: MapParentId | "all",
+  childFilter: string | "all",
+): boolean {
+  const childId = resolveItemChildId(item);
+  const parsed = parseChildCategoryId(childId);
+  if (parentFilter !== "all" && parsed?.parent !== parentFilter) return false;
+  if (childFilter !== "all" && childId !== childFilter) return false;
+  return true;
 }
 
 function parsePosition(value: unknown): DraftMapPosition | null {
@@ -371,6 +404,43 @@ export function mergeMapLayout(base: DraftMapLayout, overlay: DraftMapLayout): D
   });
 }
 
+export function groupItemsByChildId<T extends { id: string; side?: string; category?: string; position?: number; mod_name?: string; project_id?: string }>(
+  items: T[],
+  layout: DraftMapLayout,
+): Record<string, T[]> {
+  const groups: Record<string, T[]> = {};
+  for (const child of layout.children) groups[child.id] = [];
+  for (const parent of MAP_PARENTS) {
+    const fallback = uncategorizedChildId(parent.id);
+    if (!groups[fallback]) groups[fallback] = [];
+  }
+  for (const item of items) {
+    const id = resolveItemChildId(item);
+    if (!groups[id]) groups[id] = [];
+    groups[id].push(item);
+  }
+  for (const id of Object.keys(groups)) {
+    groups[id] = sortItemsInCategory(groups[id], id, layout);
+  }
+  return groups;
+}
+
+export function visibleMapChildren(layout: DraftMapLayout, groupIds: string[]): DraftMapChild[] {
+  const extra = groupIds.filter((id) => !layout.children.some((child) => child.id === id));
+  const inferred = extra.map((id) => {
+    const parsed = parseChildCategoryId(id);
+    const slug = parsed?.slug || id;
+    const preset = MAP_CHILD_PRESETS.find((entry) => entry.slug === slug);
+    return {
+      id,
+      parent: (parsed?.parent || "both") as MapParentId,
+      slug,
+      label: categoryDisplayLabel(id, preset?.label || slug, layout),
+    };
+  });
+  return [...layout.children, ...inferred];
+}
+
 export function sortItemsInCategory<T extends { id: string; position?: number; mod_name?: string; project_id?: string }>(
   items: T[],
   categoryId: string,
@@ -412,6 +482,33 @@ export function withItemsAssignedToCategory(
   }
   itemOrder[categoryId] = nextList;
   return { ...layout, itemOrder };
+}
+
+export function removeMapChild(
+  layout: DraftMapLayout,
+  childId: string,
+): { ok: true; layout: DraftMapLayout; fromId: string; otherId: string; parent: MapParentId } | { ok: false; reason: "missing" | "protected" | "invalid" } {
+  const parsed = parseChildCategoryId(childId);
+  if (!parsed) return { ok: false, reason: "invalid" };
+  if (parsed.slug === "other") return { ok: false, reason: "protected" };
+  if (!layout.children.some((child) => child.id === childId)) return { ok: false, reason: "missing" };
+  const otherId = uncategorizedChildId(parsed.parent);
+  const children = layout.children.filter((child) => child.id !== childId);
+  const categories = { ...layout.categories };
+  delete categories[childId];
+  const labels = { ...layout.labels };
+  delete labels[childId];
+  const itemOrder = { ...(layout.itemOrder || {}) };
+  const moved = itemOrder[childId] || [];
+  delete itemOrder[childId];
+  itemOrder[otherId] = [...(itemOrder[otherId] || []), ...moved.filter((id) => !(itemOrder[otherId] || []).includes(id))];
+  return {
+    ok: true,
+    fromId: childId,
+    otherId,
+    parent: parsed.parent,
+    layout: ensureDefaultTree({ categories, labels, children, itemOrder }),
+  };
 }
 
 export function reparentMapChild(

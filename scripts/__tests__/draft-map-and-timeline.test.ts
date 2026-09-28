@@ -6,6 +6,7 @@ import {
   parseChildCategoryId,
   parseMapLayout,
   relocateCategoryLayout,
+  removeMapChild,
   reparentMapChild,
   resolveCategoryPositions,
   resolveItemChildId,
@@ -109,6 +110,27 @@ async function run() {
   );
   assert.deepEqual(assigned.itemOrder?.["both:utility"], ["y", "z"]);
   assert.deepEqual(assigned.itemOrder?.["client:other"], ["x"]);
+
+  const withItems = parseMapLayout({
+    children: [{ id: "client:performance", parent: "client", slug: "performance", label: "Rendimiento" }],
+    itemOrder: { "client:performance": ["mod-a", "mod-b"] },
+  });
+  const removed = removeMapChild(withItems, "client:performance");
+  assert.equal(removed.ok, true);
+  if (removed.ok) {
+    assert.equal(removed.otherId, "client:other");
+    assert.deepEqual(removed.layout.itemOrder?.["client:other"]?.slice(-2), ["mod-a", "mod-b"]);
+    assert.equal(removed.layout.children.some((child) => child.id === "client:performance"), false);
+    assert.equal(removed.layout.children.some((child) => child.id === "client:other"), true);
+  }
+  const protectedOther = removeMapChild(withItems, "client:other");
+  assert.equal(protectedOther.ok, false);
+  if (!protectedOther.ok) assert.equal(protectedOther.reason, "protected");
+
+  const renamedPreset = withCategoryLabel(withItems, "client:performance", "FPS");
+  assert.equal(renamedPreset.labels["client:performance"], "FPS");
+  assert.equal(renamedPreset.children.find((child) => child.id === "client:performance")?.id, "client:performance");
+  assert.equal(renamedPreset.children.find((child) => child.id === "client:performance")?.label, "FPS");
 
   const clearPath = routeOrthogonalPath({ x: 50, y: 0 }, { x: 50, y: 120 }, []);
   assert.equal(clearPath.length, 2);

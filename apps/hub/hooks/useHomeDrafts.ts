@@ -52,6 +52,7 @@ export const HOME_DRAFTS_PUBLIC_KEYS = [
   "addModToDraft",
   "removeModFromDraft",
   "recategorizeDraftItem",
+  "updateDraftItemContentType",
   "updateDraftItemSide",
   "updateDraftCover",
   "deleteDraft",
@@ -98,7 +99,8 @@ function draftItemToModHit(
     iconUrl: item.icon_url || item.iconUrl,
     author: "Comunidad",
     projectType: item.content_type || item.category || "mod",
-    categories: [item.category || item.content_type].filter(Boolean),
+    categories: [item.content_type || "mod"].filter(Boolean),
+    orgCategory: item.category,
     url: buildDraftProjectUrl(item),
     _source: "modrinth",
     gameVersions: actualVersion?.game_versions || item.game_versions || [draft.minecraft_version].filter(Boolean),
@@ -347,11 +349,33 @@ export function useHomeDrafts({
     draftId: string,
     projectId: string,
     category: string,
+    itemId?: string,
+    side?: string,
   ): Promise<void> => {
     if (!userId) return;
-    const { error } = await supabase.from("draft_items").update({ category, content_type: category })
-      .eq("draft_id", draftId).eq("project_id", projectId);
+    const payload: Record<string, string> = { category };
+    if (side) payload.side = side;
+    const query = supabase.from("draft_items").update(payload);
+    const { error } = itemId
+      ? await query.eq("id", itemId)
+      : await query.eq("draft_id", draftId).eq("project_id", projectId);
     if (error) showAlert("Error", `Error al recategorizar: ${error.message}`);
+    notifyDraftsChanged();
+    await refreshDrafts();
+  }, [refreshDrafts, showAlert, userId]);
+
+  const updateDraftItemContentType = useCallback(async (
+    draftId: string,
+    projectId: string,
+    contentType: string,
+    itemId?: string,
+  ): Promise<void> => {
+    if (!userId) return;
+    const query = supabase.from("draft_items").update({ content_type: contentType });
+    const { error } = itemId
+      ? await query.eq("id", itemId)
+      : await query.eq("draft_id", draftId).eq("project_id", projectId);
+    if (error) showAlert("Error", `Error al actualizar tipo: ${error.message}`);
     notifyDraftsChanged();
     await refreshDrafts();
   }, [refreshDrafts, showAlert, userId]);
@@ -432,6 +456,7 @@ export function useHomeDrafts({
     addModToDraft,
     removeModFromDraft,
     recategorizeDraftItem,
+    updateDraftItemContentType,
     updateDraftItemSide,
     updateDraftCover,
     deleteDraft,

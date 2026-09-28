@@ -46,6 +46,7 @@ function testDraftDecoding(): void {
       { id: "invalid" },
     ],
     draft_members: [{ user_id: "editor-1", role: "editor" }],
+    map_layout: { labels: { "client:other": "Sin categoría" } },
   }];
   const drafts = decodeHomeDrafts(raw, { sodium: "https://cdn.example/sodium.png" });
   assertEqual(drafts.length, 1, "valid drafts must survive decoding");
@@ -57,6 +58,11 @@ function testDraftDecoding(): void {
   assertEqual(drafts[0].items?.[0].game_versions?.[0], "1.21.1", "draft version must hydrate items");
   assertEqual(drafts[0].items?.[0].loaders?.[0], "fabric", "draft loader must hydrate items");
   assertEqual(collectDraftProjectIds(raw).join(","), "sodium", "icon lookup ids must come from valid rows");
+  assertEqual(
+    (drafts[0].map_layout as { labels?: Record<string, string> })?.labels?.["client:other"],
+    "Sin categoría",
+    "map_layout must survive decoding for Hub category tree",
+  );
 }
 
 function testActiveDraftPersistence(): void {
@@ -134,7 +140,7 @@ function testPublicContract(): void {
   const expected = [
     "userDrafts", "activeDraft", "setActiveDraft", "handleEnterDraftCollection",
     "handleExitDraft", "createDraft", "addModToDraft", "removeModFromDraft", "recategorizeDraftItem",
-    "updateDraftItemSide", "updateDraftCover", "deleteDraft", "updateDraftMetadata",
+    "updateDraftItemContentType", "updateDraftItemSide", "updateDraftCover", "deleteDraft", "updateDraftMetadata",
   ];
   assertEqual(HOME_DRAFTS_PUBLIC_KEYS.join(","), expected.join(","), "Draft public contract keys must remain stable");
 }
@@ -146,7 +152,7 @@ async function run(): Promise<void> {
   await testRemoteDecoding();
   await testProjectResolution();
   testPublicContract();
-  console.log("Home Drafts contract: 20 assertions passed");
+  console.log("Home Drafts contract: 21 assertions passed");
 }
 
 run().catch((error: unknown) => {

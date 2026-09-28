@@ -90,7 +90,8 @@ export interface DraftDetailViewProps {
   onRemoveModFromDraft?: (draftId: string, projectId: string, itemId?: string) => Promise<void>;
   onRefreshDrafts?: () => void;
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
-  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string) => Promise<void>;
+  onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string, itemId?: string, side?: string) => Promise<void>;
+  onUpdateDraftItemContentType?: (draftId: string, projectId: string, contentType: string, itemId?: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
   onOpenProfile?: (profile: { id: string; username?: string | null; avatar_url?: string | null; color?: string | null }) => void;
 }
@@ -109,12 +110,12 @@ export function DraftDetailView({
   onRefreshDrafts,
   onUpdateDraftMetadata,
   onRecategorizeDraftItem,
+  onUpdateDraftItemContentType,
   onUpdateDraftItemSide,
   onOpenProfile,
 }: DraftDetailViewProps) {
   const [draft, setDraft] = useState<DraftDetailModel>(initialDraft);
   const [tab, setTab] = useState<DraftTab>("items");
-  const [typeFilter, setTypeFilter] = useState("all");
 
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [members, setMembers] = useState<DraftMemberRecord[]>([]);
@@ -177,7 +178,6 @@ export function DraftDetailView({
   // Reset state on draft change
   useEffect(() => {
     setTab("items");
-    setTypeFilter("all");
     setRemovedIds(new Set());
     setMembers([]);
     setActivity([]);
@@ -263,9 +263,7 @@ export function DraftDetailView({
 
   const visibleMods = activeCollectionMods.filter((mod: ModHit) => {
     const key = mod.itemId || mod.projectId;
-    if (removedIds.has(key)) return false;
-    if (typeFilter === "all") return true;
-    return (mod.projectType || "mod") === typeFilter;
+    return !removedIds.has(key);
   });
 
   const handleSaveMetadata = async () => {
@@ -325,8 +323,8 @@ export function DraftDetailView({
     if (!draft?.id || !editingItem) return;
     setSavingItem(true);
     try {
-      if (onRecategorizeDraftItem && itemType !== editingItem.projectType) {
-        await onRecategorizeDraftItem(draft.id, editingItem.projectId, itemType);
+      if (onUpdateDraftItemContentType && itemType !== editingItem.projectType) {
+        await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId);
       }
       if (onUpdateDraftItemSide && itemSide !== editingItem.side) {
         await onUpdateDraftItemSide(draft.id, editingItem.projectId, itemSide, editingItem.itemId);
@@ -394,8 +392,8 @@ export function DraftDetailView({
           {tab === "items" && (
             <DraftItemsTab
               key="items"
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
+              draftId={draft.id}
+              mapLayout={draft.map_layout}
               loadingActiveMods={loadingActiveMods}
               visibleMods={visibleMods}
               canEditItems={canEditItems}
@@ -407,6 +405,24 @@ export function DraftDetailView({
                 setItemSide(mod.side || "both");
               }}
               onRemoveItem={canEditItems && onRemoveModFromDraft ? handleRemoveMod : undefined}
+              onAssignOrgCategory={canEditItems && onRecategorizeDraftItem ? async (mod, categoryId, side) => {
+                await onRecategorizeDraftItem(draft.id, mod.projectId, categoryId, mod.itemId, side);
+                const idx = activeCollectionMods.findIndex((entry) => entry.itemId === mod.itemId || entry.projectId === mod.projectId);
+                if (idx !== -1) {
+                  activeCollectionMods[idx].orgCategory = categoryId;
+                  activeCollectionMods[idx].side = side;
+                }
+                onRefreshDrafts?.();
+              } : undefined}
+              onBulkRelocate={(fromId, otherId, parent) => {
+                for (const mod of activeCollectionMods) {
+                  if (mod.orgCategory === fromId) {
+                    mod.orgCategory = otherId;
+                    mod.side = parent;
+                  }
+                }
+                onRefreshDrafts?.();
+              }}
             />
           )}
 

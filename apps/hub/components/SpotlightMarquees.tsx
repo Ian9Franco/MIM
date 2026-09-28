@@ -24,6 +24,7 @@ export interface ModHit {
   gameVersions?: string[];
   loaders?: string[];
   side?: string;
+  orgCategory?: string;
   versionId?: string | null;
   gallery?: {
     url: string;

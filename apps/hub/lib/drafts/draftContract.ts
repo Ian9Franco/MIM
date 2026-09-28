@@ -38,6 +38,7 @@ export interface HomeDraft {
   cover_image?: string | null;
   description?: string;
   items?: HomeDraftItem[];
+  map_layout?: unknown;
   /** FomoUserDraft-compatible optional fields */
   created_at?: string;
   updated_at?: string;
@@ -162,6 +163,7 @@ export function decodeHomeDraft(
     visibility: optionalString(value.visibility) ?? "private",
     cover_image: optionalString(value.cover_image) ?? null,
     description: optionalString(value.description),
+    map_layout: value.map_layout,
     owner_id: optionalString(value.owner_id) ?? optionalString(value.user_id),
     members,
     created_at: optionalString(value.created_at),

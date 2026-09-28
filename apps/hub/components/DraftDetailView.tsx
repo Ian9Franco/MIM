@@ -16,7 +16,7 @@ import {
   DraftItemEditModal,
   type DraftTab,
 } from "./draft-detail";
-import { fixedOrgParentForContentType } from "@/lib/fomo/draftMapLayout";
+import { fixedOrgParentForContentType, orgParentForItem, remapOrgCategoryToParent } from "@/lib/fomo/draftMapLayout";
 import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
 import { DRAFT_ITEMS_CHANGED_EVENT } from "../lib/drafts/draftContract";
 
@@ -95,7 +95,13 @@ export interface DraftDetailViewProps {
   onRefreshDrafts?: () => void;
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string, itemId?: string, side?: string) => Promise<void>;
-  onUpdateDraftItemContentType?: (draftId: string, projectId: string, contentType: string, itemId?: string) => Promise<void>;
+  onUpdateDraftItemContentType?: (
+    draftId: string,
+    projectId: string,
+    contentType: string,
+    itemId?: string,
+    extras?: { versionId?: string | null; category?: string; side?: string },
+  ) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
   onOpenProfile?: (profile: { id: string; username?: string | null; avatar_url?: string | null; color?: string | null }) => void;
 }
@@ -352,12 +358,24 @@ export function DraftDetailView({
     if (!draft?.id || !editingItem) return;
     setSavingItem(true);
     try {
-      if (onUpdateDraftItemContentType && itemType !== editingItem.projectType) {
-        await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId);
-      }
       const fixedSide = fixedOrgParentForContentType(itemType);
       const nextSide = fixedSide || itemSide;
-      if (onUpdateDraftItemSide && nextSide !== editingItem.side) {
+      const nextCategory = remapOrgCategoryToParent(editingItem.orgCategory, orgParentForItem({
+        projectType: itemType,
+        content_type: itemType,
+        side: nextSide,
+      }));
+      if (onUpdateDraftItemContentType && (
+        itemType !== editingItem.projectType
+        || nextSide !== editingItem.side
+        || nextCategory !== editingItem.orgCategory
+      )) {
+        await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId, {
+          category: nextCategory,
+          side: nextSide,
+          versionId: editingItem.formatVersionIds?.[itemType] ?? undefined,
+        });
+      } else if (onUpdateDraftItemSide && nextSide !== editingItem.side) {
         await onUpdateDraftItemSide(draft.id, editingItem.projectId, nextSide, editingItem.itemId);
       }
       setEditingItem(null);
@@ -366,6 +384,7 @@ export function DraftDetailView({
       if (idx !== -1) {
         activeCollectionMods[idx].projectType = itemType;
         activeCollectionMods[idx].side = nextSide;
+        activeCollectionMods[idx].orgCategory = nextCategory;
       }
       void loadActivity(true);
     } catch (e) {
@@ -427,6 +446,18 @@ export function DraftDetailView({
               mapLayout={draft.map_layout}
               loadingActiveMods={loadingActiveMods}
               visibleMods={visibleMods}
+              draftVersion={draft.minecraft_version}
+              onChangeItemFormat={canEditItems && onUpdateDraftItemContentType ? async (mod, contentType, extras) => {
+                await onUpdateDraftItemContentType(draft.id, mod.projectId, contentType, mod.itemId, extras);
+                const idx = activeCollectionMods.findIndex((entry) => entry.itemId === mod.itemId || entry.projectId === mod.projectId);
+                if (idx !== -1) {
+                  activeCollectionMods[idx].projectType = contentType;
+                  if (extras?.category) activeCollectionMods[idx].orgCategory = extras.category;
+                  if (extras?.side) activeCollectionMods[idx].side = extras.side;
+                  if (extras && "versionId" in extras) activeCollectionMods[idx].versionId = extras.versionId ?? null;
+                }
+                onRefreshDrafts?.();
+              } : undefined}
               canEditItems={canEditItems}
               isPublic={isPublic}
               handleOpenModDetails={handleOpenModDetails}
@@ -532,6 +563,7 @@ export function DraftDetailView({
         setItemSide={setItemSide}
         savingItem={savingItem}
         onSave={handleSaveItemEdit}
+        availableFormats={editingItem?.availableFormats}
       />
     </motion.div>
   );

@@ -104,6 +104,14 @@ export function orgParentForItem(item: {
 
 const CONTENT_TYPE_IDS = new Set(["mod", "resourcepack", "shader", "datapack"]);
 
+export function remapOrgCategoryToParent(category: string | undefined, parent: MapParentId): string {
+  const parsed = parseChildCategoryId(category || "");
+  if (parsed) return childCategoryId(parent, parsed.slug);
+  const raw = (category || "other").trim() || "other";
+  if (CONTENT_TYPE_IDS.has(raw.toLowerCase())) return childCategoryId(parent, "other");
+  return childCategoryId(parent, raw);
+}
+
 export const DRAFT_CONTENT_TYPE_FILTERS = [
   { id: "all", label: "Todos" },
   { id: "mod", label: "Mods" },

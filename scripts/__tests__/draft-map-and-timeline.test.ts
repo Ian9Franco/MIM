@@ -14,6 +14,7 @@ import {
   sortItemsInCategory,
   withCategoryLabel,
   withItemsAssignedToCategory,
+  remapOrgCategoryToParent,
 } from "../../lib/fomo/draftMapLayout";
 import {
   roundedOrthogonalD,
@@ -65,6 +66,8 @@ async function run() {
   assert.equal(fixedOrgParentForContentType("resourcepack"), "client");
   assert.equal(fixedOrgParentForContentType("datapack"), "server");
   assert.equal(fixedOrgParentForContentType("mod"), null);
+  assert.equal(remapOrgCategoryToParent("both:utility", "client"), "client:utility");
+  assert.equal(remapOrgCategoryToParent("mod", "server"), "server:other");
 
   const first = defaultCategoryPosition(0);
   const fifth = defaultCategoryPosition(4);

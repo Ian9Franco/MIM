@@ -26,6 +26,8 @@ export interface ModHit {
   side?: string;
   orgCategory?: string;
   versionId?: string | null;
+  availableFormats?: string[];
+  formatVersionIds?: Partial<Record<string, string>>;
   gallery?: {
     url: string;
     thumbnailUrl?: string;

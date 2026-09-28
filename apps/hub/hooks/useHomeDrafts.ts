@@ -369,9 +369,14 @@ export function useHomeDrafts({
     projectId: string,
     contentType: string,
     itemId?: string,
+    extras?: { versionId?: string | null; category?: string; side?: string },
   ): Promise<void> => {
     if (!userId) return;
-    const query = supabase.from("draft_items").update({ content_type: contentType });
+    const payload: Record<string, string | null> = { content_type: contentType };
+    if (typeof extras?.versionId === "string" && extras.versionId) payload.version_id = extras.versionId;
+    if (extras?.category) payload.category = extras.category;
+    if (extras?.side) payload.side = extras.side;
+    const query = supabase.from("draft_items").update(payload);
     const { error } = itemId
       ? await query.eq("id", itemId)
       : await query.eq("draft_id", draftId).eq("project_id", projectId);

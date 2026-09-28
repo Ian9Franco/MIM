@@ -3,6 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Check } from "lucide-react";
+import { dualFormatBadgeLabel, isDualDraftFormat } from "@/lib/fomo/draftItemFormats";
 import { fixedOrgParentForContentType } from "@/lib/fomo/draftMapLayout";
 
 import type { ModHit } from "../SpotlightMarquees";
@@ -16,6 +17,7 @@ interface DraftItemEditModalProps {
   setItemSide: (s: string) => void;
   savingItem: boolean;
   onSave: () => void;
+  availableFormats?: string[];
 }
 
 const PROJECT_TYPES = [
@@ -45,8 +47,11 @@ export function DraftItemEditModal({
   setItemSide,
   savingItem,
   onSave,
+  availableFormats = [],
 }: DraftItemEditModalProps) {
   const fixedSide = fixedOrgParentForContentType(itemType);
+  const dual = isDualDraftFormat(availableFormats);
+  const knownFormats = new Set(availableFormats);
 
   return (
     <AnimatePresence>
@@ -70,6 +75,11 @@ export function DraftItemEditModal({
               <div className="min-w-0">
                 <h3 className="text-xs font-bold text-white truncate">{editingItem.title}</h3>
                 <p className="text-[9px] text-white/40 font-mono mt-0.5">Editar Propiedades</p>
+                {dual && (
+                  <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                    Dual en esta versión: {dualFormatBadgeLabel(availableFormats)}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -88,11 +98,14 @@ export function DraftItemEditModal({
                 <div className="grid grid-cols-2 gap-1.5 mt-1.5">
                   {PROJECT_TYPES.map((t) => {
                     const active = itemType === t.id;
+                    const allowed = knownFormats.size === 0 || knownFormats.has(t.id) || t.id === editingItem?.projectType;
                     return (
                       <button
                         key={t.id}
                         type="button"
+                        disabled={!allowed}
                         onClick={() => {
+                          if (!allowed) return;
                           setItemType(t.id);
                           const nextFixed = fixedOrgParentForContentType(t.id);
                           if (nextFixed) setItemSide(nextFixed);
@@ -100,8 +113,11 @@ export function DraftItemEditModal({
                         className={`py-2 px-2 rounded-xl text-[10px] font-semibold transition-all border text-center ${
                           active
                             ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
-                            : "bg-white/[0.02] text-white/60 border-white/[0.06] hover:bg-white/5"
+                            : allowed
+                              ? "bg-white/[0.02] text-white/60 border-white/[0.06] hover:bg-white/5"
+                              : "bg-white/[0.01] text-white/25 border-white/[0.04] cursor-not-allowed"
                         }`}
+                        title={allowed ? t.label : "Este proyecto no publica ese formato en la versión del draft"}
                       >
                         {t.label}
                       </button>

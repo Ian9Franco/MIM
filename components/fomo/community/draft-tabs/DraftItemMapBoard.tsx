@@ -31,6 +31,8 @@ type DraftItem = {
   mod_name?: string;
   source?: string;
   category?: string;
+  content_type?: string;
+  contentType?: string;
   side?: string;
   version_id?: string;
   icon_url?: string;

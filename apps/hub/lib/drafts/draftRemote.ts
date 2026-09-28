@@ -1,6 +1,12 @@
 import type { ModHit } from "../../components/SpotlightMarquees";
 import type { HomeDraftDependency } from "./draftContract";
 import { normalizeLoader } from "../projectTypes";
+import {
+  contentTypesFromLoaders,
+  pickVersionForFormat,
+  uniqueDraftFormats,
+  type DraftItemFormat,
+} from "@/lib/fomo/draftItemFormats";
 
 type DraftFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -114,9 +120,6 @@ export async function resolveDraftModrinthItem(
   const projectUrl = new URL(`/v2/project/${encodeURIComponent(mod.projectId)}`, "https://api.modrinth.com");
   const versionUrl = new URL(`/v2/project/${encodeURIComponent(mod.projectId)}/version`, "https://api.modrinth.com");
   versionUrl.searchParams.set("game_versions", JSON.stringify([draftVersion]));
-  const loader = normalizeLoader(draftLoader);
-  if (contentType === "mod" && loader) versionUrl.searchParams.set("loaders", JSON.stringify([loader]));
-
   const [projectPayload, versionsPayload] = await Promise.all([
     responseJson(await fetcher(projectUrl)),
     responseJson(await fetcher(versionUrl)),
@@ -127,7 +130,71 @@ export async function resolveDraftModrinthItem(
         return version ? [version] : [];
       })
     : [];
-  return { project: decodeProject(projectPayload), version: versions[0] ?? null };
+  const preferredLoader = contentType === "mod" ? normalizeLoader(draftLoader) : "";
+  const version = pickVersionForFormat(versions, contentType, preferredLoader) ?? versions[0] ?? null;
+  return { project: decodeProject(projectPayload), version };
+}
+
+export interface DraftProjectFormatInfo {
+  types: DraftItemFormat[];
+  versionByType: Partial<Record<DraftItemFormat, string>>;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let index = 0;
+  async function runNext(): Promise<void> {
+    const current = index;
+    index += 1;
+    if (current >= items.length) return;
+    results[current] = await worker(items[current]);
+    await runNext();
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => runNext());
+  await Promise.all(workers);
+  return results;
+}
+
+export async function fetchDraftProjectFormats(
+  projectIds: string[],
+  gameVersion: string,
+  fetcher: DraftFetch = fetch,
+): Promise<Record<string, DraftProjectFormatInfo>> {
+  const ids = [...new Set(projectIds.filter(Boolean))];
+  if (ids.length === 0 || !gameVersion) return {};
+
+  const rows = await mapWithConcurrency(ids, 4, async (projectId) => {
+    const versionUrl = new URL(`/v2/project/${encodeURIComponent(projectId)}/version`, "https://api.modrinth.com");
+    versionUrl.searchParams.set("game_versions", JSON.stringify([gameVersion]));
+    try {
+      const payload = await responseJson(await fetcher(versionUrl));
+      const versions = Array.isArray(payload)
+        ? payload.flatMap((item) => {
+            const version = decodeVersion(item);
+            return version ? [version] : [];
+          })
+        : [];
+      const types = uniqueDraftFormats(versions.flatMap((version) => contentTypesFromLoaders(version.loaders)));
+      const versionByType: Partial<Record<DraftItemFormat, string>> = {};
+      for (const type of types) {
+        const match = pickVersionForFormat(versions, type);
+        if (match) versionByType[type] = match.id;
+      }
+      return { projectId, info: { types, versionByType } satisfies DraftProjectFormatInfo };
+    } catch (error) {
+      console.error("Error fetching draft project formats:", error);
+      return { projectId, info: { types: [], versionByType: {} } satisfies DraftProjectFormatInfo };
+    }
+  });
+
+  return rows.reduce<Record<string, DraftProjectFormatInfo>>((acc, row) => {
+    if (row.info.types.length > 0) acc[row.projectId] = row.info;
+    return acc;
+  }, {});
 }
 
 export async function fetchRequiredDependencyProjects(

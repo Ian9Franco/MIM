@@ -31,6 +31,8 @@ type DraftItem = {
   mod_name?: string;
   source?: string;
   category?: string;
+  content_type?: string;
+  contentType?: string;
   side?: string;
   version_id?: string;
   icon_url?: string;
@@ -133,8 +135,14 @@ export function DraftItemMapBoard({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panRef = useRef(pan);
   const zoomRef = useRef(zoom);
-  panRef.current = pan;
-  zoomRef.current = zoom;
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     setPositions(resolveCategoryPositions(nodeIds, layout));
@@ -159,7 +167,9 @@ export function DraftItemMapBoard({
     moved: boolean;
   } | null>(null);
   const onMoveCategoryRef = useRef(onMoveCategory);
-  onMoveCategoryRef.current = onMoveCategory;
+  useEffect(() => {
+    onMoveCategoryRef.current = onMoveCategory;
+  }, [onMoveCategory]);
 
   const sized = useMemo(() => {
     const sizes: Record<string, { w: number; h: number }> = {};
@@ -602,7 +612,7 @@ export function DraftInsightsStrip({
   catalogLoading,
   isModern,
   filter,
-  children,
+  mapChildren,
   onFilterChange,
 }: {
   insights: DraftItemInsights;
@@ -610,13 +620,13 @@ export function DraftInsightsStrip({
   catalogLoading: boolean;
   isModern: boolean;
   filter: MapBoardFilter;
-  children: DraftMapChild[];
+  mapChildren: DraftMapChild[];
   onFilterChange: (filter: MapBoardFilter) => void;
 }) {
   const dupCount = insights.duplicates.reduce((n, g) => n + g.items.length, 0);
   const categoryValue = filter.startsWith("category:") ? filter.slice("category:".length) : "";
   const categoryLabel = MAP_PARENTS.find((p) => p.id === categoryValue)?.label
-    || children.find((col) => col.id === categoryValue)?.label
+    || mapChildren.find((col) => col.id === categoryValue)?.label
     || "Categoría";
 
   const missingGroups = useMemo(() => {
@@ -654,7 +664,7 @@ export function DraftInsightsStrip({
               {parent.label}
             </FomoDropdownOption>
           ))}
-          {children.map((col) => (
+          {mapChildren.map((col) => (
             <FomoDropdownOption key={col.id} active={filter === `category:${col.id}`} onClick={() => onFilterChange(`category:${col.id}`)}>
               {MAP_PARENTS.find((p) => p.id === col.parent)?.label} / {col.label}
             </FomoDropdownOption>

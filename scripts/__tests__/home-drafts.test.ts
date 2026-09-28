@@ -12,8 +12,14 @@ import {
 import {
   fetchDraftIcons,
   fetchDraftVersions,
+  fetchDraftProjectFormats,
   resolveDraftModrinthItem,
 } from "../../apps/hub/lib/drafts/draftRemote";
+import {
+  contentTypesFromLoaders,
+  isOrgParentAllowedForFormat,
+  pickVersionForFormat,
+} from "../../lib/fomo/draftItemFormats";
 import { HOME_DRAFTS_PUBLIC_KEYS } from "../../apps/hub/hooks/useHomeDrafts";
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -134,6 +140,39 @@ async function testProjectResolution(): Promise<void> {
   });
   assertEqual(curseForgeCalls, 0, "CurseForge items must not call Modrinth resolution");
   assertEqual(curseForge.version, null, "CurseForge compatibility behavior must remain provider-local");
+
+  const resolvedDatapackFirst = await resolveDraftModrinthItem({
+    projectId: "dual", title: "Dual", author: "test", projectType: "mod", _source: "modrinth",
+  }, "1.21.1", "fabric", "datapack", async (input) => {
+    const url = String(input);
+    return url.includes("/version")
+      ? jsonResponse([
+          { id: "mod-ver", game_versions: ["1.21.1"], loaders: ["fabric"], dependencies: [] },
+          { id: "dp-ver", game_versions: ["1.21.1"], loaders: ["datapack"], dependencies: [] },
+        ])
+      : jsonResponse({ id: "dual", title: "Dual" });
+  });
+  assertEqual(resolvedDatapackFirst.version?.id, "dp-ver", "datapack format must pick datapack version even if a mod version is listed first");
+}
+
+function testDraftItemFormats(): void {
+  assertEqual(contentTypesFromLoaders(["fabric", "datapack"]).join(","), "mod,datapack", "fabric+datapack must be dual formats");
+  assertEqual(contentTypesFromLoaders(["minecraft", "datapack"]).join(","), "resourcepack,datapack", "texture+datapack must be dual formats");
+  assertEqual(isOrgParentAllowedForFormat("server", "resourcepack"), false, "texturas cannot live on the server branch");
+  assertEqual(isOrgParentAllowedForFormat("client", "mod"), true, "mods can move to client");
+  assertEqual(pickVersionForFormat([
+    { id: "a", loaders: ["fabric"] },
+    { id: "b", loaders: ["datapack"] },
+  ], "datapack")?.id, "b", "format picker must skip the unrelated version");
+}
+
+async function testProjectFormats(): Promise<void> {
+  const formats = await fetchDraftProjectFormats(["dual"], "1.21.1", async () => jsonResponse([
+    { id: "mod-ver", game_versions: ["1.21.1"], loaders: ["fabric"], dependencies: [] },
+    { id: "tex-ver", game_versions: ["1.21.1"], loaders: ["minecraft"], dependencies: [] },
+  ]));
+  assertEqual(formats.dual.types.join(","), "mod,resourcepack", "draft version formats must include every published type");
+  assertEqual(formats.dual.versionByType.resourcepack, "tex-ver", "texture format must map to the minecraft loader version");
 }
 
 function testPublicContract(): void {
@@ -151,8 +190,10 @@ async function run(): Promise<void> {
   testMetadataAndEventContract();
   await testRemoteDecoding();
   await testProjectResolution();
+  testDraftItemFormats();
+  await testProjectFormats();
   testPublicContract();
-  console.log("Home Drafts contract: 21 assertions passed");
+  console.log("Home Drafts contract: assertions passed");
 }
 
 run().catch((error: unknown) => {

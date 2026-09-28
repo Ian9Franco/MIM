@@ -28,12 +28,22 @@ import {
   type DraftMapLayout,
   type MapParentId,
 } from "@/lib/fomo/draftMapLayout";
+import {
+  dualFormatBadgeLabel,
+  formatDisplayLabel,
+  isDualDraftFormat,
+  isOrgParentAllowedForFormat,
+  uniqueDraftFormats,
+  type DraftItemFormat,
+} from "@/lib/fomo/draftItemFormats";
+import { fetchDraftProjectFormats, type DraftProjectFormatInfo } from "../../lib/drafts/draftRemote";
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { DraftCategoryFilterBar } from "@/components/fomo/community/draft-tabs/DraftCategoryFilterBar";
 import { DraftCreateCategoryModal, DraftOverlayPortal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
 
 interface DraftItemsTabProps {
   draftId: string;
+  draftVersion?: string;
   mapLayout?: unknown;
   loadingActiveMods: boolean;
   visibleMods: ModHit[];
@@ -41,6 +51,11 @@ interface DraftItemsTabProps {
   onOpenEditItem: (mod: ModHit) => void;
   onRemoveItem?: (mod: ModHit) => void;
   onAssignOrgCategory?: (mod: ModHit, categoryId: string, side: MapParentId) => Promise<void>;
+  onChangeItemFormat?: (
+    mod: ModHit,
+    contentType: string,
+    extras?: { versionId?: string | null; category?: string; side?: string },
+  ) => Promise<void>;
   onBulkRelocate?: (fromId: string, otherId: string, parent: MapParentId) => void;
   canEditItems?: boolean;
   isPublic?: boolean;
@@ -48,6 +63,7 @@ interface DraftItemsTabProps {
 
 export function DraftItemsTab({
   draftId,
+  draftVersion,
   mapLayout,
   loadingActiveMods,
   visibleMods,
@@ -55,6 +71,7 @@ export function DraftItemsTab({
   onOpenEditItem,
   onRemoveItem,
   onAssignOrgCategory,
+  onChangeItemFormat,
   onBulkRelocate,
   canEditItems = false,
   isPublic = false,
@@ -67,8 +84,10 @@ export function DraftItemsTab({
   const [groupEditLabel, setGroupEditLabel] = useState("");
   const [assigning, setAssigning] = useState<ModHit | null>(null);
   const [assignParent, setAssignParent] = useState<MapParentId>("both");
+  const [assignFormat, setAssignFormat] = useState<string>("mod");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [projectFormats, setProjectFormats] = useState<Record<string, DraftProjectFormatInfo>>({});
 
   useEffect(() => {
     setLayout(resolveSessionMapLayout(mapLayout, draftId));
@@ -84,6 +103,34 @@ export function DraftItemsTab({
     const locked = orgParentForTypeFilter(typeFilter);
     if (locked !== "all") setParentFilter(locked);
   }, [typeFilter]);
+
+  const projectIdsKey = visibleMods.map((mod) => mod.projectId).filter(Boolean).sort().join(",");
+  useEffect(() => {
+    if (!draftVersion || !projectIdsKey) {
+      setProjectFormats({});
+      return;
+    }
+    let cancelled = false;
+    void fetchDraftProjectFormats(projectIdsKey.split(","), draftVersion).then((next) => {
+      if (!cancelled) setProjectFormats(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftVersion, projectIdsKey]);
+
+  const formatsFor = useCallback((mod: ModHit) => {
+    return uniqueDraftFormats([mod.projectType, ...(projectFormats[mod.projectId]?.types || [])]);
+  }, [projectFormats]);
+
+  const decorateMod = useCallback((mod: ModHit): ModHit => {
+    const info = projectFormats[mod.projectId];
+    return {
+      ...mod,
+      availableFormats: formatsFor(mod),
+      formatVersionIds: info?.versionByType,
+    };
+  }, [formatsFor, projectFormats]);
 
   const persistLayout = useCallback((next: DraftMapLayout) => {
     setLayout(next);
@@ -132,13 +179,21 @@ export function DraftItemsTab({
     onBulkRelocate?.(result.fromId, result.otherId, result.parent);
   };
 
-  const commitAssign = async (nextLayout: DraftMapLayout, childId: string, _parent: MapParentId) => {
+  const commitAssign = async (nextLayout: DraftMapLayout, childId: string, parent: MapParentId) => {
     if (!assigning) return;
-    const parent = orgParentForItem({ projectType: assigning.projectType, side: assigning.side });
+    const format = assignFormat || assigning.projectType || "mod";
+    const nextParent = isOrgParentAllowedForFormat(parent, format)
+      ? parent
+      : (fixedOrgParentForContentType(format) || parent);
     const parsed = parseChildCategoryId(childId);
-    const resolvedChild = parsed ? childCategoryId(parent, parsed.slug) : childId;
+    const resolvedChild = parsed ? childCategoryId(nextParent, parsed.slug) : childId;
     persistLayout(withItemsAssignedToCategory(nextLayout, resolvedChild, [String(assigning.itemId || assigning.projectId)]));
-    await onAssignOrgCategory?.(assigning, resolvedChild, parent);
+    const versionId = projectFormats[assigning.projectId]?.versionByType?.[format as DraftItemFormat];
+    if (format !== assigning.projectType && onChangeItemFormat) {
+      await onChangeItemFormat(assigning, format, { versionId, category: resolvedChild, side: nextParent });
+    } else {
+      await onAssignOrgCategory?.(assigning, resolvedChild, nextParent);
+    }
     setAssigning(null);
     setNewCategoryName("");
   };
@@ -172,7 +227,7 @@ export function DraftItemsTab({
         typeFilter={typeFilter}
         parentFilter={parentFilter}
         childFilter={childFilter}
-        children={mapChildren}
+        mapChildren={mapChildren}
         layout={layout}
         onTypeFilter={setTypeFilter}
         onParentFilter={setParentFilter}
@@ -271,6 +326,8 @@ export function DraftItemsTab({
                     </div>
                     {items.map((mod) => {
                       const col = typeColor(mod.projectType);
+                      const dualTypes = projectFormats[mod.projectId]?.types || [];
+                      const dual = isDualDraftFormat(dualTypes);
                       return (
                         <div
                           key={mod.itemId || mod.projectId}
@@ -291,11 +348,20 @@ export function DraftItemsTab({
                               <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md ${col.bg} ${col.text} border ${col.border}`}>
                                 {typeLabel(mod.projectType)}
                               </span>
+                              {dual && (
+                                <span
+                                  className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-400/30"
+                                  title="Este proyecto publica más de un formato en la versión del draft"
+                                >
+                                  Dual · {dualFormatBadgeLabel(dualTypes)}
+                                </span>
+                              )}
                               {canEditItems && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    setAssignFormat(mod.projectType || "mod");
                                     setAssignParent(orgParentForItem({ projectType: mod.projectType, side: mod.side }));
                                     setAssigning(mod);
                                   }}
@@ -328,7 +394,7 @@ export function DraftItemsTab({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onOpenEditItem(mod);
+                                onOpenEditItem(decorateMod(mod));
                               }}
                               className="p-1.5 rounded-lg text-white/30 hover:text-orange-400 hover:bg-orange-500/10 transition-all active:scale-90"
                               title="Modificar tipo o lado del ítem"
@@ -390,15 +456,45 @@ export function DraftItemsTab({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-sm font-bold text-white">Mover categoría</h3>
-            <p className="text-[10px] text-white/50">Organización del draft. No cambia el tipo (mod, textura, shader).</p>
+            <p className="text-[10px] text-white/50">
+              Organización del draft. El formato (mod, textura, datapack) solo cambia si el proyecto publica más de uno en {draftVersion || "esta versión"}.
+            </p>
             {(() => {
-              const lockedBranch = assigning ? fixedOrgParentForContentType(assigning.projectType) : null;
+              const dualTypes = projectFormats[assigning.projectId]?.types || [];
+              const formatOptions = uniqueDraftFormats([assigning.projectType, ...dualTypes]);
+              const lockedBranch = fixedOrgParentForContentType(assignFormat);
               const branch = lockedBranch ?? assignParent;
+              const customChildren = (layout.children || []).filter(
+                (child) => child.parent === branch && !MAP_CHILD_PRESETS.some((preset) => preset.slug === child.slug),
+              );
               return (
                 <>
+            {formatOptions.length > 1 && (
+              <div className="space-y-1.5">
+                <p className="text-[9px] font-black uppercase tracking-wider text-amber-300">
+                  Dual · {dualFormatBadgeLabel(dualTypes.length > 1 ? dualTypes : formatOptions)}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {formatOptions.map((format) => (
+                    <button
+                      key={format}
+                      type="button"
+                      onClick={() => {
+                        setAssignFormat(format);
+                        const nextLocked = fixedOrgParentForContentType(format);
+                        if (nextLocked) setAssignParent(nextLocked);
+                      }}
+                      className={`rounded-lg border px-2 py-1 text-[10px] font-bold ${assignFormat === format ? "border-amber-400/40 bg-amber-500/15 text-amber-200" : "border-white/10 text-white/50"}`}
+                    >
+                      {formatDisplayLabel(format)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {lockedBranch ? (
               <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-[10px] font-bold uppercase text-orange-200">
-                Rama: {MAP_PARENTS.find((p) => p.id === lockedBranch)?.label || lockedBranch} (fijo)
+                Rama: {MAP_PARENTS.find((p) => p.id === lockedBranch)?.label || lockedBranch} (fijo para este formato)
               </div>
             ) : (
             <div className="flex gap-1">
@@ -413,6 +509,22 @@ export function DraftItemsTab({
                 </button>
               ))}
             </div>
+            )}
+            {customChildren.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {customChildren.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    onClick={() => {
+                      void commitAssign(layout, child.id, branch);
+                    }}
+                    className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-bold text-indigo-200"
+                  >
+                    {categoryDisplayLabel(child.id, child.label, layout)}
+                  </button>
+                ))}
+              </div>
             )}
             <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
               {MAP_CHILD_PRESETS.map((preset) => (

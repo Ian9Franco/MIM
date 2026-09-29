@@ -1,4 +1,4 @@
-import { mergeMapLayout, parseMapLayout, type DraftMapLayout } from "./draftMapLayout";
+import { parseMapLayout, type DraftMapLayout } from "./draftMapLayout";
 
 const KEY_PREFIX = "mim:draft-map:";
 
@@ -43,8 +43,7 @@ export function clearDraftMapLayoutCache(draftId: string): void {
   }
 }
 
-export function resolveSessionMapLayout(mapLayout: unknown, draftId: string): DraftMapLayout {
-  const remote = parseMapLayout(mapLayout);
-  const cached = readDraftMapLayoutCache(draftId);
-  return cached ? mergeMapLayout(remote, cached.layout) : remote;
+/** Server `map_layout` is the source of truth (shared across devices). */
+export function resolveSessionMapLayout(mapLayout: unknown, _draftId: string): DraftMapLayout {
+  return parseMapLayout(mapLayout);
 }

@@ -182,6 +182,7 @@ export function useHomeController() {
   const [activeStackIndex, setActiveStackIndex] = useState(-1);
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const shouldRehydrateDraftFromServerRef = useRef(false);
   const collectionsLastLoadedRef = useRef(0);
   const collectionsRequestRef = useRef<Promise<void> | null>(null);
 
@@ -323,6 +324,7 @@ export function useHomeController() {
         if (parsed?.source === "draft") {
           setActiveTab("rankings");
           setCommunitySection("drafts");
+          shouldRehydrateDraftFromServerRef.current = true;
         }
       } catch (e) {
         console.warn("[useHomeController] Corrupted mim_active_collection in localStorage:", e);
@@ -330,9 +332,19 @@ export function useHomeController() {
     }
 
     const cachedCollectionMods = localStorage.getItem("mim_active_collection_mods");
-    if (cachedCollectionMods !== null) {
-      try { 
-        setActiveCollectionMods(JSON.parse(cachedCollectionMods)); 
+    const cachedCollectionSource = (() => {
+      try {
+        const raw = localStorage.getItem("mim_active_collection");
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { source?: string };
+        return parsed?.source ?? null;
+      } catch {
+        return null;
+      }
+    })();
+    if (cachedCollectionMods !== null && cachedCollectionSource !== "draft") {
+      try {
+        setActiveCollectionMods(JSON.parse(cachedCollectionMods));
       } catch (e) {
         console.warn("[useHomeController] Corrupted mim_active_collection_mods in localStorage:", e);
       }
@@ -364,6 +376,30 @@ export function useHomeController() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!isLoaded || !shouldRehydrateDraftFromServerRef.current) return;
+    if (activeCollection?.source !== "draft" || !activeCollection.id) return;
+
+    const fromList = drafts.userDrafts.find((draft) => draft.id === activeCollection.id);
+    if (!fromList && drafts.loadingDrafts) return;
+
+    shouldRehydrateDraftFromServerRef.current = false;
+    const seed = fromList ?? {
+      id: activeCollection.id,
+      name: activeCollection.name,
+      minecraft_version: "",
+      loader: "",
+      visibility: "private",
+    };
+    void drafts.handleEnterDraftCollection(seed);
+  }, [
+    isLoaded,
+    activeCollection?.id,
+    activeCollection?.source,
+    activeCollection?.name,
+    drafts,
+  ]);
+
   // ── Cache Saving ──
   useEffect(() => {
     if (!isLoaded) return;
@@ -377,7 +413,11 @@ export function useHomeController() {
       localStorage.removeItem("mim_active_collection");
     }
 
-    localStorage.setItem("mim_active_collection_mods", JSON.stringify(activeCollectionMods));
+    if (activeCollection?.source === "draft") {
+      localStorage.removeItem("mim_active_collection_mods");
+    } else {
+      localStorage.setItem("mim_active_collection_mods", JSON.stringify(activeCollectionMods));
+    }
 
   }, [
     isLoaded,

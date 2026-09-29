@@ -11,26 +11,22 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-/** Rellena icon_url faltantes vía APIs de Modrinth / CurseForge. */
-export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
-  items: T[],
-  request: typeof fetch = fetch,
-): Promise<T[]> {
-  const missing = items.filter((item) => !item.icon_url && !item.iconUrl);
-  if (!missing.length) return items;
+function isLikelyCurseForgeProjectId(projectId: string): boolean {
+  return /^\d+$/.test(String(projectId).trim());
+}
 
+function shouldFetchCurseForgeIcon(item: DraftItemRow): boolean {
+  if (item.source === "curseforge") return true;
+  if (item.source === "modrinth") return false;
+  return isLikelyCurseForgeProjectId(String(item.project_id));
+}
+
+async function fetchModrinthIconMap(
+  projectIds: string[],
+  request: typeof fetch,
+): Promise<Map<string, string>> {
   const iconMap = new Map<string, string>();
-
-  const modrinthIds = [
-    ...new Set(
-      missing
-        .filter((item) => item.source !== "curseforge")
-        .map((item) => String(item.project_id))
-        .filter(Boolean),
-    ),
-  ];
-
-  for (const ids of chunk(modrinthIds, 50)) {
+  for (const ids of chunk(projectIds, 50)) {
     try {
       const res = await request(
         `/api/modrinth/projects?ids=${encodeURIComponent(JSON.stringify(ids))}`,
@@ -44,10 +40,16 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
       // Best-effort enrichment; cards fall back to type icon.
     }
   }
+  return iconMap;
+}
 
-  const curseforgeItems = missing.filter((item) => item.source === "curseforge");
+async function fetchCurseForgeIconMap(
+  items: DraftItemRow[],
+  request: typeof fetch,
+): Promise<Map<string, string>> {
+  const iconMap = new Map<string, string>();
   await Promise.all(
-    curseforgeItems.map(async (item) => {
+    items.map(async (item) => {
       try {
         const res = await request(
           `/api/curseforge/project?projectId=${encodeURIComponent(String(item.project_id))}`,
@@ -65,13 +67,42 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
       }
     }),
   );
+  return iconMap;
+}
 
+function applyIconMap<T extends DraftItemRow>(items: T[], iconMap: Map<string, string>): T[] {
   if (!iconMap.size) return items;
-
   return items.map((item) => {
     const existing = item.icon_url || item.iconUrl;
     if (existing) return item;
     const icon = iconMap.get(String(item.project_id));
     return icon ? { ...item, icon_url: icon } : item;
   });
+}
+
+/** Rellena icon_url faltantes vía APIs de Modrinth / CurseForge. */
+export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
+  items: T[],
+  request: typeof fetch = fetch,
+): Promise<T[]> {
+  const missing = items.filter((item) => !item.icon_url && !item.iconUrl);
+  if (!missing.length) return items;
+
+  const modrinthIds = [
+    ...new Set(
+      missing
+        .filter((item) => !shouldFetchCurseForgeIcon(item))
+        .map((item) => String(item.project_id))
+        .filter(Boolean),
+    ),
+  ];
+  const curseforgeItems = missing.filter((item) => shouldFetchCurseForgeIcon(item));
+
+  const [modrinthIcons, curseforgeIcons] = await Promise.all([
+    fetchModrinthIconMap(modrinthIds, request),
+    fetchCurseForgeIconMap(curseforgeItems, request),
+  ]);
+
+  const merged = new Map<string, string>([...modrinthIcons, ...curseforgeIcons]);
+  return applyIconMap(items, merged);
 }

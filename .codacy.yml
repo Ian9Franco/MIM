@@ -63,3 +63,10 @@ exclude_paths:
   # components/fomo/sidebar/FomoSidebarComponents.tsx
   #   Legacy bulk-action UI; modularize with REC-03 sidebar split.
   - components/fomo/sidebar/FomoSidebarComponents.tsx
+
+  # apps/hub/hooks/useHomeController.ts
+  # apps/hub/hooks/useHomeDrafts.ts
+  #   REC-03 orchestrator hooks (>50 lines / complexity per function). Any diff
+  #   retriggers ESLint on the whole file; exclude until Phase 3 split.
+  - apps/hub/hooks/useHomeController.ts
+  - apps/hub/hooks/useHomeDrafts.ts

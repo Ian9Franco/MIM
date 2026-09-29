@@ -26,6 +26,7 @@ import {
   resolveDraftModrinthItem,
 } from "../lib/drafts/draftRemote";
 import { defaultOrgCategoryForDraftItem, normalizeDraftOrgCategory } from "@/lib/fomo/draftMapLayout";
+import { clearDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { draftItemNeedsCategoryRepair } from "../lib/drafts/repairDraftItemCategories";
 import { inferSide, normalizeContentType } from "../lib/projectTypes";
 import { createDraftRepository, type DraftRepositoryClient } from "../lib/drafts/draftRepository";
@@ -135,6 +136,20 @@ export function useHomeDrafts({
     if (activeDraftHydrated) writeActiveDraft(localStorage, activeDraft);
   }, [activeDraft, activeDraftHydrated]);
 
+  useEffect(() => {
+    if (!activeDraft?.id) return;
+    const fresh = userDrafts.find((draft) => draft.id === activeDraft.id);
+    if (!fresh) return;
+    setActiveDraft((prev) => {
+      if (!prev || prev.id !== fresh.id) return prev;
+      return {
+        ...prev,
+        ...fresh,
+        map_layout: fresh.map_layout ?? prev.map_layout,
+      };
+    });
+  }, [userDrafts, activeDraft?.id]);
+
   const refreshDrafts = useCallback(async (silent = false): Promise<void> => {
     try {
       if (!silent) setLoadingDrafts(true);
@@ -160,7 +175,6 @@ export function useHomeDrafts({
   }, [refreshDrafts]);
 
   const handleEnterDraftCollection = useCallback(async (draft: HomeDraft): Promise<void> => {
-    setActiveDraft(draft);
     setActiveCollection({
       id: draft.id,
       name: draft.name,
@@ -172,6 +186,19 @@ export function useHomeDrafts({
     setLoadingActiveMods(true);
 
     try {
+      const { data: draftRow, error: draftMetaError } = await supabase
+        .from("drafts")
+        .select("id, name, description, minecraft_version, loader, visibility, cover_image, owner_id, map_layout, updated_at")
+        .eq("id", draft.id)
+        .single();
+      if (draftMetaError) console.error("Error loading draft metadata:", draftMetaError);
+      const hydratedDraft: HomeDraft = {
+        ...draft,
+        ...(draftRow && typeof draftRow === "object" ? (draftRow as HomeDraft) : {}),
+      };
+      clearDraftMapLayoutCache(draft.id);
+      setActiveDraft(hydratedDraft);
+
       const { data, error } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
       if (error) throw error;
       const icons = await fetchDraftIconsFromItems(collectDraftItemsForIconFetch(data));
@@ -190,11 +217,11 @@ export function useHomeDrafts({
         }),
       );
 
-      let items = decodeHomeDraft({ ...draft, draft_items: data }, icons)?.items ?? draft.items ?? [];
+      const items = decodeHomeDraft({ ...hydratedDraft, draft_items: data }, icons)?.items ?? hydratedDraft.items ?? [];
 
       const versionIds = items.flatMap((item) => item.version_id ? [item.version_id] : []);
       const versions = await fetchDraftVersions(versionIds);
-      setActiveCollectionMods(items.map((item) => draftItemToModHit(item, draft, versions)));
+      setActiveCollectionMods(items.map((item) => draftItemToModHit(item, hydratedDraft, versions)));
     } catch (error) {
       console.error("Error loading draft collection:", error);
     } finally {

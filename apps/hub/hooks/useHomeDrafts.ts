@@ -217,7 +217,7 @@ export function useHomeDrafts({
         }),
       );
 
-      let items = decodeHomeDraft({ ...hydratedDraft, draft_items: data }, icons)?.items ?? hydratedDraft.items ?? [];
+      const items = decodeHomeDraft({ ...hydratedDraft, draft_items: data }, icons)?.items ?? hydratedDraft.items ?? [];
 
       const versionIds = items.flatMap((item) => item.version_id ? [item.version_id] : []);
       const versions = await fetchDraftVersions(versionIds);

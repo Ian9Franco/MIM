@@ -397,9 +397,7 @@ export function useHomeController() {
     activeCollection?.id,
     activeCollection?.source,
     activeCollection?.name,
-    drafts.userDrafts,
-    drafts.loadingDrafts,
-    drafts.handleEnterDraftCollection,
+    drafts,
   ]);
 
   // ── Cache Saving ──

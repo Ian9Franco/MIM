@@ -8,9 +8,7 @@ import { CollectionsSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
 import { supabase } from "../../lib/supabaseClient";
 import {
-  MAP_CHILD_PRESETS,
   MAP_PARENTS,
-  addMapChild,
   categoryDisplayLabel,
   childCategoryId,
   groupItemsByChildId,
@@ -40,6 +38,7 @@ import { fetchDraftProjectFormats, type DraftProjectFormatInfo } from "../../lib
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { DraftCategoryFilterBar } from "@/components/fomo/community/draft-tabs/DraftCategoryFilterBar";
 import { DraftCreateCategoryModal, DraftOverlayPortal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
+import { DraftItemCategoryPicker } from "./DraftItemCategoryPicker";
 
 interface DraftItemsTabProps {
   draftId: string;
@@ -464,9 +463,6 @@ export function DraftItemsTab({
               const formatOptions = uniqueDraftFormats([assigning.projectType, ...dualTypes]);
               const lockedBranch = fixedOrgParentForContentType(assignFormat);
               const branch = lockedBranch ?? assignParent;
-              const customChildren = (layout.children || []).filter(
-                (child) => child.parent === branch && !MAP_CHILD_PRESETS.some((preset) => preset.slug === child.slug),
-              );
               return (
                 <>
             {formatOptions.length > 1 && (
@@ -510,56 +506,15 @@ export function DraftItemsTab({
               ))}
             </div>
             )}
-            {customChildren.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {customChildren.map((child) => (
-                  <button
-                    key={child.id}
-                    type="button"
-                    onClick={() => {
-                      void commitAssign(layout, child.id, branch);
-                    }}
-                    className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-bold text-indigo-200"
-                  >
-                    {categoryDisplayLabel(child.id, child.label, layout)}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-              {MAP_CHILD_PRESETS.map((preset) => (
-                <button
-                  key={preset.slug}
-                  type="button"
-                  onClick={() => {
-                    const { layout: next } = addMapChild(layout, branch, preset.label);
-                    void commitAssign(next, childCategoryId(branch, preset.slug), branch);
-                  }}
-                  className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-left text-[10px] font-bold text-white/80"
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Nueva categoría"
-                className="flex-1 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-xs text-white"
-              />
-              <button
-                type="button"
-                disabled={!newCategoryName.trim()}
-                onClick={() => {
-                  const { layout: next, child } = addMapChild(layout, branch, newCategoryName.trim());
-                  void commitAssign(next, child.id, branch);
-                }}
-                className="rounded-xl bg-orange-500 px-3 py-2 text-[10px] font-bold text-white disabled:opacity-40"
-              >
-                Añadir
-              </button>
-            </div>
+            <DraftItemCategoryPicker
+              layout={layout}
+              branch={branch}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              onSelectCategory={(categoryId, layoutAfter) => {
+                void commitAssign(layoutAfter, categoryId, branch);
+              }}
+            />
                 </>
               );
             })()}

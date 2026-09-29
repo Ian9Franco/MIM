@@ -25,6 +25,8 @@ import {
   fetchRequiredDependencyProjects,
   resolveDraftModrinthItem,
 } from "../lib/drafts/draftRemote";
+import { defaultOrgCategoryForDraftItem, normalizeDraftOrgCategory } from "@/lib/fomo/draftMapLayout";
+import { draftItemNeedsCategoryRepair } from "../lib/drafts/repairDraftItemCategories";
 import { inferSide, normalizeContentType } from "../lib/projectTypes";
 import { createDraftRepository, type DraftRepositoryClient } from "../lib/drafts/draftRepository";
 import { canEditDraft } from "../lib/drafts/draftPermissions";
@@ -97,12 +99,12 @@ function draftItemToModHit(
     title: item.name || item.mod_name || item.project_id,
     description: "",
     iconUrl: item.icon_url || item.iconUrl,
-    author: "Comunidad",
-    projectType: item.content_type || item.category || "mod",
+    author: "",
+    projectType: item.content_type || item.project_type || "mod",
     categories: [item.content_type || "mod"].filter(Boolean),
     orgCategory: item.category,
     url: buildDraftProjectUrl(item),
-    _source: "modrinth",
+    _source: item.source === "curseforge" ? "curseforge" : "modrinth",
     gameVersions: actualVersion?.game_versions || item.game_versions || [draft.minecraft_version].filter(Boolean),
     loaders: actualVersion?.loaders || item.loaders || [draft.loader].filter(Boolean),
     side: item.side || "both",
@@ -173,6 +175,21 @@ export function useHomeDrafts({
       const { data, error } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
       if (error) throw error;
       const icons = await fetchDraftIcons(collectDraftProjectIds([{ draft_items: data }]));
+      const rawRows = Array.isArray(data) ? data : [];
+      await Promise.all(
+        rawRows.map(async (row) => {
+          if (!row || typeof row !== "object") return;
+          const record = row as Record<string, unknown>;
+          const id = typeof record.id === "string" ? record.id : "";
+          const rawCategory = typeof record.category === "string" ? record.category : undefined;
+          if (!id || !draftItemNeedsCategoryRepair(rawCategory)) return;
+          const contentType = typeof record.content_type === "string" ? record.content_type : "mod";
+          const side = record.side === "client" || record.side === "server" ? record.side : "both";
+          const category = normalizeDraftOrgCategory(rawCategory, { content_type: contentType, side });
+          await supabase.from("draft_items").update({ category }).eq("id", id);
+        }),
+      );
+
       let items = decodeHomeDraft({ ...draft, draft_items: data }, icons)?.items ?? draft.items ?? [];
 
       const versionIds = items.flatMap((item) => item.version_id ? [item.version_id] : []);
@@ -255,6 +272,7 @@ export function useHomeDrafts({
       const versionId = resolved.version?.id ?? null;
       const compatible = (mod._source || "modrinth") === "curseforge" || Boolean(versionId);
       const side = inferSide(contentType, resolved.project);
+      const orgCategory = defaultOrgCategoryForDraftItem(contentType, side);
       const { error } = await supabase.from("draft_items").insert({
         draft_id: draftId,
         source: mod._source || "modrinth",
@@ -263,7 +281,7 @@ export function useHomeDrafts({
         mod_name: mod.title || mod.projectId,
         added_by: userId,
         content_type: contentType,
-        category: contentType,
+        category: orgCategory,
         side,
         dependencies,
       });
@@ -282,6 +300,7 @@ export function useHomeDrafts({
       if (requiredProjects.length > 0) {
         await supabase.from("draft_items").insert(requiredProjects.map((project) => {
           const projectType = normalizeContentType(project);
+          const depSide = inferSide(projectType, project);
           return {
             draft_id: draftId,
             source: "modrinth",
@@ -290,8 +309,8 @@ export function useHomeDrafts({
             mod_name: project.title || project.id,
             added_by: userId,
             content_type: projectType,
-            category: projectType,
-            side: inferSide(projectType, project),
+            category: defaultOrgCategoryForDraftItem(projectType, depSide),
+            side: depSide,
             dependencies: [],
           };
         }));

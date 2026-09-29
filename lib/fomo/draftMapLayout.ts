@@ -114,6 +114,27 @@ export function remapOrgCategoryToParent(category: string | undefined, parent: M
   return childCategoryId(parent, raw);
 }
 
+/** Maps legacy draft_items.category values (e.g. "mod") to org map ids (e.g. "both:other"). */
+export function normalizeDraftOrgCategory(
+  category: string | undefined | null,
+  item: { content_type?: string; projectType?: string; side?: string },
+): string {
+  const contentType = normalizeDraftContentType(item.content_type || item.projectType);
+  const parent = orgParentForItem({
+    content_type: contentType,
+    projectType: contentType,
+    side: item.side,
+  });
+  return remapOrgCategoryToParent(category || undefined, parent);
+}
+
+export function defaultOrgCategoryForDraftItem(
+  contentType: string,
+  side?: string,
+): string {
+  return normalizeDraftOrgCategory(undefined, { content_type: contentType, side });
+}
+
 export const DRAFT_CONTENT_TYPE_FILTERS = [
   { id: "all", label: "Todos" },
   { id: "mod", label: "Mods" },

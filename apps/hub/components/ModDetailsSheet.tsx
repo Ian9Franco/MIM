@@ -322,10 +322,18 @@ export function ModDetailsSheet({
   const projectType = selectedMod?.projectType || "mod";
   const bannerType = communityTypeToBannerType(projectType);
   const { bannerBgColor, fallbackTexture } = getBannerFallbackStyle(bannerType);
-  const environment = interpretModEnvironment(
-    selectedModDetails?.client_side || selectedModDetails?.clientSide,
-    selectedModDetails?.server_side || selectedModDetails?.serverSide
-  );
+  const environment = loadingDetails && !selectedModDetails
+    ? {
+        label: "Cargando entorno…",
+        description: "Consultando la ficha del proyecto en la fuente.",
+        tone: "unknown" as const,
+        client: "unknown" as const,
+        server: "unknown" as const,
+      }
+    : interpretModEnvironment(
+        selectedModDetails?.client_side || selectedModDetails?.clientSide,
+        selectedModDetails?.server_side || selectedModDetails?.serverSide,
+      );
 
   const dependencyGroups = selectedModDeps.reduce<Record<DependencyKind, FomoDependencyItem[]>>(
     (groups, dep) => {

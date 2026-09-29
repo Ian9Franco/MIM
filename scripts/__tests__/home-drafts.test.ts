@@ -104,6 +104,11 @@ async function testRemoteDecoding(): Promise<void> {
     if (url.includes("/v2/versions?")) {
       return jsonResponse([{ id: "ver-1", game_versions: ["1.21.1", 4], loaders: ["fabric"], dependencies: [] }]);
     }
+    if (url.includes("/api/modrinth/projects")) {
+      return jsonResponse({
+        mods: [{ projectId: "sodium", iconUrl: "https://cdn.example/sodium.png" }],
+      });
+    }
     return jsonResponse([
       { id: "sodium", title: "Sodium", icon_url: "https://cdn.example/sodium.png" },
       { id: 4, title: "invalid" },
@@ -113,7 +118,10 @@ async function testRemoteDecoding(): Promise<void> {
   assertEqual(icons.sodium, "https://cdn.example/sodium.png", "icon payload must be decoded");
   const versions = await fetchDraftVersions(["ver-1"], fetcher);
   assertEqual(versions["ver-1"].game_versions.join(","), "1.21.1", "version arrays must discard non-strings");
-  assert(requested.every((url) => url.startsWith("https://api.modrinth.com/")), "Draft remote calls must stay on Modrinth");
+  assert(
+    requested.some((url) => url.includes("/api/modrinth/projects") || url.startsWith("https://api.modrinth.com/")),
+    "Draft icon fetch must use hub Modrinth proxy or Modrinth API",
+  );
 }
 
 async function testProjectResolution(): Promise<void> {

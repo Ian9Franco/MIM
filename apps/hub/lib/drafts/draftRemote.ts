@@ -7,6 +7,8 @@ import {
   uniqueDraftFormats,
   type DraftItemFormat,
 } from "@/lib/fomo/draftItemFormats";
+import { enrichDraftItemsWithIcons } from "@/lib/fomo/enrichDraftItemIcons";
+import type { DraftItemIconFetchRow } from "./draftContract";
 
 type DraftFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -62,27 +64,34 @@ async function responseJson(response: Response): Promise<unknown> {
   return response.ok ? response.json() : null;
 }
 
+export async function fetchDraftIconsFromItems(
+  items: DraftItemIconFetchRow[],
+  fetcher: DraftFetch = fetch,
+): Promise<Record<string, string>> {
+  if (items.length === 0) return {};
+  try {
+    const enriched = await enrichDraftItemsWithIcons(items, fetcher);
+    return enriched.reduce<Record<string, string>>((icons, item) => {
+      const icon = item.icon_url || item.iconUrl;
+      if (icon) icons[String(item.project_id)] = icon;
+      return icons;
+    }, {});
+  } catch (error) {
+    console.error("Error fetching draft item icons:", error);
+    return {};
+  }
+}
+
+/** @deprecated Prefer fetchDraftIconsFromItems when source is known (CurseForge + Modrinth). */
 export async function fetchDraftIcons(
   projectIds: string[],
   fetcher: DraftFetch = fetch,
 ): Promise<Record<string, string>> {
   const ids = [...new Set(projectIds.filter(Boolean))];
-  if (ids.length === 0) return {};
-  const url = new URL("https://api.modrinth.com/v2/projects");
-  url.searchParams.set("ids", JSON.stringify(ids));
-
-  try {
-    const payload = await responseJson(await fetcher(url));
-    if (!Array.isArray(payload)) return {};
-    return payload.reduce<Record<string, string>>((icons, item) => {
-      const project = decodeProject(item);
-      if (project?.icon_url) icons[project.id] = project.icon_url;
-      return icons;
-    }, {});
-  } catch (error) {
-    console.error("Error batch fetching project icons:", error);
-    return {};
-  }
+  return fetchDraftIconsFromItems(
+    ids.map((project_id) => ({ project_id, source: "modrinth" })),
+    fetcher,
+  );
 }
 
 export async function fetchDraftVersions(

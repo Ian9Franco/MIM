@@ -53,8 +53,12 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
           `/api/curseforge/project?projectId=${encodeURIComponent(String(item.project_id))}`,
         );
         if (!res.ok) return;
-        const data = (await res.json()) as { iconUrl?: string; logo?: { url?: string } };
-        const icon = data.iconUrl || data.logo?.url;
+        const data = (await res.json()) as {
+          iconUrl?: string;
+          logo?: { url?: string };
+          details?: { icon_url?: string | null };
+        };
+        const icon = data.details?.icon_url || data.iconUrl || data.logo?.url;
         if (icon) iconMap.set(String(item.project_id), icon);
       } catch {
         // ignore

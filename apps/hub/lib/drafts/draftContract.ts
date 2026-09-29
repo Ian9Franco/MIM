@@ -197,16 +197,50 @@ export function decodeHomeDrafts(value: unknown, icons: Record<string, string>):
   });
 }
 
-export function collectDraftProjectIds(value: unknown): string[] {
+export interface DraftItemIconFetchRow {
+  project_id: string;
+  source?: string;
+  icon_url?: string;
+  iconUrl?: string;
+}
+
+function draftItemIconFetchRow(item: unknown): DraftItemIconFetchRow | null {
+  if (!isRecord(item)) return null;
+  const projectId = requiredString(item.project_id);
+  if (!projectId) return null;
+  return {
+    project_id: projectId,
+    source: optionalString(item.source),
+    icon_url: optionalString(item.icon_url),
+    iconUrl: optionalString(item.iconUrl),
+  };
+}
+
+/** Rows for icon enrichment (Modrinth batch + CurseForge per project). */
+export function collectDraftItemsForIconFetch(value: unknown): DraftItemIconFetchRow[] {
   if (!Array.isArray(value)) return [];
+
+  const looksLikeRawItems = value.some(
+    (row) => isRecord(row) && requiredString(row.project_id) && !Array.isArray(row.draft_items),
+  );
+  if (looksLikeRawItems) {
+    return value.flatMap((item) => {
+      const row = draftItemIconFetchRow(item);
+      return row ? [row] : [];
+    });
+  }
+
   return value.flatMap((draft) => {
     if (!isRecord(draft) || !Array.isArray(draft.draft_items)) return [];
     return draft.draft_items.flatMap((item) => {
-      if (!isRecord(item)) return [];
-      const projectId = requiredString(item.project_id);
-      return projectId ? [projectId] : [];
+      const row = draftItemIconFetchRow(item);
+      return row ? [row] : [];
     });
   });
+}
+
+export function collectDraftProjectIds(value: unknown): string[] {
+  return collectDraftItemsForIconFetch(value).map((item) => item.project_id);
 }
 
 export function readActiveDraft(storage: DraftStorage): HomeDraft | null {

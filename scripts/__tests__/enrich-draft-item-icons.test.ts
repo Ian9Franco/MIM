@@ -37,3 +37,21 @@ test("enrichDraftItemsWithIcons fills curseforge icons from hub project API", as
   });
   assert.equal((result[0] as { icon_url?: string }).icon_url, "https://media.forgecdn.net/avatars/1.png");
 });
+
+test("enrichDraftItemsWithIcons treats numeric project_id as curseforge when source is missing", async () => {
+  const items = [{ project_id: "12345" }];
+  let calledCurseForge = false;
+  const result = await enrichDraftItemsWithIcons(items, async (url) => {
+    const href = String(url);
+    if (href.includes("curseforge/project")) {
+      calledCurseForge = true;
+      return {
+        ok: true,
+        json: async () => ({ details: { icon_url: "https://media.forgecdn.net/cf.png" } }),
+      } as Response;
+    }
+    return { ok: true, json: async () => ({ mods: [] }) } as Response;
+  });
+  assert.equal(calledCurseForge, true);
+  assert.equal((result[0] as { icon_url?: string }).icon_url, "https://media.forgecdn.net/cf.png");
+});

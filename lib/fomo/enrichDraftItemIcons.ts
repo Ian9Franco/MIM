@@ -11,6 +11,16 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
+function isLikelyCurseForgeProjectId(projectId: string): boolean {
+  return /^\d+$/.test(String(projectId).trim());
+}
+
+function shouldFetchCurseForgeIcon(item: DraftItemRow): boolean {
+  if (item.source === "curseforge") return true;
+  if (item.source === "modrinth") return false;
+  return isLikelyCurseForgeProjectId(String(item.project_id));
+}
+
 /** Rellena icon_url faltantes vía APIs de Modrinth / CurseForge. */
 export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
   items: T[],
@@ -24,7 +34,7 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
   const modrinthIds = [
     ...new Set(
       missing
-        .filter((item) => item.source !== "curseforge")
+        .filter((item) => !shouldFetchCurseForgeIcon(item))
         .map((item) => String(item.project_id))
         .filter(Boolean),
     ),
@@ -45,7 +55,7 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
     }
   }
 
-  const curseforgeItems = missing.filter((item) => item.source === "curseforge");
+  const curseforgeItems = missing.filter((item) => shouldFetchCurseForgeIcon(item));
   await Promise.all(
     curseforgeItems.map(async (item) => {
       try {

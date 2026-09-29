@@ -40,7 +40,8 @@ import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/dr
 import { DraftCategoryFilterBar } from "@/components/fomo/community/draft-tabs/DraftCategoryFilterBar";
 import { DraftCreateCategoryModal, DraftOverlayPortal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
 import { DraftItemCategoryPicker } from "./DraftItemCategoryPicker";
-import { DraftBulkRecategorizeModal, draftItemSelectionKey } from "./DraftBulkRecategorizeModal";
+import { DraftBulkRecategorizeModal } from "./DraftBulkRecategorizeModal";
+import { draftItemSelectionKey } from "./draftBulkRecategorizeUtils";
 
 interface DraftItemsTabProps {
   draftId: string;
@@ -611,9 +612,11 @@ export function DraftItemsTab({
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
         mods={selectedMods}
-        mapLayout={layout}
-        usedChildIds={usedChildIds}
-        onMapLayoutChange={persistLayout}
+        layout={{
+          mapLayout: layout,
+          usedChildIds,
+          onMapLayoutChange: persistLayout,
+        }}
         saving={savingBulkRecategorize}
         onApply={(branch, categoryId) => {
           if (!onBulkRecategorize) return;

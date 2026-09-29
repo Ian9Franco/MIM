@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Copy, GitBranch, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import type { DraftCatalogEntry } from "@/hooks/fomo/useDraftItemCatalog";
-import type { DraftItemInsights } from "@/lib/fomo/draftItemInsights";
+import { draftProjectPageUrl, matchesPresentContent, type DraftItemInsights } from "@/lib/fomo/draftItemInsights";
 import {
   MAP_CARD_MIN_H,
   MAP_CARD_WIDTH,
@@ -65,6 +65,7 @@ export function DraftItemMapBoard({
   onCreateChild,
   onSaveChild,
   onRemoveChild,
+  fill = false,
 }: {
   groupedMods: Record<string, DraftItem[]>;
   catalog: Record<string, DraftCatalogEntry>;
@@ -78,6 +79,7 @@ export function DraftItemMapBoard({
   onCreateChild: (parent: MapParentId, label: string) => void;
   onSaveChild: (childId: string, label: string, parent: MapParentId) => void;
   onRemoveChild?: (childId: string) => void;
+  fill?: boolean;
 }) {
   const duplicateIds = useMemo(
     () => new Set(insights.duplicates.flatMap((g) => g.items.map((i) => i.id))),
@@ -285,7 +287,7 @@ export function DraftItemMapBoard({
     : "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0)";
 
   return (
-    <div className="relative h-[min(62vh,640px)] min-h-[520px] max-h-[640px] w-full shrink-0">
+    <div className={`relative w-full shrink-0 ${fill ? "h-full min-h-[520px]" : "h-[min(62vh,640px)] min-h-[520px] max-h-[640px]"}`}>
       <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-black/40 p-1 backdrop-blur-md">
         <button type="button" className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setZoom((z) => clampMapZoom(z - 0.1))} aria-label="Alejar">
           <Minus className="w-3.5 h-3.5" />
@@ -630,19 +632,24 @@ export function DraftInsightsStrip({
     || "Categoría";
 
   const missingGroups = useMemo(() => {
-    const groups = new Map<string, { projectId: string; title: string; requiredBy: string[] }>();
+    const groups = new Map<string, { projectId: string; title: string; requiredBy: string[]; href: string }>();
     for (const miss of insights.missing) {
-      const key = `${miss.fromSource || "modrinth"}::${miss.project_id}`;
-      const catalogTitle = catalog[key]?.title;
-      const title = miss.title || catalogTitle || miss.project_id;
-      const current = groups.get(miss.project_id) || { projectId: miss.project_id, title, requiredBy: [] };
-      if (catalogTitle) current.title = catalogTitle;
+      const source = miss.fromSource || "modrinth";
+      const key = `${source}::${miss.project_id}`;
+      const entry = catalog[key];
+      const title = entry?.title || miss.title || miss.project_id;
+      const slug = entry?.slug || miss.slug;
+      if (matchesPresentContent(insights.presentKeys || [], { projectId: miss.project_id, slug, title })) continue;
+      const href = entry?.url || draftProjectPageUrl(source, miss.project_id, slug, miss.url);
+      const current = groups.get(miss.project_id) || { projectId: miss.project_id, title, requiredBy: [], href };
+      if (entry?.title) current.title = entry.title;
       else if (miss.title) current.title = miss.title;
+      if (href) current.href = href;
       if (!current.requiredBy.includes(miss.fromName)) current.requiredBy.push(miss.fromName);
       groups.set(miss.project_id, current);
     }
     return [...groups.values()];
-  }, [insights.missing, catalog]);
+  }, [insights.missing, insights.presentKeys, catalog]);
 
   return (
     <div className="flex flex-col gap-2 shrink-0">
@@ -680,7 +687,13 @@ export function DraftInsightsStrip({
             <div key={group.projectId} className="flex items-start gap-1.5 text-red-200">
               <GitBranch className="w-3 h-3 shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <span className="font-bold">{group.title}</span>
+                {group.href ? (
+                  <a href={group.href} target="_blank" rel="noreferrer" className="font-bold underline decoration-red-300/40 underline-offset-2 hover:decoration-red-200">
+                    {group.title}
+                  </a>
+                ) : (
+                  <span className="font-bold">{group.title}</span>
+                )}
                 <span className="opacity-60"> — lo pide </span>
                 <span className="truncate">{group.requiredBy.join(", ")}</span>
               </div>

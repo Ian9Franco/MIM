@@ -8,15 +8,16 @@ function normalizeGalleryItem(g: any) {
     return { url: g, thumbnailUrl: g, title: "" };
   }
 
-  const url = g.url || g.raw_url || g.image_url || g.imageUrl || g.value || g.src || "";
+  const fullUrl = g.raw_url || g.url || g.image_url || g.imageUrl || g.value || g.src || "";
   const thumbnailUrl =
     g.thumbnailUrl || g.thumbnail_url || g.url || g.raw_url || g.image_url || g.imageUrl || g.value || g.src || "";
 
-  if (!url) return null;
+  if (!fullUrl) return null;
 
   return {
-    url,
-    thumbnailUrl: thumbnailUrl || url,
+    url: fullUrl,
+    raw_url: g.raw_url || fullUrl,
+    thumbnailUrl: thumbnailUrl || fullUrl,
     title: g.title || g.description || g.caption || "",
     description: g.description || g.caption || "",
     featured: g.featured || false,

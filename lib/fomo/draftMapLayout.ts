@@ -562,12 +562,29 @@ export function reparentMapChild(
   layout: DraftMapLayout,
   childId: string,
   nextParent: MapParentId,
-): { ok: true; layout: DraftMapLayout; fromId: string; toId: string } | { ok: false; reason: "missing" | "exists" | "same" } {
+): { ok: true; layout: DraftMapLayout; fromId: string; toId: string } | { ok: false; reason: "missing" | "same" } {
   const child = layout.children.find((entry) => entry.id === childId);
   if (!child) return { ok: false, reason: "missing" };
   const toId = childCategoryId(nextParent, child.slug);
   if (toId === childId) return { ok: false, reason: "same" };
-  if (layout.children.some((entry) => entry.id === toId)) return { ok: false, reason: "exists" };
+  if (layout.children.some((entry) => entry.id === toId)) {
+    const children = layout.children.filter((entry) => entry.id !== childId);
+    const categories = { ...layout.categories };
+    delete categories[childId];
+    const labels = { ...layout.labels };
+    delete labels[childId];
+    const itemOrder = { ...(layout.itemOrder || {}) };
+    const moved = itemOrder[childId] || [];
+    delete itemOrder[childId];
+    const dest = itemOrder[toId] || [];
+    itemOrder[toId] = [...dest, ...moved.filter((id) => !dest.includes(id))];
+    return {
+      ok: true,
+      layout: ensureDefaultTree({ ...layout, categories, labels, children, itemOrder }),
+      fromId: childId,
+      toId,
+    };
+  }
   const next = relocateCategoryLayout(layout, childId, toId);
   const itemOrder = { ...(next.itemOrder || {}) };
   if (itemOrder[childId]) {

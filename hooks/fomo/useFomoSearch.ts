@@ -223,18 +223,30 @@ export function useFomoSearch(filters: any) {
     collectionId
   ]);
 
-  // Auto-búsqueda con debounce ante cambios de filtros o texto
+  const criteriaKeyRef = useRef<string | null>(null);
+  const criteriaKey = JSON.stringify({
+    source, loader, gameVersions, categories, environments, projectType, sortOrder, query, sinytraActive, collectionId, pageSize,
+  });
+
+  // Auto-búsqueda con debounce. Un cambio de criterio (no de página) vuelve a la 1.
   useEffect(() => {
     if (skipNextRefetch.current) {
       console.log("[useFomoSearch] Bypassing auto-refetch as requested.");
       skipNextRefetch.current = false;
+      criteriaKeyRef.current = criteriaKey;
       return;
     }
+    if (criteriaKeyRef.current !== null && criteriaKeyRef.current !== criteriaKey && page !== 1) {
+      criteriaKeyRef.current = criteriaKey;
+      setPage?.(1);
+      return;
+    }
+    criteriaKeyRef.current = criteriaKey;
     const timer = setTimeout(() => {
       refetch();
     }, 600);
     return () => clearTimeout(timer);
-  }, [refetch]);
+  }, [criteriaKey, page, refetch, setPage]);
 
   const setSkipNextRefetch = useCallback((val: boolean) => {
     skipNextRefetch.current = val;

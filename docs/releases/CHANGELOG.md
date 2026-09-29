@@ -2,12 +2,25 @@
 # MIM — Changelog Maestro de Cambios
 
 > Auditoría completa de cambios, features y mejoras de Minecraft Intelligent Manager.  
-> **Versión Actual:** v13.0.5  
+> **Versión Actual:** v13.0.6  
 > **Estado:** Beta activa — los números de versión reflejan hitos de features, no madurez de producción.  
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-09-29
 
 > [!NOTE]
 > **Nota sobre el versionado:** Este proyecto es desarrollado por un solo dev. Los números de versión altos (v10.x/v11.x) reflejan iteraciones de features, no una escala de madurez equivalente a software empresarial. Para el estado real de calidad técnica (tests, deuda conocida, áreas en trabajo), ver [project-status.md](https://github.com/Ian9Franco/MIM/blob/main/docs/planning/project-status.md).
+
+---
+
+## 🚀 Versión 13.0.6 — Release v13.0.6 — Sistemas y Criterio Técnico MIM (2026-09-29)
+
+### Cambios incluidos
+
+- Merge pull request #103 from Ian9Franco/cursor/hub-draft-move-formats-4ac6 (c6706c4)
+- fix(lint): rename mapChildren prop and sync refs in DraftItemMapBoard (77baaf9)
+- fix(types): add content_type to DraftItemMapBoard DraftItem (8de3f39)
+- fix(hub): move draft items across categories and pick dual formats (8dac6cf)
+- Live Hub activity feed and category UX fixes. (aa20962)
+- Unify draft category filters and management in FOMO and Hub. (fd8b021)
 
 ---
 

@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Server, Monitor, Layers
 import type { CommunityDraft, CommunityDraftItem } from "@/types/fomo";
 
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
+import { isDraftDependencyPresent } from "@/lib/fomo/draftItemInsights";
 
 interface ValidationResult {
   missingProject?: { id: string; title: string; source: string };
@@ -113,7 +114,7 @@ export function DraftValidationTab({
           item.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
             const depId = String(dep.project_id);
             if (dep.dependency_type === "required" && dep.project_id) {
-              if (!draftProjectIds.has(depId)) {
+              if (!isDraftDependencyPresent(draftItems, dep)) {
                 if (!localMissingDeps.has(depId)) {
                   localMissingDeps.set(depId, { missingProject: depId, requiredBy: [] });
                 }
@@ -220,7 +221,7 @@ export function DraftValidationTab({
               const depId = String(dep.project_id);
               // Check for missing required dependencies
               if (dep.dependency_type === "required" && dep.project_id) {
-                if (!draftProjectIds.has(depId)) {
+                if (!isDraftDependencyPresent(draftItems, dep)) {
                   if (!missingDependencies.has(depId)) {
                     missingDependencies.set(depId, { missingProject: depId, requiredBy: [] });
                   }

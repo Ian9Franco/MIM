@@ -15,9 +15,9 @@ export function useFomoFilters(defaultLoader = "unknown", defaultGameVersion = "
   const [environments, setEnvironmentsRaw] = useState<string[]>([]);
   const [sortOrder, setSortOrderRaw] = useState<SortOrder>("relevance");
   const [query, setQueryRaw] = useState("");
-  const [sinytraActive, setSinytraActive] = useState(false);
+  const [sinytraActive, setSinytraActiveRaw] = useState(false);
   const [page, setPage] = useState(1);
-  const [onlyExclusives, setOnlyExclusives] = useState(false);
+  const [onlyExclusives, setOnlyExclusivesRaw] = useState(false);
   const [collectionId, setCollectionIdRaw] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<DiscoverViewMode>("list");
   const [pageSize, setPageSizeRaw] = useState<number>(21);
@@ -63,6 +63,14 @@ export function useFomoFilters(defaultLoader = "unknown", defaultGameVersion = "
     setPageSizeRaw(next);
     setPage(1);
   }, []);
+  const setSinytraActive = useCallback((next: boolean) => {
+    setSinytraActiveRaw(next);
+    setPage(1);
+  }, []);
+  const setOnlyExclusives = useCallback((next: boolean) => {
+    setOnlyExclusivesRaw(next);
+    setPage(1);
+  }, []);
 
   // Persistence
   useEffect(() => {
@@ -88,11 +96,11 @@ export function useFomoFilters(defaultLoader = "unknown", defaultGameVersion = "
         if (s.projectType) setProjectTypeRaw(s.projectType);
         if (s.sortOrder) setSortOrderRaw(s.sortOrder);
         if (s.query) setQueryRaw(s.query);
-        if (s.sinytraActive !== undefined) setSinytraActive(s.sinytraActive);
+        if (s.sinytraActive !== undefined) setSinytraActiveRaw(s.sinytraActive);
         if (Array.isArray(s.categories)) setCategoriesRaw(s.categories);
         if (Array.isArray(s.environments)) setEnvironmentsRaw(s.environments);
         if (typeof s.page === "number" && s.page >= 1) setPage(s.page);
-        if (typeof s.onlyExclusives === "boolean") setOnlyExclusives(s.onlyExclusives);
+        if (typeof s.onlyExclusives === "boolean") setOnlyExclusivesRaw(s.onlyExclusives);
         if (s.viewMode === "list" || s.viewMode === "gallery" || s.viewMode === "card") setViewMode(s.viewMode);
         if (typeof s.pageSize === "number" && s.pageSize >= 1) setPageSizeRaw(s.pageSize);
       } catch (e) {

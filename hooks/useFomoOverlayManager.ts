@@ -17,11 +17,12 @@ function normalizeGallery(rawGallery: unknown[] | undefined): FomoGalleryItem[] 
       items.push({ url: item, thumbnailUrl: item, title: "" });
     } else if (typeof item === "object") {
       const obj = item as Record<string, unknown>;
-      const url = (obj.url || obj.raw_url || obj.image_url || obj.imageUrl || obj.value || "") as string;
-      if (url) {
-        const thumbnailUrl = (obj.thumbnailUrl || obj.thumbnail_url || url) as string;
+      const fullUrl = (obj.raw_url || obj.url || obj.image_url || obj.imageUrl || obj.value || "") as string;
+      if (fullUrl) {
+        const thumbnailUrl = (obj.thumbnailUrl || obj.thumbnail_url || obj.url || fullUrl) as string;
         items.push({
-          url,
+          url: fullUrl,
+          raw_url: (obj.raw_url as string) || fullUrl,
           thumbnailUrl,
           title: (obj.title || obj.description || obj.caption || "") as string,
           description: (obj.description || obj.caption || "") as string,

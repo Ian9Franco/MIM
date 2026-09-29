@@ -279,6 +279,24 @@ function startNextServer({ secretEnvironment = {}, devEnv = {} } = {}) {
   return true;
 }
 
+function warmApiSettings(callback) {
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    callback();
+  };
+  const req = http.get(`http://127.0.0.1:${PORT}/api/settings`, (res) => {
+    res.resume();
+    finish();
+  });
+  req.setTimeout(8000, () => {
+    req.destroy();
+    finish();
+  });
+  req.on('error', finish);
+}
+
 function waitForServer(callback, attempt = 0) {
   if (serverProcess && (serverProcess.killed || serverProcess.exitCode != null)) {
     console.error('[MIM] El servidor Next.js se cerró antes de quedar listo.');
@@ -387,13 +405,14 @@ app.whenReady().then(() => {
 
   waitForServer(() => {
     console.log('✅ Server is ready! Launching window.');
-    createWindow();
-    
-    // Lanzar scraper en segundo plano después de que la app esté lista
-    // para no retrasar el inicio pero asegurar que la data esté fresca
-    setTimeout(() => {
-      runCurseForgeScraper().catch(console.error);
-    }, 5000);
+    warmApiSettings(() => {
+      createWindow();
+      // Lanzar scraper en segundo plano después de que la app esté lista
+      // para no retrasar el inicio pero asegurar que la data esté fresca
+      setTimeout(() => {
+        runCurseForgeScraper().catch(console.error);
+      }, 5000);
+    });
   });
 
   app.on('activate', () => {

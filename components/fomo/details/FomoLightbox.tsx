@@ -3,9 +3,10 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { Maximize2, X } from "lucide-react";
+import type { FomoGalleryItem } from "@/types/fomo";
 
 interface FomoLightboxProps {
-  images: Array<{ url: string; title?: string }>;
+  images: FomoGalleryItem[];
   index: number | null;
   onClose: () => void;
   onNext: (e: React.MouseEvent) => void;
@@ -78,7 +79,7 @@ export function FomoLightbox({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={images[index].url}
+            src={images[index].raw_url || images[index].url}
             alt=""
             className={`object-contain block rounded-2xl transition-all duration-500 shadow-[0_0_100px_rgba(0,0,0,0.8)] border border-white/10 animate-zoom-in ${
               isFullView ? "w-[94vw] h-[90vh]" : "max-w-[90vw] h-[75vh] w-auto"

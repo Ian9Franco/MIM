@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 export type DraftCatalogEntry = {
   title?: string;
+  slug?: string;
+  url?: string;
   tags: string[];
   versions: { id: string; name: string; gameVersions: string[]; loaders: string[] }[];
 };
@@ -30,10 +32,20 @@ async function loadProjectCatalog(source: string, projectId: string): Promise<Dr
   ]);
   const tags: string[] = [];
   let title = "";
+  let slug = "";
+  let url: string | undefined;
   if (projectRes.ok) {
     const data = await projectRes.json();
     const project = data.mod || data;
     title = String(project.title || project.name || "").trim();
+    slug = String(project.slug || "").trim();
+    const projectType = String(project.project_type || project.projectType || "mod");
+    const website = project.links && typeof project.links === "object"
+      ? String((project.links as { websiteUrl?: string }).websiteUrl || "").trim()
+      : "";
+    url = platform === "modrinth"
+      ? (slug ? `https://modrinth.com/${projectType}/${slug}` : undefined)
+      : (website || (slug ? `https://www.curseforge.com/minecraft/mc-mods/${slug}` : undefined));
     tags.push(...asStringArray(project.categories));
     tags.push(...asStringArray(project.additionalCategories));
   }
@@ -51,6 +63,8 @@ async function loadProjectCatalog(source: string, projectId: string): Promise<Dr
   }
   return {
     title: title || undefined,
+    slug: slug || undefined,
+    url,
     tags: [...new Set(tags.map((tag) => tag.toLowerCase()))],
     versions,
   };

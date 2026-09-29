@@ -14,7 +14,7 @@ import {
   type MapParentId,
 } from "@/lib/fomo/draftMapLayout";
 
-function DraftOverlayPortal({
+export function DraftOverlayPortal({
   open,
   onClose,
   children,
@@ -243,5 +243,3 @@ export function DraftCreateCategoryModal({
     </DraftOverlayPortal>
   );
 }
-
-export { DraftOverlayPortal };

@@ -60,35 +60,35 @@ export function useHomeDiscover({
   setActiveTab,
   closeProjectDetails,
 }: UseHomeDiscoverOptions) {
-  const [discoverQuery, setDiscoverQuery] = useState(DEFAULT_DISCOVER_CACHE_STATE.query);
-  const [discoverType, setDiscoverType] = useState(DEFAULT_DISCOVER_CACHE_STATE.projectType);
-  const [discoverVersion, setDiscoverVersion] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.versions);
-  const [discoverLoader, setDiscoverLoader] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.loaders);
-  const [discoverEnvironment, setDiscoverEnvironment] = useState(DEFAULT_DISCOVER_CACHE_STATE.environment);
-  const [discoverCategory, setDiscoverCategory] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.categories);
-  const [discoverSort, setDiscoverSort] = useState(DEFAULT_DISCOVER_CACHE_STATE.sort);
+  const [discoverQuery, setDiscoverQueryState] = useState(DEFAULT_DISCOVER_CACHE_STATE.query);
+  const [discoverType, setDiscoverTypeState] = useState(DEFAULT_DISCOVER_CACHE_STATE.projectType);
+  const [discoverVersion, setDiscoverVersionState] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.versions);
+  const [discoverLoader, setDiscoverLoaderState] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.loaders);
+  const [discoverEnvironment, setDiscoverEnvironmentState] = useState(DEFAULT_DISCOVER_CACHE_STATE.environment);
+  const [discoverCategory, setDiscoverCategoryState] = useState<string[]>(DEFAULT_DISCOVER_CACHE_STATE.categories);
+  const [discoverSort, setDiscoverSortState] = useState(DEFAULT_DISCOVER_CACHE_STATE.sort);
   const [discoverResults, setDiscoverResults] = useState<ModHit[]>(DEFAULT_DISCOVER_CACHE_STATE.results);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverPage, setDiscoverPage] = useState(DEFAULT_DISCOVER_CACHE_STATE.page);
   const [discoverTotal, setDiscoverTotal] = useState(DEFAULT_DISCOVER_CACHE_STATE.total);
-  const [discoverSource, setDiscoverSource] = useState<DiscoverSource>(DEFAULT_DISCOVER_CACHE_STATE.source);
+  const [discoverSource, setDiscoverSourceState] = useState<DiscoverSource>(DEFAULT_DISCOVER_CACHE_STATE.source);
   const [discoverError, setDiscoverError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const initialSearchReadyRef = useRef(false);
 
   useEffect(() => {
     const cached = readDiscoverCache(localStorage);
-    setDiscoverQuery(cached.query);
-    setDiscoverType(cached.projectType);
-    setDiscoverVersion(cached.versions);
-    setDiscoverLoader(cached.loaders);
-    setDiscoverEnvironment(cached.environment);
-    setDiscoverCategory(cached.categories);
-    setDiscoverSort(cached.sort);
+    setDiscoverQueryState(cached.query);
+    setDiscoverTypeState(cached.projectType);
+    setDiscoverVersionState(cached.versions);
+    setDiscoverLoaderState(cached.loaders);
+    setDiscoverEnvironmentState(cached.environment);
+    setDiscoverCategoryState(cached.categories);
+    setDiscoverSortState(cached.sort);
     setDiscoverResults(cached.results);
     setDiscoverPage(cached.page);
     setDiscoverTotal(cached.total);
-    setDiscoverSource(cached.source);
+    setDiscoverSourceState(cached.source);
     initialSearchReadyRef.current = shouldRunInitialDiscoverSearch(cached.results);
     setHydrated(true);
   }, []);
@@ -122,6 +122,39 @@ export function useHomeDiscover({
     discoverResults,
     discoverTotal,
   ]);
+
+  const setDiscoverQuery = useCallback((value: string) => {
+    setDiscoverQueryState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverType = useCallback((value: string) => {
+    setDiscoverTypeState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverVersion = useCallback((value: string[]) => {
+    setDiscoverVersionState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverLoader = useCallback((value: string[]) => {
+    setDiscoverLoaderState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverEnvironment = useCallback((value: string) => {
+    setDiscoverEnvironmentState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverCategory = useCallback((value: string[]) => {
+    setDiscoverCategoryState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverSort = useCallback((value: string) => {
+    setDiscoverSortState(value);
+    setDiscoverPage(1);
+  }, []);
+  const setDiscoverSource = useCallback((value: DiscoverSource) => {
+    setDiscoverSourceState(value);
+    setDiscoverPage(1);
+  }, []);
 
   const runDiscoverSearch = useCallback(async (
     pageNumber = 1,
@@ -197,14 +230,34 @@ export function useHomeDiscover({
     closeProjectDetails();
   }, [closeProjectDetails, setActiveTab]);
 
+  const criteriaKeyRef = useRef("");
+  const criteriaKey = [
+    discoverQuery,
+    discoverType,
+    discoverVersion.join(","),
+    discoverLoader.join(","),
+    discoverEnvironment,
+    discoverCategory.join(","),
+    discoverSort,
+    discoverSource,
+  ].join("|");
+
   useEffect(() => {
     if (!hydrated || activeTab !== "discover") return;
     if (!initialSearchReadyRef.current) {
       initialSearchReadyRef.current = true;
+      criteriaKeyRef.current = criteriaKey;
       return;
     }
+    if (criteriaKeyRef.current !== criteriaKey) {
+      criteriaKeyRef.current = criteriaKey;
+      if (discoverPage !== 1) {
+        setDiscoverPage(1);
+        return;
+      }
+    }
     void runDiscoverSearch(discoverPage);
-  }, [activeTab, discoverPage, hydrated, runDiscoverSearch]);
+  }, [activeTab, criteriaKey, discoverPage, hydrated, runDiscoverSearch]);
 
   return {
     discoverQuery,

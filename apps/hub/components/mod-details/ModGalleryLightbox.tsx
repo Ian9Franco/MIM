@@ -35,7 +35,7 @@ export function ModGalleryLightbox({
 
   const isOpen = activeImageIndex !== null && galleryImages.length > 0;
   const activeImage = isOpen && activeImageIndex !== null ? galleryImages[activeImageIndex] : null;
-  const activeImageUrl = activeImage?.url || (activeImage as unknown as Record<string, string>)?.raw_url || null;
+  const activeImageUrl = activeImage?.raw_url || activeImage?.url || null;
   const hasMultipleImages = galleryImages.length > 1;
 
   const showPreviousImage = useCallback(() => {

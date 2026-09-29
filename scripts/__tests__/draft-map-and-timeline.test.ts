@@ -98,6 +98,20 @@ async function run() {
     assert.ok(reparented.layout.children.some((child) => child.id === "server:mobs" && child.parent === "server"));
   }
 
+  const mergedBranch = reparentMapChild(parseMapLayout({
+    children: [
+      { id: "both:performance", parent: "both", slug: "performance", label: "Rendimiento" },
+      { id: "server:performance", parent: "server", slug: "performance", label: "Rendimiento" },
+    ],
+    itemOrder: { "both:performance": ["mod-a"], "server:performance": ["mod-b"] },
+  }), "both:performance", "server");
+  assert.equal(mergedBranch.ok, true);
+  if (mergedBranch.ok) {
+    assert.equal(mergedBranch.toId, "server:performance");
+    assert.equal(mergedBranch.layout.children.some((child) => child.id === "both:performance"), false);
+    assert.deepEqual(mergedBranch.layout.itemOrder?.["server:performance"], ["mod-b", "mod-a"]);
+  }
+
   const mergedLayout = mergeMapLayout(parseMapLayout({}), {
     categories: { "both:core": { x: 99, y: 88 } },
     labels: {},

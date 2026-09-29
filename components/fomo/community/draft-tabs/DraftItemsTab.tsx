@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, LayoutGrid, List, Tag, Map as MapIcon, Pencil } from "lucide-react";
+import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, LayoutGrid, List, Tag, Map as MapIcon, Pencil, X } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { analyzeDraftItems } from "@/lib/fomo/draftItemInsights";
@@ -32,6 +32,7 @@ import {
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { useDraftItemCatalog } from "@/hooks/fomo/useDraftItemCatalog";
 import { DraftItemMapBoard, DraftInsightsStrip, type MapBoardFilter } from "./DraftItemMapBoard";
+import { DraftOverlayPortal } from "./DraftCreateCategoryModal";
 import { DraftCategoryFilterBar } from "./DraftCategoryFilterBar";
 import { DraftCreateCategoryModal } from "./DraftCreateCategoryModal";
 import { FomoDropdown, FomoDropdownOption } from "@/components/fomo/shared/FomoDropdown";
@@ -82,7 +83,8 @@ export function DraftItemsTab({
   mapLayout?: unknown;
 }) {
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"map" | "list" | "grid">("map");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [mapOpen, setMapOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<DraftContentTypeFilter>("all");
   const [parentFilter, setParentFilter] = useState<MapParentId | "all">("all");
   const [childFilter, setChildFilter] = useState<string | "all">("all");
@@ -221,11 +223,6 @@ export function DraftItemsTab({
       return;
     }
     persistLayout(next);
-    if (result.reason === "exists") {
-      window.dispatchEvent(new CustomEvent("fomo-show-status", {
-        detail: { text: "Esa categoría ya existe en esa rama.", type: "error" },
-      }));
-    }
   };
 
   const handleUpdateCategory = async (category: string, idsOverride?: string[], silent = false, side?: MapParentId) => {
@@ -464,7 +461,7 @@ export function DraftItemsTab({
           <span className={`text-[9px] md:text-[10px] ${txtSub} truncate`}>
             {item.source}
           </span>
-          {sourceTags.length > 0 && viewMode !== "map" && (
+          {sourceTags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {sourceTags.slice(0, 3).map((tag) => (
                 <span key={tag} title="Tag del proyecto" className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold text-emerald-300">
@@ -605,9 +602,9 @@ export function DraftItemsTab({
           {totalCount > 0 && (
             <div className={`flex items-center rounded-lg p-0.5 border ${isModern ? "border-border bg-muted/50" : "border-white/10 bg-black/20"}`}>
               <button
-                onClick={() => setViewMode("map")}
+                onClick={() => setMapOpen(true)}
                 title="Mapa"
-                className={`p-1 rounded-md transition-colors ${viewMode === "map" ? (isModern ? "bg-background shadow-sm text-foreground" : "bg-white/10 text-white") : txtSub}`}
+                className={`p-1 rounded-md transition-colors ${mapOpen ? (isModern ? "bg-background shadow-sm text-foreground" : "bg-white/10 text-white") : txtSub}`}
               >
                 <MapIcon className="w-4 h-4" />
               </button>
@@ -732,23 +729,7 @@ export function DraftItemsTab({
             mapChildren={mapChildren}
             onFilterChange={setMapFilter}
           />
-          {viewMode === "map" ? (
-            <DraftItemMapBoard
-              groupedMods={mapGroups}
-              catalog={catalog}
-              insights={insights}
-              isModern={isModern}
-              layout={{ ...layout, children: mapChildren }}
-              filter={mapFilter}
-              renderCard={(item) => renderItemCard(item, item.content_type || "mod")}
-              onDropCategory={(category, itemId, parent) => handleUpdateCategory(category, [itemId], true, parent)}
-              onMoveCategory={handleMoveCategory}
-              onCreateChild={handleCreateChild}
-              onSaveChild={handleSaveChild}
-              onRemoveChild={handleRemoveChild}
-            />
-          ) : (
-        <div className="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 pb-8">
+          <div className="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 pb-8">
               <div className="flex flex-col gap-8">
                 {MAP_PARENTS.map((parent) => {
                   const kids = mapChildren.filter((child) => child.parent === parent.id && (groupedMods[child.id]?.length || 0) > 0);
@@ -817,11 +798,52 @@ export function DraftItemsTab({
                 })}
               </div>
         </div>
-          )}
             </>
           )}
         </div>
       )}
+
+      <DraftOverlayPortal open={mapOpen} onClose={() => setMapOpen(false)}>
+        <div
+          className={`flex h-[min(94vh,980px)] w-[min(96vw,1440px)] flex-col overflow-hidden rounded-2xl border shadow-2xl ${isModern ? "border-border bg-background text-foreground" : "border-white/10 bg-[#121212] text-white"}`}
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mapa del draft"
+        >
+          <div className={`flex items-center justify-between gap-3 border-b px-4 py-3 ${isModern ? "border-border" : "border-white/10"}`}>
+            <div>
+              <p className="text-sm font-black">Mapa del draft</p>
+              <p className={`text-[11px] ${txtSub}`}>Arrastrá mods entre categorías y ramas. Renombrá o eliminá un hijo desde su tarjeta.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMapOpen(false)}
+              className={`rounded-lg p-2 ${isModern ? "hover:bg-muted" : "hover:bg-white/10"}`}
+              aria-label="Cerrar mapa"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 p-3">
+            <DraftItemMapBoard
+              fill
+              groupedMods={mapGroups}
+              catalog={catalog}
+              insights={insights}
+              isModern={isModern}
+              layout={{ ...layout, children: mapChildren }}
+              filter={mapFilter}
+              renderCard={(item) => renderItemCard(item, item.content_type || "mod")}
+              onDropCategory={(category, itemId, parent) => handleUpdateCategory(category, [itemId], true, parent)}
+              onMoveCategory={handleMoveCategory}
+              onCreateChild={handleCreateChild}
+              onSaveChild={handleSaveChild}
+              onRemoveChild={handleRemoveChild}
+            />
+          </div>
+        </div>
+      </DraftOverlayPortal>
 
       <DraftCreateCategoryModal
         open={showCreateCategory}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ModHit } from "./SpotlightMarquees";
 import { supabase } from "../lib/supabaseClient";
@@ -16,7 +16,14 @@ import {
   DraftItemEditModal,
   type DraftTab,
 } from "./draft-detail";
-import { fixedOrgParentForContentType, orgParentForItem, remapOrgCategoryToParent } from "@/lib/fomo/draftMapLayout";
+import {
+  fixedOrgParentForContentType,
+  orgParentForItem,
+  remapOrgCategoryToParent,
+  resolveItemChildId,
+  type DraftMapLayout,
+} from "@/lib/fomo/draftMapLayout";
+import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
 import { DRAFT_ITEMS_CHANGED_EVENT } from "../lib/drafts/draftContract";
 
@@ -149,6 +156,7 @@ export function DraftDetailView({
   const [editingItem, setEditingItem] = useState<ModHit | null>(null);
   const [itemType, setItemType] = useState("");
   const [itemSide, setItemSide] = useState("");
+  const [itemCategory, setItemCategory] = useState("");
   const [savingItem, setSavingItem] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -162,6 +170,25 @@ export function DraftDetailView({
     members,
   });
   const canEditSettings = Boolean(onUpdateDraftMetadata) && canEditItems;
+
+  const resolvedMapLayout = useMemo(
+    () => resolveSessionMapLayout(draft.map_layout, draft.id),
+    [draft.id, draft.map_layout],
+  );
+
+  const [editMapLayout, setEditMapLayout] = useState<DraftMapLayout>(resolvedMapLayout);
+
+  useEffect(() => {
+    setEditMapLayout(resolvedMapLayout);
+  }, [resolvedMapLayout]);
+
+  const persistMapLayout = useCallback((next: DraftMapLayout) => {
+    if (!draft?.id) return;
+    setEditMapLayout(next);
+    writeDraftMapLayoutCache(draft.id, next);
+    setDraft((prev) => ({ ...prev, map_layout: next }));
+    void supabase.from("drafts").update({ map_layout: next }).eq("id", draft.id);
+  }, [draft?.id]);
   const creatorUsername = ownerMember?.profiles?.username || ownerUsername;
 
   const openSettings = () => {
@@ -360,23 +387,26 @@ export function DraftDetailView({
     try {
       const fixedSide = fixedOrgParentForContentType(itemType);
       const nextSide = fixedSide || itemSide;
-      const nextCategory = remapOrgCategoryToParent(editingItem.orgCategory, orgParentForItem({
+      const nextCategory = remapOrgCategoryToParent(itemCategory, orgParentForItem({
         projectType: itemType,
         content_type: itemType,
         side: nextSide,
       }));
-      if (onUpdateDraftItemContentType && (
-        itemType !== editingItem.projectType
-        || nextSide !== editingItem.side
-        || nextCategory !== editingItem.orgCategory
-      )) {
-        await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId, {
-          category: nextCategory,
-          side: nextSide,
-          versionId: editingItem.formatVersionIds?.[itemType] ?? undefined,
-        });
-      } else if (onUpdateDraftItemSide && nextSide !== editingItem.side) {
-        await onUpdateDraftItemSide(draft.id, editingItem.projectId, nextSide, editingItem.itemId);
+      const typeChanged = itemType !== editingItem.projectType;
+      const sideChanged = nextSide !== editingItem.side;
+      const categoryChanged = nextCategory !== (editingItem.orgCategory || "");
+      if (typeChanged || sideChanged || categoryChanged) {
+        if (onUpdateDraftItemContentType) {
+          await onUpdateDraftItemContentType(draft.id, editingItem.projectId, itemType, editingItem.itemId, {
+            category: nextCategory,
+            side: nextSide,
+            versionId: editingItem.formatVersionIds?.[itemType] ?? undefined,
+          });
+        } else if (categoryChanged && onRecategorizeDraftItem) {
+          await onRecategorizeDraftItem(draft.id, editingItem.projectId, nextCategory, editingItem.itemId, nextSide);
+        } else if (sideChanged && onUpdateDraftItemSide) {
+          await onUpdateDraftItemSide(draft.id, editingItem.projectId, nextSide, editingItem.itemId);
+        }
       }
       setEditingItem(null);
       onRefreshDrafts?.();
@@ -465,6 +495,12 @@ export function DraftDetailView({
                 setEditingItem(mod);
                 setItemType(mod.projectType || "mod");
                 setItemSide(mod.side || "both");
+                setItemCategory(resolveItemChildId({
+                  side: mod.side,
+                  category: mod.orgCategory,
+                  projectType: mod.projectType,
+                }));
+                setEditMapLayout(resolvedMapLayout);
               }}
               onRemoveItem={canEditItems && onRemoveModFromDraft ? handleRemoveMod : undefined}
               onAssignOrgCategory={canEditItems && onRecategorizeDraftItem ? async (mod, categoryId, side) => {
@@ -561,6 +597,10 @@ export function DraftDetailView({
         setItemType={setItemType}
         itemSide={itemSide}
         setItemSide={setItemSide}
+        itemCategory={itemCategory}
+        setItemCategory={setItemCategory}
+        mapLayout={editMapLayout}
+        onMapLayoutChange={persistMapLayout}
         savingItem={savingItem}
         onSave={handleSaveItemEdit}
         availableFormats={editingItem?.availableFormats}

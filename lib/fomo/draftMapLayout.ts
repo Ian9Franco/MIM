@@ -26,6 +26,8 @@ export const MAP_CHILD_PRESETS = [
   { slug: "performance", label: "Rendimiento" },
   { slug: "utility", label: "Utilidad / QoL" },
   { slug: "world", label: "Mundo" },
+  { slug: "worldgen", label: "World Gen" },
+  { slug: "dungeons", label: "Dungeons / Mazmorras" },
   { slug: "mobs", label: "Fauna y Jefes" },
   { slug: "tech", label: "Tecnología / Magia" },
   { slug: "building", label: "Construcción" },

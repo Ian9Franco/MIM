@@ -17,11 +17,15 @@ import {
   type DraftTab,
 } from "./draft-detail";
 import {
+  childCategoryId,
   fixedOrgParentForContentType,
   orgParentForItem,
+  parseChildCategoryId,
   remapOrgCategoryToParent,
   resolveItemChildId,
+  withItemsAssignedToCategory,
   type DraftMapLayout,
+  type MapParentId,
 } from "@/lib/fomo/draftMapLayout";
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
 import { canEditDraft, isDraftOwner } from "../lib/drafts/draftPermissions";
@@ -158,6 +162,7 @@ export function DraftDetailView({
   const [itemSide, setItemSide] = useState("");
   const [itemCategory, setItemCategory] = useState("");
   const [savingItem, setSavingItem] = useState(false);
+  const [savingBulkRecategorize, setSavingBulkRecategorize] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
@@ -189,6 +194,16 @@ export function DraftDetailView({
     setDraft((prev) => ({ ...prev, map_layout: next }));
     void supabase.from("drafts").update({ map_layout: next }).eq("id", draft.id);
   }, [draft?.id]);
+
+  const usedChildIds = useMemo(
+    () => activeCollectionMods.map((mod) => resolveItemChildId({
+      side: mod.side,
+      category: mod.orgCategory,
+      projectType: mod.projectType,
+    })),
+    [activeCollectionMods],
+  );
+
   const creatorUsername = ownerMember?.profiles?.username || ownerUsername;
 
   const openSettings = () => {
@@ -424,6 +439,40 @@ export function DraftDetailView({
     }
   };
 
+  const handleBulkRecategorize = async (
+    mods: ModHit[],
+    chosenBranch: MapParentId,
+    pickedCategoryId: string,
+  ) => {
+    if (!draft?.id || mods.length === 0 || !onRecategorizeDraftItem) return;
+    setSavingBulkRecategorize(true);
+    try {
+      const slug = parseChildCategoryId(pickedCategoryId)?.slug ?? "other";
+      let nextLayout = editMapLayout;
+      for (const mod of mods) {
+        const parent = fixedOrgParentForContentType(mod.projectType) ?? chosenBranch;
+        const category = childCategoryId(parent, slug);
+        const itemKey = String(mod.itemId || mod.projectId);
+        nextLayout = withItemsAssignedToCategory(nextLayout, category, [itemKey]);
+        await onRecategorizeDraftItem(draft.id, mod.projectId, category, mod.itemId, parent);
+        const idx = activeCollectionMods.findIndex(
+          (entry) => entry.itemId === mod.itemId || entry.projectId === mod.projectId,
+        );
+        if (idx !== -1) {
+          activeCollectionMods[idx].orgCategory = category;
+          activeCollectionMods[idx].side = parent;
+        }
+      }
+      persistMapLayout(nextLayout);
+      onRefreshDrafts?.();
+      void loadActivity(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingBulkRecategorize(false);
+    }
+  };
+
   const handleRemoveMod = async (mod: ModHit) => {
     if (!onRemoveModFromDraft || !draft?.id) return;
     const itemId = mod.itemId || mod.projectId;
@@ -521,6 +570,8 @@ export function DraftDetailView({
                 }
                 onRefreshDrafts?.();
               }}
+              onBulkRecategorize={canEditItems && onRecategorizeDraftItem ? handleBulkRecategorize : undefined}
+              savingBulkRecategorize={savingBulkRecategorize}
             />
           )}
 
@@ -604,6 +655,7 @@ export function DraftDetailView({
         savingItem={savingItem}
         onSave={handleSaveItemEdit}
         availableFormats={editingItem?.availableFormats}
+        usedChildIds={usedChildIds}
       />
     </motion.div>
   );

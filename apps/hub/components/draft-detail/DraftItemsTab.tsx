@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Package, Pencil, Trash2, ChevronRight, Tag } from "lucide-react";
+import { Package, Pencil, Trash2, ChevronRight, Tag, Square, CheckSquare } from "lucide-react";
 import { typeColor, typeLabel } from "./draftDetailConstants";
 import { CollectionsSkeleton } from "../FomoSkeletons";
 import type { ModHit } from "../SpotlightMarquees";
@@ -19,6 +19,7 @@ import {
   fixedOrgParentForContentType,
   parseChildCategoryId,
   removeMapChild,
+  resolveItemChildId,
   visibleMapChildren,
   withCategoryLabel,
   withItemsAssignedToCategory,
@@ -39,6 +40,7 @@ import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/dr
 import { DraftCategoryFilterBar } from "@/components/fomo/community/draft-tabs/DraftCategoryFilterBar";
 import { DraftCreateCategoryModal, DraftOverlayPortal } from "@/components/fomo/community/draft-tabs/DraftCreateCategoryModal";
 import { DraftItemCategoryPicker } from "./DraftItemCategoryPicker";
+import { DraftBulkRecategorizeModal, draftItemSelectionKey } from "./DraftBulkRecategorizeModal";
 
 interface DraftItemsTabProps {
   draftId: string;
@@ -56,6 +58,8 @@ interface DraftItemsTabProps {
     extras?: { versionId?: string | null; category?: string; side?: string },
   ) => Promise<void>;
   onBulkRelocate?: (fromId: string, otherId: string, parent: MapParentId) => void;
+  onBulkRecategorize?: (mods: ModHit[], branch: MapParentId, categoryId: string) => Promise<void>;
+  savingBulkRecategorize?: boolean;
   canEditItems?: boolean;
   isPublic?: boolean;
 }
@@ -72,6 +76,8 @@ export function DraftItemsTab({
   onAssignOrgCategory,
   onChangeItemFormat,
   onBulkRelocate,
+  onBulkRecategorize,
+  savingBulkRecategorize = false,
   canEditItems = false,
   isPublic = false,
 }: DraftItemsTabProps) {
@@ -87,6 +93,8 @@ export function DraftItemsTab({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [projectFormats, setProjectFormats] = useState<Record<string, DraftProjectFormatInfo>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
     setLayout(resolveSessionMapLayout(mapLayout, draftId));
@@ -96,7 +104,22 @@ export function DraftItemsTab({
     setTypeFilter("all");
     setParentFilter("all");
     setChildFilter("all");
+    setSelectedIds(new Set());
   }, [draftId]);
+
+  const usedChildIds = useMemo(
+    () => visibleMods.map((mod) => resolveItemChildId({
+      side: mod.side,
+      category: mod.orgCategory,
+      projectType: mod.projectType,
+    })),
+    [visibleMods],
+  );
+
+  const selectedMods = useMemo(
+    () => visibleMods.filter((mod) => selectedIds.has(draftItemSelectionKey(mod))),
+    [visibleMods, selectedIds],
+  );
 
   useEffect(() => {
     const locked = orgParentForTypeFilter(typeFilter);
@@ -157,6 +180,10 @@ export function DraftItemsTab({
       return itemMatchesTreeFilter(item, parentFilter, childFilter);
     });
   }, [treeItems, typeFilter, parentFilter, childFilter]);
+
+  const allFilteredSelected = filteredItems.length > 0
+    && filteredItems.every((item) => selectedIds.has(String(item.id)));
+  const selectedCount = selectedIds.size;
 
   const grouped = useMemo(() => groupItemsByChildId(filteredItems, layout), [filteredItems, layout]);
   const mapChildren = useMemo(() => visibleMapChildren(layout, Object.keys(grouped)), [layout, grouped]);
@@ -244,6 +271,34 @@ export function DraftItemsTab({
               : "Nueva categoría en la rama seleccionada"
         }
       />
+      {canEditItems && visibleMods.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mt-2 px-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (allFilteredSelected) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(filteredItems.map((item) => String(item.id))));
+              }
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/10 text-white/50 hover:text-white hover:bg-white/5"
+          >
+            {allFilteredSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+            {allFilteredSelected ? "Deseleccionar" : "Seleccionar filtro"}
+          </button>
+          {selectedCount > 0 && onBulkRecategorize && (
+            <button
+              type="button"
+              onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-500/15 border border-indigo-500/30 text-indigo-300"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              Recategorizar ({selectedCount})
+            </button>
+          )}
+        </div>
+      )}
       </div>
 
       <div className="relative z-0 flex-1 min-h-0 overflow-y-auto scrollbar-none space-y-4 pr-1">
@@ -327,12 +382,38 @@ export function DraftItemsTab({
                       const col = typeColor(mod.projectType);
                       const dualTypes = projectFormats[mod.projectId]?.types || [];
                       const dual = isDualDraftFormat(dualTypes);
+                      const rowKey = draftItemSelectionKey(mod);
+                      const isSelected = selectedIds.has(rowKey);
                       return (
                         <div
                           key={mod.itemId || mod.projectId}
                           onClick={() => handleOpenModDetails(mod)}
-                          className="bg-surface/90 border border-border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/15"
+                          className={`bg-surface/90 border rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-white/15 ${
+                            isSelected ? "border-indigo-500/40 bg-indigo-500/5" : "border-border"
+                          }`}
                         >
+                          {canEditItems && (
+                            <button
+                              type="button"
+                              aria-label={isSelected ? "Deseleccionar" : "Seleccionar"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(rowKey)) next.delete(rowKey);
+                                  else next.add(rowKey);
+                                  return next;
+                                });
+                              }}
+                              className="p-1 rounded-md text-white/40 hover:text-white shrink-0"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-indigo-400" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                           <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/[0.05] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {mod.iconUrl ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
@@ -509,6 +590,7 @@ export function DraftItemsTab({
             <DraftItemCategoryPicker
               layout={layout}
               branch={branch}
+              usedChildIds={usedChildIds}
               newCategoryName={newCategoryName}
               setNewCategoryName={setNewCategoryName}
               onSelectCategory={(categoryId, layoutAfter) => {
@@ -524,6 +606,23 @@ export function DraftItemsTab({
           </div>
         </DraftOverlayPortal>
       )}
+
+      <DraftBulkRecategorizeModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        mods={selectedMods}
+        mapLayout={layout}
+        usedChildIds={usedChildIds}
+        onMapLayoutChange={persistLayout}
+        saving={savingBulkRecategorize}
+        onApply={(branch, categoryId) => {
+          if (!onBulkRecategorize) return;
+          void onBulkRecategorize(selectedMods, branch, categoryId).then(() => {
+            setBulkOpen(false);
+            setSelectedIds(new Set());
+          });
+        }}
+      />
     </motion.div>
   );
 }

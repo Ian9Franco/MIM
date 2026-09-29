@@ -29,6 +29,7 @@ interface DraftItemEditModalProps {
   savingItem: boolean;
   onSave: () => void;
   availableFormats?: string[];
+  usedChildIds: string[];
 }
 
 const PROJECT_TYPES = [
@@ -69,6 +70,7 @@ export function DraftItemEditModal({
   savingItem,
   onSave,
   availableFormats = [],
+  usedChildIds,
 }: DraftItemEditModalProps) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const fixedSide = fixedOrgParentForContentType(itemType);
@@ -209,6 +211,7 @@ export function DraftItemEditModal({
                     compact
                     layout={mapLayout}
                     branch={branch}
+                    usedChildIds={usedChildIds}
                     selectedCategoryId={itemCategory}
                     newCategoryName={newCategoryName}
                     setNewCategoryName={setNewCategoryName}

@@ -23,3 +23,17 @@ test("enrichDraftItemsWithIcons fills modrinth icons from batch API", async () =
   });
   assert.equal((result[0] as { icon_url?: string }).icon_url, "https://cdn/mod.png");
 });
+
+test("enrichDraftItemsWithIcons fills curseforge icons from hub project API", async () => {
+  const items = [{ project_id: "12345", source: "curseforge" }];
+  const result = await enrichDraftItemsWithIcons(items, async (url) => {
+    assert.match(String(url), /curseforge\/project/);
+    return {
+      ok: true,
+      json: async () => ({
+        details: { icon_url: "https://media.forgecdn.net/avatars/1.png" },
+      }),
+    } as Response;
+  });
+  assert.equal((result[0] as { icon_url?: string }).icon_url, "https://media.forgecdn.net/avatars/1.png");
+});

@@ -9,7 +9,7 @@ import {
   DRAFT_ITEMS_CHANGED_EVENT,
   buildDraftProjectUrl,
   changedDraftMetadata,
-  collectDraftProjectIds,
+  collectDraftItemsForIconFetch,
   decodeHomeDraft,
   decodeHomeDrafts,
   readActiveDraft,
@@ -20,7 +20,7 @@ import {
   type HomeDraftItem,
 } from "../lib/drafts/draftContract";
 import {
-  fetchDraftIcons,
+  fetchDraftIconsFromItems,
   fetchDraftVersions,
   fetchRequiredDependencyProjects,
   resolveDraftModrinthItem,
@@ -140,7 +140,7 @@ export function useHomeDrafts({
       if (!silent) setLoadingDrafts(true);
       const { data, error } = await draftRepository.listDrafts(userId);
       if (error) throw error;
-      const icons = await fetchDraftIcons(collectDraftProjectIds(data));
+      const icons = await fetchDraftIconsFromItems(collectDraftItemsForIconFetch(data));
       setUserDrafts(decodeHomeDrafts(data, icons));
     } catch (error) {
       console.error("Error loading user drafts:", error);
@@ -174,7 +174,7 @@ export function useHomeDrafts({
     try {
       const { data, error } = await supabase.from("draft_items").select("*").eq("draft_id", draft.id);
       if (error) throw error;
-      const icons = await fetchDraftIcons(collectDraftProjectIds([{ draft_items: data }]));
+      const icons = await fetchDraftIconsFromItems(collectDraftItemsForIconFetch(data));
       const rawRows = Array.isArray(data) ? data : [];
       await Promise.all(
         rawRows.map(async (row) => {

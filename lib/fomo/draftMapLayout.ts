@@ -490,6 +490,38 @@ export function visibleMapChildren(layout: DraftMapLayout, groupIds: string[]): 
   return [...layout.children, ...inferred];
 }
 
+/** Categories that exist on a branch (layout + ids assigned to items on that branch). No empty presets. */
+export function branchExistingCategories(
+  layout: DraftMapLayout,
+  branch: MapParentId,
+  usedChildIds: Iterable<string>,
+): DraftMapChild[] {
+  const byId = new Map<string, DraftMapChild>();
+  for (const child of layout.children) {
+    if (child.parent === branch) byId.set(child.id, child);
+  }
+  for (const id of usedChildIds) {
+    const parsed = parseChildCategoryId(id);
+    if (!parsed || parsed.parent !== branch) continue;
+    if (byId.has(id)) continue;
+    const slug = parsed.slug;
+    const preset = MAP_CHILD_PRESETS.find((entry) => entry.slug === slug);
+    byId.set(id, {
+      id,
+      parent: branch,
+      slug,
+      label: categoryDisplayLabel(id, preset?.label || slug, layout),
+    });
+  }
+  return [...byId.values()].sort((a, b) =>
+    categoryDisplayLabel(a.id, a.label, layout).localeCompare(
+      categoryDisplayLabel(b.id, b.label, layout),
+      undefined,
+      { sensitivity: "base" },
+    ),
+  );
+}
+
 export function sortItemsInCategory<T extends { id: string; position?: number; mod_name?: string; project_id?: string }>(
   items: T[],
   categoryId: string,

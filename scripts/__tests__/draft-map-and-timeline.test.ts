@@ -15,6 +15,8 @@ import {
   withCategoryLabel,
   withItemsAssignedToCategory,
   remapOrgCategoryToParent,
+  normalizeDraftOrgCategory,
+  defaultOrgCategoryForDraftItem,
 } from "../../lib/fomo/draftMapLayout";
 import {
   roundedOrthogonalD,
@@ -189,6 +191,16 @@ async function run() {
   assert.equal(merged.some((m) => m.kind === "chapter" && m.label === "Intro"), true);
   assert.equal(merged.filter((m) => m.t === 45).length, 1);
   assert.equal(merged.some((m) => m.label.includes("End fight")), true);
+
+  assert.equal(
+    normalizeDraftOrgCategory("mod", { content_type: "mod", side: "both" }),
+    "both:other",
+  );
+  assert.equal(
+    normalizeDraftOrgCategory("client:animaciones", { content_type: "mod", side: "client" }),
+    "client:animaciones",
+  );
+  assert.equal(defaultOrgCategoryForDraftItem("mod", "client"), "client:other");
 
   console.log("✓ Draft map layout + video timeline markers");
 }

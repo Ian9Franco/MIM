@@ -1,3 +1,4 @@
+import { normalizeDraftOrgCategory, parseChildCategoryId } from "@/lib/fomo/draftMapLayout";
 import { normalizeContentType } from "../projectTypes";
 
 export const ACTIVE_DRAFT_CACHE_KEY = "mim_active_draft";
@@ -21,6 +22,7 @@ export interface HomeDraftItem {
   project_type: string;
   content_type: string;
   category: string;
+  source?: string;
   side: "client" | "server" | "both";
   version_id?: string | null;
   dependencies: HomeDraftDependency[];
@@ -99,7 +101,21 @@ function decodeDraftItem(value: unknown, icons: Record<string, string>): HomeDra
   if (!isRecord(value)) return null;
   const projectId = requiredString(value.project_id);
   if (!projectId) return null;
-  const contentType = optionalString(value.content_type) ?? optionalString(value.category) ?? "mod";
+  const rawCategory = optionalString(value.category);
+  let contentType = optionalString(value.content_type);
+  if (!contentType) {
+    const legacyType = rawCategory?.toLowerCase();
+    if (legacyType === "mod" || legacyType === "resourcepack" || legacyType === "shader" || legacyType === "datapack") {
+      contentType = legacyType;
+    } else {
+      contentType = "mod";
+    }
+  }
+  const side = decodeSide(value.side);
+  const category = normalizeDraftOrgCategory(rawCategory ?? contentType, {
+    content_type: contentType,
+    side,
+  });
 
   return {
     id: optionalString(value.id),
@@ -111,8 +127,9 @@ function decodeDraftItem(value: unknown, icons: Record<string, string>): HomeDra
     icon_url: optionalString(value.icon_url) ?? icons[projectId],
     project_type: optionalString(value.project_type) ?? contentType,
     content_type: contentType,
-    category: optionalString(value.category) ?? contentType,
-    side: decodeSide(value.side),
+    source: optionalString(value.source),
+    category,
+    side,
     version_id:
       value.version_id === null || typeof value.version_id === "string" ? value.version_id : undefined,
     dependencies: decodeDependencies(value.dependencies),

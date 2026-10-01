@@ -2,7 +2,7 @@
 
 > Documentación técnica maestra de Minecraft Intelligent Manager.  
 > Arquitectura, flujos de datos, componentes y decisiones de diseño.  
-> **Versión:** 13.0.6 | **Última actualización:** 2026-09-29  
+> **Versión:** 13.0.7 | **Última actualización:** 2026-10-01  
 > **Estado:** En Desarrollo Activo (Desktop Electron 42 + MIMweb Mobile-First + FOMO Cloud)
 
 ---

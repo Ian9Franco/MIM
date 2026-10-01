@@ -187,6 +187,7 @@ function testPublicContract(): void {
   const expected = [
     "userDrafts", "activeDraft", "setActiveDraft", "handleEnterDraftCollection",
     "handleExitDraft", "createDraft", "addModToDraft", "removeModFromDraft", "recategorizeDraftItem",
+    "recategorizeDraftItemsBatch",
     "updateDraftItemContentType", "updateDraftItemSide", "updateDraftCover", "deleteDraft", "updateDraftMetadata",
   ];
   assertEqual(HOME_DRAFTS_PUBLIC_KEYS.join(","), expected.join(","), "Draft public contract keys must remain stable");

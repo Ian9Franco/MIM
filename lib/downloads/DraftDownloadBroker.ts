@@ -1,52 +1,52 @@
 import { calculateNextRetry, classifyNetworkError } from "@/lib/network";
-import { DownloadIntent, DownloadSessionState, DownloadTask, DownloadProvider, DownloadPlatform } from "./downloadTypes";
+import {
+  DownloadIntent,
+  DownloadSessionManifest,
+  DownloadSessionState,
+  DownloadTask,
+  DownloadProvider,
+  DownloadPlatform,
+} from "./downloadTypes";
 import { downloadEvents } from "./downloadEvents";
 import { ModrinthProvider } from "./providers/ModrinthProvider";
 import { CurseForgeProvider } from "./providers/CurseForgeProvider";
+import {
+  buildSessionManifestFromIntents,
+  evaluateManifestCompletion,
+  formatManifestReport,
+} from "./downloadSessionManifest";
+import {
+  deleteDownloadSession,
+  loadAllDownloadSessions,
+  saveDownloadSession,
+} from "@/lib/db/stores/DownloadSessionStore";
 
-/**
- * DraftDownloadBroker
- * 
- * Orchestrates download intentions by delegating to platform-specific providers.
- * Manages concurrency (e.g. Modrinth = 4, CurseForge = 1), rate limit retries,
- * session state, and pure event-driven progress reporting.
- * 
- * Is an application-wide Singleton to ensure only one queue exists.
- */
 export class DraftDownloadBroker {
   private static instance: DraftDownloadBroker;
 
   private providers: Record<string, DownloadProvider> = {
     modrinth: new ModrinthProvider(),
-    curseforge: new CurseForgeProvider()
+    curseforge: new CurseForgeProvider(),
   };
 
-  // Active Sessions
   private sessions: Map<string, DownloadSessionState> = new Map();
-  
-  // Tasks currently queued for processing
   private queue: DownloadTask[] = [];
-  
-  // Tasks currently actively downloading
   private activeTasks: Set<string> = new Set();
-  
-  // Concurrency tracking per platform
   private platformActive: Record<string, number> = {
     modrinth: 0,
-    curseforge: 0
+    curseforge: 0,
   };
 
-  // Concurrency rules
   private readonly CONCURRENCY_LIMITS: Record<string, number> = {
     modrinth: 4,
-    curseforge: 1
+    curseforge: 1,
   };
 
   private isProcessing = false;
+  private restoreStarted = false;
 
   private constructor() {
-    // Try to load persisted unfinished sessions from IndexedDB in the future
-    this.restoreSessions();
+    void this.restoreSessions();
   }
 
   public static getInstance(): DraftDownloadBroker {
@@ -56,18 +56,21 @@ export class DraftDownloadBroker {
     return DraftDownloadBroker.instance;
   }
 
-  /**
-   * Starts a new download session from a list of intents (Manifest).
-   */
-  public enqueueSession(sessionId: string, intents: DownloadIntent[]): string {
-    const tasks: DownloadTask[] = intents.map(intent => ({
+  public enqueueSession(
+    sessionId: string,
+    intents: DownloadIntent[],
+    manifest?: DownloadSessionManifest,
+  ): string {
+    const tasks: DownloadTask[] = intents.map((intent) => ({
       ...intent,
-      platform: intent.platform.toLowerCase() as DownloadPlatform, // Normalize to lowercase to match CONCURRENCY_LIMITS keys
+      platform: intent.platform.toLowerCase() as DownloadPlatform,
       sessionId,
       status: "pending",
       progress: 0,
-      retries: 0
+      retries: 0,
     }));
+
+    const sessionManifest = manifest ?? buildSessionManifestFromIntents(intents);
 
     const session: DownloadSessionState = {
       sessionId,
@@ -77,19 +80,17 @@ export class DraftDownloadBroker {
       failedTasks: 0,
       status: "active",
       startedAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      manifest: sessionManifest,
     };
 
     this.sessions.set(sessionId, session);
     this.queue.push(...tasks);
-    
-    downloadEvents.emit("session:started", { session });
-    
-    // Save to IndexedDB (placeholder)
-    this.persistSession(session);
 
+    downloadEvents.emit("session:started", { session });
+    void this.persistSession(session);
     this.processQueue();
-    
+
     return sessionId;
   }
 
@@ -99,29 +100,21 @@ export class DraftDownloadBroker {
 
     try {
       while (this.queue.length > 0) {
-        // Find next task we can process without violating concurrency limits
-        const nextTaskIndex = this.queue.findIndex(t => 
-          this.platformActive[t.platform] < this.CONCURRENCY_LIMITS[t.platform]
+        const nextTaskIndex = this.queue.findIndex(
+          (t) => this.platformActive[t.platform] < this.CONCURRENCY_LIMITS[t.platform],
         );
 
-        if (nextTaskIndex === -1) {
-          // All platforms are maxed out, wait a bit and break out of this loop tick.
-          // In a real implementation we'd rely on task completion to re-trigger processQueue.
-          break;
-        }
+        if (nextTaskIndex === -1) break;
 
         const task = this.queue.splice(nextTaskIndex, 1)[0];
-        
-        // Mark as active
         this.activeTasks.add(task.id);
         this.platformActive[task.platform]++;
-        
-        // Execute asynchronously
+
         this.executeTask(task).finally(() => {
           this.activeTasks.delete(task.id);
           this.platformActive[task.platform]--;
           this.checkSessionStatus(task.sessionId);
-          this.processQueue(); // Re-trigger for next items
+          this.processQueue();
         });
       }
     } finally {
@@ -148,14 +141,13 @@ export class DraftDownloadBroker {
 
         const resolved = await provider.resolve(task);
         await provider.download(task, resolved.url, resolved.filename, resolved.hashes);
-        
+
         task.status = "completed";
         task.progress = 100;
         task.completedAt = Date.now();
         this.updateTask(task);
         downloadEvents.emit("task:completed", { task });
-        return; // Success, exit loop
-        
+        return;
       } catch (e: unknown) {
         const err = e instanceof Error ? e : new Error(String(e));
         const status = typeof (e as { status?: unknown })?.status === "number" ? (e as { status: number }).status : undefined;
@@ -166,29 +158,24 @@ export class DraftDownloadBroker {
           httpStatus: isRateLimit ? 429 : status,
         });
 
-        const decision = calculateNextRetry(
-          retryState,
-          report,
-          {
-            maxAttempts: 5,
-            baseDelayMs: 1000,
-            maxDelayMs: 30000,
-            budgetMs: 120000,
-          }
-        );
+        const decision = calculateNextRetry(retryState, report, {
+          maxAttempts: 5,
+          baseDelayMs: 1000,
+          maxDelayMs: 30000,
+          budgetMs: 120000,
+        });
 
         if (decision.shouldRetry) {
           retryState.attemptCount += 1;
           task.retries = retryState.attemptCount;
           task.status = "retry_wait";
           const delayMs = decision.delayMs;
-          
+
           this.updateTask(task);
           downloadEvents.emit("task:retry", { task, attempt: task.retries, delayMs, report });
-          
-          await new Promise(r => setTimeout(r, delayMs));
+
+          await new Promise((r) => setTimeout(r, delayMs));
         } else {
-          // Unrecoverable error or max retries/budget reached
           task.status = "failed";
           const errorMessage = report.errorMessage || (e instanceof Error ? e.message : "Download failed");
           task.error = errorMessage;
@@ -203,50 +190,104 @@ export class DraftDownloadBroker {
   private updateTask(task: DownloadTask) {
     const session = this.sessions.get(task.sessionId);
     if (!session) return;
-    
-    const taskIdx = session.tasks.findIndex(t => t.id === task.id);
+
+    const taskIdx = session.tasks.findIndex((t) => t.id === task.id);
     if (taskIdx !== -1) {
       session.tasks[taskIdx] = { ...task };
     }
-    
+
     session.updatedAt = Date.now();
-    this.persistSession(session);
+    void this.persistSession(session);
   }
 
   private checkSessionStatus(sessionId: string) {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
-    const completed = session.tasks.filter(t => t.status === "completed").length;
-    const failed = session.tasks.filter(t => t.status === "failed").length;
-    const pending = session.tasks.filter(t => t.status === "pending" || t.status === "downloading" || t.status === "retry_wait").length;
+    const completed = session.tasks.filter((t) => t.status === "completed").length;
+    const failed = session.tasks.filter((t) => t.status === "failed").length;
+    const pending = session.tasks.filter(
+      (t) => t.status === "pending" || t.status === "downloading" || t.status === "retry_wait",
+    ).length;
 
     session.completedTasks = completed;
     session.failedTasks = failed;
 
     if (pending === 0) {
-      session.status = failed > 0 ? "failed" : "completed";
-      if (session.status === "completed") {
+      const report = evaluateManifestCompletion(session.manifest, session.tasks);
+      session.completionMessage = formatManifestReport(report);
+      if (report.isComplete) {
+        session.status = "completed";
         downloadEvents.emit("session:completed", { session });
+        void deleteDownloadSession(sessionId);
       } else {
-        downloadEvents.emit("session:failed", { session, error: `${failed} tasks failed.` });
+        session.status = "failed";
+        downloadEvents.emit("session:failed", {
+          session,
+          error: `${report.completedCount}/${report.expectedCount} completados, ${report.failedCount} fallidos.`,
+        });
+        void this.persistSession(session);
       }
     } else {
       downloadEvents.emit("session:progress", { session });
     }
 
-    this.persistSession();
+    void this.persistSession(session);
   }
 
-  private persistSession(_session?: DownloadSessionState) {
-    // TODO: Write to IndexedDB
+  private async persistSession(session?: DownloadSessionState) {
+    if (!session) return;
+    try {
+      await saveDownloadSession(JSON.parse(JSON.stringify(session)));
+    } catch (e) {
+      console.warn("[DraftDownloadBroker] Failed to persist session", e);
+    }
   }
 
-  private restoreSessions() {
-    // TODO: Read from IndexedDB and re-enqueue unfinished tasks
+  private async restoreSessions() {
+    if (this.restoreStarted) return;
+    this.restoreStarted = true;
+    try {
+      const stored = await loadAllDownloadSessions();
+      let resumedPending = 0;
+      for (const raw of stored) {
+        const session = raw as DownloadSessionState;
+        if (session.status === "completed" || session.status === "cancelled") {
+          await deleteDownloadSession(session.sessionId);
+          continue;
+        }
+        for (const task of session.tasks) {
+          if (task.status === "downloading") task.status = "pending";
+        }
+        const pendingTasks = session.tasks.filter(
+          (t) => t.status === "pending" || t.status === "retry_wait",
+        );
+        if (pendingTasks.length === 0) {
+          await deleteDownloadSession(session.sessionId);
+          continue;
+        }
+        session.status = "active";
+        this.sessions.set(session.sessionId, session);
+        this.queue.push(...pendingTasks);
+        resumedPending += pendingTasks.length;
+        downloadEvents.emit("session:started", { session });
+      }
+      if (resumedPending > 0 && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("fomo-show-status", {
+            detail: {
+              text: `Cola de descarga reanudada (${resumedPending} pendientes).`,
+              type: "info",
+            },
+          }),
+        );
+        this.processQueue();
+      }
+    } catch (e) {
+      console.warn("[DraftDownloadBroker] Failed to restore sessions", e);
+    }
   }
 
-  // Public APIs for React to read state without mutation
   public getSession(sessionId: string): DownloadSessionState | undefined {
     return this.sessions.get(sessionId);
   }

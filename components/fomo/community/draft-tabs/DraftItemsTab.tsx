@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ListPlus, Blend, Image, Glasses, Database, Puzzle, Trash2, Search, CheckSquare, Square, LayoutGrid, List, Tag, Map as MapIcon, Pencil, X } from "lucide-react";
 import { supabase } from "@/lib/core/supabaseClient";
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
@@ -30,6 +31,12 @@ import {
   type MapParentId,
 } from "@/lib/fomo/draftMapLayout";
 import { resolveSessionMapLayout, writeDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
+import {
+  buildCategoryAssignTargets,
+  patchDraftItemsInList,
+  persistCategoryAssignTargets,
+  fingerprintCategorySide,
+} from "@/lib/fomo/draftItemsController";
 import { useDraftItemCatalog } from "@/hooks/fomo/useDraftItemCatalog";
 import { DraftItemMapBoard, DraftInsightsStrip, type MapBoardFilter } from "./DraftItemMapBoard";
 import { DraftOverlayPortal } from "./DraftCreateCategoryModal";
@@ -67,6 +74,10 @@ export function DraftItemsTab({
   selectedItems,
   setSelectedItems,
   fetchDraftInfo,
+  refreshDraftItemsOnly,
+  patchDraftItems,
+  trackCategoryMutation,
+  clearCategoryMutation,
   draftLoader = "",
   draftVersion = "",
   draftId,
@@ -77,6 +88,10 @@ export function DraftItemsTab({
   selectedItems: Set<string>;
   setSelectedItems: (items: Set<string>) => void;
   fetchDraftInfo: (silent?: boolean) => void;
+  refreshDraftItemsOnly?: () => void | Promise<void>;
+  patchDraftItems?: (updater: (prev: any[]) => any[]) => void;
+  trackCategoryMutation?: (itemIds: string[], fingerprint: string) => void;
+  clearCategoryMutation?: (itemIds: string[]) => void;
   draftLoader?: string;
   draftVersion?: string;
   draftId: string;
@@ -95,6 +110,20 @@ export function DraftItemsTab({
   const layoutDirtyRef = useRef(false);
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastDraftIdRef = useRef(draftId);
+  const mutationsInFlightRef = useRef(0);
+
+  const applyItemPatch = useCallback((ids: string[], patch: { category?: string; side?: string }) => {
+    if (patchDraftItems) {
+      patchDraftItems((prev) => patchDraftItemsInList(prev, ids, patch));
+      return;
+    }
+    void refreshDraftItemsOnly?.();
+  }, [patchDraftItems, refreshDraftItemsOnly]);
+
+  const finishMutation = useCallback((ids: string[], ok: boolean) => {
+    if (ok) clearCategoryMutation?.(ids);
+    else if (patchDraftItems) void refreshDraftItemsOnly?.();
+  }, [clearCategoryMutation, patchDraftItems, refreshDraftItemsOnly]);
 
   const flushPersistLayout = useCallback((next: DraftMapLayout) => {
     writeDraftMapLayoutCache(draftId, next);
@@ -129,7 +158,7 @@ export function DraftItemsTab({
       setLayout(resolveSessionMapLayout(mapLayout, draftId));
       return;
     }
-    if (layoutDirtyRef.current) return;
+    if (layoutDirtyRef.current || mutationsInFlightRef.current > 0) return;
     setLayout(resolveSessionMapLayout(mapLayout, draftId));
   }, [mapLayout, draftId]);
 
@@ -153,11 +182,12 @@ export function DraftItemsTab({
       const slug = parseChildCategoryId(String(item?.category || ""))?.slug
         || slugifyCategory(String(item?.category || "other"));
       const updates = { side: parent, category: childCategoryId(parent, slug) };
+      applyItemPatch([itemId], updates);
       const { error } = await supabase.from("draft_items").update(updates).eq("id", itemId);
       if (error) throw error;
-      fetchDraftInfo(true);
     } catch (err) {
       console.error("Error updating side", err);
+      void refreshDraftItemsOnly?.();
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "Error al actualizar el lado del item.", type: "error" }
       }));
@@ -189,12 +219,16 @@ export function DraftItemsTab({
     }
     if (!window.confirm("¿Eliminar esta categoría? Los items pasan a Sin categoría.")) return;
     persistLayout(result.layout);
+    const ids = draftItems
+      .filter((item) => resolveItemChildId(item) === result.fromId || item.category === result.fromId)
+      .map((item) => String(item.id));
+    applyItemPatch(ids, { category: result.otherId, side: result.parent });
     try {
       const { error } = await supabase.from("draft_items").update({ category: result.otherId, side: result.parent }).eq("draft_id", draftId).eq("category", result.fromId);
       if (error) throw error;
-      fetchDraftInfo(true);
     } catch (err) {
       console.error("Error removing category", err);
+      void refreshDraftItemsOnly?.();
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "No se pudieron reasignar los items de la categoría.", type: "error" },
       }));
@@ -210,12 +244,13 @@ export function DraftItemsTab({
         .filter((item) => resolveItemChildId(item) === result.fromId || item.category === result.fromId)
         .map((item) => String(item.id));
       if (ids.length === 0) return;
+      applyItemPatch(ids, { category: result.toId, side: nextParent });
       try {
         const { error } = await supabase.from("draft_items").update({ category: result.toId, side: nextParent }).in("id", ids);
         if (error) throw error;
-        fetchDraftInfo(true);
       } catch (err) {
         console.error("Error reparenting category", err);
+        void refreshDraftItemsOnly?.();
         window.dispatchEvent(new CustomEvent("fomo-show-status", {
           detail: { text: "No se pudieron mover los mods de la categoría.", type: "error" },
         }));
@@ -228,27 +263,27 @@ export function DraftItemsTab({
   const handleUpdateCategory = async (category: string, idsOverride?: string[], silent = false, side?: MapParentId) => {
     const ids = idsOverride || Array.from(selectedItems);
     if (ids.length === 0) return;
-    const parsed = parseChildCategoryId(category);
-    const slug = parsed?.slug || slugifyCategory(category);
+    const targets = buildCategoryAssignTargets(ids, draftItems, category, side);
+    const previousItems = draftItems;
+
+    mutationsInFlightRef.current += 1;
     setLayout((prev) => {
       let next = prev;
-      for (const id of ids) {
-        const item = draftItems.find((entry) => entry.id === id);
-        const parent = side || orgParentForItem({ side: item?.side, content_type: item?.content_type });
-        next = withItemsAssignedToCategory(next, childCategoryId(parent, slug), [id]);
+      for (const target of targets) {
+        next = withItemsAssignedToCategory(next, target.category, target.ids);
       }
       schedulePersistLayout(next);
       return next;
     });
+
+    for (const target of targets) {
+      trackCategoryMutation?.(target.ids, fingerprintCategorySide(target.category, target.side));
+      applyItemPatch(target.ids, { category: target.category, side: target.side });
+    }
+
     try {
-      for (const id of ids) {
-        const item = draftItems.find((entry) => entry.id === id);
-        const parent = side || orgParentForItem({ side: item?.side, content_type: item?.content_type });
-        const catId = childCategoryId(parent, slug);
-        const { error } = await supabase.from("draft_items").update({ category: catId, side: parent }).eq("id", id);
-        if (error) throw error;
-      }
-      fetchDraftInfo(true);
+      const { error } = await persistCategoryAssignTargets(supabase, targets);
+      if (error) throw error;
       setIsCategoryModalOpen(false);
       setNewCategoryName("");
       if (!idsOverride) setSelectedItems(new Set());
@@ -257,21 +292,31 @@ export function DraftItemsTab({
           detail: { text: "Categoría asignada a los mods seleccionados.", type: "success" }
         }));
       }
+      for (const target of targets) finishMutation(target.ids, true);
     } catch (err) {
       console.error("Error updating category", err);
+      if (patchDraftItems) {
+        patchDraftItems(() => previousItems);
+      } else {
+        void refreshDraftItemsOnly?.();
+      }
+      for (const target of targets) finishMutation(target.ids, false);
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "Error al actualizar la categoría.", type: "error" }
       }));
+    } finally {
+      mutationsInFlightRef.current = Math.max(0, mutationsInFlightRef.current - 1);
     }
   };
 
   const handleUpdateVersion = async (itemId: string, versionId: string) => {
     try {
+      patchDraftItems?.((prev) => patchDraftItemsInList(prev, [itemId], { version_id: versionId }));
       const { error } = await supabase.from("draft_items").update({ version_id: versionId }).eq("id", itemId);
       if (error) throw error;
-      fetchDraftInfo(true);
     } catch (err) {
       console.error("Error updating version", err);
+      void refreshDraftItemsOnly?.();
       window.dispatchEvent(new CustomEvent("fomo-show-status", {
         detail: { text: "Error al actualizar la versión.", type: "error" }
       }));
@@ -280,14 +325,17 @@ export function DraftItemsTab({
 
   const handleDeleteItems = async (ids: string[]) => {
     try {
+      patchDraftItems?.((prev) => prev.filter((item) => !ids.includes(String(item.id))));
       const { error } = await supabase.from("draft_items").delete().in("id", ids);
       if (!error) {
         setSelectedItems(new Set());
-        fetchDraftInfo(true);
         window.dispatchEvent(new CustomEvent("fomo-draft-items-changed"));
+      } else {
+        void refreshDraftItemsOnly?.();
       }
     } catch (err) {
       console.error("[DraftItemsTab] Error deleting draft items:", err);
+      void refreshDraftItemsOnly?.();
     }
   };
 
@@ -814,8 +862,33 @@ export function DraftItemsTab({
           <div className={`flex items-center justify-between gap-3 border-b px-4 py-3 ${isModern ? "border-border" : "border-white/10"}`}>
             <div>
               <p className="text-sm font-black">Mapa del draft</p>
-              <p className={`text-[11px] ${txtSub}`}>Arrastrá mods entre categorías y ramas. Renombrá o eliminá un hijo desde su tarjeta.</p>
+              <p className={`text-[11px] ${txtSub}`}>Clic para elegir. Ctrl suma, Shift marca el rango. Arrastrá la selección a otra columna.</p>
             </div>
+            {selectedCount > 0 && (
+              <div className="flex items-center gap-2">
+                <span className={`text-[11px] font-bold ${txtSub}`}>{selectedCount} seleccionados</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const first = draftItems.find((item) => selectedItems.has(item.id));
+                    setAssignParent(orgParentForItem({ side: first?.side, content_type: first?.content_type }));
+                    setIsCategoryModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-1.5 text-xs font-bold text-indigo-300"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  Mover
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteItems(Array.from(selectedItems))}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Eliminar
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setMapOpen(false)}
@@ -834,8 +907,10 @@ export function DraftItemsTab({
               isModern={isModern}
               layout={{ ...layout, children: mapChildren }}
               filter={mapFilter}
+              selectedIds={selectedItems}
+              onSelectedIdsChange={setSelectedItems}
               renderCard={(item) => renderItemCard(item, item.content_type || "mod")}
-              onDropCategory={(category, itemId, parent) => handleUpdateCategory(category, [itemId], true, parent)}
+              onDropCategory={(category, itemIds, parent) => handleUpdateCategory(category, itemIds, true, parent)}
               onMoveCategory={handleMoveCategory}
               onCreateChild={handleCreateChild}
               onSaveChild={handleSaveChild}
@@ -865,7 +940,7 @@ export function DraftItemsTab({
       />
 
       {/* Category Assignment Modal */}
-      {isCategoryModalOpen && (
+      {isCategoryModalOpen && createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-md p-5 md:p-6 rounded-3xl shadow-2xl border flex flex-col gap-5 ${isModern ? "bg-card border-border shadow-[0_20px_60px_rgba(13,39,80,0.16)]" : "bg-[#121214] border-white/10"}`}>
             <div>
@@ -967,7 +1042,8 @@ export function DraftItemsTab({
               Cancelar
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

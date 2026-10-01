@@ -4,9 +4,10 @@ import type { CommunityDraft, CommunityDraftItem } from "@/types/fomo";
 
 import { openProjectDetailsInFomo } from "@/lib/fomo/fomoProjectNavigation";
 import { isDraftDependencyPresent } from "@/lib/fomo/draftItemInsights";
+import { orgParentForItem, type MapParentId } from "@/lib/fomo/draftMapLayout";
 
 interface ValidationResult {
-  missingProject?: { id: string; title: string; source: string };
+  missingProject?: { id: string; title: string; source: string; slug?: string };
   id: string;
   type: "critical" | "warning" | "success";
   title: string;
@@ -29,6 +30,7 @@ export function DraftValidationTab({
   const [isScanning, setIsScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [results, setResults] = useState<ValidationResult[]>([]);
+  const [branch, setBranch] = useState<"all" | MapParentId>("all");
 
   // Text utilities based on theme
   const txt = isModern ? "text-foreground" : "text-white";
@@ -43,10 +45,16 @@ export function DraftValidationTab({
     
     const runScan = async () => {
       const newResults: ValidationResult[] = [];
+      const scopeItems = branch === "all"
+        ? draftItems
+        : draftItems.filter((item) => orgParentForItem({
+          side: item.side,
+          content_type: item.content_type,
+        }) === branch);
 
       // 1. Check for duplicates (same project_id)
       const projectCounts: Record<string, CommunityDraftItem[]> = {};
-      draftItems.forEach(item => {
+      scopeItems.forEach(item => {
         if (!item.project_id) return;
         if (!projectCounts[item.project_id]) projectCounts[item.project_id] = [];
         projectCounts[item.project_id].push(item);
@@ -65,7 +73,7 @@ export function DraftValidationTab({
       }
 
       // 2. Client/Server Mismatch
-      const wrongSideItems = draftItems.filter(item => {
+      const wrongSideItems = scopeItems.filter(item => {
         // Shaders and Textures should ONLY be client
         if ((item.content_type === "shader" || item.content_type === "resourcepack") && item.side !== "client") {
           return true;
@@ -93,7 +101,7 @@ export function DraftValidationTab({
       }
 
       // 3. Orphan items (uncategorized)
-      const orphans = draftItems.filter(item => item.content_type === "mod" && (!item.category || item.category === "other"));
+      const orphans = scopeItems.filter(item => item.content_type === "mod" && (!item.category || item.category === "other" || item.category.endsWith(":other")));
       if (orphans.length > 0) {
         newResults.push({
           id: "orphans",
@@ -109,7 +117,7 @@ export function DraftValidationTab({
       const draftProjectIds = new Set(draftItems.map(i => String(i.project_id)));
       const localMissingDeps = new Map<string, { missingProject: string; requiredBy: CommunityDraftItem[] }>();
 
-      draftItems.forEach(item => {
+      scopeItems.forEach(item => {
         if (item.dependencies && Array.isArray(item.dependencies) && item.dependencies.length > 0) {
           item.dependencies.forEach((dep: { project_id?: string; dependency_type?: string }) => {
             const depId = String(dep.project_id);
@@ -158,7 +166,7 @@ export function DraftValidationTab({
       // --- DEEP API ANALYSIS (MODRINTH - ONLY FOR OLD ITEMS WITHOUT DEPS) ---
       try {
         // Detect Modrinth items that DO NOT have dependencies cached locally yet
-        const modrinthItems = draftItems.filter(i => 
+        const modrinthItems = scopeItems.filter(i => 
           i.project_id && (!i.dependencies || i.dependencies.length === 0) && (i.source === "modrinth" || (typeof i.project_id === "string" && i.project_id.length === 8))
         );
         
@@ -281,10 +289,23 @@ export function DraftValidationTab({
           const response = await fetch("/api/" + (missing.source === "curseforge" ? "curseforge" : "modrinth") + "/project?projectId=" + encodeURIComponent(missing.id));
           if (!response.ok) return;
           const project = await response.json();
+          missing.slug = project.slug || project.projectSlug || missing.slug;
           missing.title = project.title || project.name || missing.id;
           result.title = "Falta: " + missing.title;
         } catch { /* Keep the project ID when metadata is unavailable. */ }
       }));
+
+      for (let index = newResults.length - 1; index >= 0; index -= 1) {
+        const missing = newResults[index].missingProject;
+        if (!missing) continue;
+        if (isDraftDependencyPresent(draftItems, {
+          project_id: missing.id,
+          slug: missing.slug,
+          title: missing.title,
+        })) {
+          newResults.splice(index, 1);
+        }
+      }
 
       // 4. Success state if everything is fine (or close to it)
       if (newResults.length === 0) {
@@ -334,6 +355,29 @@ export function DraftValidationTab({
         </div>
 
         <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-wrap justify-center gap-1">
+            {([
+              ["all", "Todo"],
+              ["client", "Client"],
+              ["server", "Server"],
+              ["both", "Both"],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setBranch(id)}
+                className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  branch === id
+                    ? "bg-primary text-white"
+                    : isModern
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-white/10 text-white/70"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {hasScanned && (
             <div className="text-center mb-1">
               <span className={`text-3xl font-black ${

@@ -1,4 +1,5 @@
 import { DBSchema } from 'idb';
+import type { DownloadSessionState } from "@/lib/downloads/downloadTypes";
 
 /**
  * @fileoverview Esquema de la Base de Datos MIM.
@@ -146,6 +147,11 @@ export interface MIMDatabase extends DBSchema {
     key: string;
     value: FollowedMod;
     indexes: { 'by-dateFollowed': number };
+  };
+  downloadSessions: {
+    key: string;
+    value: DownloadSessionState;
+    indexes: { 'by-updatedAt': number; 'by-status': string };
   };
 }
 

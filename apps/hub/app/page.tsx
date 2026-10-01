@@ -438,6 +438,7 @@ export default function Home() {
               onRefreshDrafts={() => c.refreshUserData()}
               onUpdateDraftMetadata={c.updateDraftMetadata}
               onRecategorizeDraftItem={c.recategorizeDraftItem}
+              onRecategorizeDraftItemsBatch={c.recategorizeDraftItemsBatch}
               onUpdateDraftItemContentType={c.updateDraftItemContentType}
               onUpdateDraftItemSide={c.updateDraftItemSide}
             />

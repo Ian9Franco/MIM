@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { CollectionItem } from "../app/types";
 import type { CommunitySection } from "../components/community/CommunityShell";
@@ -27,6 +27,15 @@ import {
 } from "../lib/drafts/draftRemote";
 import { defaultOrgCategoryForDraftItem, normalizeDraftOrgCategory } from "@/lib/fomo/draftMapLayout";
 import { clearDraftMapLayoutCache } from "@/lib/fomo/draftMapLayoutCache";
+import {
+  DraftPendingMutations,
+  fingerprintCategorySide,
+  mergeModHitFromDraftItemRow,
+  patchHomeDraftListItems,
+  persistCategoryAssignTargets,
+  type CategoryAssignTarget,
+} from "@/lib/fomo/draftItemsController";
+import { useDraftRealtimeSync } from "@/lib/fomo/useDraftRealtimeSync";
 import { draftItemNeedsCategoryRepair } from "../lib/drafts/repairDraftItemCategories";
 import { inferSide, normalizeContentType } from "../lib/projectTypes";
 import { createDraftRepository, type DraftRepositoryClient } from "../lib/drafts/draftRepository";
@@ -37,6 +46,7 @@ const draftRepository = createDraftRepository(supabase as unknown as DraftReposi
 
 interface UseHomeDraftsOptions {
   userId?: string;
+  activeCollectionMods: ModHit[];
   setActiveTab: Dispatch<SetStateAction<string>>;
   setCommunitySection: Dispatch<SetStateAction<CommunitySection>>;
   setActiveCollection: Dispatch<SetStateAction<CollectionItem | null>>;
@@ -55,6 +65,7 @@ export const HOME_DRAFTS_PUBLIC_KEYS = [
   "addModToDraft",
   "removeModFromDraft",
   "recategorizeDraftItem",
+  "recategorizeDraftItemsBatch",
   "updateDraftItemContentType",
   "updateDraftItemSide",
   "updateDraftCover",
@@ -115,6 +126,7 @@ function draftItemToModHit(
 
 export function useHomeDrafts({
   userId,
+  activeCollectionMods,
   setActiveTab,
   setCommunitySection,
   setActiveCollection,
@@ -126,6 +138,63 @@ export function useHomeDrafts({
   const [activeDraft, setActiveDraft] = useState<HomeDraft | null>(null);
   const [activeDraftHydrated, setActiveDraftHydrated] = useState(false);
   const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const pendingMutationsRef = useRef(new DraftPendingMutations());
+  const activeModsRef = useRef(activeCollectionMods);
+  const activeDraftIdRef = useRef<string | null>(null);
+  activeModsRef.current = activeCollectionMods;
+  activeDraftIdRef.current = activeDraft?.id ?? null;
+
+  useDraftRealtimeSync({
+    draftId: activeDraft?.id,
+    enabled: Boolean(activeDraft?.id),
+    pending: pendingMutationsRef.current,
+    getItems: () => activeModsRef.current,
+    onItemsChange: setActiveCollectionMods,
+    mergeRemote: (mods, event, row) => {
+      const draftId = activeDraftIdRef.current;
+      if (draftId && row?.id) {
+        setUserDrafts((prev) =>
+          prev.map((draft) => {
+            if (draft.id !== draftId) return draft;
+            const items = draft.items || [];
+            if (event === "DELETE") {
+              return {
+                ...draft,
+                items: items.filter((item) => item.id !== row.id),
+              };
+            }
+            const idx = items.findIndex((item) => item.id === row.id);
+            const nextItem = {
+              ...(idx >= 0 ? items[idx] : {}),
+              id: String(row.id),
+              project_id: String(row.project_id || ""),
+              mod_name: String(row.mod_name || row.name || row.project_id || ""),
+              category: String(row.category || ""),
+              side: String(row.side || "both"),
+              content_type: String(row.content_type || "mod"),
+              version_id: row.version_id ?? null,
+            } as HomeDraftItem;
+            if (idx === -1) return { ...draft, items: [...items, nextItem] };
+            return {
+              ...draft,
+              items: items.map((item, index) => (index === idx ? { ...item, ...nextItem } : item)),
+            };
+          }),
+        );
+      }
+      return mergeModHitFromDraftItemRow(mods, event, row);
+    },
+    onMapLayoutChange: (mapLayout) => {
+      const draftId = activeDraftIdRef.current;
+      if (!draftId) return;
+      setActiveDraft((prev) => (prev?.id === draftId ? { ...prev, map_layout: mapLayout } : prev));
+      setUserDrafts((prev) =>
+        prev.map((draft) =>
+          draft.id === draftId ? { ...draft, map_layout: mapLayout } : draft,
+        ),
+      );
+    },
+  });
 
   useEffect(() => {
     setActiveDraft(readActiveDraft(localStorage));
@@ -399,15 +468,116 @@ export function useHomeDrafts({
     side?: string,
   ): Promise<void> => {
     if (!userId) return;
-    const payload: Record<string, string> = { category };
-    if (side) payload.side = side;
+    const resolvedSide = side || "both";
+    const itemIds = itemId ? [itemId] : activeModsRef.current
+      .filter((mod) => mod.projectId === projectId)
+      .map((mod) => String(mod.itemId || ""))
+      .filter(Boolean);
+
+    if (itemId) {
+      pendingMutationsRef.current.track(itemIds, fingerprintCategorySide(category, resolvedSide));
+    }
+
+    setActiveCollectionMods((prev) =>
+      prev.map((mod) => {
+        const matches = itemId
+          ? mod.itemId === itemId
+          : mod.projectId === projectId;
+        if (!matches) return mod;
+        return { ...mod, orgCategory: category, side: resolvedSide };
+      }),
+    );
+    setUserDrafts((prev) =>
+      prev.map((draft) => {
+        if (draft.id !== draftId || !draft.items?.length) return draft;
+        return {
+          ...draft,
+          items: draft.items.map((item) => {
+            const matches = itemId
+              ? item.id === itemId
+              : item.project_id === projectId;
+            if (!matches) return item;
+            return { ...item, category, side: resolvedSide as HomeDraftItem["side"] };
+          }),
+        };
+      }),
+    );
+
+    const payload: Record<string, string> = { category, side: resolvedSide };
     const query = supabase.from("draft_items").update(payload);
     const { error } = itemId
       ? await query.eq("id", itemId)
       : await query.eq("draft_id", draftId).eq("project_id", projectId);
-    if (error) showAlert("Error", `Error al recategorizar: ${error.message}`);
-    notifyDraftsChanged();
-    await refreshDrafts();
+    if (error) {
+      pendingMutationsRef.current.clear(itemIds);
+      showAlert("Error", `Error al recategorizar: ${error.message}`);
+      void refreshDrafts(true);
+      return;
+    }
+    pendingMutationsRef.current.clear(itemIds);
+  }, [refreshDrafts, showAlert, userId]);
+
+  const recategorizeDraftItemsBatch = useCallback(async (
+    draftId: string,
+    mods: ModHit[],
+  ): Promise<void> => {
+    if (!userId || mods.length === 0) return;
+    const targetsMap = new Map<string, CategoryAssignTarget>();
+    for (const mod of mods) {
+      const id = String(mod.itemId || mod.projectId);
+      const category = String(mod.orgCategory || "");
+      const side = String(mod.side || "both");
+      if (!category) continue;
+      const key = fingerprintCategorySide(category, side);
+      const existing = targetsMap.get(key);
+      if (existing) existing.ids.push(id);
+      else targetsMap.set(key, { ids: [id], category, side });
+    }
+    const targets = [...targetsMap.values()];
+    if (!targets.length) return;
+
+    for (const target of targets) {
+      pendingMutationsRef.current.track(
+        target.ids,
+        fingerprintCategorySide(target.category, target.side),
+      );
+    }
+
+    const idSet = new Set(
+      mods.map((mod) => String(mod.itemId || mod.projectId)),
+    );
+    setActiveCollectionMods((prev) =>
+      prev.map((mod) => {
+        const key = String(mod.itemId || mod.projectId);
+        if (!idSet.has(key)) return mod;
+        const normalized = mods.find((entry) => String(entry.itemId || entry.projectId) === key);
+        if (!normalized?.orgCategory) return mod;
+        return {
+          ...mod,
+          orgCategory: normalized.orgCategory,
+          side: normalized.side || mod.side,
+        };
+      }),
+    );
+    setUserDrafts((prev) => {
+      let next = prev;
+      for (const target of targets) {
+        next = patchHomeDraftListItems(next, draftId, target.ids, {
+          category: target.category,
+          side: target.side,
+        });
+      }
+      return next;
+    });
+
+    const { error } = await persistCategoryAssignTargets(supabase, targets);
+    if (error) {
+      for (const target of targets) pendingMutationsRef.current.clear(target.ids);
+      showAlert("Error", `Error al recategorizar: ${error.message}`);
+      void refreshDrafts(true);
+      return;
+    }
+    for (const target of targets) pendingMutationsRef.current.clear(target.ids);
   }, [refreshDrafts, showAlert, userId]);
 
   const updateDraftItemContentType = useCallback(async (
@@ -427,8 +597,8 @@ export function useHomeDrafts({
       ? await query.eq("id", itemId)
       : await query.eq("draft_id", draftId).eq("project_id", projectId);
     if (error) showAlert("Error", `Error al actualizar tipo: ${error.message}`);
-    notifyDraftsChanged();
-    await refreshDrafts();
+    else notifyDraftsChanged();
+    void refreshDrafts(true);
   }, [refreshDrafts, showAlert, userId]);
 
   const updateDraftItemSide = useCallback(async (
@@ -443,8 +613,8 @@ export function useHomeDrafts({
       ? await query.eq("id", itemId)
       : await query.eq("draft_id", draftId).eq("project_id", projectId);
     if (error) showAlert("Error", `Error al actualizar lado: ${error.message}`);
-    notifyDraftsChanged();
-    await refreshDrafts();
+    else notifyDraftsChanged();
+    void refreshDrafts(true);
   }, [refreshDrafts, showAlert, userId]);
 
   const updateDraftCover = useCallback(async (draftId: string, coverImage: string | null): Promise<void> => {
@@ -507,6 +677,7 @@ export function useHomeDrafts({
     addModToDraft,
     removeModFromDraft,
     recategorizeDraftItem,
+    recategorizeDraftItemsBatch,
     updateDraftItemContentType,
     updateDraftItemSide,
     updateDraftCover,

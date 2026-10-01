@@ -10,6 +10,9 @@ export interface DownloadIntent {
   modName?: string;
   projectType?: string; // e.g. mod, shader, resourcepack
   url?: string; // Direct URL if known beforehand
+  loader?: string;
+  gameVersion?: string;
+  resolvedVersionLabel?: string;
 }
 
 export interface DownloadTask extends DownloadIntent {
@@ -26,6 +29,16 @@ export interface DownloadTask extends DownloadIntent {
   iconUrl?: string;
 }
 
+export interface DownloadSessionManifest {
+  expectedCount: number;
+  entries: Array<{
+    projectId: string;
+    versionId: string;
+    modName?: string;
+    platform: string;
+  }>;
+}
+
 export interface DownloadSessionState {
   sessionId: string;
   tasks: DownloadTask[];
@@ -35,6 +48,8 @@ export interface DownloadSessionState {
   status: "active" | "paused" | "completed" | "cancelled" | "failed";
   startedAt: number;
   updatedAt: number;
+  manifest?: DownloadSessionManifest;
+  completionMessage?: string;
 }
 
 export interface DownloadProvider {

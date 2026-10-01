@@ -1,4 +1,5 @@
 import { DownloadProvider, DownloadTask } from "../downloadTypes";
+import { resolveCompatibleVersion } from "../resolveCompatibleVersion";
 
 export class ModrinthProvider implements DownloadProvider {
   platform = "modrinth" as const;
@@ -6,50 +7,64 @@ export class ModrinthProvider implements DownloadProvider {
 
   async resolve(task: DownloadTask): Promise<{ url: string; filename: string; hashes?: Record<string, string> }> {
     if (task.url) {
-      // Direct URL already known
       const filename = task.url.split("/").pop() || `${task.projectId}.jar`;
       return { url: task.url, filename };
     }
 
-    let versionUrl = `https://api.modrinth.com/v2/project/${task.projectId}/version`;
-    if (task.versionId) {
-      versionUrl = `https://api.modrinth.com/v2/version/${task.versionId}`;
+    const wantsCompatible = !task.versionId && Boolean(task.gameVersion || task.loader);
+    if (wantsCompatible) {
+      const resolved = await resolveCompatibleVersion({
+        source: "modrinth",
+        projectId: task.projectId,
+        projectType: task.projectType,
+        loader: task.loader,
+        gameVersion: task.gameVersion,
+        modName: task.modName,
+      });
+      task.versionId = resolved.versionId;
+      task.resolvedVersionLabel = resolved.versionLabel || resolved.versionId;
     }
+
+    const versionUrl = task.versionId
+      ? `https://api.modrinth.com/v2/version/${task.versionId}`
+      : `https://api.modrinth.com/v2/project/${task.projectId}/version`;
 
     const res = await fetch(versionUrl);
     if (!res.ok) {
        if (res.status === 429) {
-          throw new Error("RateLimited"); // Broker catches this and triggers exponential backoff
+          throw new Error("RateLimited");
        }
        throw new Error(`Modrinth Resolve Failed: ${res.status}`);
     }
 
     const data = await res.json();
-    
-    // If we queried all versions (no versionId), data is an array
     const targetVersion = Array.isArray(data) ? data[0] : data;
     if (!targetVersion || !targetVersion.files || targetVersion.files.length === 0) {
       throw new Error(`No files found for project ${task.projectId}`);
     }
 
-    // Try to prefer primary file, otherwise take the first
     const files = targetVersion.files as Array<{ url: string; filename: string; primary?: boolean; hashes?: Record<string, string> }>;
     const primaryFile = files.find((f) => f.primary) || files[0];
     
-    // Try to resolve extra metadata asynchronously to keep version info accurate
-    let gameVersion = "1.20.1";
-    let loader = "forge";
+    const requestedGame = task.gameVersion;
+    const requestedLoader = task.loader;
+    let gameVersion = requestedGame || "1.20.1";
+    let loader = requestedLoader || "forge";
     let title = task.modName || "";
     let iconUrl = "";
 
-    if (targetVersion.game_versions && targetVersion.game_versions.length > 0) {
+    if (!requestedGame && targetVersion.game_versions && targetVersion.game_versions.length > 0) {
       gameVersion = targetVersion.game_versions[0];
     }
-    if (targetVersion.loaders && targetVersion.loaders.length > 0) {
+    if (!requestedLoader && targetVersion.loaders && targetVersion.loaders.length > 0) {
       loader = targetVersion.loaders[0];
     }
     task.gameVersion = gameVersion;
     task.loader = loader;
+
+    if (!task.resolvedVersionLabel) {
+      task.resolvedVersionLabel = targetVersion.version_number || targetVersion.name || task.versionId;
+    }
 
     try {
       const projectRes = await fetch(`https://api.modrinth.com/v2/project/${task.projectId}`);
@@ -67,15 +82,11 @@ export class ModrinthProvider implements DownloadProvider {
     return {
       url: primaryFile.url,
       filename: primaryFile.filename,
-      hashes: primaryFile.hashes // Hashes like sha1, sha512 for deduplication
+      hashes: primaryFile.hashes
     };
   }
 
   async download(task: DownloadTask, url: string, filename: string, hashes?: Record<string, string>): Promise<void> {
-    // In MIM, the actual network byte streaming and saving to the local filesystem
-    // is handled by our Next.js backend API (to bypass CORS and write to the Downloads folder).
-    // The Broker lives in the client-side (Electron renderer), so we just call the API.
-    
     const res = await fetch("/api/modrinth/download", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

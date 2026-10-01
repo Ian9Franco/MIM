@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, Box, Eye, EyeOff, LayoutGrid, Layers, ShieldCheck, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ArrowLeft, Box, Download, Eye, EyeOff, LayoutGrid, Layers, ShieldCheck, RefreshCw, FlaskConical, FlaskConicalOff, ImagePlus, SwitchCamera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/core/supabaseClient";
 import { downloadBroker } from "@/lib/downloads/DraftDownloadBroker";
-import { DownloadIntent } from "@/lib/downloads/downloadTypes";
+import { DownloadIntent, type DownloadSessionManifest } from "@/lib/downloads/downloadTypes";
 import { useActiveDraft } from "@/hooks/fomo/useActiveDraft";
 import { CommunityDraftInviteModal } from "@/components/fomo/community/CommunityDraftInviteModal";
 import { useAuth } from "@/components/security/AuthContext";
@@ -17,6 +17,14 @@ import { DraftSnapshotsTab } from "./draft-tabs/DraftSnapshotsTab";
 import { DraftItemsTab } from "./draft-tabs/DraftItemsTab";
 import { DraftValidationTab } from "./draft-tabs/DraftValidationTab";
 import { enrichDraftItemsWithIcons } from "@/lib/fomo/enrichDraftItemIcons";
+import {
+  DraftPendingMutations,
+  mergePreservingDraftItemPresentation,
+} from "@/lib/fomo/draftItemsController";
+import { useDraftRealtimeSync } from "@/lib/fomo/useDraftRealtimeSync";
+import { draftItemsForDownloadBranch, type DraftDownloadBranch } from "@/lib/fomo/draftDownloadScope";
+import { resolveCompatibleVersion } from "@/lib/downloads/resolveCompatibleVersion";
+import { DraftDownloadPreflightModal } from "./DraftDownloadPreflightModal";
 
 export function CommunityDraftDetails({
   draftId,
@@ -41,21 +49,61 @@ export function CommunityDraftDetails({
   const [coverUrlInput, setCoverUrlInput] = useState("");
   const [rawCoverFile, setRawCoverFile] = useState<string | null>(null);
   const [snapshotToDelete, setSnapshotToDelete] = useState<string | null>(null);
+  const [downloadBranch, setDownloadBranch] = useState<DraftDownloadBranch>("all");
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightItems, setPreflightItems] = useState<CommunityDraftItem[]>([]);
 
   const { activeDraft, setActiveDraft, clearActiveDraft } = useActiveDraft();
+  const pendingMutationsRef = useRef(new DraftPendingMutations());
+  const draftItemsRef = useRef(draftItems);
+  draftItemsRef.current = draftItems;
+
+  const patchDraftItems = useCallback((
+    updater: (prev: CommunityDraftItem[]) => CommunityDraftItem[],
+  ) => {
+    setDraftItems((prev) => updater(prev));
+  }, []);
+
+  useDraftRealtimeSync<CommunityDraftItem>({
+    draftId,
+    enabled: Boolean(draftId),
+    pending: pendingMutationsRef.current,
+    getItems: () => draftItemsRef.current,
+    onItemsChange: setDraftItems,
+    onMapLayoutChange: (mapLayout) => {
+      setDraft((prev) => (prev ? { ...prev, map_layout: mapLayout } : prev));
+    },
+  });
+
+  const refreshDraftItemsOnly = useCallback(async () => {
+    try {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("draft_items")
+        .select("*")
+        .eq("draft_id", draftId)
+        .order("position", { ascending: true });
+      if (itemsError) throw itemsError;
+      const previous = draftItemsRef.current;
+      const merged = mergePreservingDraftItemPresentation(itemsData || [], previous);
+      const enrichedItems = await enrichDraftItemsWithIcons(merged, fetch, previous);
+      setDraftItems(enrichedItems);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [draftId]);
 
   useEffect(() => {
     fetchDraftInfo();
 
     const handleItemsChanged = () => {
-      fetchDraftInfo(true); // Silent reload
+      void refreshDraftItemsOnly();
     };
 
     window.addEventListener("fomo-draft-items-changed", handleItemsChanged);
     return () => {
       window.removeEventListener("fomo-draft-items-changed", handleItemsChanged);
     };
-  }, [draftId]);
+  }, [draftId, refreshDraftItemsOnly]);
 
   const fetchDraftInfo = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -80,7 +128,9 @@ export function CommunityDraftDetails({
         .order("position", { ascending: true });
 
       if (itemsError) throw itemsError;
-      const enrichedItems = await enrichDraftItemsWithIcons(itemsData || []);
+      const previous = draftItemsRef.current;
+      const merged = mergePreservingDraftItemPresentation(itemsData || [], previous);
+      const enrichedItems = await enrichDraftItemsWithIcons(merged, fetch, previous);
       setDraftItems(enrichedItems);
 
       const { data: snapsData } = await supabase
@@ -115,22 +165,59 @@ export function CommunityDraftDetails({
       return;
     }
 
+    const loader = String(draft.loader || "").toLowerCase();
+    const gameVersion = String(draft.minecraft_version || "");
     setCreatingSnapshot(true);
     try {
-      // Create a simplified manifest from the current items (Draft Manifest Regenerator)
-      // This guarantees the snapshot perfectly reflects the authoritative draft_items table
+      const pinned: Array<{ item: CommunityDraftItem; versionId: string }> = [];
+      const failed: string[] = draftItems.filter((item) => !item.project_id).map((item) => item.mod_name || "mod sin proyecto");
+      const queue = draftItems.filter((item) => item.project_id);
+      for (let index = 0; index < queue.length; index += 4) {
+        const chunk = queue.slice(index, index + 4);
+        const resolved = await Promise.all(chunk.map(async (item) => {
+          try {
+            const result = await resolveCompatibleVersion({
+              source: item.source,
+              projectId: String(item.project_id),
+              projectType: item.content_type || "mod",
+              loader,
+              gameVersion,
+              modName: item.mod_name,
+            });
+            return { item, versionId: result.versionId };
+          } catch {
+            return { item, versionId: "" };
+          }
+        }));
+        for (const entry of resolved) {
+          if (entry.versionId) pinned.push(entry);
+          else failed.push(entry.item.mod_name || entry.item.project_id || "mod");
+        }
+      }
+
+      if (failed.length > 0 || pinned.length !== queue.length) {
+        const names = failed.slice(0, 4).join(", ");
+        window.dispatchEvent(new CustomEvent("fomo-show-status", {
+          detail: {
+            text: `No se creó el snapshot. Sin versión compatible: ${names}${failed.length > 4 ? ` y ${failed.length - 4} más` : ""}.`,
+            type: "error",
+          }
+        }));
+        return;
+      }
+
       const manifest = {
         minecraft: draft.minecraft_version,
         loader: draft.loader,
-        mods: draftItems.map(item => ({
+        mods: pinned.map(({ item, versionId }) => ({
           source: item.source,
           projectId: item.project_id,
-          versionId: item.version_id,
+          versionId,
           side: item.side,
+          category: item.category,
           required: item.required,
           contentType: item.content_type || "mod",
           dependencies: item.dependencies || [],
-          // Persistimos metadatos legibles para el preview del snapshot
           mod_name: item.mod_name || item.project_id,
           icon_url: item.icon_url || null,
         }))
@@ -289,6 +376,30 @@ export function CommunityDraftDetails({
     }));
   };
 
+  const handleDownloadTest = () => {
+    if (!draft) return;
+    const items = draftItemsForDownloadBranch(draftItems, downloadBranch);
+    if (items.length === 0) {
+      window.dispatchEvent(new CustomEvent("fomo-show-status", {
+        detail: { text: "Esa rama no tiene mods para descargar.", type: "warning" }
+      }));
+      return;
+    }
+    setPreflightItems(items);
+    setPreflightOpen(true);
+  };
+
+  const enqueueTestDownload = ({ intents, manifest }: { intents: DownloadIntent[]; manifest: DownloadSessionManifest }) => {
+    if (!draft || intents.length === 0) return;
+    const loader = String(draft.loader || "").toLowerCase();
+    const gameVersion = String(draft.minecraft_version || "");
+    const sessionId = `draft_${draftId}_test_${downloadBranch}_${Date.now()}`;
+    downloadBroker.enqueueSession(sessionId, intents, manifest);
+    window.dispatchEvent(new CustomEvent("fomo-show-status", {
+      detail: { text: `Descarga encolada: ${intents.length} archivos (${loader} ${gameVersion}).`, type: "success" }
+    }));
+  };
+
 
 
   const isModern = currentTheme === "modern";
@@ -376,6 +487,32 @@ export function CommunityDraftDetails({
             </div>
 
             <div className="flex items-center gap-2">
+              <select
+                value={downloadBranch}
+                onChange={(event) => setDownloadBranch(event.target.value as DraftDownloadBranch)}
+                className="rounded-xl border border-white/20 bg-black/40 px-2 py-2.5 text-[11px] font-bold uppercase text-white backdrop-blur-md"
+                title="Qué rama descargar"
+              >
+                <option value="all">Todo</option>
+                <option value="client">Client</option>
+                <option value="server">Server</option>
+                <option value="both">Both</option>
+              </select>
+              <button
+                onClick={handleDownloadTest}
+                className="px-5 py-2.5 font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2 backdrop-blur-md bg-black/40 text-white/90 border border-white/20 hover:bg-black/60"
+              >
+                <Download className="w-4 h-4" />
+                Descargar para test
+              </button>
+              <button
+                onClick={handleCreateSnapshot}
+                disabled={creatingSnapshot}
+                className="px-5 py-2.5 bg-primary/90 text-white font-bold rounded-xl shadow-lg border border-primary/50 hover:bg-primary transition-colors flex items-center gap-2 backdrop-blur-md disabled:opacity-60"
+              >
+                {creatingSnapshot ? <RefreshCw className="w-4 h-4 animate-spin" /> : <SwitchCamera className="w-4 h-4" />}
+                {creatingSnapshot ? "Resolviendo..." : "Crear snapshot"}
+              </button>
               <button 
                 onClick={() => {
                   if (activeDraft?.id === draft.id) {
@@ -408,16 +545,6 @@ export function CommunityDraftDetails({
                 {activeDraft?.id === draft.id ? "Desactivar" : "Activar"}
               </button>
 
-              {false && (
-                <button 
-                  onClick={handleCreateSnapshot}
-                  disabled={creatingSnapshot}
-                  className="px-5 py-2.5 bg-primary/90 text-white font-bold rounded-xl shadow-lg border border-primary/50 hover:bg-primary transition-colors flex items-center gap-2 backdrop-blur-md"
-                >
-                  {creatingSnapshot ? <RefreshCw className="w-4 h-4 animate-spin" /> : <SwitchCamera className="w-4 h-4" />}
-                  Draft Snapshot
-                </button>
-              )}
             </div>
         </div>
       </div>
@@ -498,6 +625,10 @@ export function CommunityDraftDetails({
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
             fetchDraftInfo={fetchDraftInfo}
+            refreshDraftItemsOnly={refreshDraftItemsOnly}
+            patchDraftItems={patchDraftItems}
+            trackCategoryMutation={pendingMutationsRef.current.track.bind(pendingMutationsRef.current)}
+            clearCategoryMutation={pendingMutationsRef.current.clear.bind(pendingMutationsRef.current)}
             draftLoader={String(draft.loader || "")}
             draftVersion={String(draft.minecraft_version || "")}
             draftId={draftId}
@@ -527,6 +658,17 @@ export function CommunityDraftDetails({
         </motion.div>
         </AnimatePresence>
       </div>
+
+      <DraftDownloadPreflightModal
+        open={preflightOpen}
+        onClose={() => setPreflightOpen(false)}
+        isModern={isModern}
+        branch={downloadBranch}
+        loader={String(draft?.loader || "").toLowerCase()}
+        gameVersion={String(draft?.minecraft_version || "")}
+        items={preflightItems}
+        onConfirmDownload={enqueueTestDownload}
+      />
 
       <CommunityDraftInviteModal
         isOpen={isInviteModalOpen}

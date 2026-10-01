@@ -106,6 +106,7 @@ export interface DraftDetailViewProps {
   onRefreshDrafts?: () => void;
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string, itemId?: string, side?: string) => Promise<void>;
+  onRecategorizeDraftItemsBatch?: (draftId: string, mods: ModHit[]) => Promise<void>;
   onUpdateDraftItemContentType?: (
     draftId: string,
     projectId: string,
@@ -131,6 +132,7 @@ export function DraftDetailView({
   onRefreshDrafts,
   onUpdateDraftMetadata,
   onRecategorizeDraftItem,
+  onRecategorizeDraftItemsBatch,
   onUpdateDraftItemContentType,
   onUpdateDraftItemSide,
   onOpenProfile,
@@ -444,27 +446,33 @@ export function DraftDetailView({
     chosenBranch: MapParentId,
     pickedCategoryId: string,
   ) => {
-    if (!draft?.id || mods.length === 0 || !onRecategorizeDraftItem) return;
+    if (!draft?.id || mods.length === 0) return;
     setSavingBulkRecategorize(true);
     try {
       const slug = parseChildCategoryId(pickedCategoryId)?.slug ?? "other";
       let nextLayout = editMapLayout;
+      const normalized: ModHit[] = [];
       for (const mod of mods) {
         const parent = fixedOrgParentForContentType(mod.projectType) ?? chosenBranch;
         const category = childCategoryId(parent, slug);
         const itemKey = String(mod.itemId || mod.projectId);
         nextLayout = withItemsAssignedToCategory(nextLayout, category, [itemKey]);
-        await onRecategorizeDraftItem(draft.id, mod.projectId, category, mod.itemId, parent);
-        const idx = activeCollectionMods.findIndex(
-          (entry) => entry.itemId === mod.itemId || entry.projectId === mod.projectId,
-        );
-        if (idx !== -1) {
-          activeCollectionMods[idx].orgCategory = category;
-          activeCollectionMods[idx].side = parent;
-        }
+        normalized.push({ ...mod, orgCategory: category, side: parent });
       }
       persistMapLayout(nextLayout);
-      onRefreshDrafts?.();
+      if (onRecategorizeDraftItemsBatch) {
+        await onRecategorizeDraftItemsBatch(draft.id, normalized);
+      } else if (onRecategorizeDraftItem) {
+        for (const mod of normalized) {
+          await onRecategorizeDraftItem(
+            draft.id,
+            mod.projectId,
+            mod.orgCategory || pickedCategoryId,
+            mod.itemId,
+            mod.side,
+          );
+        }
+      }
       void loadActivity(true);
     } catch (e) {
       console.error(e);
@@ -554,12 +562,6 @@ export function DraftDetailView({
               onRemoveItem={canEditItems && onRemoveModFromDraft ? handleRemoveMod : undefined}
               onAssignOrgCategory={canEditItems && onRecategorizeDraftItem ? async (mod, categoryId, side) => {
                 await onRecategorizeDraftItem(draft.id, mod.projectId, categoryId, mod.itemId, side);
-                const idx = activeCollectionMods.findIndex((entry) => entry.itemId === mod.itemId || entry.projectId === mod.projectId);
-                if (idx !== -1) {
-                  activeCollectionMods[idx].orgCategory = categoryId;
-                  activeCollectionMods[idx].side = side;
-                }
-                onRefreshDrafts?.();
               } : undefined}
               onBulkRelocate={(fromId, otherId, parent) => {
                 for (const mod of activeCollectionMods) {
@@ -570,7 +572,7 @@ export function DraftDetailView({
                 }
                 onRefreshDrafts?.();
               }}
-              onBulkRecategorize={canEditItems && onRecategorizeDraftItem ? handleBulkRecategorize : undefined}
+              onBulkRecategorize={canEditItems && (onRecategorizeDraftItemsBatch || onRecategorizeDraftItem) ? handleBulkRecategorize : undefined}
               savingBulkRecategorize={savingBulkRecategorize}
             />
           )}

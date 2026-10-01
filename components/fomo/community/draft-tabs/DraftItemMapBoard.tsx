@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Copy, GitBranch, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, GitBranch, Minus, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { DraftCatalogEntry } from "@/hooks/fomo/useDraftItemCatalog";
 import { draftProjectPageUrl, matchesPresentContent, type DraftItemInsights } from "@/lib/fomo/draftItemInsights";
 import {
@@ -49,17 +49,18 @@ const PARENT_STYLE: Record<MapParentId, string> = {
 
 function nodeSize(id: string, itemCount: number): { w: number; h: number } {
   if (isMapParentId(id)) return { w: MAP_PARENT_WIDTH, h: MAP_PARENT_HEIGHT };
-  return { w: MAP_CARD_WIDTH, h: Math.max(MAP_CARD_MIN_H, 72 + itemCount * 78) };
+  const visibleRows = Math.min(itemCount, 12);
+  return { w: MAP_CARD_WIDTH, h: Math.max(MAP_CARD_MIN_H, 148 + visibleRows * 36) };
 }
 
 export function DraftItemMapBoard({
   groupedMods,
-  catalog,
   insights,
   isModern,
   layout,
   filter,
-  renderCard,
+  selectedIds,
+  onSelectedIdsChange,
   onDropCategory,
   onMoveCategory,
   onCreateChild,
@@ -73,8 +74,10 @@ export function DraftItemMapBoard({
   isModern: boolean;
   layout: DraftMapLayout;
   filter: MapBoardFilter;
-  renderCard: (item: DraftItem) => React.ReactNode;
-  onDropCategory: (category: string, itemId: string, parent: MapParentId) => void;
+  renderCard?: (item: DraftItem) => React.ReactNode;
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
+  onDropCategory: (category: string, itemIds: string[], parent: MapParentId) => void;
   onMoveCategory: (categoryId: string, position: DraftMapPosition) => void;
   onCreateChild: (parent: MapParentId, label: string) => void;
   onSaveChild: (childId: string, label: string, parent: MapParentId) => void;
@@ -133,6 +136,40 @@ export function DraftItemMapBoard({
   const [editParent, setEditParent] = useState<MapParentId>("both");
   const [creatingFor, setCreatingFor] = useState<MapParentId | null>(null);
   const [newChildName, setNewChildName] = useState("");
+  const [columnQuery, setColumnQuery] = useState<Record<string, string>>({});
+  const selectionAnchor = useRef<string | null>(null);
+  const draggedItem = useRef(false);
+
+  const readDraggedIds = (event: React.DragEvent) =>
+    event.dataTransfer.getData("text/draft-item-id").split(",").map((id) => id.trim()).filter(Boolean);
+
+  const selectRow = (itemId: string, columnIds: string[], event: React.MouseEvent) => {
+    if (draggedItem.current) {
+      draggedItem.current = false;
+      return;
+    }
+    const additive = event.ctrlKey || event.metaKey;
+    if (event.shiftKey && selectionAnchor.current) {
+      const from = columnIds.indexOf(selectionAnchor.current);
+      const to = columnIds.indexOf(itemId);
+      if (from >= 0 && to >= 0) {
+        const [start, end] = from < to ? [from, to] : [to, from];
+        const next = additive ? new Set(selectedIds) : new Set<string>();
+        for (let index = start; index <= end; index += 1) next.add(columnIds[index]);
+        onSelectedIdsChange(next);
+        return;
+      }
+    }
+    if (additive) {
+      const next = new Set(selectedIds);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      onSelectedIdsChange(next);
+    } else {
+      onSelectedIdsChange(new Set([itemId]));
+    }
+    selectionAnchor.current = itemId;
+  };
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panRef = useRef(pan);
@@ -386,8 +423,8 @@ export function DraftItemMapBoard({
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  const itemId = e.dataTransfer.getData("text/draft-item-id");
-                  if (itemId) onDropCategory(`${parent.id}:other`, itemId, parent.id);
+                  const itemIds = readDraggedIds(e);
+                  if (itemIds.length > 0) onDropCategory(`${parent.id}:other`, itemIds, parent.id);
                 }}
                 className={`absolute rounded-2xl border p-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ${PARENT_STYLE[parent.id]}`}
                 style={{ left: pos.x, top: pos.y, width: MAP_PARENT_WIDTH }}
@@ -456,8 +493,8 @@ export function DraftItemMapBoard({
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  const itemId = e.dataTransfer.getData("text/draft-item-id");
-                  if (itemId) onDropCategory(col.id, itemId, col.parent);
+                  const itemIds = readDraggedIds(e);
+                  if (itemIds.length > 0) onDropCategory(col.id, itemIds, col.parent);
                 }}
                 className={`absolute flex flex-col gap-2 rounded-2xl border p-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ${
                   isModern ? "bg-card/95 border-border" : "bg-[#141418]/95 border-white/10"
@@ -551,53 +588,84 @@ export function DraftItemMapBoard({
                     </div>
                   </div>
                 )}
-                <div data-map-scroll className="flex max-h-[420px] flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+                {items.length > 12 && (
+                  <div className="relative" data-map-edit onPointerDown={(e) => e.stopPropagation()}>
+                    <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 opacity-40" />
+                    <input
+                      value={columnQuery[col.id] || ""}
+                      onChange={(e) => setColumnQuery((prev) => ({ ...prev, [col.id]: e.target.value }))}
+                      placeholder="Buscar en la columna"
+                      className={`w-full rounded-lg border py-1 pl-7 pr-2 text-[10px] outline-none ${isModern ? "border-border bg-background" : "border-white/10 bg-black/30 text-white"}`}
+                    />
+                  </div>
+                )}
+                <div data-map-scroll className="flex max-h-[420px] flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5">
                   {items.length === 0 && (
                     <p className={`text-[10px] px-2 py-6 text-center border border-dashed rounded-xl ${isModern ? "text-muted-foreground border-border" : "text-white/30 border-white/10"}`}>
                       Soltá un mod acá
                     </p>
                   )}
-                  {items.map((item) => {
-                    const key = `${item.source || "modrinth"}::${item.project_id}`;
-                    const entry = catalog[key];
-                    const tags = entry?.tags || [];
+                  {(() => {
+                    const query = (columnQuery[col.id] || "").trim().toLowerCase();
+                    const visibleItems = query
+                      ? items.filter((item) => (item.mod_name || item.project_id || "").toLowerCase().includes(query))
+                      : items;
+                    const columnIds = visibleItems.map((item) => item.id);
+                    return visibleItems.map((item) => {
+                    const name = item.mod_name || item.project_id || "Mod";
+                    const icon = item.icon_url || item.iconUrl;
+                    const side = (item.side || "both").toLowerCase();
+                    const selected = selectedIds.has(item.id);
+                    const sideClass = side === "client"
+                      ? "bg-blue-500/15 text-blue-300"
+                      : side === "server"
+                        ? "bg-red-500/15 text-red-300"
+                        : "bg-emerald-500/15 text-emerald-300";
                     return (
                       <div
                         key={item.id}
                         draggable
                         onDragStart={(e) => {
-                          e.dataTransfer.setData("text/draft-item-id", item.id);
+                          draggedItem.current = true;
+                          const ids = selectedIds.has(item.id) ? Array.from(selectedIds) : [item.id];
+                          e.dataTransfer.setData("text/draft-item-id", ids.join(","));
                           e.dataTransfer.effectAllowed = "move";
                         }}
-                        className="relative"
+                        onDragEnd={() => {
+                          window.setTimeout(() => {
+                            draggedItem.current = false;
+                          }, 0);
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (event.shiftKey) event.preventDefault();
+                          selectRow(item.id, columnIds, event);
+                        }}
+                        title={name}
+                        className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-1.5 py-1 ${
+                          selected
+                            ? "border-primary bg-primary/15"
+                            : isModern ? "border-border bg-background/80" : "border-white/10 bg-black/25"
+                        }`}
                       >
-                        {(duplicateIds.has(item.id) || missingByFrom.has(item.id)) && (
-                          <div className="absolute -top-1.5 left-2 z-10 flex gap-1">
-                            {duplicateIds.has(item.id) && (
-                              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 text-[8px] font-black uppercase text-amber-300">
-                                <Copy className="w-2.5 h-2.5" /> Dup
-                              </span>
-                            )}
-                            {missingByFrom.has(item.id) && (
-                              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-500/20 border border-red-500/30 px-1.5 py-0.5 text-[8px] font-black uppercase text-red-300">
-                                <GitBranch className="w-2.5 h-2.5" /> Dep
-                              </span>
-                            )}
-                          </div>
+                        {icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={icon} alt="" className="h-6 w-6 shrink-0 rounded-md object-cover" />
+                        ) : (
+                          <div className="h-6 w-6 shrink-0 rounded-md bg-white/10" />
                         )}
-                        {renderCard(item)}
-                        {tags.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1 px-1">
-                            {tags.slice(0, 4).map((tag) => (
-                              <span key={tag} title="Tag del proyecto (Modrinth/CurseForge)" className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <span className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${isModern ? "text-foreground" : "text-white"}`}>
+                          {name}
+                        </span>
+                        {duplicateIds.has(item.id) && <Copy className="h-3 w-3 shrink-0 text-amber-300" />}
+                        {missingByFrom.has(item.id) && <GitBranch className="h-3 w-3 shrink-0 text-red-300" />}
+                        <span className={`shrink-0 rounded px-1 py-0.5 text-[8px] font-black uppercase ${sideClass}`}>
+                          {side === "client" ? "Client" : side === "server" ? "Server" : "Both"}
+                        </span>
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                 </div>
               </section>
             );

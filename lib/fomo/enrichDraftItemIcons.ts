@@ -84,10 +84,22 @@ function applyIconMap<T extends DraftItemRow>(items: T[], iconMap: Map<string, s
 export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
   items: T[],
   request: typeof fetch = fetch,
+  previousItems?: T[],
 ): Promise<T[]> {
-  const missing = items.filter((item) => !item.icon_url && !item.iconUrl);
-  if (!missing.length) return items;
-
+  let working = items;
+  if (previousItems?.length) {
+    const prevByProject = new Map(
+      previousItems.map((item) => [String(item.project_id), item]),
+    );
+    working = items.map((item) => {
+      if (item.icon_url || item.iconUrl) return item;
+      const prev = prevByProject.get(String(item.project_id));
+      const cached = prev?.icon_url || prev?.iconUrl;
+      return cached ? { ...item, icon_url: cached } : item;
+    });
+  }
+  const missing = working.filter((item) => !item.icon_url && !item.iconUrl);
+  if (!missing.length) return working;
   const modrinthIds = [
     ...new Set(
       missing
@@ -104,5 +116,5 @@ export async function enrichDraftItemsWithIcons<T extends DraftItemRow>(
   ]);
 
   const merged = new Map<string, string>([...modrinthIcons, ...curseforgeIcons]);
-  return applyIconMap(items, merged);
+  return applyIconMap(working, merged);
 }

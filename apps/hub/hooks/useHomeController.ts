@@ -261,6 +261,7 @@ export function useHomeController() {
 
   const drafts = useHomeDrafts({
     userId: session?.user?.id,
+    activeCollectionMods,
     setActiveTab,
     setCommunitySection,
     setActiveCollection,
@@ -1149,6 +1150,7 @@ export function useHomeController() {
     handleCloseModDetails: closeProjectDetails,
     createDraft: drafts.createDraft, addModToDraft: drafts.addModToDraft,
     removeModFromDraft: drafts.removeModFromDraft, recategorizeDraftItem: drafts.recategorizeDraftItem,
+    recategorizeDraftItemsBatch: drafts.recategorizeDraftItemsBatch,
     updateDraftItemContentType: drafts.updateDraftItemContentType,
     updateDraftItemSide: drafts.updateDraftItemSide, updateDraftCover: drafts.updateDraftCover,
     deleteDraft: drafts.deleteDraft, updateDraftMetadata: drafts.updateDraftMetadata,

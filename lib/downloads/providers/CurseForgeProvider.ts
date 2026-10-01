@@ -1,8 +1,9 @@
 import { DownloadProvider, DownloadTask } from "../downloadTypes";
+import { resolveCompatibleVersion } from "../resolveCompatibleVersion";
 
 export class CurseForgeProvider implements DownloadProvider {
   platform = "curseforge" as const;
-  concurrencyLimit = 1; // Strict 1 request at a time
+  concurrencyLimit = 1;
 
   async resolve(task: DownloadTask): Promise<{ url: string; filename: string; hashes?: Record<string, string> }> {
     if (task.url) {
@@ -10,12 +11,7 @@ export class CurseForgeProvider implements DownloadProvider {
       return { url: task.url, filename };
     }
 
-    // Resolving CurseForge file requires hitting our Next.js API since we need the API Key
-    // which is safely stored in the backend settings.
-    const resolveUrl = task.versionId 
-        ? `/api/curseforge/project?projectId=${task.projectId}&fileId=${task.versionId}`
-        : `/api/curseforge/project?projectId=${task.projectId}`;
-    
+    const resolveUrl = `/api/curseforge/project?projectId=${encodeURIComponent(task.projectId)}`;
     const res = await fetch(resolveUrl);
     if (!res.ok) {
         if (res.status === 429) throw new Error("RateLimited");
@@ -23,46 +19,101 @@ export class CurseForgeProvider implements DownloadProvider {
     }
 
     const data = await res.json();
-    
-    let targetFile = null;
+    const wantsCompatible = !task.versionId && Boolean(task.gameVersion || task.loader);
 
-    if (task.versionId && data.file) {
-        targetFile = data.file;
+    type ResolvedFile = {
+      downloadUrl?: string;
+      fileName?: string;
+      hashes?: Array<{ algo: number; value: string }> | Record<string, string>;
+      gameVersions?: string[];
+    };
+    let targetFile: ResolvedFile | null = null;
+
+    if (wantsCompatible) {
+      const resolved = await resolveCompatibleVersion({
+        source: "curseforge",
+        projectId: task.projectId,
+        projectType: task.projectType,
+        loader: task.loader,
+        gameVersion: task.gameVersion,
+        modName: task.modName,
+      });
+      task.versionId = resolved.versionId;
+      task.resolvedVersionLabel = resolved.versionLabel || resolved.versionId;
+    }
+
+    if (task.versionId || wantsCompatible) {
+      const projectType = task.projectType || "mod";
+      const params = new URLSearchParams({
+        projectId: task.projectId,
+        projectType,
+      });
+      params.set("loader", "any");
+      if (task.gameVersion) params.set("gameVersion", task.gameVersion);
+      const versionsRes = await fetch(`/api/curseforge/versions?${params.toString()}`);
+      if (!versionsRes.ok) {
+        if (versionsRes.status === 429) throw new Error("RateLimited");
+        throw new Error(`CurseForge Resolve Failed: ${versionsRes.status}`);
+      }
+      const versionsData = await versionsRes.json();
+      const versions = (versionsData.versions || []) as Array<{
+        id: string;
+        versionNumber?: string;
+        datePublished?: string;
+        gameVersions?: string[];
+        primaryFile?: { url?: string; filename?: string; hashes?: Record<string, string> };
+      }>;
+      const picked = task.versionId
+        ? versions.find((version) => String(version.id) === String(task.versionId))
+        : [...versions].sort((a, b) => Date.parse(b.datePublished || "") - Date.parse(a.datePublished || ""))[0];
+      if (!picked?.primaryFile?.url) {
+        throw new Error(task.versionId
+          ? `No se encontró la versión fijada ${task.versionId} de ${task.modName || task.projectId}`
+          : `No hay archivo para ${task.loader || "cualquier loader"} ${task.gameVersion || ""} en ${task.modName || task.projectId}`);
+      }
+      if (!task.resolvedVersionLabel) {
+        task.resolvedVersionLabel = picked.versionNumber || picked.id;
+      }
+      targetFile = {
+        downloadUrl: picked.primaryFile.url,
+        fileName: picked.primaryFile.filename,
+        hashes: picked.primaryFile.hashes,
+        gameVersions: picked.gameVersions,
+      };
     } else if (data.latestFiles && data.latestFiles.length > 0) {
-        targetFile = data.latestFiles[0];
+      targetFile = data.latestFiles[0];
     } else if (data.mainFileId) {
-        // Edge case: if we only have mainFileId, we might need a secondary API call
-        // But let's assume the API returns the file object in this implementation.
-        throw new Error(`No explicit file returned for CF project ${task.projectId}`);
+      throw new Error(`No explicit file returned for CF project ${task.projectId}`);
     }
 
     if (!targetFile || !targetFile.downloadUrl) {
-      // CurseForge sometimes hides downloadUrl for mods with disabled third-party distribution
-      // This will be caught and could trigger a fallback.
       throw new Error(`Third-party distribution disabled or file missing for CF project ${task.projectId}`);
     }
 
     const hashes: Record<string, string> = {};
-    if (targetFile.hashes) {
-        (targetFile.hashes as Array<{ algo: number; value: string }>).forEach((h) => {
+    if (Array.isArray(targetFile.hashes)) {
+        targetFile.hashes.forEach((h) => {
             if (h.algo === 1) hashes["sha1"] = h.value;
             if (h.algo === 2) hashes["md5"] = h.value;
         });
+    } else if (targetFile.hashes) {
+        Object.assign(hashes, targetFile.hashes);
     }
 
-    // Extract gameVersion and loader from targetFile.gameVersions
-    let gameVersion = "1.20.1";
-    let loader = "forge";
+    const requestedGame = task.gameVersion;
+    const requestedLoader = task.loader;
+    let gameVersion = requestedGame || "1.20.1";
+    let loader = requestedLoader || "forge";
     if (targetFile.gameVersions) {
-      const gv = targetFile.gameVersions.find((v: string) => /^\d+\.\d+(\.\d+)?$/.test(v));
-      if (gv) gameVersion = gv;
-      
-      const ld = targetFile.gameVersions.find((v: string) => 
-        ["fabric", "forge", "neoforge", "quilt", "fabric/forge"].includes(v.toLowerCase())
-      );
-      if (ld) {
-        loader = ld.toLowerCase();
-        if (loader === "fabric/forge") loader = "fabric";
+      if (!requestedGame) {
+        const gv = targetFile.gameVersions.find((v: string) => /^\d+\.\d+(\.\d+)?$/.test(v));
+        if (gv) gameVersion = gv;
+      }
+      if (!requestedLoader) {
+        const ld = targetFile.gameVersions.find((v: string) =>
+          ["fabric", "forge", "neoforge", "quilt"].includes(v.toLowerCase())
+        );
+        if (ld) loader = ld.toLowerCase();
       }
     }
 
@@ -76,7 +127,7 @@ export class CurseForgeProvider implements DownloadProvider {
 
     return {
         url: targetFile.downloadUrl,
-        filename: targetFile.fileName,
+        filename: targetFile.fileName || `${task.projectId}.jar`,
         hashes
     };
   }

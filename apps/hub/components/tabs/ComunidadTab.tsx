@@ -73,6 +73,7 @@ interface ComunidadTabProps {
   onRefreshDrafts?: () => void;
   onUpdateDraftMetadata?: (draftId: string, updates: Record<string, unknown>) => Promise<boolean>;
   onRecategorizeDraftItem?: (draftId: string, projectId: string, category: string, itemId?: string, side?: string) => Promise<void>;
+  onRecategorizeDraftItemsBatch?: (draftId: string, mods: ModHit[]) => Promise<void>;
   onUpdateDraftItemContentType?: (draftId: string, projectId: string, contentType: string, itemId?: string) => Promise<void>;
   onUpdateDraftItemSide?: (draftId: string, projectId: string, side: string, itemId?: string) => Promise<void>;
 }
@@ -188,6 +189,7 @@ export function ComunidadTab({
   onRefreshDrafts,
   onUpdateDraftMetadata,
   onRecategorizeDraftItem,
+  onRecategorizeDraftItemsBatch,
   onUpdateDraftItemContentType,
   onUpdateDraftItemSide,
 }: ComunidadTabProps) {
@@ -480,6 +482,7 @@ export function ComunidadTab({
           onRefreshDrafts={onRefreshDrafts}
           onUpdateDraftMetadata={onUpdateDraftMetadata}
           onRecategorizeDraftItem={onRecategorizeDraftItem}
+          onRecategorizeDraftItemsBatch={onRecategorizeDraftItemsBatch}
           onUpdateDraftItemContentType={onUpdateDraftItemContentType}
           onUpdateDraftItemSide={onUpdateDraftItemSide}
           onOpenProfile={(value) => {

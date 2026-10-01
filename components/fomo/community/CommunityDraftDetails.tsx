@@ -56,7 +56,10 @@ export function CommunityDraftDetails({
   const { activeDraft, setActiveDraft, clearActiveDraft } = useActiveDraft();
   const pendingMutationsRef = useRef(new DraftPendingMutations());
   const draftItemsRef = useRef(draftItems);
-  draftItemsRef.current = draftItems;
+
+  useEffect(() => {
+    draftItemsRef.current = draftItems;
+  }, [draftItems]);
 
   const patchDraftItems = useCallback((
     updater: (prev: CommunityDraftItem[]) => CommunityDraftItem[],
@@ -64,10 +67,18 @@ export function CommunityDraftDetails({
     setDraftItems((prev) => updater(prev));
   }, []);
 
+  const trackCategoryMutation = useCallback((itemIds: string[], fingerprint: string) => {
+    pendingMutationsRef.current.track(itemIds, fingerprint);
+  }, []);
+
+  const clearCategoryMutation = useCallback((itemIds: string[]) => {
+    pendingMutationsRef.current.clear(itemIds);
+  }, []);
+
   useDraftRealtimeSync<CommunityDraftItem>({
     draftId,
     enabled: Boolean(draftId),
-    pending: pendingMutationsRef.current,
+    pendingRef: pendingMutationsRef,
     getItems: () => draftItemsRef.current,
     onItemsChange: setDraftItems,
     onMapLayoutChange: (mapLayout) => {
@@ -627,8 +638,8 @@ export function CommunityDraftDetails({
             fetchDraftInfo={fetchDraftInfo}
             refreshDraftItemsOnly={refreshDraftItemsOnly}
             patchDraftItems={patchDraftItems}
-            trackCategoryMutation={pendingMutationsRef.current.track.bind(pendingMutationsRef.current)}
-            clearCategoryMutation={pendingMutationsRef.current.clear.bind(pendingMutationsRef.current)}
+            trackCategoryMutation={trackCategoryMutation}
+            clearCategoryMutation={clearCategoryMutation}
             draftLoader={String(draft.loader || "")}
             draftVersion={String(draft.minecraft_version || "")}
             draftId={draftId}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/lib/core/supabaseClient";
 import {
@@ -14,7 +14,7 @@ type RealtimeRow = DraftItemRowLike & { draft_id?: string };
 export type UseDraftRealtimeSyncOptions<TItem> = {
   draftId: string | null | undefined;
   enabled?: boolean;
-  pending?: DraftPendingMutations;
+  pendingRef?: RefObject<DraftPendingMutations | null>;
   getItems: () => TItem[];
   onItemsChange: (items: TItem[]) => void;
   onMapLayoutChange?: (mapLayout: unknown) => void;
@@ -28,27 +28,29 @@ export type UseDraftRealtimeSyncOptions<TItem> = {
 export function useDraftRealtimeSync<TItem>({
   draftId,
   enabled = true,
-  pending,
+  pendingRef,
   getItems,
   onItemsChange,
   onMapLayoutChange,
   mergeRemote,
 }: UseDraftRealtimeSyncOptions<TItem>): void {
-  const pendingRef = useRef(pending ?? new DraftPendingMutations());
+  const fallbackPendingRef = useRef(new DraftPendingMutations());
   const getItemsRef = useRef(getItems);
   const onItemsRef = useRef(onItemsChange);
   const onLayoutRef = useRef(onMapLayoutChange);
   const mergeRef = useRef(mergeRemote);
 
-  getItemsRef.current = getItems;
-  onItemsRef.current = onItemsChange;
-  onLayoutRef.current = onMapLayoutChange;
-  mergeRef.current = mergeRemote;
-
-  if (pending) pendingRef.current = pending;
+  useEffect(() => {
+    getItemsRef.current = getItems;
+    onItemsRef.current = onItemsChange;
+    onLayoutRef.current = onMapLayoutChange;
+    mergeRef.current = mergeRemote;
+  });
 
   useEffect(() => {
     if (!enabled || !draftId) return;
+
+    const resolvePending = () => pendingRef?.current ?? fallbackPendingRef.current;
 
     let channel: RealtimeChannel | null = null;
 
@@ -68,7 +70,7 @@ export function useDraftRealtimeSync<TItem>({
           if (!row?.id) return;
 
           if (event === "UPDATE" || event === "INSERT") {
-            const apply = pendingRef.current.shouldApplyRemoteUpdate(String(row.id), {
+            const apply = resolvePending().shouldApplyRemoteUpdate(String(row.id), {
               category: String(row.category || ""),
               side: String(row.side || "both"),
             });
@@ -104,5 +106,5 @@ export function useDraftRealtimeSync<TItem>({
     return () => {
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [draftId, enabled]);
+  }, [draftId, enabled, pendingRef]);
 }

@@ -141,13 +141,16 @@ export function useHomeDrafts({
   const pendingMutationsRef = useRef(new DraftPendingMutations());
   const activeModsRef = useRef(activeCollectionMods);
   const activeDraftIdRef = useRef<string | null>(null);
-  activeModsRef.current = activeCollectionMods;
-  activeDraftIdRef.current = activeDraft?.id ?? null;
+
+  useEffect(() => {
+    activeModsRef.current = activeCollectionMods;
+    activeDraftIdRef.current = activeDraft?.id ?? null;
+  }, [activeCollectionMods, activeDraft?.id]);
 
   useDraftRealtimeSync({
     draftId: activeDraft?.id,
     enabled: Boolean(activeDraft?.id),
-    pending: pendingMutationsRef.current,
+    pendingRef: pendingMutationsRef,
     getItems: () => activeModsRef.current,
     onItemsChange: setActiveCollectionMods,
     mergeRemote: (mods, event, row) => {

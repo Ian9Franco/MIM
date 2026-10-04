@@ -13,6 +13,8 @@ export interface DownloadIntent {
   loader?: string;
   gameVersion?: string;
   resolvedVersionLabel?: string;
+  /** Relative path under Downloads, e.g. `client/Rendimiento`. */
+  downloadSubdir?: string;
 }
 
 export interface DownloadTask extends DownloadIntent {

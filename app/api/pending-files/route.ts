@@ -14,6 +14,7 @@ import { currentMimIndexLayout } from "@/lib/core/mimIndex";
 import path from "path";
 import fs from "fs";
 import { withApiGuard } from "@/lib/apiGuard";
+import { listDownloadFilesRecursive } from "@/lib/downloads/listDownloadFiles";
 
 interface DownloadHistoryEntry {
   fileName?: string;
@@ -44,11 +45,9 @@ export const GET = withApiGuard(
       }
     }
 
-    const files = fs.readdirSync(downloadsPath);
-    const pendingFiles = files
-      .filter(f => f.endsWith(".jar") || f.endsWith(".zip"))
-      .map(fileName => {
-        const filePath = path.join(downloadsPath, fileName);
+    const filePaths = listDownloadFilesRecursive(downloadsPath);
+    const pendingFiles = filePaths.map((filePath) => {
+        const fileName = path.basename(filePath);
         let meta: Partial<ModMeta> = {};
         try {
           meta = scanMod(filePath);

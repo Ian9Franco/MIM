@@ -145,7 +145,8 @@ export class CurseForgeProvider implements DownloadProvider {
         iconUrl: task.iconUrl,
         loader: task.loader,
         gameVersion: task.gameVersion,
-        title: task.title || task.modName
+        title: task.title || task.modName,
+        downloadSubdir: task.downloadSubdir,
       })
     });
 

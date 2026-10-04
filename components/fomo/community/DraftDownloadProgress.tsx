@@ -89,6 +89,7 @@ export function DraftDownloadProgress({ isModern }: { isModern?: boolean }) {
       loader: task.loader,
       gameVersion: task.gameVersion,
       resolvedVersionLabel: task.resolvedVersionLabel,
+      downloadSubdir: task.downloadSubdir,
     }));
     const manifest = activeSession.manifest
       ? {

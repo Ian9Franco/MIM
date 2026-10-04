@@ -17,8 +17,8 @@
 
 import chokidar, { FSWatcher } from "chokidar";
 import { EventEmitter } from "events";
-import fs from "fs";
 import path from "path";
+import { listDownloadFilesRecursive } from "@/lib/downloads/listDownloadFiles";
 
 // ── Shared Event Bus ──────────────────────────────────────────────────────────
 
@@ -56,12 +56,7 @@ function isRelevantFile(filePath: string): boolean {
  * immediate "catch-up" flush to the newly connected client.
  */
 export function scanExistingFiles(downloadsPath: string): string[] {
-  if (!fs.existsSync(downloadsPath)) return [];
-
-  return fs
-    .readdirSync(downloadsPath)
-    .filter(isRelevantFile)
-    .map((f) => path.join(downloadsPath, f));
+  return listDownloadFilesRecursive(downloadsPath);
 }
 
 /**

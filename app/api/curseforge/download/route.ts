@@ -16,6 +16,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { watcherEmitter } from "@/lib/core/watcher";
 import { findExisting, AduanaDirs } from "@/lib/fomo/aduana";
+import { pickDownloadFilePath } from "@/lib/downloads/downloadTargetPath";
 
 const bodySchema = z.object({
   url: z.string().url("Invalid URL format"),
@@ -30,6 +31,7 @@ const bodySchema = z.object({
   gameVersion: z.string().optional(),
   projectType: z.string().optional(),
   title: z.string().optional(),
+  downloadSubdir: z.string().max(260).optional(),
 });
 
 export const POST = withApiGuard(
@@ -39,7 +41,7 @@ export const POST = withApiGuard(
   },
   async ({ body }) => {
     try {
-      const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType, title } = body;
+      const { url, filename, hashes, iconUrl, projectId, loader, gameVersion, projectType, title, downloadSubdir } = body;
 
       // path.basename previene path traversal ("../../evil.jar" → "evil.jar")
       let safeFilename = path.basename(filename);
@@ -97,12 +99,7 @@ export const POST = withApiGuard(
           case "builds":
           case "staging":
           default: {
-            const ext = path.extname(safeFilename);
-            const base = path.basename(safeFilename, ext);
-            let targetPath = path.join(downloadsDir, safeFilename);
-            if (fs.existsSync(targetPath)) {
-              targetPath = path.join(downloadsDir, `${base}_${Date.now()}${ext}`);
-            }
+            const targetPath = pickDownloadFilePath(downloadsDir, safeFilename, downloadSubdir);
             try {
               fs.copyFileSync(existingPath, targetPath);
               console.log(`[/api/curseforge/download] Dedup (${dedup.location}): ${path.basename(existingPath)} → ${path.basename(targetPath)}`);
@@ -115,14 +112,7 @@ export const POST = withApiGuard(
         }
       }
 
-      let destPath = path.join(downloadsDir, safeFilename);
-
-      // Guard de colisión: renombrar con timestamp si el archivo ya existe
-      if (fs.existsSync(destPath)) {
-        const ext  = path.extname(safeFilename);
-        const name = path.basename(safeFilename, ext);
-        destPath   = path.join(downloadsDir, `${name}_${Date.now()}${ext}`);
-      }
+      const destPath = pickDownloadFilePath(downloadsDir, safeFilename, downloadSubdir);
 
       const res = await fetch(url, {
         headers: {

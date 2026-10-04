@@ -7,6 +7,8 @@ import { resolveCompatibleVersionsBatch, type ResolvedCompatibleVersion } from "
 import type { DownloadIntent, DownloadSessionManifest } from "@/lib/downloads/downloadTypes";
 import { buildSessionManifestFromIntents } from "@/lib/downloads/downloadSessionManifest";
 import type { DraftDownloadBranch } from "@/lib/fomo/draftDownloadScope";
+import { draftDownloadRelativePath } from "@/lib/downloads/draftDownloadFolderPath";
+import type { DraftMapLayout } from "@/lib/fomo/draftMapLayout";
 import { draftItemPlatformUrl } from "@/lib/fomo/draftItemPlatformUrl";
 import {
   buildStashEntry,
@@ -57,6 +59,7 @@ export function DraftDownloadPreflightModal({
   loader,
   gameVersion,
   items,
+  mapLayout,
   onConfirmDownload,
 }: {
   open: boolean;
@@ -66,6 +69,7 @@ export function DraftDownloadPreflightModal({
   loader: string;
   gameVersion: string;
   items: CommunityDraftItem[];
+  mapLayout?: DraftMapLayout | null;
   onConfirmDownload: (payload: { intents: DownloadIntent[]; manifest: DownloadSessionManifest }) => void;
 }) {
   const [rows, setRows] = useState<PreflightRow[]>([]);
@@ -134,6 +138,7 @@ export function DraftDownloadPreflightModal({
         loader,
         gameVersion,
         resolvedVersionLabel: row.resolved!.versionLabel || row.resolved!.versionId,
+        downloadSubdir: draftDownloadRelativePath(row.item, mapLayout),
       }));
   };
 

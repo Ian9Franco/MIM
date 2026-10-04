@@ -25,6 +25,8 @@ import { useDraftRealtimeSync } from "@/lib/fomo/useDraftRealtimeSync";
 import { draftItemsForDownloadBranch, type DraftDownloadBranch } from "@/lib/fomo/draftDownloadScope";
 import { resolveCompatibleVersion } from "@/lib/downloads/resolveCompatibleVersion";
 import { DraftDownloadPreflightModal } from "./DraftDownloadPreflightModal";
+import { draftDownloadRelativePath } from "@/lib/downloads/draftDownloadFolderPath";
+import { parseMapLayout } from "@/lib/fomo/draftMapLayout";
 
 export function CommunityDraftDetails({
   draftId,
@@ -335,6 +337,23 @@ export function CommunityDraftDetails({
       return;
     }
 
+    const mapLayout = parseMapLayout(draft?.map_layout);
+    const loader = String(draft?.loader || snap.manifest.loader || "").toLowerCase();
+    const gameVersion = String(draft?.minecraft_version || snap.manifest.minecraft || "");
+    const draftItemByProject = new Map(
+      draftItems.map((item) => [String(item.project_id), item]),
+    );
+
+    const subdirForManifestMod = (m: CommunityDraftItem) =>
+      draftDownloadRelativePath(
+        {
+          side: m.side,
+          category: m.category,
+          content_type: m.content_type || m.contentType,
+        },
+        mapLayout,
+      );
+
     const snapshotProjectIds = new Set(snap.manifest.mods.map((m: CommunityDraftItem) => String(m.projectId || m.project_id)));
     const missingDeps = new Map<string, string>();
 
@@ -356,13 +375,21 @@ export function CommunityDraftDetails({
     if (missingDeps.size > 0) {
       const confirmDownload = window.confirm(`El Snapshot no incluye ${missingDeps.size} dependencia(s) requerida(s).\n¿Deseas intentar descargarlas automáticamente también?`);
       if (confirmDownload) {
-        additionalIntents = Array.from(missingDeps.values()).map(depId => ({
-          id: crypto.randomUUID(),
-          projectId: depId,
-          versionId: undefined, // Let the broker resolve the best version
-          platform: "modrinth",
-          projectType: "mod"
-        }));
+        additionalIntents = Array.from(missingDeps.values()).map((depId) => {
+          const fromDraft = draftItemByProject.get(depId);
+          const folderItem = fromDraft || { side: "both", category: "both:other", content_type: "mod" };
+          return {
+            id: crypto.randomUUID(),
+            projectId: depId,
+            versionId: undefined,
+            platform: "modrinth" as const,
+            projectType: "mod",
+            loader,
+            gameVersion,
+            modName: fromDraft?.mod_name,
+            downloadSubdir: draftDownloadRelativePath(folderItem, mapLayout),
+          };
+        });
       }
     }
 
@@ -372,10 +399,10 @@ export function CommunityDraftDetails({
       versionId: m.versionId || m.version_id,
       platform: (m.source as "modrinth" | "curseforge") || "modrinth",
       projectType: (m.contentType || m.content_type || "mod") as "mod" | "resourcepack" | "shader" | "datapack",
-      side: (m.side as "client" | "server" | "both") || "both",
-      required: m.required !== false,
-      title: m.mod_name || m.title || m.projectId || m.project_id,
-      iconUrl: m.icon_url || m.iconUrl || undefined
+      modName: m.mod_name || m.title,
+      loader,
+      gameVersion,
+      downloadSubdir: subdirForManifestMod(m),
     }));
     
     const finalIntents = [...intents, ...additionalIntents];
@@ -678,6 +705,7 @@ export function CommunityDraftDetails({
         loader={String(draft?.loader || "").toLowerCase()}
         gameVersion={String(draft?.minecraft_version || "")}
         items={preflightItems}
+        mapLayout={draft ? parseMapLayout(draft.map_layout) : null}
         onConfirmDownload={enqueueTestDownload}
       />
 

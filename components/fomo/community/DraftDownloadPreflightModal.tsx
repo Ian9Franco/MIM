@@ -1,12 +1,22 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, RotateCcw, Save, X } from "lucide-react";
 import type { CommunityDraftItem } from "@/types/fomo";
 import { resolveCompatibleVersionsBatch, type ResolvedCompatibleVersion } from "@/lib/downloads/resolveCompatibleVersion";
 import type { DownloadIntent, DownloadSessionManifest } from "@/lib/downloads/downloadTypes";
 import { buildSessionManifestFromIntents } from "@/lib/downloads/downloadSessionManifest";
 import type { DraftDownloadBranch } from "@/lib/fomo/draftDownloadScope";
+import { draftItemPlatformUrl } from "@/lib/fomo/draftItemPlatformUrl";
+import {
+  buildStashEntry,
+  clearPreflightFailedStash,
+  formatPreflightFailureReport,
+  mergePreflightFailedStash,
+  readPreflightFailedStash,
+  savePreflightFailedStash,
+  type PreflightFailedStash,
+} from "@/lib/fomo/draftDownloadPreflightStash";
 
 export type PreflightRow = {
   item: CommunityDraftItem;
@@ -14,6 +24,30 @@ export type PreflightRow = {
   resolved?: ResolvedCompatibleVersion;
   error?: string;
 };
+
+async function resolvePreflightRows(
+  items: CommunityDraftItem[],
+  loader: string,
+  gameVersion: string,
+  concurrency = 2,
+): Promise<PreflightRow[]> {
+  const inputs = items.map((item) => ({
+    item,
+    source: item.source,
+    projectId: String(item.project_id),
+    projectType: item.content_type || "mod",
+    loader,
+    gameVersion,
+    modName: item.mod_name,
+  }));
+  const results = await resolveCompatibleVersionsBatch(inputs, concurrency);
+  return results.map((result) => ({
+    item: result.input.item,
+    storedVersionId: result.input.item.version_id,
+    resolved: result.ok ? result.resolved : undefined,
+    error: result.ok ? undefined : result.error,
+  }));
+}
 
 export function DraftDownloadPreflightModal({
   open,
@@ -36,10 +70,25 @@ export function DraftDownloadPreflightModal({
 }) {
   const [rows, setRows] = useState<PreflightRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showFailedOnly, setShowFailedOnly] = useState(false);
+  const [stash, setStash] = useState<PreflightFailedStash | null>(null);
+  const [showStashPanel, setShowStashPanel] = useState(false);
 
   const txt = isModern ? "text-foreground" : "text-white";
   const txtSub = isModern ? "text-muted-foreground" : "text-white/60";
   const panel = isModern ? "bg-card border-border" : "bg-[#121214] border-white/10";
+  const btnMuted = isModern ? "bg-muted text-muted-foreground hover:bg-muted/80" : "bg-white/10 text-white/70 hover:bg-white/15";
+
+  const refreshStash = useCallback(() => {
+    setStash(readPreflightFailedStash());
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    refreshStash();
+    setShowFailedOnly(false);
+    setShowStashPanel(false);
+  }, [open, refreshStash]);
 
   useEffect(() => {
     if (!open || items.length === 0) {
@@ -53,26 +102,11 @@ export function DraftDownloadPreflightModal({
       storedVersionId: item.version_id,
     })));
 
-    (async () => {
-      const inputs = items.map((item) => ({
-        item,
-        source: item.source,
-        projectId: String(item.project_id),
-        projectType: item.content_type || "mod",
-        loader,
-        gameVersion,
-        modName: item.mod_name,
-      }));
-      const results = await resolveCompatibleVersionsBatch(inputs, 2);
+    void resolvePreflightRows(items, loader, gameVersion, 2).then((next) => {
       if (cancelled) return;
-      setRows(results.map((result) => ({
-        item: result.input.item,
-        storedVersionId: result.input.item.version_id,
-        resolved: result.ok ? result.resolved : undefined,
-        error: result.ok ? undefined : result.error,
-      })));
+      setRows(next);
       setLoading(false);
-    })();
+    });
 
     return () => {
       cancelled = true;
@@ -81,6 +115,8 @@ export function DraftDownloadPreflightModal({
 
   const okCount = rows.filter((row) => row.resolved).length;
   const failCount = rows.filter((row) => row.error).length;
+  const failedRows = useMemo(() => rows.filter((row) => row.error), [rows]);
+  const visibleRows = showFailedOnly ? failedRows : rows;
 
   const branchLabel = branch === "all" ? "Todo" : branch === "client" ? "Client" : branch === "server" ? "Server" : "Both";
 
@@ -122,20 +158,83 @@ export function DraftDownloadPreflightModal({
   };
 
   const reportText = useMemo(() => {
-    const lines = [
-      `Revisión descarga test (${branchLabel}) — ${loader} ${gameVersion}`,
-      `OK: ${okCount} | Fallos: ${failCount}`,
-      "",
-      ...rows.map((row) => {
+    const header = `Revisión descarga test (${branchLabel}) — ${loader} ${gameVersion}\nOK: ${okCount} | Fallos: ${failCount}`;
+    const okLines = rows
+      .filter((row) => row.resolved)
+      .map((row) => {
         const name = row.item.mod_name || row.item.project_id;
-        if (row.resolved) {
-          return `OK  ${name} → ${row.resolved.versionLabel || row.resolved.versionId} (draft: ${row.storedVersionId || "—"})`;
-        }
-        return `FAIL ${name} — ${row.error}`;
-      }),
-    ];
-    return lines.join("\n");
-  }, [rows, okCount, failCount, branchLabel, loader, gameVersion]);
+        return `OK  ${name} → ${row.resolved!.versionLabel || row.resolved!.versionId} (draft: ${row.storedVersionId || "—"})`;
+      });
+    const failBlock = formatPreflightFailureReport(
+      failedRows.map((row) => ({
+        modName: String(row.item.mod_name || row.item.project_id || "—"),
+        error: row.error || "Error",
+        platformUrl: draftItemPlatformUrl(row.item),
+        storedVersionId: row.storedVersionId,
+      })),
+      "",
+    );
+    return [header, "", ...okLines, failBlock].filter(Boolean).join("\n");
+  }, [rows, failedRows, okCount, failCount, branchLabel, loader, gameVersion]);
+
+  const retryFailed = async () => {
+    if (failedRows.length === 0 || loading) return;
+    setLoading(true);
+    const retried = await resolvePreflightRows(
+      failedRows.map((row) => row.item),
+      loader,
+      gameVersion,
+      1,
+    );
+    const byId = new Map(retried.map((row) => [row.item.id, row]));
+    setRows((prev) => prev.map((row) => byId.get(row.item.id) ?? row));
+    setLoading(false);
+  };
+
+  const saveFailedToStash = () => {
+    if (failedRows.length === 0) return;
+    const entries = failedRows.map((row) =>
+      buildStashEntry(row.item, row.error || "Error"),
+    );
+    const merged = mergePreflightFailedStash(branchLabel, loader, gameVersion, entries);
+    savePreflightFailedStash(merged);
+    refreshStash();
+    window.dispatchEvent(new CustomEvent("fomo-show-status", {
+      detail: {
+        text: `${entries.length} ítem(s) guardados en la cola temporal. Podés abrirlos en Modrinth/CurseForge cuando quieras.`,
+        type: "success",
+      },
+    }));
+  };
+
+  const openUrls = (urls: string[], label: string) => {
+    const list = urls.filter(Boolean);
+    if (list.length === 0) return;
+    if (list.length > 12) {
+      const proceed = window.confirm(
+        `Se abrirán ${list.length} pestañas (${label}). ¿Continuar?`,
+      );
+      if (!proceed) return;
+    }
+    for (const url of list) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const openFailedOnOrigin = () => {
+    openUrls(
+      failedRows.map((row) => draftItemPlatformUrl(row.item)),
+      "fallidos del preflight",
+    );
+  };
+
+  const openStashOnOrigin = () => {
+    if (!stash?.entries.length) return;
+    openUrls(
+      stash.entries.map((entry) => entry.platformUrl),
+      "cola guardada",
+    );
+  };
 
   if (!open) return null;
 
@@ -162,6 +261,74 @@ export function DraftDownloadPreflightModal({
           </button>
         </div>
 
+        {(failCount > 0 || (stash?.entries.length ?? 0) > 0) && (
+          <div className={`flex flex-wrap items-center gap-2 border-b px-5 py-2 text-[11px] ${isModern ? "border-border bg-muted/30" : "border-white/10 bg-white/5"}`}>
+            {failCount > 0 && (
+              <label className={`inline-flex cursor-pointer items-center gap-1.5 ${txtSub}`}>
+                <input
+                  type="checkbox"
+                  checked={showFailedOnly}
+                  onChange={(event) => setShowFailedOnly(event.target.checked)}
+                  className="rounded border-border"
+                />
+                Solo fallidos ({failCount})
+              </label>
+            )}
+            {stash && stash.entries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowStashPanel((value) => !value)}
+                className={`rounded-lg px-2 py-1 font-bold ${btnMuted}`}
+              >
+                Cola guardada ({stash.entries.length})
+              </button>
+            )}
+          </div>
+        )}
+
+        {showStashPanel && stash && stash.entries.length > 0 && (
+          <div className={`max-h-40 overflow-y-auto border-b px-5 py-3 text-[11px] custom-scrollbar ${isModern ? "border-border" : "border-white/10"}`}>
+            <div className={`mb-2 flex flex-wrap items-center justify-between gap-2 ${txtSub}`}>
+              <span>
+                Guardado {new Date(stash.savedAt).toLocaleString()} · {stash.loader} {stash.gameVersion}
+              </span>
+              <div className="flex gap-1">
+                <button type="button" onClick={openStashOnOrigin} className={`rounded px-2 py-1 font-bold ${btnMuted}`}>
+                  Abrir todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearPreflightFailedStash();
+                    refreshStash();
+                    setShowStashPanel(false);
+                  }}
+                  className={`rounded px-2 py-1 font-bold ${btnMuted}`}
+                >
+                  Vaciar cola
+                </button>
+              </div>
+            </div>
+            <ul className={`space-y-1 ${txt}`}>
+              {stash.entries.map((entry) => (
+                <li key={entry.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{entry.modName} — {entry.error}</span>
+                  {entry.platformUrl ? (
+                    <a
+                      href={entry.platformUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-primary hover:underline"
+                    >
+                      Abrir
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-5 py-3">
           {loading && (
             <div className={`flex items-center gap-2 py-8 text-sm ${txtSub}`}>
@@ -177,11 +344,13 @@ export function DraftDownloadPreflightModal({
                   <th className="pb-2 font-bold">En draft</th>
                   <th className="pb-2 font-bold">Se bajará</th>
                   <th className="pb-2 font-bold">Estado</th>
+                  <th className="pb-2 font-bold w-8" aria-label="Origen" />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {visibleRows.map((row) => {
                   const name = row.item.mod_name || row.item.project_id || "—";
+                  const platformUrl = draftItemPlatformUrl(row.item);
                   return (
                     <tr key={row.item.id} className={`border-t ${isModern ? "border-border/60" : "border-white/5"}`}>
                       <td className={`py-2 pr-2 font-semibold ${txt}`}>{name}</td>
@@ -198,6 +367,19 @@ export function DraftDownloadPreflightModal({
                           </span>
                         )}
                       </td>
+                      <td className="py-2">
+                        {platformUrl ? (
+                          <a
+                            href={platformUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex rounded p-1 ${isModern ? "hover:bg-muted" : "hover:bg-white/10"}`}
+                            title="Abrir en Modrinth o CurseForge"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                          </a>
+                        ) : null}
+                      </td>
                     </tr>
                   );
                 })}
@@ -206,30 +388,62 @@ export function DraftDownloadPreflightModal({
           )}
         </div>
 
-        <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-5 py-4 ${isModern ? "border-border" : "border-white/10"}`}>
-          <button
-            type="button"
-            onClick={() => navigator.clipboard.writeText(reportText)}
-            className={`rounded-lg px-3 py-2 text-xs font-bold ${isModern ? "bg-muted text-muted-foreground" : "bg-white/10 text-white/70"}`}
-          >
-            Copiar informe
-          </button>
-          <div className="flex gap-2">
+        <div className={`flex flex-col gap-3 border-t px-5 py-4 ${isModern ? "border-border" : "border-white/10"}`}>
+          {failCount > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void retryFailed()}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold ${btnMuted} disabled:opacity-50`}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reintentar fallidos ({failCount})
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={saveFailedToStash}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold ${btnMuted}`}
+              >
+                <Save className="h-3.5 w-3.5" />
+                Guardar fallidos en cola
+              </button>
+              <button
+                type="button"
+                onClick={openFailedOnOrigin}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold ${btnMuted}`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Abrir fallidos en origen
+              </button>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <button
               type="button"
-              onClick={onClose}
-              className={`rounded-xl px-4 py-2 text-xs font-bold ${isModern ? "bg-muted" : "bg-white/10"}`}
+              onClick={() => navigator.clipboard.writeText(reportText)}
+              className={`rounded-lg px-3 py-2 text-xs font-bold ${btnMuted}`}
             >
-              Cancelar
+              Copiar informe
             </button>
-            <button
-              type="button"
-              disabled={loading || okCount === 0}
-              onClick={handleDownload}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
-            >
-              {failCount === 0 ? `Descargar ${okCount} archivos` : `Descargar ${okCount} (${failCount} sin versión)`}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className={`rounded-xl px-4 py-2 text-xs font-bold ${isModern ? "bg-muted" : "bg-white/10"}`}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={loading || okCount === 0}
+                onClick={handleDownload}
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {failCount === 0 ? `Descargar ${okCount} archivos` : `Descargar ${okCount} (${failCount} sin versión)`}
+              </button>
+            </div>
           </div>
         </div>
       </div>

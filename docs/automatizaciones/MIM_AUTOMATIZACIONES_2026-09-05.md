@@ -1,19 +1,19 @@
 # MIM — Automatizaciones de ingeniería
 
-Revisión: 2026-09-06. Se conserva el nombre del archivo original como referencia estable.
+Revisión: 2026-11-20. Se conserva el nombre del archivo original como referencia estable.
 
 **Objetivo:** mejorar confiabilidad, claridad de uso y mantenibilidad de MIM mediante cambios verificables alineados con `docs/whosnext.md`. El volumen de PRs, capas o comentarios no mide progreso.
 
-**Uso:** cada bloque contiene un prompt completo y autónomo. Copiá el contenido del bloque correspondiente en su automatización de ChatGPT. Las reglas compartidas están repetidas intencionalmente para que no tengas que combinar secciones ni adjuntar este documento.
+**Uso:** cada bloque contiene un prompt completo y autónomo. Copiá el contenido del bloque correspondiente en la automatización (Codex, Cursor u otra). Las reglas compartidas están repetidas intencionalmente para que no tengas que combinar secciones ni adjuntar este documento.
 
-Esta edición modifica únicamente los prompts de este archivo; la aplicación en ChatGPT queda a cargo de Ian. No cambia horarios, modelos ni preferencias de notificación.
+Esta edición modifica únicamente los prompts de este archivo; la aplicación en el orquestador queda a cargo de Ian. No cambia horarios, modelos ni preferencias de notificación.
 
-| Automatización | Responsabilidad |
-|---|---|
-| Dumbledore | Planificar y seguir una mejora de responsabilidades; no implementa. |
-| McGonagall | Implementar una frontera estructural por PR. |
-| Hermione | Auditar cambios, verificar fases y reconciliar documentación. |
-| Harry | Resolver tareas pequeñas y mantener la cola operativa. |
+| Rol | Nombre sugerido en Codex | Responsabilidad |
+|---|---|---|
+| Dumbledore | Dumbledore — MIM Refactor Planning | Planificar y seguir una mejora de responsabilidades; no implementa. |
+| McGonagall | McGonagall — PR estructural MIM | Implementar una frontera estructural por PR. |
+| Hermione | Hermione — MIM Commit Review | Auditar cambios, verificar fases y reconciliar documentación. |
+| Harry | Harry — MIM Roadmap Cycle | Resolver tareas pequeñas y mantener la cola operativa. |
 
 Se mantienen las identidades, el límite global de dos PRs y la revisión humana. Se corrigen rutas, se usan IDs y criterios de cierre del roadmap, se conecta UNRELEASED al trabajo entregado y se evitan cierres sin evidencia y actividad repetitiva.
 
@@ -325,6 +325,8 @@ Las decisiones de usuario pendientes se expresan con una pregunta específica, e
 ### Formato del trabajo
 
 Títulos de commits/PRs: español, primera persona, breves y técnicos, identificando el rol. Descripción proporcional al cambio: problema, comportamiento resultante, ID/subalcance, evidencia, validación y limitaciones materiales. `TECHNICAL ANALYSIS` en inglés profesional y resumen del rol en español. No rellenes una plantilla extensa para una corrección pequeña.
+
+Si hay un bloqueo del Council asignado a Hermione, eso tiene prioridad absoluta. Si no lo podés resolver técnicamente, demostrá por qué y escalalo; no repitas el mismo bloqueo sin fin.
 ```
 
 ## Harry
